@@ -1,0 +1,55 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# local runtime logs
+*.log
+debug.log
+spring-run.out.log
+spring-run.err.log
+
+# local JDK bundle
+oracleJdk-26/
+.tools/jdk17/
+.tools/*.zip
+
+# env / secrets files
+.env
+.env.*
+
+# backend local build/cache/database
+backend/target/
+backend/.mvn/repository/
+backend/*.mv.db
+backend/*.lock.db
+backend/*.trace.db
+backend/HELP.md
+
+# Python
+**/venv/
+**/.venv/
+__pycache__/
+*.pyc
+
+# Migration exports (one-time data, do not commit)
+migration_export/
+.tools/migration_export/
+
+# One-time migration tools
+.tools/H2AddColumn.java
+.tools/H2Inspector.java
+.tools/H2Export.java
+.tools/h2_counts.sql
+.tools/h2_tables.sql
+
+# Cloned repos
+run/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Claude
+.claude/
