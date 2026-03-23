@@ -14,6 +14,7 @@ const RunDetail = React.lazy(() => import('./pages/RunDetail'));
 const Analysis = React.lazy(() => import('./pages/Analysis'));
 const Shoes = React.lazy(() => import('./pages/Shoes'));
 const Races = React.lazy(() => import('./pages/Races'));
+const TodayRun = React.lazy(() => import('./pages/TodayRun'));
 
 function ScrollToTop() {
   const location = useLocation();
@@ -55,6 +56,7 @@ function App() {
               <Route path="/run/:id" element={<RunDetail />} />
               <Route path="/run" element={<RunDetail />} />
               <Route path="/analysis" element={<Analysis />} />
+              <Route path="/today-run" element={<TodayRun />} />
               <Route path="/shoes" element={<Shoes />} />
               <Route path="/races" element={<Races />} />
               <Route path="*" element={<Navigate to="/" replace />} />

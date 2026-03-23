@@ -286,6 +286,7 @@ export default function Races() {
   const filteredCatalog = useMemo(() => {
     const query = catalogQuery.trim().toLowerCase();
     return worldRaceCatalog.filter((race) => {
+      if (showNyrrProgress && race.program !== 'NYRR 9+1') return false;
       const matchesCountry = selectedCountry === 'All' || race.country === selectedCountry;
       if (!matchesCountry) return false;
       if (!query) return true;
@@ -296,7 +297,7 @@ export default function Races() {
         || (race.organization || '').toLowerCase().includes(query)
         || (race.program || '').toLowerCase().includes(query);
     });
-  }, [catalogQuery, selectedCountry]);
+  }, [catalogQuery, selectedCountry, showNyrrProgress]);
 
   const countryCounts = useMemo(() => {
     return worldRaceCatalog.reduce((acc, race) => {

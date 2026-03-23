@@ -8,8 +8,8 @@ import TopNav from '../components/TopNav';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { formatDuration, formatPace } from '../utils/format';
+import { getTodayRunRecommendation } from '../utils/todayRun';
 import 'leaflet/dist/leaflet.css';
-
 const HEAT_GRADIENT = {
   0.0: '#1a0a00',
   0.2: '#ff4500',
@@ -173,6 +173,11 @@ export default function Profile() {
   const totalKm = runs.reduce((s, r) => s + (r.distanceKm || 0), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
   const avgPaceStr = totalKm > 0 ? formatPace(totalKm, totalSec, lang) : '0:00 /km';
+
+  const {
+    recommendation: todayRecommendation,
+    tone: recommendationTone,
+  } = getTodayRunRecommendation({ runs, t, lang });
 
   // Daily steps from running (last 14 days)
   const dailySteps = (() => {
@@ -359,25 +364,79 @@ export default function Profile() {
 
         {/* Bottom Grid */}
         <div className="bottom-grid">
-          <section
-            className="card data-analyze-section"
-            onClick={() => navigate('/analysis')}
-            style={{ cursor: 'pointer' }}
-            title={t('profile.analysis_title_attr')}
-          >
-            <div className="top-link-row">
-              <h2>{t('profile.analysis_title')}</h2>
-              <span className="card-cta">&rarr;</span>
+          <section className="card data-analyze-section analysis-split-card">
+            <div
+              className="analysis-primary-section"
+              onClick={() => navigate('/analysis')}
+              style={{ cursor: 'pointer' }}
+              title={t('profile.analysis_title_attr')}
+            >
+              <div className="top-link-row">
+                <h2>{t('profile.analysis_title')}</h2>
+                <span className="card-cta">&rarr;</span>
+              </div>
+              <div className="stat-block">
+                <span className="stat-label">{t('profile.weekly_mileage')}</span>
+                <span className="stat-value">{totalKm.toFixed(1)} <small>km</small></span>
+              </div>
+              <div className="stat-block">
+                <span className="stat-label">{t('profile.avg_pace')}</span>
+                <span className="stat-value">{avgPaceStr}</span>
+              </div>
+              <p className="analysis-hint">{t('profile.analysis_hint')}</p>
             </div>
-            <div className="stat-block">
-              <span className="stat-label">{t('profile.weekly_mileage')}</span>
-              <span className="stat-value">{totalKm.toFixed(1)} <small>km</small></span>
+
+            <div
+              className="analysis-recommend-section analysis-recommend-link"
+              onClick={() => navigate('/today-run')}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  navigate('/today-run');
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'pointer' }}
+              title={t('profile.today_run_open_details')}
+            >
+              <div className="analysis-recommend-header">
+                <div>
+                  <h3>{t('profile.today_run_title')}</h3>
+                  <p>{t('profile.today_run_copy')}</p>
+                </div>
+                <div className="analysis-recommend-header-actions">
+                  <span className={`analysis-recommend-pill tone-${recommendationTone.key}`}>{todayRecommendation.type}</span>
+                  <span className="analysis-recommend-arrow" aria-hidden="true">&rarr;</span>
+                </div>
+              </div>
+
+              <div className={`analysis-recommend-type-card tone-${recommendationTone.key}`}>
+                <span className="analysis-recommend-type-icon" aria-hidden="true">{recommendationTone.icon}</span>
+                <div className="analysis-recommend-type-copy">
+                  <span className="stat-label">{t('profile.today_run_type_label')}</span>
+                  <strong>{todayRecommendation.type}</strong>
+                </div>
+              </div>
+
+              <div className="analysis-recommend-grid">
+                <article className="analysis-recommend-card">
+                  <span className="stat-label">{t('profile.today_run_focus')}</span>
+                  <strong>{todayRecommendation.title}</strong>
+                </article>
+                <article className="analysis-recommend-card">
+                  <span className="stat-label">{t('profile.today_run_distance')}</span>
+                  <strong>{todayRecommendation.distance}</strong>
+                </article>
+                <article className="analysis-recommend-card">
+                  <span className="stat-label">{t('profile.today_run_pace')}</span>
+                  <strong>{todayRecommendation.pace}</strong>
+                </article>
+              </div>
+
+              <p className="analysis-recommend-purpose">{todayRecommendation.purpose}</p>
+              <div className="analysis-recommend-link-copy">{t('profile.today_run_open_details')}</div>
             </div>
-            <div className="stat-block">
-              <span className="stat-label">{t('profile.avg_pace')}</span>
-              <span className="stat-value">{avgPaceStr}</span>
-            </div>
-            <p className="analysis-hint">{t('profile.analysis_hint')}</p>
           </section>
 
           <div className="right-column">
