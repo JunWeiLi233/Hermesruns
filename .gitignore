@@ -18,6 +18,7 @@ oracleJdk-26/
 # env / secrets files
 .env
 .env.*
+start_hermes_postgres.ps1
 
 # backend local build/cache/database
 backend/target/

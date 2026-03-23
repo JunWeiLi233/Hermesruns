@@ -1,0 +1,7 @@
+# Auto-normalize line endings
+* text=auto
+
+# Tell GitHub these folders are documentation or dependencies, not code
+.venv/** linguist-vendored
+backend/mvnw* linguist-generated
+node_modules/** linguist-vendored
