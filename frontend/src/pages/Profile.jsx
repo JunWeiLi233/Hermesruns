@@ -36,16 +36,9 @@ export default function Profile() {
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [garminConfigModalOpen, setGarminConfigModalOpen] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [nameStatus, setNameStatus] = useState('');
   const [importStatus, setImportStatus] = useState('');
-  const [garminConfigStatus, setGarminConfigStatus] = useState('');
-  const [garminConsumerKeyInput, setGarminConsumerKeyInput] = useState('');
-  const [garminConsumerSecretInput, setGarminConsumerSecretInput] = useState('');
-  const [garminRedirectUriInput, setGarminRedirectUriInput] = useState('');
-  const [garminHasSavedSecret, setGarminHasSavedSecret] = useState(false);
-  const [garminUsesCustomConfig, setGarminUsesCustomConfig] = useState(false);
   const [garminFiles, setGarminFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
@@ -53,14 +46,6 @@ export default function Profile() {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
   const [profileShoes, setProfileShoes] = useState([]);
-
-  const [garminConfigured, setGarminConfigured] = useState(false);
-  const [garminUsesServerKeys, setGarminUsesServerKeys] = useState(false);
-  const [garminConnected, setGarminConnected] = useState(false);
-  const [garminUserId, setGarminUserId] = useState('');
-  const [garminLoading, setGarminLoading] = useState(false);
-  const [garminSyncing, setGarminSyncing] = useState(false);
-  const [garminSyncNote, setGarminSyncNote] = useState('');
 
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef(null);
@@ -75,13 +60,6 @@ export default function Profile() {
     loadProfile();
     loadActivities();
     loadShoes();
-    loadGarminStatus();
-
-    // Handle Garmin OAuth callback hash
-    const hash = window.location.hash;
-    if (hash.includes('garmin=success') || hash.includes('garmin=error')) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
   }, [isAuthenticated]);
 
   async function loadProfile() {
@@ -98,152 +76,6 @@ export default function Profile() {
       const data = await apiJson('/api/shoes/recent');
       setProfileShoes(Array.isArray(data) ? data : []);
     } catch { /* ignored */ }
-  }
-
-  async function loadGarminStatus() {
-    try {
-      const cfgResponse = await apiFetch('/api/auth/garmin/configured');
-      if (cfgResponse.status === 404) {
-        setGarminConfigured(false);
-        setGarminUsesServerKeys(false);
-        setGarminConnected(false);
-        setGarminUserId('');
-        setGarminUsesCustomConfig(false);
-        return;
-      }
-      if (!cfgResponse.ok) throw new Error('Garmin config check failed');
-      const cfg = await cfgResponse.json();
-      setGarminConfigured(cfg.garminConfigured === true);
-      setGarminUsesServerKeys(cfg.usesServerGarminKeys === true);
-      setGarminUsesCustomConfig(cfg.usesCustomConfig === true);
-      if (cfg.garminConfigured) {
-        const st = await apiJson('/api/auth/garmin/status');
-        setGarminConnected(st.connected === true);
-        setGarminUserId(st.garminUserId || '');
-      }
-    } catch { /* ignored */ }
-  }
-
-  async function openGarminConfigModal() {
-    setGarminConfigStatus('');
-    setGarminConsumerSecretInput('');
-    try {
-      const data = await apiJson('/api/auth/garmin/config');
-      setGarminConsumerKeyInput(data.consumerKey || '');
-      setGarminRedirectUriInput(data.redirectUri || `${window.location.origin}/api/auth/garmin/callback`);
-      setGarminHasSavedSecret(data.hasSecret === true);
-      setGarminUsesCustomConfig(data.usesCustomConfig === true);
-    } catch {
-      setGarminConsumerKeyInput('');
-      setGarminRedirectUriInput(`${window.location.origin}/api/auth/garmin/callback`);
-      setGarminHasSavedSecret(false);
-    }
-    setGarminConfigModalOpen(true);
-  }
-
-  async function handleSaveGarminConfig(e) {
-    e.preventDefault();
-    setGarminConfigStatus('');
-    try {
-      const payload = {
-        consumerKey: garminConsumerKeyInput,
-        consumerSecret: garminConsumerSecretInput,
-        redirectUri: garminRedirectUriInput,
-      };
-      const response = await apiFetch('/api/auth/garmin/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Garmin config save failed');
-      setGarminConfigStatus(t('profile.garmin_config_saved'));
-      setGarminHasSavedSecret(true);
-      setGarminUsesCustomConfig(true);
-      await loadGarminStatus();
-      setTimeout(() => setGarminConfigModalOpen(false), 500);
-    } catch (error) {
-      setGarminConfigStatus(error.message || 'Garmin config save failed');
-    }
-  }
-
-  async function handleClearGarminConfig() {
-    setGarminConfigStatus('');
-    try {
-      const response = await apiFetch('/api/auth/garmin/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ consumerKey: '', consumerSecret: '', redirectUri: '' }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Garmin config clear failed');
-      setGarminConsumerKeyInput('');
-      setGarminConsumerSecretInput('');
-      setGarminRedirectUriInput(`${window.location.origin}/api/auth/garmin/callback`);
-      setGarminHasSavedSecret(false);
-      setGarminUsesCustomConfig(false);
-      setGarminConnected(false);
-      setGarminUserId('');
-      await loadGarminStatus();
-    } catch (error) {
-      setGarminConfigStatus(error.message || 'Garmin config clear failed');
-    }
-  }
-
-  async function handleGarminConnect() {
-    setGarminLoading(true);
-    try {
-      const data = await apiJson('/api/auth/garmin/start');
-      if (data.authorizeUrl) {
-        window.location.href = data.authorizeUrl;
-        return;
-      }
-    } catch { /* ignored */ }
-    setGarminLoading(false);
-  }
-
-  async function handleGarminDisconnect() {
-    setGarminLoading(true);
-    try {
-      await apiFetch('/api/auth/garmin/disconnect', { method: 'POST' });
-      setGarminConnected(false);
-      setGarminUserId('');
-      setGarminSyncNote('');
-    } catch { /* ignored */ }
-    setGarminLoading(false);
-  }
-
-  async function handleGarminSyncNow() {
-    setGarminSyncNote('');
-    setGarminSyncing(true);
-    try {
-      const res = await apiFetch('/api/auth/garmin/sync', { method: 'POST' });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setGarminSyncNote(err.error || 'Garmin sync failed');
-        setGarminSyncing(false);
-        return;
-      }
-      for (let i = 0; i < 45; i++) {
-        await new Promise(r => setTimeout(r, 1500));
-        const st = await apiJson('/api/auth/garmin/sync-status');
-        if (st.status === 'FAILED') {
-          setGarminSyncNote(st.error || 'Garmin sync failed');
-          break;
-        }
-        if (st.status === 'COMPLETED') {
-          setGarminSyncNote(t('profile.garmin_sync_done', { n: st.importedActivities ?? 0 }));
-          await loadActivities();
-          break;
-        }
-        if (!st.active && st.status !== 'RUNNING') {
-          break;
-        }
-      }
-    } catch {
-      setGarminSyncNote(t('profile.garmin_sync_error'));
-    }
-    setGarminSyncing(false);
   }
 
   async function loadActivities() {
@@ -662,7 +494,7 @@ export default function Profile() {
             <section className="card connected-services-section">
               <h2 style={{ margin: '0 0 16px' }}>{t('profile.connected_services')}</h2>
 
-              {/* Garmin */}
+              {/* Garmin — file import */}
               <div className="service-row">
                 <div className="service-icon" style={{ background: '#11548a' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -672,65 +504,17 @@ export default function Profile() {
                 </div>
                 <div className="service-info">
                   <strong>{t('profile.garmin_watch_title')}</strong>
-                  {garminConnected ? (
-                    <span className="service-status service-status-on">{t('profile.garmin_status_connected', { userId: garminUserId })}</span>
-                  ) : garminUsesCustomConfig ? (
-                    <span className="service-status service-status-on">{t('profile.garmin_status_custom_config')}</span>
-                  ) : garminConfigured && garminUsesServerKeys ? (
-                    <span className="service-status service-status-off">{t('profile.garmin_status_server_ready')}</span>
-                  ) : garminConfigured ? (
-                    <span className="service-status service-status-off">{t('profile.garmin_status_not_connected')}</span>
-                  ) : (
-                    <span className="service-status service-status-off">{t('profile.garmin_status_not_configured')}</span>
-                  )}
+                  <span className="service-status service-status-off">{t('profile.garmin_watch_status')}</span>
                 </div>
                 <div className="service-action">
-                  {garminConnected ? (
-                    <>
-                      <button className="btn-service btn-service-disconnect" disabled={garminLoading || garminSyncing} onClick={handleGarminDisconnect}>
-                        {t('profile.garmin_disconnect')}
-                      </button>
-                      <button className="btn-service btn-service-connect" type="button" disabled={garminLoading || garminSyncing} onClick={handleGarminSyncNow}>
-                        {garminSyncing ? t('profile.garmin_syncing') : t('profile.garmin_sync_now')}
-                      </button>
-                      <button className="btn-service" type="button" disabled={garminSyncing} onClick={openGarminConfigModal}>
-                        {garminUsesServerKeys && !garminUsesCustomConfig ? t('profile.garmin_advanced') : t('profile.garmin_configure')}
-                      </button>
-                    </>
-                  ) : garminConfigured && garminUsesServerKeys ? (
-                    <>
-                      <button className="btn-service btn-service-connect" disabled={garminLoading} onClick={handleGarminConnect}>
-                        {garminLoading ? t('profile.garmin_connecting') : t('profile.garmin_sign_in')}
-                      </button>
-                      <button className="btn-service" type="button" onClick={openGarminConfigModal}>
-                        {t('profile.garmin_advanced')}
-                      </button>
-                    </>
-                  ) : garminConfigured ? (
-                    <>
-                      <button className="btn-service" type="button" onClick={openGarminConfigModal}>
-                        {t('profile.garmin_configure')}
-                      </button>
-                      <button className="btn-service btn-service-connect" disabled={garminLoading} onClick={handleGarminConnect}>
-                        {garminLoading ? t('profile.garmin_connecting') : t('profile.garmin_sign_in')}
-                      </button>
-                    </>
-                  ) : (
-                    <button className="btn-service" type="button" onClick={openGarminConfigModal}>
-                      {t('profile.garmin_configure')}
-                    </button>
-                  )}
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
+                    {t('profile.watch_import_files')}
+                  </button>
                 </div>
               </div>
+              <p className="service-hint">{t('profile.garmin_import_hint')}</p>
 
-              <p className="service-hint">
-                {garminConnected
-                  ? t('profile.garmin_auto_sync_hint')
-                  : t('profile.garmin_sign_in_hint')}
-              </p>
-              {garminSyncNote ? <p className="service-hint" style={{ marginTop: 6 }}>{garminSyncNote}</p> : null}
-
-              {/* COROS watch — file import (no public OAuth in Hermes yet) */}
+              {/* COROS — file import */}
               <div className="service-row" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--line, #eee)' }}>
                 <div className="service-icon" style={{ background: '#e85d04' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1007,48 +791,6 @@ export default function Profile() {
             <option value="high-contrast-light">{t('profile.theme_high_contrast_light')}</option>
           </select>
         </div>
-      </Modal>
-
-      <Modal isOpen={garminConfigModalOpen} onClose={() => setGarminConfigModalOpen(false)} title={t('profile.garmin_config_modal_title')}>
-        <form onSubmit={handleSaveGarminConfig}>
-          <p className="modal-help">
-            {garminUsesServerKeys && !garminUsesCustomConfig ? t('profile.garmin_config_hint_optional') : t('profile.garmin_config_hint')}
-          </p>
-
-          <label className="modal-label">{t('profile.garmin_config_key_label')}</label>
-          <input
-            type="text"
-            value={garminConsumerKeyInput}
-            onChange={(e) => setGarminConsumerKeyInput(e.target.value)}
-          />
-
-          <label className="modal-label">{t('profile.garmin_config_secret_label')}</label>
-          <input
-            type="password"
-            value={garminConsumerSecretInput}
-            onChange={(e) => setGarminConsumerSecretInput(e.target.value)}
-            placeholder={garminHasSavedSecret ? t('profile.garmin_config_secret_saved') : ''}
-          />
-
-          <label className="modal-label">{t('profile.garmin_config_redirect_label')}</label>
-          <input
-            type="text"
-            value={garminRedirectUriInput}
-            onChange={(e) => setGarminRedirectUriInput(e.target.value)}
-          />
-
-          {garminHasSavedSecret && <p className="modal-help">{t('profile.garmin_config_secret_saved')}</p>}
-          {garminConfigStatus && <div className="modal-status">{garminConfigStatus}</div>}
-
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={handleClearGarminConfig}>
-              {t('profile.garmin_config_clear')}
-            </button>
-            <button type="submit" className="btn-primary modal-button">
-              {t('profile.garmin_config_save')}
-            </button>
-          </div>
-        </form>
       </Modal>
 
       {/* Sync Modal */}
