@@ -1,0 +1,272 @@
+/**
+ * Popular running shoe catalog, organized by brand.
+ * Each entry: { model, type }
+ *   type: 'daily' | 'speed' | 'race' | 'trail' | 'stability'
+ */
+const shoeCatalog = [
+  {
+    brand: 'Nike',
+    logo: '🟠',
+    models: [
+      { model: 'Pegasus 41', type: 'daily' },
+      { model: 'Pegasus Plus', type: 'daily' },
+      { model: 'Vomero 18', type: 'daily' },
+      { model: 'Structure 26', type: 'stability' },
+      { model: 'Zoom Fly 6', type: 'speed' },
+      { model: 'Vaporfly 3', type: 'race' },
+      { model: 'Alphafly 3', type: 'race' },
+      { model: 'Streakfly 2', type: 'race' },
+      { model: 'Infinity Run 4', type: 'daily' },
+      { model: 'Wildhorse 8', type: 'trail' },
+      { model: 'Zegama 2', type: 'trail' },
+      { model: 'Ultrafly', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'Adidas',
+    logo: '⚫',
+    models: [
+      { model: 'Ultraboost 5', type: 'daily' },
+      { model: 'Ultraboost Light', type: 'daily' },
+      { model: 'Supernova Rise 2', type: 'daily' },
+      { model: 'Supernova Solution', type: 'stability' },
+      { model: 'Adistar 2', type: 'stability' },
+      { model: 'Boston 12', type: 'speed' },
+      { model: 'Adizero SL 2', type: 'speed' },
+      { model: 'Adizero Takumi Sen 10', type: 'race' },
+      { model: 'Adizero Adios Pro 4', type: 'race' },
+      { model: 'Adizero Prime X 2 Strung', type: 'race' },
+      { model: 'Terrex Agravic Speed Ultra', type: 'trail' },
+      { model: 'Terrex Free Hiker 2', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'ASICS',
+    logo: '🔵',
+    models: [
+      { model: 'Gel-Nimbus 26', type: 'daily' },
+      { model: 'Gel-Cumulus 26', type: 'daily' },
+      { model: 'Gel-Kayano 31', type: 'stability' },
+      { model: 'GT-2000 13', type: 'stability' },
+      { model: 'Novablast 5', type: 'daily' },
+      { model: 'Superblast 2', type: 'speed' },
+      { model: 'Magic Speed 4', type: 'speed' },
+      { model: 'Metaspeed Sky Paris', type: 'race' },
+      { model: 'Metaspeed Edge Paris', type: 'race' },
+      { model: 'Fuji Lite 4', type: 'trail' },
+      { model: 'Trabuco Max 3', type: 'trail' },
+      { model: 'Fuji Speed 3', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'New Balance',
+    logo: '🟡',
+    models: [
+      { model: 'Fresh Foam X 1080 v14', type: 'daily' },
+      { model: 'Fresh Foam X 880 v15', type: 'daily' },
+      { model: 'Fresh Foam X 860 v15', type: 'stability' },
+      { model: 'FuelCell Rebel v4', type: 'speed' },
+      { model: 'FuelCell SuperComp Elite v4', type: 'race' },
+      { model: 'FuelCell SuperComp Trainer v2', type: 'speed' },
+      { model: 'SC Pacer', type: 'race' },
+      { model: 'FuelCell Summit Unknown v5', type: 'trail' },
+      { model: 'Fresh Foam X Hierro v8', type: 'trail' },
+      { model: 'Fresh Foam X More Trail v3', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'HOKA',
+    logo: '🟢',
+    models: [
+      { model: 'Clifton 9', type: 'daily' },
+      { model: 'Bondi 8', type: 'daily' },
+      { model: 'Mach 6', type: 'speed' },
+      { model: 'Mach X', type: 'speed' },
+      { model: 'Rincon 4', type: 'daily' },
+      { model: 'Arahi 7', type: 'stability' },
+      { model: 'Gaviota 5', type: 'stability' },
+      { model: 'Cielo X1', type: 'race' },
+      { model: 'Rocket X 2', type: 'race' },
+      { model: 'Speedgoat 6', type: 'trail' },
+      { model: 'Tecton X 3', type: 'trail' },
+      { model: 'Challenger 7', type: 'trail' },
+      { model: 'Torrent 3', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'Brooks',
+    logo: '🔷',
+    models: [
+      { model: 'Ghost 16', type: 'daily' },
+      { model: 'Glycerin 21', type: 'daily' },
+      { model: 'Glycerin GTS 21', type: 'stability' },
+      { model: 'Adrenaline GTS 24', type: 'stability' },
+      { model: 'Launch 10', type: 'speed' },
+      { model: 'Hyperion Max 2', type: 'speed' },
+      { model: 'Hyperion Elite 4', type: 'race' },
+      { model: 'Hyperion Tempo', type: 'speed' },
+      { model: 'Cascadia 18', type: 'trail' },
+      { model: 'Catamount 3', type: 'trail' },
+      { model: 'Caldera 7', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'Saucony',
+    logo: '🔴',
+    models: [
+      { model: 'Ride 17', type: 'daily' },
+      { model: 'Triumph 22', type: 'daily' },
+      { model: 'Guide 17', type: 'stability' },
+      { model: 'Hurricane 24', type: 'stability' },
+      { model: 'Kinvara 15', type: 'speed' },
+      { model: 'Tempus 2', type: 'speed' },
+      { model: 'Endorphin Speed 4', type: 'speed' },
+      { model: 'Endorphin Pro 4', type: 'race' },
+      { model: 'Endorphin Elite', type: 'race' },
+      { model: 'Peregrine 14', type: 'trail' },
+      { model: 'Xodus Ultra 3', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'On',
+    logo: '⚪',
+    models: [
+      { model: 'Cloudmonster 2', type: 'daily' },
+      { model: 'Cloudsurfer 7', type: 'daily' },
+      { model: 'Cloudrunner 2', type: 'daily' },
+      { model: 'Cloudstratus 3', type: 'stability' },
+      { model: 'Cloudboom Echo 3', type: 'race' },
+      { model: 'Cloudflow 4', type: 'speed' },
+      { model: 'Cloudultra 2', type: 'trail' },
+      { model: 'Cloudventure 2', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'Mizuno',
+    logo: '🟣',
+    models: [
+      { model: 'Wave Rider 28', type: 'daily' },
+      { model: 'Wave Sky 7', type: 'daily' },
+      { model: 'Wave Inspire 20', type: 'stability' },
+      { model: 'Wave Horizon 7', type: 'stability' },
+      { model: 'Wave Rebellion Pro 2', type: 'race' },
+      { model: 'Wave Rebellion Flash 2', type: 'speed' },
+      { model: 'Wave Duel Pro', type: 'race' },
+      { model: 'Wave Mujin 10', type: 'trail' },
+      { model: 'Wave Daichi 8', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'Altra',
+    logo: '🟤',
+    models: [
+      { model: 'Torin 7', type: 'daily' },
+      { model: 'Rivera 4', type: 'daily' },
+      { model: 'Via Olympus 2', type: 'daily' },
+      { model: 'Escalante 4', type: 'speed' },
+      { model: 'Vanish Carbon 2', type: 'race' },
+      { model: 'Lone Peak 8', type: 'trail' },
+      { model: 'Olympus 6', type: 'trail' },
+      { model: 'Mont Blanc 3', type: 'trail' },
+      { model: 'Timp 5', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'Puma',
+    logo: '⬛',
+    models: [
+      { model: 'Velocity Nitro 3', type: 'daily' },
+      { model: 'Magnify Nitro 2', type: 'daily' },
+      { model: 'Deviate Nitro 3', type: 'speed' },
+      { model: 'Deviate Nitro Elite 3', type: 'race' },
+      { model: 'Fast-R 2 Nitro Elite', type: 'race' },
+      { model: 'Voyage Nitro 3', type: 'trail' },
+    ],
+  },
+  {
+    brand: 'Reebok',
+    logo: '🔶',
+    models: [
+      { model: 'Floatride Energy 5', type: 'daily' },
+      { model: 'Floatride Energy X', type: 'speed' },
+      { model: 'Forever Floatride Energy 2', type: 'daily' },
+    ],
+  },
+  {
+    brand: 'Under Armour',
+    logo: '🔘',
+    models: [
+      { model: 'Flow Velociti Elite 2', type: 'race' },
+      { model: 'Flow Velociti 3', type: 'speed' },
+      { model: 'HOVR Phantom 3', type: 'daily' },
+      { model: 'HOVR Infinite 5', type: 'daily' },
+      { model: 'HOVR Machina 3', type: 'daily' },
+    ],
+  },
+  {
+    brand: '361°',
+    logo: '🔵',
+    models: [
+      { model: 'Flame', type: 'daily' },
+      { model: 'Spire 5', type: 'daily' },
+      { model: 'Futura', type: 'race' },
+    ],
+  },
+  {
+    brand: 'Li-Ning',
+    logo: '🔴',
+    models: [
+      { model: '飞电 4 Ultra', type: 'race' },
+      { model: '飞电 4 Challenger', type: 'speed' },
+      { model: '飞电 3 Ultra', type: 'race' },
+      { model: '赤兔 7 Pro', type: 'speed' },
+      { model: '赤兔 6 Pro', type: 'speed' },
+      { model: '超轻 21', type: 'daily' },
+      { model: '绝影 3', type: 'daily' },
+      { model: '烈骏 7', type: 'stability' },
+    ],
+  },
+  {
+    brand: 'Anta',
+    logo: '🟠',
+    models: [
+      { model: 'C202 GT Ultra', type: 'race' },
+      { model: 'C202 GT Pro', type: 'speed' },
+      { model: 'C202 5', type: 'speed' },
+      { model: '马赫 4 Pro', type: 'speed' },
+      { model: '马赫 3', type: 'daily' },
+      { model: '柏油路霸 3', type: 'daily' },
+    ],
+  },
+  {
+    brand: 'Xtep',
+    logo: '🔵',
+    models: [
+      { model: '160X 5.0 Pro', type: 'race' },
+      { model: '160X 5.0', type: 'speed' },
+      { model: '160X 3.0 Pro', type: 'race' },
+      { model: '竞速 300X', type: 'speed' },
+      { model: '致轻 8', type: 'daily' },
+    ],
+  },
+  {
+    brand: 'Skechers',
+    logo: '🔵',
+    models: [
+      { model: 'GOrun Ride 12', type: 'daily' },
+      { model: 'GOrun MaxRoad 6', type: 'daily' },
+      { model: 'GOrun Speed Elite Hyper', type: 'race' },
+      { model: 'GOrun Razor Excess 2', type: 'speed' },
+    ],
+  },
+];
+
+export default shoeCatalog;
+
+/** Flat list for search: [{ brand, model, type }] */
+export const flatCatalog = shoeCatalog.flatMap(b =>
+  b.models.map(m => ({ brand: b.brand, model: m.model, type: m.type }))
+);
+
+/** All brand names */
+export const brandNames = shoeCatalog.map(b => b.brand);
