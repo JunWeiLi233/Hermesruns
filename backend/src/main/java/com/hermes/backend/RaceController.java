@@ -1,0 +1,332 @@
+package com.hermes.backend;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/races")
+public class RaceController {
+    private final AuthService authService;
+    private final RaceEventRepository raceEventRepository;
+    private final ActivityRepository activityRepository;
+
+    public RaceController(
+            AuthService authService,
+            RaceEventRepository raceEventRepository,
+            ActivityRepository activityRepository
+    ) {
+        this.authService = authService;
+        this.raceEventRepository = raceEventRepository;
+        this.activityRepository = activityRepository;
+    }
+
+    @GetMapping
+    public ResponseEntity<?> list(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        Runner runner = runnerOptional.get();
+        List<Activity> runActivities = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
+        List<RaceEventResponse> races = raceEventRepository.findByRunnerOrderByEventDateAsc(runner).stream()
+                .map(race -> toResponse(race, runActivities))
+                .toList();
+
+        return ResponseEntity.ok(races);
+    }
+
+    @PostMapping
+    public ResponseEntity<?> create(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody RaceEventRequest request
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        ValidationResult validation = validateRequest(request);
+        if (!validation.valid()) {
+            return error(HttpStatus.BAD_REQUEST, validation.message());
+        }
+
+        RaceEvent raceEvent = new RaceEvent();
+        applyRequest(raceEvent, request);
+        raceEvent.setRunner(runnerOptional.get());
+        RaceEvent saved = raceEventRepository.save(raceEvent);
+        List<Activity> runActivities = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runnerOptional.get(), ActivityType.RUN);
+        return ResponseEntity.ok(toResponse(saved, runActivities));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody RaceEventRequest request
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        ValidationResult validation = validateRequest(request);
+        if (!validation.valid()) {
+            return error(HttpStatus.BAD_REQUEST, validation.message());
+        }
+
+        Optional<RaceEvent> raceOptional = raceEventRepository.findByIdAndRunner(id, runnerOptional.get());
+        if (raceOptional.isEmpty()) {
+            return error(HttpStatus.NOT_FOUND, "Race not found.");
+        }
+
+        RaceEvent raceEvent = raceOptional.get();
+        applyRequest(raceEvent, request);
+        RaceEvent saved = raceEventRepository.save(raceEvent);
+        List<Activity> runActivities = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runnerOptional.get(), ActivityType.RUN);
+        return ResponseEntity.ok(toResponse(saved, runActivities));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        Optional<RaceEvent> raceOptional = raceEventRepository.findByIdAndRunner(id, runnerOptional.get());
+        if (raceOptional.isEmpty()) {
+            return error(HttpStatus.NOT_FOUND, "Race not found.");
+        }
+
+        raceEventRepository.delete(raceOptional.get());
+        return ResponseEntity.noContent().build();
+    }
+
+    private void applyRequest(RaceEvent raceEvent, RaceEventRequest request) {
+        raceEvent.setName(request.name().trim());
+        raceEvent.setOrganization(trimToNull(request.organization()));
+        raceEvent.setLocation(trimToNull(request.location()));
+        raceEvent.setEventDate(request.eventDate());
+        raceEvent.setDistanceKm(request.distanceKm());
+        raceEvent.setRegistrationStatus(parseStatus(request.registrationStatus()));
+        raceEvent.setGoalTimeSeconds(request.goalTimeSeconds());
+        raceEvent.setNotes(trimToNull(request.notes()));
+        raceEvent.setNyrrNinePlusOneEligible(Boolean.TRUE.equals(request.nyrrNinePlusOneEligible()));
+        raceEvent.setCompletedActivityId(request.completedActivityId());
+    }
+
+    private ValidationResult validateRequest(RaceEventRequest request) {
+        if (request == null) {
+            return new ValidationResult(false, "Race payload is required.");
+        }
+        if (request.name() == null || request.name().trim().isBlank()) {
+            return new ValidationResult(false, "Race name is required.");
+        }
+        if (request.eventDate() == null) {
+            return new ValidationResult(false, "Race date is required.");
+        }
+        if (request.distanceKm() != null && request.distanceKm() <= 0) {
+            return new ValidationResult(false, "Race distance must be positive.");
+        }
+        if (request.goalTimeSeconds() != null && request.goalTimeSeconds() <= 0) {
+            return new ValidationResult(false, "Goal time must be positive.");
+        }
+        return new ValidationResult(true, null);
+    }
+
+    private RaceEventResponse toResponse(RaceEvent raceEvent, List<Activity> runActivities) {
+        Activity matchedActivity = resolveMatchedActivity(raceEvent, runActivities);
+        boolean completed = matchedActivity != null || raceEvent.getRegistrationStatus() == RaceRegistrationStatus.COMPLETED;
+        long countdownDays = ChronoUnit.DAYS.between(LocalDate.now(), raceEvent.getEventDate());
+
+        return new RaceEventResponse(
+                raceEvent.getId(),
+                raceEvent.getName(),
+                raceEvent.getOrganization(),
+                raceEvent.getLocation(),
+                raceEvent.getEventDate(),
+                raceEvent.getDistanceKm(),
+                raceEvent.getRegistrationStatus().name(),
+                raceEvent.getGoalTimeSeconds(),
+                raceEvent.getNotes(),
+                raceEvent.isNyrrNinePlusOneEligible(),
+                raceEvent.getCompletedActivityId(),
+                completed,
+                countdownDays,
+                matchedActivity == null ? null : new LinkedActivitySummary(
+                        matchedActivity.getId(),
+                        matchedActivity.getName(),
+                        matchedActivity.getStartTime(),
+                        matchedActivity.getStartDate(),
+                        matchedActivity.getDistanceKm(),
+                        matchedActivity.getMovingTimeSeconds()
+                )
+        );
+    }
+
+    private Activity resolveMatchedActivity(RaceEvent raceEvent, List<Activity> runActivities) {
+        if (raceEvent.getCompletedActivityId() != null) {
+            for (Activity activity : runActivities) {
+                if (raceEvent.getCompletedActivityId().equals(activity.getId())) {
+                    return activity;
+                }
+            }
+        }
+
+        if (raceEvent.getEventDate() == null) {
+            return null;
+        }
+
+        List<ActivityCandidate> candidates = new ArrayList<>();
+        for (Activity activity : runActivities) {
+            LocalDate activityDate = extractActivityDate(activity);
+            if (activityDate == null) {
+                continue;
+            }
+
+            long dayDelta = Math.abs(ChronoUnit.DAYS.between(raceEvent.getEventDate(), activityDate));
+            if (dayDelta > 2) {
+                continue;
+            }
+
+            double activityKm = resolveDistanceKm(activity);
+            if (activityKm <= 0) {
+                continue;
+            }
+
+            if (raceEvent.getDistanceKm() != null && raceEvent.getDistanceKm() > 0) {
+                double toleranceKm = Math.max(1.5, raceEvent.getDistanceKm() * 0.15);
+                if (Math.abs(activityKm - raceEvent.getDistanceKm()) > toleranceKm) {
+                    continue;
+                }
+            }
+
+            candidates.add(new ActivityCandidate(activity, dayDelta, Math.abs(activityKm - Optional.ofNullable(raceEvent.getDistanceKm()).orElse(activityKm))));
+        }
+
+        return candidates.stream()
+                .min(Comparator.comparingLong(ActivityCandidate::dayDelta).thenComparingDouble(ActivityCandidate::distanceDelta))
+                .map(ActivityCandidate::activity)
+                .orElse(null);
+    }
+
+    private LocalDate extractActivityDate(Activity activity) {
+        if (activity.getStartTime() != null) {
+            return activity.getStartTime().toLocalDate();
+        }
+        if (activity.getStartDate() != null && !activity.getStartDate().isBlank()) {
+            String value = activity.getStartDate();
+            if (value.length() >= 10) {
+                try {
+                    return LocalDate.parse(value.substring(0, 10));
+                } catch (Exception ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    private double resolveDistanceKm(Activity activity) {
+        if (activity.getDistanceKm() > 0) {
+            return activity.getDistanceKm();
+        }
+        if (activity.getDistanceMeters() != null && activity.getDistanceMeters() > 0) {
+            return activity.getDistanceMeters() / 1000.0;
+        }
+        return 0;
+    }
+
+    private RaceRegistrationStatus parseStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return RaceRegistrationStatus.INTERESTED;
+        }
+        try {
+            return RaceRegistrationStatus.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            return RaceRegistrationStatus.INTERESTED;
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private ResponseEntity<Map<String, String>> unauthorized() {
+        return error(HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
+    }
+
+    private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", message);
+        return ResponseEntity.status(status).body(response);
+    }
+
+    private record ValidationResult(boolean valid, String message) {
+    }
+
+    private record ActivityCandidate(Activity activity, long dayDelta, double distanceDelta) {
+    }
+
+    public record RaceEventRequest(
+            String name,
+            String organization,
+            String location,
+            LocalDate eventDate,
+            Double distanceKm,
+            String registrationStatus,
+            Integer goalTimeSeconds,
+            String notes,
+            Boolean nyrrNinePlusOneEligible,
+            Long completedActivityId
+    ) {
+    }
+
+    public record LinkedActivitySummary(
+            Long id,
+            String name,
+            java.time.LocalDateTime startTime,
+            String startDate,
+            double distanceKm,
+            int movingTimeSeconds
+    ) {
+    }
+
+    public record RaceEventResponse(
+            Long id,
+            String name,
+            String organization,
+            String location,
+            LocalDate eventDate,
+            Double distanceKm,
+            String registrationStatus,
+            Integer goalTimeSeconds,
+            String notes,
+            boolean nyrrNinePlusOneEligible,
+            Long completedActivityId,
+            boolean completed,
+            long countdownDays,
+            LinkedActivitySummary matchedActivity
+    ) {
+    }
+}
