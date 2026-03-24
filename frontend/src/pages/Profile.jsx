@@ -44,8 +44,15 @@ export default function Profile() {
   const [huaweiFiles, setHuaweiFiles] = useState(null);
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
   const [profileShoes, setProfileShoes] = useState([]);
+  const [aiQuota, setAiQuota] = useState(null);
+  const [billingConfig, setBillingConfig] = useState(null);
+  const [subscriptionMonths, setSubscriptionMonths] = useState(1);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [subscriptionCheckoutError, setSubscriptionCheckoutError] = useState('');
+  const [checkoutBanner, setCheckoutBanner] = useState(null);
 
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef(null);
@@ -60,7 +67,39 @@ export default function Profile() {
     loadProfile();
     loadActivities();
     loadShoes();
+    loadAiQuota();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const c = await apiJson('/api/billing/config');
+        setBillingConfig(c);
+      } catch {
+        setBillingConfig({ checkoutConfigured: false, provider: 'stripe' });
+      }
+    })();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const params = new URLSearchParams(window.location.search);
+    const co = params.get('checkout');
+    if (co !== 'success' && co !== 'cancel') return;
+    setCheckoutBanner(co);
+    (async () => {
+      try {
+        const data = await apiJson('/api/shoes/ai-usage');
+        setAiQuota(data);
+      } catch { /* ignored */ }
+    })();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (subscriptionModalOpen) setSubscriptionCheckoutError('');
+  }, [subscriptionModalOpen]);
 
   async function loadProfile() {
     try {
@@ -68,6 +107,34 @@ export default function Profile() {
       setProfile(data);
     } catch {
       navigate('/login');
+    }
+  }
+
+  async function loadAiQuota() {
+    try {
+      const data = await apiJson('/api/shoes/ai-usage');
+      setAiQuota(data);
+    } catch { /* ignored */ }
+  }
+
+  async function startStripeCheckout(ev) {
+    ev?.stopPropagation?.();
+    ev?.preventDefault?.();
+    if (!billingConfig?.checkoutConfigured) return;
+    setSubscriptionCheckoutError('');
+    setCheckoutLoading(true);
+    try {
+      const data = await apiJson('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months: subscriptionMonths }),
+      });
+      if (data?.url) window.location.href = data.url;
+      else throw new Error('no checkout url');
+    } catch (err) {
+      setSubscriptionCheckoutError(err?.message || t('profile.subscription_checkout_error'));
+    } finally {
+      setCheckoutLoading(false);
     }
   }
 
@@ -490,6 +557,70 @@ export default function Profile() {
               </ul>
             </section>
 
+            {/* Subscription */}
+            {aiQuota && (
+              <section className="card subscription-section">
+                {checkoutBanner && (
+                  <div
+                    className={
+                      checkoutBanner === 'success'
+                        ? 'subscription-toast subscription-toast--success'
+                        : 'subscription-toast subscription-toast--muted'
+                    }
+                    role="status"
+                  >
+                    <span>{checkoutBanner === 'success' ? t('profile.subscription_checkout_success') : t('profile.subscription_checkout_cancel')}</span>
+                    <button
+                      type="button"
+                      className="subscription-toast-close"
+                      onClick={() => setCheckoutBanner(null)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <h2 style={{ margin: '0 0 16px' }}>{t('profile.subscription_title')}</h2>
+                <div
+                  className="subscription-card subscription-card--clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSubscriptionModalOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSubscriptionModalOpen(true);
+                    }
+                  }}
+                >
+                  <div className="subscription-tier-row">
+                    <span className={`subscription-badge ${aiQuota.tier === 'PRO' ? 'subscription-badge-pro' : 'subscription-badge-free'}`}>
+                      {aiQuota.tier === 'PRO' ? 'PRO' : 'FREE'}
+                    </span>
+                    {aiQuota.tier === 'PRO' && aiQuota.proExpiresAt && (
+                      <span className="subscription-expires">{t('profile.pro_expires', { date: new Date(aiQuota.proExpiresAt).toLocaleDateString() })}</span>
+                    )}
+                  </div>
+                  <div className="subscription-quota-info">
+                    {aiQuota.admin ? (
+                      <p className="subscription-detail">{t('profile.ai_unlimited')}</p>
+                    ) : aiQuota.tier === 'PRO' ? (
+                      <p className="subscription-detail">{t('profile.ai_pro_usage', { used: aiQuota.monthlyUsed, limit: aiQuota.monthlyLimit })}</p>
+                    ) : aiQuota.quotaType === 'welcome' ? (
+                      <p className="subscription-detail">{t('profile.ai_welcome_usage', { remaining: aiQuota.scansRemaining, total: aiQuota.welcomeTotal })}</p>
+                    ) : (
+                      <p className="subscription-detail">{t('profile.ai_daily_usage', { remaining: aiQuota.scansRemaining })}</p>
+                    )}
+                  </div>
+                  {aiQuota.tier !== 'PRO' && !aiQuota.admin && (
+                    <div className="subscription-upgrade">
+                      <p className="subscription-upgrade-hint">{t('profile.upgrade_hint')}</p>
+                    </div>
+                  )}
+                  <p className="subscription-click-hint">{t('profile.subscription_click_hint')}</p>
+                </div>
+              </section>
+            )}
+
             {/* Connected Services */}
             <section className="card connected-services-section">
               <h2 style={{ margin: '0 0 16px' }}>{t('profile.connected_services')}</h2>
@@ -706,6 +837,94 @@ export default function Profile() {
           </section>
         )}
       </main>
+
+      {/* Subscription plans */}
+      <Modal
+        isOpen={subscriptionModalOpen && !!aiQuota}
+        onClose={() => setSubscriptionModalOpen(false)}
+        title={t('profile.subscription_modal_title')}
+      >
+        {aiQuota && (
+          <>
+            <p className="subscription-modal-subtitle">{t('profile.subscription_modal_subtitle')}</p>
+            {aiQuota.admin && (
+              <p className="subscription-modal-admin-note">{t('profile.subscription_admin_plans_note')}</p>
+            )}
+            <div className="subscription-plan-grid">
+              <article
+                className={`subscription-plan-card ${!aiQuota.admin && aiQuota.tier !== 'PRO' ? 'subscription-plan-card--current' : ''}`}
+              >
+                <div className="subscription-plan-card-head">
+                  <span className="subscription-badge subscription-badge-free">{t('profile.subscription_tier_free_title')}</span>
+                  {!aiQuota.admin && aiQuota.tier !== 'PRO' && (
+                    <span className="subscription-current-pill">{t('profile.subscription_current_badge')}</span>
+                  )}
+                </div>
+                <ul className="subscription-feature-list">
+                  <li>{t('profile.subscription_free_f1')}</li>
+                  <li>{t('profile.subscription_free_f2')}</li>
+                  <li>{t('profile.subscription_free_f3')}</li>
+                </ul>
+                <p className="subscription-plan-card-foot">{t('profile.subscription_tier_free_body')}</p>
+              </article>
+              <article
+                className={`subscription-plan-card subscription-plan-card--pro ${!aiQuota.admin && aiQuota.tier === 'PRO' ? 'subscription-plan-card--current' : ''}`}
+              >
+                <div className="subscription-plan-card-head">
+                  <span className="subscription-badge subscription-badge-pro">{t('profile.subscription_tier_pro_title')}</span>
+                  {!aiQuota.admin && aiQuota.tier === 'PRO' && (
+                    <span className="subscription-current-pill">{t('profile.subscription_current_badge')}</span>
+                  )}
+                </div>
+                <ul className="subscription-feature-list">
+                  <li>{t('profile.subscription_pro_f1')}</li>
+                  <li>{t('profile.subscription_pro_f2')}</li>
+                  <li>{t('profile.subscription_pro_f3')}</li>
+                </ul>
+                {billingConfig?.priceLabel && (
+                  <p className="subscription-price-label">{billingConfig.priceLabel}</p>
+                )}
+                <p className="subscription-price-disclaimer">{t('profile.subscription_price_disclaimer')}</p>
+                <p className="subscription-plan-card-foot">{t('profile.subscription_tier_pro_body')}</p>
+                {!aiQuota.admin && billingConfig?.checkoutConfigured && (
+                  <div className="subscription-checkout-block" onClick={e => e.stopPropagation()}>
+                    <label className="subscription-months-label">
+                      <span>{t('profile.subscription_months_label')}</span>
+                      <select
+                        className="subscription-months-select"
+                        value={subscriptionMonths}
+                        onChange={e => setSubscriptionMonths(Number(e.target.value))}
+                      >
+                        {[1, 3, 6, 12].map(m => (
+                          <option key={m} value={m}>
+                            {t('profile.subscription_months_suffix', { n: m })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn-primary subscription-checkout-btn"
+                      disabled={checkoutLoading}
+                      onClick={startStripeCheckout}
+                    >
+                      {checkoutLoading ? t('profile.subscription_checkout_loading') : (aiQuota.tier === 'PRO' ? t('profile.subscription_checkout_extend') : t('profile.subscription_checkout_pro'))}
+                    </button>
+                    <p className="subscription-checkout-note">{t('profile.subscription_checkout_redirect_note')}</p>
+                    <p className="subscription-powered-by">{t('profile.subscription_powered_by')}</p>
+                  </div>
+                )}
+                {!aiQuota.admin && !billingConfig?.checkoutConfigured && (
+                  <p className="subscription-pro-cta">{t('profile.subscription_pro_cta')}</p>
+                )}
+                {subscriptionCheckoutError && (
+                  <div className="modal-status subscription-checkout-error">{subscriptionCheckoutError}</div>
+                )}
+              </article>
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* Name Modal */}
       <Modal isOpen={nameModalOpen} onClose={() => setNameModalOpen(false)} title={t('profile.name_modal_title')}>

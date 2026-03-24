@@ -61,11 +61,14 @@ public class GarminController {
     private final SecretEncryptionService encryptionService;
     private final List<ActivityFileParser> parsers;
     private final GarminOAuthSettings garminOAuthSettings;
+    private final RestTemplate restTemplate;
 
     /** Temporary store for OAuth 1.0a request tokens (token → tokenSecret) */
     private final ConcurrentHashMap<String, String> pendingTokens = new ConcurrentHashMap<>();
     /** Map request token → Hermes session token so we know which user started the flow */
     private final ConcurrentHashMap<String, String> pendingSession = new ConcurrentHashMap<>();
+    /** Track when each pending token was created for expiry cleanup */
+    private final ConcurrentHashMap<String, Long> pendingTokenTimestamps = new ConcurrentHashMap<>();
 
     private final ConcurrentMap<Long, GarminSyncTracker> garminSyncStates = new ConcurrentHashMap<>();
 
@@ -75,7 +78,8 @@ public class GarminController {
                             ActivityPointRepository activityPointRepository,
                             SecretEncryptionService encryptionService,
                             List<ActivityFileParser> parsers,
-                            GarminOAuthSettings garminOAuthSettings) {
+                            GarminOAuthSettings garminOAuthSettings,
+                            RestTemplate restTemplate) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
@@ -83,6 +87,7 @@ public class GarminController {
         this.encryptionService = encryptionService;
         this.parsers = parsers;
         this.garminOAuthSettings = garminOAuthSettings;
+        this.restTemplate = restTemplate;
     }
 
     // ── Provider check ──
@@ -192,7 +197,7 @@ public class GarminController {
 
             String authHeaderValue = buildOAuthHeader(params);
 
-            RestTemplate rest = new RestTemplate();
+            RestTemplate rest = this.restTemplate;
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", authHeaderValue);
             HttpEntity<String> entity = new HttpEntity<>("", headers);
@@ -212,6 +217,7 @@ public class GarminController {
 
             // Store for callback
             pendingTokens.put(oauthToken, oauthTokenSecret);
+            pendingTokenTimestamps.put(oauthToken, System.currentTimeMillis());
             String sessionToken = authHeader.replace("Bearer ", "").trim();
             pendingSession.put(oauthToken, sessionToken);
 
@@ -221,7 +227,7 @@ public class GarminController {
         } catch (Exception e) {
             log.error("Garmin OAuth start failed", e);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                    .body(Map.of("error", "Garmin OAuth request failed: " + e.getMessage()));
+                    .body(Map.of("error", "Garmin OAuth request failed. Please try again later."));
         }
     }
 
@@ -234,6 +240,7 @@ public class GarminController {
 
         String tokenSecret = pendingTokens.remove(oauthToken);
         String sessionToken = pendingSession.remove(oauthToken);
+        pendingTokenTimestamps.remove(oauthToken);
 
         if (tokenSecret == null || sessionToken == null) {
             log.warn("Garmin callback: unknown or expired request token");
@@ -269,7 +276,7 @@ public class GarminController {
 
             String authHeaderValue = buildOAuthHeader(params);
 
-            RestTemplate rest = new RestTemplate();
+            RestTemplate rest = this.restTemplate;
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", authHeaderValue);
             HttpEntity<String> entity = new HttpEntity<>("", headers);
@@ -409,7 +416,7 @@ public class GarminController {
      */
     @PostMapping("/garmin/webhook")
     public ResponseEntity<?> garminActivityWebhook(@RequestBody Map<String, Object> payload) {
-        log.info("Garmin webhook received: {}", payload);
+        log.debug("Garmin webhook received: {}", payload);
 
         try {
             @SuppressWarnings("unchecked")
@@ -442,6 +449,11 @@ public class GarminController {
                 Runner runner = runnerOpt.get();
 
                 if (callbackUrl != null && !callbackUrl.isBlank()) {
+                    if (!SafeOutboundUrlValidator.isAllowedGarminCallbackUrl(callbackUrl)) {
+                        log.warn("Garmin webhook: rejected unsafe callbackURL host for userId={}", userId);
+                        skipped++;
+                        continue;
+                    }
                     // Fetch FIT file from Garmin callback URL
                     try {
                         byte[] fitData = fetchGarminFile(callbackUrl, runner);
@@ -521,7 +533,7 @@ public class GarminController {
         String signature = sign("GET", fullUrl.split("\\?")[0], params, config.consumerSecret(), accessTokenSecret);
         params.put("oauth_signature", signature);
 
-        RestTemplate rest = new RestTemplate();
+        RestTemplate rest = this.restTemplate;
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", buildOAuthHeader(params));
         HttpEntity<String> entity = new HttpEntity<>(headers);
@@ -658,7 +670,11 @@ public class GarminController {
                             ap.setSequenceIndex(seq++);
                             points.add(ap);
                         }
-                        activityPointRepository.saveAll(points);
+                        // Save in batches of 500 to limit memory pressure
+                        for (int b = 0; b < points.size(); b += 500) {
+                            activityPointRepository.saveAll(points.subList(b, Math.min(b + 500, points.size())));
+                            activityPointRepository.flush();
+                        }
                         pointsSaved = points.size();
                     }
 
@@ -841,7 +857,7 @@ public class GarminController {
         }
         String fullUrl = baseUrl + "?" + urlQuery;
 
-        RestTemplate rest = new RestTemplate();
+        RestTemplate rest = this.restTemplate;
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", buildOAuthHeader(params));
         HttpEntity<String> entity = new HttpEntity<>(headers);
@@ -988,5 +1004,19 @@ public class GarminController {
                     "RUNNING".equals(status)
             );
         }
+    }
+
+    /** Remove stale OAuth tokens older than 10 minutes (runs every 5 minutes) */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 300_000)
+    void cleanupStalePendingTokens() {
+        long cutoff = System.currentTimeMillis() - 600_000; // 10 minutes
+        pendingTokenTimestamps.entrySet().removeIf(entry -> {
+            if (entry.getValue() < cutoff) {
+                pendingTokens.remove(entry.getKey());
+                pendingSession.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
     }
 }

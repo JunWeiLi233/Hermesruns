@@ -18,15 +18,17 @@ public class ActivityController {
     private final ActivityPointRepository activityPointRepository;
     private final RunnerRepository runnerRepository;
     private final SecretEncryptionService secretEncryptionService;
+    private final RestTemplate restTemplate;
 
     public ActivityController(AuthService authService, ActivityRepository activityRepository,
                               ActivityPointRepository activityPointRepository, RunnerRepository runnerRepository,
-                              SecretEncryptionService secretEncryptionService) {
+                              SecretEncryptionService secretEncryptionService, RestTemplate restTemplate) {
         this.authService = authService;
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
         this.runnerRepository = runnerRepository;
         this.secretEncryptionService = secretEncryptionService;
+        this.restTemplate = restTemplate;
     }
 
     @GetMapping
@@ -113,11 +115,10 @@ public class ActivityController {
 
     @SuppressWarnings("unchecked")
     private List<ActivityPoint> fetchStravaStream(String stravaId, String accessToken) {
-        RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+        ResponseEntity<List<Map<String, Object>>> response = this.restTemplate.exchange(
                 "https://www.strava.com/api/v3/activities/" + stravaId + "/streams?keys=latlng",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),

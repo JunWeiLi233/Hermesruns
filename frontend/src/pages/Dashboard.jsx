@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiJson, apiFetch } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import BrandLogo from '../components/BrandLogo';
 import Modal from '../components/Modal';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 
@@ -176,7 +177,10 @@ export default function Dashboard() {
     <div className="dashboard-body">
       <LanguageSwitcher />
       <nav className="top-nav">
-        <div className="nav-brand">HERMES <span>{t('dashboard.nav_label')}</span></div>
+        <div className="nav-brand nav-brand--logo">
+          <BrandLogo size="md" />
+          <span className="nav-brand-label">{t('dashboard.nav_label')}</span>
+        </div>
         <button
           className="btn-primary"
           style={{ width: 'auto', minHeight: 40, marginTop: 0 }}

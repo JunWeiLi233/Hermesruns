@@ -5,6 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiJson, apiFetch } from '../api';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import BrandLogo from '../components/BrandLogo';
 import shoeCatalog, { flatCatalog } from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 
@@ -83,6 +84,7 @@ export default function Shoes() {
   const [scanFiles, setScanFiles] = useState([]);
   const [scanStatus, setScanStatus] = useState('');
   const [scannedShoes, setScannedShoes] = useState([]);
+  const [aiQuota, setAiQuota] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -110,6 +112,9 @@ export default function Shoes() {
     try {
       const data = await apiJson('/api/shoes/scan-available');
       setScanAvailable(!!data.available);
+      if (data.available) {
+        setAiQuota({ tier: data.tier, scansRemaining: data.scansRemaining, quotaType: data.quotaType, unlimited: data.unlimited, admin: data.admin, monthlyLimit: data.monthlyLimit, monthlyUsed: data.monthlyUsed, welcomeTotal: data.welcomeTotal, dailyLimit: data.dailyLimit });
+      }
     } catch { /* ignored */ }
   }
 
@@ -296,8 +301,9 @@ export default function Shoes() {
           const errData = await res.json().catch(() => null);
           const errMsg = errData?.error || '';
           if (errMsg) console.error('Scan error:', errMsg);
-          if (errMsg.includes('429') || errMsg.includes('Too Many') || errMsg.includes('RATE') || errMsg.includes('spending')) {
-            setScanStatus('rate_limited');
+          if (res.status === 429 || errMsg.includes('LIMIT') || errMsg.includes('Too Many') || errMsg.includes('RATE') || errMsg.includes('spending')) {
+            setScanStatus('quota_exceeded');
+            if (errData?.tier) setAiQuota(q => ({ ...q, tier: errData.tier, scansRemaining: errData.scansRemaining, quotaType: errData.quotaType }));
             return;
           }
           continue;
@@ -307,6 +313,7 @@ export default function Shoes() {
           const parsed = JSON.parse(data.raw);
           if (Array.isArray(parsed)) allShoes.push(...parsed);
           anySuccess = true;
+          if (data.tier) setAiQuota(q => ({ ...q, tier: data.tier, scansRemaining: data.scansRemaining, quotaType: data.quotaType }));
         }
       } catch { continue; }
     }
@@ -564,7 +571,7 @@ export default function Shoes() {
     <div className="dashboard-body history-page shoes-page">
       <LanguageSwitcher />
       <header className="top-nav">
-        <Link to="/profile" className="logo logo-link">HERMES</Link>
+        <BrandLogo to="/profile" className="logo logo-link" size="md" />
         <div className="history-actions">
           <Link to="/races" className="top-nav-shortcut">{t('races.nav_label')}</Link>
           <Link to="/profile" className="history-back-link">{t('shoes.back_to_profile')}</Link>
@@ -787,13 +794,35 @@ export default function Shoes() {
         ) : scanStatus !== 'done' ? (
           <form onSubmit={handleScan}>
             <p className="modal-help">{t('shoes.scan_hint')}</p>
+            {aiQuota && !aiQuota.admin && !aiQuota.unlimited && (
+              <div className="ai-quota-bar">
+                {aiQuota.tier === 'PRO' ? (
+                  <span className="ai-quota-badge ai-quota-pro">PRO</span>
+                ) : (
+                  <span className="ai-quota-badge ai-quota-free">FREE</span>
+                )}
+                <span className="ai-quota-text">
+                  {aiQuota.scansRemaining > 0
+                    ? t('shoes.ai_scans_remaining', { count: aiQuota.scansRemaining })
+                    : t('shoes.ai_scans_exhausted')}
+                  {aiQuota.quotaType === 'welcome' && ` (${t('shoes.ai_welcome_bonus')})`}
+                  {aiQuota.quotaType === 'daily' && ` (${t('shoes.ai_daily_reset')})`}
+                </span>
+              </div>
+            )}
             <input type="file" accept="image/*" multiple onChange={e => setScanFiles(Array.from(e.target.files || []))} />
             {scanStatus === 'processing' && <div className="modal-status">{t('shoes.scan_processing')}</div>}
+            {scanStatus === 'quota_exceeded' && (
+              <div className="modal-status ai-quota-exceeded">
+                <p style={{ color: '#f59e0b', margin: '0 0 8px 0' }}>{t('shoes.ai_quota_exceeded')}</p>
+                {aiQuota?.tier !== 'PRO' && <p style={{ margin: 0 }}>{t('shoes.ai_upgrade_hint')}</p>}
+              </div>
+            )}
             {scanStatus === 'rate_limited' && <div className="modal-status" style={{ color: '#f59e0b' }}>{t('shoes.scan_rate_limited')}</div>}
             {scanStatus === 'failed' && <div className="modal-status" style={{ color: '#ef4444' }}>{t('shoes.scan_failed')}</div>}
             <div className="modal-actions">
               <button type="button" className="btn-secondary modal-button" onClick={() => setScanOpen(false)}>{t('shoes.cancel')}</button>
-              <button type="submit" className="btn-primary modal-button" disabled={scanFiles.length === 0 || scanStatus === 'processing'}>{t('shoes.scan_image')}</button>
+              <button type="submit" className="btn-primary modal-button" disabled={scanFiles.length === 0 || scanStatus === 'processing' || (aiQuota && !aiQuota.admin && aiQuota.scansRemaining <= 0)}>{t('shoes.scan_image')}</button>
             </div>
           </form>
         ) : (

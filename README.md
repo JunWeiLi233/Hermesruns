@@ -213,6 +213,51 @@ Output goes to `backend/src/main/resources/static/` — the backend serves it di
 
 > PowerShell environment variables are session-scoped — the script handles this for you.
 
+#### Stripe billing (optional)
+
+Hermes can sell **Pro** (AI scan quota) through **Stripe Checkout**. Users pay on Stripe’s hosted page; a webhook extends Pro in the database.
+
+1. In [Stripe Dashboard](https://dashboard.stripe.com/), create a **Product** with a **one-time Price** (e.g. one month of Pro — use “customer chooses quantity” or a fixed price; Hermes sends **quantity = number of months** in Checkout).
+2. Copy the Price id (`price_...`) into `STRIPE_PRICE_PRO_MONTHLY`.
+3. Create an API key (**Developers → API keys**) → `STRIPE_SECRET_KEY`.
+4. Add endpoint **Developers → Webhooks** → URL `https://YOUR_DOMAIN/api/billing/webhook`, event `checkout.session.completed`, then copy **Signing secret** → `STRIPE_WEBHOOK_SECRET`.
+5. Set **`APP_PUBLIC_BASE_URL`** to the URL users use in the browser (e.g. `https://app.example.com` or `http://localhost:8080`) so Stripe redirects back to `/profile` after payment.
+6. Optionally set **`APP_BILLING_PRICE_LABEL`** (e.g. `$9 / month`) for display on the Profile page only.
+
+| Variable | Purpose |
+|---|---|
+| `STRIPE_SECRET_KEY` | Secret API key |
+| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret |
+| `STRIPE_PRICE_PRO_MONTHLY` | Stripe Price id for one month (quantity = months in cart) |
+| `APP_PUBLIC_BASE_URL` | Public site URL for Checkout return links |
+| `APP_BILLING_PRICE_LABEL` | Optional UI label for pricing |
+
+Local testing: `stripe listen --forward-to localhost:8080/api/billing/webhook`.
+
+#### Email verification (password sign-up)
+
+Email/password registration sends a **verification link** via SMTP. Until the user opens the link, sign-in returns `EMAIL_NOT_VERIFIED`.
+
+| Variable | Purpose |
+|---|---|
+| `SPRING_MAIL_HOST` | SMTP server (leave empty on dev to **skip** verification and allow immediate login) |
+| `SPRING_MAIL_PORT` | Usually `587` |
+| `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | SMTP credentials |
+| `APP_MAIL_FROM` | From address (must be allowed by your provider) |
+| `APP_PUBLIC_BASE_URL` | Same as billing — used in the verification link |
+
+Verification link: `GET /api/auth/verify-email?token=…` → redirects to `/login?verified=1`.
+
+#### Public cloud checklist (security)
+
+- **`HERMES_ENV=production`** — If Strava is enabled (`STRAVA_CLIENT_ID` set), Hermes refuses to start until **`STRAVA_WEBHOOK_VERIFY_TOKEN`** is set to a **long random** value (not the default `hermes-strava-webhook`). This reduces trivial spoofing of the Strava subscription handshake.
+- **TLS** — Terminate HTTPS in front of the app (nginx, Traefik, cloud LB). Set **`APP_ENABLE_HSTS=true`** only when every user hits the site over HTTPS.
+- **Reverse proxy** — `server.forward-headers-strategy=framework` is set so redirects and client IP behave correctly behind `X-Forwarded-*` (still configure your proxy to set these headers).
+- **CORS** — If the React app is on another origin, set **`APP_CORS_ALLOWED_ORIGINS`** (comma-separated, e.g. `https://app.example.com`).
+- **Database** — Use **PostgreSQL** in production; do not expose the embedded **H2** file DB to the network.
+- **Webhooks** — Strava/Garmin push endpoints are **rate-limited per IP**; Garmin **callback URLs** are restricted to **HTTPS `*.garmin.com`** to block SSRF. Stripe billing webhooks rely on **signature verification** (not rate-limited, so retries succeed).
+- **Errors** — Default Spring error pages omit stack traces; keep `APP_JPA_DDL_AUTO` off **`update`** for mature deployments if you prefer schema control (e.g. `validate` + migrations).
+
 ---
 
 ### Database
@@ -493,6 +538,51 @@ npm run build
 | Strava | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `APP_DATA_ENCRYPTION_KEY` | Strava 登录 + 活动同步 |
 | Google | `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET`, `APP_GOOGLE_REDIRECT_URI` | Google 登录 |
 | 管理员 | `APP_BOOTSTRAP_ADMIN_EMAIL`, `APP_BOOTSTRAP_ADMIN_PASSWORD` | 启动时自动创建管理员 |
+
+#### Stripe 收款（可选）
+
+可通过 **Stripe Checkout** 售卖 **Pro**（AI 扫描额度）。用户在 Stripe 托管页付款；Webhook 在数据库中延长 Pro。
+
+1. 在 [Stripe 控制台](https://dashboard.stripe.com/) 创建 **产品** 与 **一次性 Price**（单价对应「1 个月」；结账时 Hermes 会把 **数量** 设为购买月数）。
+2. 将 Price id（`price_...`）写入 `STRIPE_PRICE_PRO_MONTHLY`。
+3. **开发者 → API 密钥** → `STRIPE_SECRET_KEY`。
+4. **开发者 → Webhook** → 地址 `https://你的域名/api/billing/webhook`，事件勾选 `checkout.session.completed`，复制签名密钥 → `STRIPE_WEBHOOK_SECRET`。
+5. 设置 **`APP_PUBLIC_BASE_URL`** 为用户实际访问的站点根 URL（生产示例：`https://app.example.com`），以便支付完成后跳回 `/profile`。
+6. 可选：`APP_BILLING_PRICE_LABEL`（如 `¥39/月`）仅在个人主页展示。
+
+| 环境变量 | 说明 |
+|---|---|
+| `STRIPE_SECRET_KEY` | 密钥 |
+| `STRIPE_WEBHOOK_SECRET` | Webhook 签名密钥 |
+| `STRIPE_PRICE_PRO_MONTHLY` | 单价对应 1 个月的 Price id |
+| `APP_PUBLIC_BASE_URL` | 公网访问的根 URL |
+| `APP_BILLING_PRICE_LABEL` | 可选的界面标价文案 |
+
+本地调试：`stripe listen --forward-to localhost:8080/api/billing/webhook`。
+
+#### 邮箱验证（密码注册）
+
+使用邮箱+密码注册时，系统会发送**验证链接**。未完成验证前登录会返回 `EMAIL_NOT_VERIFIED`。
+
+| 环境变量 | 说明 |
+|---|---|
+| `SPRING_MAIL_HOST` | SMTP 服务器（开发环境可留空，将**跳过**验证、注册后直接可登录） |
+| `SPRING_MAIL_PORT` | 一般为 `587` |
+| `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | SMTP 账号 |
+| `APP_MAIL_FROM` | 发件人（需与邮服策略一致） |
+| `APP_PUBLIC_BASE_URL` | 与收款配置相同，用于邮件内链接 |
+
+验证地址：`GET /api/auth/verify-email?token=…`，成功后跳转到 `/login?verified=1`。
+
+#### 公网部署（安全）
+
+- **`HERMES_ENV=production`** — 若启用 Strava（已配置 `STRAVA_CLIENT_ID`），必须使用 **随机长串** 作为 **`STRAVA_WEBHOOK_VERIFY_TOKEN`**，不能使用默认的 `hermes-strava-webhook`，否则进程会拒绝启动。
+- **HTTPS** — 在反向代理或负载均衡上终结 TLS；仅当全站长期走 HTTPS 时再将 **`APP_ENABLE_HSTS`** 设为 `true`。
+- **反向代理** — 已启用 `forward-headers` 策略，请让代理传入正确的 **`X-Forwarded-*`**。
+- **跨域** — 若前端与 API 不同域，设置 **`APP_CORS_ALLOWED_ORIGINS`**（逗号分隔）。
+- **数据库** — 生产环境用 **PostgreSQL**；勿把 **H2** 暴露到公网。
+- **Webhook** — Strava/Garmin 推送按 **IP 限速**；Garmin 的 **callbackURL** 仅允许 **HTTPS 且 `*.garmin.com`**，降低 SSRF 风险；Stripe 依赖 **签名**，不限速以免重试失败。
+- **建表** — 成熟环境可将 **`APP_JPA_DDL_AUTO`** 从 `update` 改为 `validate` 并配合迁移工具管理表结构。
 
 ---
 

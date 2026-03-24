@@ -33,8 +33,9 @@ public class ShoeController {
                 ? shoeRepository.findByRunnerOrderByCreatedAtDesc(user.get())
                 : shoeRepository.findByRunnerAndRetiredFalseOrderByCreatedAtDesc(user.get());
 
+        Map<Long, Double> distanceMap = buildShoeDistanceMap(user.get());
         shoes.forEach(s -> {
-            double activityKm = activityRepository.sumDistanceKmByShoeId(s.getId());
+            double activityKm = distanceMap.getOrDefault(s.getId(), 0.0);
             double initial = s.getInitialDistanceKm() != null ? s.getInitialDistanceKm() : 0.0;
             s.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
         });
@@ -57,8 +58,9 @@ public class ShoeController {
             lastUsed.put((Long) row[0], row[1]);
         }
 
+        Map<Long, Double> distanceMap2 = buildShoeDistanceMap(user.get());
         shoes.forEach(s -> {
-            double activityKm = activityRepository.sumDistanceKmByShoeId(s.getId());
+            double activityKm = distanceMap2.getOrDefault(s.getId(), 0.0);
             double initial = s.getInitialDistanceKm() != null ? s.getInitialDistanceKm() : 0.0;
             s.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
         });
@@ -84,22 +86,33 @@ public class ShoeController {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
+        String brand = body.get("brand") instanceof String s ? s.trim() : "";
+        String model = body.get("model") instanceof String s ? s.trim() : "";
+        if (brand.length() > 100 || model.length() > 100) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Brand and model must be 100 characters or fewer.");
+        }
+
         Shoe shoe = new Shoe();
         shoe.setRunner(user.get());
-        shoe.setBrand((String) body.get("brand"));
-        shoe.setModel((String) body.get("model"));
-        shoe.setNickname((String) body.get("nickname"));
-        if (body.get("maxDistanceKm") != null) {
-            shoe.setMaxDistanceKm(((Number) body.get("maxDistanceKm")).doubleValue());
+        shoe.setBrand(brand);
+        shoe.setModel(model);
+        shoe.setNickname(body.get("nickname") instanceof String s ? s.trim() : null);
+        if (body.get("maxDistanceKm") instanceof Number n) {
+            double km = n.doubleValue();
+            if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid max distance.");
+            shoe.setMaxDistanceKm(km);
         }
         if (Boolean.TRUE.equals(body.get("isPrimary"))) {
             shoe.setIsPrimary(true);
         }
-        if (body.get("initialDistanceKm") != null) {
-            shoe.setInitialDistanceKm(((Number) body.get("initialDistanceKm")).doubleValue());
+        if (body.get("initialDistanceKm") instanceof Number n) {
+            double km = n.doubleValue();
+            if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid initial distance.");
+            shoe.setInitialDistanceKm(km);
         }
-        if (body.get("photoUrl") != null) {
-            shoe.setPhotoUrl((String) body.get("photoUrl"));
+        if (body.get("photoUrl") instanceof String url) {
+            if (url.length() > 2048) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Photo URL too long.");
+            shoe.setPhotoUrl(url.isBlank() ? null : url);
         }
 
         Shoe saved = shoeRepository.save(shoe);
@@ -197,5 +210,13 @@ public class ShoeController {
 
         activityRepository.save(activity);
         return ResponseEntity.ok(Map.of("message", "Shoe assignment updated"));
+    }
+
+    private Map<Long, Double> buildShoeDistanceMap(Runner runner) {
+        Map<Long, Double> map = new HashMap<>();
+        for (Object[] row : activityRepository.sumDistanceKmByRunner(runner)) {
+            map.put((Long) row[0], ((Number) row[1]).doubleValue());
+        }
+        return map;
     }
 }

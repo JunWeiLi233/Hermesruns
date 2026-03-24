@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import BrandLogo from '../components/BrandLogo';
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
@@ -91,8 +92,8 @@ export default function Landing() {
       <section className="landing-hero">
         <div className="landing-hero-bg" />
         <nav className="landing-nav">
-          <div className="landing-nav-brand">
-            HERMES <span>{t('common.logo_mark')}</span>
+          <div className="landing-nav-brand landing-nav-brand--logo">
+            <BrandLogo size="hero" />
           </div>
           <div className="landing-nav-actions">
             <Link to="/login" className="landing-nav-link">{t('landing.sign_in')}</Link>
@@ -191,7 +192,9 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <span>HERMES <span style={{ color: 'var(--brand-accent)' }}>{t('common.logo_mark')}</span></span>
+        <span className="landing-footer-brand">
+          <BrandLogo size="sm" />
+        </span>
         <span className="landing-footer-copy">{t('landing.footer')}</span>
       </footer>
     </div>

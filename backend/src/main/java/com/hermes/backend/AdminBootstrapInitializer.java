@@ -31,6 +31,7 @@ public class AdminBootstrapInitializer {
             admin.setDeleted(false);
             admin.setStatus("ACTIVE");
             admin.setRole("ADMIN");
+            admin.setEmailVerified(true);
             authService.storePassword(admin, bootstrapAdminPassword);
             runnerRepository.save(admin);
 

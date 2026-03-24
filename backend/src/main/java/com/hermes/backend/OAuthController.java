@@ -41,6 +41,7 @@ public class OAuthController {
     private final ActivityPointRepository activityPointRepository;
     private final SecretEncryptionService secretEncryptionService;
     private final GarminOAuthSettings garminOAuthSettings;
+    private final RestTemplate restTemplate;
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
 
     @Value("${google.client.id:}")
@@ -64,13 +65,14 @@ public class OAuthController {
     public OAuthController(RunnerRepository runnerRepository, AuthService authService,
                            ActivityRepository activityRepository, ActivityPointRepository activityPointRepository,
                            SecretEncryptionService secretEncryptionService,
-                           GarminOAuthSettings garminOAuthSettings) {
+                           GarminOAuthSettings garminOAuthSettings, RestTemplate restTemplate) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
         this.secretEncryptionService = secretEncryptionService;
         this.garminOAuthSettings = garminOAuthSettings;
+        this.restTemplate = restTemplate;
     }
 
     @GetMapping("/auth/providers")
@@ -134,7 +136,7 @@ public class OAuthController {
             return errorRedirect("Google sign-in failed.", state);
         }
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
 
         try {
             HttpHeaders tokenHeaders = new HttpHeaders();
@@ -187,6 +189,7 @@ public class OAuthController {
                         newRunner.setStatus("ACTIVE_GOOGLE");
                         return runnerRepository.save(newRunner);
                     });
+            runner.setEmailVerified(true);
 
             String token = authService.issueSessionToken(runner);
             String targetPage = authService.isAdmin(runner) ? "/dashboard" : "/profile";
@@ -220,7 +223,7 @@ public class OAuthController {
             return errorRedirect("Strava sign-in failed.", state);
         }
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
 
         try {
             HttpHeaders tokenHeaders = new HttpHeaders();
@@ -280,6 +283,8 @@ public class OAuthController {
             if (runner.getDisplayName() == null || runner.getDisplayName().isBlank()) {
                 runner.setDisplayName(resolveStravaDisplayName(athlete, athleteId));
             }
+
+            runner.setEmailVerified(true);
 
             runner = runnerRepository.save(runner);
 
@@ -372,14 +377,15 @@ public class OAuthController {
         }
 
         Runner runner = runnerOptional.get();
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
         int page = 1;
+        final int maxPages = 50; // Safety limit: 50 pages × 200 = 10,000 activities max
         boolean[] gpsRateLimited = {false};
         try {
-            while (true) {
+            while (page <= maxPages) {
                 String activitiesUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=" + page;
                 ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
                         activitiesUrl,
@@ -511,7 +517,7 @@ public class OAuthController {
                         point.setSequenceIndex(i);
                         points.add(point);
                     }
-                    activityPointRepository.saveAll(points);
+                    savePointsInBatches(points);
                     System.out.println("GPS cached: " + stravaId + " (" + points.size() + " pts)");
                     return true;
                 }
@@ -539,7 +545,7 @@ public class OAuthController {
         if (accessToken == null || accessToken.isBlank()) return;
 
         try {
-            RestTemplate restTemplate = new RestTemplate();
+            RestTemplate restTemplate = this.restTemplate;
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
 
@@ -612,7 +618,7 @@ public class OAuthController {
     private String refreshStravaToken(Runner runner, String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank() || !isStravaConfigured()) return null;
         try {
-            RestTemplate rest = new RestTemplate();
+            RestTemplate rest = this.restTemplate;
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
             form.add("client_id", stravaClientId);
             form.add("client_secret", stravaClientSecret);
@@ -787,6 +793,7 @@ public class OAuthController {
         private int processedActivities;
         private int processedPages;
         private String error;
+        private long lastUpdatedMs = System.currentTimeMillis();
 
         synchronized void resetForNewSync() {
             status = "PENDING";
@@ -827,11 +834,17 @@ public class OAuthController {
         synchronized void markCompleted() {
             status = "COMPLETED";
             error = null;
+            lastUpdatedMs = System.currentTimeMillis();
         }
 
         synchronized void markFailed(String message) {
             status = "FAILED";
             error = message;
+            lastUpdatedMs = System.currentTimeMillis();
+        }
+
+        synchronized boolean isStale(long cutoffMs) {
+            return lastUpdatedMs < cutoffMs && !"RUNNING".equals(status) && !"PENDING".equals(status);
         }
 
         synchronized StravaSyncStatusResponse snapshot() {
@@ -846,5 +859,21 @@ public class OAuthController {
                     "RUNNING".equals(status) || "PENDING".equals(status)
             );
         }
+    }
+
+    /** Save activity points in batches of 500 to limit memory pressure */
+    private void savePointsInBatches(List<ActivityPoint> points) {
+        final int batchSize = 500;
+        for (int i = 0; i < points.size(); i += batchSize) {
+            activityPointRepository.saveAll(points.subList(i, Math.min(i + batchSize, points.size())));
+            activityPointRepository.flush();
+        }
+    }
+
+    /** Remove completed/failed sync trackers older than 30 minutes (runs every 10 minutes) */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 600_000)
+    void cleanupStaleSyncTrackers() {
+        long cutoff = System.currentTimeMillis() - 1_800_000; // 30 minutes
+        stravaSyncStates.entrySet().removeIf(entry -> entry.getValue().isStale(cutoff));
     }
 }
