@@ -30,9 +30,9 @@ if ($portCheck) {
     $pids = $portCheck | ForEach-Object {
         ($_ -replace '.*\s', '').Trim()
     } | Sort-Object -Unique
-    foreach ($pid in $pids) {
-        if ($pid -match '^\d+$' -and $pid -ne '0') {
-            Stop-Process -Id ([int]$pid) -Force -ErrorAction SilentlyContinue
+    foreach ($procId in $pids) {
+        if ($procId -match '^\d+$' -and $procId -ne '0') {
+            Stop-Process -Id ([int]$procId) -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -52,12 +52,22 @@ $env:STRAVA_CLIENT_ID = "YOUR_STRAVA_CLIENT_ID"
 $env:STRAVA_CLIENT_SECRET = "YOUR_STRAVA_CLIENT_SECRET"
 $env:STRAVA_REDIRECT_URI = "http://localhost:8080/api/auth/strava/callback"
 $env:APP_DATA_ENCRYPTION_KEY = "YOUR_ENCRYPTION_KEY"
+# Strava Webhook verify token (must match the value used when creating the push subscription)
+# $env:STRAVA_WEBHOOK_VERIFY_TOKEN = "hermes-strava-webhook"
 
 # ── Google OAuth ──
 # Create credentials at https://console.cloud.google.com/apis/credentials
 $env:APP_GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
 $env:APP_GOOGLE_CLIENT_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"
 $env:APP_GOOGLE_REDIRECT_URI = "http://localhost:8080/api/auth/google/callback"
+
+# ── Garmin Connect Developer API ──
+# Apply at https://developer.garmin.com/gc-developer-program/activity-api/
+$env:GARMIN_CONSUMER_KEY = "YOUR_GARMIN_CONSUMER_KEY"
+$env:GARMIN_CONSUMER_SECRET = "YOUR_GARMIN_CONSUMER_SECRET"
+$env:GARMIN_REDIRECT_URI = "http://localhost:8080/api/auth/garmin/callback"
+# Optional: Wellness API path from Garmin docs to resolve userId after OAuth (for activity webhooks).
+# $env:GARMIN_USER_ID_URL = "https://apis.garmin.com/wellness-api/rest/user/id"
 
 # ── AI Vision (shoe image scanning) ──
 # Get your free API key from https://aistudio.google.com/apikey

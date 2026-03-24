@@ -15,4 +15,8 @@ public interface RunnerRepository extends JpaRepository<Runner, Long> {
     Optional<Runner> findByStravaAthleteId(Long stravaAthleteId);
 
     List<Runner> findByDeletedFalseOrderByIdAsc();
+
+    List<Runner> findByStravaAthleteIdIsNotNullAndStravaRefreshTokenIsNotNullAndDeletedFalse();
+
+    Optional<Runner> findByGarminUserId(String garminUserId);
 }

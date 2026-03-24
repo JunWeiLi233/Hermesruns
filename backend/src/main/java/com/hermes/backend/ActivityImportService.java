@@ -27,8 +27,8 @@ public class ActivityImportService {
 
     @Transactional
     public ImportResult importFile(Runner runner, ImportProvider provider, MultipartFile file) {
-        if (provider != ImportProvider.GARMIN && provider != ImportProvider.COROS) {
-            throw new IllegalArgumentException("File upload currently supports Garmin and COROS only.");
+        if (provider != ImportProvider.GARMIN && provider != ImportProvider.COROS && provider != ImportProvider.HUAWEI) {
+            throw new IllegalArgumentException("File upload supports Garmin, COROS, and Huawei exports only.");
         }
 
         if (file == null || file.isEmpty()) {

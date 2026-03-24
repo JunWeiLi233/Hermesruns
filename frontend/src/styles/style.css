@@ -379,8 +379,6 @@ select:focus {
 .btn,
 .btn-primary,
 .btn-secondary,
-.btn-runner-menu,
-.btn-logout,
 .filter-dropdown,
 .provider-pill,
 .theme-select,
@@ -391,30 +389,36 @@ select:focus {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    min-height: 46px;
-    padding: 0 18px;
+    min-height: 34px;
+    padding: 0 14px;
     border: 1px solid var(--line-soft);
-    border-radius: 999px;
+    border-radius: 8px;
     background: rgba(255, 255, 255, 0.82);
     color: var(--text-strong);
-    font-weight: 800;
+    font-size: 0.82rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: transform var(--transition), box-shadow var(--transition), background-color var(--transition), border-color var(--transition), color var(--transition);
+    transition: all 0.15s ease;
 }
 
 .btn-primary {
     width: 100%;
-    min-height: 52px;
+    min-height: 44px;
     margin-top: 10px;
     border: none;
+    border-radius: 10px;
     background: linear-gradient(135deg, var(--brand-accent) 0%, var(--brand-accent-strong) 100%);
     color: #ffffff;
-    box-shadow: 0 18px 30px rgba(234, 79, 31, 0.24);
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(234, 79, 31, 0.2);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(234, 79, 31, 0.3);
+    transform: translateY(-1px);
 }
 
 .btn-primary:hover,
-.btn-runner-menu:hover,
-.btn-logout:hover,
 .filter-dropdown:hover,
 .provider-pill:hover,
 .theme-select:hover,
@@ -422,9 +426,8 @@ select:focus {
 .delete-btn:hover,
 .unit-toggle button:hover,
 .social-login button:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255, 107, 44, 0.28);
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    border-color: rgba(0, 0, 0, 0.14);
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .btn-secondary {
@@ -571,66 +574,199 @@ select:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px;
-    padding: 18px 32px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.72);
-    background: rgba(255, 255, 255, 0.74);
-    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+    gap: 16px;
+    padding: 0 28px;
+    height: 56px;
+    border-bottom: 1px solid var(--line-soft, rgba(0,0,0,0.06));
+    background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(18px);
 }
 
 .top-nav-shortcuts {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .top-nav-shortcut {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 46px;
-    padding: 0 18px;
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.82);
-    color: var(--text-strong);
-    font-weight: 800;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--line-soft, rgba(0,0,0,0.08));
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    font-size: 0.82rem;
+    font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
-    transition: transform var(--transition), box-shadow var(--transition), background-color var(--transition), border-color var(--transition), color var(--transition);
+    transition: all 0.15s ease;
 }
 
 .top-nav-shortcut:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255, 107, 44, 0.28);
-    color: var(--brand-accent-strong);
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-strong);
+    border-color: rgba(0, 0, 0, 0.12);
 }
 
 .top-nav-shortcut.active {
-    border-color: rgba(255, 107, 44, 0.38);
-    background: rgba(255, 107, 44, 0.12);
-    color: var(--brand-accent-strong);
+    background: var(--brand-ink, #0f172a);
+    border-color: var(--brand-ink, #0f172a);
+    color: #fff;
 }
 
 .top-nav .logo,
 .nav-brand {
     color: var(--text-strong);
-    font-size: 1.55rem;
+    font-size: 1.35rem;
     font-weight: 800;
-    letter-spacing: -0.08em;
+    letter-spacing: -0.06em;
 }
 
-.user-profile {
-    padding: 8px 10px 8px 16px;
-    border: 1px solid var(--line);
+/* ── Unified user menu (avatar + name + dropdown) ── */
+.user-menu-shell {
+    position: relative;
+}
+
+.user-menu-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 3px 10px 3px 3px;
+    border: 1px solid var(--line-soft, rgba(0,0,0,0.08));
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.56);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.runner-identity,
+.user-menu-trigger:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.14);
+}
+
+.user-menu-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff6b2c 0%, #e04f1f 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.user-menu-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-strong, #0f172a);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-menu-chevron {
+    color: var(--text-muted, #94a3b8);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.user-menu-chevron.open {
+    transform: rotate(180deg);
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 220px;
+    padding: 6px;
+    border: 1px solid var(--line-soft, rgba(0,0,0,0.08));
+    border-radius: 12px;
+    background: var(--surface-strong, #fff);
+    box-shadow: 0 10px 38px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.user-menu-dropdown.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.user-menu-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 10px 12px 8px;
+}
+
+.user-menu-header-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-strong, #0f172a);
+}
+
+.user-menu-header-email {
+    font-size: 0.74rem;
+    color: var(--text-muted, #94a3b8);
+}
+
+.user-menu-divider {
+    height: 1px;
+    margin: 4px 8px;
+    background: var(--line-soft, rgba(0,0,0,0.06));
+}
+
+.user-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    background: transparent;
+    color: var(--text-strong, #0f172a);
+    text-align: left;
+    font-size: 0.84rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.user-menu-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.user-menu-item svg {
+    color: var(--text-muted, #94a3b8);
+    flex-shrink: 0;
+}
+
+.user-menu-item-logout {
+    color: #dc2626;
+}
+
+.user-menu-item-logout svg {
+    color: #dc2626;
+}
+
+.user-menu-item-logout:hover {
+    background: #fef2f2;
+}
+
+/* Keep these for other pages that still use them */
 .analysis-page-header,
 .analysis-summary-copy,
 .analysis-column,
@@ -643,70 +779,11 @@ select:focus {
     flex-direction: column;
 }
 
-.runner-identity {
-    align-items: flex-end;
-    gap: 2px;
-}
-
-.user-name,
 .run-info strong,
 .shoe-info strong,
 .settings-copy strong {
     color: var(--text-strong);
     font-weight: 800;
-}
-
-.user-email {
-    font-size: 0.78rem;
-}
-
-.avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(255, 107, 44, 0.15), rgba(16, 32, 61, 0.12));
-    font-size: 0.95rem;
-    font-weight: 800;
-}
-
-.runner-menu-shell {
-    position: relative;
-}
-
-.runner-menu {
-    position: absolute;
-    top: calc(100% + 12px);
-    right: 0;
-    min-width: 200px;
-    padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    background: var(--surface-strong);
-    box-shadow: var(--shadow-card);
-    backdrop-filter: blur(18px);
-}
-
-.runner-menu-item {
-    width: 100%;
-    border: none;
-    border-radius: 14px;
-    padding: 12px 14px;
-    background: transparent;
-    color: var(--text-strong);
-    text-align: left;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color var(--transition), color var(--transition), transform var(--transition);
-}
-
-.runner-menu-item:hover {
-    background: rgba(255, 107, 44, 0.1);
-    color: var(--brand-accent-strong);
-    transform: translateX(2px);
 }
 
 .dashboard-container,
@@ -913,11 +990,25 @@ select:focus {
 
 .analysis-grid {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: stretch;
 }
 
 .analysis-column,
 .right-column {
     gap: 24px;
+}
+
+.analysis-grid > .analysis-column > .card {
+    flex: 1;
+}
+
+.analysis-grid > .card {
+    display: flex;
+    flex-direction: column;
+}
+
+.analysis-grid > .card > table {
+    flex: 1;
 }
 
 .stat-block {
@@ -955,6 +1046,92 @@ select:focus {
     transform: translateY(-4px);
     box-shadow: 0 24px 44px rgba(15, 23, 42, 0.12);
     border-color: rgba(255, 107, 44, 0.16);
+}
+
+/* ── Connected Services card ── */
+.connected-services-section {
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+.connected-services-section:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 44px rgba(15, 23, 42, 0.12);
+    border-color: rgba(17, 84, 138, 0.2);
+}
+.service-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--classic-bg, #f8fafc);
+    border-radius: 10px;
+    border: 1px solid var(--classic-border, #e2e8f0);
+}
+.service-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.service-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.service-info strong {
+    font-size: 0.95rem;
+}
+.service-status {
+    font-size: 0.78rem;
+}
+.service-status-on {
+    color: #16a34a;
+}
+.service-status-off {
+    color: var(--classic-muted, #94a3b8);
+}
+.service-action {
+    flex-shrink: 0;
+}
+.btn-service {
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+}
+.btn-service:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.btn-service-connect {
+    background: #11548a;
+    color: #fff;
+}
+.btn-service-connect:hover:not(:disabled) {
+    background: #0e4370;
+}
+.btn-service-disconnect {
+    background: transparent;
+    color: var(--classic-muted, #64748b);
+    border: 1px solid var(--classic-border, #e2e8f0);
+}
+.btn-service-disconnect:hover:not(:disabled) {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+.service-hint {
+    font-size: 0.78rem;
+    color: var(--classic-muted, #94a3b8);
+    margin: 12px 0 0;
+    line-height: 1.5;
 }
 
 .analysis-split-card {
@@ -1464,6 +1641,7 @@ select:focus {
 .import-source-grid {
     display: grid;
     gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .import-source-card {
@@ -1670,14 +1848,25 @@ select:focus {
 
 .unit-toggle {
     display: inline-flex;
+    gap: 0;
+}
+
+.unit-toggle button {
+    border: 1px solid var(--line-soft, rgba(0,0,0,0.08));
+    border-radius: 0;
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 0.78rem;
+    cursor: pointer;
 }
 
 .unit-toggle button:first-child {
-    border-radius: 999px 0 0 999px;
+    border-radius: 6px 0 0 6px;
+    border-right: none;
 }
 
 .unit-toggle button:last-child {
-    border-radius: 0 999px 999px 0;
+    border-radius: 0 6px 6px 0;
 }
 
 /* Themes... (rest of your original CSS remains unchanged) */
@@ -1764,44 +1953,42 @@ select:focus {
 }
 
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .top-nav,
-.dashboard-body:is(.theme-midnight, .theme-high-contrast) .runner-menu,
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-dropdown,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .card,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .table-card,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .modal-card,
-.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-profile,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .heatmap-map-shell,
 .dashboard-body.theme-high-contrast-light .top-nav,
-.dashboard-body.theme-high-contrast-light .runner-menu,
+.dashboard-body.theme-high-contrast-light .user-menu-dropdown,
 .dashboard-body.theme-high-contrast-light .card,
 .dashboard-body.theme-high-contrast-light .table-card,
 .dashboard-body.theme-high-contrast-light .modal-card,
-.dashboard-body.theme-high-contrast-light .user-profile,
 .dashboard-body.theme-high-contrast-light .heatmap-map-shell {
     background: var(--surface);
     border-color: var(--line);
 }
 
-.dashboard-body:is(.theme-midnight, .theme-high-contrast) .btn-runner-menu,
-.dashboard-body:is(.theme-midnight, .theme-high-contrast) .btn-logout,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .top-nav-shortcut,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .filter-dropdown,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .provider-pill,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .theme-select,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .view-btn,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .delete-btn,
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .unit-toggle,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) .unit-toggle button,
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-trigger,
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) input[type="text"],
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) input[type="file"],
 .dashboard-body:is(.theme-midnight, .theme-high-contrast) select,
-.dashboard-body.theme-high-contrast-light .btn-runner-menu,
-.dashboard-body.theme-high-contrast-light .btn-logout,
 .dashboard-body.theme-high-contrast-light .top-nav-shortcut,
 .dashboard-body.theme-high-contrast-light .filter-dropdown,
 .dashboard-body.theme-high-contrast-light .provider-pill,
 .dashboard-body.theme-high-contrast-light .theme-select,
 .dashboard-body.theme-high-contrast-light .view-btn,
 .dashboard-body.theme-high-contrast-light .delete-btn,
+.dashboard-body.theme-high-contrast-light .unit-toggle,
 .dashboard-body.theme-high-contrast-light .unit-toggle button,
+.dashboard-body.theme-high-contrast-light .user-menu-trigger,
 .dashboard-body.theme-high-contrast-light input[type="text"],
 .dashboard-body.theme-high-contrast-light input[type="file"],
 .dashboard-body.theme-high-contrast-light select {
@@ -1810,57 +1997,79 @@ select:focus {
     border-color: var(--line);
 }
 
-.dashboard-body.theme-midnight .btn-runner-menu,
-.dashboard-body.theme-midnight .btn-logout,
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-name,
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-header-name {
+    color: var(--text-strong);
+}
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-header-email,
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-chevron {
+    color: var(--text-muted);
+}
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-item {
+    color: var(--text-strong);
+}
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+.dashboard-body:is(.theme-midnight, .theme-high-contrast) .user-menu-divider {
+    background: var(--line);
+}
+
 .dashboard-body.theme-midnight .top-nav-shortcut,
 .dashboard-body.theme-midnight .filter-dropdown,
 .dashboard-body.theme-midnight .provider-pill,
 .dashboard-body.theme-midnight .theme-select,
-.dashboard-body.theme-midnight .unit-toggle button {
+.dashboard-body.theme-midnight .unit-toggle,
+.dashboard-body.theme-midnight .unit-toggle button,
+.dashboard-body.theme-midnight .user-menu-trigger {
     background: rgba(158, 176, 200, 0.12);
     color: #f8fafc;
     border-color: rgba(158, 176, 200, 0.32);
 }
 
-.dashboard-body.theme-midnight .btn-runner-menu:hover,
-.dashboard-body.theme-midnight .btn-logout:hover,
 .dashboard-body.theme-midnight .top-nav-shortcut:hover,
 .dashboard-body.theme-midnight .filter-dropdown:hover,
 .dashboard-body.theme-midnight .provider-pill:hover,
 .dashboard-body.theme-midnight .theme-select:hover,
-.dashboard-body.theme-midnight .unit-toggle button:hover {
+.dashboard-body.theme-midnight .unit-toggle button:hover,
+.dashboard-body.theme-midnight .user-menu-trigger:hover {
     background: rgba(255, 107, 44, 0.14);
     color: #ffffff;
     border-color: rgba(255, 107, 44, 0.46);
 }
 
-.dashboard-body.theme-high-contrast .btn-runner-menu,
-.dashboard-body.theme-high-contrast .btn-logout,
 .dashboard-body.theme-high-contrast .top-nav-shortcut,
 .dashboard-body.theme-high-contrast .filter-dropdown,
 .dashboard-body.theme-high-contrast .provider-pill,
 .dashboard-body.theme-high-contrast .theme-select,
-.dashboard-body.theme-high-contrast .unit-toggle button {
+.dashboard-body.theme-high-contrast .unit-toggle,
+.dashboard-body.theme-high-contrast .unit-toggle button,
+.dashboard-body.theme-high-contrast .user-menu-trigger {
     background: #0a0a0a;
     color: #ffffff;
     border-color: rgba(255, 255, 255, 0.88);
 }
 
-.dashboard-body.theme-high-contrast .btn-runner-menu:hover,
-.dashboard-body.theme-high-contrast .btn-logout:hover,
 .dashboard-body.theme-high-contrast .top-nav-shortcut:hover,
 .dashboard-body.theme-high-contrast .filter-dropdown:hover,
 .dashboard-body.theme-high-contrast .provider-pill:hover,
 .dashboard-body.theme-high-contrast .theme-select:hover,
-.dashboard-body.theme-high-contrast .unit-toggle button:hover {
+.dashboard-body.theme-high-contrast .unit-toggle button:hover,
+.dashboard-body.theme-high-contrast .user-menu-trigger:hover {
     background: rgba(255, 212, 0, 0.12);
     color: #ffea70;
     border-color: #ffd400;
 }
 
-.dashboard-body:is(.theme-midnight, .theme-high-contrast) .runner-menu-item,
-.dashboard-body.theme-high-contrast-light .runner-menu-item {
+.dashboard-body.theme-high-contrast-light .user-menu-name,
+.dashboard-body.theme-high-contrast-light .user-menu-header-name {
     color: var(--text-strong);
+}
+.dashboard-body.theme-high-contrast-light .user-menu-item {
+    color: var(--text-strong);
+}
+.dashboard-body.theme-high-contrast-light .user-menu-divider {
+    background: var(--line);
 }
 
 .dashboard-body.theme-midnight .import-source-card,
@@ -1882,15 +2091,15 @@ select:focus {
     color: #0f172a;
 }
 
-.dashboard-body.theme-high-contrast-light .btn-runner-menu,
-.dashboard-body.theme-high-contrast-light .btn-logout,
 .dashboard-body.theme-high-contrast-light .top-nav-shortcut,
 .dashboard-body.theme-high-contrast-light .filter-dropdown,
 .dashboard-body.theme-high-contrast-light .provider-pill,
 .dashboard-body.theme-high-contrast-light .theme-select,
 .dashboard-body.theme-high-contrast-light .view-btn,
 .dashboard-body.theme-high-contrast-light .delete-btn,
+.dashboard-body.theme-high-contrast-light .unit-toggle,
 .dashboard-body.theme-high-contrast-light .unit-toggle button,
+.dashboard-body.theme-high-contrast-light .user-menu-trigger,
 .dashboard-body.theme-high-contrast-light input[type="text"],
 .dashboard-body.theme-high-contrast-light input[type="file"],
 .dashboard-body.theme-high-contrast-light select {
@@ -1914,7 +2123,11 @@ select:focus {
 }
 
 @media (max-width: 900px) {
-    .top-nav,
+    .top-nav {
+        padding: 0 16px;
+        gap: 10px;
+    }
+
     .top-nav-actions,
     .card-header,
     .analysis-summary-row,
@@ -1925,8 +2138,12 @@ select:focus {
         align-items: flex-start;
     }
 
-    .runner-identity {
-        align-items: flex-start;
+    .user-menu-name {
+        display: none;
+    }
+
+    .user-menu-trigger {
+        padding: 3px;
     }
 
     .dashboard-container,

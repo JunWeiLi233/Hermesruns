@@ -262,6 +262,7 @@ def main():
     provider_dirs = {
         "GARMIN": Path(config.get("garmin_dir", ROOT / "imports" / "garmin")),
         "COROS": Path(config.get("coros_dir", ROOT / "imports" / "coros")),
+        "HUAWEI": Path(config.get("huawei_dir", ROOT / "imports" / "huawei")),
     }
 
     state = load_json(DEFAULT_STATE_PATH, {"processed": {}, "failures": {}})
@@ -269,6 +270,7 @@ def main():
     append_log(log_path, "[Hermes Sync] Starting local auto-import watcher")
     append_log(log_path, f"[Hermes Sync] Garmin dir: {provider_dirs['GARMIN']}")
     append_log(log_path, f"[Hermes Sync] COROS dir: {provider_dirs['COROS']}")
+    append_log(log_path, f"[Hermes Sync] Huawei dir: {provider_dirs['HUAWEI']}")
     append_log(log_path, f"[Hermes Sync] Poll interval: {poll_seconds}s")
     append_log(log_path, f"[Hermes Sync] Retry policy: {retries} retries with {retry_delay_seconds}s delay")
 

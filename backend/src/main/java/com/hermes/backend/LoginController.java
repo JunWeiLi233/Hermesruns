@@ -17,11 +17,16 @@ public class LoginController {
     private final RunnerRepository runnerRepository;
     private final AuthService authService;
     private final LoginRateLimiter rateLimiter;
+    private final SecretEncryptionService secretEncryptionService;
+    private final GarminOAuthSettings garminOAuthSettings;
 
-    public LoginController(RunnerRepository runnerRepository, AuthService authService, LoginRateLimiter rateLimiter) {
+    public LoginController(RunnerRepository runnerRepository, AuthService authService, LoginRateLimiter rateLimiter,
+                           SecretEncryptionService secretEncryptionService, GarminOAuthSettings garminOAuthSettings) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.rateLimiter = rateLimiter;
+        this.secretEncryptionService = secretEncryptionService;
+        this.garminOAuthSettings = garminOAuthSettings;
     }
 
     // ==========================================
@@ -43,7 +48,7 @@ public class LoginController {
         rateLimiter.recordSuccess(ip);
         Runner runner = runnerOptional.get();
         String token = authService.issueSessionToken(runner);
-        return ResponseEntity.ok(authResponse("Login successful.", token, runner));
+        return ResponseEntity.ok(authResponse("Login successful.", token, runner, false));
     }
 
     // ==========================================
@@ -167,17 +172,23 @@ public class LoginController {
         Runner runner = runnerOptional.get();
         String token = authService.issueSessionToken(runner);
 
-        return ResponseEntity.ok(authResponse("Admin login successful.", token, runner));
+        return ResponseEntity.ok(authResponse("Admin login successful.", token, runner, true));
     }
 
     // --- Helper Methods ---
 
-    private Map<String, String> authResponse(String message, String token, Runner runner) {
+    private Map<String, String> authResponse(String message, String token, Runner runner, boolean adminLogin) {
         Map<String, String> response = new HashMap<>();
         response.put("message", message);
         response.put("token", token);
         response.put("email", runner.getEmail());
         response.put("role", runner.getRole());
+        if (!adminLogin) {
+            boolean garminReady = garminOAuthSettings.canConnectGarmin(secretEncryptionService, runner);
+            boolean usesServerKeys = secretEncryptionService.isConfigured() && garminOAuthSettings.usesServerKeysFor(runner);
+            response.put("garminConnectAvailable", Boolean.toString(garminReady));
+            response.put("garminUsesServerGarminKeys", Boolean.toString(usesServerKeys));
+        }
         return response;
     }
 

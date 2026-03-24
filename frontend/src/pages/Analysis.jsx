@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
 import { formatDuration, formatPaceSeconds } from '../utils/format';
 import { calculateVdot, computeTrainingPaces, predictRaceTime, RACE_DISTANCES } from '../utils/vdot';
@@ -197,11 +198,11 @@ export default function Analysis() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const { theme, setTheme, isDark } = useTheme();
+  const { unit, isMile } = useUnit();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [unit, setUnit] = useState('km');
 
   // Modals
   const [nameModalOpen, setNameModalOpen] = useState(false);
@@ -210,6 +211,7 @@ export default function Analysis() {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [garminFiles, setGarminFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
+  const [huaweiFiles, setHuaweiFiles] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -347,7 +349,7 @@ export default function Analysis() {
       datasets: [{
         label: t('analysis.chart_label_pace'),
         data: values,
-        backgroundColor: ['#166534', '#0369a1', '#ca8a04', '#FF5A1F', '#b91c1c'],
+        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],
         borderRadius: 4,
       }],
     };
@@ -399,6 +401,76 @@ export default function Analysis() {
       ],
     };
   }, [allVdots, t]);
+
+  // Prediction history chart — predicted times over time based on rolling 90-day peak VDOT
+  const predictionHistoryData = useMemo(() => {
+    if (!allVdots.length || allVdots.length < 3) return null;
+    const sorted = [...allVdots].sort((a, b) => a.date - b.date);
+    const windowMs = 90 * 24 * 60 * 60 * 1000;
+
+    // Sample monthly to keep chart clean
+    const samples = [];
+    let lastMonth = -1;
+    sorted.forEach(run => {
+      const m = run.date.getFullYear() * 12 + run.date.getMonth();
+      if (m !== lastMonth) {
+        lastMonth = m;
+        // Compute 90-day peak VDOT at this point
+        const cutoff = run.date.getTime() - windowMs;
+        let peak = 0;
+        for (const r of sorted) {
+          if (r.date.getTime() > run.date.getTime()) break;
+          if (r.date.getTime() >= cutoff && r.vdot > peak) peak = r.vdot;
+        }
+        if (peak > 0) samples.push({ date: run.date.getTime(), vdot: peak });
+      }
+    });
+    // Always include latest point
+    const lastRun = sorted[sorted.length - 1];
+    const lastCutoff = lastRun.date.getTime() - windowMs;
+    let lastPeak = 0;
+    for (const r of sorted) {
+      if (r.date.getTime() >= lastCutoff && r.vdot > lastPeak) lastPeak = r.vdot;
+    }
+    if (lastPeak > 0 && (samples.length === 0 || samples[samples.length - 1].date !== lastRun.date.getTime())) {
+      samples.push({ date: lastRun.date.getTime(), vdot: lastPeak });
+    }
+
+    if (samples.length < 2) return null;
+
+    const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#dc2626'];
+    return RACE_DISTANCES.map((rd, i) => {
+      const data = samples.map(s => {
+        const timeMin = predictRaceTime(s.vdot, rd.meters);
+        return { x: s.date, y: timeMin ? Math.round(timeMin * 60) : null };
+      });
+      const latest = data[data.length - 1]?.y || 0;
+      const earliest = data[0]?.y || 0;
+      const improved = earliest > 0 && latest > 0 && latest < earliest;
+      const diffSec = earliest - latest;
+      return {
+        key: rd.key,
+        label: lang === 'en' ? rd.labelEn : rd.labelZh,
+        color: colors[i],
+        latestFormatted: latest > 0 ? formatDuration(latest) : '--',
+        improved,
+        diffFormatted: diffSec > 0 ? formatDuration(Math.abs(diffSec)) : null,
+        chartData: {
+          datasets: [{
+            data,
+            borderColor: colors[i],
+            backgroundColor: colors[i] + '25',
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: colors[i],
+            pointHoverRadius: 7,
+            tension: 0.35,
+            fill: true,
+          }],
+        },
+      };
+    });
+  }, [allVdots, lang]);
 
   // ── Training Load (EWMA) & ACWR ──
   const trainingLoadData = useMemo(() => {
@@ -536,10 +608,11 @@ export default function Analysis() {
   async function handleImport(e) {
     e.preventDefault();
     const formData = new FormData();
-    if (garminFiles) for (const f of garminFiles) formData.append('files', f);
-    if (corosFiles) for (const f of corosFiles) formData.append('files', f);
+    if (garminFiles) for (const f of garminFiles) formData.append('garmins', f);
+    if (corosFiles) for (const f of corosFiles) formData.append('coros', f);
+    if (huaweiFiles) for (const f of huaweiFiles) formData.append('huawei', f);
     try {
-      await apiFetch('/api/import/files', { method: 'POST', body: formData });
+      await apiFetch('/api/import/batch', { method: 'POST', body: formData });
       setImportModalOpen(false);
       loadData();
     } catch { /* ignored */ }
@@ -576,8 +649,6 @@ export default function Analysis() {
     animation: { animateScale: true },
   }), []);
 
-  const isMile = unit === 'mile';
-
   return (
     <div className="dashboard-body">
       <LanguageSwitcher />
@@ -603,6 +674,27 @@ export default function Analysis() {
           <h1 className="analysis-title">{t('analysis.heading')}</h1>
         </section>
 
+        {/* Run Level — Doughnut Chart */}
+        <section className="card analysis-card-center">
+          <h3>{t('analysis.run_level')}</h3>
+          <div className="analysis-chart-shell analysis-chart-shell-large" style={{ width: 180, margin: '15px auto' }}>
+            <Doughnut data={doughnutData} options={doughnutOptions} />
+          </div>
+          {rank ? (
+            <>
+              <p className="analysis-level-copy" style={{ color: rank.color, textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', margin: '8px 0 0' }}>
+                {t(`analysis.rank_${rank.key}`)} Lv. {runLevel}
+              </p>
+              <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.next_rank_progress', { percent: rankPct })}</p>
+            </>
+          ) : (
+            <>
+              <p className="analysis-level-copy" style={{ color: textColor, textAlign: 'center' }}>{t('analysis.run_level_waiting')}</p>
+              <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.run_level_prompt')}</p>
+            </>
+          )}
+        </section>
+
         {/* Summary */}
         <section className="card summary-wide analysis-summary-card">
           <div className="analysis-summary-row">
@@ -610,10 +702,6 @@ export default function Analysis() {
               <p><strong>{t('analysis.weekly_mileage')}</strong> <span>{isMile ? (totalKm / KM_TO_MILE).toFixed(1) : totalKm.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span></p>
               <p><strong>{t('analysis.avg_pace')}</strong> <span>{totalKm > 0 ? fmtPace(totalSec / totalKm) : '--:--'}</span> <span className="unit-pace">{t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}</span></p>
               <p><strong>{t('analysis.current_vdot_label')}</strong> <span>{bestVdot > 0 ? bestVdot.toFixed(1) : '--'}</span></p>
-            </div>
-            <div className="unit-toggle">
-              <button type="button" className={unit === 'km' ? 'active' : ''} onClick={() => setUnit('km')}>{t('analysis.unit_km_button')}</button>
-              <button type="button" className={unit === 'mile' ? 'active' : ''} onClick={() => setUnit('mile')}>{t('analysis.unit_mile_button')}</button>
             </div>
           </div>
         </section>
@@ -635,159 +723,31 @@ export default function Analysis() {
             </div>
           )}
           {bestVdot <= 0 && <div className="vdot-no-data">{t('analysis.vdot_no_data')}</div>}
-        </section>
 
-        {/* Grid: Recovery + Run Level | Training Paces */}
-        <div className="analysis-grid">
-          <div className="analysis-column">
-            {/* Recovery */}
-            <section className="card">
-              <h3 style={{ margin: '0 0 10px' }}>{t('analysis.recovery')}</h3>
-              <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                <div style={{ fontSize: '2.4rem', fontWeight: 800, lineHeight: 1.1, color: recoveryState.hasData ? recoveryColor : '#64748b' }}>
-                  {recoveryState.hasData ? (recoveryState.recoveryHoursLeft <= 0 ? '0h' : recoveryState.recoveryHoursLeft + 'h') : '--'}
-                </div>
-                <div style={{ fontSize: '0.82rem', marginTop: 4, color: 'var(--text-muted, #64748b)' }}>
-                  {recoveryState.hasData ? t(recoveryStatusKey) : t('analysis.recovery_no_data')}
-                </div>
-              </div>
-              <div style={{ background: 'var(--border-color, #e2e8f0)', borderRadius: 6, height: 10, overflow: 'hidden', marginBottom: 14 }}>
-                <div style={{
-                  height: '100%', borderRadius: 6, transition: 'width 0.6s ease',
-                  width: `${Math.min(100, Math.round((recoveryState.recoveryHoursLeft / 96) * 100))}%`,
-                  background: recoveryColor,
-                }} />
-              </div>
-
-              {/* Per-run recovery breakdown */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {recoveryState.runDetails.map((rd, i) => {
-                  const dist = isMile ? (rd.distKm * (1 / KM_TO_MILE)).toFixed(2) + ' mi' : rd.distKm.toFixed(2) + ' km';
-                  const dateStr = rd.date.toLocaleDateString(lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                  const zoneLabel = lang === 'en' ? rd.zone.labelEn : rd.zone.labelZh;
-                  const barColor = rd.recoveryPct >= 100 ? '#166534' : rd.recoveryPct >= 60 ? '#ca8a04' : '#ea580c';
-                  const hrTag = rd.hrBased ? ' ♥' : '';
-                  return (
-                    <div key={i} style={{ borderLeft: `3px solid ${rd.zone.color}`, paddingLeft: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-strong, #1e293b)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{rd.name}</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: rd.zone.color, whiteSpace: 'nowrap' }}>{rd.score} · {zoneLabel}{hrTag}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', color: 'var(--text-muted, #94a3b8)', marginBottom: 4 }}>
-                        <span>{dist} · {dateStr}</span>
-                        <span>{rd.recoveryHours}h → {rd.recoveryPct}%</span>
-                      </div>
-                      <div style={{ background: 'var(--border-color, #e2e8f0)', borderRadius: 3, height: 5, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${Math.min(100, rd.recoveryPct)}%`, background: barColor, borderRadius: 3 }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* Run Level — Doughnut Chart */}
-            <section className="card analysis-card-center">
-              <h3>{t('analysis.run_level')}</h3>
-              <div className="analysis-chart-shell analysis-chart-shell-large" style={{ width: 180, margin: '15px auto' }}>
-                <Doughnut data={doughnutData} options={doughnutOptions} />
-              </div>
-              {rank ? (
-                <>
-                  <p className="analysis-level-copy" style={{ color: rank.color, textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', margin: '8px 0 0' }}>
-                    {t(`analysis.rank_${rank.key}`)} Lv. {runLevel}
-                  </p>
-                  <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.next_rank_progress', { percent: rankPct })}</p>
-                </>
-              ) : (
-                <>
-                  <p className="analysis-level-copy" style={{ color: textColor, textAlign: 'center' }}>{t('analysis.run_level_waiting')}</p>
-                  <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.run_level_prompt')}</p>
-                </>
-              )}
-            </section>
-          </div>
-
-          <div className="analysis-column">
-            {/* Training Paces */}
-            <section className="card">
-              <h3>
-                <span>{t('analysis.pace_zones')}</span>
-                <span className="pace-unit-note" style={{ marginLeft: 8 }}>({t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')})</span>
-              </h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 15 }}>
-                <tbody>
-                  {[
-                    { key: 'easy', label: t('analysis.pace_easy_label'), color: '#166534', range: paces?.easy },
-                    { key: 'marathon', label: t('analysis.pace_marathon_label'), color: '#0369a1', range: paces?.marathon },
-                    { key: 'threshold', label: t('analysis.pace_threshold_label'), color: '#ca8a04', range: paces?.threshold },
-                    { key: 'interval', label: t('analysis.pace_interval_label'), color: '#FF5A1F', range: paces?.interval },
-                    { key: 'repetition', label: t('analysis.pace_repetition_label'), color: '#b91c1c', range: paces?.repetition },
-                  ].map(({ key, label, color, range }) => (
-                    <tr key={key} style={{ borderBottom: '1px solid var(--border-color, #eee)' }}>
-                      <td style={{ padding: '12px 0' }}>{label}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 'bold', color }}>
-                        {range ? (range.length === 2 ? `${fmtPace(range[0])} - ${fmtPace(range[1])}` : fmtPace(range[0])) : '--:--'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {paceChartData && (
-                <div style={{ marginTop: 20, height: 200 }}>
-                  <Bar data={paceChartData} options={{
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false },
-                      tooltip: {
-                        callbacks: {
-                          label: (ctx) => `${formatPaceSeconds(ctx.parsed.y)} ${t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}`,
-                        },
-                      },
+          {paceChartData && (
+            <div style={{ marginTop: 20, height: 200 }}>
+              <Bar data={paceChartData} options={{
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx) => `${formatPaceSeconds(ctx.parsed.y)} ${t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}`,
                     },
-                    scales: {
-                      y: {
-                        reverse: true,
-                        ticks: { color: textColor, callback: (value) => formatPaceSeconds(value) },
-                        grid: { color: gridColor },
-                      },
-                      x: { ticks: { color: textColor }, grid: { display: false } },
-                    },
-                  }} />
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
-
-        {/* Race Predictions */}
-        {predictions.length > 0 && (
-          <section className="card" style={{ marginTop: 25 }}>
-            <h3 style={{ margin: '0 0 4px' }}>{t('analysis.race_predictions')}</h3>
-            <p className="analysis-muted" style={{ margin: '0 0 15px', fontSize: '0.85rem' }}>{t('analysis.race_predictions_copy')}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-              {predictions.map(p => {
-                const totalSec = p.timeMin ? Math.round(p.timeMin * 60) : 0;
-                const paceSecPerKm = totalSec > 0 ? (totalSec / p.meters) * 1000 : 0;
-                const paceDisplay = paceSecPerKm > 0 ? formatPaceSeconds(isMile ? paceSecPerKm * KM_TO_MILE : paceSecPerKm) : '--:--';
-                return (
-                  <div key={p.key} style={{ background: 'var(--card-bg, #f8fafc)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', marginBottom: 6 }}>
-                      {lang === 'en' ? p.labelEn : p.labelZh}
-                    </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-strong, #1e293b)' }}>
-                      {p.timeMin ? formatDuration(p.timeMin * 60) : '--'}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
-                      {paceDisplay} {t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}
-                    </div>
-                  </div>
-                );
-              })}
+                  },
+                },
+                scales: {
+                  y: {
+                    reverse: true,
+                    ticks: { color: textColor, callback: (value) => formatPaceSeconds(value) },
+                    grid: { color: gridColor },
+                  },
+                  x: { ticks: { color: textColor }, grid: { display: false } },
+                },
+              }} />
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* Progress Chart — Scatter + Line */}
         <section className="card progress-card" style={{ marginTop: 25 }}>
@@ -837,6 +797,168 @@ export default function Analysis() {
             )}
           </div>
         </section>
+
+        {/* Recovery + Training Paces side by side */}
+        <div className="analysis-grid" style={{ marginTop: 24 }}>
+          <section className="card">
+              <h3 style={{ margin: '0 0 10px' }}>{t('analysis.recovery')}</h3>
+              <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: '2.4rem', fontWeight: 800, lineHeight: 1.1, color: recoveryState.hasData ? recoveryColor : '#64748b' }}>
+                  {recoveryState.hasData ? (recoveryState.recoveryHoursLeft <= 0 ? '0h' : recoveryState.recoveryHoursLeft + 'h') : '--'}
+                </div>
+                <div style={{ fontSize: '0.82rem', marginTop: 4, color: 'var(--text-muted, #64748b)' }}>
+                  {recoveryState.hasData ? t(recoveryStatusKey) : t('analysis.recovery_no_data')}
+                </div>
+              </div>
+              <div style={{ background: 'var(--border-color, #e2e8f0)', borderRadius: 6, height: 10, overflow: 'hidden', marginBottom: 14 }}>
+                <div style={{
+                  height: '100%', borderRadius: 6, transition: 'width 0.6s ease',
+                  width: `${Math.min(100, Math.round((recoveryState.recoveryHoursLeft / 96) * 100))}%`,
+                  background: recoveryColor,
+                }} />
+              </div>
+
+              {/* Per-run recovery breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recoveryState.runDetails.map((rd, i) => {
+                  const dist = isMile ? (rd.distKm * (1 / KM_TO_MILE)).toFixed(2) + ' mi' : rd.distKm.toFixed(2) + ' km';
+                  const dateStr = rd.date.toLocaleDateString(lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                  const zoneLabel = lang === 'en' ? rd.zone.labelEn : rd.zone.labelZh;
+                  const barColor = rd.recoveryPct >= 100 ? '#166534' : rd.recoveryPct >= 60 ? '#ca8a04' : '#ea580c';
+                  const hrTag = rd.hrBased ? ' ♥' : '';
+                  return (
+                    <div key={i} style={{ borderLeft: `3px solid ${rd.zone.color}`, paddingLeft: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-strong, #1e293b)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{rd.name}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: rd.zone.color, whiteSpace: 'nowrap' }}>{rd.score} · {zoneLabel}{hrTag}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.73rem', color: 'var(--text-muted, #94a3b8)', marginBottom: 4 }}>
+                        <span>{dist} · {dateStr}</span>
+                        <span>{rd.recoveryHours}h → {rd.recoveryPct}%</span>
+                      </div>
+                      <div style={{ background: 'var(--border-color, #e2e8f0)', borderRadius: 3, height: 5, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, rd.recoveryPct)}%`, background: barColor, borderRadius: 3 }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+          </section>
+
+          <section className="card">
+          <h3>
+            <span>{t('analysis.pace_zones')}</span>
+            <span className="pace-unit-note" style={{ marginLeft: 8 }}>({t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')})</span>
+          </h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 15 }}>
+            <tbody>
+              {[
+                { key: 'easy', label: t('analysis.pace_easy_label'), color: '#22c55e', range: paces?.easy },
+                { key: 'marathon', label: t('analysis.pace_marathon_label'), color: '#3b82f6', range: paces?.marathon },
+                { key: 'threshold', label: t('analysis.pace_threshold_label'), color: '#f59e0b', range: paces?.threshold },
+                { key: 'interval', label: t('analysis.pace_interval_label'), color: '#ef4444', range: paces?.interval },
+                { key: 'repetition', label: t('analysis.pace_repetition_label'), color: '#dc2626', range: paces?.repetition },
+              ].map(({ key, label, color, range }) => (
+                <tr key={key} style={{ borderBottom: '1px solid var(--border-color, #eee)' }}>
+                  <td style={{ padding: '12px 0', borderLeft: `4px solid ${color}`, paddingLeft: 12, color, fontWeight: 600 }}>{label}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', color }}>
+                    {range ? (range.length === 2 ? `${fmtPace(range[0])} - ${fmtPace(range[1])}` : fmtPace(range[0])) : '--:--'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </section>
+        </div>
+
+        {/* Race Predictions */}
+        {predictions.length > 0 && (
+          <section className="card" style={{ marginTop: 25 }}>
+            <h3 style={{ margin: '0 0 4px' }}>{t('analysis.race_predictions')}</h3>
+            <p className="analysis-muted" style={{ margin: '0 0 15px', fontSize: '0.85rem' }}>{t('analysis.race_predictions_copy')}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              {predictions.map(p => {
+                const totalSec = p.timeMin ? Math.round(p.timeMin * 60) : 0;
+                const paceSecPerKm = totalSec > 0 ? (totalSec / p.meters) * 1000 : 0;
+                const paceDisplay = paceSecPerKm > 0 ? formatPaceSeconds(isMile ? paceSecPerKm * KM_TO_MILE : paceSecPerKm) : '--:--';
+                return (
+                  <div key={p.key} style={{ background: 'var(--card-bg, #f8fafc)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', marginBottom: 6 }}>
+                      {lang === 'en' ? p.labelEn : p.labelZh}
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-strong, #1e293b)' }}>
+                      {p.timeMin ? formatDuration(p.timeMin * 60) : '--'}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
+                      {paceDisplay} {t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Prediction History — 4 mini charts */}
+        {predictionHistoryData && predictionHistoryData.length > 0 && (
+          <section className="card" style={{ marginTop: 25 }}>
+            <h3 style={{ margin: '0 0 4px' }}>{t('analysis.pred_history_heading')}</h3>
+            <p className="analysis-muted" style={{ margin: '0 0 20px', fontSize: '0.85rem' }}>{t('analysis.pred_history_copy')}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
+              {predictionHistoryData.map(item => (
+                <div key={item.key} onClick={() => navigate(`/prediction/${item.key}`)} style={{ border: `2px solid ${item.color}22`, borderRadius: 14, padding: '18px 16px 12px', background: `${item.color}08`, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 4px 16px ${item.color}30`; }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: item.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
+                      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-strong, #1e293b)', marginTop: 2 }}>{item.latestFormatted}</div>
+                    </div>
+                    {item.diffFormatted && (
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.78rem', color: item.improved ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                          {item.improved ? '\u25BC' : '\u25B2'} {item.diffFormatted}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #94a3b8)' }}>{t('analysis.pred_history_since_start')}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ height: 120 }}>
+                    <Line data={item.chartData} options={{
+                      responsive: true, maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          callbacks: {
+                            title: (items) => {
+                              if (!items.length) return '';
+                              return new Date(items[0].parsed.x).toLocaleDateString(lang, { year: 'numeric', month: 'short' });
+                            },
+                            label: (ctx) => ctx.parsed.y ? formatDuration(ctx.parsed.y) : '--',
+                          },
+                        },
+                      },
+                      scales: {
+                        x: {
+                          type: 'linear',
+                          display: false,
+                        },
+                        y: {
+                          reverse: true,
+                          grid: { color: gridColor, drawBorder: false },
+                          ticks: {
+                            color: textColor,
+                            font: { size: 10 },
+                            maxTicksLimit: 4,
+                            callback: (v) => formatDuration(v),
+                          },
+                        },
+                      },
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Training Load & ACWR */}
         {trainingLoadData && loadChartData && acwrChartData && (
@@ -982,6 +1104,17 @@ export default function Analysis() {
               </div>
               <label className="modal-label">{t('profile.coros_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setCorosFiles(e.target.files)} />
+            </section>
+            <section className="import-source-card">
+              <div className="import-source-header">
+                <div className="import-source-copy">
+                  <span className="import-source-title">{t('profile.huawei_source_title')}</span>
+                  <span className="import-source-hint">{t('profile.huawei_source_hint')}</span>
+                </div>
+                <span className="import-source-tag">HUAWEI</span>
+              </div>
+              <label className="modal-label">{t('profile.huawei_file_label')}</label>
+              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setHuaweiFiles(e.target.files)} />
             </section>
           </div>
           <div className="modal-actions">

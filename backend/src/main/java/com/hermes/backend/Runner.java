@@ -168,4 +168,39 @@ public class Runner {
     public void setStravaTokenExpiresAt(Long stravaTokenExpiresAt) {
         this.stravaTokenExpiresAt = stravaTokenExpiresAt;
     }
+
+    // ── Garmin fields ──
+
+    private String garminUserId;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String garminAccessToken;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String garminAccessTokenSecret;
+
+    private String garminConsumerKey;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String garminConsumerSecret;
+
+    private String garminRedirectUri;
+
+    public String getGarminUserId() { return garminUserId; }
+    public void setGarminUserId(String garminUserId) { this.garminUserId = garminUserId; }
+
+    public String getGarminAccessToken() { return garminAccessToken; }
+    public void setGarminAccessToken(String garminAccessToken) { this.garminAccessToken = garminAccessToken; }
+
+    public String getGarminAccessTokenSecret() { return garminAccessTokenSecret; }
+    public void setGarminAccessTokenSecret(String garminAccessTokenSecret) { this.garminAccessTokenSecret = garminAccessTokenSecret; }
+
+    public String getGarminConsumerKey() { return garminConsumerKey; }
+    public void setGarminConsumerKey(String garminConsumerKey) { this.garminConsumerKey = garminConsumerKey; }
+
+    public String getGarminConsumerSecret() { return garminConsumerSecret; }
+    public void setGarminConsumerSecret(String garminConsumerSecret) { this.garminConsumerSecret = garminConsumerSecret; }
+
+    public String getGarminRedirectUri() { return garminRedirectUri; }
+    public void setGarminRedirectUri(String garminRedirectUri) { this.garminRedirectUri = garminRedirectUri; }
 }

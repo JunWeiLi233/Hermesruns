@@ -40,6 +40,7 @@ public class OAuthController {
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
     private final SecretEncryptionService secretEncryptionService;
+    private final GarminOAuthSettings garminOAuthSettings;
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
 
     @Value("${google.client.id:}")
@@ -62,12 +63,14 @@ public class OAuthController {
 
     public OAuthController(RunnerRepository runnerRepository, AuthService authService,
                            ActivityRepository activityRepository, ActivityPointRepository activityPointRepository,
-                           SecretEncryptionService secretEncryptionService) {
+                           SecretEncryptionService secretEncryptionService,
+                           GarminOAuthSettings garminOAuthSettings) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
         this.secretEncryptionService = secretEncryptionService;
+        this.garminOAuthSettings = garminOAuthSettings;
     }
 
     @GetMapping("/auth/providers")
@@ -75,6 +78,7 @@ public class OAuthController {
         Map<String, Boolean> response = new HashMap<>();
         response.put("googleConfigured", isGoogleConfigured());
         response.put("stravaConfigured", isStravaConfigured());
+        response.put("garminGlobalConfigured", garminOAuthSettings.isGlobalConsumerPairConfigured());
         return ResponseEntity.ok(response);
     }
 
@@ -357,7 +361,7 @@ public class OAuthController {
         return ResponseEntity.ok(response);
     }
 
-    private void fetchAndSaveStravaActivities(String accessToken, Long runnerId) {
+    void fetchAndSaveStravaActivities(String accessToken, Long runnerId) {
         StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runnerId, ignored -> new StravaSyncTracker());
         tracker.markRunning();
 
@@ -527,18 +531,56 @@ public class OAuthController {
         }
     }
 
+    /**
+     * Fetch and sync a single Strava activity by its ID (used by webhook handler).
+     */
+    void syncStravaActivityById(Runner runner, long stravaActivityId) {
+        String accessToken = resolveRunnerStravaAccessToken(runner);
+        if (accessToken == null || accessToken.isBlank()) return;
+
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+
+            String url = "https://www.strava.com/api/v3/activities/" + stravaActivityId;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> activityData = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {}).getBody();
+
+            if (activityData == null) return;
+
+            StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runner.getId(), ignored -> new StravaSyncTracker());
+            boolean[] gpsRateLimited = {false};
+            syncSingleStravaActivity(runner, tracker, activityData, gpsRateLimited, restTemplate, headers, accessToken);
+        } catch (Exception e) {
+            System.err.println("Strava webhook sync failed for activity " + stravaActivityId + ": " + e.getMessage());
+        }
+    }
+
+    /** Delete a Strava activity that was removed on Strava (webhook delete event). */
+    void deleteStravaActivity(Runner runner, long stravaActivityId) {
+        String checksum = "STRAVA_" + stravaActivityId;
+        activityRepository.findByRunnerAndProviderAndSourceChecksum(runner, ImportProvider.STRAVA, checksum)
+                .ifPresent(activity -> {
+                    activityPointRepository.deleteByActivity(activity);
+                    activityRepository.delete(activity);
+                });
+    }
+
     private boolean isGoogleConfigured() {
         return googleClientId != null && !googleClientId.isBlank()
                 && googleClientSecret != null && !googleClientSecret.isBlank();
     }
 
-    private boolean isStravaConfigured() {
+    boolean isStravaConfigured() {
         return stravaClientId != null && !stravaClientId.isBlank()
                 && stravaClientSecret != null && !stravaClientSecret.isBlank()
                 && secretEncryptionService.isConfigured();
     }
 
-    private String resolveRunnerStravaAccessToken(Runner runner) {
+    String resolveRunnerStravaAccessToken(Runner runner) {
         String storedAccessToken = runner.getStravaAccessToken();
         if (storedAccessToken == null || storedAccessToken.isBlank()) {
             return null;
@@ -548,6 +590,7 @@ public class OAuthController {
         String storedRefreshToken = runner.getStravaRefreshToken();
         String decryptedRefreshToken = secretEncryptionService.decrypt(storedRefreshToken);
 
+        // Migrate unencrypted tokens
         if (secretEncryptionService.isConfigured()
                 && (!secretEncryptionService.isEncrypted(storedAccessToken)
                 || (storedRefreshToken != null && !storedRefreshToken.isBlank() && !secretEncryptionService.isEncrypted(storedRefreshToken)))) {
@@ -556,7 +599,54 @@ public class OAuthController {
             runnerRepository.save(runner);
         }
 
+        // Auto-refresh if token is expired or about to expire (within 5 minutes)
+        Long expiresAt = runner.getStravaTokenExpiresAt();
+        if (expiresAt != null && expiresAt < (System.currentTimeMillis() / 1000) + 300) {
+            String refreshed = refreshStravaToken(runner, decryptedRefreshToken);
+            if (refreshed != null) return refreshed;
+        }
+
         return decryptedAccessToken;
+    }
+
+    private String refreshStravaToken(Runner runner, String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank() || !isStravaConfigured()) return null;
+        try {
+            RestTemplate rest = new RestTemplate();
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("client_id", stravaClientId);
+            form.add("client_secret", stravaClientSecret);
+            form.add("grant_type", "refresh_token");
+            form.add("refresh_token", refreshToken);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = rest.postForObject(
+                    "https://www.strava.com/oauth/token",
+                    new HttpEntity<>(form, headers),
+                    Map.class);
+
+            if (body == null) return null;
+
+            String newAccess = stringValue(body.get("access_token"));
+            String newRefresh = stringValue(body.get("refresh_token"));
+            Long newExpires = longValue(body.get("expires_at"));
+
+            if (newAccess != null && !newAccess.isBlank()) {
+                runner.setStravaAccessToken(secretEncryptionService.encrypt(newAccess));
+                if (newRefresh != null && !newRefresh.isBlank()) {
+                    runner.setStravaRefreshToken(secretEncryptionService.encrypt(newRefresh));
+                }
+                if (newExpires != null) runner.setStravaTokenExpiresAt(newExpires);
+                runnerRepository.save(runner);
+                return newAccess;
+            }
+        } catch (Exception e) {
+            System.err.println("Strava token refresh failed for runner " + runner.getId() + ": " + e.getMessage());
+        }
+        return null;
     }
 
     private RedirectView errorRedirect(String message, String state) {
