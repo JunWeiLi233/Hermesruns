@@ -7,13 +7,14 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
 
 export default function Landing() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/profile');
-  }, [isAuthenticated, navigate]);
+    if (!isAuthenticated || !authHydrated) return;
+    navigate(isAdmin ? '/dashboard' : '/profile');
+  }, [isAuthenticated, authHydrated, isAdmin, navigate]);
 
   const startStrava = useCallback(() => {
     const baseUrl = getBackendBaseUrl();

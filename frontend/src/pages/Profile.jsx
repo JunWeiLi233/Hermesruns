@@ -46,11 +46,19 @@ ChartJS.register(
   Legend,
   Filler,
 );
-const HEAT_GRADIENT = {
+const HEAT_GRADIENT_DARK = {
   0.0: '#1a0a00',
   0.2: '#ff4500',
   0.5: '#ff8c00',
   0.8: '#ffd700',
+  1.0: '#ffffff',
+};
+
+const HEAT_GRADIENT_LIGHT = {
+  0.2: '#b71c1c',
+  0.4: '#e53935',
+  0.6: '#fb8c00',
+  0.8: '#fdd835',
   1.0: '#ffffff',
 };
 
@@ -270,6 +278,12 @@ export default function Profile() {
         subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(m);
+
+      if (heatLayerRef.current) {
+        heatLayerRef.current.setOptions({
+          gradient: isDark ? HEAT_GRADIENT_DARK : HEAT_GRADIENT_LIGHT
+        });
+      }
     });
   }, [isDark, mapReady]);
 
@@ -301,8 +315,12 @@ export default function Profile() {
         setHeatmapSummary('Map not visible');
         return;
       }
+      const currentGradient = document.body.classList.contains('theme-midnight') 
+        ? HEAT_GRADIENT_DARK 
+        : HEAT_GRADIENT_LIGHT;
+
       heatLayerRef.current = (L.default || L).heatLayer(points, {
-        radius: 4, blur: 3, maxZoom: 18, max: 1.0, minOpacity: 0.5, gradient: HEAT_GRADIENT,
+        radius: 4, blur: 5, maxZoom: 18, max: 1.0, minOpacity: 0.4, gradient: currentGradient,
       }).addTo(map);
 
       // Compute bounds manually — avoids creating N L.latLng objects

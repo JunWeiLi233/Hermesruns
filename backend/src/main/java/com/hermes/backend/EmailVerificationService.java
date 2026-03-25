@@ -44,9 +44,10 @@ public class EmailVerificationService {
 
     /**
      * First-time signup: persist runner (password already set), attach token, send mail.
-     * If sending fails, the runner row is removed so the user can try again.
+     * If sending fails and {@code deleteRunnerRowOnMailFailure} is true, the runner row is removed
+     * (brand-new signups only). For recycled soft-deleted accounts, pass false so the row is kept.
      */
-    public void sendVerificationToNewRunner(Runner runner) {
+    public void sendVerificationToNewRunner(Runner runner, boolean deleteRunnerRowOnMailFailure) {
         String plain = newPlainToken();
         applyToken(runner, plain);
         runnerRepository.save(runner);
@@ -55,9 +56,16 @@ public class EmailVerificationService {
             sendMail(runner.getEmail(), plain);
         } catch (MailException e) {
             log.error("Verification email failed for {}; rolling back signup row {}", runner.getEmail(), id, e);
-            runnerRepository.deleteById(id);
+            if (deleteRunnerRowOnMailFailure && id != null) {
+                runnerRepository.deleteById(id);
+            }
             throw e;
         }
+    }
+
+    /** @see #sendVerificationToNewRunner(Runner, boolean) */
+    public void sendVerificationToNewRunner(Runner runner) {
+        sendVerificationToNewRunner(runner, true);
     }
 
     /**

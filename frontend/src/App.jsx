@@ -1,6 +1,7 @@
 import React, { Suspense, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { UnitProvider } from './contexts/UnitContext';
@@ -41,6 +42,28 @@ function ScrollToTop() {
   return null;
 }
 
+function RouteLoading() {
+  return <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted, #64748b)' }}>Loading…</div>;
+}
+
+function AdminOnlyRoute({ children }) {
+  const { isAuthenticated, isAdmin, authHydrated } = useAuth();
+
+  if (!isAuthenticated) return <Navigate to="/admin" replace />;
+  if (!authHydrated) return <RouteLoading />;
+  if (!isAdmin) return <Navigate to="/profile" replace />;
+  return children;
+}
+
+function UserOnlyRoute({ children }) {
+  const { isAuthenticated, isAdmin, authHydrated } = useAuth();
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!authHydrated) return <RouteLoading />;
+  if (isAdmin) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 function App() {
   return (
     <I18nProvider>
@@ -54,16 +77,16 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/admin" element={<AdminLogin />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/runs" element={<Runs />} />
-              <Route path="/run/:id" element={<RunDetail />} />
-              <Route path="/run" element={<RunDetail />} />
-              <Route path="/analysis" element={<Analysis />} />
-              <Route path="/prediction/:distKey" element={<PredictionDetail />} />
-              <Route path="/today-run" element={<TodayRun />} />
-              <Route path="/shoes" element={<Shoes />} />
-              <Route path="/races" element={<Races />} />
+              <Route path="/dashboard" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
+              <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
+              <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
+              <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+              <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+              <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
+              <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
+              <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
+              <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
+              <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
