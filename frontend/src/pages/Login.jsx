@@ -7,7 +7,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -23,8 +23,9 @@ export default function Login() {
   const [altLoginOpen, setAltLoginOpen] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/profile');
-  }, [isAuthenticated, navigate]);
+    if (!isAuthenticated || !authHydrated) return;
+    navigate(isAdmin ? '/dashboard' : '/profile');
+  }, [isAuthenticated, authHydrated, isAdmin, navigate]);
 
   useEffect(() => {
     if (searchParams.get('verified') === '1') {
@@ -91,19 +92,14 @@ export default function Login() {
         } else {
           setError(data.error || data.message || 'Request failed.');
         }
-        setLoading(false);
         return;
       }
 
-      login(data.token, data.email);
-
-      if (data.role === 'ADMIN') {
-        navigate('/dashboard');
-      } else {
-        navigate('/profile');
-      }
+      login(data.token, data.email, data.role);
+      // Redirect after authHydrated (see useEffect); avoids racing route guards that still saw no token.
     } catch {
       setError(t('common.connection_failed'));
+    } finally {
       setLoading(false);
     }
   }

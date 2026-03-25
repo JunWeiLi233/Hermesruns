@@ -30,6 +30,9 @@ public class Shoe {
     private Double initialDistanceKm;
     @Column(length = 1024)
     private String photoUrl;
+    /** Admin confirmed this product image matches brand+model (set from dashboard). */
+    @Column(name = "photo_verified")
+    private Boolean photoVerified = false;
     private boolean retired;
     private boolean isPrimary;
     private LocalDateTime createdAt;
@@ -41,6 +44,7 @@ public class Shoe {
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
         if (maxDistanceKm == null) maxDistanceKm = 650.0;
+        if (photoVerified == null) photoVerified = false;
     }
 
     // Getters and Setters
@@ -80,6 +84,9 @@ public class Shoe {
 
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    public boolean isPhotoVerified() { return Boolean.TRUE.equals(photoVerified); }
+    public void setPhotoVerified(boolean photoVerified) { this.photoVerified = photoVerified; }
 
     public Double getCurrentDistanceKm() { return currentDistanceKm; }
     public void setCurrentDistanceKm(Double currentDistanceKm) { this.currentDistanceKm = currentDistanceKm; }

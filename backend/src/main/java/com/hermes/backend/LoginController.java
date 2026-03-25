@@ -164,16 +164,27 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
         }
 
-        if (runnerRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            return error(HttpStatus.CONFLICT, "Email already in use.");
+        Optional<Runner> existingByEmail = runnerRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (existingByEmail.isPresent()) {
+            Runner r = existingByEmail.get();
+            boolean removed = r.isDeleted() || "DELETED".equalsIgnoreCase(r.getStatus());
+            if (!removed) {
+                return error(HttpStatus.CONFLICT, "Email already in use.");
+            }
         }
 
-        Runner runner = new Runner();
-        runner.setEmail(normalizedEmail);
-        runner.setStatus("ACTIVE");
-        runner.setRole("USER");
-        authService.storePassword(runner, rawPassword);
-        aiUsageService.initNewUser(runner);
+        Runner runner;
+        if (existingByEmail.isPresent()) {
+            runner = existingByEmail.get();
+            recycleDeletedRunnerForSignup(runner, normalizedEmail, rawPassword);
+        } else {
+            runner = new Runner();
+            runner.setEmail(normalizedEmail);
+            runner.setStatus("ACTIVE");
+            runner.setRole("USER");
+            authService.storePassword(runner, rawPassword);
+            aiUsageService.initNewUser(runner);
+        }
 
         Map<String, Object> body = new LinkedHashMap<>();
         if (!emailVerificationService.isMailConfigured()) {
@@ -187,7 +198,7 @@ public class LoginController {
 
         runner.setEmailVerified(false);
         try {
-            emailVerificationService.sendVerificationToNewRunner(runner);
+            emailVerificationService.sendVerificationToNewRunner(runner, existingByEmail.isEmpty());
         } catch (Exception e) {
             return error(HttpStatus.SERVICE_UNAVAILABLE, "Could not send verification email. Try again later.");
         }
@@ -196,6 +207,37 @@ public class LoginController {
         body.put("verificationRequired", true);
         body.put("email", normalizedEmail);
         return ResponseEntity.ok(body);
+    }
+
+    /**
+     * Re-open a soft-deleted runner row so the same email can sign up again without a DB unique violation.
+     */
+    private void recycleDeletedRunnerForSignup(Runner runner, String normalizedEmail, String rawPassword) {
+        runner.setEmail(normalizedEmail);
+        runner.setDeleted(false);
+        runner.setStatus("ACTIVE");
+        runner.setRole("USER");
+        runner.setSessionToken(null);
+        runner.setTokenIssuedAt(null);
+        authService.storePassword(runner, rawPassword);
+        aiUsageService.initNewUser(runner);
+        runner.setStravaAthleteId(null);
+        runner.setStravaUsername(null);
+        runner.setStravaAccessToken(null);
+        runner.setStravaRefreshToken(null);
+        runner.setStravaTokenExpiresAt(null);
+        runner.setGarminUserId(null);
+        runner.setGarminAccessToken(null);
+        runner.setGarminAccessTokenSecret(null);
+        runner.setGarminConsumerKey(null);
+        runner.setGarminConsumerSecret(null);
+        runner.setGarminRedirectUri(null);
+        runner.setDisplayName(null);
+        runner.setSubscriptionTier("FREE");
+        runner.setProExpiresAt(null);
+        runner.setAiMonthlyScansUsed(0);
+        runner.setAiMonthlyResetDate(null);
+        emailVerificationService.clearVerificationFields(runner);
     }
 
     // ==========================================
