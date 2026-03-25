@@ -24,12 +24,19 @@ export function ThemeProvider({ children }) {
     setThemeState(validated);
   }, []);
 
-  // Apply theme class to document.body whenever theme changes
+  // Theme classes live on body; CSS targets `body.theme-* .dashboard-body` (see style.css).
+  // `data-theme` mirrors midnight / high-contrast for selectors like [data-theme="midnight"].
   useEffect(() => {
     const body = document.body;
     THEME_CLASSES.forEach(cls => body.classList.remove(cls));
     if (theme !== 'light') {
       body.classList.add(`theme-${theme}`);
+    }
+    const html = document.documentElement;
+    if (theme === 'midnight' || theme === 'high-contrast') {
+      html.setAttribute('data-theme', theme);
+    } else {
+      html.removeAttribute('data-theme');
     }
   }, [theme]);
 

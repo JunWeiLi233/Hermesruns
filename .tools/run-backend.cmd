@@ -113,6 +113,10 @@ for /d %%D in ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-*\*") do (
 cd /d "%ROOT%\backend"
 
 echo [Hermes] Igniting Spring Boot...
+:: Memory-optimized JVM flags for small servers (2GB RAM)
+if not defined JAVA_TOOL_OPTIONS (
+  set "JAVA_TOOL_OPTIONS=-Xmx384m -Xms128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m"
+)
 if defined MVN_CMD (
   call "%MVN_CMD%" -Dmaven.repo.local="%MAVEN_REPO%" spring-boot:run
 ) else (

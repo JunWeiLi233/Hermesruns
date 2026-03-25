@@ -49,6 +49,12 @@ if defined APP_JPA_DDL_AUTO         echo set "APP_JPA_DDL_AUTO=%APP_JPA_DDL_AUTO
 if defined APP_AI_API_KEY           echo set "APP_AI_API_KEY=%APP_AI_API_KEY%">> "%BOOT_SCRIPT%"
 if defined APP_AI_MODEL             echo set "APP_AI_MODEL=%APP_AI_MODEL%">> "%BOOT_SCRIPT%"
 if defined APP_AI_PROVIDER          echo set "APP_AI_PROVIDER=%APP_AI_PROVIDER%">> "%BOOT_SCRIPT%"
+if defined SPRING_MAIL_HOST         echo set "SPRING_MAIL_HOST=%SPRING_MAIL_HOST%">> "%BOOT_SCRIPT%"
+if defined SPRING_MAIL_PORT         echo set "SPRING_MAIL_PORT=%SPRING_MAIL_PORT%">> "%BOOT_SCRIPT%"
+if defined SPRING_MAIL_USERNAME     echo set "SPRING_MAIL_USERNAME=%SPRING_MAIL_USERNAME%">> "%BOOT_SCRIPT%"
+if defined SPRING_MAIL_PASSWORD     echo set "SPRING_MAIL_PASSWORD=%SPRING_MAIL_PASSWORD%">> "%BOOT_SCRIPT%"
+if defined APP_MAIL_FROM            echo set "APP_MAIL_FROM=%APP_MAIL_FROM%">> "%BOOT_SCRIPT%"
+if defined APP_PUBLIC_BASE_URL     echo set "APP_PUBLIC_BASE_URL=%APP_PUBLIC_BASE_URL%">> "%BOOT_SCRIPT%"
 echo cd /d "%ROOT%">> "%BOOT_SCRIPT%"
 echo call .tools\run-backend.cmd>> "%BOOT_SCRIPT%"
 

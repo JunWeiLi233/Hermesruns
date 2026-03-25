@@ -6,7 +6,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "shoes", indexes = {
-    @Index(name = "idx_shoe_runner", columnList = "runner_id")
+    @Index(name = "idx_shoe_runner", columnList = "runner_id"),
+    @Index(name = "idx_shoe_runner_identity", columnList = "runner_id,identity_key")
 })
 public class Shoe {
 
@@ -21,6 +22,9 @@ public class Shoe {
 
     private String brand;
     private String model;
+    /** Fingerprint for duplicate detection (Chinese vs romanized names, spacing, case). */
+    @Column(name = "identity_key", length = 256)
+    private String identityKey;
     private String nickname;
     private Double maxDistanceKm;
     private Double initialDistanceKm;
@@ -52,6 +56,9 @@ public class Shoe {
 
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
+
+    public String getIdentityKey() { return identityKey; }
+    public void setIdentityKey(String identityKey) { this.identityKey = identityKey; }
 
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }

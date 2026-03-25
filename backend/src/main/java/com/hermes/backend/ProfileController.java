@@ -64,6 +64,11 @@ public class ProfileController {
             return error(HttpStatus.BAD_REQUEST, "Display name must be 60 characters or fewer.");
         }
 
+        if (normalizedDisplayName.contains("<") || normalizedDisplayName.contains(">") ||
+                normalizedDisplayName.contains("&") || normalizedDisplayName.contains("\"")) {
+            return error(HttpStatus.BAD_REQUEST, "Display name contains invalid characters.");
+        }
+
         Runner runner = runnerOptional.get();
         runner.setDisplayName(normalizedDisplayName);
         runnerRepository.save(runner);
@@ -81,13 +86,13 @@ public class ProfileController {
 
         Runner runner = runnerOptional.get();
         activityNormalizationService.backfillActivityTypes(runner);
-        List<ActivityPoint> activityPoints = activityPointRepository.findHeatmapPointsByRunnerAndActivityType(
+        List<Object[]> coords = activityPointRepository.findHeatmapCoordsByRunnerAndType(
                 runner,
                 ActivityType.RUN
         );
-        HeatmapBounds bounds = buildBounds(activityPoints);
-        List<HeatPoint> points = activityPoints.stream()
-                .map(point -> new HeatPoint(point.getLatitude(), point.getLongitude(), 1.0))
+        HeatmapBounds bounds = buildBoundsFromCoords(coords);
+        List<HeatPoint> points = coords.stream()
+                .map(c -> new HeatPoint((Double) c[0], (Double) c[1], 1.0))
                 .toList();
 
         return ResponseEntity.ok(new HeatmapResponse(
@@ -98,8 +103,8 @@ public class ProfileController {
         ));
     }
 
-    private HeatmapBounds buildBounds(List<ActivityPoint> activityPoints) {
-        if (activityPoints.isEmpty()) {
+    private HeatmapBounds buildBoundsFromCoords(List<Object[]> coords) {
+        if (coords.isEmpty()) {
             return null;
         }
 
@@ -108,18 +113,23 @@ public class ProfileController {
         double minLongitude = Double.MAX_VALUE;
         double maxLongitude = -Double.MAX_VALUE;
 
-        for (ActivityPoint point : activityPoints) {
-            minLatitude = Math.min(minLatitude, point.getLatitude());
-            maxLatitude = Math.max(maxLatitude, point.getLatitude());
-            minLongitude = Math.min(minLongitude, point.getLongitude());
-            maxLongitude = Math.max(maxLongitude, point.getLongitude());
+        for (Object[] c : coords) {
+            double lat = (Double) c[0];
+            double lng = (Double) c[1];
+            minLatitude = Math.min(minLatitude, lat);
+            maxLatitude = Math.max(maxLatitude, lat);
+            minLongitude = Math.min(minLongitude, lng);
+            maxLongitude = Math.max(maxLongitude, lng);
         }
 
         return new HeatmapBounds(minLatitude, minLongitude, maxLatitude, maxLongitude);
     }
 
     private ProfileResponse toProfileResponse(Runner runner) {
-        return new ProfileResponse(runner.getEmail(), runner.getDisplayName());
+        boolean stravaLinked = runner.getStravaAthleteId() != null
+                && runner.getStravaRefreshToken() != null
+                && !runner.getStravaRefreshToken().isBlank();
+        return new ProfileResponse(runner.getEmail(), runner.getDisplayName(), stravaLinked);
     }
 
     private ResponseEntity<Map<String, String>> unauthorized() {
@@ -132,7 +142,7 @@ public class ProfileController {
         return ResponseEntity.status(status).body(response);
     }
 
-    public record ProfileResponse(String email, String displayName) {
+    public record ProfileResponse(String email, String displayName, boolean stravaLinked) {
     }
 
     public record UpdateDisplayNameRequest(String displayName) {

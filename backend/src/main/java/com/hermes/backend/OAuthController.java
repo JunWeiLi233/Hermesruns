@@ -41,6 +41,8 @@ public class OAuthController {
     private final ActivityPointRepository activityPointRepository;
     private final SecretEncryptionService secretEncryptionService;
     private final GarminOAuthSettings garminOAuthSettings;
+    private final AiUsageService aiUsageService;
+    private final RestTemplate restTemplate;
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
 
     @Value("${google.client.id:}")
@@ -61,16 +63,27 @@ public class OAuthController {
     @Value("${app.strava.redirect-uri:http://localhost:8080/api/auth/strava/callback}")
     private String stravaRedirectUri;
 
+    /** Max Strava activity list pages per user when doing background / incremental sync (recent pages first). */
+    @Value("${strava.sync.max-pages-recent:5}")
+    private int stravaRecentSyncMaxPages;
+
+    /** Max pages for a full history pull (login callback, manual resync). */
+    @Value("${strava.sync.max-pages-full:50}")
+    private int stravaFullSyncMaxPages;
+
     public OAuthController(RunnerRepository runnerRepository, AuthService authService,
                            ActivityRepository activityRepository, ActivityPointRepository activityPointRepository,
                            SecretEncryptionService secretEncryptionService,
-                           GarminOAuthSettings garminOAuthSettings) {
+                           GarminOAuthSettings garminOAuthSettings, AiUsageService aiUsageService,
+                           RestTemplate restTemplate) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
         this.secretEncryptionService = secretEncryptionService;
         this.garminOAuthSettings = garminOAuthSettings;
+        this.aiUsageService = aiUsageService;
+        this.restTemplate = restTemplate;
     }
 
     @GetMapping("/auth/providers")
@@ -134,7 +147,7 @@ public class OAuthController {
             return errorRedirect("Google sign-in failed.", state);
         }
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
 
         try {
             HttpHeaders tokenHeaders = new HttpHeaders();
@@ -185,8 +198,10 @@ public class OAuthController {
                         newRunner.setEmail(googleEmail);
                         newRunner.setRole("USER");
                         newRunner.setStatus("ACTIVE_GOOGLE");
+                        aiUsageService.initNewUser(newRunner);
                         return runnerRepository.save(newRunner);
                     });
+            runner.setEmailVerified(true);
 
             String token = authService.issueSessionToken(runner);
             String targetPage = authService.isAdmin(runner) ? "/dashboard" : "/profile";
@@ -220,7 +235,7 @@ public class OAuthController {
             return errorRedirect("Strava sign-in failed.", state);
         }
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
 
         try {
             HttpHeaders tokenHeaders = new HttpHeaders();
@@ -281,13 +296,16 @@ public class OAuthController {
                 runner.setDisplayName(resolveStravaDisplayName(athlete, athleteId));
             }
 
+            runner.setEmailVerified(true);
+
+            if (runner.getId() == null) {
+                aiUsageService.initNewUser(runner);
+            }
+
             runner = runnerRepository.save(runner);
 
-            StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runner.getId(), ignored -> new StravaSyncTracker());
-            tracker.resetForNewSync();
-
             Long runnerId = runner.getId();
-            CompletableFuture.runAsync(() -> fetchAndSaveStravaActivities(accessToken, runnerId));
+            CompletableFuture.runAsync(() -> fetchAndSaveStravaActivities(accessToken, runnerId, false));
 
             String token = authService.issueSessionToken(runner);
             String targetPage = authService.isAdmin(runner) ? "/dashboard" : "/profile";
@@ -318,7 +336,7 @@ public class OAuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No Strava account linked");
         }
 
-        CompletableFuture.runAsync(() -> fetchAndSaveStravaActivities(accessToken, runner.getId()));
+        CompletableFuture.runAsync(() -> fetchAndSaveStravaActivities(accessToken, runner.getId(), false));
         return ResponseEntity.ok("Strava sync started");
     }
 
@@ -361,9 +379,17 @@ public class OAuthController {
         return ResponseEntity.ok(response);
     }
 
-    void fetchAndSaveStravaActivities(String accessToken, Long runnerId) {
+    /**
+     * Pull activities from Strava into Hermes.
+     *
+     * @param recentOnly when true (scheduled / incremental jobs), only fetch the first {@link #stravaRecentSyncMaxPages}
+     *                   pages and stop early once a page contains runs that are already stored (Strava lists newest first).
+     */
+    void fetchAndSaveStravaActivities(String accessToken, Long runnerId, boolean recentOnly) {
         StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runnerId, ignored -> new StravaSyncTracker());
-        tracker.markRunning();
+        if (!tracker.tryBeginSync()) {
+            return;
+        }
 
         Optional<Runner> runnerOptional = runnerRepository.findById(runnerId);
         if (runnerOptional.isEmpty()) {
@@ -372,14 +398,15 @@ public class OAuthController {
         }
 
         Runner runner = runnerOptional.get();
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
         int page = 1;
+        final int maxPages = recentOnly ? Math.max(1, stravaRecentSyncMaxPages) : Math.max(1, stravaFullSyncMaxPages);
         boolean[] gpsRateLimited = {false};
         try {
-            while (true) {
+            while (page <= maxPages) {
                 String activitiesUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=" + page;
                 ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
                         activitiesUrl,
@@ -396,18 +423,41 @@ public class OAuthController {
                 }
 
                 tracker.incrementProcessedPages();
+                int runsOnPage = 0;
+                int newOrUpdatedRunsOnPage = 0;
                 for (Map<String, Object> activityData : activities) {
-                    syncSingleStravaActivity(runner, tracker, activityData, gpsRateLimited, restTemplate, headers, accessToken);
+                    StravaActivitySyncResult r = syncSingleStravaActivity(
+                            runner, tracker, activityData, gpsRateLimited, restTemplate, headers, accessToken);
+                    if (r == StravaActivitySyncResult.SKIPPED_NON_RUN) {
+                        continue;
+                    }
+                    runsOnPage++;
+                    if (r == StravaActivitySyncResult.NEW_OR_UPDATED_RUN) {
+                        newOrUpdatedRunsOnPage++;
+                    }
+                }
+
+                // Newest-first listing: once a page has runs but none were new/updated, older pages are duplicates.
+                if (runsOnPage > 0 && newOrUpdatedRunsOnPage == 0) {
+                    tracker.markCompleted();
+                    return;
                 }
 
                 page++;
             }
+            tracker.markCompleted();
         } catch (Exception exception) {
             tracker.markFailed("Unable to sync Strava activities right now.");
         }
     }
 
-    private void syncSingleStravaActivity(Runner runner, StravaSyncTracker tracker, Map<String, Object> activityData,
+    private enum StravaActivitySyncResult {
+        SKIPPED_NON_RUN,
+        NEW_OR_UPDATED_RUN,
+        DUPLICATE_RUN
+    }
+
+    private StravaActivitySyncResult syncSingleStravaActivity(Runner runner, StravaSyncTracker tracker, Map<String, Object> activityData,
                                           boolean[] gpsRateLimited, RestTemplate restTemplate, HttpHeaders headers,
                                           String accessToken) {
         ActivityType activityType = ActivityTypeResolver.fromSportLabels(
@@ -418,13 +468,13 @@ public class OAuthController {
 
         if (activityType != ActivityType.RUN) {
             tracker.incrementSkippedNonRuns();
-            return;
+            return StravaActivitySyncResult.SKIPPED_NON_RUN;
         }
 
         String stravaId = stringValue(activityData.get("id"));
         if (stravaId == null || stravaId.isBlank()) {
             tracker.incrementSkippedNonRuns();
-            return;
+            return StravaActivitySyncResult.SKIPPED_NON_RUN;
         }
 
         String checksum = "STRAVA_" + stravaId;
@@ -479,9 +529,10 @@ public class OAuthController {
 
         if (existingActivity && previousType == ActivityType.RUN) {
             tracker.incrementSkippedDuplicates();
-        } else {
-            tracker.incrementImportedRuns();
+            return StravaActivitySyncResult.DUPLICATE_RUN;
         }
+        tracker.incrementImportedRuns();
+        return StravaActivitySyncResult.NEW_OR_UPDATED_RUN;
     }
 
     @SuppressWarnings("unchecked")
@@ -511,7 +562,7 @@ public class OAuthController {
                         point.setSequenceIndex(i);
                         points.add(point);
                     }
-                    activityPointRepository.saveAll(points);
+                    savePointsInBatches(points);
                     System.out.println("GPS cached: " + stravaId + " (" + points.size() + " pts)");
                     return true;
                 }
@@ -539,7 +590,7 @@ public class OAuthController {
         if (accessToken == null || accessToken.isBlank()) return;
 
         try {
-            RestTemplate restTemplate = new RestTemplate();
+            RestTemplate restTemplate = this.restTemplate;
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
 
@@ -612,7 +663,7 @@ public class OAuthController {
     private String refreshStravaToken(Runner runner, String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank() || !isStravaConfigured()) return null;
         try {
-            RestTemplate rest = new RestTemplate();
+            RestTemplate rest = this.restTemplate;
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
             form.add("client_id", stravaClientId);
             form.add("client_secret", stravaClientSecret);
@@ -787,6 +838,7 @@ public class OAuthController {
         private int processedActivities;
         private int processedPages;
         private String error;
+        private long lastUpdatedMs = System.currentTimeMillis();
 
         synchronized void resetForNewSync() {
             status = "PENDING";
@@ -798,11 +850,16 @@ public class OAuthController {
             error = null;
         }
 
-        synchronized void markRunning() {
-            if ("IDLE".equals(status)) {
-                resetForNewSync();
+        /**
+         * @return false if a sync is already in progress for this runner (avoids overlapping Strava API pulls).
+         */
+        synchronized boolean tryBeginSync() {
+            if ("RUNNING".equals(status) || "PENDING".equals(status)) {
+                return false;
             }
+            resetForNewSync();
             status = "RUNNING";
+            return true;
         }
 
         synchronized void incrementImportedRuns() {
@@ -827,11 +884,17 @@ public class OAuthController {
         synchronized void markCompleted() {
             status = "COMPLETED";
             error = null;
+            lastUpdatedMs = System.currentTimeMillis();
         }
 
         synchronized void markFailed(String message) {
             status = "FAILED";
             error = message;
+            lastUpdatedMs = System.currentTimeMillis();
+        }
+
+        synchronized boolean isStale(long cutoffMs) {
+            return lastUpdatedMs < cutoffMs && !"RUNNING".equals(status) && !"PENDING".equals(status);
         }
 
         synchronized StravaSyncStatusResponse snapshot() {
@@ -846,5 +909,21 @@ public class OAuthController {
                     "RUNNING".equals(status) || "PENDING".equals(status)
             );
         }
+    }
+
+    /** Save activity points in batches of 500 to limit memory pressure */
+    private void savePointsInBatches(List<ActivityPoint> points) {
+        final int batchSize = 500;
+        for (int i = 0; i < points.size(); i += batchSize) {
+            activityPointRepository.saveAll(points.subList(i, Math.min(i + batchSize, points.size())));
+            activityPointRepository.flush();
+        }
+    }
+
+    /** Remove completed/failed sync trackers older than 30 minutes (runs every 10 minutes) */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 600_000)
+    void cleanupStaleSyncTrackers() {
+        long cutoff = System.currentTimeMillis() - 1_800_000; // 30 minutes
+        stravaSyncStates.entrySet().removeIf(entry -> entry.getValue().isStale(cutoff));
     }
 }

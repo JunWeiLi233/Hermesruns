@@ -1,7 +1,11 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -10,7 +14,8 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_runner_email", columnList = "email"),
                 @Index(name = "idx_runner_session_token", columnList = "sessionToken"),
                 @Index(name = "idx_runner_strava_athlete_id", columnList = "stravaAthleteId"),
-                @Index(name = "idx_runner_deleted_role", columnList = "deleted, role")
+                @Index(name = "idx_runner_deleted_role", columnList = "deleted, role"),
+                @Index(name = "idx_runner_email_verif_token", columnList = "emailVerificationTokenHash")
         }
 )
 public class Runner {
@@ -168,6 +173,90 @@ public class Runner {
     public void setStravaTokenExpiresAt(Long stravaTokenExpiresAt) {
         this.stravaTokenExpiresAt = stravaTokenExpiresAt;
     }
+
+    // ── Subscription & AI usage fields ──
+    // ColumnDefault: required so Hibernate ddl-auto can add NOT NULL columns on PostgreSQL when rows already exist.
+
+    @Column(nullable = false)
+    @ColumnDefault("'FREE'")
+    private String subscriptionTier = "FREE"; // FREE or PRO
+
+    private LocalDateTime proExpiresAt;
+
+    @Column(nullable = false)
+    @ColumnDefault("5")
+    private int aiWelcomeScansRemaining = 5;
+
+    /**
+     * AI shoe-scan lifecycle: {@code NEW_USER} = one trial scan, then {@code REGULAR_USER} with
+     * {@link #aiFreeScansRemaining} (3) for non-Pro. Null = legacy row (migrated on first quota touch).
+     */
+    @Column(length = 24)
+    private String aiExperiencePhase;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int aiFreeScansRemaining = 0;
+
+    private LocalDate aiDailyLastUsedDate;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int aiMonthlyScansUsed = 0;
+
+    private LocalDate aiMonthlyResetDate;
+
+    /** False until the user completes email verification (password sign-up only). OAuth users are verified by the provider. */
+    @Column(nullable = false)
+    @ColumnDefault("true")
+    private boolean emailVerified = true;
+
+    @JsonIgnore
+    @Column(length = 64)
+    private String emailVerificationTokenHash;
+
+    private LocalDateTime emailVerificationExpiresAt;
+
+    @PrePersist
+    @PreUpdate
+    private void applySubscriptionAiDefaults() {
+        if (subscriptionTier == null || subscriptionTier.isBlank()) {
+            subscriptionTier = "FREE";
+        }
+    }
+
+    public String getSubscriptionTier() { return subscriptionTier; }
+    public void setSubscriptionTier(String subscriptionTier) { this.subscriptionTier = subscriptionTier; }
+
+    public LocalDateTime getProExpiresAt() { return proExpiresAt; }
+    public void setProExpiresAt(LocalDateTime proExpiresAt) { this.proExpiresAt = proExpiresAt; }
+
+    public int getAiWelcomeScansRemaining() { return aiWelcomeScansRemaining; }
+    public void setAiWelcomeScansRemaining(int aiWelcomeScansRemaining) { this.aiWelcomeScansRemaining = aiWelcomeScansRemaining; }
+
+    public String getAiExperiencePhase() { return aiExperiencePhase; }
+    public void setAiExperiencePhase(String aiExperiencePhase) { this.aiExperiencePhase = aiExperiencePhase; }
+
+    public int getAiFreeScansRemaining() { return aiFreeScansRemaining; }
+    public void setAiFreeScansRemaining(int aiFreeScansRemaining) { this.aiFreeScansRemaining = aiFreeScansRemaining; }
+
+    public LocalDate getAiDailyLastUsedDate() { return aiDailyLastUsedDate; }
+    public void setAiDailyLastUsedDate(LocalDate aiDailyLastUsedDate) { this.aiDailyLastUsedDate = aiDailyLastUsedDate; }
+
+    public int getAiMonthlyScansUsed() { return aiMonthlyScansUsed; }
+    public void setAiMonthlyScansUsed(int aiMonthlyScansUsed) { this.aiMonthlyScansUsed = aiMonthlyScansUsed; }
+
+    public LocalDate getAiMonthlyResetDate() { return aiMonthlyResetDate; }
+    public void setAiMonthlyResetDate(LocalDate aiMonthlyResetDate) { this.aiMonthlyResetDate = aiMonthlyResetDate; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public String getEmailVerificationTokenHash() { return emailVerificationTokenHash; }
+    public void setEmailVerificationTokenHash(String emailVerificationTokenHash) { this.emailVerificationTokenHash = emailVerificationTokenHash; }
+
+    public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
+    public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
 
     // ── Garmin fields ──
 

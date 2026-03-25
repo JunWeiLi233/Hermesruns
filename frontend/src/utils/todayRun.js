@@ -1,5 +1,5 @@
 import { formatPace } from './format';
-import { calculateVdot, computeTrainingPaces } from './vdot';
+import { estimateCurrentVdot, computeTrainingPaces } from './vdot';
 
 function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
@@ -10,7 +10,7 @@ function hrToVo2Fraction(avgHr, hrMax) {
 function paceToVo2Fraction(paceSecPerKm, vdot) {
   if (!paceSecPerKm || paceSecPerKm <= 0 || !vdot || vdot <= 0) return null;
   const velocity = (1000 / paceSecPerKm) * 60;
-  const vo2 = -4.6 + (0.182258 * velocity) + (0.000104 * velocity * velocity);
+  const vo2 = -4.60 + (0.182258 * velocity) + (0.000104 * velocity * velocity);
   return vo2 / vdot;
 }
 
@@ -150,22 +150,6 @@ function computeTrainingLoadSnapshot(runs, bestVdot) {
   return { acute: ewmaA, chronic: ewmaC, acwr: lastAcwr };
 }
 
-function getBestVdot(runs) {
-  let best = 0;
-  const now = Date.now();
-  const ninetyDays = 90 * 24 * 60 * 60 * 1000;
-  runs.forEach((run) => {
-    const km = Number(run.distanceKm || 0);
-    const sec = Number(run.movingTimeSeconds || 0);
-    if (km < 1.5 || sec <= 0) return;
-    const runDate = new Date(run.startTime || run.startDate || 0);
-    if ((now - runDate.getTime()) > ninetyDays) return;
-    const vdot = calculateVdot(km * 1000, sec / 60);
-    if (vdot > 0 && vdot <= 85 && vdot > best) best = vdot;
-  });
-  return best;
-}
-
 function getRecommendationTone(type, t) {
   switch (type) {
     case t('profile.today_run_type_recovery'):
@@ -261,7 +245,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
     ? Math.max(0, Math.floor((now - new Date(lastRun.startTime || lastRun.startDate)) / msPerDay))
     : null;
 
-  const bestVdot = getBestVdot(runs);
+  const bestVdot = estimateCurrentVdot(runs).representativeVdot;
   const trainingPaces = bestVdot > 0 ? computeTrainingPaces(bestVdot) : null;
   const recoveryState = computeRecoveryState(runs, bestVdot);
   const trainingLoad = computeTrainingLoadSnapshot(runs, bestVdot);

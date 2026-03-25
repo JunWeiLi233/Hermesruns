@@ -6,14 +6,25 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
 import { formatDuration, formatPaceSeconds } from '../utils/format';
-import { calculateVdot, computeTrainingPaces, predictRaceTime, RACE_DISTANCES } from '../utils/vdot';
+import {
+  computeTrainingPaces,
+  predictRaceTime,
+  RACE_DISTANCES,
+  estimateCurrentVdot,
+  collectAllVdotEntries,
+  computeRollingRepresentativeSeries,
+  VDOT_LOOKBACK_MS,
+  danielsRunningVo2CostMlKgMin,
+} from '../utils/vdot';
 import TopNav from '../components/TopNav';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import ImportDataGuide from '../components/ImportDataGuide';
+import RunLevelMedal from '../components/RunLevelMedal';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ScatterController, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Bar, Scatter, Doughnut, Line } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ArcElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ScatterController, ArcElement, Title, Tooltip, Legend, Filler);
 
 const KM_TO_MILE = 1.60934;
 
@@ -43,7 +54,7 @@ function hrToVo2Fraction(avgHr, hrMax) {
 function paceToVo2Fraction(paceSecPerKm, vdot) {
   if (!paceSecPerKm || paceSecPerKm <= 0 || !vdot || vdot <= 0) return null;
   const v = (1000 / paceSecPerKm) * 60;
-  const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+  const vo2 = danielsRunningVo2CostMlKgMin(v);
   return vo2 / vdot;
 }
 
@@ -231,34 +242,10 @@ export default function Analysis() {
     } catch { /* ignored */ }
   }
 
-  // VDOT calculation from runs
-  const { bestVdot, bestRun, allVdots } = useMemo(() => {
-    let best = 0, bestR = null;
-    const vdots = [];
-    const now = Date.now();
-    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
-
-    runs.forEach(run => {
-      const km = Number(run.distanceKm || 0);
-      const sec = Number(run.movingTimeSeconds || 0);
-      if (km < 1.5 || sec <= 0) return;
-
-      const distM = km * 1000;
-      const timeMin = sec / 60;
-      const v = calculateVdot(distM, timeMin);
-      if (v <= 0 || v > 85) return;
-
-      const runDate = new Date(run.startTime || run.startDate || 0);
-      vdots.push({ vdot: v, date: runDate, run });
-
-      if ((now - runDate.getTime()) <= ninetyDays && v > best) {
-        best = v;
-        bestR = run;
-      }
-    });
-
-    return { bestVdot: best, bestRun: bestR, allVdots: vdots };
-  }, [runs]);
+  const vdotEstimate = useMemo(() => estimateCurrentVdot(runs), [runs]);
+  const bestVdot = vdotEstimate.representativeVdot;
+  const bestRun = vdotEstimate.bestRun;
+  const allVdots = useMemo(() => collectAllVdotEntries(runs), [runs]);
 
   // Training paces
   const paces = useMemo(() => {
@@ -276,10 +263,43 @@ export default function Analysis() {
   }, [bestVdot]);
 
   // Summary stats
-  const { totalKm, totalSec } = useMemo(() => {
-    let km = 0, sec = 0;
-    runs.forEach(r => { km += Number(r.distanceKm || 0); sec += Number(r.movingTimeSeconds || 0); });
-    return { totalKm: km, totalSec: sec };
+  const { totalKm, totalSec, roll7, roll28, elev28 } = useMemo(() => {
+    let km = 0;
+    let sec = 0;
+    const now = Date.now();
+    const d7 = 7 * 24 * 60 * 60 * 1000;
+    const d28 = 28 * 24 * 60 * 60 * 1000;
+    let km7 = 0;
+    let km28 = 0;
+    let eg28 = 0;
+    let n7 = 0;
+    let n28 = 0;
+    runs.forEach((r) => {
+      const k = Number(r.distanceKm || 0);
+      const s = Number(r.movingTimeSeconds || 0);
+      km += k;
+      sec += s;
+      const t = new Date(r.startTime || r.startDate).getTime();
+      if (Number.isNaN(t)) return;
+      const age = now - t;
+      if (age <= d7) {
+        km7 += k;
+        n7 += 1;
+      }
+      if (age <= d28) {
+        km28 += k;
+        n28 += 1;
+        const eg = Number(r.totalElevationGain);
+        if (Number.isFinite(eg) && eg > 0) eg28 += eg;
+      }
+    });
+    return {
+      totalKm: km,
+      totalSec: sec,
+      roll7: { km: km7, runs: n7 },
+      roll28: { km: km28, runs: n28 },
+      elev28: eg28,
+    };
   }, [runs]);
 
   // Recovery state (matches old analysis.html logic)
@@ -362,78 +382,58 @@ export default function Analysis() {
 
     const scatterData = sorted.map(v => ({ x: v.date.getTime(), y: Math.round(v.vdot * 10) / 10 }));
 
-    const windowMs = 90 * 24 * 60 * 60 * 1000;
-    const peakData = sorted.map(run => {
-      const windowStart = run.date.getTime() - windowMs;
-      let peak = 0;
-      for (const r of sorted) {
-        if (r.date.getTime() > run.date.getTime()) break;
-        if (r.date.getTime() >= windowStart && r.vdot > peak) peak = r.vdot;
-      }
-      return { x: run.date.getTime(), y: Math.round(peak * 10) / 10 };
-    });
+    const rolling = computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
+    const peakData = rolling.map((p) => ({ x: p.x, y: p.y }));
 
     return {
       datasets: [
         {
-          label: t('analysis.progress_all_runs') || 'All Runs',
+          label: t('profile.vo2_chart_per_run'),
           data: scatterData,
-          backgroundColor: 'rgba(255, 107, 44, 0.3)',
-          borderColor: 'rgba(255, 107, 44, 0.5)',
-          pointRadius: 4,
-          pointHoverRadius: 7,
+          backgroundColor: 'rgba(13, 148, 136, 0.35)',
+          borderColor: 'rgba(13, 148, 136, 0.55)',
+          pointRadius: 3,
+          pointHoverRadius: 6,
           showLine: false,
           order: 2,
         },
         {
-          label: t('analysis.progress_fitness') || '90-Day Peak',
+          label: t('profile.vo2_chart_trend'),
           data: peakData,
           type: 'line',
-          borderColor: '#ea4f1f',
-          backgroundColor: 'rgba(234, 79, 31, 0.08)',
-          borderWidth: 2.5,
+          borderColor: '#0f766e',
+          backgroundColor: 'rgba(13, 148, 136, 0.06)',
+          borderWidth: 2,
           pointRadius: 0,
-          pointHoverRadius: 5,
+          pointHoverRadius: 4,
           fill: true,
-          tension: 0.3,
+          tension: 0.35,
           order: 1,
         },
       ],
     };
   }, [allVdots, t]);
 
-  // Prediction history chart — predicted times over time based on rolling 90-day peak VDOT
+  // Prediction history — rolling 90-day representative VDOT, sampled monthly
   const predictionHistoryData = useMemo(() => {
     if (!allVdots.length || allVdots.length < 3) return null;
     const sorted = [...allVdots].sort((a, b) => a.date - b.date);
-    const windowMs = 90 * 24 * 60 * 60 * 1000;
+    const rolling = computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
+    if (rolling.length < 2) return null;
 
-    // Sample monthly to keep chart clean
     const samples = [];
     let lastMonth = -1;
-    sorted.forEach(run => {
-      const m = run.date.getFullYear() * 12 + run.date.getMonth();
+    rolling.forEach((pt) => {
+      const d = new Date(pt.x);
+      const m = d.getFullYear() * 12 + d.getMonth();
       if (m !== lastMonth) {
         lastMonth = m;
-        // Compute 90-day peak VDOT at this point
-        const cutoff = run.date.getTime() - windowMs;
-        let peak = 0;
-        for (const r of sorted) {
-          if (r.date.getTime() > run.date.getTime()) break;
-          if (r.date.getTime() >= cutoff && r.vdot > peak) peak = r.vdot;
-        }
-        if (peak > 0) samples.push({ date: run.date.getTime(), vdot: peak });
+        samples.push({ date: pt.x, vdot: pt.y });
       }
     });
-    // Always include latest point
-    const lastRun = sorted[sorted.length - 1];
-    const lastCutoff = lastRun.date.getTime() - windowMs;
-    let lastPeak = 0;
-    for (const r of sorted) {
-      if (r.date.getTime() >= lastCutoff && r.vdot > lastPeak) lastPeak = r.vdot;
-    }
-    if (lastPeak > 0 && (samples.length === 0 || samples[samples.length - 1].date !== lastRun.date.getTime())) {
-      samples.push({ date: lastRun.date.getTime(), vdot: lastPeak });
+    const lastPt = rolling[rolling.length - 1];
+    if (samples.length === 0 || samples[samples.length - 1].date !== lastPt.x) {
+      samples.push({ date: lastPt.x, vdot: lastPt.y });
     }
 
     if (samples.length < 2) return null;
@@ -527,21 +527,27 @@ export default function Analysis() {
     }
     if (allDates.length < 7) return null;
 
-    // EWMA: λ_acute = 2/(7+1) = 0.25, λ_chronic = 2/(28+1) ≈ 0.069
+    // EWMA: acute 7d, chronic 28d (ACWR); CTL-style 42d for long-horizon fitness vs short fatigue
     const lambdaA = 2 / 8;
     const lambdaC = 2 / 29;
+    const lambdaCtl42 = 2 / 43;
 
     let ewmaA = dailyLoads[allDates[0]] || 0;
     let ewmaC = ewmaA;
+    let ewmaCtl = ewmaA;
 
     const acute = [], chronic = [], acwr = [];
 
     for (let i = 0; i < allDates.length; i++) {
       const load = dailyLoads[allDates[i]] || 0;
-      if (i === 0) { ewmaA = load; ewmaC = load; }
-      else {
+      if (i === 0) {
+        ewmaA = load;
+        ewmaC = load;
+        ewmaCtl = load;
+      } else {
         ewmaA = load * lambdaA + (1 - lambdaA) * ewmaA;
         ewmaC = load * lambdaC + (1 - lambdaC) * ewmaC;
+        ewmaCtl = load * lambdaCtl42 + (1 - lambdaCtl42) * ewmaCtl;
       }
 
       const ts = new Date(allDates[i]).getTime();
@@ -552,12 +558,18 @@ export default function Analysis() {
       acwr.push({ x: ts, y: ratio !== null ? Math.round(ratio * 100) / 100 : null });
     }
 
+    const lastAtl = acute[acute.length - 1]?.y || 0;
+    const lastCtl42 = Math.round(ewmaCtl * 10) / 10;
+    const formBalance = Math.round((lastCtl42 - lastAtl) * 10) / 10;
+
     return {
       acute, chronic,
       acwr: acwr.filter(p => p.y !== null),
-      lastAcute: acute[acute.length - 1]?.y || 0,
+      lastAcute: lastAtl,
       lastChronic: chronic[chronic.length - 1]?.y || 0,
       lastAcwr: acwr[acwr.length - 1]?.y ?? null,
+      lastCtl42,
+      formBalance,
     };
   }, [runs, bestVdot]);
 
@@ -634,6 +646,59 @@ export default function Analysis() {
   const textColor = isDark ? '#e2e8f0' : '#1a2b4c';
   const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
 
+  /** Same VO₂max / VDOT scatter + trend as Profile — Daniels estimate (ml·kg⁻¹·min⁻¹ scale on axis). */
+  const vo2ProgressScatterOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'nearest', intersect: false },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: { usePointStyle: true, padding: 10, font: { size: 10 }, color: textColor },
+      },
+      tooltip: {
+        callbacks: {
+          title: (items) => {
+            if (!items.length) return '';
+            return new Date(items[0].parsed.x).toLocaleDateString(lang, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            });
+          },
+          label: (ctx) => {
+            const v = ctx.parsed.y;
+            if (v == null) return '';
+            const name = ctx.dataset.label || '';
+            return `${name}: ${typeof v === 'number' ? v.toFixed(1) : v} ${t('profile.vo2_unit_short')}`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        type: 'linear',
+        grid: { display: false },
+        ticks: {
+          color: textColor,
+          maxTicksLimit: 8,
+          callback: (value) => new Date(value).toLocaleDateString(lang, { month: 'short', year: '2-digit' }),
+        },
+      },
+      y: {
+        grid: { color: gridColor },
+        ticks: { color: textColor },
+        title: {
+          display: true,
+          text: t('profile.vo2_chart_y_title'),
+          color: textColor,
+          font: { size: 10 },
+        },
+      },
+    },
+  }), [textColor, gridColor, lang, t]);
+
   // Doughnut chart for run level
   const doughnutData = useMemo(() => ({
     datasets: [{
@@ -645,6 +710,8 @@ export default function Analysis() {
 
   const doughnutOptions = useMemo(() => ({
     cutout: '85%',
+    responsive: true,
+    maintainAspectRatio: false,
     plugins: { tooltip: { enabled: false }, legend: { display: false } },
     animation: { animateScale: true },
   }), []);
@@ -674,11 +741,26 @@ export default function Analysis() {
           <h1 className="analysis-title">{t('analysis.heading')}</h1>
         </section>
 
-        {/* Run Level — Doughnut Chart */}
+        {/* Run Level — medal centered in doughnut hole */}
         <section className="card analysis-card-center">
           <h3>{t('analysis.run_level')}</h3>
-          <div className="analysis-chart-shell analysis-chart-shell-large" style={{ width: 180, margin: '15px auto' }}>
-            <Doughnut data={doughnutData} options={doughnutOptions} />
+          <div
+            className="analysis-run-level-donut-wrap"
+            title={rank ? t(`analysis.rank_${rank.key}`) : undefined}
+          >
+            <div className="analysis-run-level-donut-chart">
+              <Doughnut data={doughnutData} options={doughnutOptions} />
+            </div>
+            <div
+              className={`analysis-run-level-medal-inner${rank ? '' : ' analysis-run-level-medal-inner--muted'}`}
+              aria-hidden="true"
+            >
+              {rank ? (
+                <RunLevelMedal rankKey={rank.key} accentColor={rank.color} size={76} variant="discOnly" />
+              ) : (
+                <RunLevelMedal rankKey="waiting" accentColor="#94a3b8" size={64} variant="discOnly" />
+              )}
+            </div>
           </div>
           {rank ? (
             <>
@@ -699,10 +781,30 @@ export default function Analysis() {
         <section className="card summary-wide analysis-summary-card">
           <div className="analysis-summary-row">
             <div className="analysis-summary-copy">
-              <p><strong>{t('analysis.weekly_mileage')}</strong> <span>{isMile ? (totalKm / KM_TO_MILE).toFixed(1) : totalKm.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span></p>
-              <p><strong>{t('analysis.avg_pace')}</strong> <span>{totalKm > 0 ? fmtPace(totalSec / totalKm) : '--:--'}</span> <span className="unit-pace">{t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}</span></p>
-              <p><strong>{t('analysis.current_vdot_label')}</strong> <span>{bestVdot > 0 ? bestVdot.toFixed(1) : '--'}</span></p>
+              <p><strong>{t('analysis.total_mileage')}</strong> <span>{isMile ? (totalKm / KM_TO_MILE).toFixed(1) : totalKm.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span></p>
+              <p><strong>{t('analysis.roll_7d')}</strong> <span>{isMile ? (roll7.km / KM_TO_MILE).toFixed(1) : roll7.km.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span> · {t('analysis.roll_runs', { n: roll7.runs })}</p>
+              <p><strong>{t('analysis.roll_28d')}</strong> <span>{isMile ? (roll28.km / KM_TO_MILE).toFixed(1) : roll28.km.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span> · {t('analysis.roll_runs', { n: roll28.runs })}</p>
+              {elev28 > 0 && (
+                <p><strong>{t('analysis.elevation_28d')}</strong> <span>{Math.round(elev28)}</span> <span className="unit-text">m</span></p>
+              )}
+              <p><strong>{t('analysis.avg_pace')}</strong> <span>{totalKm > 0 ? fmtPace(totalSec / totalKm) : '--:--'}</span> <span className="unit-pace">{t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}</span> <span className="analysis-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({t('analysis.avg_pace_lifetime')})</span></p>
+              <p><strong>{t('analysis.current_vdot_label')}</strong> <span>{bestVdot > 0 ? bestVdot.toFixed(1) : '--'}</span> <span className="analysis-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({t('analysis.vdot_footnote')})</span></p>
             </div>
+          </div>
+        </section>
+
+        {/* VO₂max progress — same chart as Profile (per-run estimate + 90-day trend) */}
+        <section className="card progress-card analysis-vo2-progress-card" style={{ marginTop: 24 }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('profile.vo2_chart_heading')}</h2>
+          <p className="analysis-muted" style={{ marginTop: 6 }}>{t('analysis.progress_copy')}</p>
+          <div className="progress-chart-shell analysis-vo2-chart-shell" style={{ position: 'relative', height: 280, marginTop: 18 }}>
+            {progressChartData ? (
+              <Scatter data={progressChartData} options={vo2ProgressScatterOptions} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                {t('analysis.vdot_no_data')}
+              </div>
+            )}
           </div>
         </section>
 
@@ -747,55 +849,6 @@ export default function Analysis() {
               }} />
             </div>
           )}
-        </section>
-
-        {/* Progress Chart — Scatter + Line */}
-        <section className="card progress-card" style={{ marginTop: 25 }}>
-          <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.progress_heading')}</h2>
-          <p className="analysis-muted" style={{ marginTop: 6 }}>{t('analysis.progress_copy')}</p>
-          <div className="progress-chart-shell" style={{ position: 'relative', height: 280, marginTop: 18 }}>
-            {progressChartData ? (
-              <Scatter data={progressChartData} options={{
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16, color: textColor } },
-                  tooltip: {
-                    callbacks: {
-                      title: (items) => {
-                        if (!items.length) return '';
-                        const d = new Date(items[0].parsed.x);
-                        return d.toLocaleDateString(lang, { year: 'numeric', month: 'short', day: 'numeric' });
-                      },
-                      label: (ctx) => `VDOT: ${ctx.parsed.y.toFixed(1)}`,
-                    },
-                  },
-                },
-                scales: {
-                  x: {
-                    type: 'linear',
-                    grid: { display: false },
-                    ticks: {
-                      color: textColor,
-                      maxTicksLimit: 8,
-                      callback: (value) => {
-                        const d = new Date(value);
-                        return d.toLocaleDateString(lang, { month: 'short', year: '2-digit' });
-                      },
-                    },
-                  },
-                  y: {
-                    grid: { color: gridColor },
-                    ticks: { color: textColor },
-                    title: { display: true, text: 'VDOT', color: textColor },
-                  },
-                },
-              }} />
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
-                {t('analysis.vdot_no_data')}
-              </div>
-            )}
-          </div>
         </section>
 
         {/* Recovery + Training Paces side by side */}
@@ -993,6 +1046,22 @@ export default function Analysis() {
               </div>
             </div>
 
+            <div className="tl-stats-row" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
+              <div className="tl-stat">
+                <span className="tl-stat-label">{t('analysis.form_ctl')}</span>
+                <span className="tl-stat-value" style={{ color: '#0d9488' }}>{trainingLoadData.lastCtl42.toFixed(0)}</span>
+                <span className="tl-stat-sub">{t('analysis.form_ctl_sub')}</span>
+              </div>
+              <div className="tl-stat">
+                <span className="tl-stat-label">{t('analysis.form_balance')}</span>
+                <span className="tl-stat-value" style={{ color: trainingLoadData.formBalance >= 0 ? '#16a34a' : '#dc2626' }}>
+                  {trainingLoadData.formBalance > 0 ? '+' : ''}{trainingLoadData.formBalance.toFixed(0)}
+                </span>
+                <span className="tl-stat-sub">{t(trainingLoadData.formBalance >= 0 ? 'analysis.form_balance_hint_fresh' : 'analysis.form_balance_hint_fatigue')}</span>
+              </div>
+            </div>
+            <p className="analysis-muted" style={{ margin: '10px 0 0', fontSize: '0.82rem', lineHeight: 1.45 }}>{t('analysis.form_row_note_body')}</p>
+
             {/* Acute vs Chronic load chart */}
             <div style={{ position: 'relative', height: 250, marginTop: 18 }}>
               <Line data={loadChartData} options={{
@@ -1081,6 +1150,7 @@ export default function Analysis() {
       {/* Import Modal */}
       <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
         <form onSubmit={handleImport}>
+          <ImportDataGuide />
           <p className="modal-help">{t('profile.import_hint')}</p>
           <div className="import-source-grid">
             <section className="import-source-card">
@@ -1117,6 +1187,7 @@ export default function Analysis() {
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setHuaweiFiles(e.target.files)} />
             </section>
           </div>
+          <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
           <div className="modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => setImportModalOpen(false)}>{t('profile.cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('profile.upload_file')}</button>

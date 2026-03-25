@@ -109,6 +109,14 @@ public class AuthService {
         return runner != null && "ADMIN".equalsIgnoreCase(runner.getRole());
     }
 
+    /** SHA-256 hex of a secret (e.g. email verification token). */
+    public String hashPlainToken(String plainToken) {
+        if (plainToken == null) {
+            return null;
+        }
+        return hashSessionToken(plainToken);
+    }
+
     private String hashSessionToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

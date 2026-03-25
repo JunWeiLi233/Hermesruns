@@ -67,7 +67,7 @@ public class StravaWebhookController {
      */
     @PostMapping
     public ResponseEntity<String> handleEvent(@RequestBody Map<String, Object> event) {
-        log.info("Strava webhook event: {}", event);
+        log.debug("Strava webhook event: {}", event);
 
         String objectType = str(event.get("object_type"));
         String aspectType = str(event.get("aspect_type"));

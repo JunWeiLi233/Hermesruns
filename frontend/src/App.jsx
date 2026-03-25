@@ -5,6 +5,7 @@ import { I18nProvider } from './contexts/I18nContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { UnitProvider } from './contexts/UnitContext';
 
+const Landing = React.lazy(() => import('./pages/Landing'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Signup = React.lazy(() => import('./pages/Signup'));
 const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
@@ -49,7 +50,7 @@ function App() {
           <Suspense fallback={<div style={{ textAlign: 'center', padding: '4rem' }}>Loading...</div>}>
             <ScrollToTop />
             <Routes>
-              <Route path="/" element={<Login />} />
+              <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/admin" element={<AdminLogin />} />

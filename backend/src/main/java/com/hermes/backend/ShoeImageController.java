@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
 public class ShoeImageController {
 
     private final AuthService authService;
+    private final AiUsageService aiUsageService;
+    private final RestTemplate restTemplate;
 
     @Value("${app.ai.api-key:}")
     private String aiApiKey;
@@ -71,9 +73,11 @@ public class ShoeImageController {
             Map.entry("361度", "361sport.com")
     );
 
-    public ShoeImageController(AuthService authService, ShoeRepository shoeRepository) {
+    public ShoeImageController(AuthService authService, ShoeRepository shoeRepository, AiUsageService aiUsageService, RestTemplate restTemplate) {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
+        this.aiUsageService = aiUsageService;
+        this.restTemplate = restTemplate;
     }
 
     // ── Admin endpoints (all shoes, regardless of owner) ──
@@ -340,7 +344,7 @@ public class ShoeImageController {
             headers.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             headers.set("Accept-Language", "en-US,en;q=0.9");
 
-            RestTemplate restTemplate = new RestTemplate();
+            RestTemplate restTemplate = this.restTemplate;
             ResponseEntity<String> response = restTemplate.exchange(
                     searchUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class);
 
@@ -379,7 +383,7 @@ public class ShoeImageController {
             headers.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             headers.set("Accept-Language", "en-US,en;q=0.9");
 
-            RestTemplate restTemplate = new RestTemplate();
+            RestTemplate restTemplate = this.restTemplate;
             ResponseEntity<String> response = restTemplate.exchange(
                     searchUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class);
 
@@ -417,7 +421,20 @@ public class ShoeImageController {
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
         boolean available = aiApiKey != null && !aiApiKey.isBlank();
-        return ResponseEntity.ok(Map.of("available", available));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("available", available);
+        if (available) {
+            result.putAll(aiUsageService.getUsageStatus(user.get()));
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/ai-usage")
+    public ResponseEntity<?> getAiUsage(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+        return ResponseEntity.ok(aiUsageService.getUsageStatus(user.get()));
     }
 
     @PostMapping("/scan-image")
@@ -431,6 +448,16 @@ public class ShoeImageController {
         if (aiApiKey == null || aiApiKey.isBlank()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("error", "AI API key not configured. Set APP_AI_API_KEY environment variable."));
+        }
+
+        // Check AI usage quota
+        Runner runner = user.get();
+        String quotaError = aiUsageService.checkQuota(runner);
+        if (quotaError != null) {
+            Map<String, Object> errorBody = new LinkedHashMap<>();
+            errorBody.put("error", quotaError);
+            errorBody.putAll(aiUsageService.getUsageStatus(runner));
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
         }
 
         try {
@@ -457,7 +484,11 @@ public class ShoeImageController {
             int end = text.lastIndexOf(']');
             if (start >= 0 && end > start) {
                 String jsonArray = text.substring(start, end + 1);
-                return ResponseEntity.ok(Map.of("raw", jsonArray));
+                aiUsageService.recordUsage(runner);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("raw", jsonArray);
+                result.putAll(aiUsageService.getUsageStatus(runner));
+                return ResponseEntity.ok(result);
             }
 
             return ResponseEntity.ok(Map.of("shoes", List.of()));
@@ -465,11 +496,11 @@ public class ShoeImageController {
         } catch (HttpStatusCodeException e) {
             System.err.println("AI API error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "AI API error: " + e.getResponseBodyAsString()));
+                    .body(Map.of("error", "AI service temporarily unavailable. Please try again later."));
         } catch (Exception e) {
             System.err.println("Shoe image scan failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to analyze image: " + e.getMessage()));
+                    .body(Map.of("error", "Failed to analyze image. Please try again."));
         }
     }
 
@@ -494,7 +525,7 @@ public class ShoeImageController {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
                 + aiModel + ":generateContent?key=" + aiApiKey;
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
         ResponseEntity<Map> response = restTemplate.exchange(
                 url, HttpMethod.POST, new HttpEntity<>(request, headers), Map.class);
 
@@ -538,7 +569,7 @@ public class ShoeImageController {
         headers.set("x-api-key", aiApiKey);
         headers.set("anthropic-version", "2023-06-01");
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
         ResponseEntity<Map> response = restTemplate.exchange(
                 "https://api.anthropic.com/v1/messages",
                 HttpMethod.POST, new HttpEntity<>(request, headers), Map.class);
