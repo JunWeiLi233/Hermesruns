@@ -64,6 +64,10 @@ VDOT         = VO2 / %VO2max
 
 The %VO2max curve accounts for the fact that longer efforts use a lower fraction of maximum oxygen uptake.
 
+Hermes also exposes this pipeline explicitly as **estimated VO₂max (ml·kg⁻¹·min⁻¹)** from each run: `VO₂(velocity) = −4.60 + 0.182258·v + 0.000104·v²` with *v* in m/min, then `VO₂max ≈ VO₂(velocity) / %VO₂max(time in minutes)` — the same algebra as headline VDOT, labeled for clarity on the Profile card and charts.
+
+**Headline “current” VDOT in Hermes:** Uses performances from the last **90 days**, **prefers distances ≥3 km** (falls back to ≥1.5 km if you have no longer runs), and takes the **mean of the top three** VDOT values in that pool so one GPS glitch or very short hard segment does not dominate. Scatter charts still plot every qualifying run; the smooth fitness line uses the same **rolling robust** VDOT window.
+
 #### Training Paces (from VDOT)
 
 Each training zone targets a specific %VO2max. The pace for a given fraction is found by reversing the VO2 equation (solving the quadratic):
@@ -113,6 +117,10 @@ ACWR = Acute EWMA / Chronic EWMA
 | > 1.50 | Danger | High injury risk — reduce load |
 
 Based on: Gabbett (2016), Hulin et al. (2014), and the EWMA approach by Williams et al. (2017).
+
+#### Training form (42d fitness vs 7d fatigue)
+
+The Analysis page also tracks a **42-day EWMA** of the same per-day effort scores, subtracts the **7-day acute EWMA**, and shows the difference as a simple “form” style signal (similar in spirit to CTL minus short-term fatigue). This **42d series is not** the same as the **28-day chronic** series used in the ACWR denominator.
 
 #### Recovery Estimation
 

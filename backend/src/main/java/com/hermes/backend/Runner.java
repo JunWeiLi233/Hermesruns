@@ -187,6 +187,17 @@ public class Runner {
     @ColumnDefault("5")
     private int aiWelcomeScansRemaining = 5;
 
+    /**
+     * AI shoe-scan lifecycle: {@code NEW_USER} = one trial scan, then {@code REGULAR_USER} with
+     * {@link #aiFreeScansRemaining} (3) for non-Pro. Null = legacy row (migrated on first quota touch).
+     */
+    @Column(length = 24)
+    private String aiExperiencePhase;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int aiFreeScansRemaining = 0;
+
     private LocalDate aiDailyLastUsedDate;
 
     @Column(nullable = false)
@@ -222,6 +233,12 @@ public class Runner {
 
     public int getAiWelcomeScansRemaining() { return aiWelcomeScansRemaining; }
     public void setAiWelcomeScansRemaining(int aiWelcomeScansRemaining) { this.aiWelcomeScansRemaining = aiWelcomeScansRemaining; }
+
+    public String getAiExperiencePhase() { return aiExperiencePhase; }
+    public void setAiExperiencePhase(String aiExperiencePhase) { this.aiExperiencePhase = aiExperiencePhase; }
+
+    public int getAiFreeScansRemaining() { return aiFreeScansRemaining; }
+    public void setAiFreeScansRemaining(int aiFreeScansRemaining) { this.aiFreeScansRemaining = aiFreeScansRemaining; }
 
     public LocalDate getAiDailyLastUsedDate() { return aiDailyLastUsedDate; }
     public void setAiDailyLastUsedDate(LocalDate aiDailyLastUsedDate) { this.aiDailyLastUsedDate = aiDailyLastUsedDate; }

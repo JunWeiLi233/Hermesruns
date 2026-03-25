@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import BrandLogo from '../components/BrandLogo';
+import HermesLogo from '../components/HermesLogo';
 
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
@@ -20,6 +20,7 @@ export default function Login() {
   const [showResend, setShowResend] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+  const [altLoginOpen, setAltLoginOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) navigate('/profile');
@@ -28,10 +29,17 @@ export default function Login() {
   useEffect(() => {
     if (searchParams.get('verified') === '1') {
       setBanner('verified');
+      setAltLoginOpen(true);
     }
     const err = searchParams.get('error');
-    if (err === 'verify_invalid') setBanner('invalid');
-    if (err === 'verify_expired') setBanner('expired');
+    if (err === 'verify_invalid') {
+      setBanner('invalid');
+      setAltLoginOpen(true);
+    }
+    if (err === 'verify_expired') {
+      setBanner('expired');
+      setAltLoginOpen(true);
+    }
     if (searchParams.get('verified') || searchParams.get('error')) {
       setSearchParams({}, { replace: true });
     }
@@ -79,6 +87,7 @@ export default function Login() {
         if (data.code === 'EMAIL_NOT_VERIFIED') {
           setError(t('common.email_not_verified'));
           setShowResend(true);
+          setAltLoginOpen(true);
         } else {
           setError(data.error || data.message || 'Request failed.');
         }
@@ -110,8 +119,8 @@ export default function Login() {
       <div className="layout-wrapper">
         <section className="brand-section">
           <div className="brand-content">
-            <div className="brand-badge brand-badge-logo-only">
-              <BrandLogo size="lg" />
+            <div className="brand-badge">
+              <HermesLogo mark={t('common.logo_mark')} tone="dark" />
             </div>
             <h1 className="auth-hero-title">{t('index.hero_title').split('\n').map((line, i) => (
               <span key={i}>{line}{i === 0 && <br />}</span>
@@ -129,12 +138,26 @@ export default function Login() {
           <div className="auth-panel">
             <div className="login-container">
               <div className="auth-card-header">
-                <p className="auth-card-kicker">Hermesruns</p>
+                <p className="auth-card-kicker"><HermesLogo tone="light" showIcon={false} /></p>
                 <h2 className="auth-card-title">{t('index.submit')}</h2>
-                <p className="auth-card-copy">{t('index.hero_text')}</p>
+                <p className="auth-card-copy">{t('index.strava_focus_copy')}</p>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <button type="button" className="btn-strava btn-strava--lead" onClick={() => startOAuth('strava')}>
+                {t('index.strava')}
+              </button>
+
+              <button
+                type="button"
+                className="auth-alt-toggle"
+                onClick={() => setAltLoginOpen(o => !o)}
+                aria-expanded={altLoginOpen}
+              >
+                {altLoginOpen ? t('index.alt_login_hide') : t('index.alt_login_show')}
+              </button>
+
+              {altLoginOpen && (
+              <form className="auth-alt-block" onSubmit={handleSubmit}>
                 {banner === 'verified' && (
                   <div className="error-alert" style={{ display: 'block', background: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.35)', color: '#166534' }}>
                     {t('common.verified_banner')}
@@ -191,22 +214,20 @@ export default function Login() {
                   {loading ? t('index.submit_loading') : t('index.submit')}
                 </button>
 
-                <div className="divider"><span>{t('index.divider')}</span></div>
+                <div className="divider"><span>{t('index.divider_alt')}</span></div>
 
-                <div className="social-login">
-                  <button type="button" className="btn-strava" onClick={() => startOAuth('strava')}>
-                    {t('index.strava')}
-                  </button>
+                <div className="social-login social-login--single">
                   <button type="button" className="btn-google" onClick={() => startOAuth('google')}>
                     {t('index.google')}
                   </button>
                 </div>
-
-                <div className="signup-link">
-                  <span>{t('index.signup_prompt')}</span>
-                  <Link to="/signup">{t('index.signup_link')}</Link>
-                </div>
               </form>
+              )}
+
+              <div className="signup-link">
+                <span>{t('index.signup_prompt')}</span>
+                <Link to="/signup">{t('index.signup_link')}</Link>
+              </div>
             </div>
           </div>
         </section>

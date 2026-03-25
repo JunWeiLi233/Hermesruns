@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -14,8 +15,8 @@ import java.util.List;
  * if a webhook event is missed (network issue, downtime, etc.),
  * this scheduler will pick up the gap within the next cycle.</p>
  *
- * <p>Runs every 30 minutes by default. Configurable via
- * {@code strava.sync.interval-ms} property.</p>
+ * <p>Runs on a fixed delay (default 10 minutes). Configure via
+ * {@code strava.sync.interval-ms} or env {@code STRAVA_SYNC_INTERVAL_MS}.</p>
  */
 @Component
 public class StravaAutoSyncScheduler {
@@ -32,10 +33,10 @@ public class StravaAutoSyncScheduler {
 
     /**
      * Sync Strava activities for all connected runners.
-     * Runs every 30 minutes (1_800_000 ms). Initial delay of 2 minutes
+     * Default interval 10 minutes. Initial delay of 2 minutes
      * to let the application finish startup before hammering Strava API.
      */
-    @Scheduled(fixedDelayString = "${strava.sync.interval-ms:1800000}", initialDelay = 120_000)
+    @Scheduled(fixedDelayString = "${strava.sync.interval-ms:600000}", initialDelay = 120_000)
     public void syncAllStravaRunners() {
         if (!oAuthController.isStravaConfigured()) {
             return;
@@ -61,7 +62,7 @@ public class StravaAutoSyncScheduler {
                     failed++;
                     continue;
                 }
-                oAuthController.fetchAndSaveStravaActivities(accessToken, runner.getId());
+                oAuthController.fetchAndSaveStravaActivities(accessToken, runner.getId(), true);
                 synced++;
             } catch (Exception e) {
                 log.warn("Strava auto-sync: failed for runner {}: {}", runner.getId(), e.getMessage());

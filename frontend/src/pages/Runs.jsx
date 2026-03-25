@@ -5,7 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiJson } from '../api';
 import { formatDuration, formatDistance, formatPace, formatDate } from '../utils/format';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import BrandLogo from '../components/BrandLogo';
+import HermesLogo from '../components/HermesLogo';
 
 const BATCH_SIZE = 10;
 const MONTH_NAMES_ZH = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -146,7 +146,7 @@ export default function Runs() {
     <div className="dashboard-body history-page">
       <LanguageSwitcher />
       <header className="top-nav">
-        <BrandLogo to="/profile" className="logo logo-link" size="md" />
+        <Link to="/profile" className="logo logo-link"><HermesLogo /></Link>
         <div className="history-actions">
           <Link to="/races" className="top-nav-shortcut">{t('races.nav_label')}</Link>
           <Link to="/profile" className="history-back-link">{t('runs.back_to_profile')}</Link>

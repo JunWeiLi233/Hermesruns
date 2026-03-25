@@ -126,7 +126,10 @@ public class ProfileController {
     }
 
     private ProfileResponse toProfileResponse(Runner runner) {
-        return new ProfileResponse(runner.getEmail(), runner.getDisplayName());
+        boolean stravaLinked = runner.getStravaAthleteId() != null
+                && runner.getStravaRefreshToken() != null
+                && !runner.getStravaRefreshToken().isBlank();
+        return new ProfileResponse(runner.getEmail(), runner.getDisplayName(), stravaLinked);
     }
 
     private ResponseEntity<Map<String, String>> unauthorized() {
@@ -139,7 +142,7 @@ public class ProfileController {
         return ResponseEntity.status(status).body(response);
     }
 
-    public record ProfileResponse(String email, String displayName) {
+    public record ProfileResponse(String email, String displayName, boolean stravaLinked) {
     }
 
     public record UpdateDisplayNameRequest(String displayName) {

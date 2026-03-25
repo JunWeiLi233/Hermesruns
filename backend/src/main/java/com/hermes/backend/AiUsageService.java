@@ -10,8 +10,11 @@ import java.util.Map;
 @Service
 public class AiUsageService {
 
-    private static final int WELCOME_SCANS = 5;
-    private static final int FREE_DAILY_LIMIT = 1;
+    public static final String PHASE_NEW_USER = "NEW_USER";
+    public static final String PHASE_REGULAR_USER = "REGULAR_USER";
+
+    private static final int NEW_USER_TRIAL_SCANS = 1;
+    private static final int USER_FREE_SCANS = 3;
     private static final int PRO_MONTHLY_LIMIT = 50;
 
     private final RunnerRepository runnerRepository;
@@ -21,12 +24,22 @@ public class AiUsageService {
     }
 
     /**
+     * Call for every new account (email signup, Google/Strava first save).
+     */
+    public void initNewUser(Runner runner) {
+        runner.setAiExperiencePhase(PHASE_NEW_USER);
+        runner.setAiFreeScansRemaining(0);
+        runner.setAiWelcomeScansRemaining(0);
+        runner.setAiDailyLastUsedDate(null);
+    }
+
+    /**
      * Check if a runner can perform an AI scan right now.
-     * Returns null if allowed, or an error message if blocked.
+     * Returns null if allowed, or an error code if blocked.
      */
     public String checkQuota(Runner runner) {
         if ("ADMIN".equals(runner.getRole())) {
-            return null; // admins are unlimited
+            return null;
         }
 
         if (isPro(runner)) {
@@ -37,17 +50,15 @@ public class AiUsageService {
             return null;
         }
 
-        // Free tier: welcome scans first, then daily limit
-        if (runner.getAiWelcomeScansRemaining() > 0) {
+        migrateLegacyAiQuotaIfNeeded(runner);
+
+        if (PHASE_NEW_USER.equals(runner.getAiExperiencePhase())) {
             return null;
         }
-
-        LocalDate today = LocalDate.now();
-        if (today.equals(runner.getAiDailyLastUsedDate())) {
-            return "FREE_DAILY_LIMIT";
+        if (PHASE_REGULAR_USER.equals(runner.getAiExperiencePhase()) && runner.getAiFreeScansRemaining() > 0) {
+            return null;
         }
-
-        return null;
+        return "AI_FREE_QUOTA_EXCEEDED";
     }
 
     /**
@@ -61,10 +72,17 @@ public class AiUsageService {
         if (isPro(runner)) {
             resetMonthlyIfNeeded(runner);
             runner.setAiMonthlyScansUsed(runner.getAiMonthlyScansUsed() + 1);
-        } else if (runner.getAiWelcomeScansRemaining() > 0) {
-            runner.setAiWelcomeScansRemaining(runner.getAiWelcomeScansRemaining() - 1);
-        } else {
-            runner.setAiDailyLastUsedDate(LocalDate.now());
+            runnerRepository.save(runner);
+            return;
+        }
+
+        migrateLegacyAiQuotaIfNeeded(runner);
+
+        if (PHASE_NEW_USER.equals(runner.getAiExperiencePhase())) {
+            runner.setAiExperiencePhase(PHASE_REGULAR_USER);
+            runner.setAiFreeScansRemaining(USER_FREE_SCANS);
+        } else if (PHASE_REGULAR_USER.equals(runner.getAiExperiencePhase()) && runner.getAiFreeScansRemaining() > 0) {
+            runner.setAiFreeScansRemaining(runner.getAiFreeScansRemaining() - 1);
         }
 
         runnerRepository.save(runner);
@@ -84,6 +102,7 @@ public class AiUsageService {
         if (admin) {
             status.put("unlimited", true);
             status.put("scansRemaining", -1);
+            status.put("experiencePhase", null);
             return status;
         }
 
@@ -95,20 +114,21 @@ public class AiUsageService {
             status.put("monthlyLimit", PRO_MONTHLY_LIMIT);
             status.put("monthlyUsed", runner.getAiMonthlyScansUsed());
             status.put("proExpiresAt", runner.getProExpiresAt() != null ? runner.getProExpiresAt().toString() : null);
+            status.put("experiencePhase", null);
         } else {
-            int welcomeRemaining = runner.getAiWelcomeScansRemaining();
-            if (welcomeRemaining > 0) {
-                status.put("unlimited", false);
-                status.put("scansRemaining", welcomeRemaining);
-                status.put("quotaType", "welcome");
-                status.put("welcomeTotal", WELCOME_SCANS);
+            migrateLegacyAiQuotaIfNeeded(runner);
+            String phase = runner.getAiExperiencePhase();
+            status.put("unlimited", false);
+            status.put("experiencePhase", phase);
+            if (PHASE_NEW_USER.equals(phase)) {
+                status.put("scansRemaining", NEW_USER_TRIAL_SCANS);
+                status.put("quotaType", "new_user");
+                status.put("userFreeTotal", USER_FREE_SCANS);
             } else {
-                LocalDate today = LocalDate.now();
-                boolean usedToday = today.equals(runner.getAiDailyLastUsedDate());
-                status.put("unlimited", false);
-                status.put("scansRemaining", usedToday ? 0 : FREE_DAILY_LIMIT);
-                status.put("quotaType", "daily");
-                status.put("dailyLimit", FREE_DAILY_LIMIT);
+                int freeLeft = runner.getAiFreeScansRemaining();
+                status.put("scansRemaining", freeLeft);
+                status.put("quotaType", "user_free");
+                status.put("userFreeTotal", USER_FREE_SCANS);
             }
         }
 
@@ -122,7 +142,6 @@ public class AiUsageService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime currentExpiry = runner.getProExpiresAt();
 
-        // Extend from current expiry if still active, otherwise from now
         LocalDateTime base = (currentExpiry != null && currentExpiry.isAfter(now)) ? currentExpiry : now;
         runner.setSubscriptionTier("PRO");
         runner.setProExpiresAt(base.plusMonths(months));
@@ -139,6 +158,35 @@ public class AiUsageService {
         runner.setProExpiresAt(null);
         runner.setAiMonthlyScansUsed(0);
         runner.setAiMonthlyResetDate(null);
+        runner.setAiExperiencePhase(PHASE_REGULAR_USER);
+        runner.setAiFreeScansRemaining(0);
+        runnerRepository.save(runner);
+    }
+
+    /**
+     * Maps pre-phase rows (welcome + daily limits) onto REGULAR_USER + {@link #USER_FREE_SCANS} pool.
+     */
+    void migrateLegacyAiQuotaIfNeeded(Runner runner) {
+        if (runner.getAiExperiencePhase() != null) {
+            return;
+        }
+        LocalDate today = LocalDate.now();
+        int welcome = runner.getAiWelcomeScansRemaining();
+        boolean dailyUsedToday = today.equals(runner.getAiDailyLastUsedDate());
+
+        int free;
+        if (welcome > 0) {
+            free = Math.min(USER_FREE_SCANS, welcome);
+        } else if (!dailyUsedToday) {
+            free = 1;
+        } else {
+            free = 0;
+        }
+
+        runner.setAiExperiencePhase(PHASE_REGULAR_USER);
+        runner.setAiFreeScansRemaining(free);
+        runner.setAiWelcomeScansRemaining(0);
+        runner.setAiDailyLastUsedDate(null);
         runnerRepository.save(runner);
     }
 
@@ -150,7 +198,6 @@ public class AiUsageService {
             return false;
         }
         if (runner.getProExpiresAt().isBefore(LocalDateTime.now())) {
-            // Pro expired — downgrade
             runner.setSubscriptionTier("FREE");
             runner.setProExpiresAt(null);
             runnerRepository.save(runner);

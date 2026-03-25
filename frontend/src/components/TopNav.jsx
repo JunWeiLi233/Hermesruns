@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
-import BrandLogo from './BrandLogo';
+import HermesLogo from './HermesLogo';
 
 export default function TopNav({ showProfile = false, profile, backLink, rightContent }) {
   const { logout } = useAuth();
@@ -31,9 +31,11 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
   return (
     <header className="top-nav">
       {backLink ? (
-        <BrandLogo to={backLink.to} className="logo logo-link" size="md" />
+        <Link to={backLink.to} className="logo logo-link">
+          {backLink.label && backLink.label !== 'HERMES' ? backLink.label : <HermesLogo />}
+        </Link>
       ) : (
-        <BrandLogo to="/profile" className="logo logo-link" size="md" />
+        <Link to="/profile" className="logo logo-link"><HermesLogo /></Link>
       )}
 
       <div className="top-nav-actions">

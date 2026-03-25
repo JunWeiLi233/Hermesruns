@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { getBackendBaseUrl } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import BrandLogo from '../components/BrandLogo';
+import HermesLogo from '../components/HermesLogo';
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
@@ -13,6 +14,11 @@ export default function Landing() {
   useEffect(() => {
     if (isAuthenticated) navigate('/profile');
   }, [isAuthenticated, navigate]);
+
+  const startStrava = useCallback(() => {
+    const baseUrl = getBackendBaseUrl();
+    window.location.href = `${baseUrl}/api/auth/strava/start?state=login`;
+  }, []);
 
   const features = [
     {
@@ -92,12 +98,15 @@ export default function Landing() {
       <section className="landing-hero">
         <div className="landing-hero-bg" />
         <nav className="landing-nav">
-          <div className="landing-nav-brand landing-nav-brand--logo">
-            <BrandLogo size="hero" />
+          <div className="landing-nav-brand">
+            <HermesLogo mark={t('common.logo_mark')} tone="dark" />
           </div>
           <div className="landing-nav-actions">
-            <Link to="/login" className="landing-nav-link">{t('landing.sign_in')}</Link>
-            <Link to="/signup" className="landing-btn-cta-sm">{t('landing.get_started')}</Link>
+            <button type="button" className="landing-btn-strava-sm" onClick={startStrava}>
+              {t('landing.cta_strava')}
+            </button>
+            <Link to="/login" className="landing-nav-link">{t('landing.alt_sign_in')}</Link>
+            <Link to="/signup" className="landing-nav-link">{t('landing.get_started')}</Link>
           </div>
         </nav>
 
@@ -109,9 +118,12 @@ export default function Landing() {
             ))}
           </h1>
           <p className="landing-hero-text">{t('landing.hero_text')}</p>
-          <div className="landing-hero-actions">
-            <Link to="/signup" className="landing-btn-cta">{t('landing.get_started')}</Link>
-            <Link to="/login" className="landing-btn-ghost">{t('landing.sign_in')}</Link>
+          <div className="landing-hero-actions landing-hero-actions--wrap">
+            <button type="button" className="landing-btn-strava" onClick={startStrava}>
+              {t('landing.cta_strava')}
+            </button>
+            <Link to="/login" className="landing-btn-ghost">{t('landing.alt_sign_in')}</Link>
+            <Link to="/signup" className="landing-hero-tertiary">{t('landing.get_started')}</Link>
           </div>
 
           <div className="landing-stats-row">
@@ -183,18 +195,19 @@ export default function Landing() {
         <div className="landing-section-inner">
           <h2 className="landing-cta-title">{t('landing.cta_title')}</h2>
           <p className="landing-cta-copy">{t('landing.cta_copy')}</p>
-          <div className="landing-hero-actions">
-            <Link to="/signup" className="landing-btn-cta">{t('landing.get_started')}</Link>
-            <Link to="/login" className="landing-btn-ghost">{t('landing.sign_in')}</Link>
+          <div className="landing-hero-actions landing-hero-actions--wrap">
+            <button type="button" className="landing-btn-strava" onClick={startStrava}>
+              {t('landing.cta_strava')}
+            </button>
+            <Link to="/login" className="landing-btn-ghost">{t('landing.alt_sign_in')}</Link>
+            <Link to="/signup" className="landing-hero-tertiary">{t('landing.get_started')}</Link>
           </div>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="landing-footer">
-        <span className="landing-footer-brand">
-          <BrandLogo size="sm" />
-        </span>
+        <span><HermesLogo mark={t('common.logo_mark')} tone="light" /></span>
         <span className="landing-footer-copy">{t('landing.footer')}</span>
       </footer>
     </div>

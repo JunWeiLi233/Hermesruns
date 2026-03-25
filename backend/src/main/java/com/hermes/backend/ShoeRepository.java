@@ -14,4 +14,8 @@ public interface ShoeRepository extends JpaRepository<Shoe, Long> {
     Optional<Shoe> findByIdAndRunner(Long id, Runner runner);
 
     List<Shoe> findByBrandIgnoreCaseAndModelIgnoreCase(String brand, String model);
+
+    List<Shoe> findByRunnerAndIdentityKey(Runner runner, String identityKey);
+
+    List<Shoe> findByRunnerAndRetiredFalseAndIdentityKeyNotNull(Runner runner);
 }

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import BrandLogo from '../components/BrandLogo';
+import HermesLogo from '../components/HermesLogo';
 
 function checkPasswordClient(password, minLength) {
   const failed = [];
@@ -28,6 +28,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [pwRules, setPwRules] = useState({ minLength: 10 });
   const [doneInfo, setDoneInfo] = useState(null);
+  const [altRegisterOpen, setAltRegisterOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -132,8 +133,8 @@ export default function Signup() {
       <div className="layout-wrapper">
         <section className="brand-section">
           <div className="brand-content">
-            <div className="brand-badge brand-badge-logo-only">
-              <BrandLogo size="lg" />
+            <div className="brand-badge">
+              <HermesLogo mark={t('common.logo_mark')} tone="dark" />
             </div>
             <h1 className="auth-hero-title">{t('signup.hero_title').split('\n').map((line, i) => (
               <span key={i}>{line}{i === 0 && <br />}</span>
@@ -146,11 +147,27 @@ export default function Signup() {
           <div className="auth-panel">
             <div className="login-container">
               <div className="auth-card-header">
-                <p className="auth-card-kicker">Hermesruns</p>
-                <h2 className="auth-card-title">{t('signup.form_title')}</h2>
+                <p className="auth-card-kicker"><HermesLogo tone="light" showIcon={false} /></p>
+                <h2 className="auth-card-title">{t('signup.card_title')}</h2>
+                <p className="auth-card-copy" style={{ marginTop: 8 }}>{t('signup.strava_focus_copy')}</p>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <button type="button" className="btn-strava btn-strava--lead" onClick={() => startOAuth('strava')}>
+                {t('signup.strava')}
+              </button>
+
+              <button
+                type="button"
+                className="auth-alt-toggle"
+                onClick={() => setAltRegisterOpen(o => !o)}
+                aria-expanded={altRegisterOpen}
+              >
+                {altRegisterOpen ? t('signup.alt_register_hide') : t('signup.alt_register_show')}
+              </button>
+
+              {altRegisterOpen && (
+              <form className="auth-alt-block" onSubmit={handleSubmit}>
+                <p className="auth-card-copy" style={{ marginBottom: 16 }}>{t('signup.form_title')}</p>
                 {error && <div className="error-alert" style={{ display: 'block' }}>{error}</div>}
 
                 <div className="form-group">
@@ -194,22 +211,20 @@ export default function Signup() {
                   {loading ? t('signup.submit_loading') : t('signup.submit')}
                 </button>
 
-                <div className="divider"><span>{t('signup.divider')}</span></div>
+                <div className="divider"><span>{t('signup.divider_alt')}</span></div>
 
-                <div className="social-login">
-                  <button type="button" className="btn-strava" onClick={() => startOAuth('strava')}>
-                    {t('signup.strava')}
-                  </button>
+                <div className="social-login social-login--single">
                   <button type="button" className="btn-google" onClick={() => startOAuth('google')}>
                     {t('signup.google')}
                   </button>
                 </div>
-
-                <div className="signup-link">
-                  <span>{t('signup.signin_prompt')}</span>
-                  <Link to="/login">{t('signup.signin_link')}</Link>
-                </div>
               </form>
+              )}
+
+              <div className="signup-link">
+                <span>{t('signup.signin_prompt')}</span>
+                <Link to="/login">{t('signup.signin_link')}</Link>
+              </div>
             </div>
           </div>
         </section>

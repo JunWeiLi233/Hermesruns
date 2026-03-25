@@ -173,6 +173,7 @@ public class LoginController {
         runner.setStatus("ACTIVE");
         runner.setRole("USER");
         authService.storePassword(runner, rawPassword);
+        aiUsageService.initNewUser(runner);
 
         Map<String, Object> body = new LinkedHashMap<>();
         if (!emailVerificationService.isMailConfigured()) {
@@ -243,6 +244,11 @@ public class LoginController {
 
         if (adminOptional.isEmpty()) {
             return error(HttpStatus.FORBIDDEN, "Admin privileges required.");
+        }
+
+        Runner admin = adminOptional.get();
+        if (admin.getId().equals(id)) {
+            return error(HttpStatus.BAD_REQUEST, "You cannot delete the account you are currently signed in with.");
         }
 
         Optional<Runner> runnerOptional = runnerRepository.findById(id);

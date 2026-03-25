@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -6,11 +6,46 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
 import TopNav from '../components/TopNav';
+import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import ImportDataGuide from '../components/ImportDataGuide';
 import { formatDuration, formatPace } from '../utils/format';
 import { getTodayRunRecommendation } from '../utils/todayRun';
+import {
+  estimateCurrentVdot,
+  collectAllVdotEntries,
+  computeRollingRepresentativeSeries,
+  VDOT_LOOKBACK_MS,
+} from '../utils/vdot';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  ScatterController,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Scatter } from 'react-chartjs-2';
 import 'leaflet/dist/leaflet.css';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  ScatterController,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+);
 const HEAT_GRADIENT = {
   0.0: '#1a0a00',
   0.2: '#ff4500',
@@ -19,10 +54,14 @@ const HEAT_GRADIENT = {
   1.0: '#ffffff',
 };
 
+const CARTO_TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const CARTO_TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const CARTO_ATTRIB = '\u00a9 OpenStreetMap \u00a9 CARTO';
+
 export default function Profile() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, isDark } = useTheme();
   const { isMile } = useUnit();
   const navigate = useNavigate();
 
@@ -58,6 +97,8 @@ export default function Profile() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const heatLayerRef = useRef(null);
+  const tileLayerRef = useRef(null);
+  const heatmapIsDarkRef = useRef(undefined);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -81,6 +122,26 @@ export default function Profile() {
       }
     })();
   }, [isAuthenticated]);
+
+  const stravaSessionPullRef = useRef(false);
+
+  /** One Strava pull per browser session when linked; server also runs periodic Strava auto-sync. */
+  useEffect(() => {
+    if (!isAuthenticated || !profile?.stravaLinked || stravaSessionPullRef.current) return;
+    stravaSessionPullRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const prov = await apiJson('/api/auth/providers');
+        if (cancelled || !prov.stravaConfigured) return;
+        const res = await apiFetch('/api/strava/sync');
+        if (!res.ok || cancelled) return;
+        await new Promise(r => setTimeout(r, 3500));
+        if (!cancelled) loadActivities();
+      } catch { /* ignored */ }
+    })();
+    return () => { cancelled = true; };
+  }, [isAuthenticated, profile?.stravaLinked]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -177,8 +238,9 @@ export default function Profile() {
     import('leaflet').then(L => {
       const map = L.map(mapRef.current, { scrollWheelZoom: true, dragging: true })
         .setView([40.7306, -73.9352], 12);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '\u00a9 OpenStreetMap \u00a9 CARTO',
+      const tileUrl = isDark ? CARTO_TILE_DARK : CARTO_TILE_LIGHT;
+      tileLayerRef.current = L.tileLayer(tileUrl, {
+        attribution: CARTO_ATTRIB,
         subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(map);
@@ -186,6 +248,30 @@ export default function Profile() {
       setMapReady(true);
     });
   }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const layer = tileLayerRef.current;
+    if (!map || !mapReady || !layer) return;
+    if (heatmapIsDarkRef.current === undefined) {
+      heatmapIsDarkRef.current = isDark;
+      return;
+    }
+    if (heatmapIsDarkRef.current === isDark) return;
+    heatmapIsDarkRef.current = isDark;
+    import('leaflet').then(L => {
+      const m = mapInstanceRef.current;
+      const prev = tileLayerRef.current;
+      if (!m || !prev) return;
+      m.removeLayer(prev);
+      const tileUrl = isDark ? CARTO_TILE_DARK : CARTO_TILE_LIGHT;
+      tileLayerRef.current = L.tileLayer(tileUrl, {
+        attribution: CARTO_ATTRIB,
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(m);
+    });
+  }, [isDark, mapReady]);
 
   const renderHeatmap = useCallback(async (year) => {
     const map = mapInstanceRef.current;
@@ -255,6 +341,102 @@ export default function Profile() {
     tone: recommendationTone,
   } = getTodayRunRecommendation({ runs, t, lang });
 
+  const profileVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
+
+  const vo2ProgressChart = useMemo(() => {
+    const sorted = collectAllVdotEntries(runs);
+    if (sorted.length === 0) return null;
+    const scatterData = sorted.map((e) => ({
+      x: e.date.getTime(),
+      y: Math.round(e.vdot * 10) / 10,
+    }));
+    const rolling = computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
+    const lineData = rolling.map((p) => ({ x: p.x, y: p.y }));
+    return {
+      datasets: [
+        {
+          label: t('profile.vo2_chart_per_run'),
+          data: scatterData,
+          backgroundColor: 'rgba(13, 148, 136, 0.35)',
+          borderColor: 'rgba(13, 148, 136, 0.55)',
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          showLine: false,
+          order: 2,
+        },
+        {
+          label: t('profile.vo2_chart_trend'),
+          data: lineData,
+          type: 'line',
+          borderColor: '#0f766e',
+          backgroundColor: 'rgba(13, 148, 136, 0.06)',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          fill: true,
+          tension: 0.35,
+          order: 1,
+        },
+      ],
+    };
+  }, [runs, t]);
+
+  const vo2ChartOptions = useMemo(() => {
+    const textColor = isDark ? '#e2e8f0' : '#334155';
+    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { usePointStyle: true, padding: 10, font: { size: 10 }, color: textColor },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              if (!items.length) return '';
+              return new Date(items[0].parsed.x).toLocaleDateString(lang, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              });
+            },
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              if (v == null) return '';
+              const name = ctx.dataset.label || '';
+              return `${name}: ${typeof v === 'number' ? v.toFixed(1) : v} ${t('profile.vo2_unit_short')}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          grid: { display: false },
+          ticks: {
+            color: textColor,
+            maxTicksLimit: 5,
+            callback: (value) => new Date(value).toLocaleDateString(lang, { month: 'short', year: '2-digit' }),
+          },
+        },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color: textColor },
+          title: {
+            display: true,
+            text: t('profile.vo2_chart_y_title'),
+            color: textColor,
+            font: { size: 10 },
+          },
+        },
+      },
+    };
+  }, [isDark, lang, t]);
+
   // Daily steps from running (last 14 days)
   const dailySteps = (() => {
     const STEPS_PER_KM = 1282; // avg stride ~0.78m
@@ -281,6 +463,52 @@ export default function Profile() {
   const maxSteps = Math.max(1, ...dailySteps.map(d => d.steps));
   const todaySteps = dailySteps[dailySteps.length - 1];
   const weekSteps = dailySteps.slice(-7).reduce((s, d) => s + d.steps, 0);
+
+  /** Recorded kcal when present; else ~65 kcal/km (rough running estimate). */
+  const caloriesSummary = useMemo(() => {
+    const ROUGH_KCAL_PER_KM = 65;
+    function kcalForRun(run) {
+      const c = Number(run.calories);
+      if (Number.isFinite(c) && c > 0) return Math.round(c);
+      const km = Number(run.distanceKm || 0);
+      if (km <= 0) return 0;
+      return Math.round(km * ROUGH_KCAL_PER_KM);
+    }
+    const now = new Date();
+    const days = [];
+    for (let i = 13; i >= 0; i -= 1) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      days.push({ key: d.toISOString().slice(0, 10), date: d, kcal: 0 });
+    }
+    const cutoff7 = Date.now() - 7 * 86400000;
+    const cutoff28 = Date.now() - 28 * 86400000;
+    let totalAll = 0;
+    let week7 = 0;
+    let week28 = 0;
+    for (const run of runs) {
+      const t = new Date(run.startTime || run.startDate).getTime();
+      if (Number.isNaN(t)) continue;
+      const k = kcalForRun(run);
+      if (k <= 0) continue;
+      totalAll += k;
+      if (t >= cutoff7) week7 += k;
+      if (t >= cutoff28) week28 += k;
+      const rKey = new Date(run.startTime || run.startDate).toISOString().slice(0, 10);
+      const day = days.find((x) => x.key === rKey);
+      if (day) day.kcal += k;
+    }
+    const todayK = days[days.length - 1].kcal;
+    return {
+      dailyCalories: days,
+      total: totalAll,
+      week7,
+      week28,
+      today: todayK,
+    };
+  }, [runs]);
+
+  const maxDailyKcal = Math.max(1, ...caloriesSummary.dailyCalories.map((d) => d.kcal));
 
   // Personal Records
   const personalRecords = (() => {
@@ -443,6 +671,10 @@ export default function Profile() {
 
         {/* Bottom Grid */}
         <div className="bottom-grid">
+          <section className="card profile-distribution-strip">
+            <ProfileDistributionCharts runs={runs} isMile={isMile} t={t} />
+          </section>
+
           <section className="card data-analyze-section analysis-split-card">
             <div
               className="analysis-primary-section"
@@ -463,6 +695,64 @@ export default function Profile() {
                 <span className="stat-value">{avgPaceStr}</span>
               </div>
               <p className="analysis-hint">{t('profile.analysis_hint')}</p>
+            </div>
+
+            <div className="analysis-vo2-section" aria-label={t('profile.vo2_card_title')}>
+              <div
+                className="analysis-vo2-clickable"
+                onClick={() => navigate('/analysis')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate('/analysis');
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+                title={t('profile.vo2_card_cta')}
+              >
+                <div className="analysis-vo2-header">
+                  <h3>{t('profile.vo2_card_title')}</h3>
+                  <span className="card-cta" aria-hidden="true">&rarr;</span>
+                </div>
+                <p className="analysis-vo2-subtitle">{t('profile.vo2_card_subtitle')}</p>
+                {profileVdot > 0 ? (
+                  <>
+                    <div className="analysis-vo2-value-row">
+                      <span className="analysis-vo2-value">{profileVdot.toFixed(1)}</span>
+                      <span className="analysis-vo2-unit">{t('profile.vo2_unit_short')}</span>
+                    </div>
+                    <p className="analysis-vo2-formula-hint">{t('profile.vo2_formula_hint')}</p>
+                    <p className="analysis-vo2-copy">{t('profile.vo2_card_copy')}</p>
+                  </>
+                ) : (
+                  <p className="analysis-vo2-empty">{t('profile.vo2_no_data')}</p>
+                )}
+              </div>
+
+              {profileVdot > 0 && vo2ProgressChart && vo2ProgressChart.datasets[0].data.length > 0 && (
+                <div className="analysis-vo2-chart-wrap">
+                  <p className="analysis-vo2-chart-title">{t('profile.vo2_chart_heading')}</p>
+                  <div className="analysis-vo2-chart-canvas">
+                    <Scatter data={vo2ProgressChart} options={vo2ChartOptions} />
+                  </div>
+                </div>
+              )}
+
+              <div
+                className="analysis-vo2-footer analysis-vo2-clickable"
+                onClick={() => navigate('/analysis')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate('/analysis');
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+              >
+                {t('profile.vo2_card_cta')}
+              </div>
             </div>
 
             <div
@@ -596,6 +886,12 @@ export default function Profile() {
                     <span className={`subscription-badge ${aiQuota.tier === 'PRO' ? 'subscription-badge-pro' : 'subscription-badge-free'}`}>
                       {aiQuota.tier === 'PRO' ? 'PRO' : 'FREE'}
                     </span>
+                    {aiQuota.tier !== 'PRO' && !aiQuota.admin && aiQuota.experiencePhase === 'NEW_USER' && (
+                      <span className="subscription-user-phase">{t('profile.user_tag_new')}</span>
+                    )}
+                    {aiQuota.tier !== 'PRO' && !aiQuota.admin && aiQuota.experiencePhase === 'REGULAR_USER' && (
+                      <span className="subscription-user-phase">{t('profile.user_tag_regular')}</span>
+                    )}
                     {aiQuota.tier === 'PRO' && aiQuota.proExpiresAt && (
                       <span className="subscription-expires">{t('profile.pro_expires', { date: new Date(aiQuota.proExpiresAt).toLocaleDateString() })}</span>
                     )}
@@ -605,10 +901,10 @@ export default function Profile() {
                       <p className="subscription-detail">{t('profile.ai_unlimited')}</p>
                     ) : aiQuota.tier === 'PRO' ? (
                       <p className="subscription-detail">{t('profile.ai_pro_usage', { used: aiQuota.monthlyUsed, limit: aiQuota.monthlyLimit })}</p>
-                    ) : aiQuota.quotaType === 'welcome' ? (
-                      <p className="subscription-detail">{t('profile.ai_welcome_usage', { remaining: aiQuota.scansRemaining, total: aiQuota.welcomeTotal })}</p>
+                    ) : aiQuota.quotaType === 'new_user' ? (
+                      <p className="subscription-detail">{t('profile.ai_new_user_usage', { totalAfter: aiQuota.userFreeTotal ?? 3 })}</p>
                     ) : (
-                      <p className="subscription-detail">{t('profile.ai_daily_usage', { remaining: aiQuota.scansRemaining })}</p>
+                      <p className="subscription-detail">{t('profile.ai_user_free_usage', { remaining: aiQuota.scansRemaining, total: aiQuota.userFreeTotal ?? 3 })}</p>
                     )}
                   </div>
                   {aiQuota.tier !== 'PRO' && !aiQuota.admin && (
@@ -765,6 +1061,55 @@ export default function Profile() {
             })}
           </div>
           <p className="steps-hint">{t('profile.steps_hint')}</p>
+        </section>
+
+        {/* Calories — sync or distance-based estimate */}
+        <section className="card calories-section">
+          <h2>{t('profile.calories_title')}</h2>
+          <div className="calories-summary">
+            <div className="calories-stat">
+              <span className="calories-stat-value">{caloriesSummary.today.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_today')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+            <div className="calories-stat">
+              <span className="calories-stat-value">{caloriesSummary.week7.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_week')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+            <div className="calories-stat">
+              <span className="calories-stat-value">{caloriesSummary.week28.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_month')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+            <div className="calories-stat calories-stat--total">
+              <span className="calories-stat-value">{caloriesSummary.total.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_total')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+          </div>
+          <div className="calories-chart">
+            {caloriesSummary.dailyCalories.map((d, i) => {
+              const pct = maxDailyKcal > 0 ? (d.kcal / maxDailyKcal) * 100 : 0;
+              const isToday = i === caloriesSummary.dailyCalories.length - 1;
+              const dayLabel = d.date.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en', { weekday: 'narrow' });
+              const dateLabel = `${d.date.getMonth() + 1}/${d.date.getDate()}`;
+              return (
+                <div key={d.key} className={`calories-bar-col${isToday ? ' calories-bar-today' : ''}`}>
+                  <span className="calories-bar-count">{d.kcal > 0 ? d.kcal.toLocaleString() : ''}</span>
+                  <div className="calories-bar-track">
+                    <div
+                      className={`calories-bar-fill${d.kcal === 0 ? ' calories-bar-empty' : ''}`}
+                      style={{ height: `${Math.max(d.kcal > 0 ? 4 : 0, pct)}%` }}
+                    />
+                  </div>
+                  <span className="calories-bar-day">{dayLabel}</span>
+                  <span className="calories-bar-date">{dateLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="calories-hint">{t('profile.calories_hint')}</p>
         </section>
 
         {/* Personal Records */}
@@ -948,6 +1293,7 @@ export default function Profile() {
       {/* Import Modal */}
       <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
         <form onSubmit={handleImport}>
+          <ImportDataGuide />
           <p className="modal-help">{t('profile.import_hint')}</p>
           <div className="import-source-grid">
             <section className="import-source-card">

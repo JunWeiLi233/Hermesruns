@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiJson, apiFetch } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import BrandLogo from '../components/BrandLogo';
+import HermesLogo from '../components/HermesLogo';
 import Modal from '../components/Modal';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 
@@ -27,12 +27,13 @@ function ShoeImage({ src, alt, className }) {
 }
 
 export default function Dashboard() {
-  const { logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated, email: sessionEmail } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
 
   const [runners, setRunners] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const [deletingId, setDeletingId] = useState(null);
 
   // Shoe image management
   const [allShoes, setAllShoes] = useState([]);
@@ -81,6 +82,28 @@ export default function Dashboard() {
       setShoeLoadState('ready');
     } catch {
       setShoeLoadState('error');
+    }
+  }
+
+  async function handleDeleteRunner(runner) {
+    const self =
+      sessionEmail
+      && (runner.email || '').toLowerCase() === sessionEmail.toLowerCase();
+    if (self) {
+      alert(t('dashboard.delete_self_forbidden'));
+      return;
+    }
+    if (!window.confirm(t('dashboard.delete_runner_confirm', { email: runner.email || '' }))) {
+      return;
+    }
+    setDeletingId(runner.id);
+    try {
+      await apiJson(`/api/auth/runners/${runner.id}`, { method: 'DELETE' });
+      setRunners(prev => prev.filter(r => r.id !== runner.id));
+    } catch (err) {
+      alert(err.message || t('dashboard.delete_runner_failed'));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -177,9 +200,8 @@ export default function Dashboard() {
     <div className="dashboard-body">
       <LanguageSwitcher />
       <nav className="top-nav">
-        <div className="nav-brand nav-brand--logo">
-          <BrandLogo size="md" />
-          <span className="nav-brand-label">{t('dashboard.nav_label')}</span>
+        <div className="nav-brand">
+          <HermesLogo mark={t('dashboard.nav_label')} tone="light" />
         </div>
         <button
           className="btn-primary"
@@ -227,10 +249,12 @@ export default function Dashboard() {
                     <td><span style={getRoleStyle(safeRole)}>{getRoleLabel(safeRole)}</span></td>
                     <td>
                       <button
+                        type="button"
                         className="delete-btn"
-                        onClick={() => alert(t('common.delete_demo_locked'))}
+                        disabled={deletingId === runner.id}
+                        onClick={() => handleDeleteRunner(runner)}
                       >
-                        {t('dashboard.delete_button')}
+                        {deletingId === runner.id ? '…' : t('dashboard.delete_button')}
                       </button>
                     </td>
                   </tr>

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import BrandLogo from '../components/BrandLogo';
+import HermesLogo from '../components/HermesLogo';
 
 export default function AdminLogin() {
   const { login } = useAuth();
@@ -48,11 +48,11 @@ export default function AdminLogin() {
     <div>
       <LanguageSwitcher />
       <div className="login-container">
-        <div className="logo admin-login-brand">
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            <BrandLogo size="lg" />
+        <div className="logo">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <HermesLogo tone="light" />
           </div>
-          <h1 style={{ color: 'var(--brand-accent)', textAlign: 'center', fontSize: '1.25rem' }}>{t('admin.brand')}</h1>
+          <h1 style={{ color: 'var(--brand-accent)', textAlign: 'center' }}>{t('admin.brand')}</h1>
           <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: 30 }}>{t('admin.subtitle')}</p>
         </div>
 
