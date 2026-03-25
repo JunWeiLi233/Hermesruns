@@ -1,29 +1,75 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import HermesLogo from '../components/HermesLogo';
 
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [banner, setBanner] = useState(null);
+  const [showResend, setShowResend] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
+  const [altLoginOpen, setAltLoginOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) navigate('/profile');
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    if (searchParams.get('verified') === '1') {
+      setBanner('verified');
+      setAltLoginOpen(true);
+    }
+    const err = searchParams.get('error');
+    if (err === 'verify_invalid') {
+      setBanner('invalid');
+      setAltLoginOpen(true);
+    }
+    if (err === 'verify_expired') {
+      setBanner('expired');
+      setAltLoginOpen(true);
+    }
+    if (searchParams.get('verified') || searchParams.get('error')) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  async function handleResend(e) {
+    e?.preventDefault?.();
+    setResendMsg('');
+    setResendBusy(true);
+    try {
+      const res = await apiFetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setResendMsg(data.message || t('common.resend_sent'));
+    } catch {
+      setResendMsg(t('common.connection_failed'));
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setShowResend(false);
 
-    if (password.length < 6) {
+    if (!password) {
       setError(t('common.password_too_short'));
       return;
     }
@@ -38,7 +84,13 @@ export default function Login() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || data.message || 'Request failed.');
+        if (data.code === 'EMAIL_NOT_VERIFIED') {
+          setError(t('common.email_not_verified'));
+          setShowResend(true);
+          setAltLoginOpen(true);
+        } else {
+          setError(data.error || data.message || 'Request failed.');
+        }
         setLoading(false);
         return;
       }
@@ -67,7 +119,9 @@ export default function Login() {
       <div className="layout-wrapper">
         <section className="brand-section">
           <div className="brand-content">
-            <div className="brand-badge">HERMES <span>{t('common.logo_mark')}</span></div>
+            <div className="brand-badge">
+              <HermesLogo mark={t('common.logo_mark')} tone="dark" />
+            </div>
             <h1 className="auth-hero-title">{t('index.hero_title').split('\n').map((line, i) => (
               <span key={i}>{line}{i === 0 && <br />}</span>
             ))}</h1>
@@ -84,13 +138,48 @@ export default function Login() {
           <div className="auth-panel">
             <div className="login-container">
               <div className="auth-card-header">
-                <p className="auth-card-kicker">HERMES</p>
+                <p className="auth-card-kicker"><HermesLogo tone="light" showIcon={false} /></p>
                 <h2 className="auth-card-title">{t('index.submit')}</h2>
-                <p className="auth-card-copy">{t('index.hero_text')}</p>
+                <p className="auth-card-copy">{t('index.strava_focus_copy')}</p>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <button type="button" className="btn-strava btn-strava--lead" onClick={() => startOAuth('strava')}>
+                {t('index.strava')}
+              </button>
+
+              <button
+                type="button"
+                className="auth-alt-toggle"
+                onClick={() => setAltLoginOpen(o => !o)}
+                aria-expanded={altLoginOpen}
+              >
+                {altLoginOpen ? t('index.alt_login_hide') : t('index.alt_login_show')}
+              </button>
+
+              {altLoginOpen && (
+              <form className="auth-alt-block" onSubmit={handleSubmit}>
+                {banner === 'verified' && (
+                  <div className="error-alert" style={{ display: 'block', background: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.35)', color: '#166534' }}>
+                    {t('common.verified_banner')}
+                  </div>
+                )}
+                {banner === 'invalid' && (
+                  <div className="error-alert" style={{ display: 'block' }}>{t('common.verify_error')}</div>
+                )}
+                {banner === 'expired' && (
+                  <div className="error-alert" style={{ display: 'block' }}>{t('common.verify_expired')}</div>
+                )}
                 {error && <div className="error-alert" style={{ display: 'block' }}>{error}</div>}
+
+                {(showResend || banner === 'expired') && (
+                  <div style={{ marginBottom: 16, padding: '12px', background: 'var(--classic-bg, #f8fafc)', borderRadius: 8, border: '1px solid var(--classic-border, #e2e8f0)' }}>
+                    <p style={{ margin: '0 0 8px', fontSize: '0.85rem' }}>{t('common.resend_email_placeholder')}</p>
+                    <button type="button" className="btn-secondary" disabled={resendBusy || !email.trim()} onClick={handleResend}>
+                      {resendBusy ? '…' : t('common.resend_verification')}
+                    </button>
+                    {resendMsg && <p style={{ margin: '8px 0 0', fontSize: '0.85rem' }}>{resendMsg}</p>}
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label htmlFor="email">{t('index.email_label')}</label>
@@ -108,7 +197,7 @@ export default function Login() {
                 <div className="form-group">
                   <div className="label-row">
                     <label htmlFor="password">{t('index.password_label')}</label>
-                    <a href="#" className="forgot-password">{t('index.forgot_password')}</a>
+                    <a href="#" className="forgot-password" onClick={e => e.preventDefault()}>{t('index.forgot_password')}</a>
                   </div>
                   <input
                     type="password"
@@ -125,22 +214,20 @@ export default function Login() {
                   {loading ? t('index.submit_loading') : t('index.submit')}
                 </button>
 
-                <div className="divider"><span>{t('index.divider')}</span></div>
+                <div className="divider"><span>{t('index.divider_alt')}</span></div>
 
-                <div className="social-login">
-                  <button type="button" className="btn-strava" onClick={() => startOAuth('strava')}>
-                    {t('index.strava')}
-                  </button>
+                <div className="social-login social-login--single">
                   <button type="button" className="btn-google" onClick={() => startOAuth('google')}>
                     {t('index.google')}
                   </button>
                 </div>
-
-                <div className="signup-link">
-                  <span>{t('index.signup_prompt')}</span>
-                  <Link to="/signup">{t('index.signup_link')}</Link>
-                </div>
               </form>
+              )}
+
+              <div className="signup-link">
+                <span>{t('index.signup_prompt')}</span>
+                <Link to="/signup">{t('index.signup_link')}</Link>
+              </div>
             </div>
           </div>
         </section>

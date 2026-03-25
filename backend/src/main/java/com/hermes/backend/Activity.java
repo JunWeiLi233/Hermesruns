@@ -20,7 +20,8 @@ import java.util.List;
                 @Index(name = "idx_activity_runner_type", columnList = "runner_id, activityType"),
                 @Index(name = "idx_activity_runner_start_time", columnList = "runner_id, startTime"),
                 @Index(name = "idx_activity_provider_checksum", columnList = "provider, source_checksum"),
-                @Index(name = "idx_activity_strava_id", columnList = "stravaId")
+                @Index(name = "idx_activity_strava_id", columnList = "stravaId"),
+                @Index(name = "idx_activity_shoe", columnList = "shoe_id")
         }
 )
 public class Activity {

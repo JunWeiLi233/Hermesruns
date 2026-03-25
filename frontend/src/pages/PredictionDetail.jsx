@@ -6,13 +6,13 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import { formatDuration, formatPaceSeconds } from '../utils/format';
-import { calculateVdot, predictRaceTime, RACE_DISTANCES } from '../utils/vdot';
+import { predictRaceTime, RACE_DISTANCES, collectAllVdotEntries, computeRollingRepresentativeSeries, VDOT_LOOKBACK_MS } from '../utils/vdot';
 import TopNav from '../components/TopNav';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, LineController, ScatterController, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line, Scatter } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, ScatterController, Title, Tooltip, Legend, Filler);
 
 const KM_TO_MILE = 1.60934;
 
@@ -40,62 +40,36 @@ export default function PredictionDetail() {
   const textColor = isDark ? '#e2e8f0' : '#334155';
   const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
-  // Compute all VDOT points
-  const allVdots = useMemo(() => {
-    const vdots = [];
-    runs.forEach(run => {
-      const km = Number(run.distanceKm || 0);
-      const sec = Number(run.movingTimeSeconds || 0);
-      if (km < 1.5 || sec <= 0) return;
-      const v = calculateVdot(km * 1000, sec / 60);
-      if (v <= 0 || v > 85) return;
-      const runDate = new Date(run.startTime || run.startDate || 0);
-      vdots.push({ vdot: v, date: runDate, run });
-    });
-    return vdots.sort((a, b) => a.date - b.date);
-  }, [runs]);
+  const allVdots = useMemo(() => collectAllVdotEntries(runs), [runs]);
 
-  // Build detailed prediction history — weekly samples for more granularity
   const historyData = useMemo(() => {
-    if (!allVdots.length || !raceDist) return null;
-    const windowMs = 90 * 24 * 60 * 60 * 1000;
+    if (!raceDist || allVdots.length < 1) return null;
+    const rolling = computeRollingRepresentativeSeries(allVdots, VDOT_LOOKBACK_MS);
+    if (!rolling.length) return null;
 
-    // Weekly samples
     const samples = [];
     let lastWeek = -1;
-    allVdots.forEach(run => {
-      const week = Math.floor(run.date.getTime() / (7 * 24 * 60 * 60 * 1000));
+    rolling.forEach((pt) => {
+      const week = Math.floor(pt.x / (7 * 24 * 60 * 60 * 1000));
       if (week !== lastWeek) {
         lastWeek = week;
-        const cutoff = run.date.getTime() - windowMs;
-        let peak = 0;
-        for (const r of allVdots) {
-          if (r.date.getTime() > run.date.getTime()) break;
-          if (r.date.getTime() >= cutoff && r.vdot > peak) peak = r.vdot;
-        }
-        if (peak > 0) {
-          const timeMin = predictRaceTime(peak, raceDist.meters);
-          samples.push({
-            date: run.date.getTime(),
-            timeSec: timeMin ? Math.round(timeMin * 60) : null,
-            vdot: peak,
-          });
-        }
+        const timeMin = predictRaceTime(pt.y, raceDist.meters);
+        samples.push({
+          date: pt.x,
+          timeSec: timeMin ? Math.round(timeMin * 60) : null,
+          vdot: pt.y,
+        });
       }
     });
 
-    // Always include latest
-    const last = allVdots[allVdots.length - 1];
-    const lastCutoff = last.date.getTime() - windowMs;
-    let lastPeak = 0;
-    for (const r of allVdots) {
-      if (r.date.getTime() >= lastCutoff && r.vdot > lastPeak) lastPeak = r.vdot;
-    }
-    if (lastPeak > 0) {
-      const timeMin = predictRaceTime(lastPeak, raceDist.meters);
-      const entry = { date: last.date.getTime(), timeSec: timeMin ? Math.round(timeMin * 60) : null, vdot: lastPeak };
-      if (!samples.length || samples[samples.length - 1].date !== entry.date) samples.push(entry);
-    }
+    const last = rolling[rolling.length - 1];
+    const timeMinLast = predictRaceTime(last.y, raceDist.meters);
+    const entry = {
+      date: last.x,
+      timeSec: timeMinLast ? Math.round(timeMinLast * 60) : null,
+      vdot: last.y,
+    };
+    if (!samples.length || samples[samples.length - 1].date !== entry.date) samples.push(entry);
 
     return samples;
   }, [allVdots, raceDist]);

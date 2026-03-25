@@ -1,26 +1,137 @@
 /**
- * VDOT calculation utilities — ported from the Daniels/Gilbert formula
- * used in analysis.html.
+ * Aerobic fitness from running — **Daniels & Gilbert** (*Oxygen Power*, 1979; Jack Daniels *Running Formula*).
+ *
+ * **Oxygen cost of running** (velocity v in m/min, horizontal):
+ *   VO₂ = −4.60 + 0.182258·v + 0.000104·v²   (ml·kg⁻¹·min⁻¹)
+ *
+ * **Race effort — fraction of VO₂max** sustainable for duration t (minutes):
+ *   %VO₂max = 0.8 + 0.1894393·e^(−0.012778·t) + 0.2989558·e^(−0.1932605·t)
+ *
+ * **Race-derived VO₂max** (assumes that performance was a maximal race effort for that duration):
+ *   VO₂max ≈ VO₂(at pace) ÷ %VO₂max(t)
+ *
+ * **Submaximal runs** (training): the race formula is wrong — easy pace has low VO₂ cost and
+ * would underestimate VO₂max. When **average heart rate** and **max HR** are available, we use
+ *   VO₂max ≈ VO₂(at pace) ÷ (avgHR / HRmax)
+ * with HR ratio clamped to a plausible steady-state range (approximation; lab VO₂max may differ).
  */
 
 /**
- * Calculate VDOT from distance (meters) and time (minutes).
- * Jack Daniels' formula.
+ * Daniels–Gilbert steady-state oxygen cost of running (ml·kg⁻¹·min⁻¹) at velocity v (m/min).
  */
-export function calculateVdot(distanceMeters, timeMinutes) {
-  if (distanceMeters <= 0 || timeMinutes <= 0) return 0;
-  const velocity = distanceMeters / timeMinutes; // m/min
-  const vo2 = -4.60 + 0.182258 * velocity + 0.000104 * velocity * velocity;
-  const percentMax =
+export function danielsRunningVo2CostMlKgMin(velocityMPerMin) {
+  const v = velocityMPerMin;
+  if (v <= 0) return 0;
+  return -4.60 + 0.182258 * v + 0.000104 * v * v;
+}
+
+/**
+ * Fraction of VO₂max sustainable for t minutes (race-type curve).
+ */
+export function danielsFractionOfVo2maxAtDurationMinutes(timeMinutes) {
+  if (timeMinutes <= 0) return 0;
+  return (
     0.8 +
     0.1894393 * Math.exp(-0.012778 * timeMinutes) +
-    0.2989558 * Math.exp(-0.1932605 * timeMinutes);
-  return percentMax > 0 ? vo2 / percentMax : 0;
+    0.2989558 * Math.exp(-0.1932605 * timeMinutes)
+  );
+}
+
+/**
+ * Race- or time-trial-derived **estimated VO₂max** (ml·kg⁻¹·min⁻¹), assuming **maximal race effort**
+ * for that distance/duration.
+ */
+export function estimateVo2maxDanielsRaceMlKgMin(distanceMeters, timeMinutes) {
+  if (distanceMeters <= 0 || timeMinutes <= 0) return 0;
+  const velocity = distanceMeters / timeMinutes;
+  const vo2 = danielsRunningVo2CostMlKgMin(velocity);
+  const pct = danielsFractionOfVo2maxAtDurationMinutes(timeMinutes);
+  return pct > 0 ? vo2 / pct : 0;
+}
+
+/** @deprecated use estimateVo2maxDanielsRaceMlKgMin — alias kept for callers */
+export function estimateVo2maxDanielsMlKgMin(distanceMeters, timeMinutes) {
+  return estimateVo2maxDanielsRaceMlKgMin(distanceMeters, timeMinutes);
+}
+
+/**
+ * Daniels “VDOT” — in this model numerically equal to the race-derived VO₂max estimate (ml·kg⁻¹·min⁻¹).
+ */
+export function calculateVdot(distanceMeters, timeMinutes) {
+  return estimateVo2maxDanielsRaceMlKgMin(distanceMeters, timeMinutes);
+}
+
+/**
+ * HR-based fraction of max for steady running: approximate %VO₂max via %HRmax (trained runners).
+ * Clamped to avoid absurd divisions on very easy efforts or bad data.
+ */
+export function fractionVo2maxFromHeartRate(avgHr, hrMax) {
+  if (!avgHr || !hrMax || hrMax < 130) return null;
+  const r = avgHr / hrMax;
+  return Math.min(0.97, Math.max(0.52, r));
+}
+
+function clampVo2maxEstimate(v) {
+  if (!Number.isFinite(v) || v <= 0) return 0;
+  return Math.min(88, Math.max(24, v));
+}
+
+/**
+ * VO₂max from one run: prefer **HR-adjusted** oxygen cost; else **race assumption** only for
+ * relatively strong efforts (vs your median pace) when HR missing.
+ */
+export function estimateVo2maxFromRun(run, stats) {
+  const km = Number(run.distanceKm || 0);
+  const sec = Number(run.movingTimeSeconds || 0);
+  if (km < VDOT_MIN_KM_LOOSE || sec <= 0) return null;
+
+  const timeMin = sec / 60;
+  const velocityMPerMin = (km * 1000) / timeMin;
+  const vo2Cost = danielsRunningVo2CostMlKgMin(velocityMPerMin);
+  const paceSecPerKm = sec / km;
+
+  const avgHr = Number(run.averageHeartRate);
+  const { hrMax, medianPaceSecPerKm } = stats;
+
+  if (avgHr > 40 && hrMax >= 130) {
+    const f = fractionVo2maxFromHeartRate(avgHr, hrMax);
+    if (f != null && f > 0) {
+      const raw = vo2Cost / f;
+      return { vo2max: clampVo2maxEstimate(raw), method: 'hr' };
+    }
+  }
+
+  if (medianPaceSecPerKm != null && paceSecPerKm > medianPaceSecPerKm * NO_HR_MAX_PACE_SLOP_FACTOR) {
+    return null;
+  }
+
+  const raw = estimateVo2maxDanielsRaceMlKgMin(km * 1000, timeMin);
+  return raw > 0 ? { vo2max: clampVo2maxEstimate(raw), method: 'race' } : null;
+}
+
+/** Without HR: only use race formula if pace is not slower than ~15% beyond median (filters easy jogs). */
+const NO_HR_MAX_PACE_SLOP_FACTOR = 1.18;
+
+/**
+ * Max HR seen in activity list; must be plausible to use HR path.
+ */
+export function precomputeRunStats(runs) {
+  let hrMax = 0;
+  const paces = [];
+  for (const r of runs) {
+    const m = Number(r.maxHeartRate);
+    if (m > hrMax) hrMax = m;
+    const km = Number(r.distanceKm || 0);
+    const sec = Number(r.movingTimeSeconds || 0);
+    if (km >= VDOT_MIN_KM_LOOSE && sec > 0) paces.push(sec / km);
+  }
+  paces.sort((a, b) => a - b);
+  const medianPaceSecPerKm = paces.length ? paces[Math.floor(paces.length / 2)] : null;
+  return { hrMax: hrMax >= 130 ? hrMax : 0, medianPaceSecPerKm };
 }
 
 /**
  * Convert VDOT + %VO2max fraction to pace in seconds per km.
- * Solves the quadratic VO2-velocity equation for velocity, then converts.
  */
 export function vdotToPaceSecondsPerKm(vdot, vo2Fraction) {
   const targetVo2 = vdot * vo2Fraction;
@@ -29,14 +140,10 @@ export function vdotToPaceSecondsPerKm(vdot, vo2Fraction) {
   const c = -4.60 - targetVo2;
   const disc = b * b - 4 * a * c;
   if (disc < 0) return null;
-  const v = (-b + Math.sqrt(disc)) / (2 * a); // m/min
+  const v = (-b + Math.sqrt(disc)) / (2 * a);
   return v > 0 ? (1000 / v) * 60 : null;
 }
 
-/**
- * Compute Daniels' training paces from VDOT.
- * Returns pace ranges in seconds/km for each zone.
- */
 export function computeTrainingPaces(vdot) {
   return {
     easy: [vdotToPaceSecondsPerKm(vdot, 0.54), vdotToPaceSecondsPerKm(vdot, 0.62)],
@@ -47,10 +154,6 @@ export function computeTrainingPaces(vdot) {
   };
 }
 
-/**
- * Predict race time for a given distance using binary search on the VDOT equation.
- * Returns time in minutes, or null if inputs are invalid.
- */
 export function predictRaceTime(vdot, distanceMeters) {
   if (!vdot || vdot <= 0 || distanceMeters <= 0) return null;
   let lo = 1;
@@ -64,12 +167,106 @@ export function predictRaceTime(vdot, distanceMeters) {
   return (lo + hi) / 2;
 }
 
-/**
- * Standard race distances used for predictions.
- */
 export const RACE_DISTANCES = [
   { key: '5k', meters: 5000, labelZh: '5 公里', labelEn: '5K' },
   { key: '10k', meters: 10000, labelZh: '10 公里', labelEn: '10K' },
   { key: 'half', meters: 21097.5, labelZh: '半程马拉松', labelEn: 'Half Marathon' },
   { key: 'marathon', meters: 42195, labelZh: '全程马拉松', labelEn: 'Marathon' },
 ];
+
+export const VDOT_LOOKBACK_MS = 90 * 24 * 60 * 60 * 1000;
+export const VDOT_MIN_KM_STRICT = 3;
+export const VDOT_MIN_KM_LOOSE = 1.5;
+export const VDOT_TOP_N = 3;
+
+/**
+ * One run → fitness entry (VO₂max estimate in Daniels ml·kg⁻¹·min⁻¹), or null.
+ * `stats` from {@link precomputeRunStats}(full run list).
+ */
+export function buildVdotEntry(run, options = {}) {
+  const { maxAgeMs = VDOT_LOOKBACK_MS, now = Date.now(), stats: statsOverride } = options;
+  const km = Number(run.distanceKm || 0);
+  const sec = Number(run.movingTimeSeconds || 0);
+  if (km < VDOT_MIN_KM_LOOSE || sec <= 0) return null;
+  const runDate = new Date(run.startTime || run.startDate || 0);
+  if (Number.isNaN(runDate.getTime())) return null;
+  if (maxAgeMs != null && now - runDate.getTime() > maxAgeMs) return null;
+
+  const stats = statsOverride || precomputeRunStats([run]);
+  const est = estimateVo2maxFromRun(run, stats);
+  if (!est || est.vo2max <= 0) return null;
+
+  const v = est.vo2max;
+  return {
+    vo2max: v,
+    vdot: v,
+    method: est.method,
+    date: runDate,
+    run,
+    distKm: km,
+  };
+}
+
+export function representativeVdotFromEntries(entries) {
+  if (!entries.length) {
+    return { value: 0, bestRun: null, poolMinKm: VDOT_MIN_KM_STRICT, usedCount: 0 };
+  }
+  const strict = entries.filter((e) => e.distKm >= VDOT_MIN_KM_STRICT);
+  const pool = strict.length > 0 ? strict : entries;
+  const sorted = [...pool].sort((a, b) => b.vo2max - a.vo2max);
+  const n = Math.min(VDOT_TOP_N, sorted.length);
+  const top = sorted.slice(0, n);
+  const value = Math.round((top.reduce((s, e) => s + e.vo2max, 0) / n) * 10) / 10;
+  return {
+    value,
+    bestRun: top[0].run,
+    poolMinKm: strict.length > 0 ? VDOT_MIN_KM_STRICT : VDOT_MIN_KM_LOOSE,
+    usedCount: n,
+  };
+}
+
+export function estimateCurrentVdot(runs, now = Date.now()) {
+  const stats = precomputeRunStats(runs);
+  const windowEntries = [];
+  for (const run of runs) {
+    const e = buildVdotEntry(run, { maxAgeMs: VDOT_LOOKBACK_MS, now, stats });
+    if (e) windowEntries.push(e);
+  }
+  const { value, bestRun, poolMinKm, usedCount } = representativeVdotFromEntries(windowEntries);
+  return {
+    representativeVdot: value,
+    representativeVo2max: value,
+    bestRun,
+    poolMinKm,
+    usedTopN: usedCount,
+    windowEntries,
+    runStats: stats,
+  };
+}
+
+export function collectAllVdotEntries(runs) {
+  const stats = precomputeRunStats(runs);
+  const out = [];
+  for (const run of runs) {
+    const e = buildVdotEntry(run, { maxAgeMs: null, now: Date.now(), stats });
+    if (e) out.push(e);
+  }
+  out.sort((a, b) => a.date - b.date);
+  return out;
+}
+
+export function computeRollingRepresentativeSeries(sortedEntries, windowMs = VDOT_LOOKBACK_MS) {
+  const result = [];
+  for (let i = 0; i < sortedEntries.length; i += 1) {
+    const end = sortedEntries[i].date.getTime();
+    const start = end - windowMs;
+    const inWindow = [];
+    for (let j = 0; j <= i; j += 1) {
+      const t = sortedEntries[j].date.getTime();
+      if (t >= start && t <= end) inWindow.push(sortedEntries[j]);
+    }
+    const { value } = representativeVdotFromEntries(inWindow);
+    if (value > 0) result.push({ x: end, y: value, date: sortedEntries[i].date });
+  }
+  return result;
+}

@@ -5,6 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiJson, apiFetch } from '../api';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import HermesLogo from '../components/HermesLogo';
 import shoeCatalog, { flatCatalog } from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 
@@ -43,6 +44,9 @@ const TYPE_LABELS = {
   trail: 'type_trail', stability: 'type_stability',
 };
 
+/** AI 识图单次请求最多处理的图片数量 */
+const SHOE_SCAN_MAX_FILES = 5;
+
 export default function Shoes() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
@@ -51,6 +55,8 @@ export default function Shoes() {
   const [shoes, setShoes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
   const [showRetired, setShowRetired] = useState(false);
+  const [duplicateClusters, setDuplicateClusters] = useState([]);
+  const [mergeBusy, setMergeBusy] = useState(false);
 
   // Add modal — wizard steps: 'brand' → 'model' → 'details'
   const [addOpen, setAddOpen] = useState(false);
@@ -83,6 +89,7 @@ export default function Shoes() {
   const [scanFiles, setScanFiles] = useState([]);
   const [scanStatus, setScanStatus] = useState('');
   const [scannedShoes, setScannedShoes] = useState([]);
+  const [aiQuota, setAiQuota] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -92,14 +99,36 @@ export default function Shoes() {
 
   async function loadShoes() {
     try {
-      const data = await apiJson(`/api/shoes?includeRetired=${showRetired}`);
+      const [data, dupData] = await Promise.all([
+        apiJson(`/api/shoes?includeRetired=${showRetired}`),
+        apiFetch('/api/shoes/duplicate-clusters').then(r => (r.ok ? r.json() : { clusters: [] })).catch(() => ({ clusters: [] })),
+      ]);
       const list = Array.isArray(data) ? data : [];
       list.sort((a, b) => (b.currentDistanceKm || 0) - (a.currentDistanceKm || 0));
       setShoes(list);
+      setDuplicateClusters(Array.isArray(dupData.clusters) ? dupData.clusters : []);
       setLoadState('ready');
     } catch (err) {
       if (err.message !== 'Unauthorized') setLoadState('error');
     }
+  }
+
+  async function mergeDuplicateCluster(cluster) {
+    const list = [...(cluster.shoes || [])].sort((a, b) => (a.id || 0) - (b.id || 0));
+    if (list.length < 2) return;
+    const keepId = list[0].id;
+    const mergeShoeIds = list.slice(1).map(s => s.id);
+    if (!window.confirm(t('shoes.duplicate_merge_confirm', { n: mergeShoeIds.length }))) return;
+    setMergeBusy(true);
+    try {
+      const res = await apiFetch('/api/shoes/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keepShoeId: keepId, mergeShoeIds }),
+      });
+      if (res.ok) await loadShoes();
+    } catch { /* ignored */ }
+    finally { setMergeBusy(false); }
   }
 
   useEffect(() => {
@@ -110,6 +139,19 @@ export default function Shoes() {
     try {
       const data = await apiJson('/api/shoes/scan-available');
       setScanAvailable(!!data.available);
+      if (data.available) {
+        setAiQuota({
+          tier: data.tier,
+          scansRemaining: data.scansRemaining,
+          quotaType: data.quotaType,
+          unlimited: data.unlimited,
+          admin: data.admin,
+          monthlyLimit: data.monthlyLimit,
+          monthlyUsed: data.monthlyUsed,
+          userFreeTotal: data.userFreeTotal,
+          experiencePhase: data.experiencePhase,
+        });
+      }
     } catch { /* ignored */ }
   }
 
@@ -249,16 +291,6 @@ export default function Shoes() {
   }
 
   // ── Scan ──
-  function findExistingShoe(scanned) {
-    const sBrand = (scanned.brand || '').toLowerCase().trim();
-    const sModel = (scanned.model || '').toLowerCase().trim();
-    return shoes.find(shoe => {
-      const eBrand = (shoe.brand || '').toLowerCase().trim();
-      const eModel = (shoe.model || '').toLowerCase().trim();
-      return eBrand === sBrand && eModel === sModel;
-    });
-  }
-
   function compressImage(file, maxSize = 1024, quality = 0.8) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -279,14 +311,23 @@ export default function Shoes() {
     });
   }
 
+  function onScanFilesSelected(e) {
+    const picked = Array.from(e.target.files || []);
+    if (picked.length > SHOE_SCAN_MAX_FILES) {
+      alert(t('shoes.scan_file_limit_notice', { max: SHOE_SCAN_MAX_FILES }));
+    }
+    setScanFiles(picked.slice(0, SHOE_SCAN_MAX_FILES));
+  }
+
   async function handleScan(e) {
     e.preventDefault();
     if (scanFiles.length === 0) return;
+    const batch = scanFiles.slice(0, SHOE_SCAN_MAX_FILES);
     setScanStatus('processing');
     setScannedShoes([]);
     const allShoes = [];
     let anySuccess = false;
-    for (const file of scanFiles) {
+    for (const file of batch) {
       try {
         const compressed = await compressImage(file);
         const formData = new FormData();
@@ -296,8 +337,18 @@ export default function Shoes() {
           const errData = await res.json().catch(() => null);
           const errMsg = errData?.error || '';
           if (errMsg) console.error('Scan error:', errMsg);
-          if (errMsg.includes('429') || errMsg.includes('Too Many') || errMsg.includes('RATE') || errMsg.includes('spending')) {
-            setScanStatus('rate_limited');
+          if (res.status === 429 || errMsg.includes('LIMIT') || errMsg.includes('QUOTA') || errMsg.includes('Too Many') || errMsg.includes('RATE') || errMsg.includes('spending')) {
+            setScanStatus('quota_exceeded');
+            if (errData?.tier) {
+              setAiQuota(q => ({
+                ...q,
+                tier: errData.tier,
+                scansRemaining: errData.scansRemaining,
+                quotaType: errData.quotaType,
+                userFreeTotal: errData.userFreeTotal,
+                experiencePhase: errData.experiencePhase,
+              }));
+            }
             return;
           }
           continue;
@@ -307,15 +358,41 @@ export default function Shoes() {
           const parsed = JSON.parse(data.raw);
           if (Array.isArray(parsed)) allShoes.push(...parsed);
           anySuccess = true;
+          if (data.tier) {
+            setAiQuota(q => ({
+              ...q,
+              tier: data.tier,
+              scansRemaining: data.scansRemaining,
+              quotaType: data.quotaType,
+              userFreeTotal: data.userFreeTotal,
+              experiencePhase: data.experiencePhase,
+            }));
+          }
         }
       } catch { continue; }
     }
     if (anySuccess && allShoes.length > 0) {
-      const tagged = allShoes.map(s => {
-        const existing = findExistingShoe(s);
-        if (existing) return { ...s, _existing: existing, _action: 'keep_existing' };
-        return { ...s, _existing: null, _action: 'add' };
-      });
+      let tagged = allShoes.map(s => ({ ...s, _existing: null, _action: 'add' }));
+      try {
+        const batchRes = await apiFetch('/api/shoes/match-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: allShoes.map(s => ({ brand: s.brand || '', model: s.model || '' })),
+          }),
+        });
+        if (batchRes.ok) {
+          const batchData = await batchRes.json();
+          const results = Array.isArray(batchData.results) ? batchData.results : [];
+          tagged = allShoes.map((s, i) => {
+            const r = results.find(x => x.index === i) ?? results[i];
+            const matches = (r && Array.isArray(r.matches)) ? r.matches : [];
+            const existing = matches.length > 0 ? matches[0] : null;
+            if (existing) return { ...s, _existing: existing, _action: 'keep_existing' };
+            return { ...s, _existing: null, _action: 'add' };
+          });
+        }
+      } catch { /* fall through: all new */ }
       setScannedShoes(tagged);
       setScanStatus('done');
     } else {
@@ -564,7 +641,7 @@ export default function Shoes() {
     <div className="dashboard-body history-page shoes-page">
       <LanguageSwitcher />
       <header className="top-nav">
-        <Link to="/profile" className="logo logo-link">HERMES</Link>
+        <Link to="/profile" className="logo logo-link"><HermesLogo /></Link>
         <div className="history-actions">
           <Link to="/races" className="top-nav-shortcut">{t('races.nav_label')}</Link>
           <Link to="/profile" className="history-back-link">{t('shoes.back_to_profile')}</Link>
@@ -602,6 +679,36 @@ export default function Shoes() {
             <div className="history-summary-value">{avgHealthLabel}</div>
           </article>
         </section>
+
+        {duplicateClusters.length > 0 && (
+          <section className="card shoe-duplicate-panel">
+            <h2 className="shoe-duplicate-title">{t('shoes.duplicate_title')}</h2>
+            <p className="shoe-duplicate-copy">{t('shoes.duplicate_copy')}</p>
+            {duplicateClusters.map((cluster, ci) => (
+              <div key={cluster.identityKey || ci} className="shoe-duplicate-cluster">
+                <div className="shoe-duplicate-cluster-meta">
+                  <span className="shoe-duplicate-key">{t('shoes.duplicate_key_label')}: <code>{cluster.identityKey}</code></span>
+                  <button
+                    type="button"
+                    className="btn-primary shoe-duplicate-merge"
+                    disabled={mergeBusy}
+                    onClick={() => mergeDuplicateCluster(cluster)}
+                  >
+                    {t('shoes.duplicate_merge_btn')}
+                  </button>
+                </div>
+                <ul className="shoe-duplicate-list">
+                  {(cluster.shoes || []).map(s => (
+                    <li key={s.id}>
+                      <strong>{s.brand}</strong> {s.model}
+                      <span className="shoe-duplicate-mi"> · {Math.round((s.currentDistanceKm || 0) * 10) / 10} km</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </section>
+        )}
 
         {/* Shoe List */}
         <section className="card history-list-card">
@@ -787,13 +894,38 @@ export default function Shoes() {
         ) : scanStatus !== 'done' ? (
           <form onSubmit={handleScan}>
             <p className="modal-help">{t('shoes.scan_hint')}</p>
-            <input type="file" accept="image/*" multiple onChange={e => setScanFiles(Array.from(e.target.files || []))} />
+            {aiQuota && !aiQuota.admin && !aiQuota.unlimited && (
+              <div className="ai-quota-bar">
+                {aiQuota.tier === 'PRO' ? (
+                  <span className="ai-quota-badge ai-quota-pro">PRO</span>
+                ) : (
+                  <span className="ai-quota-badge ai-quota-free">FREE</span>
+                )}
+                <span className="ai-quota-text">
+                  {aiQuota.scansRemaining > 0
+                    ? t('shoes.ai_scans_remaining', { count: aiQuota.scansRemaining })
+                    : t('shoes.ai_scans_exhausted')}
+                  {aiQuota.quotaType === 'new_user' && ` (${t('shoes.ai_quota_new_user')})`}
+                  {aiQuota.quotaType === 'user_free' && ` (${t('shoes.ai_quota_user_free', { remaining: aiQuota.scansRemaining, total: aiQuota.userFreeTotal ?? 3 })})`}
+                </span>
+              </div>
+            )}
+            <input type="file" accept="image/*" multiple onChange={onScanFilesSelected} />
+            <p className="modal-help scan-file-limit-hint" style={{ marginTop: 8, fontSize: '0.85rem' }}>
+              {t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}
+            </p>
             {scanStatus === 'processing' && <div className="modal-status">{t('shoes.scan_processing')}</div>}
+            {scanStatus === 'quota_exceeded' && (
+              <div className="modal-status ai-quota-exceeded">
+                <p style={{ color: '#f59e0b', margin: '0 0 8px 0' }}>{t('shoes.ai_quota_exceeded')}</p>
+                {aiQuota?.tier !== 'PRO' && <p style={{ margin: 0 }}>{t('shoes.ai_upgrade_hint')}</p>}
+              </div>
+            )}
             {scanStatus === 'rate_limited' && <div className="modal-status" style={{ color: '#f59e0b' }}>{t('shoes.scan_rate_limited')}</div>}
             {scanStatus === 'failed' && <div className="modal-status" style={{ color: '#ef4444' }}>{t('shoes.scan_failed')}</div>}
             <div className="modal-actions">
               <button type="button" className="btn-secondary modal-button" onClick={() => setScanOpen(false)}>{t('shoes.cancel')}</button>
-              <button type="submit" className="btn-primary modal-button" disabled={scanFiles.length === 0 || scanStatus === 'processing'}>{t('shoes.scan_image')}</button>
+              <button type="submit" className="btn-primary modal-button" disabled={scanFiles.length === 0 || scanStatus === 'processing' || (aiQuota && !aiQuota.admin && aiQuota.scansRemaining <= 0)}>{t('shoes.scan_image')}</button>
             </div>
           </form>
         ) : (

@@ -4,6 +4,12 @@
 #  and fill in your own credentials.
 # ============================================
 
+# ── Production hardening (public cloud) ──
+# $env:HERMES_ENV = "production"
+# $env:STRAVA_WEBHOOK_VERIFY_TOKEN = "<long-random-secret>"  # required if Strava enabled + HERMES_ENV=production
+# $env:APP_ENABLE_HSTS = "true"   # only if site is always HTTPS
+# $env:APP_CORS_ALLOWED_ORIGINS = "https://app.example.com"  # if SPA is on another host
+
 # ── Kill previous Hermes terminals ──
 $hermesTitles = @("Hermes - Spring Boot Server", "Hermes - Python Engine", "Hermes - Auto Import Watcher")
 
@@ -74,6 +80,24 @@ $env:GARMIN_REDIRECT_URI = "http://localhost:8080/api/auth/garmin/callback"
 $env:APP_AI_API_KEY = "YOUR_AI_API_KEY"
 $env:APP_AI_MODEL = "gemini-2.5-flash"
 $env:APP_AI_PROVIDER = "gemini"
+
+# ── Stripe (Pro checkout — optional) ──
+# One-time Price in Dashboard → STRIPE_PRICE_PRO_MONTHLY. Webhook URL: https://YOUR_HOST/api/billing/webhook
+# $env:STRIPE_SECRET_KEY = "sk_live_..."
+# $env:STRIPE_WEBHOOK_SECRET = "whsec_..."
+# $env:STRIPE_PRICE_PRO_MONTHLY = "price_..."
+# $env:APP_PUBLIC_BASE_URL = "http://localhost:8080"
+# $env:APP_BILLING_PRICE_LABEL = "$9 / month"
+
+# ── Email verification (password sign-up) — optional ──
+# If SPRING_MAIL_HOST is empty, new accounts skip inbox verification (dev only).
+# APP_PUBLIC_BASE_URL must be the URL users open in the browser (used inside the verification link).
+$env:SPRING_MAIL_HOST = "smtp.gmail.com"
+$env:SPRING_MAIL_PORT = "587"
+$env:SPRING_MAIL_USERNAME = "your@gmail.com"
+$env:SPRING_MAIL_PASSWORD = "<app-password>"
+$env:APP_MAIL_FROM = "Hermes <your@gmail.com>"
+$env:APP_PUBLIC_BASE_URL = "http://localhost:8080"
 
 # ── Admin bootstrap ──
 $env:APP_BOOTSTRAP_ADMIN_EMAIL = "admin"

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -6,11 +6,46 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
 import TopNav from '../components/TopNav';
+import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import ImportDataGuide from '../components/ImportDataGuide';
 import { formatDuration, formatPace } from '../utils/format';
 import { getTodayRunRecommendation } from '../utils/todayRun';
+import {
+  estimateCurrentVdot,
+  collectAllVdotEntries,
+  computeRollingRepresentativeSeries,
+  VDOT_LOOKBACK_MS,
+} from '../utils/vdot';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  ScatterController,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Scatter } from 'react-chartjs-2';
 import 'leaflet/dist/leaflet.css';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  ScatterController,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+);
 const HEAT_GRADIENT = {
   0.0: '#1a0a00',
   0.2: '#ff4500',
@@ -19,10 +54,14 @@ const HEAT_GRADIENT = {
   1.0: '#ffffff',
 };
 
+const CARTO_TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const CARTO_TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+const CARTO_ATTRIB = '\u00a9 OpenStreetMap \u00a9 CARTO';
+
 export default function Profile() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, isDark } = useTheme();
   const { isMile } = useUnit();
   const navigate = useNavigate();
 
@@ -36,36 +75,30 @@ export default function Profile() {
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [garminConfigModalOpen, setGarminConfigModalOpen] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [nameStatus, setNameStatus] = useState('');
   const [importStatus, setImportStatus] = useState('');
-  const [garminConfigStatus, setGarminConfigStatus] = useState('');
-  const [garminConsumerKeyInput, setGarminConsumerKeyInput] = useState('');
-  const [garminConsumerSecretInput, setGarminConsumerSecretInput] = useState('');
-  const [garminRedirectUriInput, setGarminRedirectUriInput] = useState('');
-  const [garminHasSavedSecret, setGarminHasSavedSecret] = useState(false);
-  const [garminUsesCustomConfig, setGarminUsesCustomConfig] = useState(false);
   const [garminFiles, setGarminFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
   const [profileShoes, setProfileShoes] = useState([]);
-
-  const [garminConfigured, setGarminConfigured] = useState(false);
-  const [garminUsesServerKeys, setGarminUsesServerKeys] = useState(false);
-  const [garminConnected, setGarminConnected] = useState(false);
-  const [garminUserId, setGarminUserId] = useState('');
-  const [garminLoading, setGarminLoading] = useState(false);
-  const [garminSyncing, setGarminSyncing] = useState(false);
-  const [garminSyncNote, setGarminSyncNote] = useState('');
+  const [aiQuota, setAiQuota] = useState(null);
+  const [billingConfig, setBillingConfig] = useState(null);
+  const [subscriptionMonths, setSubscriptionMonths] = useState(1);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [subscriptionCheckoutError, setSubscriptionCheckoutError] = useState('');
+  const [checkoutBanner, setCheckoutBanner] = useState(null);
 
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const heatLayerRef = useRef(null);
+  const tileLayerRef = useRef(null);
+  const heatmapIsDarkRef = useRef(undefined);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -75,14 +108,59 @@ export default function Profile() {
     loadProfile();
     loadActivities();
     loadShoes();
-    loadGarminStatus();
-
-    // Handle Garmin OAuth callback hash
-    const hash = window.location.hash;
-    if (hash.includes('garmin=success') || hash.includes('garmin=error')) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    loadAiQuota();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const c = await apiJson('/api/billing/config');
+        setBillingConfig(c);
+      } catch {
+        setBillingConfig({ checkoutConfigured: false, provider: 'stripe' });
+      }
+    })();
+  }, [isAuthenticated]);
+
+  const stravaSessionPullRef = useRef(false);
+
+  /** One Strava pull per browser session when linked; server also runs periodic Strava auto-sync. */
+  useEffect(() => {
+    if (!isAuthenticated || !profile?.stravaLinked || stravaSessionPullRef.current) return;
+    stravaSessionPullRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const prov = await apiJson('/api/auth/providers');
+        if (cancelled || !prov.stravaConfigured) return;
+        const res = await apiFetch('/api/strava/sync');
+        if (!res.ok || cancelled) return;
+        await new Promise(r => setTimeout(r, 3500));
+        if (!cancelled) loadActivities();
+      } catch { /* ignored */ }
+    })();
+    return () => { cancelled = true; };
+  }, [isAuthenticated, profile?.stravaLinked]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const params = new URLSearchParams(window.location.search);
+    const co = params.get('checkout');
+    if (co !== 'success' && co !== 'cancel') return;
+    setCheckoutBanner(co);
+    (async () => {
+      try {
+        const data = await apiJson('/api/shoes/ai-usage');
+        setAiQuota(data);
+      } catch { /* ignored */ }
+    })();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (subscriptionModalOpen) setSubscriptionCheckoutError('');
+  }, [subscriptionModalOpen]);
 
   async function loadProfile() {
     try {
@@ -93,157 +171,39 @@ export default function Profile() {
     }
   }
 
+  async function loadAiQuota() {
+    try {
+      const data = await apiJson('/api/shoes/ai-usage');
+      setAiQuota(data);
+    } catch { /* ignored */ }
+  }
+
+  async function startStripeCheckout(ev) {
+    ev?.stopPropagation?.();
+    ev?.preventDefault?.();
+    if (!billingConfig?.checkoutConfigured) return;
+    setSubscriptionCheckoutError('');
+    setCheckoutLoading(true);
+    try {
+      const data = await apiJson('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months: subscriptionMonths }),
+      });
+      if (data?.url) window.location.href = data.url;
+      else throw new Error('no checkout url');
+    } catch (err) {
+      setSubscriptionCheckoutError(err?.message || t('profile.subscription_checkout_error'));
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }
+
   async function loadShoes() {
     try {
       const data = await apiJson('/api/shoes/recent');
       setProfileShoes(Array.isArray(data) ? data : []);
     } catch { /* ignored */ }
-  }
-
-  async function loadGarminStatus() {
-    try {
-      const cfgResponse = await apiFetch('/api/auth/garmin/configured');
-      if (cfgResponse.status === 404) {
-        setGarminConfigured(false);
-        setGarminUsesServerKeys(false);
-        setGarminConnected(false);
-        setGarminUserId('');
-        setGarminUsesCustomConfig(false);
-        return;
-      }
-      if (!cfgResponse.ok) throw new Error('Garmin config check failed');
-      const cfg = await cfgResponse.json();
-      setGarminConfigured(cfg.garminConfigured === true);
-      setGarminUsesServerKeys(cfg.usesServerGarminKeys === true);
-      setGarminUsesCustomConfig(cfg.usesCustomConfig === true);
-      if (cfg.garminConfigured) {
-        const st = await apiJson('/api/auth/garmin/status');
-        setGarminConnected(st.connected === true);
-        setGarminUserId(st.garminUserId || '');
-      }
-    } catch { /* ignored */ }
-  }
-
-  async function openGarminConfigModal() {
-    setGarminConfigStatus('');
-    setGarminConsumerSecretInput('');
-    try {
-      const data = await apiJson('/api/auth/garmin/config');
-      setGarminConsumerKeyInput(data.consumerKey || '');
-      setGarminRedirectUriInput(data.redirectUri || `${window.location.origin}/api/auth/garmin/callback`);
-      setGarminHasSavedSecret(data.hasSecret === true);
-      setGarminUsesCustomConfig(data.usesCustomConfig === true);
-    } catch {
-      setGarminConsumerKeyInput('');
-      setGarminRedirectUriInput(`${window.location.origin}/api/auth/garmin/callback`);
-      setGarminHasSavedSecret(false);
-    }
-    setGarminConfigModalOpen(true);
-  }
-
-  async function handleSaveGarminConfig(e) {
-    e.preventDefault();
-    setGarminConfigStatus('');
-    try {
-      const payload = {
-        consumerKey: garminConsumerKeyInput,
-        consumerSecret: garminConsumerSecretInput,
-        redirectUri: garminRedirectUriInput,
-      };
-      const response = await apiFetch('/api/auth/garmin/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Garmin config save failed');
-      setGarminConfigStatus(t('profile.garmin_config_saved'));
-      setGarminHasSavedSecret(true);
-      setGarminUsesCustomConfig(true);
-      await loadGarminStatus();
-      setTimeout(() => setGarminConfigModalOpen(false), 500);
-    } catch (error) {
-      setGarminConfigStatus(error.message || 'Garmin config save failed');
-    }
-  }
-
-  async function handleClearGarminConfig() {
-    setGarminConfigStatus('');
-    try {
-      const response = await apiFetch('/api/auth/garmin/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ consumerKey: '', consumerSecret: '', redirectUri: '' }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Garmin config clear failed');
-      setGarminConsumerKeyInput('');
-      setGarminConsumerSecretInput('');
-      setGarminRedirectUriInput(`${window.location.origin}/api/auth/garmin/callback`);
-      setGarminHasSavedSecret(false);
-      setGarminUsesCustomConfig(false);
-      setGarminConnected(false);
-      setGarminUserId('');
-      await loadGarminStatus();
-    } catch (error) {
-      setGarminConfigStatus(error.message || 'Garmin config clear failed');
-    }
-  }
-
-  async function handleGarminConnect() {
-    setGarminLoading(true);
-    try {
-      const data = await apiJson('/api/auth/garmin/start');
-      if (data.authorizeUrl) {
-        window.location.href = data.authorizeUrl;
-        return;
-      }
-    } catch { /* ignored */ }
-    setGarminLoading(false);
-  }
-
-  async function handleGarminDisconnect() {
-    setGarminLoading(true);
-    try {
-      await apiFetch('/api/auth/garmin/disconnect', { method: 'POST' });
-      setGarminConnected(false);
-      setGarminUserId('');
-      setGarminSyncNote('');
-    } catch { /* ignored */ }
-    setGarminLoading(false);
-  }
-
-  async function handleGarminSyncNow() {
-    setGarminSyncNote('');
-    setGarminSyncing(true);
-    try {
-      const res = await apiFetch('/api/auth/garmin/sync', { method: 'POST' });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setGarminSyncNote(err.error || 'Garmin sync failed');
-        setGarminSyncing(false);
-        return;
-      }
-      for (let i = 0; i < 45; i++) {
-        await new Promise(r => setTimeout(r, 1500));
-        const st = await apiJson('/api/auth/garmin/sync-status');
-        if (st.status === 'FAILED') {
-          setGarminSyncNote(st.error || 'Garmin sync failed');
-          break;
-        }
-        if (st.status === 'COMPLETED') {
-          setGarminSyncNote(t('profile.garmin_sync_done', { n: st.importedActivities ?? 0 }));
-          await loadActivities();
-          break;
-        }
-        if (!st.active && st.status !== 'RUNNING') {
-          break;
-        }
-      }
-    } catch {
-      setGarminSyncNote(t('profile.garmin_sync_error'));
-    }
-    setGarminSyncing(false);
   }
 
   async function loadActivities() {
@@ -278,8 +238,9 @@ export default function Profile() {
     import('leaflet').then(L => {
       const map = L.map(mapRef.current, { scrollWheelZoom: true, dragging: true })
         .setView([40.7306, -73.9352], 12);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '\u00a9 OpenStreetMap \u00a9 CARTO',
+      const tileUrl = isDark ? CARTO_TILE_DARK : CARTO_TILE_LIGHT;
+      tileLayerRef.current = L.tileLayer(tileUrl, {
+        attribution: CARTO_ATTRIB,
         subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(map);
@@ -287,6 +248,30 @@ export default function Profile() {
       setMapReady(true);
     });
   }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const layer = tileLayerRef.current;
+    if (!map || !mapReady || !layer) return;
+    if (heatmapIsDarkRef.current === undefined) {
+      heatmapIsDarkRef.current = isDark;
+      return;
+    }
+    if (heatmapIsDarkRef.current === isDark) return;
+    heatmapIsDarkRef.current = isDark;
+    import('leaflet').then(L => {
+      const m = mapInstanceRef.current;
+      const prev = tileLayerRef.current;
+      if (!m || !prev) return;
+      m.removeLayer(prev);
+      const tileUrl = isDark ? CARTO_TILE_DARK : CARTO_TILE_LIGHT;
+      tileLayerRef.current = L.tileLayer(tileUrl, {
+        attribution: CARTO_ATTRIB,
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(m);
+    });
+  }, [isDark, mapReady]);
 
   const renderHeatmap = useCallback(async (year) => {
     const map = mapInstanceRef.current;
@@ -356,6 +341,102 @@ export default function Profile() {
     tone: recommendationTone,
   } = getTodayRunRecommendation({ runs, t, lang });
 
+  const profileVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
+
+  const vo2ProgressChart = useMemo(() => {
+    const sorted = collectAllVdotEntries(runs);
+    if (sorted.length === 0) return null;
+    const scatterData = sorted.map((e) => ({
+      x: e.date.getTime(),
+      y: Math.round(e.vdot * 10) / 10,
+    }));
+    const rolling = computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
+    const lineData = rolling.map((p) => ({ x: p.x, y: p.y }));
+    return {
+      datasets: [
+        {
+          label: t('profile.vo2_chart_per_run'),
+          data: scatterData,
+          backgroundColor: 'rgba(13, 148, 136, 0.35)',
+          borderColor: 'rgba(13, 148, 136, 0.55)',
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          showLine: false,
+          order: 2,
+        },
+        {
+          label: t('profile.vo2_chart_trend'),
+          data: lineData,
+          type: 'line',
+          borderColor: '#0f766e',
+          backgroundColor: 'rgba(13, 148, 136, 0.06)',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          fill: true,
+          tension: 0.35,
+          order: 1,
+        },
+      ],
+    };
+  }, [runs, t]);
+
+  const vo2ChartOptions = useMemo(() => {
+    const textColor = isDark ? '#e2e8f0' : '#334155';
+    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { usePointStyle: true, padding: 10, font: { size: 10 }, color: textColor },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              if (!items.length) return '';
+              return new Date(items[0].parsed.x).toLocaleDateString(lang, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              });
+            },
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              if (v == null) return '';
+              const name = ctx.dataset.label || '';
+              return `${name}: ${typeof v === 'number' ? v.toFixed(1) : v} ${t('profile.vo2_unit_short')}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          grid: { display: false },
+          ticks: {
+            color: textColor,
+            maxTicksLimit: 5,
+            callback: (value) => new Date(value).toLocaleDateString(lang, { month: 'short', year: '2-digit' }),
+          },
+        },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color: textColor },
+          title: {
+            display: true,
+            text: t('profile.vo2_chart_y_title'),
+            color: textColor,
+            font: { size: 10 },
+          },
+        },
+      },
+    };
+  }, [isDark, lang, t]);
+
   // Daily steps from running (last 14 days)
   const dailySteps = (() => {
     const STEPS_PER_KM = 1282; // avg stride ~0.78m
@@ -382,6 +463,52 @@ export default function Profile() {
   const maxSteps = Math.max(1, ...dailySteps.map(d => d.steps));
   const todaySteps = dailySteps[dailySteps.length - 1];
   const weekSteps = dailySteps.slice(-7).reduce((s, d) => s + d.steps, 0);
+
+  /** Recorded kcal when present; else ~65 kcal/km (rough running estimate). */
+  const caloriesSummary = useMemo(() => {
+    const ROUGH_KCAL_PER_KM = 65;
+    function kcalForRun(run) {
+      const c = Number(run.calories);
+      if (Number.isFinite(c) && c > 0) return Math.round(c);
+      const km = Number(run.distanceKm || 0);
+      if (km <= 0) return 0;
+      return Math.round(km * ROUGH_KCAL_PER_KM);
+    }
+    const now = new Date();
+    const days = [];
+    for (let i = 13; i >= 0; i -= 1) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      days.push({ key: d.toISOString().slice(0, 10), date: d, kcal: 0 });
+    }
+    const cutoff7 = Date.now() - 7 * 86400000;
+    const cutoff28 = Date.now() - 28 * 86400000;
+    let totalAll = 0;
+    let week7 = 0;
+    let week28 = 0;
+    for (const run of runs) {
+      const t = new Date(run.startTime || run.startDate).getTime();
+      if (Number.isNaN(t)) continue;
+      const k = kcalForRun(run);
+      if (k <= 0) continue;
+      totalAll += k;
+      if (t >= cutoff7) week7 += k;
+      if (t >= cutoff28) week28 += k;
+      const rKey = new Date(run.startTime || run.startDate).toISOString().slice(0, 10);
+      const day = days.find((x) => x.key === rKey);
+      if (day) day.kcal += k;
+    }
+    const todayK = days[days.length - 1].kcal;
+    return {
+      dailyCalories: days,
+      total: totalAll,
+      week7,
+      week28,
+      today: todayK,
+    };
+  }, [runs]);
+
+  const maxDailyKcal = Math.max(1, ...caloriesSummary.dailyCalories.map((d) => d.kcal));
 
   // Personal Records
   const personalRecords = (() => {
@@ -544,6 +671,10 @@ export default function Profile() {
 
         {/* Bottom Grid */}
         <div className="bottom-grid">
+          <section className="card profile-distribution-strip">
+            <ProfileDistributionCharts runs={runs} isMile={isMile} t={t} />
+          </section>
+
           <section className="card data-analyze-section analysis-split-card">
             <div
               className="analysis-primary-section"
@@ -564,6 +695,64 @@ export default function Profile() {
                 <span className="stat-value">{avgPaceStr}</span>
               </div>
               <p className="analysis-hint">{t('profile.analysis_hint')}</p>
+            </div>
+
+            <div className="analysis-vo2-section" aria-label={t('profile.vo2_card_title')}>
+              <div
+                className="analysis-vo2-clickable"
+                onClick={() => navigate('/analysis')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate('/analysis');
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+                title={t('profile.vo2_card_cta')}
+              >
+                <div className="analysis-vo2-header">
+                  <h3>{t('profile.vo2_card_title')}</h3>
+                  <span className="card-cta" aria-hidden="true">&rarr;</span>
+                </div>
+                <p className="analysis-vo2-subtitle">{t('profile.vo2_card_subtitle')}</p>
+                {profileVdot > 0 ? (
+                  <>
+                    <div className="analysis-vo2-value-row">
+                      <span className="analysis-vo2-value">{profileVdot.toFixed(1)}</span>
+                      <span className="analysis-vo2-unit">{t('profile.vo2_unit_short')}</span>
+                    </div>
+                    <p className="analysis-vo2-formula-hint">{t('profile.vo2_formula_hint')}</p>
+                    <p className="analysis-vo2-copy">{t('profile.vo2_card_copy')}</p>
+                  </>
+                ) : (
+                  <p className="analysis-vo2-empty">{t('profile.vo2_no_data')}</p>
+                )}
+              </div>
+
+              {profileVdot > 0 && vo2ProgressChart && vo2ProgressChart.datasets[0].data.length > 0 && (
+                <div className="analysis-vo2-chart-wrap">
+                  <p className="analysis-vo2-chart-title">{t('profile.vo2_chart_heading')}</p>
+                  <div className="analysis-vo2-chart-canvas">
+                    <Scatter data={vo2ProgressChart} options={vo2ChartOptions} />
+                  </div>
+                </div>
+              )}
+
+              <div
+                className="analysis-vo2-footer analysis-vo2-clickable"
+                onClick={() => navigate('/analysis')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate('/analysis');
+                  }
+                }}
+                role="link"
+                tabIndex={0}
+              >
+                {t('profile.vo2_card_cta')}
+              </div>
             </div>
 
             <div
@@ -658,11 +847,81 @@ export default function Profile() {
               </ul>
             </section>
 
+            {/* Subscription */}
+            {aiQuota && (
+              <section className="card subscription-section">
+                {checkoutBanner && (
+                  <div
+                    className={
+                      checkoutBanner === 'success'
+                        ? 'subscription-toast subscription-toast--success'
+                        : 'subscription-toast subscription-toast--muted'
+                    }
+                    role="status"
+                  >
+                    <span>{checkoutBanner === 'success' ? t('profile.subscription_checkout_success') : t('profile.subscription_checkout_cancel')}</span>
+                    <button
+                      type="button"
+                      className="subscription-toast-close"
+                      onClick={() => setCheckoutBanner(null)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <h2 style={{ margin: '0 0 16px' }}>{t('profile.subscription_title')}</h2>
+                <div
+                  className="subscription-card subscription-card--clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSubscriptionModalOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSubscriptionModalOpen(true);
+                    }
+                  }}
+                >
+                  <div className="subscription-tier-row">
+                    <span className={`subscription-badge ${aiQuota.tier === 'PRO' ? 'subscription-badge-pro' : 'subscription-badge-free'}`}>
+                      {aiQuota.tier === 'PRO' ? 'PRO' : 'FREE'}
+                    </span>
+                    {aiQuota.tier !== 'PRO' && !aiQuota.admin && aiQuota.experiencePhase === 'NEW_USER' && (
+                      <span className="subscription-user-phase">{t('profile.user_tag_new')}</span>
+                    )}
+                    {aiQuota.tier !== 'PRO' && !aiQuota.admin && aiQuota.experiencePhase === 'REGULAR_USER' && (
+                      <span className="subscription-user-phase">{t('profile.user_tag_regular')}</span>
+                    )}
+                    {aiQuota.tier === 'PRO' && aiQuota.proExpiresAt && (
+                      <span className="subscription-expires">{t('profile.pro_expires', { date: new Date(aiQuota.proExpiresAt).toLocaleDateString() })}</span>
+                    )}
+                  </div>
+                  <div className="subscription-quota-info">
+                    {aiQuota.admin ? (
+                      <p className="subscription-detail">{t('profile.ai_unlimited')}</p>
+                    ) : aiQuota.tier === 'PRO' ? (
+                      <p className="subscription-detail">{t('profile.ai_pro_usage', { used: aiQuota.monthlyUsed, limit: aiQuota.monthlyLimit })}</p>
+                    ) : aiQuota.quotaType === 'new_user' ? (
+                      <p className="subscription-detail">{t('profile.ai_new_user_usage', { totalAfter: aiQuota.userFreeTotal ?? 3 })}</p>
+                    ) : (
+                      <p className="subscription-detail">{t('profile.ai_user_free_usage', { remaining: aiQuota.scansRemaining, total: aiQuota.userFreeTotal ?? 3 })}</p>
+                    )}
+                  </div>
+                  {aiQuota.tier !== 'PRO' && !aiQuota.admin && (
+                    <div className="subscription-upgrade">
+                      <p className="subscription-upgrade-hint">{t('profile.upgrade_hint')}</p>
+                    </div>
+                  )}
+                  <p className="subscription-click-hint">{t('profile.subscription_click_hint')}</p>
+                </div>
+              </section>
+            )}
+
             {/* Connected Services */}
             <section className="card connected-services-section">
               <h2 style={{ margin: '0 0 16px' }}>{t('profile.connected_services')}</h2>
 
-              {/* Garmin */}
+              {/* Garmin — file import */}
               <div className="service-row">
                 <div className="service-icon" style={{ background: '#11548a' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -672,65 +931,17 @@ export default function Profile() {
                 </div>
                 <div className="service-info">
                   <strong>{t('profile.garmin_watch_title')}</strong>
-                  {garminConnected ? (
-                    <span className="service-status service-status-on">{t('profile.garmin_status_connected', { userId: garminUserId })}</span>
-                  ) : garminUsesCustomConfig ? (
-                    <span className="service-status service-status-on">{t('profile.garmin_status_custom_config')}</span>
-                  ) : garminConfigured && garminUsesServerKeys ? (
-                    <span className="service-status service-status-off">{t('profile.garmin_status_server_ready')}</span>
-                  ) : garminConfigured ? (
-                    <span className="service-status service-status-off">{t('profile.garmin_status_not_connected')}</span>
-                  ) : (
-                    <span className="service-status service-status-off">{t('profile.garmin_status_not_configured')}</span>
-                  )}
+                  <span className="service-status service-status-off">{t('profile.garmin_watch_status')}</span>
                 </div>
                 <div className="service-action">
-                  {garminConnected ? (
-                    <>
-                      <button className="btn-service btn-service-disconnect" disabled={garminLoading || garminSyncing} onClick={handleGarminDisconnect}>
-                        {t('profile.garmin_disconnect')}
-                      </button>
-                      <button className="btn-service btn-service-connect" type="button" disabled={garminLoading || garminSyncing} onClick={handleGarminSyncNow}>
-                        {garminSyncing ? t('profile.garmin_syncing') : t('profile.garmin_sync_now')}
-                      </button>
-                      <button className="btn-service" type="button" disabled={garminSyncing} onClick={openGarminConfigModal}>
-                        {garminUsesServerKeys && !garminUsesCustomConfig ? t('profile.garmin_advanced') : t('profile.garmin_configure')}
-                      </button>
-                    </>
-                  ) : garminConfigured && garminUsesServerKeys ? (
-                    <>
-                      <button className="btn-service btn-service-connect" disabled={garminLoading} onClick={handleGarminConnect}>
-                        {garminLoading ? t('profile.garmin_connecting') : t('profile.garmin_sign_in')}
-                      </button>
-                      <button className="btn-service" type="button" onClick={openGarminConfigModal}>
-                        {t('profile.garmin_advanced')}
-                      </button>
-                    </>
-                  ) : garminConfigured ? (
-                    <>
-                      <button className="btn-service" type="button" onClick={openGarminConfigModal}>
-                        {t('profile.garmin_configure')}
-                      </button>
-                      <button className="btn-service btn-service-connect" disabled={garminLoading} onClick={handleGarminConnect}>
-                        {garminLoading ? t('profile.garmin_connecting') : t('profile.garmin_sign_in')}
-                      </button>
-                    </>
-                  ) : (
-                    <button className="btn-service" type="button" onClick={openGarminConfigModal}>
-                      {t('profile.garmin_configure')}
-                    </button>
-                  )}
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
+                    {t('profile.watch_import_files')}
+                  </button>
                 </div>
               </div>
+              <p className="service-hint">{t('profile.garmin_import_hint')}</p>
 
-              <p className="service-hint">
-                {garminConnected
-                  ? t('profile.garmin_auto_sync_hint')
-                  : t('profile.garmin_sign_in_hint')}
-              </p>
-              {garminSyncNote ? <p className="service-hint" style={{ marginTop: 6 }}>{garminSyncNote}</p> : null}
-
-              {/* COROS watch — file import (no public OAuth in Hermes yet) */}
+              {/* COROS — file import */}
               <div className="service-row" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--line, #eee)' }}>
                 <div className="service-icon" style={{ background: '#e85d04' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -852,6 +1063,55 @@ export default function Profile() {
           <p className="steps-hint">{t('profile.steps_hint')}</p>
         </section>
 
+        {/* Calories — sync or distance-based estimate */}
+        <section className="card calories-section">
+          <h2>{t('profile.calories_title')}</h2>
+          <div className="calories-summary">
+            <div className="calories-stat">
+              <span className="calories-stat-value">{caloriesSummary.today.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_today')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+            <div className="calories-stat">
+              <span className="calories-stat-value">{caloriesSummary.week7.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_week')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+            <div className="calories-stat">
+              <span className="calories-stat-value">{caloriesSummary.week28.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_month')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+            <div className="calories-stat calories-stat--total">
+              <span className="calories-stat-value">{caloriesSummary.total.toLocaleString()}</span>
+              <span className="calories-stat-label">{t('profile.calories_total')}</span>
+              <span className="calories-stat-unit">{t('profile.calories_unit')}</span>
+            </div>
+          </div>
+          <div className="calories-chart">
+            {caloriesSummary.dailyCalories.map((d, i) => {
+              const pct = maxDailyKcal > 0 ? (d.kcal / maxDailyKcal) * 100 : 0;
+              const isToday = i === caloriesSummary.dailyCalories.length - 1;
+              const dayLabel = d.date.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en', { weekday: 'narrow' });
+              const dateLabel = `${d.date.getMonth() + 1}/${d.date.getDate()}`;
+              return (
+                <div key={d.key} className={`calories-bar-col${isToday ? ' calories-bar-today' : ''}`}>
+                  <span className="calories-bar-count">{d.kcal > 0 ? d.kcal.toLocaleString() : ''}</span>
+                  <div className="calories-bar-track">
+                    <div
+                      className={`calories-bar-fill${d.kcal === 0 ? ' calories-bar-empty' : ''}`}
+                      style={{ height: `${Math.max(d.kcal > 0 ? 4 : 0, pct)}%` }}
+                    />
+                  </div>
+                  <span className="calories-bar-day">{dayLabel}</span>
+                  <span className="calories-bar-date">{dateLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="calories-hint">{t('profile.calories_hint')}</p>
+        </section>
+
         {/* Personal Records */}
         {personalRecords && (
           <section className="card pr-section">
@@ -923,6 +1183,94 @@ export default function Profile() {
         )}
       </main>
 
+      {/* Subscription plans */}
+      <Modal
+        isOpen={subscriptionModalOpen && !!aiQuota}
+        onClose={() => setSubscriptionModalOpen(false)}
+        title={t('profile.subscription_modal_title')}
+      >
+        {aiQuota && (
+          <>
+            <p className="subscription-modal-subtitle">{t('profile.subscription_modal_subtitle')}</p>
+            {aiQuota.admin && (
+              <p className="subscription-modal-admin-note">{t('profile.subscription_admin_plans_note')}</p>
+            )}
+            <div className="subscription-plan-grid">
+              <article
+                className={`subscription-plan-card ${!aiQuota.admin && aiQuota.tier !== 'PRO' ? 'subscription-plan-card--current' : ''}`}
+              >
+                <div className="subscription-plan-card-head">
+                  <span className="subscription-badge subscription-badge-free">{t('profile.subscription_tier_free_title')}</span>
+                  {!aiQuota.admin && aiQuota.tier !== 'PRO' && (
+                    <span className="subscription-current-pill">{t('profile.subscription_current_badge')}</span>
+                  )}
+                </div>
+                <ul className="subscription-feature-list">
+                  <li>{t('profile.subscription_free_f1')}</li>
+                  <li>{t('profile.subscription_free_f2')}</li>
+                  <li>{t('profile.subscription_free_f3')}</li>
+                </ul>
+                <p className="subscription-plan-card-foot">{t('profile.subscription_tier_free_body')}</p>
+              </article>
+              <article
+                className={`subscription-plan-card subscription-plan-card--pro ${!aiQuota.admin && aiQuota.tier === 'PRO' ? 'subscription-plan-card--current' : ''}`}
+              >
+                <div className="subscription-plan-card-head">
+                  <span className="subscription-badge subscription-badge-pro">{t('profile.subscription_tier_pro_title')}</span>
+                  {!aiQuota.admin && aiQuota.tier === 'PRO' && (
+                    <span className="subscription-current-pill">{t('profile.subscription_current_badge')}</span>
+                  )}
+                </div>
+                <ul className="subscription-feature-list">
+                  <li>{t('profile.subscription_pro_f1')}</li>
+                  <li>{t('profile.subscription_pro_f2')}</li>
+                  <li>{t('profile.subscription_pro_f3')}</li>
+                </ul>
+                {billingConfig?.priceLabel && (
+                  <p className="subscription-price-label">{billingConfig.priceLabel}</p>
+                )}
+                <p className="subscription-price-disclaimer">{t('profile.subscription_price_disclaimer')}</p>
+                <p className="subscription-plan-card-foot">{t('profile.subscription_tier_pro_body')}</p>
+                {!aiQuota.admin && billingConfig?.checkoutConfigured && (
+                  <div className="subscription-checkout-block" onClick={e => e.stopPropagation()}>
+                    <label className="subscription-months-label">
+                      <span>{t('profile.subscription_months_label')}</span>
+                      <select
+                        className="subscription-months-select"
+                        value={subscriptionMonths}
+                        onChange={e => setSubscriptionMonths(Number(e.target.value))}
+                      >
+                        {[1, 3, 6, 12].map(m => (
+                          <option key={m} value={m}>
+                            {t('profile.subscription_months_suffix', { n: m })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn-primary subscription-checkout-btn"
+                      disabled={checkoutLoading}
+                      onClick={startStripeCheckout}
+                    >
+                      {checkoutLoading ? t('profile.subscription_checkout_loading') : (aiQuota.tier === 'PRO' ? t('profile.subscription_checkout_extend') : t('profile.subscription_checkout_pro'))}
+                    </button>
+                    <p className="subscription-checkout-note">{t('profile.subscription_checkout_redirect_note')}</p>
+                    <p className="subscription-powered-by">{t('profile.subscription_powered_by')}</p>
+                  </div>
+                )}
+                {!aiQuota.admin && !billingConfig?.checkoutConfigured && (
+                  <p className="subscription-pro-cta">{t('profile.subscription_pro_cta')}</p>
+                )}
+                {subscriptionCheckoutError && (
+                  <div className="modal-status subscription-checkout-error">{subscriptionCheckoutError}</div>
+                )}
+              </article>
+            </div>
+          </>
+        )}
+      </Modal>
+
       {/* Name Modal */}
       <Modal isOpen={nameModalOpen} onClose={() => setNameModalOpen(false)} title={t('profile.name_modal_title')}>
         <form onSubmit={handleSaveName}>
@@ -945,6 +1293,7 @@ export default function Profile() {
       {/* Import Modal */}
       <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
         <form onSubmit={handleImport}>
+          <ImportDataGuide />
           <p className="modal-help">{t('profile.import_hint')}</p>
           <div className="import-source-grid">
             <section className="import-source-card">
@@ -1007,48 +1356,6 @@ export default function Profile() {
             <option value="high-contrast-light">{t('profile.theme_high_contrast_light')}</option>
           </select>
         </div>
-      </Modal>
-
-      <Modal isOpen={garminConfigModalOpen} onClose={() => setGarminConfigModalOpen(false)} title={t('profile.garmin_config_modal_title')}>
-        <form onSubmit={handleSaveGarminConfig}>
-          <p className="modal-help">
-            {garminUsesServerKeys && !garminUsesCustomConfig ? t('profile.garmin_config_hint_optional') : t('profile.garmin_config_hint')}
-          </p>
-
-          <label className="modal-label">{t('profile.garmin_config_key_label')}</label>
-          <input
-            type="text"
-            value={garminConsumerKeyInput}
-            onChange={(e) => setGarminConsumerKeyInput(e.target.value)}
-          />
-
-          <label className="modal-label">{t('profile.garmin_config_secret_label')}</label>
-          <input
-            type="password"
-            value={garminConsumerSecretInput}
-            onChange={(e) => setGarminConsumerSecretInput(e.target.value)}
-            placeholder={garminHasSavedSecret ? t('profile.garmin_config_secret_saved') : ''}
-          />
-
-          <label className="modal-label">{t('profile.garmin_config_redirect_label')}</label>
-          <input
-            type="text"
-            value={garminRedirectUriInput}
-            onChange={(e) => setGarminRedirectUriInput(e.target.value)}
-          />
-
-          {garminHasSavedSecret && <p className="modal-help">{t('profile.garmin_config_secret_saved')}</p>}
-          {garminConfigStatus && <div className="modal-status">{garminConfigStatus}</div>}
-
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={handleClearGarminConfig}>
-              {t('profile.garmin_config_clear')}
-            </button>
-            <button type="submit" className="btn-primary modal-button">
-              {t('profile.garmin_config_save')}
-            </button>
-          </div>
-        </form>
       </Modal>
 
       {/* Sync Modal */}
