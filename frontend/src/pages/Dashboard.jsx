@@ -45,6 +45,11 @@ export default function Dashboard() {
   const [imgSearching, setImgSearching] = useState(false);
   const [imgCustomQuery, setImgCustomQuery] = useState('');
   const [imgCustomUrl, setImgCustomUrl] = useState('');
+  const [verifyingShoeId, setVerifyingShoeId] = useState(null);
+
+  // Server Health
+  const [serverStats, setServerStats] = useState(null);
+  const [syncingAll, setSyncingAll] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -61,8 +66,12 @@ export default function Dashboard() {
           return;
         }
 
-        const data = await apiJson('/api/auth/runners');
-        setRunners(Array.isArray(data) ? data : []);
+        const [userData, statsData] = await Promise.all([
+          apiJson('/api/auth/runners'),
+          apiJson('/api/admin/stats').catch(() => null)
+        ]);
+        setRunners(Array.isArray(userData) ? userData : []);
+        setServerStats(statsData);
         setLoadState('ready');
       } catch (err) {
         if (err.message === 'Unauthorized') return;
@@ -82,6 +91,19 @@ export default function Dashboard() {
       setShoeLoadState('ready');
     } catch {
       setShoeLoadState('error');
+    }
+  }
+
+  async function handleGlobalSync() {
+    if (!window.confirm(t('dashboard.sync_all_confirm'))) return;
+    setSyncingAll(true);
+    try {
+      await apiJson('/api/admin/sync-all', { method: 'POST' });
+      alert(t('dashboard.sync_all_success'));
+    } catch (err) {
+      alert(err.message || t('dashboard.sync_all_failed'));
+    } finally {
+      setSyncingAll(false);
     }
   }
 
@@ -154,32 +176,86 @@ export default function Dashboard() {
   async function selectImage(url) {
     if (!imgPickerShoe) return;
     try {
-      await apiFetch(`/api/shoes/admin/${imgPickerShoe.id}/photo`, {
+      await apiJson(`/api/shoes/admin/${imgPickerShoe.id}/photo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ photoUrl: url }),
       });
       // Update all shoes with same brand+model in the UI
       setAllShoes(prev => prev.map(s =>
-        isSameShoeModel(s, imgPickerShoe) ? { ...s, photoUrl: url } : s
+        isSameShoeModel(s, imgPickerShoe) ? { ...s, photoUrl: url, photoVerified: false } : s
       ));
-      setImgPickerShoe(prev => prev ? { ...prev, photoUrl: url } : prev);
-    } catch { /* ignored */ }
+      setImgPickerShoe(prev => prev ? { ...prev, photoUrl: url, photoVerified: false } : prev);
+      await loadAllShoes();
+    } catch (err) {
+      alert(err.message || t('dashboard.load_error'));
+    }
   }
 
   async function clearImage() {
     if (!imgPickerShoe) return;
     try {
-      await apiFetch(`/api/shoes/admin/${imgPickerShoe.id}/photo`, {
+      await apiJson(`/api/shoes/admin/${imgPickerShoe.id}/photo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ photoUrl: '' }),
       });
       setAllShoes(prev => prev.map(s =>
-        isSameShoeModel(s, imgPickerShoe) ? { ...s, photoUrl: null } : s
+        isSameShoeModel(s, imgPickerShoe) ? { ...s, photoUrl: null, photoVerified: false } : s
       ));
-      setImgPickerShoe(prev => prev ? { ...prev, photoUrl: null } : prev);
-    } catch { /* ignored */ }
+      setImgPickerShoe(prev => prev ? { ...prev, photoUrl: null, photoVerified: false } : prev);
+      await loadAllShoes();
+    } catch (err) {
+      alert(err.message || t('dashboard.load_error'));
+    }
+  }
+
+  function samePhotoUrl(a, b) {
+    return (a || '').trim() === (b || '').trim();
+  }
+
+  async function verifyPhoto(shoe, e) {
+    e?.stopPropagation?.();
+    if (!shoe?.photoUrl || shoe.photoVerified) return;
+    setVerifyingShoeId(shoe.id);
+    try {
+      await apiJson(`/api/shoes/admin/${shoe.id}/verify-photo`, { method: 'PUT' });
+      const canonical = (shoe.photoUrl || '').trim();
+      setAllShoes(prev => prev.map(s => {
+        if (!isSameShoeModel(s, shoe) || !samePhotoUrl(s.photoUrl, canonical)) return s;
+        return { ...s, photoVerified: true };
+      }));
+      setImgPickerShoe(prev =>
+        prev && prev.id === shoe.id ? { ...prev, photoVerified: true } : prev);
+      await loadAllShoes();
+    } catch (err) {
+      alert(err.message || t('dashboard.load_error'));
+    }
+    finally {
+      setVerifyingShoeId(null);
+    }
+  }
+
+  async function unverifyPhoto(shoe, e) {
+    e?.stopPropagation?.();
+    if (!shoe?.photoUrl || !shoe.photoVerified) return;
+    setVerifyingShoeId(shoe.id);
+    try {
+      await apiJson(`/api/shoes/admin/${shoe.id}/unverify-photo`, { method: 'PUT' });
+      const canonical = (shoe.photoUrl || '').trim();
+      setAllShoes(prev => prev.map(s => {
+        if (!isSameShoeModel(s, shoe) || !samePhotoUrl(s.photoUrl, canonical)) return s;
+        return { ...s, photoVerified: false };
+      }));
+      setImgPickerShoe(prev =>
+        prev && prev.id === shoe.id ? { ...prev, photoVerified: false } : prev);
+      await loadAllShoes();
+    } catch (err) {
+      alert(err.message || t('dashboard.load_error'));
+    }
+    finally {
+      setVerifyingShoeId(null);
+    }
   }
 
   // Filter shoes
@@ -192,9 +268,15 @@ export default function Dashboard() {
           || (s.runnerEmail || '').toLowerCase().includes(q);
       })
     : allShoes;
+  const sortedShoes = [...filteredShoes].sort((a, b) => {
+    const av = a.photoVerified ? 1 : 0;
+    const bv = b.photoVerified ? 1 : 0;
+    return av - bv; // unverified first, verified last
+  });
 
   const shoesWithImage = allShoes.filter(s => s.photoUrl);
   const shoesWithoutImage = allShoes.filter(s => !s.photoUrl && !s.retired);
+  const shoesVerified = allShoes.filter(s => s.photoUrl && s.photoVerified);
 
   return (
     <div className="dashboard-body">
@@ -217,6 +299,41 @@ export default function Dashboard() {
           <h2>{t('dashboard.header_title')}</h2>
           <p>{t('dashboard.header_desc')}</p>
         </div>
+
+        {/* System Health / Server Control Center */}
+        {serverStats && (
+          <div className="admin-shoe-section" style={{ marginBottom: 30 }}>
+            <div className="admin-shoe-header">
+              <h2>{t('dashboard.system_health_title')}</h2>
+              <button 
+                type="button" 
+                className="btn-primary" 
+                disabled={syncingAll}
+                onClick={handleGlobalSync}
+                style={{ width: 'auto', minHeight: 36, marginTop: 0 }}
+              >
+                {syncingAll ? '...' : t('dashboard.sync_all_btn')}
+              </button>
+            </div>
+            <div className="profile-distribution-grid" style={{ marginTop: 20 }}>
+              <div className="profile-zone-card" style={{ display: 'flex', flexDirection: 'column', gap: 8, gridColumn: 'auto' }}>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{t('dashboard.stat_uptime')}</span>
+                <strong style={{ fontSize: '1.4rem' }}>{(serverStats.uptimeMillis / 3600000).toFixed(1)} h</strong>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{serverStats.osName}</span>
+              </div>
+              <div className="profile-zone-card" style={{ display: 'flex', flexDirection: 'column', gap: 8, gridColumn: 'auto' }}>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{t('dashboard.stat_memory')}</span>
+                <strong style={{ fontSize: '1.4rem' }}>{serverStats.memoryUsedMb} MB</strong>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>/ {serverStats.memoryMaxMb} MB Max</span>
+              </div>
+              <div className="profile-zone-card" style={{ display: 'flex', flexDirection: 'column', gap: 8, gridColumn: 'auto' }}>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{t('dashboard.stat_database')}</span>
+                <strong style={{ fontSize: '1.4rem' }}>{serverStats.totalActivities}</strong>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('dashboard.stat_activities_across')} {serverStats.totalUsers} {t('dashboard.stat_users')}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Users Table */}
         <div className="table-card">
@@ -271,6 +388,7 @@ export default function Dashboard() {
             <div className="admin-shoe-stats">
               <span className="admin-stat admin-stat-ok">{shoesWithImage.length} {t('dashboard.shoe_with_image')}</span>
               <span className="admin-stat admin-stat-missing">{shoesWithoutImage.length} {t('dashboard.shoe_without_image')}</span>
+              <span className="admin-stat admin-stat-verified">{shoesVerified.length} {t('dashboard.shoe_verified_count')}</span>
             </div>
           </div>
           <input
@@ -290,10 +408,10 @@ export default function Dashboard() {
                 <button type="button" className="btn-secondary" style={{ marginTop: 10 }} onClick={loadAllShoes}>Retry</button>
               </div>
             )}
-            {shoeLoadState === 'ready' && filteredShoes.length === 0 && (
+            {shoeLoadState === 'ready' && sortedShoes.length === 0 && (
               <div className="admin-shoe-status">{t('dashboard.shoe_empty')}</div>
             )}
-            {shoeLoadState === 'ready' && filteredShoes.map(shoe => {
+            {shoeLoadState === 'ready' && sortedShoes.map(shoe => {
               const name = [shoe.brand, shoe.model].filter(Boolean).join(' ') || shoe.nickname || '—';
               return (
                 <div key={shoe.id} className={`admin-shoe-card${shoe.retired ? ' admin-shoe-retired' : ''}`}>
@@ -308,9 +426,34 @@ export default function Dashboard() {
                   <div className="admin-shoe-info">
                     <span className="admin-shoe-name">{name}</span>
                     <span className="admin-shoe-owner">{shoe.runnerEmail}</span>
-                    {shoe.photoUrl
-                      ? <span className="admin-shoe-status-badge admin-shoe-confirmed">{t('dashboard.shoe_confirmed')}</span>
-                      : <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.shoe_no_image')}</span>}
+                    <div className="admin-shoe-badges">
+                      {shoe.photoUrl
+                        ? <span className="admin-shoe-status-badge admin-shoe-confirmed">{t('dashboard.shoe_confirmed')}</span>
+                        : <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.shoe_no_image')}</span>}
+                      {shoe.photoUrl && shoe.photoVerified && (
+                        <span className="admin-shoe-status-badge admin-shoe-verified">{t('dashboard.shoe_photo_verified')}</span>
+                      )}
+                    </div>
+                    {shoe.photoUrl && !shoe.photoVerified && (
+                      <button
+                        type="button"
+                        className="admin-shoe-verify-btn"
+                        disabled={verifyingShoeId === shoe.id}
+                        onClick={ev => verifyPhoto(shoe, ev)}
+                      >
+                        {verifyingShoeId === shoe.id ? '…' : t('dashboard.shoe_verify_btn')}
+                      </button>
+                    )}
+                    {shoe.photoUrl && shoe.photoVerified && (
+                      <button
+                        type="button"
+                        className="admin-shoe-verify-btn admin-shoe-unverify-btn"
+                        disabled={verifyingShoeId === shoe.id}
+                        onClick={ev => unverifyPhoto(shoe, ev)}
+                      >
+                        {verifyingShoeId === shoe.id ? '…' : t('dashboard.shoe_unverify_btn')}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -337,9 +480,34 @@ export default function Dashboard() {
                   : <div className="shoe-img-placeholder"><span>👟</span></div>}
               </div>
               {imgPickerShoe.photoUrl && (
-                <button type="button" className="btn-secondary img-picker-clear" onClick={clearImage}>
-                  {t('shoes.img_clear')}
-                </button>
+                <div className="img-picker-current-actions">
+                  <button type="button" className="btn-secondary img-picker-clear" onClick={clearImage}>
+                    {t('shoes.img_clear')}
+                  </button>
+                  {!imgPickerShoe.photoVerified && (
+                    <button
+                      type="button"
+                      className="btn-primary img-picker-verify"
+                      disabled={verifyingShoeId === imgPickerShoe.id}
+                      onClick={() => verifyPhoto(imgPickerShoe)}
+                    >
+                      {verifyingShoeId === imgPickerShoe.id ? '…' : t('dashboard.shoe_verify_btn')}
+                    </button>
+                  )}
+                  {imgPickerShoe.photoVerified && (
+                    <>
+                      <span className="admin-shoe-status-badge admin-shoe-verified">{t('dashboard.shoe_photo_verified')}</span>
+                      <button
+                        type="button"
+                        className="btn-secondary img-picker-verify img-picker-unverify"
+                        disabled={verifyingShoeId === imgPickerShoe.id}
+                        onClick={() => unverifyPhoto(imgPickerShoe)}
+                      >
+                        {verifyingShoeId === imgPickerShoe.id ? '…' : t('dashboard.shoe_unverify_btn')}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
 

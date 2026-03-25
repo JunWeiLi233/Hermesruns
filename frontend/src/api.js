@@ -25,7 +25,10 @@ export async function apiJson(url, options = {}) {
   if (response.status === 401) {
     localStorage.removeItem('hermes_jwt');
     localStorage.removeItem('hermes_email');
-    localStorage.removeItem('hermes_admin');
+    localStorage.removeItem('hermes_role');
+    try {
+      localStorage.removeItem('hermes_admin');
+    } catch { /* ignore */ }
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }

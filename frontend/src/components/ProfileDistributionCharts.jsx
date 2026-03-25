@@ -35,7 +35,7 @@ function ZoneCard({
   isMile,
   t,
 }) {
-  const [metric, setMetric] = useState('load');
+  const [metric, setMetric] = useState('distance');
 
   const { values, total, percentages, chartData, maxVal } = useMemo(() => {
     const { values: vals } = computeZoneValues(runs, zoneKind, metric);
@@ -59,9 +59,12 @@ function ZoneCard({
 
   const doughnutOptions = useMemo(
     () => ({
-      cutout: '85%',
+      cutout: '75%',
+      rotation: -90,
+      circumference: 180,
+      aspectRatio: 2,
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
       plugins: {
         legend: { display: false },
         tooltip: {

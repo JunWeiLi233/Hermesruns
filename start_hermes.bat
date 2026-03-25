@@ -59,7 +59,7 @@ echo cd /d "%ROOT%">> "%BOOT_SCRIPT%"
 echo call .tools\run-backend.cmd>> "%BOOT_SCRIPT%"
 
 echo [2/4] Waking up Spring Boot (Java)...
-start "Hermes - Spring Boot Server" cmd /k "%BOOT_SCRIPT%"
+start "Hermes - Spring Boot Server" cmd /c "%BOOT_SCRIPT% > d:\Hermes\backend_log.txt 2>&1"
 
 :: 3. Start the Python Analytics Engine when Python is available
 if defined PYTHON_EXE (

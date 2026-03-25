@@ -99,6 +99,7 @@ public class ShoeImageController {
             m.put("model", s.getModel());
             m.put("nickname", s.getNickname());
             m.put("photoUrl", s.getPhotoUrl());
+            m.put("photoVerified", s.isPhotoVerified());
             m.put("retired", s.isRetired());
             m.put("runnerEmail", s.getRunner() != null ? s.getRunner().getEmail() : null);
             result.add(m);
@@ -111,29 +112,30 @@ public class ShoeImageController {
     public ResponseEntity<?> adminSearchImages(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody(required = false) Map<String, String> body) {
-        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
-        if (user.isEmpty() || !authService.isAdmin(user.get()))
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin only");
-
-        Optional<Shoe> shoeOpt = shoeRepository.findById(id);
-        if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
-
-        Shoe shoe = shoeOpt.get();
-        String brand = shoe.getBrand() != null ? shoe.getBrand() : "";
-        String model = shoe.getModel() != null ? shoe.getModel() : "";
-        String customQuery = body != null ? body.getOrDefault("query", "") : "";
-
+            @RequestBody(required = false) Map<String, Object> body) {
         try {
+            Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+            if (user.isEmpty() || !authService.isAdmin(user.get()))
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin only");
+
+            Optional<Shoe> shoeOpt = shoeRepository.findById(id);
+            if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+            Shoe shoe = shoeOpt.get();
+            String brand = shoe.getBrand() != null ? shoe.getBrand() : "";
+            String model = shoe.getModel() != null ? shoe.getModel() : "";
+            String customQuery = extractQuery(body);
+
             List<String> images;
             if (!customQuery.isBlank()) {
                 images = scrapeMultipleImages(customQuery, 12);
             } else {
                 images = searchShoeImageCandidates(brand, model);
             }
-            return ResponseEntity.ok(Map.of("images", images));
+            return ResponseEntity.ok(Map.of("images", sanitizeImageUrls(images)));
         } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("images", List.of()));
+            System.err.println("Admin image search failed for shoe " + id + ": " + e.getMessage());
+            return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
 
@@ -165,11 +167,13 @@ public class ShoeImageController {
             List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
             for (Shoe s : matching) {
                 s.setPhotoUrl(finalUrl);
+                s.setPhotoVerified(false);
                 shoeRepository.save(s);
                 count++;
             }
         } else {
             shoe.setPhotoUrl(finalUrl);
+            shoe.setPhotoVerified(false);
             shoeRepository.save(shoe);
             count = 1;
         }
@@ -178,6 +182,91 @@ public class ShoeImageController {
                 "photoUrl", finalUrl != null ? finalUrl : "",
                 "updated", count
         ));
+    }
+
+    /**
+     * Admin: mark the current product image as verified for this shoe model (all same brand+model rows).
+     */
+    @PutMapping("/admin/{id}/verify-photo")
+    public ResponseEntity<?> adminVerifyPhoto(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty() || !authService.isAdmin(user.get()))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin only");
+
+        Optional<Shoe> shoeOpt = shoeRepository.findById(id);
+        if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+        Shoe shoe = shoeOpt.get();
+        if (shoe.getPhotoUrl() == null || shoe.getPhotoUrl().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "no_photo"));
+        }
+
+        String canonicalUrl = shoe.getPhotoUrl().trim();
+        String brand = shoe.getBrand();
+        String model = shoe.getModel();
+        int count = 0;
+        if (brand != null && model != null) {
+            List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            for (Shoe s : matching) {
+                String pu = s.getPhotoUrl();
+                if (pu != null && pu.trim().equals(canonicalUrl)) {
+                    s.setPhotoVerified(true);
+                    shoeRepository.save(s);
+                    count++;
+                }
+            }
+        } else {
+            shoe.setPhotoVerified(true);
+            shoeRepository.save(shoe);
+            count = 1;
+        }
+
+        return ResponseEntity.ok(Map.of("photoVerified", true, "updated", count));
+    }
+
+    /**
+     * Admin: unmark current product image verification for this shoe model
+     * (all same brand+model rows that share the same image URL).
+     */
+    @PutMapping("/admin/{id}/unverify-photo")
+    public ResponseEntity<?> adminUnverifyPhoto(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty() || !authService.isAdmin(user.get()))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin only");
+
+        Optional<Shoe> shoeOpt = shoeRepository.findById(id);
+        if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+        Shoe shoe = shoeOpt.get();
+        if (shoe.getPhotoUrl() == null || shoe.getPhotoUrl().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "no_photo"));
+        }
+
+        String canonicalUrl = shoe.getPhotoUrl().trim();
+        String brand = shoe.getBrand();
+        String model = shoe.getModel();
+        int count = 0;
+        if (brand != null && model != null) {
+            List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            for (Shoe s : matching) {
+                String pu = s.getPhotoUrl();
+                if (pu != null && pu.trim().equals(canonicalUrl)) {
+                    s.setPhotoVerified(false);
+                    shoeRepository.save(s);
+                    count++;
+                }
+            }
+        } else {
+            shoe.setPhotoVerified(false);
+            shoeRepository.save(shoe);
+            count = 1;
+        }
+
+        return ResponseEntity.ok(Map.of("photoVerified", false, "updated", count));
     }
 
     // ── User endpoints ──
@@ -238,7 +327,7 @@ public class ShoeImageController {
         Shoe shoe = shoeOpt.get();
         String brand = shoe.getBrand() != null ? shoe.getBrand() : "";
         String model = shoe.getModel() != null ? shoe.getModel() : "";
-        String customQuery = body != null ? body.getOrDefault("query", "") : "";
+        String customQuery = extractQuery(body);
 
         try {
             List<String> images;
@@ -247,10 +336,10 @@ public class ShoeImageController {
             } else {
                 images = searchShoeImageCandidates(brand, model);
             }
-            return ResponseEntity.ok(Map.of("images", images));
+            return ResponseEntity.ok(Map.of("images", sanitizeImageUrls(images)));
         } catch (Exception e) {
             System.err.println("Image search failed: " + e.getMessage());
-            return ResponseEntity.ok(Map.of("images", List.of()));
+            return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
 
@@ -285,52 +374,62 @@ public class ShoeImageController {
         String cnQuery = brand + " " + model + " 跑鞋";
         LinkedHashSet<String> results = new LinkedHashSet<>();
 
-        // Strategy 1: JD.com
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " site:jd.com"), 4));
-        // Strategy 2: Tmall
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " site:tmall.com"), 4));
-        // Strategy 3: Bilibili (video thumbnails — great product shots from reviews)
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 测评 site:bilibili.com"), 4));
-        // Strategy 4: Brand official website
+        // Strategy 1: User-requested E-commerce platforms with sterile "White Background" or "Main Image" modifiers
+        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 京东 白底图"), 4));
+        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 淘宝 主图"), 4));
+        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 拼多多 主图"), 4));
+
+        // Strategy 2: Poizon (得物) - Best industry source for 360-degree floating shoe images
+        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 得物 白底图"), 4));
+        
+        // Strategy 3: Brand official website domains
         String domain = BRAND_DOMAINS.get(brandLower);
         if (domain != null) {
             results.addAll(fetchMultipleImages(bingImageUrl(brand + " " + model + " site:" + domain), 4));
         }
-        // Strategy 5: Generic search
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery), 4));
-        results.addAll(fetchMultipleImages(bingImageUrl(brand + " " + model + " running shoe"), 4));
+        
+        // Strategy 4: Fallback generic clean images targeting Chinese review sites or english
+        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 跑鞋 透底图"), 4));
+        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " running shoe white background"), 4));
 
         return new ArrayList<>(results);
     }
 
-    /**
-     * Multi-strategy shoe image search algorithm (auto-find — saves first match).
-     */
     private String scrapeShoeImage(String brand, String model) {
         String brandLower = brand.toLowerCase().trim();
         String cnQuery = brand + " " + model + " 跑鞋";
 
-        // Strategy 1: JD.com — clean product photos
-        String result = fetchAndParse(bingImageUrl(cnQuery + " site:jd.com"));
-        if (result != null) return result;
-
-        // Strategy 2: Tmall
-        result = fetchAndParse(bingImageUrl(cnQuery + " site:tmall.com"));
-        if (result != null) return result;
-
-        // Strategy 3: Brand official website
-        String domain = BRAND_DOMAINS.get(brandLower);
-        if (domain != null) {
-            result = fetchAndParse(bingImageUrl(brand + " " + model + " site:" + domain));
+        // Strategy 1: JD / Taobao / PDD / DeWu catalogue imagery (White backgrounds)
+        String[] specificTargets = {
+            " 京东 白底图",
+            " 淘宝 主图",
+            " 得物 白底图",
+            " 拼多多 主图"
+        };
+        
+        for (String target : specificTargets) {
+            String result = fetchAndParse(bingImageUrl(cnQuery + target));
             if (result != null) return result;
         }
 
-        // Strategy 4: Generic search (Chinese + English)
-        result = fetchAndParse(bingImageUrl(cnQuery));
+        // Strategy 2: Brand official website domains
+        String domain = BRAND_DOMAINS.get(brandLower);
+        if (domain != null) {
+            String result = fetchAndParse(bingImageUrl(brand + " " + model + " site:" + domain));
+            if (result != null) return result;
+        }
+
+        // Strategy 3: Site restrictive (original fallbacks)
+        String result = fetchAndParse(bingImageUrl(cnQuery + " site:jd.com"));
+        if (result != null) return result;
+        result = fetchAndParse(bingImageUrl(cnQuery + " site:taobao.com"));
         if (result != null) return result;
 
-        result = fetchAndParse(bingImageUrl(brand + " " + model + " running shoe"));
-        return result;
+        // Strategy 4: Fallback generic clean images
+        result = fetchAndParse(bingImageUrl(cnQuery + " 跑鞋 白底图"));
+        if (result != null) return result;
+
+        return fetchAndParse(bingImageUrl(brand + " " + model + " running shoe white background"));
     }
 
     /** Fetch up to maxResults image URLs from a single Bing search page. */
@@ -408,9 +507,29 @@ public class ShoeImageController {
     private boolean isImageFileUrl(String url) {
         if (url == null || !url.startsWith("http")) return false;
         String lower = url.toLowerCase();
+        if (lower.contains(".html") || lower.contains(".htm")) return false;
         return lower.contains(".jpg") || lower.contains(".jpeg") ||
                lower.contains(".png") || lower.contains(".webp") ||
-               lower.contains("image") || lower.contains("/img/");
+               lower.contains(".gif") || lower.contains(".avif");
+    }
+
+    private String extractQuery(Map<String, ?> body) {
+        if (body == null) return "";
+        try {
+            Object raw = body.get("query");
+            return raw == null ? "" : String.valueOf(raw).trim();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private List<String> sanitizeImageUrls(List<String> urls) {
+        if (urls == null || urls.isEmpty()) return List.of();
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        for (String u : urls) {
+            if (isImageFileUrl(u)) out.add(u);
+        }
+        return new ArrayList<>(out);
     }
 
     @GetMapping("/scan-available")

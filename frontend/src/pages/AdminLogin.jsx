@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -7,9 +7,15 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
 
 export default function AdminLogin() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated || !authHydrated) return;
+    if (isAdmin) navigate('/dashboard', { replace: true });
+    else navigate('/login', { replace: true });
+  }, [isAuthenticated, authHydrated, isAdmin, navigate]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,15 +37,14 @@ export default function AdminLogin() {
 
       if (!res.ok) {
         setError(data.error || data.message || t('auth.admin_invalid'));
-        setLoading(false);
         return;
       }
 
-      login(data.token, data.email);
-      localStorage.setItem('hermes_admin', 'true');
-      navigate('/dashboard');
+      login(data.token, data.email, 'ADMIN');
+      // useEffect sends admins to /dashboard once session is hydrated from /api/auth/protected/ping
     } catch {
       setError(t('admin.system_offline'));
+    } finally {
       setLoading(false);
     }
   }

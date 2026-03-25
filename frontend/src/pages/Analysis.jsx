@@ -219,6 +219,7 @@ export default function Analysis() {
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [polarizedMode, setPolarizedMode] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [garminFiles, setGarminFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
@@ -616,6 +617,60 @@ export default function Analysis() {
     };
   }, [trainingLoadData]);
 
+  // 80/20 Polarized Training Data (Rolling 28 Days)
+  const polarizedData = useMemo(() => {
+    if (!runs || runs.length === 0) return null;
+    let easySec = 0, modSec = 0, hardSec = 0;
+    let totalSec = 0;
+    const lookbackMs = 28 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    
+    let estimatedHRmax = 0;
+    for (const r of runs) {
+      if (r.maxHeartRate && r.maxHeartRate > estimatedHRmax) estimatedHRmax = r.maxHeartRate;
+    }
+    
+    for (const run of runs) {
+      const t = new Date(run.startTime || run.startDate).getTime();
+      if (isNaN(t) || now - t > lookbackMs) continue;
+      
+      const duration = Number(run.movingTimeSeconds || 0);
+      if (duration <= 0) continue;
+      
+      const distKm = run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0);
+      const paceSecPerKm = distKm > 0 ? (duration / distKm) : 0;
+      let vo2Frac;
+      const avgHr = run.averageHeartRate;
+      
+      if (avgHr > 0 && estimatedHRmax > 100) {
+        const hrFrac = hrToVo2Fraction(avgHr, estimatedHRmax);
+        if (hrFrac !== null && hrFrac > 0) vo2Frac = hrFrac;
+      }
+      if (!vo2Frac) {
+        const paceFrac = paceToVo2Fraction(paceSecPerKm, bestVdot);
+        vo2Frac = (paceFrac && paceFrac > 0) ? paceFrac : 0.65;
+      }
+      vo2Frac = Math.max(0.40, Math.min(1.20, vo2Frac));
+      const zone = classifyZone(vo2Frac);
+      
+      totalSec += duration;
+      if (zone.key === 'recovery' || zone.key === 'easy') easySec += duration;
+      else if (zone.key === 'marathon') modSec += duration;
+      else hardSec += duration;
+    }
+    
+    if (totalSec === 0) return null;
+    
+    const easyPct = Math.round((easySec / totalSec) * 100);
+    const modPct = Math.round((modSec / totalSec) * 100);
+    const hardPct = Math.round((hardSec / totalSec) * 100);
+    
+    const deviation = Math.abs(easyPct - 80) + Math.abs(hardPct - 20) + modPct;
+    const score = Math.max(1, Math.min(100, Math.round(100 - (deviation * 1.2))));
+    
+    return { easyPct, modPct, hardPct, score, totalSec, easySec, modSec, hardSec };
+  }, [runs, bestVdot]);
+
   // Import handler
   async function handleImport(e) {
     e.preventDefault();
@@ -791,6 +846,54 @@ export default function Analysis() {
               <p><strong>{t('analysis.current_vdot_label')}</strong> <span>{bestVdot > 0 ? bestVdot.toFixed(1) : '--'}</span> <span className="analysis-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({t('analysis.vdot_footnote')})</span></p>
             </div>
           </div>
+        </section>
+
+        {/* 80/20 Polarized Mode Toggle and View */}
+        <section className="card analysis-polarized-card" style={{ marginTop: 24 }}>
+          <div className="polarized-header">
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.polar_title')}</h2>
+            <label className="polarized-toggle">
+              <input 
+                type="checkbox" 
+                checked={polarizedMode} 
+                onChange={(e) => setPolarizedMode(e.target.checked)} 
+              />
+              <span className="polarized-slider"></span>
+              <span className="polarized-toggle-label">{t('analysis.polar_toggle')}</span>
+            </label>
+          </div>
+          
+          {polarizedMode && polarizedData && (
+            <div className="polarized-body">
+              <div className="polarized-score-circle">
+                <span className="polarized-score-value" style={{ color: polarizedData.score >= 80 ? '#22c55e' : polarizedData.score >= 50 ? '#f59e0b' : '#ef4444' }}>{polarizedData.score}</span>
+                <span className="polarized-score-label">{t('analysis.polar_score')}</span>
+              </div>
+              
+              <div className="polarized-visual-container">
+                <div className="polarized-bar">
+                  <div className="polarized-segment easy" style={{ width: `${polarizedData.easyPct}%` }}></div>
+                  <div className="polarized-segment moderate" style={{ width: `${polarizedData.modPct}%` }}></div>
+                  <div className="polarized-segment hard" style={{ width: `${polarizedData.hardPct}%` }}></div>
+                  <div className="polarized-target-marker" style={{ left: '80%' }}></div>
+                </div>
+                <div className="polarized-labels">
+                  <span className="polar-label easy" style={{ width: `${polarizedData.easyPct}%`, minWidth: '40px' }}>{polarizedData.easyPct}% {t('analysis.polar_easy')}</span>
+                  {polarizedData.modPct > 0 && <span className="polar-label moderate" style={{ width: `${polarizedData.modPct}%` }}>{polarizedData.modPct}%</span>}
+                  <span className="polar-label hard" style={{ flex: 1, minWidth: '40px', paddingRight: 4 }}>{polarizedData.hardPct}% {t('analysis.polar_hard')}</span>
+                </div>
+              </div>
+              
+              <p className="polarized-feedback">
+                {polarizedData.score >= 80 ? t('analysis.polar_excellent') : 
+                 polarizedData.score >= 60 ? t('analysis.polar_good') : 
+                 t('analysis.polar_needs_work')}
+              </p>
+            </div>
+          )}
+          {polarizedMode && !polarizedData && (
+            <p className="analysis-muted" style={{ marginTop: 14 }}>{t('analysis.polar_no_data')}</p>
+          )}
         </section>
 
         {/* VO₂max progress — same chart as Profile (per-run estimate + 90-day trend) */}
