@@ -1,1 +1,0 @@
-import{r as e}from"./I18nContext-B3JGA7I4.js";var t=e();function n({mark:e,tone:n=`light`,className:r=``}){return(0,t.jsxs)(`span`,{className:`hermes-logo hermes-logo--${n}${r?` ${r}`:``}`.trim(),children:[(0,t.jsx)(`span`,{className:`hermes-logo__word`,children:`HERMES`}),e!=null&&e!==``?(0,t.jsx)(`span`,{className:`hermes-logo__mark`,children:e}):null]})}export{n as t};

@@ -19,6 +19,7 @@ const Shoes = React.lazy(() => import('./pages/Shoes'));
 const Races = React.lazy(() => import('./pages/Races'));
 const TodayRun = React.lazy(() => import('./pages/TodayRun'));
 const PredictionDetail = React.lazy(() => import('./pages/PredictionDetail'));
+const MuscleTraining = React.lazy(() => import('./pages/MuscleTraining'));
 
 function ScrollToTop() {
   const location = useLocation();
@@ -87,6 +88,7 @@ function App() {
               <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
               <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
               <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
+              <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

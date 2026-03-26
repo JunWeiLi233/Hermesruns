@@ -249,6 +249,58 @@ const shoeCatalog = [
       { model: '致轻 8', type: 'daily' },
     ],
   },
+  // Chinese aliases for faster local search
+  {
+    brand: '李宁',
+    logo: '🔴',
+    models: [
+      { model: '飞电 4 Ultra', type: 'race' },
+      { model: '飞电 4 Challenger', type: 'speed' },
+      { model: '赤兔 7 Pro', type: 'speed' },
+      { model: '超轻 21', type: 'daily' },
+      { model: '烈骏 7', type: 'stability' },
+    ],
+  },
+  {
+    brand: '安踏',
+    logo: '🟠',
+    models: [
+      { model: 'C202 GT Ultra', type: 'race' },
+      { model: 'C202 GT Pro', type: 'speed' },
+      { model: '马赫 4 Pro', type: 'speed' },
+      { model: '马赫 3', type: 'daily' },
+      { model: '柏油路霸 3', type: 'daily' },
+    ],
+  },
+  {
+    brand: '特步',
+    logo: '🔵',
+    models: [
+      { model: '160X 5.0 Pro', type: 'race' },
+      { model: '160X 5.0', type: 'speed' },
+      { model: '竞速 300X', type: 'speed' },
+      { model: '致轻 8', type: 'daily' },
+      { model: '动力巢 PB', type: 'daily' },
+    ],
+  },
+  {
+    brand: '鸿星尔克',
+    logo: '🔷',
+    models: [
+      { model: '极风 2.0', type: 'speed' },
+      { model: '奇弹 Pro', type: 'daily' },
+      { model: '飞燃 2.0', type: 'race' },
+    ],
+  },
+  {
+    brand: '匹克',
+    logo: '🔴',
+    models: [
+      { model: '态极 5.0 Pro', type: 'daily' },
+      { model: 'UP30 Elite', type: 'race' },
+      { model: '轻弹训练', type: 'speed' },
+    ],
+  },
   {
     brand: 'Skechers',
     logo: '🔵',
@@ -257,6 +309,62 @@ const shoeCatalog = [
       { model: 'GOrun MaxRoad 6', type: 'daily' },
       { model: 'GOrun Speed Elite Hyper', type: 'race' },
       { model: 'GOrun Razor Excess 2', type: 'speed' },
+    ],
+  },
+  // Chinese / domestic running shoe brands (enhanced inventory)
+  {
+    brand: 'Erke',
+    logo: '🔷',
+    models: [
+      { model: 'Kirin Daily Trainer', type: 'daily' },
+      { model: 'Speed Sprint Pro', type: 'speed' },
+      { model: 'Race Lite', type: 'race' },
+      { model: 'Trail Explorer', type: 'trail' },
+      { model: 'Support Stability', type: 'stability' },
+    ],
+  },
+  {
+    brand: 'Peak',
+    logo: '🔴',
+    models: [
+      { model: 'Taichi Daily', type: 'daily' },
+      { model: 'Aero Speed', type: 'speed' },
+      { model: 'Racing Edge', type: 'race' },
+      { model: 'Trail Apex', type: 'trail' },
+      { model: 'Stability Guard', type: 'stability' },
+    ],
+  },
+  {
+    brand: 'Qiaodan',
+    logo: '⚫',
+    models: [
+      { model: 'Flyman Daily', type: 'daily' },
+      { model: 'Speed Blade', type: 'speed' },
+      { model: 'Pro Race', type: 'race' },
+      { model: 'Trail Voyager', type: 'trail' },
+      { model: 'Support Stability', type: 'stability' },
+    ],
+  },
+  {
+    brand: 'Warrior',
+    logo: '🔴',
+    models: [
+      { model: 'Classic Daily', type: 'daily' },
+      { model: 'Urban Speed', type: 'speed' },
+      { model: 'Race Sprint', type: 'race' },
+      { model: 'Trail Explorer', type: 'trail' },
+      { model: 'Stability Support', type: 'stability' },
+    ],
+  },
+  {
+    brand: 'Double Star',
+    logo: '⚪',
+    models: [
+      { model: 'Everyday Runner', type: 'daily' },
+      { model: 'Speed Trainer', type: 'speed' },
+      { model: 'Race Trainer', type: 'race' },
+      { model: 'Trail Runner', type: 'trail' },
+      { model: 'Stability Support', type: 'stability' },
     ],
   },
 ];

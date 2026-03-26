@@ -64,8 +64,9 @@ public class ProfileController {
             return error(HttpStatus.BAD_REQUEST, "Display name must be 60 characters or fewer.");
         }
 
-        if (normalizedDisplayName.contains("<") || normalizedDisplayName.contains(">") ||
-                normalizedDisplayName.contains("&") || normalizedDisplayName.contains("\"")) {
+        try {
+            InputSanitizer.rejectControlAndHtmlChars(normalizedDisplayName, "displayName");
+        } catch (IllegalArgumentException ex) {
             return error(HttpStatus.BAD_REQUEST, "Display name contains invalid characters.");
         }
 

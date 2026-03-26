@@ -64,15 +64,11 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Admin privileges required."));
         }
 
-        // Run the sync asynchronously to avoid blocking the HTTP request
-        new Thread(() -> {
-            try {
-                stravaAutoSyncScheduler.syncAllStravaRunners();
-            } catch (Exception e) {
-                // Ignore background errors
-            }
-        }).start();
-
-        return ResponseEntity.ok(Map.of("message", "Global Strava sync started."));
+        AdminBackgroundJob job = stravaAutoSyncScheduler.triggerAdminSync(adminOptional.get(), "legacy_admin_endpoint");
+        return ResponseEntity.ok(Map.of(
+                "message", "Global Strava sync started.",
+                "jobId", job.getId(),
+                "status", job.getStatus()
+        ));
     }
 }

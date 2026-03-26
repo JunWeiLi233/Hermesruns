@@ -6,8 +6,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Strava Event Subscription (Webhook) endpoints.
@@ -33,6 +36,7 @@ public class StravaWebhookController {
 
     private final RunnerRepository runnerRepository;
     private final OAuthController oAuthController;
+    private final ExecutorService webhookExecutor;
 
     @Value("${strava.webhook.verify-token:hermes-strava-webhook}")
     private String verifyToken;
@@ -40,6 +44,17 @@ public class StravaWebhookController {
     public StravaWebhookController(RunnerRepository runnerRepository, OAuthController oAuthController) {
         this.runnerRepository = runnerRepository;
         this.oAuthController = oAuthController;
+        // Bound concurrency to reduce memory pressure on small-RAM servers.
+        this.webhookExecutor = Executors.newFixedThreadPool(4, r -> {
+            Thread t = new Thread(r, "strava-webhook-worker");
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    @PreDestroy
+    void shutdown() {
+        webhookExecutor.shutdownNow();
     }
 
     /**
@@ -95,7 +110,10 @@ public class StravaWebhookController {
 
         // Find the runner by Strava athlete ID
         Long athleteId = ownerId;
-        CompletableFuture.runAsync(() -> processActivityEvent(athleteId, objectId, aspectType));
+        CompletableFuture.runAsync(
+                () -> processActivityEvent(athleteId, objectId, aspectType),
+                webhookExecutor
+        );
 
         return ResponseEntity.ok("EVENT_RECEIVED");
     }

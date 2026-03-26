@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.zip.ZipException;
+import java.io.ByteArrayOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -19,16 +22,29 @@ import java.util.zip.ZipInputStream;
 public class ActivityImportService {
     private final ActivityRepository activityRepository;
     private final List<ActivityFileParser> fileParsers;
+    private final ActivityPointRepository activityPointRepository;
 
-    public ActivityImportService(ActivityRepository activityRepository, List<ActivityFileParser> fileParsers) {
+    private static final int MAX_ZIP_ENTRIES = 200;
+    private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry
+    private static final long MAX_ZIP_TOTAL_BYTES = 50L * 1024L * 1024L; // 50MB total extracted
+
+    private static final int POINTS_BATCH_SIZE = 500;
+    private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
+
+    public ActivityImportService(
+            ActivityRepository activityRepository,
+            List<ActivityFileParser> fileParsers,
+            ActivityPointRepository activityPointRepository
+    ) {
         this.activityRepository = activityRepository;
         this.fileParsers = fileParsers;
+        this.activityPointRepository = activityPointRepository;
     }
 
     @Transactional
     public ImportResult importFile(Runner runner, ImportProvider provider, MultipartFile file) {
         if (provider != ImportProvider.GARMIN && provider != ImportProvider.COROS && provider != ImportProvider.HUAWEI) {
-            throw new IllegalArgumentException("File upload supports Garmin, COROS, and Huawei exports only.");
+            throw new IllegalArgumentException("File upload supports FIT/GPX device exports (COROS, Huawei, and compatible sources) only.");
         }
 
         if (file == null || file.isEmpty()) {
@@ -53,6 +69,7 @@ public class ActivityImportService {
     private ImportResult importZipArchive(Runner runner, ImportProvider provider, String fileName, byte[] fileBytes) {
         ImportResult aggregate = ImportResult.empty(provider.name(), "ZIP import completed.");
         int supportedEntries = 0;
+        long extractedTotalBytes = 0;
 
         try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(fileBytes))) {
             ZipEntry entry;
@@ -70,10 +87,22 @@ public class ActivityImportService {
                     continue;
                 }
 
+                if (supportedEntries >= MAX_ZIP_ENTRIES) {
+                    // Hard stop to avoid pathological ZIPs.
+                    break;
+                }
+
                 supportedEntries++;
-                byte[] entryBytes = zipInputStream.readAllBytes();
+
+                byte[] entryBytes = readEntryBytesWithLimits(zipInputStream, MAX_ZIP_ENTRY_BYTES);
+                extractedTotalBytes += entryBytes.length;
+                if (extractedTotalBytes > MAX_ZIP_TOTAL_BYTES) {
+                    throw new IllegalArgumentException("ZIP archive is too large to import (extracted data limit).");
+                }
                 aggregate = aggregate.merge(importWorkoutBytes(runner, provider, entryName, entryBytes));
             }
+        } catch (ZipException exception) {
+            throw new IllegalArgumentException("Invalid ZIP archive.", exception);
         } catch (IOException exception) {
             throw new IllegalArgumentException("Unable to read the uploaded ZIP archive.", exception);
         }
@@ -142,22 +171,50 @@ public class ActivityImportService {
         activity.setCreatedAt(LocalDateTime.now());
         activity.setAverageHeartRate(parsedActivity.averageHeartRate());
         activity.setMaxHeartRate(parsedActivity.maxHeartRate());
+        // Persist the Activity first so we can bulk-insert ActivityPoint rows
+        // without keeping the entire points list inside the Activity's JPA collection.
+        Activity savedActivity = activityRepository.save(activity);
+
+        List<ActivityPoint> batch = new ArrayList<>(POINTS_BATCH_SIZE);
+        List<ParsedTrackPoint> allPoints = parsedActivity.points();
+        int totalPoints = allPoints != null ? allPoints.size() : 0;
+        int stride = totalPoints > MAX_POINTS_PER_ACTIVITY
+                ? Math.max(1, (int) Math.ceil(totalPoints / (double) MAX_POINTS_PER_ACTIVITY))
+                : 1;
 
         int sequenceIndex = 0;
-        for (ParsedTrackPoint point : parsedActivity.points()) {
+        int keptPoints = 0;
+        if (allPoints != null && !allPoints.isEmpty()) {
+            for (int idx = 0; idx < totalPoints; idx += stride) {
+                ParsedTrackPoint point = allPoints.get(idx);
             ActivityPoint activityPoint = new ActivityPoint();
+            activityPoint.setActivity(savedActivity);
             activityPoint.setSequenceIndex(sequenceIndex++);
             activityPoint.setLatitude(point.latitude());
             activityPoint.setLongitude(point.longitude());
-            activity.addPoint(activityPoint);
-        }
+            batch.add(activityPoint);
+                keptPoints++;
 
-        activityRepository.save(activity);
+                if (batch.size() >= POINTS_BATCH_SIZE) {
+                    activityPointRepository.saveAll(batch);
+                    activityPointRepository.flush();
+                    batch.clear();
+                }
+            }
+        }
+        if (!batch.isEmpty()) {
+            activityPointRepository.saveAll(batch);
+            activityPointRepository.flush();
+        }
+        // Help GC earlier on small-RAM servers.
+        if (allPoints != null) {
+            try { allPoints.clear(); } catch (Exception ignored) {}
+        }
 
         return new ImportResult(
                 provider.name(),
                 1,
-                parsedActivity.points().size(),
+                keptPoints,
                 0,
                 0,
                 "Import completed successfully."
@@ -198,5 +255,20 @@ public class ActivityImportService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available.", exception);
         }
+    }
+
+    private static byte[] readEntryBytesWithLimits(ZipInputStream zipInputStream, int maxBytes) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(Math.min(1024 * 1024, maxBytes));
+        byte[] buffer = new byte[8 * 1024];
+        int read;
+        int total = 0;
+        while ((read = zipInputStream.read(buffer)) >= 0) {
+            total += read;
+            if (total > maxBytes) {
+                throw new IllegalArgumentException("ZIP entry is too large to import (max " + (maxBytes / (1024 * 1024)) + "MB).");
+            }
+            out.write(buffer, 0, read);
+        }
+        return out.toByteArray();
     }
 }

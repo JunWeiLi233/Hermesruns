@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/import")
@@ -19,9 +20,44 @@ public class ImportController {
     private final AuthService authService;
     private final ActivityImportService activityImportService;
 
+    private static final long MAX_UPLOAD_BYTES = 20L * 1024L * 1024L; // 20MB
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("gpx", "tcx", "fit", "zip");
+
     public ImportController(AuthService authService, ActivityImportService activityImportService) {
         this.authService = authService;
         this.activityImportService = activityImportService;
+    }
+
+    private static void validateUploadFile(MultipartFile file, String providerName) {
+        if (file == null) {
+            throw new IllegalArgumentException("Missing file.");
+        }
+        if (file.isEmpty() || file.getSize() <= 0) {
+            throw new IllegalArgumentException("Empty upload file.");
+        }
+        if (file.getSize() > MAX_UPLOAD_BYTES) {
+            throw new IllegalArgumentException("File too large (max 20MB).");
+        }
+
+        String original = file.getOriginalFilename();
+        if (original == null || original.isBlank()) {
+            throw new IllegalArgumentException("Upload filename is required.");
+        }
+
+        // Extract last path component (defense-in-depth).
+        original = original.replace('\\', '/');
+        int slash = original.lastIndexOf('/');
+        if (slash >= 0) original = original.substring(slash + 1);
+
+        int dot = original.lastIndexOf('.');
+        if (dot < 0 || dot == original.length() - 1) {
+            throw new IllegalArgumentException("Unsupported upload file type.");
+        }
+        String ext = original.substring(dot + 1).trim().toLowerCase(Locale.ROOT);
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new IllegalArgumentException("Unsupported upload file type.");
+        }
+        // Provider-specific validation (if needed) happens in ActivityImportService.
     }
 
     @PostMapping(path = "/files", consumes = "multipart/form-data")
@@ -36,7 +72,16 @@ public class ImportController {
         }
 
         try {
-            ImportProvider provider = ImportProvider.valueOf(providerValue.trim().toUpperCase(Locale.ROOT));
+            if (providerValue == null || providerValue.isBlank()) {
+                return error(HttpStatus.BAD_REQUEST, "provider is required.");
+            }
+            String normalizedProvider = providerValue.trim();
+            if (normalizedProvider.length() > 30) {
+                return error(HttpStatus.BAD_REQUEST, "Invalid provider.");
+            }
+            ImportProvider provider = ImportProvider.valueOf(normalizedProvider.toUpperCase(Locale.ROOT));
+
+            validateUploadFile(file, provider.name());
             ImportResult result = activityImportService.importFile(runnerOptional.get(), provider, file);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException exception) {
@@ -45,12 +90,14 @@ public class ImportController {
     }
 
     /**
-     * Multi-file import: use field names {@code garmins}, {@code coros}, {@code huawei} (repeat per file).
+     * Multi-file import: use field names {@code exports} (FIT/GPX batch), {@code coros}, {@code huawei}.
+     * Legacy {@code garmins} is still accepted for older clients.
      */
     @PostMapping(path = "/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> importBatch(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-            @RequestParam(value = "garmins", required = false) List<MultipartFile> garmins,
+            @RequestParam(value = "exports", required = false) List<MultipartFile> exports,
+            @RequestParam(value = "garmins", required = false) List<MultipartFile> garminsLegacy,
             @RequestParam(value = "coros", required = false) List<MultipartFile> coros,
             @RequestParam(value = "huawei", required = false) List<MultipartFile> huawei) {
 
@@ -60,7 +107,13 @@ public class ImportController {
         }
 
         Runner runner = runnerOptional.get();
-        List<MultipartFile> g = garmins != null ? garmins : List.of();
+        List<MultipartFile> g = new ArrayList<>();
+        if (exports != null) {
+            g.addAll(exports);
+        }
+        if (garminsLegacy != null) {
+            g.addAll(garminsLegacy);
+        }
         List<MultipartFile> c = coros != null ? coros : List.of();
         List<MultipartFile> h = huawei != null ? huawei : List.of();
 
@@ -77,6 +130,7 @@ public class ImportController {
         for (MultipartFile file : g) {
             if (file == null || file.isEmpty()) continue;
             try {
+                validateUploadFile(file, "GARMIN");
                 aggregate = aggregate.merge(activityImportService.importFile(runner, ImportProvider.GARMIN, file));
             } catch (IllegalArgumentException ex) {
                 errors.add(ex.getMessage());
@@ -85,6 +139,7 @@ public class ImportController {
         for (MultipartFile file : c) {
             if (file == null || file.isEmpty()) continue;
             try {
+                validateUploadFile(file, "COROS");
                 aggregate = aggregate.merge(activityImportService.importFile(runner, ImportProvider.COROS, file));
             } catch (IllegalArgumentException ex) {
                 errors.add(ex.getMessage());
@@ -93,6 +148,7 @@ public class ImportController {
         for (MultipartFile file : h) {
             if (file == null || file.isEmpty()) continue;
             try {
+                validateUploadFile(file, "HUAWEI");
                 aggregate = aggregate.merge(activityImportService.importFile(runner, ImportProvider.HUAWEI, file));
             } catch (IllegalArgumentException ex) {
                 errors.add(ex.getMessage());

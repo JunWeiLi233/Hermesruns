@@ -86,7 +86,7 @@ export default function Profile() {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [nameStatus, setNameStatus] = useState('');
   const [importStatus, setImportStatus] = useState('');
-  const [garminFiles, setGarminFiles] = useState(null);
+  const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
 
@@ -102,6 +102,7 @@ export default function Profile() {
   const [checkoutBanner, setCheckoutBanner] = useState(null);
 
   const [mapReady, setMapReady] = useState(false);
+  const [weeklyFlashIndex, setWeeklyFlashIndex] = useState(0);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const heatLayerRef = useRef(null);
@@ -353,6 +354,119 @@ export default function Profile() {
   const avgPaceStr = totalKm > 0
     ? `${formatDuration(totalSec / unitDistance)} ${paceUnitLabel}`
     : `0:00 ${paceUnitLabel}`;
+
+  const weeklyHook = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    const prevWeekStart = new Date(weekStart);
+    prevWeekStart.setDate(weekStart.getDate() - 7);
+    const prevWeekEnd = new Date(weekStart);
+
+    let thisWeekKm = 0;
+    let lastWeekKm = 0;
+    let thisWeekRuns = 0;
+    let longestRunKm = 0;
+
+    for (const run of runs) {
+      const runDate = new Date(run.startTime || run.startDate || 0);
+      if (Number.isNaN(runDate.getTime())) continue;
+      const runDay = new Date(runDate.getFullYear(), runDate.getMonth(), runDate.getDate());
+      const km = Number(run.distanceKm || 0);
+
+      if (runDay >= weekStart) {
+        thisWeekKm += km;
+        thisWeekRuns += 1;
+        if (km > longestRunKm) longestRunKm = km;
+      } else if (runDay >= prevWeekStart && runDay < prevWeekEnd) {
+        lastWeekKm += km;
+      }
+    }
+
+    const unitThisWeek = isMile ? thisWeekKm / 1.60934 : thisWeekKm;
+    const unitLastWeek = isMile ? lastWeekKm / 1.60934 : lastWeekKm;
+    const unitLongest = isMile ? longestRunKm / 1.60934 : longestRunKm;
+    const delta = unitThisWeek - unitLastWeek;
+    const deltaAbs = Math.abs(delta);
+
+    let headline;
+    if (thisWeekRuns === 0) {
+      headline = `New week, fresh slate. Your first ${distanceUnitShort} is waiting.`;
+    } else if (unitLastWeek <= 0 && unitThisWeek > 0) {
+      headline = `You are on the board with ${unitThisWeek.toFixed(1)} ${distanceUnitShort} this week.`;
+    } else if (delta > 0.05) {
+      headline = `You are up ${deltaAbs.toFixed(1)} ${distanceUnitShort} versus last week.`;
+    } else if (delta < -0.05) {
+      headline = `You are ${deltaAbs.toFixed(1)} ${distanceUnitShort} behind last week so far.`;
+    } else {
+      headline = `You are tracking almost exactly with last week.`;
+    }
+
+    let kicker;
+    if (thisWeekRuns >= 4) {
+      kicker = `Strong rhythm: ${thisWeekRuns} runs already this week.`;
+    } else if (longestRunKm >= 10) {
+      kicker = `Your longest run this week is ${unitLongest.toFixed(1)} ${distanceUnitShort}.`;
+    } else if (unitLastWeek > unitThisWeek && unitLastWeek > 0) {
+      kicker = `A short run of ${(unitLastWeek - unitThisWeek).toFixed(1)} ${distanceUnitShort} matches last week.`;
+    } else {
+      kicker = `Keep the streak warm with one more easy run.`;
+    }
+
+    return {
+      headline,
+      kicker,
+      thisWeekDistance: unitThisWeek,
+      lastWeekDistance: unitLastWeek,
+      runCount: thisWeekRuns,
+      longestRun: unitLongest,
+    };
+  }, [runs, isMile, distanceUnitShort]);
+
+  const weeklyFlashcards = useMemo(() => {
+    const cards = [
+      {
+        eyebrow: 'This week',
+        title: weeklyHook.headline,
+        body: weeklyHook.kicker,
+        accent: `${weeklyHook.thisWeekDistance.toFixed(1)} ${distanceUnitShort}`,
+      },
+      {
+        eyebrow: 'Volume',
+        title: weeklyHook.runCount > 0
+          ? `You have logged ${weeklyHook.runCount} run${weeklyHook.runCount > 1 ? 's' : ''} this week.`
+          : 'No runs logged this week yet.',
+        body: weeklyHook.runCount > 0
+          ? `Your current weekly volume sits at ${weeklyHook.thisWeekDistance.toFixed(1)} ${distanceUnitShort}.`
+          : `A short opener this week will get the rhythm going again.`,
+        accent: `${weeklyHook.runCount} run${weeklyHook.runCount === 1 ? '' : 's'}`,
+      },
+      {
+        eyebrow: 'Longest run',
+        title: weeklyHook.longestRun > 0
+          ? `Your longest outing so far is ${weeklyHook.longestRun.toFixed(1)} ${distanceUnitShort}.`
+          : 'Your long run slot is still open this week.',
+        body: weeklyHook.longestRun > 0
+          ? `That gives you a solid anchor for the rest of the week.`
+          : `One steady run could define the week in a good way.`,
+        accent: `${weeklyHook.longestRun.toFixed(1)} ${distanceUnitShort}`,
+      },
+      {
+        eyebrow: 'Compared to last week',
+        title: weeklyHook.lastWeekDistance > 0
+          ? `Last week at this point you had ${weeklyHook.lastWeekDistance.toFixed(1)} ${distanceUnitShort}.`
+          : 'Last week gives you a clean baseline to beat.',
+        body: weeklyHook.thisWeekDistance >= weeklyHook.lastWeekDistance
+          ? 'You are holding or improving the trend.'
+          : 'One more run would close that gap fast.',
+        accent: `${weeklyHook.lastWeekDistance.toFixed(1)} ${distanceUnitShort}`,
+      },
+    ];
+    return cards;
+  }, [weeklyHook, distanceUnitShort]);
+
+  const activeWeeklyFlashcard = weeklyFlashcards[weeklyFlashIndex % Math.max(weeklyFlashcards.length, 1)];
 
   const {
     recommendation: todayRecommendation,
@@ -626,8 +740,8 @@ export default function Profile() {
     const formData = new FormData();
     let hasFiles = false;
 
-    if (garminFiles) {
-      for (const f of garminFiles) { formData.append('garmins', f); hasFiles = true; }
+    if (fitExportFiles) {
+      for (const f of fitExportFiles) { formData.append('exports', f); hasFiles = true; }
     }
     if (corosFiles) {
       for (const f of corosFiles) { formData.append('coros', f); hasFiles = true; }
@@ -687,6 +801,40 @@ export default function Profile() {
           </div>
         </section>
 
+        {activeWeeklyFlashcard && (
+          <section
+            className="card weekly-flashcard"
+            onClick={() => setWeeklyFlashIndex((prev) => (prev + 1) % weeklyFlashcards.length)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setWeeklyFlashIndex((prev) => (prev + 1) % weeklyFlashcards.length);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Weekly running snapshot card"
+          >
+            <div className="weekly-flashcard-copy">
+              <span className="weekly-flashcard-eyebrow">{activeWeeklyFlashcard.eyebrow}</span>
+              <h3>{activeWeeklyFlashcard.title}</h3>
+              <p>{activeWeeklyFlashcard.body}</p>
+            </div>
+            <div className="weekly-flashcard-side">
+              <strong>{activeWeeklyFlashcard.accent}</strong>
+              <span>Tap for next insight</span>
+              <div className="weekly-flashcard-dots" aria-hidden="true">
+                {weeklyFlashcards.map((_, index) => (
+                  <span
+                    key={index}
+                    className={`weekly-flashcard-dot${index === weeklyFlashIndex ? ' active' : ''}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Bottom Grid */}
         <div className="bottom-grid">
           <section className="card profile-distribution-strip">
@@ -740,7 +888,6 @@ export default function Profile() {
                       <span className="analysis-vo2-value">{profileVdot.toFixed(1)}</span>
                       <span className="analysis-vo2-unit">{t('profile.vo2_unit_short')}</span>
                     </div>
-                    <p className="analysis-vo2-formula-hint">{t('profile.vo2_formula_hint')}</p>
                     <p className="analysis-vo2-copy">{t('profile.vo2_card_copy')}</p>
                   </>
                 ) : (
@@ -939,7 +1086,7 @@ export default function Profile() {
             <section className="card connected-services-section">
               <h2 style={{ margin: '0 0 16px' }}>{t('profile.connected_services')}</h2>
 
-              {/* Garmin — file import */}
+              {/* FIT/GPX — file import */}
               <div className="service-row">
                 <div className="service-icon" style={{ background: '#11548a' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -948,8 +1095,8 @@ export default function Profile() {
                   </svg>
                 </div>
                 <div className="service-info">
-                  <strong>{t('profile.garmin_watch_title')}</strong>
-                  <span className="service-status service-status-off">{t('profile.garmin_watch_status')}</span>
+                  <strong>{t('profile.fit_export_watch_title')}</strong>
+                  <span className="service-status service-status-off">{t('profile.fit_export_watch_status')}</span>
                 </div>
                 <div className="service-action">
                   <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
@@ -957,7 +1104,7 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <p className="service-hint">{t('profile.garmin_import_hint')}</p>
+              <p className="service-hint">{t('profile.fit_export_import_hint')}</p>
 
               {/* COROS — file import */}
               <div className="service-row" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--line, #eee)' }}>
@@ -1317,14 +1464,14 @@ export default function Profile() {
             <section className="import-source-card">
               <div className="import-source-header">
                 <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.garmin_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.garmin_source_hint')}</span>
+                  <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
+                  <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
                 </div>
-                <span className="import-source-tag">GARMIN</span>
+                <span className="import-source-tag">FIT/GPX</span>
               </div>
-              <label className="modal-label">{t('profile.garmin_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setGarminFiles(e.target.files)} />
-              <p className="selected-file-name">{garminFiles?.length ? `${garminFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <label className="modal-label">{t('profile.fit_export_file_label')}</label>
+              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setFitExportFiles(e.target.files)} />
+              <p className="selected-file-name">{fitExportFiles?.length ? `${fitExportFiles.length} file(s)` : t('profile.no_file_selected')}</p>
             </section>
             <section className="import-source-card">
               <div className="import-source-header">

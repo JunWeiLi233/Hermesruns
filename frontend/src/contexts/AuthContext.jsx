@@ -10,6 +10,20 @@ const AuthContext = createContext(null);
 
 const ROLE_STORAGE_KEY = 'hermes_role';
 
+function readAuthFromUrl() {
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return {
+      token: hashParams.get('token') || searchParams.get('token'),
+      email: hashParams.get('email') || searchParams.get('email'),
+      source: hashParams.get('source') || searchParams.get('source'),
+    };
+  } catch {
+    return { token: null, email: null, source: null };
+  }
+}
+
 function normalizeRole(role) {
   return role === 'ADMIN' ? 'ADMIN' : 'USER';
 }
@@ -22,12 +36,18 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
-  const [token, setToken] = useState(() => localStorage.getItem('hermes_jwt') || null);
-  const [email, setEmail] = useState(() => localStorage.getItem('hermes_email') || null);
+  // If OAuth redirects back with `#token=...` (backend RedirectView), derive the initial token synchronously
+  // so route guards do not kick the user to `/login` or `/admin` before URL-hash parsing runs.
+  const incomingAuth = readAuthFromUrl();
+  const initialToken = incomingAuth?.token || localStorage.getItem('hermes_jwt') || null;
+  const initialEmail = incomingAuth?.email || localStorage.getItem('hermes_email') || null;
+
+  const [token, setToken] = useState(() => initialToken);
+  const [email, setEmail] = useState(() => initialEmail);
   /** Authoritative role comes from /api/auth/protected/ping after token is known (never trust stale localStorage alone). */
   const [role, setRole] = useState(null);
   /** False while JWT exists but role has not been confirmed by the server yet. */
-  const [authHydrated, setAuthHydrated] = useState(() => !localStorage.getItem('hermes_jwt'));
+  const [authHydrated, setAuthHydrated] = useState(() => !initialToken);
 
   // OAuth / magic-link: token in URL hash or query (backend redirect)
   useEffect(() => {
