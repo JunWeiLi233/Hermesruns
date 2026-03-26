@@ -20,6 +20,8 @@ public class ShoeImageController {
     private final AuthService authService;
     private final AiUsageService aiUsageService;
     private final RestTemplate restTemplate;
+    private final SystemConfigService systemConfigService;
+    private final ApiRateLimiter apiRateLimiter;
 
     @Value("${app.ai.api-key:}")
     private String aiApiKey;
@@ -35,6 +37,7 @@ public class ShoeImageController {
             "Return ONLY a JSON array, no other text. Each element should have: " +
             "\"brand\" (string), \"model\" (string), \"distanceKm\" (number in kilometers). " +
             "If the distance is in miles, convert to km (multiply by 1.60934). " +
+            "Return at most 10 elements in the JSON array. " +
             "Example: [{\"brand\":\"Nike\",\"model\":\"Pegasus 41\",\"distanceKm\":342.5}]";
 
     private final ShoeRepository shoeRepository;
@@ -42,6 +45,9 @@ public class ShoeImageController {
     // Bing uses mediaurl=URL_ENCODED in href attributes
     private static final Pattern MEDIA_URL_PATTERN =
             Pattern.compile("mediaurl=(https?%3a%2f%2f[^&\"]+)", Pattern.CASE_INSENSITIVE);
+
+    // Prevent resource exhaustion and limit what we send to 3rd-party AI.
+    private static final long MAX_SCAN_IMAGE_BYTES = 6L * 1024L * 1024L; // 6MB
 
     // Brand → official website domain mapping
     private static final Map<String, String> BRAND_DOMAINS = Map.ofEntries(
@@ -73,11 +79,19 @@ public class ShoeImageController {
             Map.entry("361度", "361sport.com")
     );
 
-    public ShoeImageController(AuthService authService, ShoeRepository shoeRepository, AiUsageService aiUsageService, RestTemplate restTemplate) {
+    public ShoeImageController(
+            AuthService authService,
+            ShoeRepository shoeRepository,
+            AiUsageService aiUsageService,
+            RestTemplate restTemplate,
+            SystemConfigService systemConfigService,
+            ApiRateLimiter apiRateLimiter) {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
         this.aiUsageService = aiUsageService;
         this.restTemplate = restTemplate;
+        this.systemConfigService = systemConfigService;
+        this.apiRateLimiter = apiRateLimiter;
     }
 
     // ── Admin endpoints (all shoes, regardless of owner) ──
@@ -156,8 +170,13 @@ public class ShoeImageController {
         if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
 
         Shoe shoe = shoeOpt.get();
-        String photoUrl = body.getOrDefault("photoUrl", "");
-        String finalUrl = photoUrl.isBlank() ? null : photoUrl;
+        String photoUrlRaw = body != null ? body.getOrDefault("photoUrl", "") : "";
+        String finalUrl;
+        try {
+            finalUrl = SafeUrlValidator.validateHttpUrlOrNull(photoUrlRaw, 2048, "photoUrl");
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
 
         // Apply to ALL shoes with same brand+model
         String brand = shoe.getBrand();
@@ -359,8 +378,14 @@ public class ShoeImageController {
         if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
 
         Shoe shoe = shoeOpt.get();
-        String photoUrl = body.getOrDefault("photoUrl", "");
-        shoe.setPhotoUrl(photoUrl.isBlank() ? null : photoUrl);
+        String photoUrlRaw = body != null ? body.getOrDefault("photoUrl", "") : "";
+        String finalUrl;
+        try {
+            finalUrl = SafeUrlValidator.validateHttpUrlOrNull(photoUrlRaw, 2048, "photoUrl");
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+        shoe.setPhotoUrl(finalUrl);
         shoeRepository.save(shoe);
         return ResponseEntity.ok(Map.of("photoUrl", shoe.getPhotoUrl() != null ? shoe.getPhotoUrl() : ""));
     }
@@ -517,7 +542,12 @@ public class ShoeImageController {
         if (body == null) return "";
         try {
             Object raw = body.get("query");
-            return raw == null ? "" : String.valueOf(raw).trim();
+            String q = raw == null ? "" : String.valueOf(raw).trim();
+            if (q.length() > 200) {
+                q = q.substring(0, 200);
+            }
+            InputSanitizer.rejectControlAndHtmlChars(q, "query");
+            return q;
         } catch (Exception ignored) {
             return "";
         }
@@ -539,7 +569,8 @@ public class ShoeImageController {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
-        boolean available = aiApiKey != null && !aiApiKey.isBlank();
+        // Use centralized config check so status logic is consistent.
+        boolean available = systemConfigService.isAiConfigured();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("available", available);
         if (available) {
@@ -559,12 +590,20 @@ public class ShoeImageController {
     @PostMapping("/scan-image")
     public ResponseEntity<?> scanImage(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam("image") MultipartFile image) {
+            @RequestParam("image") MultipartFile image,
+            jakarta.servlet.http.HttpServletRequest request) {
 
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
-        if (aiApiKey == null || aiApiKey.isBlank()) {
+        String ip = RequestIpResolver.clientIp(request);
+        // Extra abuse protection (in addition to quota): limit AI calls per IP
+        if (!apiRateLimiter.allow("ai-scan:" + ip, 30, 3600)) { // 30/hour per IP
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many AI requests. Try again later."));
+        }
+
+        if (!systemConfigService.isAiConfigured()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("error", "AI API key not configured. Set APP_AI_API_KEY environment variable."));
         }
@@ -580,12 +619,20 @@ public class ShoeImageController {
         }
 
         try {
+            if (image == null || image.isEmpty() || image.getSize() <= 0) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Image is required."));
+            }
+            if (image.getSize() > MAX_SCAN_IMAGE_BYTES) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Image too large."));
+            }
+
+            String mediaType = image.getContentType();
+            if (mediaType == null || !mediaType.toLowerCase(Locale.ROOT).startsWith("image/")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid image content type."));
+            }
+
             byte[] imageBytes = image.getBytes();
             String base64 = Base64.getEncoder().encodeToString(imageBytes);
-            String mediaType = image.getContentType();
-            if (mediaType == null || !mediaType.startsWith("image/")) {
-                mediaType = "image/png";
-            }
 
             String text;
             if ("claude".equalsIgnoreCase(aiProvider)) {

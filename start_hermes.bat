@@ -5,6 +5,7 @@ echo       STARTING HERMES TECH STACK
 echo ==========================================
 
 set "ROOT=%~dp0"
+set "HERMES_BACKEND_LOG=%ROOT%backend_log.txt"
 set "APP_URL=http://localhost:8080"
 set "HEALTH_URL=http://localhost:8080"
 set "PYTHON_EXE="
@@ -55,11 +56,18 @@ if defined SPRING_MAIL_USERNAME     echo set "SPRING_MAIL_USERNAME=%SPRING_MAIL_
 if defined SPRING_MAIL_PASSWORD     echo set "SPRING_MAIL_PASSWORD=%SPRING_MAIL_PASSWORD%">> "%BOOT_SCRIPT%"
 if defined APP_MAIL_FROM            echo set "APP_MAIL_FROM=%APP_MAIL_FROM%">> "%BOOT_SCRIPT%"
 if defined APP_PUBLIC_BASE_URL     echo set "APP_PUBLIC_BASE_URL=%APP_PUBLIC_BASE_URL%">> "%BOOT_SCRIPT%"
+if defined HERMES_ENV              echo set "HERMES_ENV=%HERMES_ENV%">> "%BOOT_SCRIPT%"
+if defined SPRING_PROFILES_ACTIVE  echo set "SPRING_PROFILES_ACTIVE=%SPRING_PROFILES_ACTIVE%">> "%BOOT_SCRIPT%"
+if defined APP_ENABLE_HSTS         echo set "APP_ENABLE_HSTS=%APP_ENABLE_HSTS%">> "%BOOT_SCRIPT%"
+if defined APP_CORS_ALLOWED_ORIGINS echo set "APP_CORS_ALLOWED_ORIGINS=%APP_CORS_ALLOWED_ORIGINS%">> "%BOOT_SCRIPT%"
+if defined STRIPE_SECRET_KEY       echo set "STRIPE_SECRET_KEY=%STRIPE_SECRET_KEY%">> "%BOOT_SCRIPT%"
+if defined STRIPE_WEBHOOK_SECRET   echo set "STRIPE_WEBHOOK_SECRET=%STRIPE_WEBHOOK_SECRET%">> "%BOOT_SCRIPT%"
+if defined STRIPE_PRICE_PRO_MONTHLY echo set "STRIPE_PRICE_PRO_MONTHLY=%STRIPE_PRICE_PRO_MONTHLY%">> "%BOOT_SCRIPT%"
 echo cd /d "%ROOT%">> "%BOOT_SCRIPT%"
 echo call .tools\run-backend.cmd>> "%BOOT_SCRIPT%"
 
 echo [2/4] Waking up Spring Boot (Java)...
-start "Hermes - Spring Boot Server" cmd /c "%BOOT_SCRIPT% > d:\Hermes\backend_log.txt 2>&1"
+start "Hermes - Spring Boot Server" cmd /c call "%BOOT_SCRIPT%" ^> "%HERMES_BACKEND_LOG%" 2^>^&1
 
 :: 3. Start the Python Analytics Engine when Python is available
 if defined PYTHON_EXE (

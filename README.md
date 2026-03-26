@@ -282,7 +282,7 @@ Install PostgreSQL 15+, create a database named `hermes`, then fill in the crede
 $env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
 $env:APP_DB_DRIVER   = "org.postgresql.Driver"
 $env:APP_DB_USERNAME = "hermes"
-$env:APP_DB_PASSWORD = "your-postgres-password"
+$env:APP_DB_PASSWORD = "<your-postgres-password>"
 .\start_hermes.bat
 ```
 
@@ -291,7 +291,7 @@ $env:APP_DB_PASSWORD = "your-postgres-password"
 ```powershell
 $env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
 $env:APP_DB_USERNAME = "hermes"
-$env:APP_DB_PASSWORD = "your-postgres-password"
+$env:APP_DB_PASSWORD = "<your-postgres-password>"
 .\migrate_h2_to_postgres.bat
 ```
 
@@ -609,7 +609,7 @@ npm run build
 ```powershell
 $env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
 $env:APP_DB_USERNAME = "hermes"
-$env:APP_DB_PASSWORD = "你的密码"
+$env:APP_DB_PASSWORD = "<你的密码>"
 .\migrate_h2_to_postgres.bat
 ```
 

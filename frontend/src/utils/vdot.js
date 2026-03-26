@@ -67,8 +67,12 @@ export function calculateVdot(distanceMeters, timeMinutes) {
  */
 export function fractionVo2maxFromHeartRate(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax < 130) return null;
-  const r = avgHr / hrMax;
-  return Math.min(0.97, Math.max(0.52, r));
+  // Swain (1994) running rule-of-thumb:
+  // %HRmax = 0.64 * %VO2max + 37  =>  %VO2max = (%HRmax - 37) / 0.64
+  // Here we use avgHr/hrMax as %HRmax / 100.
+  const hrPct = Math.min(1.0, avgHr / hrMax); // 0..1
+  const vo2Fraction = ((hrPct * 100) - 37) / 64; // = %VO2max/100
+  return Math.min(0.97, Math.max(0.52, vo2Fraction));
 }
 
 function clampVo2maxEstimate(v) {

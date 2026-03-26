@@ -18,7 +18,25 @@ oracleJdk-26/
 # env / secrets files
 .env
 .env.*
-start_hermes_postgres.ps1
+# Local PowerShell env (secrets); keep Hermes.local.env.example.ps1 in git
+Hermes.local.env.ps1
+Hermes.local.env.*.ps1
+
+# local logs / runtime artifacts
+backend_log.txt
+*.pid
+*.seed
+
+# local sync config (may contain paths/tokens)
+.tools/hermes_sync_config.json
+
+# TLS / credentials (never commit)
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials.json
 
 # backend local build/cache/database
 backend/target/
@@ -27,6 +45,9 @@ backend/*.mv.db
 backend/*.lock.db
 backend/*.trace.db
 backend/HELP.md
+
+# local / prod overrides (often contain secrets)
+backend/src/main/resources/application-production.properties
 
 # Python
 **/venv/
@@ -46,7 +67,8 @@ migration_export/
 .tools/h2_tables.sql
 
 # Cloned repos
-run/
+/run/
+/Hermes/
 
 # Frontend
 frontend/node_modules/

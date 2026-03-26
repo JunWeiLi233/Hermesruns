@@ -40,7 +40,7 @@ public class SecurityHeadersFilter implements Filter {
                 "base-uri 'self'; " +
                 "form-action 'self'; " +
                 "connect-src 'self' https://www.strava.com https://accounts.google.com " +
-                "https://generativelanguage.googleapis.com https://healthapi.garmin.com https://apis.garmin.com " +
+                "https://generativelanguage.googleapis.com " +
                 "https://api.stripe.com https://*.stripe.com");
         chain.doFilter(request, response);
     }

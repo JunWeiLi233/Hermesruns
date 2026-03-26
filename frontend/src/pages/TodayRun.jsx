@@ -104,7 +104,7 @@ export default function TodayRun() {
 
             <div className="today-run-metric-strip">
               <article className="today-run-metric-card">
-                <span className="stat-label">VDOT</span>
+                <span className="stat-label">VO₂max</span>
                 <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
               </article>
               <article className="today-run-metric-card">

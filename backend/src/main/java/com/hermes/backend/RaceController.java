@@ -120,13 +120,13 @@ public class RaceController {
 
     private void applyRequest(RaceEvent raceEvent, RaceEventRequest request) {
         raceEvent.setName(request.name().trim());
-        raceEvent.setOrganization(trimToNull(request.organization()));
-        raceEvent.setLocation(trimToNull(request.location()));
+        raceEvent.setOrganization(InputSanitizer.trimToNull(request.organization()));
+        raceEvent.setLocation(InputSanitizer.trimToNull(request.location()));
         raceEvent.setEventDate(request.eventDate());
         raceEvent.setDistanceKm(request.distanceKm());
         raceEvent.setRegistrationStatus(parseStatus(request.registrationStatus()));
         raceEvent.setGoalTimeSeconds(request.goalTimeSeconds());
-        raceEvent.setNotes(trimToNull(request.notes()));
+        raceEvent.setNotes(InputSanitizer.trimToNull(request.notes()));
         raceEvent.setNyrrNinePlusOneEligible(Boolean.TRUE.equals(request.nyrrNinePlusOneEligible()));
         raceEvent.setCompletedActivityId(request.completedActivityId());
     }
@@ -146,6 +146,20 @@ public class RaceController {
         }
         if (request.goalTimeSeconds() != null && request.goalTimeSeconds() <= 0) {
             return new ValidationResult(false, "Goal time must be positive.");
+        }
+
+        // Basic anti-XSS / injection hardening: reject control chars + HTML delimiters.
+        try {
+            if (request.name() != null) InputSanitizer.rejectControlAndHtmlChars(request.name(), "name");
+            InputSanitizer.rejectControlAndHtmlChars(request.organization(), "organization");
+            InputSanitizer.rejectControlAndHtmlChars(request.location(), "location");
+            InputSanitizer.rejectControlAndHtmlChars(request.notes(), "notes");
+            if (request.name() != null && request.name().length() > 120) return new ValidationResult(false, "Race name too long.");
+            if (request.organization() != null && request.organization().length() > 80) return new ValidationResult(false, "Organization too long.");
+            if (request.location() != null && request.location().length() > 120) return new ValidationResult(false, "Location too long.");
+            if (request.notes() != null && request.notes().length() > 2000) return new ValidationResult(false, "Notes too long.");
+        } catch (IllegalArgumentException ex) {
+            return new ValidationResult(false, ex.getMessage());
         }
         return new ValidationResult(true, null);
     }

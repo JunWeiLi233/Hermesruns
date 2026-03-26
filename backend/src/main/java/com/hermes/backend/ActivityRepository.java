@@ -14,6 +14,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     Optional<Activity> findByRunnerAndProviderAndSourceChecksum(Runner runner, ImportProvider provider, String sourceChecksum);
 
+    Optional<Activity> findByIdAndRunner(Long id, Runner runner);
+
     long countByRunner(Runner runner);
 
     long countByRunnerAndActivityType(Runner runner, ActivityType activityType);
