@@ -44,6 +44,7 @@ public class BillingController {
     private final String stripePriceProMonthly;
     private final String publicBaseUrl;
     private final String priceDisplayLabel;
+    private final SystemConfigService systemConfigService;
 
     public BillingController(
             AuthService authService,
@@ -54,7 +55,8 @@ public class BillingController {
             @Value("${app.billing.stripe.webhook-secret:}") String stripeWebhookSecret,
             @Value("${app.billing.stripe.price-pro-monthly:}") String stripePriceProMonthly,
             @Value("${app.billing.public-base-url:http://localhost:8080}") String publicBaseUrl,
-            @Value("${app.billing.price-display-label:}") String priceDisplayLabel) {
+            @Value("${app.billing.price-display-label:}") String priceDisplayLabel,
+            SystemConfigService systemConfigService) {
         this.authService = authService;
         this.runnerRepository = runnerRepository;
         this.aiUsageService = aiUsageService;
@@ -64,6 +66,7 @@ public class BillingController {
         this.stripePriceProMonthly = stripePriceProMonthly;
         this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
         this.priceDisplayLabel = priceDisplayLabel;
+        this.systemConfigService = systemConfigService;
     }
 
     @PostConstruct
@@ -79,7 +82,7 @@ public class BillingController {
     @GetMapping("/config")
     public Map<String, Object> billingConfig() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("checkoutConfigured", isCheckoutFullyConfigured());
+        m.put("checkoutConfigured", systemConfigService.isCheckoutFullyConfigured());
         m.put("provider", "stripe");
         if (priceDisplayLabel != null && !priceDisplayLabel.isBlank()) {
             m.put("priceLabel", priceDisplayLabel.trim());
@@ -262,8 +265,7 @@ public class BillingController {
     }
 
     private boolean isCheckoutFullyConfigured() {
-        return stripeSecretKey != null && !stripeSecretKey.isBlank()
-                && stripePriceProMonthly != null && !stripePriceProMonthly.isBlank();
+        return systemConfigService.isCheckoutFullyConfigured();
     }
 
     private static String trimTrailingSlash(String url) {

@@ -80,4 +80,13 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("yearEnd") LocalDateTime yearEnd,
             @Param("yearPrefix") String yearPrefix
     );
+
+    /** Ordered projection used by `GET /api/activities/{id}/points` to reduce heap usage vs loading entities. */
+    @Query("""
+            select p.latitude, p.longitude
+            from ActivityPoint p
+            where p.activity.id = :activityId
+            order by p.sequenceIndex asc
+            """)
+    List<Object[]> findLatLngByActivityIdOrdered(@Param("activityId") Long activityId);
 }

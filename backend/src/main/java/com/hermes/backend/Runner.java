@@ -15,7 +15,8 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_runner_session_token", columnList = "sessionToken"),
                 @Index(name = "idx_runner_strava_athlete_id", columnList = "stravaAthleteId"),
                 @Index(name = "idx_runner_deleted_role", columnList = "deleted, role"),
-                @Index(name = "idx_runner_email_verif_token", columnList = "emailVerificationTokenHash")
+                @Index(name = "idx_runner_email_verif_token", columnList = "emailVerificationTokenHash"),
+                @Index(name = "idx_runner_pw_reset_token", columnList = "passwordResetTokenHash")
         }
 )
 public class Runner {
@@ -217,6 +218,12 @@ public class Runner {
 
     private LocalDateTime emailVerificationExpiresAt;
 
+    @JsonIgnore
+    @Column(length = 64)
+    private String passwordResetTokenHash;
+
+    private LocalDateTime passwordResetExpiresAt;
+
     @PrePersist
     @PreUpdate
     private void applySubscriptionAiDefaults() {
@@ -258,38 +265,9 @@ public class Runner {
     public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
     public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
 
-    // ── Garmin fields ──
+    public String getPasswordResetTokenHash() { return passwordResetTokenHash; }
+    public void setPasswordResetTokenHash(String passwordResetTokenHash) { this.passwordResetTokenHash = passwordResetTokenHash; }
 
-    private String garminUserId;
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String garminAccessToken;
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String garminAccessTokenSecret;
-
-    private String garminConsumerKey;
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String garminConsumerSecret;
-
-    private String garminRedirectUri;
-
-    public String getGarminUserId() { return garminUserId; }
-    public void setGarminUserId(String garminUserId) { this.garminUserId = garminUserId; }
-
-    public String getGarminAccessToken() { return garminAccessToken; }
-    public void setGarminAccessToken(String garminAccessToken) { this.garminAccessToken = garminAccessToken; }
-
-    public String getGarminAccessTokenSecret() { return garminAccessTokenSecret; }
-    public void setGarminAccessTokenSecret(String garminAccessTokenSecret) { this.garminAccessTokenSecret = garminAccessTokenSecret; }
-
-    public String getGarminConsumerKey() { return garminConsumerKey; }
-    public void setGarminConsumerKey(String garminConsumerKey) { this.garminConsumerKey = garminConsumerKey; }
-
-    public String getGarminConsumerSecret() { return garminConsumerSecret; }
-    public void setGarminConsumerSecret(String garminConsumerSecret) { this.garminConsumerSecret = garminConsumerSecret; }
-
-    public String getGarminRedirectUri() { return garminRedirectUri; }
-    public void setGarminRedirectUri(String garminRedirectUri) { this.garminRedirectUri = garminRedirectUri; }
+    public LocalDateTime getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
+    public void setPasswordResetExpiresAt(LocalDateTime passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
 }

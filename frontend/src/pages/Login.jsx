@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { getBackendBaseUrl, apiFetch } from '../api';
+import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
 
@@ -21,6 +21,7 @@ export default function Login() {
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
   const [altLoginOpen, setAltLoginOpen] = useState(false);
+  const [stravaStatus, setStravaStatus] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
@@ -28,11 +29,26 @@ export default function Login() {
   }, [isAuthenticated, authHydrated, isAdmin, navigate]);
 
   useEffect(() => {
+    let cancelled = false;
+    apiJson('/api/auth/strava/status')
+      .then((res) => {
+        if (cancelled) return;
+        setStravaStatus(res || null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStravaStatus(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     if (searchParams.get('verified') === '1') {
       setBanner('verified');
       setAltLoginOpen(true);
     }
     const err = searchParams.get('error');
+    const details = searchParams.get('details');
     if (err === 'verify_invalid') {
       setBanner('invalid');
       setAltLoginOpen(true);
@@ -40,6 +56,16 @@ export default function Login() {
     if (err === 'verify_expired') {
       setBanner('expired');
       setAltLoginOpen(true);
+    }
+    if (err === 'STRAVA_NOT_CONFIGURED') {
+      setBanner('strava_not_configured');
+      setAltLoginOpen(true);
+      setError(t('common.strava_not_configured'));
+    } else if (err && err.startsWith('STRAVA_')) {
+      setBanner('strava_failed');
+      setAltLoginOpen(true);
+      // Show backend-provided details when present for easier debugging.
+      setError(details || t('common.strava_login_failed'));
     }
     if (searchParams.get('verified') || searchParams.get('error')) {
       setSearchParams({}, { replace: true });
@@ -118,9 +144,9 @@ export default function Login() {
             <div className="brand-badge">
               <HermesLogo mark={t('common.logo_mark')} tone="dark" />
             </div>
-            <h1 className="auth-hero-title">{t('index.hero_title').split('\n').map((line, i) => (
-              <span key={i}>{line}{i === 0 && <br />}</span>
-            ))}</h1>
+            <p className="auth-hero-title auth-hero-title--intro">
+              {t('index.hero_title').replace(/\n+/g, ' ')}
+            </p>
             <p className="auth-hero-text">{t('index.hero_text')}</p>
             <div className="hero-chip-row">
               <span className="hero-chip">{t('profile.heatmap')}</span>
@@ -139,7 +165,21 @@ export default function Login() {
                 <p className="auth-card-copy">{t('index.strava_focus_copy')}</p>
               </div>
 
-              <button type="button" className="btn-strava btn-strava--lead" onClick={() => startOAuth('strava')}>
+              {stravaStatus && !stravaStatus.configured && (
+                <div className="error-alert" style={{ display: 'block' }}>
+                  {t('common.strava_not_configured')}
+                  {stravaStatus.reason && (
+                    <div style={{ marginTop: 6, fontSize: '0.9rem' }}>{stravaStatus.reason}</div>
+                  )}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn-strava btn-strava--lead"
+                disabled={Boolean(stravaStatus && !stravaStatus.configured)}
+                onClick={() => startOAuth('strava')}
+              >
                 {t('index.strava')}
               </button>
 
@@ -164,6 +204,12 @@ export default function Login() {
                 )}
                 {banner === 'expired' && (
                   <div className="error-alert" style={{ display: 'block' }}>{t('common.verify_expired')}</div>
+                )}
+                {banner === 'strava_not_configured' && (
+                  <div className="error-alert" style={{ display: 'block' }}>{t('common.strava_not_configured')}</div>
+                )}
+                {banner === 'strava_failed' && (
+                  <div className="error-alert" style={{ display: 'block' }}>{t('common.strava_login_failed')}</div>
                 )}
                 {error && <div className="error-alert" style={{ display: 'block' }}>{error}</div>}
 

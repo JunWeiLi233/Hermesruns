@@ -46,6 +46,15 @@ export default function Dashboard() {
   const [imgCustomQuery, setImgCustomQuery] = useState('');
   const [imgCustomUrl, setImgCustomUrl] = useState('');
   const [verifyingShoeId, setVerifyingShoeId] = useState(null);
+  const [catalogBrands, setCatalogBrands] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [newBrandName, setNewBrandName] = useState('');
+  const [catalogBrand, setCatalogBrand] = useState('');
+  const [catalogModel, setCatalogModel] = useState('');
+  const [catalogType, setCatalogType] = useState('daily');
+  const [catalogSavingBrand, setCatalogSavingBrand] = useState(false);
+  const [catalogSavingModel, setCatalogSavingModel] = useState(false);
+  const [catalogMsg, setCatalogMsg] = useState('');
 
   // Server Health
   const [serverStats, setServerStats] = useState(null);
@@ -81,7 +90,70 @@ export default function Dashboard() {
 
     load();
     loadAllShoes();
+    loadCatalogBrands();
   }, [isAuthenticated, navigate, t]);
+
+  async function loadCatalogBrands() {
+    setCatalogLoading(true);
+    try {
+      const data = await apiJson('/api/shoe-catalog');
+      const brands = Array.isArray(data?.brands) ? data.brands : [];
+      setCatalogBrands(brands);
+      if (!catalogBrand && brands.length > 0) {
+        setCatalogBrand(brands[0].brand || '');
+      }
+    } catch {
+      setCatalogBrands([]);
+    } finally {
+      setCatalogLoading(false);
+    }
+  }
+
+  async function handleAddCatalogBrand(e) {
+    e.preventDefault();
+    const brand = newBrandName.trim();
+    if (!brand) return;
+    setCatalogSavingBrand(true);
+    setCatalogMsg('');
+    try {
+      await apiJson('/api/shoe-catalog/admin/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand }),
+      });
+      setNewBrandName('');
+      setCatalogBrand(brand);
+      await loadCatalogBrands();
+      setCatalogMsg(`Brand saved: ${brand}`);
+    } catch (err) {
+      setCatalogMsg(err.message || 'Failed to add brand');
+    } finally {
+      setCatalogSavingBrand(false);
+    }
+  }
+
+  async function handleAddCatalogModel(e) {
+    e.preventDefault();
+    const brand = catalogBrand.trim();
+    const model = catalogModel.trim();
+    if (!brand || !model) return;
+    setCatalogSavingModel(true);
+    setCatalogMsg('');
+    try {
+      await apiJson('/api/shoe-catalog/admin/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand, model, type: catalogType }),
+      });
+      setCatalogModel('');
+      await loadCatalogBrands();
+      setCatalogMsg(`Model saved: ${brand} ${model}`);
+    } catch (err) {
+      setCatalogMsg(err.message || 'Failed to add model');
+    } finally {
+      setCatalogSavingModel(false);
+    }
+  }
 
   async function loadAllShoes() {
     setShoeLoadState('loading');
@@ -379,6 +451,63 @@ export default function Dashboard() {
               })}
             </tbody>
           </table>
+        </div>
+
+        <div className="admin-shoe-section" style={{ marginBottom: 30 }}>
+          <div className="admin-shoe-header">
+            <h2>Running Shoe Catalog Manager</h2>
+            <button type="button" className="btn-secondary" style={{ width: 'auto', minHeight: 36, marginTop: 0 }} onClick={loadCatalogBrands}>
+              Refresh Catalog
+            </button>
+          </div>
+          <p style={{ margin: '6px 0 16px', color: '#64748b', fontSize: '0.9rem' }}>
+            Admin can add a new shoe brand, or add a new model into any brand. Changes apply to user shoe inventory picker.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <form onSubmit={handleAddCatalogBrand} className="profile-zone-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <strong>Add New Brand</strong>
+              <input
+                type="text"
+                className="admin-shoe-filter"
+                placeholder="e.g. 李宁 / On / Saucony"
+                value={newBrandName}
+                onChange={e => setNewBrandName(e.target.value)}
+              />
+              <button type="submit" className="btn-primary" style={{ width: 'fit-content', minHeight: 36, marginTop: 0 }} disabled={catalogSavingBrand}>
+                {catalogSavingBrand ? 'Saving...' : 'Add Brand'}
+              </button>
+            </form>
+            <form onSubmit={handleAddCatalogModel} className="profile-zone-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <strong>Add Model To Brand</strong>
+              <select className="admin-shoe-filter" value={catalogBrand} onChange={e => setCatalogBrand(e.target.value)}>
+                <option value="">Select a brand</option>
+                {catalogBrands.map(b => (
+                  <option key={b.id || b.brand} value={b.brand}>{b.brand}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                className="admin-shoe-filter"
+                placeholder="e.g. 飞电 4 Ultra / Pegasus 41"
+                value={catalogModel}
+                onChange={e => setCatalogModel(e.target.value)}
+              />
+              <select className="admin-shoe-filter" value={catalogType} onChange={e => setCatalogType(e.target.value)}>
+                <option value="daily">daily</option>
+                <option value="speed">speed</option>
+                <option value="race">race</option>
+                <option value="trail">trail</option>
+                <option value="stability">stability</option>
+              </select>
+              <button type="submit" className="btn-primary" style={{ width: 'fit-content', minHeight: 36, marginTop: 0 }} disabled={catalogSavingModel}>
+                {catalogSavingModel ? 'Saving...' : 'Add Model'}
+              </button>
+            </form>
+          </div>
+          {catalogMsg && <div className="admin-shoe-status" style={{ marginTop: 12 }}>{catalogMsg}</div>}
+          <div style={{ marginTop: 16, color: '#64748b', fontSize: '0.85rem' }}>
+            {catalogLoading ? 'Loading catalog...' : `Catalog brands: ${catalogBrands.length}`}
+          </div>
         </div>
 
         {/* Shoe Image Management */}

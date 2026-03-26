@@ -955,6 +955,16 @@ input {
     letter-spacing: -0.07em;
 }
 
+.auth-hero-title--intro {
+    max-width: 34ch;
+    margin-bottom: 16px;
+    font-size: clamp(1.05rem, 2vw, 1.3rem);
+    line-height: 1.55;
+    letter-spacing: 0;
+    font-weight: 500;
+    text-wrap: pretty;
+}
+
 .brand-content p,
 .auth-hero-text {
     max-width: 42ch;
@@ -3536,6 +3546,14 @@ body.theme-midnight .dashboard-body {
     --surface-strong: rgba(12, 20, 35, 0.96);
     --text-strong: #f8fafc;
     --text-muted: #9eb0c8;
+    /* Ensure "VO2max" and "Today's run" cards follow theme surfaces */
+    --bg-vo2: var(--surface);
+    --bg-recommend: var(--surface);
+    --bg-recommend-card: var(--surface-strong);
+    --bg-recommend-recovery: var(--surface-strong);
+    --bg-recommend-easy: rgba(6, 78, 59, 0.4);
+    --bg-recommend-quality: rgba(120, 53, 15, 0.4);
+    --bg-recommend-restart: rgba(124, 45, 18, 0.4);
 }
 
 body.theme-high-contrast .dashboard-body {
@@ -3548,6 +3566,14 @@ body.theme-high-contrast .dashboard-body {
     --brand-accent: #ffd400;
     --brand-accent-strong: #ffea70;
     --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 22px 48px rgba(0, 0, 0, 0.52);
+    /* Ensure "VO2max" and "Today's run" cards follow theme surfaces */
+    --bg-vo2: var(--surface);
+    --bg-recommend: var(--surface);
+    --bg-recommend-card: var(--surface-strong);
+    --bg-recommend-recovery: var(--surface-strong);
+    --bg-recommend-easy: var(--surface-strong);
+    --bg-recommend-quality: var(--surface-strong);
+    --bg-recommend-restart: var(--surface-strong);
 }
 
 body.theme-high-contrast-light .dashboard-body {
@@ -3560,6 +3586,14 @@ body.theme-high-contrast-light .dashboard-body {
     --brand-ink: #050505;
     --shadow-card: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 20px 42px rgba(15, 23, 42, 0.12);
     --map-overlay: rgba(255, 255, 255, 0.96);
+    /* Ensure "VO2max" and "Today's run" cards follow theme surfaces */
+    --bg-vo2: var(--surface);
+    --bg-recommend: var(--surface);
+    --bg-recommend-card: var(--surface-strong);
+    --bg-recommend-recovery: var(--surface-strong);
+    --bg-recommend-easy: var(--surface-strong);
+    --bg-recommend-quality: var(--surface-strong);
+    --bg-recommend-restart: var(--surface-strong);
 }
 
 body:is(.theme-midnight, .theme-high-contrast) .dashboard-body .lang-switcher,
@@ -5878,7 +5912,21 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
   border-color: var(--classic-accent, #fa5d29);
   box-shadow: 0 2px 8px rgba(250,93,41,0.12);
 }
-.shoe-brand-logo { font-size: 1.4rem; }
+.shoe-brand-logo {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shoe-brand-logo-svg {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+}
+.shoe-brand-logo-fallback {
+  font-size: 1.4rem;
+}
 .shoe-brand-name { font-weight: 600; font-size: 0.85rem; }
 .shoe-brand-count {
   font-size: 0.7rem; color: var(--classic-muted, #888);

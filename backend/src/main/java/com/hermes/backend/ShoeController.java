@@ -243,6 +243,14 @@ public class ShoeController {
 
         String brand = body.get("brand") instanceof String s ? s.trim() : "";
         String model = body.get("model") instanceof String s ? s.trim() : "";
+
+        try {
+            InputSanitizer.rejectControlAndHtmlChars(brand, "brand");
+            InputSanitizer.rejectControlAndHtmlChars(model, "model");
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
+
         if (brand.length() > 100 || model.length() > 100) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Brand and model must be 100 characters or fewer.");
         }
@@ -251,7 +259,18 @@ public class ShoeController {
         shoe.setRunner(user.get());
         shoe.setBrand(brand);
         shoe.setModel(model);
-        shoe.setNickname(body.get("nickname") instanceof String s ? s.trim() : null);
+        String nickname = body.get("nickname") instanceof String s ? s.trim() : null;
+        if (nickname != null) {
+            try {
+                InputSanitizer.rejectControlAndHtmlChars(nickname, "nickname");
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            }
+            if (nickname.length() > 80) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Nickname must be 80 characters or fewer.");
+            }
+        }
+        shoe.setNickname(nickname);
         if (body.get("maxDistanceKm") instanceof Number n) {
             double km = n.doubleValue();
             if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid max distance.");
@@ -267,7 +286,11 @@ public class ShoeController {
         }
         if (body.get("photoUrl") instanceof String url) {
             if (url.length() > 2048) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Photo URL too long.");
-            shoe.setPhotoUrl(url.isBlank() ? null : url);
+            try {
+                shoe.setPhotoUrl(SafeUrlValidator.validateHttpUrlOrNull(url, 2048, "photoUrl"));
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            }
         }
 
         shoeIdentityService.applyIdentityKey(shoe);
@@ -290,19 +313,65 @@ public class ShoeController {
         if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
 
         Shoe shoe = shoeOpt.get();
-        if (body.containsKey("brand")) shoe.setBrand((String) body.get("brand"));
-        if (body.containsKey("model")) shoe.setModel((String) body.get("model"));
-        if (body.containsKey("nickname")) shoe.setNickname((String) body.get("nickname"));
+        if (body.containsKey("brand") && body.get("brand") instanceof String s) {
+            String v = s.trim();
+            try {
+                InputSanitizer.rejectControlAndHtmlChars(v, "brand");
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            }
+            if (v.length() > 100) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Brand too long.");
+            shoe.setBrand(v);
+        }
+        if (body.containsKey("model") && body.get("model") instanceof String s) {
+            String v = s.trim();
+            try {
+                InputSanitizer.rejectControlAndHtmlChars(v, "model");
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            }
+            if (v.length() > 100) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Model too long.");
+            shoe.setModel(v);
+        }
+        if (body.containsKey("nickname")) {
+            Object nickRaw = body.get("nickname");
+            String v = nickRaw instanceof String s ? s.trim() : null;
+            if (v != null) {
+                try {
+                    InputSanitizer.rejectControlAndHtmlChars(v, "nickname");
+                } catch (IllegalArgumentException ex) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+                }
+                if (v.length() > 80) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Nickname too long.");
+            }
+            shoe.setNickname(v);
+        }
         if (body.containsKey("maxDistanceKm") && body.get("maxDistanceKm") != null) {
-            shoe.setMaxDistanceKm(((Number) body.get("maxDistanceKm")).doubleValue());
+            if (!(body.get("maxDistanceKm") instanceof Number n)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid maxDistanceKm.");
+            }
+            double km = n.doubleValue();
+            if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid max distance.");
+            shoe.setMaxDistanceKm(km);
         }
         if (body.containsKey("retired")) shoe.setRetired(Boolean.TRUE.equals(body.get("retired")));
         if (body.containsKey("isPrimary")) shoe.setIsPrimary(Boolean.TRUE.equals(body.get("isPrimary")));
         if (body.containsKey("initialDistanceKm") && body.get("initialDistanceKm") != null) {
-            shoe.setInitialDistanceKm(((Number) body.get("initialDistanceKm")).doubleValue());
+            if (!(body.get("initialDistanceKm") instanceof Number n)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid initialDistanceKm.");
+            }
+            double km = n.doubleValue();
+            if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid initial distance.");
+            shoe.setInitialDistanceKm(km);
         }
         if (body.containsKey("photoUrl")) {
-            shoe.setPhotoUrl((String) body.get("photoUrl"));
+            Object urlRaw = body.get("photoUrl");
+            String url = urlRaw instanceof String s ? s : null;
+            try {
+                shoe.setPhotoUrl(SafeUrlValidator.validateHttpUrlOrNull(url, 2048, "photoUrl"));
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            }
         }
 
         shoeIdentityService.applyIdentityKey(shoe);
@@ -349,8 +418,8 @@ public class ShoeController {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
-        Optional<Activity> activityOpt = activityRepository.findById(activityId);
-        if (activityOpt.isEmpty() || !activityOpt.get().getRunner().getId().equals(user.get().getId())) {
+        Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(activityId, user.get());
+        if (activityOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activity not found");
         }
 

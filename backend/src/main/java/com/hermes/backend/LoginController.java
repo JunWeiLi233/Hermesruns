@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -17,31 +19,39 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/auth")
 public class LoginController {
+    private static final Logger log = LoggerFactory.getLogger(LoginController.class);
 
     private final RunnerRepository runnerRepository;
     private final AuthService authService;
     private final LoginRateLimiter rateLimiter;
     private final SecretEncryptionService secretEncryptionService;
-    private final GarminOAuthSettings garminOAuthSettings;
     private final AiUsageService aiUsageService;
     private final EmailVerificationService emailVerificationService;
     private final VerificationResendLimiter verificationResendLimiter;
+    private final PasswordResetLimiter passwordResetLimiter;
+    private final PasswordResetService passwordResetService;
+    private final ApiRateLimiter apiRateLimiter;
 
     @Value("${app.billing.public-base-url:http://localhost:8080}")
     private String publicBaseUrl;
 
     public LoginController(RunnerRepository runnerRepository, AuthService authService, LoginRateLimiter rateLimiter,
-                           SecretEncryptionService secretEncryptionService, GarminOAuthSettings garminOAuthSettings,
+                           SecretEncryptionService secretEncryptionService,
                            AiUsageService aiUsageService, EmailVerificationService emailVerificationService,
-                           VerificationResendLimiter verificationResendLimiter) {
+                           VerificationResendLimiter verificationResendLimiter,
+                           PasswordResetLimiter passwordResetLimiter,
+                           PasswordResetService passwordResetService,
+                           ApiRateLimiter apiRateLimiter) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.rateLimiter = rateLimiter;
         this.secretEncryptionService = secretEncryptionService;
-        this.garminOAuthSettings = garminOAuthSettings;
         this.aiUsageService = aiUsageService;
         this.emailVerificationService = emailVerificationService;
         this.verificationResendLimiter = verificationResendLimiter;
+        this.passwordResetLimiter = passwordResetLimiter;
+        this.passwordResetService = passwordResetService;
+        this.apiRateLimiter = apiRateLimiter;
     }
 
     // ==========================================
@@ -49,25 +59,29 @@ public class LoginController {
     // ==========================================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Runner loginRequest, HttpServletRequest request) {
-        String ip = request.getRemoteAddr();
+        String ip = RequestIpResolver.clientIp(request);
         if (rateLimiter.isBlocked(ip)) {
+            log.warn("Auth login rate-limited ip={}", ip);
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
         }
 
         Optional<Runner> runnerOptional = authService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
         if (runnerOptional.isEmpty()) {
             rateLimiter.recordFailure(ip);
+            log.warn("Auth login failed ip={} email={}", ip, authService.normalizeEmail(loginRequest.getEmail()));
             return error(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
         }
 
         rateLimiter.recordSuccess(ip);
         Runner runner = runnerOptional.get();
         if (!authService.isAdmin(runner) && !runner.isEmailVerified()) {
+            log.warn("Auth login blocked (email not verified) ip={} email={}", ip, runner.getEmail());
             return errorWithCode(HttpStatus.FORBIDDEN,
                     "Please verify your email before signing in. Check your inbox or request a new link.",
                     "EMAIL_NOT_VERIFIED");
         }
         String token = authService.issueSessionToken(runner);
+        log.info("Auth login success ip={} runnerId={} role={}", ip, runner.getId(), runner.getRole());
         return ResponseEntity.ok(authResponse("Login successful.", token, runner, false));
     }
 
@@ -93,6 +107,14 @@ public class LoginController {
         if (token == null || token.isBlank()) {
             return new RedirectView(base + "/login?error=verify_invalid");
         }
+        if (token.length() > 1024) {
+            return new RedirectView(base + "/login?error=verify_invalid");
+        }
+        try {
+            InputSanitizer.rejectControlChars(token, "token");
+        } catch (IllegalArgumentException ex) {
+            return new RedirectView(base + "/login?error=verify_invalid");
+        }
         String hash = authService.hashPlainToken(token.trim());
         Optional<Runner> opt = runnerRepository.findByEmailVerificationTokenHash(hash);
         if (opt.isEmpty() || opt.get().isDeleted()) {
@@ -112,8 +134,9 @@ public class LoginController {
     @PostMapping("/resend-verification")
     public ResponseEntity<?> resendVerification(@RequestBody(required = false) Map<String, String> body,
                                                 HttpServletRequest request) {
-        String ip = request.getRemoteAddr();
+        String ip = RequestIpResolver.clientIp(request);
         if (!verificationResendLimiter.allow(ip)) {
+            log.warn("Auth resend verification rate-limited ip={}", ip);
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many requests. Try again later.");
         }
 
@@ -123,6 +146,11 @@ public class LoginController {
         if (email == null || email.isBlank() || !PasswordStrengthChecker.looksLikeEmail(email)) {
             return ResponseEntity.ok(Map.of("message", generic));
         }
+        try {
+            InputSanitizer.rejectControlChars(email, "email");
+        } catch (IllegalArgumentException ignored) {
+            return ResponseEntity.ok(Map.of("message", generic));
+        }
 
         Optional<Runner> opt = runnerRepository.findByEmailIgnoreCase(email);
         if (opt.isEmpty() || opt.get().isDeleted() || opt.get().isEmailVerified()) {
@@ -130,12 +158,14 @@ public class LoginController {
         }
 
         if (!emailVerificationService.isMailConfigured()) {
+            log.warn("Auth resend verification blocked (mail not configured) ip={}", ip);
             return error(HttpStatus.SERVICE_UNAVAILABLE, "Email delivery is not configured on this server.");
         }
 
         try {
             emailVerificationService.resendVerification(opt.get());
         } catch (Exception e) {
+            log.warn("Auth resend verification failed ip={} email={}", ip, email, e);
             return error(HttpStatus.SERVICE_UNAVAILABLE, "Could not send email. Try again later.");
         }
 
@@ -143,7 +173,13 @@ public class LoginController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody Runner signupRequest) {
+    public ResponseEntity<?> signup(@RequestBody Runner signupRequest, HttpServletRequest request) {
+        String ip = RequestIpResolver.clientIp(request);
+        // Anti-bot: limit account creation per IP
+        if (!apiRateLimiter.allow("signup:" + ip, 8, 3600)) { // 8 per hour
+            log.warn("Auth signup rate-limited ip={}", ip);
+            return error(HttpStatus.TOO_MANY_REQUESTS, "Too many sign-up attempts. Try again later.");
+        }
         String normalizedEmail = authService.normalizeEmail(signupRequest.getEmail());
         String rawPassword = signupRequest.getPassword();
 
@@ -209,6 +245,126 @@ public class LoginController {
         return ResponseEntity.ok(body);
     }
 
+    // ==========================================
+    // 2b. PASSWORD RESET (FORGOT / RESET)
+    // ==========================================
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<?> requestPasswordReset(
+            @RequestBody(required = false) Map<String, String> body,
+            HttpServletRequest request
+    ) {
+        String ip = RequestIpResolver.clientIp(request);
+        if (!passwordResetLimiter.allow(ip)) {
+            log.warn("Auth password reset request rate-limited ip={}", ip);
+            return error(HttpStatus.TOO_MANY_REQUESTS, "Too many requests. Try again later.");
+        }
+
+        // Always return a generic success to avoid account enumeration.
+        String generic = "If an account exists for that address, a password reset email was sent.";
+
+        String email = body == null ? null : authService.normalizeEmail(body.get("email"));
+        if (email == null || email.isBlank() || !PasswordStrengthChecker.looksLikeEmail(email)) {
+            return ResponseEntity.ok(Map.of("message", generic));
+        }
+        try {
+            InputSanitizer.rejectControlChars(email, "email");
+        } catch (IllegalArgumentException ignored) {
+            return ResponseEntity.ok(Map.of("message", generic));
+        }
+
+        if (!passwordResetService.isMailConfigured()) {
+            // Email reset requires mail; do not reveal whether the account exists.
+            log.warn("Auth password reset request ignored (mail not configured) ip={}", ip);
+            return ResponseEntity.ok(Map.of("message", generic));
+        }
+
+        Optional<Runner> opt = runnerRepository.findByEmailIgnoreCase(email)
+                .filter(r -> !r.isDeleted());
+        if (opt.isEmpty()) {
+            log.info("Auth password reset requested for non-existent email ip={}", ip);
+            return ResponseEntity.ok(Map.of("message", generic));
+        }
+
+        try {
+            passwordResetService.sendResetLink(opt.get());
+            log.info("Auth password reset email queued ip={} runnerId={}", ip, opt.get().getId());
+        } catch (Exception e) {
+            // Keep response generic; avoid leaking server configuration details.
+            log.warn("Auth password reset email send failed ip={} runnerId={}", ip, opt.get().getId(), e);
+        }
+
+        return ResponseEntity.ok(Map.of("message", generic));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<?> confirmPasswordReset(
+            @RequestBody(required = false) Map<String, String> body,
+            HttpServletRequest request
+    ) {
+        String ip = RequestIpResolver.clientIp(request);
+        // Reuse login limiter semantics for brute force protection
+        String key = "pwreset:" + ip;
+        if (rateLimiter.isBlocked(key)) {
+            log.warn("Auth password reset confirm rate-limited ip={}", ip);
+            return error(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
+        }
+
+        String token = body == null ? null : body.get("token");
+        String newPassword = body == null ? null : body.get("password");
+        if (token == null || token.isBlank()) {
+            rateLimiter.recordFailure(key);
+            return error(HttpStatus.BAD_REQUEST, "Reset token is required.");
+        }
+        try {
+            InputSanitizer.rejectControlChars(token, "token");
+            if (newPassword != null) InputSanitizer.rejectControlChars(newPassword, "password");
+        } catch (IllegalArgumentException ex) {
+            rateLimiter.recordFailure(key);
+            return error(HttpStatus.BAD_REQUEST, "Invalid input.");
+        }
+
+        PasswordStrengthChecker.Result pw = PasswordStrengthChecker.check(newPassword);
+        if (!pw.ok()) {
+            rateLimiter.recordFailure(key);
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("error", "Password does not meet strength requirements.");
+            err.put("code", "WEAK_PASSWORD");
+            err.put("failedRules", pw.failedRuleIds());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+        }
+
+        String hash = authService.hashPlainToken(token.trim());
+        Optional<Runner> opt = runnerRepository.findByPasswordResetTokenHash(hash)
+                .filter(r -> !r.isDeleted());
+        if (opt.isEmpty()) {
+            rateLimiter.recordFailure(key);
+            log.warn("Auth password reset confirm failed (token not found) ip={}", ip);
+            return error(HttpStatus.BAD_REQUEST, "Invalid or expired reset token.");
+        }
+
+        Runner runner = opt.get();
+        LocalDateTime exp = runner.getPasswordResetExpiresAt();
+        if (exp == null || exp.isBefore(LocalDateTime.now())) {
+            passwordResetService.clearResetFields(runner);
+            runnerRepository.save(runner);
+            rateLimiter.recordFailure(key);
+            log.warn("Auth password reset confirm failed (token expired) ip={} runnerId={}", ip, runner.getId());
+            return error(HttpStatus.BAD_REQUEST, "Invalid or expired reset token.");
+        }
+
+        // Apply new password, invalidate existing sessions, clear reset token.
+        authService.storePassword(runner, newPassword);
+        runner.setSessionToken(null);
+        runner.setTokenIssuedAt(null);
+        passwordResetService.clearResetFields(runner);
+        runnerRepository.save(runner);
+
+        rateLimiter.recordSuccess(key);
+        log.info("Auth password reset success ip={} runnerId={}", ip, runner.getId());
+        return ResponseEntity.ok(Map.of("message", "Password updated."));
+    }
+
     /**
      * Re-open a soft-deleted runner row so the same email can sign up again without a DB unique violation.
      */
@@ -226,12 +382,6 @@ public class LoginController {
         runner.setStravaAccessToken(null);
         runner.setStravaRefreshToken(null);
         runner.setStravaTokenExpiresAt(null);
-        runner.setGarminUserId(null);
-        runner.setGarminAccessToken(null);
-        runner.setGarminAccessTokenSecret(null);
-        runner.setGarminConsumerKey(null);
-        runner.setGarminConsumerSecret(null);
-        runner.setGarminRedirectUri(null);
         runner.setDisplayName(null);
         runner.setSubscriptionTier("FREE");
         runner.setProExpiresAt(null);
@@ -320,8 +470,13 @@ public class LoginController {
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
         }
 
-        String email = body.getOrDefault("email", "");
-        String password = body.getOrDefault("password", "");
+        String email = body == null ? "" : body.getOrDefault("email", "");
+        String password = body == null ? "" : body.getOrDefault("password", "");
+        try {
+            InputSanitizer.rejectControlChars(email, "email");
+        } catch (IllegalArgumentException ignored) {
+            return error(HttpStatus.UNAUTHORIZED, "Invalid admin credentials.");
+        }
         Optional<Runner> runnerOptional = authService.authenticate(email, password)
                 .filter(authService::isAdmin);
 
@@ -359,7 +514,14 @@ public class LoginController {
         }
 
         Runner runner = runnerOptional.get();
-        String action = (String) body.getOrDefault("action", "");
+        Object actionRaw = body == null ? null : body.get("action");
+        String action = actionRaw instanceof String s ? s : "";
+        try {
+            InputSanitizer.rejectControlChars(action, "action");
+            InputSanitizer.rejectControlAndHtmlChars(action, "action");
+        } catch (IllegalArgumentException ignored) {
+            return error(HttpStatus.BAD_REQUEST, "Invalid action.");
+        }
 
         if ("grant_pro".equals(action)) {
             int months = body.containsKey("months") ? ((Number) body.get("months")).intValue() : 1;
@@ -381,12 +543,6 @@ public class LoginController {
         response.put("token", token);
         response.put("email", runner.getEmail());
         response.put("role", runner.getRole());
-        if (!adminLogin) {
-            boolean garminReady = garminOAuthSettings.canConnectGarmin(secretEncryptionService, runner);
-            boolean usesServerKeys = secretEncryptionService.isConfigured() && garminOAuthSettings.usesServerKeysFor(runner);
-            response.put("garminConnectAvailable", Boolean.toString(garminReady));
-            response.put("garminUsesServerGarminKeys", Boolean.toString(usesServerKeys));
-        }
         return response;
     }
 

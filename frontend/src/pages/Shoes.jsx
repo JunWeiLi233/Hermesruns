@@ -6,7 +6,7 @@ import { apiJson, apiFetch } from '../api';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
-import shoeCatalog, { flatCatalog } from '../data/shoeCatalog';
+import shoeCatalog from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 
 function shoeHealth(current, max) {
@@ -15,6 +15,80 @@ function shoeHealth(current, max) {
   if (pct >= 0.9) return 'critical';
   if (pct >= 0.7) return 'warn';
   return 'good';
+}
+
+function normalizeBrandKey(brand) {
+  return (brand || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[!.,]/g, '');
+}
+
+function brandLogoSpec(brand) {
+  // Wordmark-style SVG “logos” (no external assets needed).
+  // We still keep `shoeCatalog.logo` as a fallback/compat field.
+  const key = normalizeBrandKey(brand);
+
+  const make = ({ bg, fg, text }) => ({
+    bg,
+    fg,
+    text,
+    fontSize: /[\u4e00-\u9fff]/.test(text) ? 12 : 13,
+  });
+
+  if (key === 'nike') return make({ bg: '#f97316', fg: '#ffffff', text: 'NIKE' });
+  if (key === 'adidas') return make({ bg: '#111827', fg: '#ffffff', text: 'ADID' });
+  if (key === 'asics') return make({ bg: '#2563eb', fg: '#ffffff', text: 'ASICS' });
+  if (key === 'newbalance') return make({ bg: '#fbbf24', fg: '#0f172a', text: 'NB' });
+  if (key === 'hoka') return make({ bg: '#22c55e', fg: '#ffffff', text: 'HOKA' });
+  if (key === 'brooks') return make({ bg: '#3b82f6', fg: '#ffffff', text: 'BROOKS' });
+  if (key === 'saucony') return make({ bg: '#ef4444', fg: '#ffffff', text: 'SAU' });
+  if (key === 'on') return make({ bg: '#e5e7eb', fg: '#0f172a', text: 'ON' });
+  if (key === 'mizuno') return make({ bg: '#8b5cf6', fg: '#ffffff', text: 'M' });
+  if (key === 'altra') return make({ bg: '#a16207', fg: '#ffffff', text: 'AL' });
+  if (key === 'puma') return make({ bg: '#0f172a', fg: '#ffffff', text: 'PUMA' });
+  if (key === 'reebok') return make({ bg: '#f59e0b', fg: '#0f172a', text: 'REEB' });
+  if (key === 'underarmour' || key === 'ua') return make({ bg: '#111827', fg: '#ffffff', text: 'UA' });
+  if (key === '361°' || key === '361' || key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361°' });
+  if (key === 'li-ning' || key === 'li ning' || (brand || '').includes('李宁')) return make({ bg: '#dc2626', fg: '#ffffff', text: '李宁' });
+  if (key === 'anta' || (brand || '').includes('安踏')) return make({ bg: '#f97316', fg: '#ffffff', text: '安踏' });
+  if (key === 'xtep' || (brand || '').includes('特步')) return make({ bg: '#2563eb', fg: '#ffffff', text: '特步' });
+  if (key === 'skechers') return make({ bg: '#06b6d4', fg: '#ffffff', text: 'S' });
+
+  // Chinese / additional brands (requested)
+  if ((brand || '').includes('鸿星尔克') || key === 'erke') return make({ bg: '#60a5fa', fg: '#0b1220', text: '鸿星尔克' });
+  if ((brand || '').includes('匹克') || key === 'peak') return make({ bg: '#ef4444', fg: '#ffffff', text: '匹克' });
+  if ((brand || '').includes('乔丹') || key === 'qiaodan') return make({ bg: '#111827', fg: '#ffffff', text: '乔丹' });
+  if ((brand || '').includes('回力') || key === 'warrior') return make({ bg: '#dc2626', fg: '#ffffff', text: '回力' });
+  if ((brand || '').includes('双星') || key === 'double-star' || key === 'doublestar') return make({ bg: '#64748b', fg: '#ffffff', text: '双星' });
+
+  return null;
+}
+
+function BrandLogo({ brand, fallbackEmoji }) {
+  const spec = brandLogoSpec(brand);
+  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || '👟'}</span>;
+
+  // Keep logo legible across themes: SVG uses fixed colors by design.
+  return (
+    <svg className="shoe-brand-logo-svg" viewBox="0 0 40 40" role="img" aria-label={`${brand} logo`}>
+      <rect x="2" y="2" width="36" height="36" rx="10" fill={spec.bg} />
+      <text
+        x="20"
+        y="25"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={spec.fg}
+        fontFamily={/[\u4e00-\u9fff]/.test(spec.text) ? `'Microsoft YaHei','PingFang SC',system-ui,Segoe UI,Arial'` : 'system-ui,Segoe UI,Arial'}
+        fontSize={spec.fontSize}
+        fontWeight="800"
+      >
+        {spec.text}
+      </text>
+    </svg>
+  );
 }
 
 /** Shoe image component with auto background removal */
@@ -100,12 +174,55 @@ export default function Shoes() {
   const [scanStatus, setScanStatus] = useState('');
   const [scannedShoes, setScannedShoes] = useState([]);
   const [aiQuota, setAiQuota] = useState(null);
+  const [catalog, setCatalog] = useState(shoeCatalog);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
     loadShoes();
     checkScanAvailable();
+    loadCatalog();
   }, [isAuthenticated]);
+
+  async function loadCatalog() {
+    try {
+      const data = await apiJson('/api/shoe-catalog');
+      const dynamicBrands = Array.isArray(data?.brands) ? data.brands : [];
+      if (dynamicBrands.length === 0) return;
+
+      const byBrand = new Map();
+      for (const b of shoeCatalog) {
+        byBrand.set((b.brand || '').toLowerCase(), {
+          brand: b.brand,
+          logo: b.logo,
+          models: Array.isArray(b.models) ? [...b.models] : [],
+        });
+      }
+      for (const b of dynamicBrands) {
+        const key = (b.brand || '').toLowerCase();
+        if (!key) continue;
+        const existing = byBrand.get(key);
+        if (!existing) {
+          byBrand.set(key, {
+            brand: b.brand,
+            logo: b.logo || '👟',
+            models: Array.isArray(b.models) ? b.models.map(m => ({ model: m.model, type: m.type || 'daily' })) : [],
+          });
+          continue;
+        }
+        const modelNames = new Set(existing.models.map(m => (m.model || '').toLowerCase()));
+        for (const m of (Array.isArray(b.models) ? b.models : [])) {
+          const mk = (m.model || '').toLowerCase();
+          if (!mk || modelNames.has(mk)) continue;
+          existing.models.push({ model: m.model, type: m.type || 'daily' });
+          modelNames.add(mk);
+        }
+      }
+      setCatalog(Array.from(byBrand.values()).sort((a, b) => a.brand.localeCompare(b.brand, 'zh-Hans-CN')));
+    } catch {
+      // Keep bundled catalog as fallback when API unavailable.
+      setCatalog(shoeCatalog);
+    }
+  }
 
   async function loadShoes() {
     try {
@@ -240,10 +357,11 @@ export default function Shoes() {
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
+    const flatCatalog = catalog.flatMap(b => (b.models || []).map(m => ({ brand: b.brand, model: m.model, type: m.type })));
     return flatCatalog.filter(
-      s => s.brand.toLowerCase().includes(q) || s.model.toLowerCase().includes(q)
+      s => (s.brand || '').toLowerCase().includes(q) || (s.model || '').toLowerCase().includes(q)
     ).slice(0, 15);
-  }, [searchQuery]);
+  }, [searchQuery, catalog]);
 
   // ── Edit modal ──
   function openEditForm(shoe) {
@@ -557,12 +675,14 @@ export default function Shoes() {
           {/* Brand grid */}
           {!searchQuery.trim() && (
             <div className="shoe-brand-grid">
-              {shoeCatalog.map(b => (
+              {catalog.map(b => (
                 <button
                   key={b.brand} type="button" className="shoe-brand-card"
                   onClick={() => handlePickBrand(b)}
                 >
-                  <span className="shoe-brand-logo">{b.logo}</span>
+                  <span className="shoe-brand-logo">
+                    <BrandLogo brand={b.brand} fallbackEmoji={b.logo} />
+                  </span>
                   <span className="shoe-brand-name">{b.brand}</span>
                   <span className="shoe-brand-count">{b.models.length}</span>
                 </button>
@@ -588,7 +708,9 @@ export default function Shoes() {
             &larr; {t('shoes.back')}
           </button>
           <div className="shoe-brand-header">
-            <span className="shoe-brand-logo">{selectedBrand.logo}</span>
+            <span className="shoe-brand-logo">
+              <BrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
+            </span>
             <span className="shoe-brand-name-lg">{selectedBrand.brand}</span>
           </div>
           <div className="shoe-model-list">

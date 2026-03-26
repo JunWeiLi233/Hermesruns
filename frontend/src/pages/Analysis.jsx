@@ -48,7 +48,11 @@ function classifyZone(vo2Fraction) {
 function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
   const hrPct = Math.min(1.0, avgHr / hrMax);
-  return Math.max(0, 1.67 * hrPct - 0.67);
+  // Swain (1994) running rule-of-thumb:
+  // %HRmax = 0.64 * %VO2max + 37  =>  %VO2max = (%HRmax - 37) / 0.64
+  // Convert fraction: %VO2max/100. With %HRmax = hrPct*100:
+  // vo2Fraction = (hrPct*100 - 37) / 64
+  return Math.max(0, (hrPct * 100 - 37) / 64);
 }
 
 function paceToVo2Fraction(paceSecPerKm, vdot) {
@@ -221,7 +225,7 @@ export default function Analysis() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [polarizedMode, setPolarizedMode] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
-  const [garminFiles, setGarminFiles] = useState(null);
+  const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
 
@@ -675,7 +679,7 @@ export default function Analysis() {
   async function handleImport(e) {
     e.preventDefault();
     const formData = new FormData();
-    if (garminFiles) for (const f of garminFiles) formData.append('garmins', f);
+    if (fitExportFiles) for (const f of fitExportFiles) formData.append('exports', f);
     if (corosFiles) for (const f of corosFiles) formData.append('coros', f);
     if (huaweiFiles) for (const f of huaweiFiles) formData.append('huawei', f);
     try {
@@ -1259,13 +1263,13 @@ export default function Analysis() {
             <section className="import-source-card">
               <div className="import-source-header">
                 <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.garmin_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.garmin_source_hint')}</span>
+                  <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
+                  <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
                 </div>
-                <span className="import-source-tag">GARMIN</span>
+                <span className="import-source-tag">FIT/GPX</span>
               </div>
-              <label className="modal-label">{t('profile.garmin_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setGarminFiles(e.target.files)} />
+              <label className="modal-label">{t('profile.fit_export_file_label')}</label>
+              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setFitExportFiles(e.target.files)} />
             </section>
             <section className="import-source-card">
               <div className="import-source-header">

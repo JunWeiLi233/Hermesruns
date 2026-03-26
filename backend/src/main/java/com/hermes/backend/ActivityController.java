@@ -13,6 +13,9 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/activities")
 public class ActivityController {
+    private static final int POINTS_BATCH_SIZE = 500;
+    private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
+
     private final AuthService authService;
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
@@ -56,6 +59,10 @@ public class ActivityController {
         Runner runner = activeUser.get();
         List<Object[]> coords;
         if (year != null) {
+            // Prevent weird ranges that could stress queries or return unexpected data.
+            if (year < 1900 || year > 2100) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid year.");
+            }
             java.time.LocalDateTime yearStart = java.time.LocalDateTime.of(year, 1, 1, 0, 0);
             java.time.LocalDateTime yearEnd = java.time.LocalDateTime.of(year + 1, 1, 1, 0, 0);
             coords = activityPointRepository.findHeatmapCoordsByRunnerAndTypeAndYear(
@@ -81,15 +88,15 @@ public class ActivityController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
         }
 
-        Optional<Activity> activityOpt = activityRepository.findById(id);
-        if (activityOpt.isEmpty() || !activityOpt.get().getRunner().getId().equals(activeUser.get().getId())) {
+        Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
+        if (activityOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activity not found");
         }
 
         Activity activity = activityOpt.get();
 
-        // FIT/GPX/TCX imports: return locally stored points
-        List<ActivityPoint> localPoints = activity.getPoints();
+        // FIT/GPX/TCX imports: return locally stored points (projection, not entities).
+        List<LatLngPoint> localPoints = fetchLatLngPoints(activity.getId());
         if (!localPoints.isEmpty()) {
             return ResponseEntity.ok(localPoints);
         }
@@ -99,12 +106,10 @@ public class ActivityController {
         String stravaToken = resolveRunnerStravaAccessToken(activeUser.get());
         if (stravaId != null && stravaToken != null) {
             try {
-                List<ActivityPoint> stravaPoints = fetchStravaStream(stravaId, stravaToken);
-                if (!stravaPoints.isEmpty()) {
-                    stravaPoints.forEach(p -> p.setActivity(activity));
-                    activityPointRepository.saveAll(stravaPoints);
-                }
-                return ResponseEntity.ok(stravaPoints);
+                fetchAndCacheStravaStream(activity, stravaId, stravaToken);
+                // Query again to return an identical payload shape for local/Strava points.
+                List<LatLngPoint> cached = fetchLatLngPoints(activity.getId());
+                return ResponseEntity.ok(cached);
             } catch (Exception e) {
                 System.err.println("Failed to fetch Strava stream for activity " + stravaId + ": " + e.getMessage());
             }
@@ -113,8 +118,23 @@ public class ActivityController {
         return ResponseEntity.ok(List.of());
     }
 
+    private List<LatLngPoint> fetchLatLngPoints(Long activityId) {
+        List<Object[]> coords = activityPointRepository.findLatLngByActivityIdOrdered(activityId);
+        if (coords == null || coords.isEmpty()) return List.of();
+
+        List<LatLngPoint> out = new ArrayList<>(coords.size());
+        for (Object[] row : coords) {
+            if (row == null || row.length < 2) continue;
+            Double lat = ((Number) row[0]).doubleValue();
+            Double lng = ((Number) row[1]).doubleValue();
+            if (lat == null || lng == null) continue;
+            out.add(new LatLngPoint(lat, lng));
+        }
+        return out;
+    }
+
     @SuppressWarnings("unchecked")
-    private List<ActivityPoint> fetchStravaStream(String stravaId, String accessToken) {
+    private void fetchAndCacheStravaStream(Activity activity, String stravaId, String accessToken) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -126,27 +146,47 @@ public class ActivityController {
         );
 
         List<Map<String, Object>> streams = response.getBody();
-        if (streams == null) return List.of();
+        if (streams == null) return;
 
         for (Map<String, Object> stream : streams) {
             if ("latlng".equals(stream.get("type"))) {
                 List<List<Double>> data = (List<List<Double>>) stream.get("data");
-                if (data == null) return List.of();
+                if (data == null || data.isEmpty()) return;
 
-                List<ActivityPoint> points = new ArrayList<>();
-                for (int i = 0; i < data.size(); i++) {
+                int total = data.size();
+                int stride = total > MAX_POINTS_PER_ACTIVITY
+                        ? Math.max(1, (int) Math.ceil(total / (double) MAX_POINTS_PER_ACTIVITY))
+                        : 1;
+
+                List<ActivityPoint> batch = new ArrayList<>(POINTS_BATCH_SIZE);
+                int seq = 0;
+
+                for (int i = 0; i < total; i += stride) {
                     List<Double> coord = data.get(i);
+                    if (coord == null || coord.size() < 2) continue;
+
                     ActivityPoint point = new ActivityPoint();
+                    point.setActivity(activity);
                     point.setLatitude(coord.get(0));
                     point.setLongitude(coord.get(1));
-                    point.setSequenceIndex(i);
-                    points.add(point);
+                    point.setSequenceIndex(seq++);
+                    batch.add(point);
+
+                    if (batch.size() >= POINTS_BATCH_SIZE) {
+                        activityPointRepository.saveAll(batch);
+                        activityPointRepository.flush();
+                        batch.clear();
+                    }
                 }
-                return points;
+
+                if (!batch.isEmpty()) {
+                    activityPointRepository.saveAll(batch);
+                    activityPointRepository.flush();
+                }
+
+                return;
             }
         }
-
-        return List.of();
     }
 
     private String resolveRunnerStravaAccessToken(Runner runner) {
@@ -162,4 +202,6 @@ public class ActivityController {
         }
         return decryptedToken;
     }
+
+    public record LatLngPoint(double latitude, double longitude) {}
 }

@@ -86,7 +86,7 @@ export default function Landing() {
 
   const integrations = [
     { name: 'Strava', color: '#fc4c02' },
-    { name: 'Garmin', color: '#007cc3' },
+    { name: 'FIT / GPX', color: '#007cc3' },
     { name: 'Google', color: '#4285f4' },
     { name: 'COROS', color: '#e53935' },
   ];

@@ -4,7 +4,11 @@ import { estimateCurrentVdot, computeTrainingPaces } from './vdot';
 function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
   const hrPct = Math.min(1.0, avgHr / hrMax);
-  return Math.max(0, 1.67 * hrPct - 0.67);
+  // Swain (1994) running rule-of-thumb:
+  // %HRmax = 0.64 * %VO2max + 37  =>  %VO2max = (%HRmax - 37) / 0.64
+  // vo2Fraction = %VO2max/100. With %HRmax = hrPct*100:
+  // vo2Fraction = (hrPct*100 - 37) / 64
+  return Math.max(0, (hrPct * 100 - 37) / 64);
 }
 
 function paceToVo2Fraction(paceSecPerKm, vdot) {
@@ -150,6 +154,77 @@ function computeTrainingLoadSnapshot(runs, bestVdot) {
   return { acute: ewmaA, chronic: ewmaC, acwr: lastAcwr };
 }
 
+function resolveRunDistanceKm(run) {
+  const km = Number(run.distanceKm || 0);
+  if (km > 0) return km;
+  const meters = Number(run.distanceMeters || 0);
+  return meters > 0 ? meters / 1000 : 0;
+}
+
+function resolveRunTimeMs(run) {
+  return new Date(run.startTime || run.startDate || 0).getTime();
+}
+
+function percentile(values, p) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * p)));
+  return sorted[idx];
+}
+
+function classifyHardRuns(runs) {
+  const eligiblePaces = runs
+    .map((r) => {
+      const km = resolveRunDistanceKm(r);
+      const sec = Number(r.movingTimeSeconds || 0);
+      return km >= 3 && sec > 0 ? sec / km : null;
+    })
+    .filter((v) => Number.isFinite(v));
+
+  const hardPaceThreshold = percentile(eligiblePaces, 0.35);
+
+  return runs.map((r) => {
+    const km = resolveRunDistanceKm(r);
+    const sec = Number(r.movingTimeSeconds || 0);
+    const durationMin = sec / 60;
+    const pace = km > 0 ? sec / km : null;
+    const longRun = durationMin >= 90 || km >= 16;
+    const fasterRun = hardPaceThreshold !== null && pace !== null && pace <= hardPaceThreshold && durationMin >= 30;
+    return { run: r, isHard: Boolean(longRun || fasterRun), durationMin, km };
+  });
+}
+
+function computeMicrocycleSnapshot(runs, nowMs) {
+  const d7 = 7 * 24 * 60 * 60 * 1000;
+  const d14 = 14 * 24 * 60 * 60 * 1000;
+  const tagged = classifyHardRuns(runs);
+  let km7 = 0;
+  let km14 = 0;
+  let hard7 = 0;
+  const runDays7 = new Set();
+  let lastHardAt = null;
+
+  for (const item of tagged) {
+    const t = resolveRunTimeMs(item.run);
+    if (!Number.isFinite(t)) continue;
+    const age = nowMs - t;
+    if (age <= d14) km14 += item.km;
+    if (age <= d7) {
+      km7 += item.km;
+      runDays7.add(new Date(t).toISOString().slice(0, 10));
+      if (item.isHard) hard7 += 1;
+    }
+    if (item.isHard && (lastHardAt === null || t > lastHardAt)) {
+      lastHardAt = t;
+    }
+  }
+
+  const hoursSinceHard = lastHardAt ? (nowMs - lastHardAt) / (1000 * 60 * 60) : null;
+  const runDaysCount7 = runDays7.size;
+  const qualityCap = runDaysCount7 >= 5 ? 2 : 1;
+  return { km7, km14, hard7, hoursSinceHard, runDaysCount7, qualityCap };
+}
+
 function getRecommendationTone(type, t) {
   switch (type) {
     case t('profile.today_run_type_recovery'):
@@ -221,14 +296,18 @@ function buildReasons(recommendation, t, metrics) {
   if (metrics.acwr !== null) {
     reasons.push(t('today_run.reason_acwr', { acwr: metrics.acwr.toFixed(2) }));
   }
+  if (metrics.hardRuns7d != null && metrics.qualityCap != null) {
+    reasons.push(t('today_run.reason_hard_days', { hard: metrics.hardRuns7d, cap: metrics.qualityCap }));
+  }
   reasons.push(recommendation.purpose);
   return reasons;
 }
 
 export function getTodayRunRecommendation({ runs, t, lang }) {
-  const totalKm = runs.reduce((s, r) => s + (r.distanceKm || 0), 0);
+  const totalKm = runs.reduce((s, r) => s + resolveRunDistanceKm(r), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
   const now = new Date();
+  const nowMs = now.getTime();
   const msPerDay = 24 * 60 * 60 * 1000;
   const recent7 = runs.filter((run) => {
     const date = new Date(run.startTime || run.startDate);
@@ -238,8 +317,8 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
     const date = new Date(run.startTime || run.startDate);
     return !Number.isNaN(date.getTime()) && (now - date) / msPerDay <= 14;
   });
-  const recent7Km = recent7.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
-  const recent14Km = recent14.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
+  const recent7Km = recent7.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
+  const recent14Km = recent14.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
   const lastRun = runs[0] || null;
   const daysSinceLastRun = lastRun
     ? Math.max(0, Math.floor((now - new Date(lastRun.startTime || lastRun.startDate)) / msPerDay))
@@ -267,6 +346,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
   const intervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'));
   const recoveryHours = recoveryState.recoveryHoursLeft || 0;
   const acwr = trainingLoad?.acwr ?? null;
+  const micro = computeMicrocycleSnapshot(runs, nowMs);
 
   let recommendation;
   if (!runs.length) {
@@ -277,7 +357,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       pace: t('profile.today_run_pace_restart'),
       purpose: t('profile.today_run_purpose_restart'),
     };
-  } else if (recoveryState.hasData && recoveryHours > 24) {
+  } else if (recoveryState.hasData && recoveryHours > 30) {
     recommendation = {
       type: t('profile.today_run_type_recovery'),
       title: t('profile.today_run_title_recovery'),
@@ -285,7 +365,19 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       pace: easyPace,
       purpose: t('profile.today_run_purpose_recovery_analysis', { hours: recoveryHours }),
     };
-  } else if (acwr !== null && acwr > 1.35) {
+  } else if (micro.hoursSinceHard !== null && micro.hoursSinceHard < 36) {
+    recommendation = {
+      type: t('profile.today_run_type_easy'),
+      title: t('profile.today_run_title_base'),
+      distance: t('profile.today_run_distance_base', {
+        distance: micro.km14 >= 20 ? '6-8 km' : '4-6 km',
+      }),
+      pace: easyPace,
+      purpose: t('profile.today_run_purpose_recovery_analysis', {
+        hours: Math.max(0, Math.round(36 - micro.hoursSinceHard)),
+      }),
+    };
+  } else if (acwr !== null && acwr > 1.2) {
     recommendation = {
       type: t('profile.today_run_type_recovery'),
       title: t('profile.today_run_title_load_high'),
@@ -293,7 +385,13 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       pace: easyPace,
       purpose: t('profile.today_run_purpose_load_high', { acwr: acwr.toFixed(2) }),
     };
-  } else if (acwr !== null && acwr < 0.8 && bestVdot > 0) {
+  } else if (
+    acwr !== null
+    && acwr < 0.85
+    && bestVdot > 0
+    && micro.hard7 < micro.qualityCap
+    && recoveryHours <= 18
+  ) {
     recommendation = {
       type: t('profile.today_run_type_quality'),
       title: t('profile.today_run_title_quality'),
@@ -311,7 +409,12 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       pace: easyPace,
       purpose: t('profile.today_run_purpose_comeback'),
     };
-  } else if (bestVdot > 0 && recent7Km >= 22 && recoveryHours <= 12) {
+  } else if (
+    bestVdot > 0
+    && recent7Km >= 22
+    && recoveryHours <= 12
+    && micro.hard7 < micro.qualityCap
+  ) {
     recommendation = {
       type: t('profile.today_run_type_quality'),
       title: t('profile.today_run_title_threshold'),
@@ -342,6 +445,10 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
     totalSec,
     recent7Km,
     recent14Km,
+    hardRuns7d: micro.hard7,
+    hoursSinceHard: micro.hoursSinceHard,
+    runDays7: micro.runDaysCount7,
+    qualityCap: micro.qualityCap,
     easyPace,
     thresholdPace,
     intervalPace,

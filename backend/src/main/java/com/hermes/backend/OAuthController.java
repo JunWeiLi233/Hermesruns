@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
 
+import jakarta.annotation.PreDestroy;
+
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -30,20 +32,35 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ConcurrentMap;
 
 @RestController
 @RequestMapping("/api")
 public class OAuthController {
+    private static final int STRAVA_POINTS_BATCH_SIZE = 500;
+    private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
+
     private final RunnerRepository runnerRepository;
     private final AuthService authService;
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
     private final SecretEncryptionService secretEncryptionService;
-    private final GarminOAuthSettings garminOAuthSettings;
+    private final SystemConfigService systemConfigService;
     private final AiUsageService aiUsageService;
     private final RestTemplate restTemplate;
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
+
+    // Bound background sync parallelism for small-RAM deployments.
+    private final ExecutorService stravaBackgroundExecutor = Executors.newFixedThreadPool(
+            2,
+            r -> {
+                Thread t = new Thread(r, "strava-sync-worker");
+                t.setDaemon(true);
+                return t;
+            }
+    );
 
     @Value("${google.client.id:}")
     private String googleClientId;
@@ -73,26 +90,35 @@ public class OAuthController {
 
     public OAuthController(RunnerRepository runnerRepository, AuthService authService,
                            ActivityRepository activityRepository, ActivityPointRepository activityPointRepository,
-                           SecretEncryptionService secretEncryptionService,
-                           GarminOAuthSettings garminOAuthSettings, AiUsageService aiUsageService,
-                           RestTemplate restTemplate) {
+                           SecretEncryptionService secretEncryptionService, AiUsageService aiUsageService,
+                           RestTemplate restTemplate,
+                           SystemConfigService systemConfigService) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
         this.secretEncryptionService = secretEncryptionService;
-        this.garminOAuthSettings = garminOAuthSettings;
         this.aiUsageService = aiUsageService;
         this.restTemplate = restTemplate;
+        this.systemConfigService = systemConfigService;
+    }
+
+    @PreDestroy
+    void shutdown() {
+        stravaBackgroundExecutor.shutdownNow();
     }
 
     @GetMapping("/auth/providers")
     public ResponseEntity<Map<String, Boolean>> getAuthProviders() {
         Map<String, Boolean> response = new HashMap<>();
-        response.put("googleConfigured", isGoogleConfigured());
-        response.put("stravaConfigured", isStravaConfigured());
-        response.put("garminGlobalConfigured", garminOAuthSettings.isGlobalConsumerPairConfigured());
+        response.put("googleConfigured", systemConfigService.isGoogleConfigured());
+        response.put("stravaConfigured", systemConfigService.isStravaConfigured());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/auth/strava/status")
+    public ResponseEntity<Map<String, Object>> getStravaStatus() {
+        return ResponseEntity.ok(systemConfigService.getStravaStatus());
     }
 
     @GetMapping("/auth/google/start")
@@ -224,15 +250,30 @@ public class OAuthController {
             @RequestParam(required = false) String state
     ) {
         if (!isStravaConfigured()) {
-            return errorRedirect("Strava sign-in is not configured.", state);
+            System.err.println("[Hermes] Strava OAuth callback hit but Strava is not configured.");
+            return errorRedirectCode(
+                    "STRAVA_NOT_CONFIGURED",
+                    "Strava OAuth is not configured on this server.",
+                    state
+            );
         }
 
         if (error != null && !error.isBlank()) {
-            return errorRedirect("Strava sign-in failed.", state);
+            System.err.println("[Hermes] Strava OAuth callback returned error: " + error);
+            return errorRedirectCode(
+                    "STRAVA_OAUTH_ERROR",
+                    "Strava returned an error.",
+                    state
+            );
         }
 
         if (code == null || code.isBlank()) {
-            return errorRedirect("Strava sign-in failed.", state);
+            System.err.println("[Hermes] Strava OAuth callback missing authorization code.");
+            return errorRedirectCode(
+                    "STRAVA_MISSING_CODE",
+                    "Strava callback is missing the authorization code.",
+                    state
+            );
         }
 
         RestTemplate restTemplate = this.restTemplate;
@@ -245,6 +286,8 @@ public class OAuthController {
             tokenParams.add("client_id", stravaClientId);
             tokenParams.add("client_secret", stravaClientSecret);
             tokenParams.add("code", code);
+            // Some OAuth providers require the same redirect_uri on token exchange.
+            tokenParams.add("redirect_uri", stravaRedirectUri);
             tokenParams.add("grant_type", "authorization_code");
 
             ResponseEntity<Map<String, Object>> tokenResponse = restTemplate.exchange(
@@ -257,7 +300,11 @@ public class OAuthController {
 
             Map<String, Object> responseBody = tokenResponse.getBody();
             if (responseBody == null) {
-                return errorRedirect("Strava sign-in failed.", state);
+                return errorRedirectCode(
+                        "STRAVA_OAUTH_INVALID_RESPONSE",
+                        "Strava token response was empty/invalid.",
+                        state
+                );
             }
 
             String accessToken = stringValue(responseBody.get("access_token"));
@@ -267,7 +314,11 @@ public class OAuthController {
             Long athleteId = longValue(athlete.get("id"));
 
             if (accessToken == null || accessToken.isBlank() || athleteId == null) {
-                return errorRedirect("Strava sign-in failed.", state);
+                return errorRedirectCode(
+                        "STRAVA_OAUTH_INVALID_RESPONSE",
+                        "Strava token response missing access_token/athlete id.",
+                        state
+                );
             }
 
             Runner runner = runnerRepository.findByStravaAthleteId(athleteId)
@@ -305,7 +356,10 @@ public class OAuthController {
             runner = runnerRepository.save(runner);
 
             Long runnerId = runner.getId();
-            CompletableFuture.runAsync(() -> fetchAndSaveStravaActivities(accessToken, runnerId, false));
+            CompletableFuture.runAsync(
+                    () -> fetchAndSaveStravaActivities(accessToken, runnerId, false),
+                    stravaBackgroundExecutor
+            );
 
             String token = authService.issueSessionToken(runner);
             String targetPage = authService.isAdmin(runner) ? "/dashboard" : "/profile";
@@ -317,7 +371,13 @@ public class OAuthController {
                             + "&email=" + urlEncode(runner.getEmail())
             );
         } catch (Exception exception) {
-            return errorRedirect("Strava sign-in failed.", state);
+            System.err.println("[Hermes] Strava OAuth callback failed: "
+                    + exception.getClass().getSimpleName() + " - " + exception.getMessage());
+            return errorRedirectCode(
+                    "STRAVA_OAUTH_FAILED",
+                    exception.getClass().getSimpleName() + ": " + safeMessage(exception),
+                    state
+            );
         }
     }
 
@@ -336,7 +396,10 @@ public class OAuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No Strava account linked");
         }
 
-        CompletableFuture.runAsync(() -> fetchAndSaveStravaActivities(accessToken, runner.getId(), false));
+        CompletableFuture.runAsync(
+                () -> fetchAndSaveStravaActivities(accessToken, runner.getId(), false),
+                stravaBackgroundExecutor
+        );
         return ResponseEntity.ok("Strava sync started");
     }
 
@@ -552,18 +615,44 @@ public class OAuthController {
                     List<List<Double>> data = (List<List<Double>>) stream.get("data");
                     if (data == null || data.isEmpty()) return true;
 
-                    List<ActivityPoint> points = new ArrayList<>();
-                    for (int i = 0; i < data.size(); i++) {
+                    // Memory optimization for small RAM servers:
+                    // avoid building the full points list; save incrementally.
+                    final int batchSize = STRAVA_POINTS_BATCH_SIZE;
+                    int total = data.size();
+                    int stride = total > MAX_POINTS_PER_ACTIVITY
+                            ? Math.max(1, (int) Math.ceil(total / (double) MAX_POINTS_PER_ACTIVITY))
+                            : 1;
+
+                    List<ActivityPoint> batch = new ArrayList<>(batchSize);
+                    int totalSaved = 0;
+                    int seq = 0;
+
+                    for (int i = 0; i < total; i += stride) {
                         List<Double> coord = data.get(i);
+                        if (coord == null || coord.size() < 2) continue;
+
                         ActivityPoint point = new ActivityPoint();
                         point.setActivity(activity);
                         point.setLatitude(coord.get(0));
                         point.setLongitude(coord.get(1));
-                        point.setSequenceIndex(i);
-                        points.add(point);
+                        point.setSequenceIndex(seq++);
+                        batch.add(point);
+
+                        if (batch.size() >= batchSize) {
+                            activityPointRepository.saveAll(batch);
+                            activityPointRepository.flush();
+                            totalSaved += batch.size();
+                            batch.clear();
+                        }
                     }
-                    savePointsInBatches(points);
-                    System.out.println("GPS cached: " + stravaId + " (" + points.size() + " pts)");
+
+                    if (!batch.isEmpty()) {
+                        activityPointRepository.saveAll(batch);
+                        activityPointRepository.flush();
+                        totalSaved += batch.size();
+                    }
+
+                    System.out.println("GPS cached: " + stravaId + " (" + totalSaved + " pts)");
                     return true;
                 }
             }
@@ -621,14 +710,11 @@ public class OAuthController {
     }
 
     private boolean isGoogleConfigured() {
-        return googleClientId != null && !googleClientId.isBlank()
-                && googleClientSecret != null && !googleClientSecret.isBlank();
+        return systemConfigService.isGoogleConfigured();
     }
 
     boolean isStravaConfigured() {
-        return stravaClientId != null && !stravaClientId.isBlank()
-                && stravaClientSecret != null && !stravaClientSecret.isBlank()
-                && secretEncryptionService.isConfigured();
+        return systemConfigService.isStravaConfigured();
     }
 
     String resolveRunnerStravaAccessToken(Runner runner) {
@@ -702,6 +788,26 @@ public class OAuthController {
 
     private RedirectView errorRedirect(String message, String state) {
         return new RedirectView(resolveEntryPage(state) + "?error=" + urlEncode(message));
+    }
+
+    private RedirectView errorRedirectCode(String code, String details, String state) {
+        String base = resolveEntryPage(state) + "?error=" + urlEncode(code);
+        if (details != null && !details.isBlank()) {
+            base += "&details=" + urlEncode(details);
+        }
+        return new RedirectView(base);
+    }
+
+    private String safeMessage(Exception exception) {
+        try {
+            String msg = exception.getMessage();
+            if (msg == null) return "";
+            // Keep the URL reasonably short; avoid dumping huge nested messages.
+            msg = msg.trim();
+            return msg.length() > 200 ? msg.substring(0, 200) : msg;
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     private String resolveEntryPage(String state) {

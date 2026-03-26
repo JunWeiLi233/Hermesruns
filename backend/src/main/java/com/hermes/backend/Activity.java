@@ -42,7 +42,7 @@ public class Activity {
     private int movingTimeSeconds;
     private String startDate;
 
-    // --- CONTRIBUTOR'S NEW FIELDS (For Garmin/Coros GPS Engine) ---
+    // --- GPS / import fields (FIT, GPX, TCX from file imports) ---
     @Enumerated(EnumType.STRING)
     private ImportProvider provider;
 

@@ -45,9 +45,7 @@ public class WebhookRateLimitFilter implements Filter {
         }
 
         // Do not rate-limit Stripe webhooks — retries are legitimate; authenticity is enforced by signature.
-        boolean webhookPath = path.endsWith("/api/strava/webhook")
-                || path.endsWith("/api/garmin/webhook")
-                || path.endsWith("/api/garmin/deregistration");
+        boolean webhookPath = path.endsWith("/api/strava/webhook");
 
         if (!webhookPath) {
             chain.doFilter(request, response);

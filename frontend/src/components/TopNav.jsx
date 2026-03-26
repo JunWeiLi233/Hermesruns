@@ -46,6 +46,12 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
           >
             {t('races.nav_label')}
           </NavLink>
+          <NavLink
+            to="/muscle-training"
+            className={({ isActive }) => `top-nav-shortcut${isActive ? ' active' : ''}`}
+          >
+            {t('muscle_training.nav_label')}
+          </NavLink>
           <div className="unit-toggle">
             <button type="button" className={unit === 'km' ? 'active' : ''} onClick={() => setUnit('km')}>km</button>
             <button type="button" className={unit === 'mile' ? 'active' : ''} onClick={() => setUnit('mile')}>mi</button>

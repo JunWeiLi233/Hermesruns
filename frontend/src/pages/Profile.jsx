@@ -86,7 +86,7 @@ export default function Profile() {
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [nameStatus, setNameStatus] = useState('');
   const [importStatus, setImportStatus] = useState('');
-  const [garminFiles, setGarminFiles] = useState(null);
+  const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
 
@@ -626,8 +626,8 @@ export default function Profile() {
     const formData = new FormData();
     let hasFiles = false;
 
-    if (garminFiles) {
-      for (const f of garminFiles) { formData.append('garmins', f); hasFiles = true; }
+    if (fitExportFiles) {
+      for (const f of fitExportFiles) { formData.append('exports', f); hasFiles = true; }
     }
     if (corosFiles) {
       for (const f of corosFiles) { formData.append('coros', f); hasFiles = true; }
@@ -740,7 +740,6 @@ export default function Profile() {
                       <span className="analysis-vo2-value">{profileVdot.toFixed(1)}</span>
                       <span className="analysis-vo2-unit">{t('profile.vo2_unit_short')}</span>
                     </div>
-                    <p className="analysis-vo2-formula-hint">{t('profile.vo2_formula_hint')}</p>
                     <p className="analysis-vo2-copy">{t('profile.vo2_card_copy')}</p>
                   </>
                 ) : (
@@ -939,7 +938,7 @@ export default function Profile() {
             <section className="card connected-services-section">
               <h2 style={{ margin: '0 0 16px' }}>{t('profile.connected_services')}</h2>
 
-              {/* Garmin — file import */}
+              {/* FIT/GPX — file import */}
               <div className="service-row">
                 <div className="service-icon" style={{ background: '#11548a' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -948,8 +947,8 @@ export default function Profile() {
                   </svg>
                 </div>
                 <div className="service-info">
-                  <strong>{t('profile.garmin_watch_title')}</strong>
-                  <span className="service-status service-status-off">{t('profile.garmin_watch_status')}</span>
+                  <strong>{t('profile.fit_export_watch_title')}</strong>
+                  <span className="service-status service-status-off">{t('profile.fit_export_watch_status')}</span>
                 </div>
                 <div className="service-action">
                   <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
@@ -957,7 +956,7 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <p className="service-hint">{t('profile.garmin_import_hint')}</p>
+              <p className="service-hint">{t('profile.fit_export_import_hint')}</p>
 
               {/* COROS — file import */}
               <div className="service-row" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--line, #eee)' }}>
@@ -1317,14 +1316,14 @@ export default function Profile() {
             <section className="import-source-card">
               <div className="import-source-header">
                 <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.garmin_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.garmin_source_hint')}</span>
+                  <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
+                  <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
                 </div>
-                <span className="import-source-tag">GARMIN</span>
+                <span className="import-source-tag">FIT/GPX</span>
               </div>
-              <label className="modal-label">{t('profile.garmin_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setGarminFiles(e.target.files)} />
-              <p className="selected-file-name">{garminFiles?.length ? `${garminFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <label className="modal-label">{t('profile.fit_export_file_label')}</label>
+              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setFitExportFiles(e.target.files)} />
+              <p className="selected-file-name">{fitExportFiles?.length ? `${fitExportFiles.length} file(s)` : t('profile.no_file_selected')}</p>
             </section>
             <section className="import-source-card">
               <div className="import-source-header">
