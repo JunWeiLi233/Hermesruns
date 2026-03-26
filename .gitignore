@@ -67,7 +67,8 @@ migration_export/
 .tools/h2_tables.sql
 
 # Cloned repos
-run/
+/run/
+/Hermes/
 
 # Frontend
 frontend/node_modules/

@@ -1,11 +1,12 @@
 package com.hermes.backend;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface RunnerRepository extends JpaRepository<Runner, Long> {
+public interface RunnerRepository extends JpaRepository<Runner, Long>, JpaSpecificationExecutor<Runner> {
     boolean existsByEmailIgnoreCase(String email);
 
     Optional<Runner> findByEmailIgnoreCase(String email);
@@ -21,4 +22,6 @@ public interface RunnerRepository extends JpaRepository<Runner, Long> {
     Optional<Runner> findByEmailVerificationTokenHash(String emailVerificationTokenHash);
 
     Optional<Runner> findByPasswordResetTokenHash(String passwordResetTokenHash);
+
+    long countByDeletedFalse();
 }

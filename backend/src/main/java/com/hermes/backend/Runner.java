@@ -55,6 +55,8 @@ public class Runner {
 
     private Long stravaTokenExpiresAt;
 
+    private LocalDateTime createdAt;
+
     public Runner() {
     }
 
@@ -175,6 +177,14 @@ public class Runner {
         this.stravaTokenExpiresAt = stravaTokenExpiresAt;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     // ── Subscription & AI usage fields ──
     // ColumnDefault: required so Hibernate ddl-auto can add NOT NULL columns on PostgreSQL when rows already exist.
 
@@ -229,6 +239,9 @@ public class Runner {
     private void applySubscriptionAiDefaults() {
         if (subscriptionTier == null || subscriptionTier.isBlank()) {
             subscriptionTier = "FREE";
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
         }
     }
 

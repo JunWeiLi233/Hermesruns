@@ -3794,6 +3794,101 @@ body.theme-high-contrast-light .dashboard-body select {
     background: #ffffff;
 }
 
+.weekly-flashcard {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(180px, 0.8fr);
+    gap: 20px;
+    align-items: center;
+    padding: 24px 26px;
+    cursor: pointer;
+    border: 1px solid rgba(251, 146, 60, 0.16);
+    background:
+        radial-gradient(circle at top left, rgba(251, 146, 60, 0.18), transparent 34%),
+        linear-gradient(135deg, rgba(255, 237, 213, 0.94), rgba(255, 228, 230, 0.9));
+}
+
+.weekly-flashcard-copy {
+    display: grid;
+    gap: 8px;
+}
+
+.weekly-flashcard-eyebrow {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--brand-accent, #ff6b2c);
+}
+
+.weekly-flashcard h3 {
+    margin: 0;
+    font-size: clamp(1.1rem, 2vw, 1.45rem);
+    line-height: 1.25;
+    color: var(--text-strong, #0f172a);
+}
+
+.weekly-flashcard p {
+    margin: 0;
+    color: var(--text-muted, #64748b);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+.weekly-flashcard-side {
+    display: grid;
+    gap: 8px;
+    justify-items: end;
+    text-align: right;
+}
+
+.weekly-flashcard-side strong {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-family: var(--font-display);
+    color: var(--brand-accent, #ff6b2c);
+    line-height: 1;
+}
+
+.weekly-flashcard-side span {
+    font-size: 0.78rem;
+    color: var(--text-muted, #64748b);
+    font-weight: 600;
+}
+
+.weekly-flashcard-dots {
+    display: flex;
+    gap: 6px;
+}
+
+.weekly-flashcard-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.35);
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.weekly-flashcard-dot.active {
+    background: var(--brand-accent, #ff6b2c);
+    transform: scale(1.15);
+}
+
+body.theme-midnight .weekly-flashcard {
+    border-color: rgba(251, 146, 60, 0.2);
+    background:
+        radial-gradient(circle at top left, rgba(251, 146, 60, 0.16), transparent 30%),
+        linear-gradient(135deg, rgba(56, 28, 17, 0.92), rgba(76, 5, 25, 0.88));
+}
+
+body.theme-midnight .weekly-flashcard h3 {
+    color: #f8fafc;
+}
+
+body.theme-midnight .weekly-flashcard p,
+body.theme-midnight .weekly-flashcard-side span {
+    color: rgba(226, 232, 240, 0.72);
+}
+
 @media (max-width: 1024px) {
     .layout-wrapper,
     .bottom-grid,
@@ -3803,6 +3898,15 @@ body.theme-high-contrast-light .dashboard-body select {
 
     .brand-section {
         padding: 52px 28px 40px;
+    }
+
+    .weekly-flashcard {
+        grid-template-columns: 1fr;
+    }
+
+    .weekly-flashcard-side {
+        justify-items: start;
+        text-align: left;
     }
 
     .form-section {
