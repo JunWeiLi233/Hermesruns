@@ -67,12 +67,10 @@ export function calculateVdot(distanceMeters, timeMinutes) {
  */
 export function fractionVo2maxFromHeartRate(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax < 130) return null;
-  // Swain (1994) running rule-of-thumb:
-  // %HRmax = 0.64 * %VO2max + 37  =>  %VO2max = (%HRmax - 37) / 0.64
-  // Here we use avgHr/hrMax as %HRmax / 100.
-  const hrPct = Math.min(1.0, avgHr / hrMax); // 0..1
-  const vo2Fraction = ((hrPct * 100) - 37) / 64; // = %VO2max/100
-  return Math.min(0.97, Math.max(0.52, vo2Fraction));
+  // Practical approximation: for steady runs, avgHR/HRmax is usually close to
+  // the sustainable VO2 fraction for that effort. Clamp to avoid outliers.
+  const hrPct = Math.min(1.0, avgHr / hrMax);
+  return Math.min(0.98, Math.max(0.60, hrPct));
 }
 
 function clampVo2maxEstimate(v) {
@@ -150,11 +148,12 @@ export function vdotToPaceSecondsPerKm(vdot, vo2Fraction) {
 
 export function computeTrainingPaces(vdot) {
   return {
-    easy: [vdotToPaceSecondsPerKm(vdot, 0.54), vdotToPaceSecondsPerKm(vdot, 0.62)],
-    marathon: [vdotToPaceSecondsPerKm(vdot, 0.78)],
-    threshold: [vdotToPaceSecondsPerKm(vdot, 0.85)],
-    interval: [vdotToPaceSecondsPerKm(vdot, 0.96)],
-    repetition: [vdotToPaceSecondsPerKm(vdot, 1.11)],
+    // Daniels-style target fractions (more realistic zone anchors).
+    easy: [vdotToPaceSecondsPerKm(vdot, 0.59), vdotToPaceSecondsPerKm(vdot, 0.74)],
+    marathon: [vdotToPaceSecondsPerKm(vdot, 0.80)],
+    threshold: [vdotToPaceSecondsPerKm(vdot, 0.88)],
+    interval: [vdotToPaceSecondsPerKm(vdot, 0.98)],
+    repetition: [vdotToPaceSecondsPerKm(vdot, 1.05)],
   };
 }
 
@@ -169,6 +168,59 @@ export function predictRaceTime(vdot, distanceMeters) {
     else hi = mid;
   }
   return (lo + hi) / 2;
+}
+
+function bestRecentNormalizedRaceTimeSec(runs, targetMeters, options = {}) {
+  const { lookbackDays = 180 } = options;
+  if (!Array.isArray(runs) || !runs.length || targetMeters <= 0) return null;
+  const now = Date.now();
+  const lookbackMs = lookbackDays * 24 * 60 * 60 * 1000;
+  const targetKm = targetMeters / 1000;
+  let best = null;
+
+  for (const run of runs) {
+    const km = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
+    const sec = Number(run.movingTimeSeconds || run.durationSeconds || 0);
+    const t = new Date(run.startTime || run.startDate || 0).getTime();
+    if (!Number.isFinite(km) || !Number.isFinite(sec) || !Number.isFinite(t)) continue;
+    if (km <= 0 || sec <= 0 || now - t > lookbackMs) continue;
+
+    const distRatio = km / targetKm;
+    // Keep only runs reasonably close to target race distance.
+    if (distRatio < 0.8 || distRatio > 1.2) continue;
+
+    const paceSecPerKm = sec / km;
+    const normalizedSec = paceSecPerKm * targetKm;
+    if (!Number.isFinite(normalizedSec) || normalizedSec <= 0) continue;
+
+    if (best == null || normalizedSec < best.normalizedSec) {
+      best = { normalizedSec, distRatio };
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Race prediction calibrated by recent real-world results near the same distance.
+ * This avoids optimistic predictions when VO2/VDOT is higher than current race readiness.
+ */
+export function predictRaceTimeCalibrated(vdot, distanceMeters, runs, options = {}) {
+  const baseMin = predictRaceTime(vdot, distanceMeters);
+  if (!baseMin || !Array.isArray(runs) || runs.length === 0) return baseMin;
+
+  const anchor = bestRecentNormalizedRaceTimeSec(runs, distanceMeters, options);
+  if (!anchor) return baseMin;
+
+  const baseSec = baseMin * 60;
+  // Stronger blend when anchor run is very close to target distance.
+  const closeness = Math.max(0, 1 - Math.abs(anchor.distRatio - 1) / 0.2); // 1 at exact, 0 at bounds
+  const weight = 0.45 + 0.35 * closeness; // 0.45 .. 0.80
+  const blendedSec = baseSec * (1 - weight) + anchor.normalizedSec * weight;
+  // Guardrail: do not predict meaningfully faster than a very recent, near-distance anchor.
+  // This prevents optimistic projections that disagree with proven race reality.
+  const floorSec = anchor.normalizedSec * 0.995;
+  return Math.max(blendedSec, floorSec) / 60;
 }
 
 export const RACE_DISTANCES = [

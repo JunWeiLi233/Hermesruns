@@ -24,8 +24,7 @@ public class AdminAuditLog {
     private String targetId;
     private String summary;
 
-    @Lob
-    @Column(columnDefinition = "CLOB")
+    @Column(columnDefinition = "text")
     private String metadataJson;
 
     @PrePersist

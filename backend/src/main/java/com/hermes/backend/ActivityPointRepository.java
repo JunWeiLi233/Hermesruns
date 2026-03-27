@@ -89,4 +89,35 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             order by p.sequenceIndex asc
             """)
     List<Object[]> findLatLngByActivityIdOrdered(@Param("activityId") Long activityId);
+
+    @Query("""
+            select p.latitude, p.longitude, p.elapsedSeconds, p.distanceMeters, p.elevationMeters, p.heartRate, p.cadence,
+                   p.elevationRawMeters, p.elevationCorrectedMeters
+            from ActivityPoint p
+            where p.activity.id = :activityId
+            order by p.sequenceIndex asc
+            """)
+    List<Object[]> findAnalyticsSamplesByActivityIdOrdered(@Param("activityId") Long activityId);
+
+    @Query("""
+            select p
+            from ActivityPoint p
+            where p.activity = :activity
+            order by p.sequenceIndex asc
+            """)
+    List<ActivityPoint> findByActivityOrderBySequenceIndexAsc(@Param("activity") Activity activity);
+
+    @Query(value = """
+            select ap.latitude, ap.longitude
+            from activity_points ap
+            join activities a on a.id = ap.activity_id
+            where a.runner_id = :runnerId
+              and a.activity_type = :activityType
+            order by coalesce(a.start_time, a.created_at) desc, ap.sequence_index desc
+            limit 1
+            """, nativeQuery = true)
+    List<Object[]> findLatestLatLngByRunnerAndType(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType
+    );
 }

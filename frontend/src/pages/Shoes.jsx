@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
 import shoeCatalog from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
+import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 
 function shoeHealth(current, max) {
   if (!max || max <= 0) return 'good';
@@ -131,12 +133,110 @@ const TYPE_LABELS = {
 /** AI 识图单次请求最多处理的图片数量 */
 const SHOE_SCAN_MAX_FILES = 5;
 
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function average(values) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function formatPaceForDisplay(paceSecPerKm, unit, t) {
+  if (!paceSecPerKm || paceSecPerKm <= 0) return '--';
+  const converted = unit === 'mile' ? paceSecPerKm * 1.60934 : paceSecPerKm;
+  const mins = Math.floor(converted / 60);
+  const secs = Math.round(converted % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}/${unit === 'mile' ? t('analysis.unit_distance_mile') : t('analysis.unit_distance_km')}`;
+}
+
+function buildShoePerformanceInsights(shoes, runs, unit, t, lang) {
+  const eligibleRuns = runs
+    .map((run) => {
+      const shoeId = run.shoeId;
+      const distanceKm = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
+      const movingTimeSeconds = Number(run.movingTimeSeconds || run.durationSeconds || 0);
+      const averageHeartRate = Number(run.averageHeartRate || 0);
+      const averageCadence = Number(run.averageCadence || 0);
+      if (!shoeId || distanceKm < 4 || movingTimeSeconds <= 0 || averageHeartRate <= 0) return null;
+      return {
+        shoeId,
+        distanceKm,
+        movingTimeSeconds,
+        averageHeartRate,
+        averageCadence: averageCadence > 0 ? averageCadence : null,
+        paceSecPerKm: movingTimeSeconds / Math.max(distanceKm, 0.001),
+      };
+    })
+    .filter(Boolean);
+
+  const byShoe = new Map();
+  for (const run of eligibleRuns) {
+    if (!byShoe.has(run.shoeId)) byShoe.set(run.shoeId, []);
+    byShoe.get(run.shoeId).push(run);
+  }
+
+  const insights = new Map();
+  let topInsight = null;
+
+  for (const shoe of shoes) {
+    const shoeRuns = byShoe.get(shoe.id) || [];
+    if (shoeRuns.length < 3) continue;
+
+    const anchorPace = Math.round(median(shoeRuns.map((run) => run.paceSecPerKm)) / 15) * 15;
+    const samePaceRuns = shoeRuns.filter((run) => Math.abs(run.paceSecPerKm - anchorPace) <= 20);
+    const comparisonRuns = eligibleRuns.filter((run) => run.shoeId !== shoe.id && Math.abs(run.paceSecPerKm - anchorPace) <= 20);
+    if (samePaceRuns.length < 2 || comparisonRuns.length < 2) continue;
+
+    const shoeHr = average(samePaceRuns.map((run) => run.averageHeartRate));
+    const otherHr = average(comparisonRuns.map((run) => run.averageHeartRate));
+    const deltaHr = otherHr - shoeHr;
+    const shoeCadenceValues = samePaceRuns.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
+    const otherCadenceValues = comparisonRuns.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
+    const cadenceDelta = shoeCadenceValues.length >= 2 && otherCadenceValues.length >= 2
+      ? average(shoeCadenceValues) - average(otherCadenceValues)
+      : null;
+
+    const insight = {
+      shoeId: shoe.id,
+      paceSecPerKm: anchorPace,
+      deltaHr,
+      cadenceDelta,
+      sampleCount: samePaceRuns.length,
+      compareCount: comparisonRuns.length,
+      positive: deltaHr > 0.8,
+      name: formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang }),
+      summary: deltaHr > 0
+        ? t('shoes.performance_positive', {
+          bpm: Math.abs(deltaHr).toFixed(1),
+          pace: formatPaceForDisplay(anchorPace, unit, t),
+        })
+        : t('shoes.performance_negative', {
+          bpm: Math.abs(deltaHr).toFixed(1),
+          pace: formatPaceForDisplay(anchorPace, unit, t),
+        }),
+    };
+
+    insights.set(shoe.id, insight);
+    if (!topInsight || Math.abs(deltaHr) > Math.abs(topInsight.deltaHr)) {
+      topInsight = insight;
+    }
+  }
+
+  return { byShoe: insights, topInsight };
+}
+
 export default function Shoes() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
+  const { unit } = useUnit();
   const navigate = useNavigate();
 
   const [shoes, setShoes] = useState([]);
+  const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
   const [showRetired, setShowRetired] = useState(false);
   const [duplicateClusters, setDuplicateClusters] = useState([]);
@@ -179,9 +279,19 @@ export default function Shoes() {
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
     loadShoes();
+    loadRuns();
     checkScanAvailable();
     loadCatalog();
   }, [isAuthenticated]);
+
+  async function loadRuns() {
+    try {
+      const activities = await apiJson('/api/activities');
+      setRuns(Array.isArray(activities) ? activities : []);
+    } catch {
+      setRuns([]);
+    }
+  }
 
   async function loadCatalog() {
     try {
@@ -313,6 +423,7 @@ export default function Shoes() {
   // Stats
   const activeShoes = shoes.filter(s => !s.retired);
   const totalMileage = shoes.reduce((s, sh) => s + (sh.currentDistanceKm || 0), 0);
+  const shoePerformanceInsights = useMemo(() => buildShoePerformanceInsights(shoes, runs, unit, t, lang), [shoes, runs, unit, t, lang]);
   const avgHealthLabel = (() => {
     if (activeShoes.length === 0) return '--';
     const healths = activeShoes.map(s => shoeHealth(s.currentDistanceKm || 0, s.maxDistanceKm || 650));
@@ -664,8 +775,8 @@ export default function Shoes() {
                   key={i} type="button" className="shoe-search-item"
                   onClick={() => { setFormBrand(s.brand); setFormModel(s.model); setSearchQuery(''); setAddStep('details'); }}
                 >
-                  <span className="shoe-search-item-brand">{s.brand}</span>
-                  <span className="shoe-search-item-model">{s.model}</span>
+                  <span className="shoe-search-item-brand">{localizeShoeBrand(s.brand, lang)}</span>
+                  <span className="shoe-search-item-model">{localizeShoeModel(s.model, lang)}</span>
                   <span className={`shoe-type-badge shoe-type-${s.type}`}>{t(`shoes.${TYPE_LABELS[s.type]}`)}</span>
                 </button>
               ))}
@@ -683,7 +794,7 @@ export default function Shoes() {
                   <span className="shoe-brand-logo">
                     <BrandLogo brand={b.brand} fallbackEmoji={b.logo} />
                   </span>
-                  <span className="shoe-brand-name">{b.brand}</span>
+                  <span className="shoe-brand-name">{localizeShoeBrand(b.brand, lang)}</span>
                   <span className="shoe-brand-count">{b.models.length}</span>
                 </button>
               ))}
@@ -711,7 +822,7 @@ export default function Shoes() {
             <span className="shoe-brand-logo">
               <BrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
             </span>
-            <span className="shoe-brand-name-lg">{selectedBrand.brand}</span>
+            <span className="shoe-brand-name-lg">{localizeShoeBrand(selectedBrand.brand, lang)}</span>
           </div>
           <div className="shoe-model-list">
             {selectedBrand.models.map((m, i) => (
@@ -719,7 +830,7 @@ export default function Shoes() {
                 key={i} type="button" className="shoe-model-item"
                 onClick={() => handlePickModel(m)}
               >
-                <span className="shoe-model-name">{m.model}</span>
+                <span className="shoe-model-name">{localizeShoeModel(m.model, lang)}</span>
                 <span className={`shoe-type-badge shoe-type-${m.type}`}>{t(`shoes.${TYPE_LABELS[m.type]}`)}</span>
               </button>
             ))}
@@ -812,6 +923,40 @@ export default function Shoes() {
           </article>
         </section>
 
+        <section className="card shoe-performance-panel">
+          <div className="shoe-performance-head">
+            <div>
+              <h2>{t('shoes.performance_heading')}</h2>
+              <p>{t('shoes.performance_copy')}</p>
+            </div>
+            {shoePerformanceInsights.topInsight && (
+              <div className={`shoe-performance-badge${shoePerformanceInsights.topInsight.positive ? ' positive' : ''}`}>
+                {shoePerformanceInsights.topInsight.positive
+                  ? t('shoes.performance_badge_gain')
+                  : t('shoes.performance_badge_watch')}
+              </div>
+            )}
+          </div>
+
+          {shoePerformanceInsights.topInsight ? (
+            <>
+              <div className="shoe-performance-highlight">
+                <strong>{shoePerformanceInsights.topInsight.name}</strong>
+                <p>{shoePerformanceInsights.topInsight.summary}</p>
+              </div>
+              <div className="shoe-performance-meta">
+                <span>{t('shoes.performance_sample', { count: shoePerformanceInsights.topInsight.sampleCount })}</span>
+                <span>{t('shoes.performance_compare_sample', { count: shoePerformanceInsights.topInsight.compareCount })}</span>
+                {shoePerformanceInsights.topInsight.cadenceDelta != null && (
+                  <span>{t('shoes.performance_cadence_delta', { value: `${shoePerformanceInsights.topInsight.cadenceDelta > 0 ? '+' : ''}${shoePerformanceInsights.topInsight.cadenceDelta.toFixed(1)}` })}</span>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="analysis-muted" style={{ marginTop: 10 }}>{t('shoes.performance_empty')}</p>
+          )}
+        </section>
+
         {duplicateClusters.length > 0 && (
           <section className="card shoe-duplicate-panel">
             <h2 className="shoe-duplicate-title">{t('shoes.duplicate_title')}</h2>
@@ -832,7 +977,7 @@ export default function Shoes() {
                 <ul className="shoe-duplicate-list">
                   {(cluster.shoes || []).map(s => (
                     <li key={s.id}>
-                      <strong>{s.brand}</strong> {s.model}
+                      <strong>{localizeShoeBrand(s.brand, lang)}</strong> {localizeShoeModel(s.model, lang)}
                       <span className="shoe-duplicate-mi"> · {Math.round((s.currentDistanceKm || 0) * 10) / 10} km</span>
                     </li>
                   ))}
@@ -861,7 +1006,8 @@ export default function Shoes() {
               const max = shoe.maxDistanceKm || 650;
               const pct = Math.min(100, (current / max) * 100);
               const health = shoeHealth(current, max);
-              const name = [shoe.brand, shoe.model].filter(Boolean).join(' ') || shoe.nickname || '—';
+              const name = formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang });
+              const performanceInsight = shoePerformanceInsights.byShoe.get(shoe.id);
 
               return (
                 <article key={shoe.id} className={`shoe-card${shoe.retired ? ' shoe-retired' : ''}`}>
@@ -901,6 +1047,12 @@ export default function Shoes() {
                   <span className={`shoe-health-label shoe-health-${health}`}>
                     {health === 'good' ? t('shoes.health_good') : health === 'warn' ? t('shoes.health_warn') : t('shoes.health_critical')}
                   </span>
+                  {performanceInsight && (
+                    <div className={`shoe-performance-inline${performanceInsight.positive ? ' positive' : ''}`}>
+                      <strong>{t('shoes.performance_inline_title')}</strong>
+                      <p>{performanceInsight.summary}</p>
+                    </div>
+                  )}
                 </article>
               );
             })}

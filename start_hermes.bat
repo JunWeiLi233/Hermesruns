@@ -78,7 +78,9 @@ if defined PYTHON_EXE (
         echo [3/4] Waking up Hermes auto-import watcher...
         start "Hermes - Auto Import Watcher" cmd /k "cd /d %ROOT% && \"%PYTHON_EXE%\" .tools\hermes_auto_sync.py \"%SYNC_CONFIG%\""
     ) else (
-        echo [3/4] Auto-import watcher not started. Create .tools\hermes_sync_config.json to enable it.
+        echo [3/4] Auto-import watcher not started.
+        echo       To enable: copy .tools\hermes_sync_config.example.json to .tools\hermes_sync_config.json
+        echo       then set auth email/password and import folders. See README "Garmin / COROS Auto-Import".
     )
 ) else (
     echo [3/4] Skipping Python VDOT Engine. No local virtualenv was found.

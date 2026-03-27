@@ -8,7 +8,7 @@ import { apiJson, apiFetch } from '../api';
 import { formatDuration, formatPaceSeconds } from '../utils/format';
 import {
   computeTrainingPaces,
-  predictRaceTime,
+  predictRaceTimeCalibrated,
   RACE_DISTANCES,
   estimateCurrentVdot,
   collectAllVdotEntries,
@@ -21,6 +21,7 @@ import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ImportDataGuide from '../components/ImportDataGuide';
 import RunLevelMedal from '../components/RunLevelMedal';
+import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ScatterController, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Bar, Scatter, Doughnut, Line } from 'react-chartjs-2';
 
@@ -209,6 +210,141 @@ const acwrZoneBandsPlugin = {
   },
 };
 
+function average(values) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function computeInjuryRiskInsight(runs, trainingLoadData, lang) {
+  const now = Date.now();
+  const recentStart = now - 14 * 24 * 60 * 60 * 1000;
+  const baselineStart = now - 42 * 24 * 60 * 60 * 1000;
+
+  const eligible = runs
+    .map((run) => {
+      const start = new Date(run.startTime || run.startDate || 0).getTime();
+      const distanceKm = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
+      const durationSec = Number(run.movingTimeSeconds || run.durationSeconds || 0);
+      const averageHeartRate = Number(run.averageHeartRate || 0);
+      const averageCadence = Number(run.averageCadence || 0);
+      if (Number.isNaN(start) || start < baselineStart || distanceKm < 4 || durationSec < 20 * 60) return null;
+      const paceSecPerKm = durationSec / Math.max(distanceKm, 0.001);
+      const aerobicCost = averageHeartRate > 0 ? averageHeartRate * (paceSecPerKm / 300) : null;
+      return {
+        start,
+        distanceKm,
+        durationSec,
+        paceSecPerKm,
+        averageHeartRate: averageHeartRate > 0 ? averageHeartRate : null,
+        averageCadence: averageCadence > 0 ? averageCadence : null,
+        aerobicCost,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.start - b.start);
+
+  const baseline = eligible.filter((run) => run.start >= baselineStart && run.start < recentStart);
+  const recent = eligible.filter((run) => run.start >= recentStart);
+
+  const baselineCadence = baseline.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
+  const recentCadence = recent.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
+  const baselineCost = baseline.filter((run) => run.aerobicCost != null).map((run) => run.aerobicCost);
+  const recentCost = recent.filter((run) => run.aerobicCost != null).map((run) => run.aerobicCost);
+
+  const cadenceBaseline = average(baselineCadence);
+  const cadenceRecent = average(recentCadence);
+  const cadenceDeltaPct = cadenceBaseline > 0 ? ((cadenceRecent - cadenceBaseline) / cadenceBaseline) * 100 : 0;
+
+  const costBaseline = average(baselineCost);
+  const costRecent = average(recentCost);
+  const costDeltaPct = costBaseline > 0 ? ((costRecent - costBaseline) / costBaseline) * 100 : 0;
+
+  let recentHardRuns = 0;
+  for (const run of eligible.filter((entry) => entry.start >= now - 7 * 24 * 60 * 60 * 1000)) {
+    const durationMin = run.durationSec / 60;
+    const paceLoad = Math.max(0.55, Math.min(1.15, 300 / Math.max(run.paceSecPerKm, 1)));
+    if (computeEffortScore(paceLoad, durationMin) >= 85) recentHardRuns += 1;
+  }
+
+  let score = 6;
+  const reasons = [];
+
+  if (trainingLoadData?.lastAcwr != null) {
+    if (trainingLoadData.lastAcwr >= 1.35) {
+      score += 28;
+      reasons.push({ key: 'load', tone: 'high', value: trainingLoadData.lastAcwr.toFixed(2) });
+    } else if (trainingLoadData.lastAcwr >= 1.18) {
+      score += 16;
+      reasons.push({ key: 'load', tone: 'mid', value: trainingLoadData.lastAcwr.toFixed(2) });
+    }
+  }
+
+  if (baselineCadence.length >= 3 && recentCadence.length >= 2) {
+    if (cadenceDeltaPct <= -2.0) {
+      score += 24;
+      reasons.push({ key: 'cadence', tone: 'high', value: `${cadenceDeltaPct.toFixed(1)}%` });
+    } else if (cadenceDeltaPct <= -1.0) {
+      score += 12;
+      reasons.push({ key: 'cadence', tone: 'mid', value: `${cadenceDeltaPct.toFixed(1)}%` });
+    }
+  }
+
+  if (baselineCost.length >= 3 && recentCost.length >= 2) {
+    if (costDeltaPct >= 4.5) {
+      score += 26;
+      reasons.push({ key: 'drift', tone: 'high', value: `+${costDeltaPct.toFixed(1)}%` });
+    } else if (costDeltaPct >= 2.0) {
+      score += 14;
+      reasons.push({ key: 'drift', tone: 'mid', value: `+${costDeltaPct.toFixed(1)}%` });
+    }
+  }
+
+  if (recentHardRuns >= 3) {
+    score += 12;
+    reasons.push({ key: 'stacking', tone: 'mid', value: String(recentHardRuns) });
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let level = 'low';
+  if (score >= 72) level = 'high';
+  else if (score >= 46) level = 'moderate';
+
+  const confidenceParts = [
+    baselineCadence.length >= 3 && recentCadence.length >= 2,
+    baselineCost.length >= 3 && recentCost.length >= 2,
+    trainingLoadData?.lastAcwr != null,
+  ].filter(Boolean).length;
+
+  return {
+    score,
+    level,
+    reasons,
+    enoughData: recent.length >= 3,
+    mandatoryCrossTraining: level === 'high',
+    metrics: {
+      cadenceRecent,
+      cadenceBaseline,
+      cadenceDeltaPct,
+      costRecent,
+      costBaseline,
+      costDeltaPct,
+      acwr: trainingLoadData?.lastAcwr ?? null,
+      recentHardRuns,
+    },
+    confidence: confidenceParts >= 3 ? 'high' : confidenceParts === 2 ? 'medium' : 'low',
+    gctAvailable: false,
+    locale: lang,
+  };
+}
+
 export default function Analysis() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
@@ -262,10 +398,10 @@ export default function Analysis() {
   const predictions = useMemo(() => {
     if (bestVdot <= 0) return [];
     return RACE_DISTANCES.map(rd => {
-      const timeMin = predictRaceTime(bestVdot, rd.meters);
+      const timeMin = predictRaceTimeCalibrated(bestVdot, rd.meters, runs);
       return { ...rd, timeMin };
     });
-  }, [bestVdot]);
+  }, [bestVdot, runs]);
 
   // Summary stats
   const { totalKm, totalSec, roll7, roll28, elev28 } = useMemo(() => {
@@ -350,6 +486,15 @@ export default function Analysis() {
     const val = unit === 'mile' ? secPerKm * KM_TO_MILE : secPerKm;
     return formatPaceSeconds(val);
   }
+
+  const distributionT = useMemo(() => {
+    return (key, replacements) => {
+      if (typeof key === 'string' && key.startsWith('profile.')) {
+        return t(`analysis.${key.slice('profile.'.length)}`, replacements);
+      }
+      return t(key, replacements);
+    };
+  }, [t]);
 
   // Pace chart data
   const paceChartData = useMemo(() => {
@@ -446,7 +591,7 @@ export default function Analysis() {
     const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#dc2626'];
     return RACE_DISTANCES.map((rd, i) => {
       const data = samples.map(s => {
-        const timeMin = predictRaceTime(s.vdot, rd.meters);
+        const timeMin = predictRaceTimeCalibrated(s.vdot, rd.meters, runs);
         return { x: s.date, y: timeMin ? Math.round(timeMin * 60) : null };
       });
       const latest = data[data.length - 1]?.y || 0;
@@ -475,7 +620,7 @@ export default function Analysis() {
         },
       };
     });
-  }, [allVdots, lang]);
+  }, [allVdots, lang, runs]);
 
   // ── Training Load (EWMA) & ACWR ──
   const trainingLoadData = useMemo(() => {
@@ -582,6 +727,10 @@ export default function Analysis() {
     if (!trainingLoadData) return getAcwrZone(null);
     return getAcwrZone(trainingLoadData.lastAcwr);
   }, [trainingLoadData]);
+
+  const injuryInsight = useMemo(() => {
+    return computeInjuryRiskInsight(runs, trainingLoadData, lang);
+  }, [runs, trainingLoadData, lang]);
 
   const loadChartData = useMemo(() => {
     if (!trainingLoadData) return null;
@@ -836,22 +985,6 @@ export default function Analysis() {
           )}
         </section>
 
-        {/* Summary */}
-        <section className="card summary-wide analysis-summary-card">
-          <div className="analysis-summary-row">
-            <div className="analysis-summary-copy">
-              <p><strong>{t('analysis.total_mileage')}</strong> <span>{isMile ? (totalKm / KM_TO_MILE).toFixed(1) : totalKm.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span></p>
-              <p><strong>{t('analysis.roll_7d')}</strong> <span>{isMile ? (roll7.km / KM_TO_MILE).toFixed(1) : roll7.km.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span> · {t('analysis.roll_runs', { n: roll7.runs })}</p>
-              <p><strong>{t('analysis.roll_28d')}</strong> <span>{isMile ? (roll28.km / KM_TO_MILE).toFixed(1) : roll28.km.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span> · {t('analysis.roll_runs', { n: roll28.runs })}</p>
-              {elev28 > 0 && (
-                <p><strong>{t('analysis.elevation_28d')}</strong> <span>{Math.round(elev28)}</span> <span className="unit-text">m</span></p>
-              )}
-              <p><strong>{t('analysis.avg_pace')}</strong> <span>{totalKm > 0 ? fmtPace(totalSec / totalKm) : '--:--'}</span> <span className="unit-pace">{t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}</span> <span className="analysis-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({t('analysis.avg_pace_lifetime')})</span></p>
-              <p><strong>{t('analysis.current_vdot_label')}</strong> <span>{bestVdot > 0 ? bestVdot.toFixed(1) : '--'}</span> <span className="analysis-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({t('analysis.vdot_footnote')})</span></p>
-            </div>
-          </div>
-        </section>
-
         {/* 80/20 Polarized Mode Toggle and View */}
         <section className="card analysis-polarized-card" style={{ marginTop: 24 }}>
           <div className="polarized-header">
@@ -897,6 +1030,105 @@ export default function Analysis() {
           )}
           {polarizedMode && !polarizedData && (
             <p className="analysis-muted" style={{ marginTop: 14 }}>{t('analysis.polar_no_data')}</p>
+          )}
+        </section>
+
+        <section className="card profile-distribution-strip" style={{ marginTop: 24 }}>
+          <ProfileDistributionCharts runs={runs} isMile={isMile} t={distributionT} />
+        </section>
+
+        <section className="card injury-ai-card" style={{ marginTop: 24 }}>
+          <div className="injury-ai-head">
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.injury_heading')}</h2>
+              <p className="analysis-muted" style={{ marginTop: 6 }}>{t('analysis.injury_copy')}</p>
+            </div>
+            <div className={`injury-ai-score injury-ai-score-${injuryInsight.level}`}>
+              <span>{injuryInsight.score}</span>
+              <small>{t('analysis.injury_score')}</small>
+            </div>
+          </div>
+
+          {!injuryInsight.enoughData ? (
+            <p className="analysis-muted" style={{ marginTop: 14 }}>{t('analysis.injury_not_enough')}</p>
+          ) : (
+            <>
+              <div className={`injury-ai-banner injury-ai-banner-${injuryInsight.level}`}>
+                <strong>
+                  {injuryInsight.level === 'high'
+                    ? t('analysis.injury_high_title')
+                    : injuryInsight.level === 'moderate'
+                      ? t('analysis.injury_moderate_title')
+                      : t('analysis.injury_low_title')}
+                </strong>
+                <span>
+                  {injuryInsight.mandatoryCrossTraining
+                    ? t('analysis.injury_action_mandatory')
+                    : injuryInsight.level === 'moderate'
+                      ? t('analysis.injury_action_caution')
+                      : t('analysis.injury_action_clear')}
+                </span>
+              </div>
+
+              <div className="injury-ai-signal-grid">
+                <article className="injury-ai-signal">
+                  <span className="injury-ai-signal-label">{t('analysis.injury_signal_cadence')}</span>
+                  <strong>{injuryInsight.metrics.cadenceRecent ? `${Math.round(injuryInsight.metrics.cadenceRecent)} spm` : '--'}</strong>
+                  <small>
+                    {injuryInsight.metrics.cadenceBaseline
+                      ? t('analysis.injury_vs_baseline', { value: `${injuryInsight.metrics.cadenceDeltaPct > 0 ? '+' : ''}${injuryInsight.metrics.cadenceDeltaPct.toFixed(1)}%` })
+                      : t('analysis.injury_signal_missing')}
+                  </small>
+                </article>
+                <article className="injury-ai-signal">
+                  <span className="injury-ai-signal-label">{t('analysis.injury_signal_drift')}</span>
+                  <strong>{injuryInsight.metrics.costRecent ? `${injuryInsight.metrics.costRecent.toFixed(1)}` : '--'}</strong>
+                  <small>
+                    {injuryInsight.metrics.costBaseline
+                      ? t('analysis.injury_vs_baseline', { value: `${injuryInsight.metrics.costDeltaPct > 0 ? '+' : ''}${injuryInsight.metrics.costDeltaPct.toFixed(1)}%` })
+                      : t('analysis.injury_signal_missing')}
+                  </small>
+                </article>
+                <article className="injury-ai-signal">
+                  <span className="injury-ai-signal-label">ACWR</span>
+                  <strong>{injuryInsight.metrics.acwr != null ? injuryInsight.metrics.acwr.toFixed(2) : '--'}</strong>
+                  <small>{t(`analysis.acwr_${acwrZone.key}`)}</small>
+                </article>
+                <article className="injury-ai-signal">
+                  <span className="injury-ai-signal-label">{t('analysis.injury_signal_stack')}</span>
+                  <strong>{injuryInsight.metrics.recentHardRuns}</strong>
+                  <small>{t('analysis.injury_signal_stack_sub')}</small>
+                </article>
+              </div>
+
+              <div className="injury-ai-graph">
+                <div className="injury-ai-graph-row">
+                  <span>{t('analysis.injury_signal_cadence')}</span>
+                  <div className="injury-ai-graph-track">
+                    <span className="injury-ai-graph-bar injury-ai-graph-bar-baseline" style={{ width: '100%' }} />
+                    <span
+                      className="injury-ai-graph-bar injury-ai-graph-bar-current"
+                      style={{ width: `${injuryInsight.metrics.cadenceBaseline > 0 ? Math.max(12, (injuryInsight.metrics.cadenceRecent / injuryInsight.metrics.cadenceBaseline) * 100) : 12}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="injury-ai-graph-row">
+                  <span>{t('analysis.injury_signal_drift')}</span>
+                  <div className="injury-ai-graph-track">
+                    <span className="injury-ai-graph-bar injury-ai-graph-bar-baseline" style={{ width: '100%' }} />
+                    <span
+                      className="injury-ai-graph-bar injury-ai-graph-bar-risk"
+                      style={{ width: `${injuryInsight.metrics.costBaseline > 0 ? Math.max(12, (injuryInsight.metrics.costRecent / injuryInsight.metrics.costBaseline) * 100) : 12}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="injury-ai-footer">
+                <p>{injuryInsight.gctAvailable ? t('analysis.injury_gct_live') : t('analysis.injury_gct_missing')}</p>
+                <p>{t(`analysis.injury_confidence_${injuryInsight.confidence}`)}</p>
+              </div>
+            </>
           )}
         </section>
 

@@ -34,8 +34,6 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
                 continue;
             }
 
-            points.add(new ParsedTrackPoint(latitude, longitude));
-
             LocalDateTime trackPointTime = parseDateTime(firstTextByLocalName(trackPoint, "time"));
             if (trackPointTime != null) {
                 if (startTime == null) {
@@ -43,6 +41,30 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
                 }
                 endTime = trackPointTime;
             }
+
+            Integer elapsedSeconds = null;
+            if (startTime != null && trackPointTime != null) {
+                long sec = java.time.Duration.between(startTime, trackPointTime).getSeconds();
+                if (sec >= 0 && sec <= Integer.MAX_VALUE) {
+                    elapsedSeconds = (int) sec;
+                }
+            }
+
+            Double elevationMeters = parseDouble(firstTextByLocalName(trackPoint, "ele"));
+            Integer heartRate = parseFirstInt(trackPoint,
+                    "hr", "heartrate", "gpxtpx:hr", "ns3:hr", "TrackPointExtension/hr");
+            Integer cadence = parseFirstInt(trackPoint,
+                    "cad", "gpxtpx:cad", "ns3:cad", "TrackPointExtension/cad");
+
+            points.add(new ParsedTrackPoint(
+                    latitude,
+                    longitude,
+                    elapsedSeconds,
+                    null,
+                    elevationMeters,
+                    heartRate,
+                    cadence
+            ));
         }
 
         if (points.isEmpty()) {
@@ -82,5 +104,33 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
         }
 
         return fileNameStem(fileName);
+    }
+
+    private Integer parseFirstInt(Element parent, String... keys) {
+        for (String k : keys) {
+            String v = firstTextByLocalNamePathAware(parent, k);
+            if (v == null || v.isBlank()) continue;
+            try {
+                int n = (int) Math.round(Double.parseDouble(v.trim()));
+                if (n > 0) return n;
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private String firstTextByLocalNamePathAware(Element parent, String key) {
+        if (key.contains("/")) {
+            String[] parts = key.split("/");
+            Element cur = parent;
+            for (String p : parts) {
+                if (cur == null) return null;
+                String local = p.contains(":") ? p.substring(p.indexOf(':') + 1) : p;
+                cur = firstChildElementByLocalName(cur, local);
+            }
+            return cur == null ? null : cur.getTextContent();
+        }
+        String local = key.contains(":") ? key.substring(key.indexOf(':') + 1) : key;
+        return firstTextByLocalName(parent, local);
     }
 }

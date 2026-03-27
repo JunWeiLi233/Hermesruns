@@ -1,0 +1,3 @@
+import{i as t,n as s}from"./I18nContext-MpK2bNYo.js";var a=t();function r(){const{lang:e,setLang:n}=s();return(0,a.jsxs)("div",{className:"lang-switcher",children:[(0,a.jsx)("button",{type:"button","data-set-language":"zh-CN",className:e==="zh-CN"?"active":"","aria-pressed":e==="zh-CN",onClick:()=>n("zh-CN"),children:"中文"}),(0,a.jsx)("button",{type:"button","data-set-language":"en",className:e==="en"?"active":"","aria-pressed":e==="en",onClick:()=>n("en"),children:"English"})]})}export{r as t};
+
+//# sourceMappingURL=LanguageSwitcher-pR5SS818.js.map

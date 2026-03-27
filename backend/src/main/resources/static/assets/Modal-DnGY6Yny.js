@@ -1,0 +1,3 @@
+import{i as t}from"./I18nContext-MpK2bNYo.js";var r=t();function d({isOpen:l,onClose:a,title:s,children:i}){if(!l)return null;function n(e){e.target===e.currentTarget&&a()}return(0,r.jsx)("div",{className:"modal-shell",onClick:n,children:(0,r.jsxs)("div",{className:"modal-card",children:[(0,r.jsxs)("div",{className:"modal-header",children:[(0,r.jsx)("h3",{children:s}),(0,r.jsx)("button",{type:"button",className:"modal-close",onClick:a,children:"×"})]}),(0,r.jsx)("div",{className:"modal-form",children:i})]})})}export{d as t};
+
+//# sourceMappingURL=Modal-DnGY6Yny.js.map
