@@ -6,10 +6,13 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
 import TopNav from '../components/TopNav';
-import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ImportDataGuide from '../components/ImportDataGuide';
+import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
+import { TemperatureGlyph, WeatherGlyph } from '../components/WeatherGlyph';
+import SectionCard from '../components/ui/SectionCard';
+import MetricCard from '../components/ui/MetricCard';
 import { formatDuration, formatPace } from '../utils/format';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import {
@@ -66,6 +69,27 @@ const CARTO_TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{
 const CARTO_TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 const CARTO_ATTRIB = '\u00a9 OpenStreetMap \u00a9 CARTO';
 
+/** Track background only — one box, no inner % width (avoids grid/absolute overflow bugs). */
+const PROFILE_BAR_TRACK_EMPTY = 'rgba(148, 163, 184, 0.25)';
+
+function profileBarWarmBackground(pct) {
+  const p = Math.min(100, Math.max(0, Number(pct) || 0));
+  return `linear-gradient(90deg, #fb923c 0%, #f97316 ${p}%, ${PROFILE_BAR_TRACK_EMPTY} ${p}%, ${PROFILE_BAR_TRACK_EMPTY} 100%)`;
+}
+
+function profileBarTempBackground(pct) {
+  const p = Math.min(100, Math.max(0, Number(pct) || 0));
+  return `linear-gradient(90deg, #38bdf8 0%, #0284c7 ${p}%, ${PROFILE_BAR_TRACK_EMPTY} ${p}%, ${PROFILE_BAR_TRACK_EMPTY} 100%)`;
+}
+
+function pickNumber(...values) {
+  for (const value of values) {
+    const num = Number(value);
+    if (Number.isFinite(num)) return num;
+  }
+  return null;
+}
+
 export default function Profile() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
@@ -81,7 +105,7 @@ export default function Profile() {
   const [years, setYears] = useState([]);
 
   const [nameModalOpen, setNameModalOpen] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [activeImportModal, setActiveImportModal] = useState(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [nameStatus, setNameStatus] = useState('');
@@ -89,6 +113,15 @@ export default function Profile() {
   const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
+
+  const [garminEmail, setGarminEmail] = useState('');
+  const [garminPassword, setGarminPassword] = useState('');
+  const [garminLimit, setGarminLimit] = useState(50);
+  const [garminImporting, setGarminImporting] = useState(false);
+  const [garminStatus, setGarminStatus] = useState('');
+  const [garminStatusType, setGarminStatusType] = useState('');
+  const [weatherContext, setWeatherContext] = useState(null);
+  const [weatherSnapshot, setWeatherSnapshot] = useState(null);
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
@@ -108,6 +141,8 @@ export default function Profile() {
   const heatLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
   const heatmapIsDarkRef = useRef(undefined);
+  const importModalOpen = activeImportModal === 'manual';
+  const garminModalOpen = activeImportModal === 'garmin';
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -173,8 +208,12 @@ export default function Profile() {
 
   async function loadProfile() {
     try {
-      const data = await apiJson('/api/profile/me');
-      setProfile(data);
+      const [profileData, weatherData] = await Promise.all([
+        apiJson('/api/profile/me'),
+        apiJson('/api/v1/weather/context').catch(() => null),
+      ]);
+      setProfile(profileData);
+      setWeatherContext(weatherData && typeof weatherData === 'object' ? weatherData : null);
     } catch {
       navigate('/login');
     }
@@ -292,7 +331,7 @@ export default function Profile() {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    setHeatmapSummary('Loading\u2026');
+    setHeatmapSummary(t('profile.heatmap_loading'));
     const url = year ? `/api/activities/heatmap?year=${year}` : '/api/activities/heatmap';
     try {
       // Fetch data and preload leaflet modules in parallel
@@ -309,20 +348,10 @@ export default function Profile() {
       setHeatmapEmpty(false);
 
       if (heatLayerRef.current) map.removeLayer(heatLayerRef.current);
-      // Ensure map container has a valid size before drawing heat layer
-      map.invalidateSize();
-      const size = map.getSize();
-      if (size.x === 0 || size.y === 0) {
-        setHeatmapSummary('Map not visible');
-        return;
-      }
-      const currentGradient = document.body.classList.contains('theme-midnight') 
-        ? HEAT_GRADIENT_DARK 
-        : HEAT_GRADIENT_LIGHT;
 
-      heatLayerRef.current = (L.default || L).heatLayer(points, {
-        radius: 4, blur: 5, maxZoom: 18, max: 1.0, minOpacity: 0.4, gradient: currentGradient,
-      }).addTo(map);
+      const currentGradient = document.body.classList.contains('theme-midnight')
+        ? HEAT_GRADIENT_DARK
+        : HEAT_GRADIENT_LIGHT;
 
       // Compute bounds manually — avoids creating N L.latLng objects
       let minLat = points[0][0], maxLat = minLat, minLng = points[0][1], maxLng = minLng;
@@ -331,12 +360,27 @@ export default function Profile() {
         if (lat < minLat) minLat = lat; else if (lat > maxLat) maxLat = lat;
         if (lng < minLng) minLng = lng; else if (lng > maxLng) maxLng = lng;
       }
-      map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [30, 30], maxZoom: 14 });
-      setHeatmapSummary(`${points.length.toLocaleString()} GPS points`);
+
+      // Defer heat layer until layout/paint: leaflet.heat uses a canvas that throws if width/height are 0.
+      const paintHeat = () => {
+        map.invalidateSize();
+        const size = map.getSize();
+        if (size.x === 0 || size.y === 0) {
+          setHeatmapSummary(t('profile.heatmap_map_not_visible'));
+          return;
+        }
+        heatLayerRef.current = (L.default || L).heatLayer(points, {
+          radius: 4, blur: 5, maxZoom: 18, max: 1.0, minOpacity: 0.4, gradient: currentGradient,
+        }).addTo(map);
+        map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [30, 30], maxZoom: 14 });
+        map.invalidateSize();
+        setHeatmapSummary(t('profile.heatmap_points_summary', { count: points.length.toLocaleString() }));
+      };
+      requestAnimationFrame(() => requestAnimationFrame(paintHeat));
     } catch {
-      setHeatmapSummary('Failed to load heatmap');
+      setHeatmapSummary(t('profile.heatmap_load_failed'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (mapReady && isAuthenticated) {
@@ -347,6 +391,7 @@ export default function Profile() {
   // Stats
   const totalKm = runs.reduce((s, r) => s + (r.distanceKm || 0), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
+  const totalRuns = runs.length;
   const unitDistance = isMile ? totalKm / 1.60934 : totalKm;
   const unitLabel = t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km');
   const paceUnitLabel = t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km');
@@ -392,26 +437,26 @@ export default function Profile() {
 
     let headline;
     if (thisWeekRuns === 0) {
-      headline = `New week, fresh slate. Your first ${distanceUnitShort} is waiting.`;
+      headline = t('profile.weekly_flash.headline_empty', { unit: distanceUnitShort });
     } else if (unitLastWeek <= 0 && unitThisWeek > 0) {
-      headline = `You are on the board with ${unitThisWeek.toFixed(1)} ${distanceUnitShort} this week.`;
+      headline = t('profile.weekly_flash.headline_started', { distance: unitThisWeek.toFixed(1), unit: distanceUnitShort });
     } else if (delta > 0.05) {
-      headline = `You are up ${deltaAbs.toFixed(1)} ${distanceUnitShort} versus last week.`;
+      headline = t('profile.weekly_flash.headline_up', { delta: deltaAbs.toFixed(1), unit: distanceUnitShort });
     } else if (delta < -0.05) {
-      headline = `You are ${deltaAbs.toFixed(1)} ${distanceUnitShort} behind last week so far.`;
+      headline = t('profile.weekly_flash.headline_down', { delta: deltaAbs.toFixed(1), unit: distanceUnitShort });
     } else {
-      headline = `You are tracking almost exactly with last week.`;
+      headline = t('profile.weekly_flash.headline_even');
     }
 
     let kicker;
     if (thisWeekRuns >= 4) {
-      kicker = `Strong rhythm: ${thisWeekRuns} runs already this week.`;
+      kicker = t('profile.weekly_flash.kicker_rhythm', { count: thisWeekRuns });
     } else if (longestRunKm >= 10) {
-      kicker = `Your longest run this week is ${unitLongest.toFixed(1)} ${distanceUnitShort}.`;
+      kicker = t('profile.weekly_flash.kicker_longest', { distance: unitLongest.toFixed(1), unit: distanceUnitShort });
     } else if (unitLastWeek > unitThisWeek && unitLastWeek > 0) {
-      kicker = `A short run of ${(unitLastWeek - unitThisWeek).toFixed(1)} ${distanceUnitShort} matches last week.`;
+      kicker = t('profile.weekly_flash.kicker_gap', { distance: (unitLastWeek - unitThisWeek).toFixed(1), unit: distanceUnitShort });
     } else {
-      kicker = `Keep the streak warm with one more easy run.`;
+      kicker = t('profile.weekly_flash.kicker_easy');
     }
 
     return {
@@ -422,49 +467,49 @@ export default function Profile() {
       runCount: thisWeekRuns,
       longestRun: unitLongest,
     };
-  }, [runs, isMile, distanceUnitShort]);
+  }, [runs, isMile, distanceUnitShort, t]);
 
   const weeklyFlashcards = useMemo(() => {
     const cards = [
       {
-        eyebrow: 'This week',
+        eyebrow: t('profile.weekly_flash.eyebrow_this_week'),
         title: weeklyHook.headline,
         body: weeklyHook.kicker,
         accent: `${weeklyHook.thisWeekDistance.toFixed(1)} ${distanceUnitShort}`,
       },
       {
-        eyebrow: 'Volume',
+        eyebrow: t('profile.weekly_flash.eyebrow_volume'),
         title: weeklyHook.runCount > 0
-          ? `You have logged ${weeklyHook.runCount} run${weeklyHook.runCount > 1 ? 's' : ''} this week.`
-          : 'No runs logged this week yet.',
+          ? t('profile.weekly_flash.volume_title_runs', { count: weeklyHook.runCount })
+          : t('profile.weekly_flash.volume_title_empty'),
         body: weeklyHook.runCount > 0
-          ? `Your current weekly volume sits at ${weeklyHook.thisWeekDistance.toFixed(1)} ${distanceUnitShort}.`
-          : `A short opener this week will get the rhythm going again.`,
-        accent: `${weeklyHook.runCount} run${weeklyHook.runCount === 1 ? '' : 's'}`,
+          ? t('profile.weekly_flash.volume_body_runs', { distance: weeklyHook.thisWeekDistance.toFixed(1), unit: distanceUnitShort })
+          : t('profile.weekly_flash.volume_body_empty'),
+        accent: t('profile.weekly_flash.volume_accent', { count: weeklyHook.runCount }),
       },
       {
-        eyebrow: 'Longest run',
+        eyebrow: t('profile.weekly_flash.eyebrow_longest'),
         title: weeklyHook.longestRun > 0
-          ? `Your longest outing so far is ${weeklyHook.longestRun.toFixed(1)} ${distanceUnitShort}.`
-          : 'Your long run slot is still open this week.',
+          ? t('profile.weekly_flash.longest_title_value', { distance: weeklyHook.longestRun.toFixed(1), unit: distanceUnitShort })
+          : t('profile.weekly_flash.longest_title_empty'),
         body: weeklyHook.longestRun > 0
-          ? `That gives you a solid anchor for the rest of the week.`
-          : `One steady run could define the week in a good way.`,
+          ? t('profile.weekly_flash.longest_body_value')
+          : t('profile.weekly_flash.longest_body_empty'),
         accent: `${weeklyHook.longestRun.toFixed(1)} ${distanceUnitShort}`,
       },
       {
-        eyebrow: 'Compared to last week',
+        eyebrow: t('profile.weekly_flash.eyebrow_compare'),
         title: weeklyHook.lastWeekDistance > 0
-          ? `Last week at this point you had ${weeklyHook.lastWeekDistance.toFixed(1)} ${distanceUnitShort}.`
-          : 'Last week gives you a clean baseline to beat.',
+          ? t('profile.weekly_flash.compare_title_value', { distance: weeklyHook.lastWeekDistance.toFixed(1), unit: distanceUnitShort })
+          : t('profile.weekly_flash.compare_title_empty'),
         body: weeklyHook.thisWeekDistance >= weeklyHook.lastWeekDistance
-          ? 'You are holding or improving the trend.'
-          : 'One more run would close that gap fast.',
+          ? t('profile.weekly_flash.compare_body_ahead')
+          : t('profile.weekly_flash.compare_body_behind'),
         accent: `${weeklyHook.lastWeekDistance.toFixed(1)} ${distanceUnitShort}`,
       },
     ];
     return cards;
-  }, [weeklyHook, distanceUnitShort]);
+  }, [weeklyHook, distanceUnitShort, t]);
 
   const activeWeeklyFlashcard = weeklyFlashcards[weeklyFlashIndex % Math.max(weeklyFlashcards.length, 1)];
 
@@ -642,6 +687,115 @@ export default function Profile() {
 
   const maxDailyKcal = Math.max(1, ...caloriesSummary.dailyCalories.map((d) => d.kcal));
 
+  const systemStatus = useMemo(() => {
+    const currentTempC = pickNumber(
+      weatherContext?.currentDewPointC,
+      profile?.weather?.temperatureC,
+      profile?.currentTemperatureC,
+      profile?.currentTempC,
+      profile?.systemStatus?.temperatureC,
+    );
+    const baseline14dC = pickNumber(
+      weatherContext?.baselineDewPoint14dC,
+      profile?.weather?.baseline14dC,
+      profile?.temperatureBaseline14dC,
+      profile?.baseline14dC,
+      profile?.systemStatus?.baseline14dC,
+    );
+    const impactDeltaC = pickNumber(
+      weatherContext?.climateShockDeltaC,
+      profile?.weather?.impactDeltaC,
+      profile?.temperatureImpactDeltaC,
+      profile?.impactDeltaC,
+      profile?.systemStatus?.impactDeltaC,
+      currentTempC != null && baseline14dC != null ? currentTempC - baseline14dC : null,
+    );
+    const heatAdaptationSecPerKm = pickNumber(
+      weatherContext?.pacePenaltySecPerKm,
+      profile?.weather?.heatAdaptationSecPerKm,
+      profile?.heatAdaptationSecPerKm,
+      profile?.systemStatus?.heatAdaptationSecPerKm,
+      0,
+    );
+    const todayTempShiftC = pickNumber(
+      weatherContext?.climateShockDeltaC,
+      profile?.weather?.todayTempShiftC,
+      profile?.todayTempShiftC,
+      profile?.systemStatus?.todayTempShiftC,
+      impactDeltaC,
+    );
+    return {
+      available: weatherContext?.available ?? false,
+      currentTempC,
+      baseline14dC,
+      impactDeltaC,
+      heatAdaptationSecPerKm,
+      todayTempShiftC,
+      acclimatizationDay: weatherContext?.acclimatizationDay ?? null,
+      acclimatizationStatus: weatherContext?.acclimatizationStatus ?? null,
+      message: weatherContext?.message ?? '',
+    };
+  }, [profile, weatherContext]);
+
+  const heatPaceBarPct = useMemo(() => {
+    const sec = systemStatus.heatAdaptationSecPerKm ?? 0;
+    return Math.max(0, Math.min(100, ((sec + 30) / 60) * 100));
+  }, [systemStatus.heatAdaptationSecPerKm]);
+
+  /** Maps °C shift vs 14d baseline to bar fill. ±15°C → 0–100% so typical days do not peg the bar. */
+  const tempShiftBarPct = useMemo(() => {
+    const delta = systemStatus.todayTempShiftC;
+    if (!Number.isFinite(delta)) return 0;
+    return Math.max(0, Math.min(100, ((delta + 15) / 30) * 100));
+  }, [systemStatus.todayTempShiftC]);
+
+  function formatTemp(value, digits = 1) {
+    if (!Number.isFinite(value)) return '—';
+    return `${value.toFixed(digits)}°C`;
+  }
+
+  function formatSignedTemp(value, digits = 1) {
+    if (!Number.isFinite(value)) return '—';
+    const signed = value >= 0 ? `+${value.toFixed(digits)}` : value.toFixed(digits);
+    return `${signed}°C`;
+  }
+
+  function formatSignedPaceSec(value) {
+    if (!Number.isFinite(value)) return `— ${t('analysis.chart_unit_seconds_km')}`;
+    const rounded = Math.round(value);
+    const signed = rounded >= 0 ? `+${rounded}` : `${rounded}`;
+    return `${signed} ${t('analysis.chart_unit_seconds_km')}`;
+  }
+
+  const preferFahrenheit = useMemo(
+    () => typeof navigator !== 'undefined' && /^en-?US/i.test(navigator.language || ''),
+    [],
+  );
+
+  function formatAmbientTemp(value) {
+    if (!Number.isFinite(value)) return '--';
+    if (preferFahrenheit) return `${Math.round((value * 9) / 5 + 32)}°F`;
+    return `${Math.round(value)}°C`;
+  }
+
+  function displayMetricTemp(value, digits = 1) {
+    if (!Number.isFinite(value)) return '--';
+    return `${Number(value).toFixed(digits)}°C`;
+  }
+
+  function displaySignedMetricTemp(value, digits = 1) {
+    if (!Number.isFinite(value)) return '--';
+    const signed = value >= 0 ? `+${Number(value).toFixed(digits)}` : Number(value).toFixed(digits);
+    return `${signed}°C`;
+  }
+
+  function displaySignedPace(value) {
+    if (!Number.isFinite(value)) return `-- ${t('analysis.chart_unit_seconds_km')}`;
+    const rounded = Math.round(value);
+    const signed = rounded >= 0 ? `+${rounded}` : `${rounded}`;
+    return `${signed} ${t('analysis.chart_unit_seconds_km')}`;
+  }
+
   // Personal Records
   const personalRecords = (() => {
     if (runs.length === 0) return null;
@@ -729,7 +883,7 @@ export default function Profile() {
       setProfile(prev => ({ ...prev, displayName: displayNameInput }));
       setNameModalOpen(false);
     } catch {
-      setNameStatus('Failed to save name');
+      setNameStatus(t('profile.name_save_failed'));
     }
   }
 
@@ -754,11 +908,101 @@ export default function Profile() {
     try {
       const res = await apiFetch('/api/import/batch', { method: 'POST', body: formData });
       if (!res.ok) throw new Error();
-      setImportModalOpen(false);
+      setActiveImportModal(null);
       loadActivities();
       renderHeatmap(selectedYear || null);
     } catch {
-      setImportStatus('Import failed');
+      setImportStatus(t('profile.import_failed'));
+    }
+  }
+
+  function openManualImportFromGarmin() {
+    if (garminImporting) return;
+    setActiveImportModal('manual');
+  }
+
+  async function handleGarminImport(e) {
+    e.preventDefault();
+    if (!garminEmail.trim() || !garminPassword.trim()) return;
+    setGarminImporting(true);
+    setGarminStatus('');
+    setGarminStatusType('');
+
+    try {
+      const res = await apiFetch('/api/garmin/connect/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          garminEmail: garminEmail.trim(),
+          garminPassword: garminPassword,
+          limit: garminLimit,
+        }),
+      });
+
+      if (res.status === 409) {
+        setGarminStatus(t('profile.garmin_connect_already_running'));
+        setGarminStatusType('warn');
+        setGarminImporting(false);
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t('profile.garmin_connect_failed'));
+      }
+
+      // Poll for completion
+      let attempts = 0;
+      const maxAttempts = 120;
+      const poll = async () => {
+        if (attempts >= maxAttempts) {
+          setGarminStatus(t('profile.garmin_connect_failed'));
+          setGarminStatusType('error');
+          setGarminImporting(false);
+          return;
+        }
+        attempts++;
+
+        try {
+          const statusData = await apiJson('/api/garmin/connect/import/status');
+          if (statusData.active) {
+            const progress = statusData.importedRuns > 0
+              ? t('profile.garmin_connect_progress_count', { count: statusData.importedRuns })
+              : t('profile.garmin_connect_importing');
+            setGarminStatus(progress);
+            setGarminStatusType('info');
+            setTimeout(poll, 2000);
+            return;
+          }
+
+          setGarminImporting(false);
+          if (statusData.status === 'COMPLETED') {
+            if (statusData.importedRuns > 0) {
+              setGarminStatus(
+                t('profile.garmin_connect_success')
+                  .replace('{imported}', statusData.importedRuns)
+                  .replace('{points}', statusData.importedPoints)
+              );
+              setGarminStatusType('success');
+              loadActivities();
+              renderHeatmap(selectedYear || null);
+            } else {
+              setGarminStatus(statusData.message || t('profile.garmin_connect_no_runs'));
+              setGarminStatusType('info');
+            }
+          } else if (statusData.status === 'FAILED') {
+            setGarminStatus(statusData.message || t('profile.garmin_connect_failed'));
+            setGarminStatusType('error');
+          }
+        } catch {
+          setTimeout(poll, 3000);
+        }
+      };
+
+      setTimeout(poll, 3000);
+    } catch (err) {
+      setGarminStatus(err.message || t('profile.garmin_connect_failed'));
+      setGarminStatusType('error');
+      setGarminImporting(false);
     }
   }
 
@@ -767,23 +1011,47 @@ export default function Profile() {
       <LanguageSwitcher />
       <TopNav
         showProfile
-        profile={{
-          displayName: profile?.displayName,
-          email: profile?.email,
-          onSettings: () => setSettingsModalOpen(true),
-          onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
-          onImportData: () => setImportModalOpen(true),
-        }}
-      />
+          profile={{
+            displayName: profile?.displayName,
+            email: profile?.email,
+            onSettings: () => setSettingsModalOpen(true),
+            onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
+            onImportData: () => setActiveImportModal('garmin'),
+          }}
+        />
 
       <main className="dashboard-container">
+        <section className="profile-hero-strip">
+          <MetricCard
+            tone="accent"
+            label={t('profile.weekly_mileage')}
+            value={`${unitDistance.toFixed(1)} ${distanceUnitShort}`}
+            hint={t('profile.analysis_hint')}
+          />
+          <MetricCard
+            label={t('profile.avg_pace')}
+            value={avgPaceStr}
+            hint={t('profile.run_count', { count: totalRuns })}
+          />
+          <MetricCard
+            label={t('profile.today_run_title')}
+            value={todayRecommendation.type}
+            hint={todayRecommendation.distance}
+          />
+          <MetricCard
+            tone="success"
+            label={t('profile.vo2_card_title')}
+            value={profileVdot > 0 ? profileVdot.toFixed(1) : '--'}
+            hint={profileVdot > 0 ? t('profile.vo2_card_subtitle') : t('profile.vo2_no_data')}
+          />
+        </section>
+
         {/* Heatmap */}
-        <section className="card heatmap-section">
-          <div className="card-header">
-            <div>
-              <h2>{t('profile.heatmap')}</h2>
-              <p className="heatmap-summary">{heatmapSummary}</p>
-            </div>
+        <SectionCard
+          className="heatmap-section"
+          title={t('profile.heatmap')}
+          subtitle={heatmapSummary}
+          actions={(
             <select
               className="filter-dropdown"
               value={selectedYear}
@@ -794,12 +1062,13 @@ export default function Profile() {
                 <option key={y} value={y}>{y} {t('profile.season_suffix')}</option>
               ))}
             </select>
-          </div>
+          )}
+        >
           <div className="heatmap-map-shell">
-            <div ref={mapRef} style={{ height: 400, width: '100%', borderRadius: 8 }} />
-            {heatmapEmpty && <div className="heatmap-empty-state">No imported routes yet.</div>}
+            <div ref={mapRef} className="heatmap-map-canvas" />
+            {heatmapEmpty && <div className="heatmap-empty-state">{t('profile.heatmap_empty')}</div>}
           </div>
-        </section>
+        </SectionCard>
 
         {activeWeeklyFlashcard && (
           <section
@@ -813,7 +1082,7 @@ export default function Profile() {
             }}
             role="button"
             tabIndex={0}
-            aria-label="Weekly running snapshot card"
+            aria-label={t('profile.weekly_flash.aria_label')}
           >
             <div className="weekly-flashcard-copy">
               <span className="weekly-flashcard-eyebrow">{activeWeeklyFlashcard.eyebrow}</span>
@@ -822,7 +1091,7 @@ export default function Profile() {
             </div>
             <div className="weekly-flashcard-side">
               <strong>{activeWeeklyFlashcard.accent}</strong>
-              <span>Tap for next insight</span>
+              <span>{t('profile.weekly_flash.tap_next')}</span>
               <div className="weekly-flashcard-dots" aria-hidden="true">
                 {weeklyFlashcards.map((_, index) => (
                   <span
@@ -836,16 +1105,19 @@ export default function Profile() {
         )}
 
         {/* Bottom Grid */}
-        <div className="bottom-grid">
-          <section className="card profile-distribution-strip">
-            <ProfileDistributionCharts runs={runs} isMile={isMile} t={t} />
-          </section>
-
+        <div className="bottom-grid profile-layout-grid">
           <section className="card data-analyze-section analysis-split-card">
             <div
               className="analysis-primary-section"
               onClick={() => navigate('/analysis')}
-              style={{ cursor: 'pointer' }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  navigate('/analysis');
+                }
+              }}
               title={t('profile.analysis_title_attr')}
             >
               <div className="top-link-row">
@@ -931,7 +1203,6 @@ export default function Profile() {
               }}
               role="button"
               tabIndex={0}
-              style={{ cursor: 'pointer' }}
               title={t('profile.today_run_open_details')}
             >
               <div className="analysis-recommend-header">
@@ -974,20 +1245,18 @@ export default function Profile() {
           </section>
 
           <div className="right-column">
-            <section className="card recent-running-section">
-              <div
-                className="card-header"
-                style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}
-                onClick={() => navigate('/runs')}
-              >
-                <h2 style={{ margin: 0 }}>{t('profile.recent_runs')}</h2>
-                <span style={{ color: 'var(--classic-accent)', fontWeight: 'bold', fontSize: '0.85rem' }}>
+            <SectionCard
+              className="recent-running-section"
+              title={t('profile.recent_runs')}
+              actions={
+                <button type="button" className="btn-secondary recent-runs-link-btn" onClick={() => navigate('/runs')}>
                   {t('profile.view_history')}
-                </span>
-              </div>
+                </button>
+              }
+            >
               <ul className="run-list">
                 {runs.length === 0 ? (
-                  <div style={{ padding: '15px 0' }}>
+                  <div className="run-empty-state">
                     <div className="loading-text">{t('profile.syncing_runs')}</div>
                   </div>
                 ) : (
@@ -996,13 +1265,12 @@ export default function Profile() {
                     const mins = Math.floor((run.movingTimeSeconds || 0) / 60);
                     const secs = Math.min(59, Math.round((run.movingTimeSeconds || 0) % 60));
                     return (
-                      <li key={i} className="run-item" onClick={() => navigate('/runs')}
-                        style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
+                      <li key={i} className="run-item run-item-clickable" onClick={() => navigate('/runs')}>
                         <div className="run-info">
                           <strong>{run.name || 'Run'}</strong><br />
-                          <span style={{ fontSize: '0.8rem', color: '#888' }}>{date}</span>
+                          <span className="run-date">{date}</span>
                         </div>
-                        <div className="run-stats" style={{ fontWeight: 'bold', color: 'var(--classic-accent)' }}>
+                        <div className="run-stats run-stats-accent">
                           {isMile ? ((run.distanceKm || 0) / 1.60934).toFixed(1) : (run.distanceKm || 0).toFixed(1)} {distanceUnitShort} &bull; {mins}:{String(secs).padStart(2, '0')}
                         </div>
                       </li>
@@ -1010,7 +1278,7 @@ export default function Profile() {
                   })
                 )}
               </ul>
-            </section>
+            </SectionCard>
 
             {/* Subscription */}
             {aiQuota && (
@@ -1034,7 +1302,7 @@ export default function Profile() {
                     </button>
                   </div>
                 )}
-                <h2 style={{ margin: '0 0 16px' }}>{t('profile.subscription_title')}</h2>
+                <h2 className="section-title-with-gap">{t('profile.subscription_title')}</h2>
                 <div
                   className="subscription-card subscription-card--clickable"
                   role="button"
@@ -1084,31 +1352,33 @@ export default function Profile() {
 
             {/* Connected Services */}
             <section className="card connected-services-section">
-              <h2 style={{ margin: '0 0 16px' }}>{t('profile.connected_services')}</h2>
+              <h2 className="section-title-with-gap">{t('profile.connected_services')}</h2>
 
-              {/* FIT/GPX — file import */}
-              <div className="service-row">
-                <div className="service-icon" style={{ background: '#11548a' }}>
+              {/* Garmin Connect — account-based import */}
+              <div className="service-row service-row--primary">
+                <div className="service-icon service-icon--garmin">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 6v6l4 2" />
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 7v7" />
+                    <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+                    <path d="M8 18h8" />
                   </svg>
                 </div>
                 <div className="service-info">
-                  <strong>{t('profile.fit_export_watch_title')}</strong>
-                  <span className="service-status service-status-off">{t('profile.fit_export_watch_status')}</span>
+                  <strong>{t('profile.garmin_connect_title')}</strong>
+                  <span className="service-status service-status-off">{t('profile.garmin_connect_status')}</span>
                 </div>
                 <div className="service-action">
-                  <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
-                    {t('profile.watch_import_files')}
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setActiveImportModal('garmin')}>
+                    {t('profile.garmin_connect_import')}
                   </button>
                 </div>
               </div>
-              <p className="service-hint">{t('profile.fit_export_import_hint')}</p>
+              <p className="service-hint">{t('profile.garmin_connect_hint')}</p>
 
               {/* COROS — file import */}
-              <div className="service-row" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--line, #eee)' }}>
-                <div className="service-icon" style={{ background: '#e85d04' }}>
+              <div className="service-row service-row-separated">
+                <div className="service-icon service-icon--coros">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
                     <line x1="4" y1="22" x2="4" y2="15" />
@@ -1119,7 +1389,7 @@ export default function Profile() {
                   <span className="service-status service-status-off">{t('profile.coros_watch_status')}</span>
                 </div>
                 <div className="service-action">
-                  <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setActiveImportModal('manual')}>
                     {t('profile.watch_import_files')}
                   </button>
                 </div>
@@ -1127,8 +1397,8 @@ export default function Profile() {
               <p className="service-hint">{t('profile.coros_watch_hint')}</p>
 
               {/* Huawei Health — file import */}
-              <div className="service-row" style={{ marginTop: 12 }}>
-                <div className="service-icon" style={{ background: '#cf0a2c' }}>
+              <div className="service-row service-row-offset">
+                <div className="service-icon service-icon--huawei">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="6" y="5" width="12" height="14" rx="3" />
                     <path d="M9 12h6M12 9v6" />
@@ -1139,7 +1409,7 @@ export default function Profile() {
                   <span className="service-status service-status-off">{t('profile.huawei_watch_status')}</span>
                 </div>
                 <div className="service-action">
-                  <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setActiveImportModal('manual')}>
                     {t('profile.watch_import_files')}
                   </button>
                 </div>
@@ -1147,20 +1417,20 @@ export default function Profile() {
               <p className="service-hint">{t('profile.huawei_watch_hint')}</p>
             </section>
 
-            <section className="card running-shoes-section" onClick={() => navigate('/shoes')} style={{ cursor: 'pointer' }}>
-              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <h2 style={{ margin: 0 }}>{t('profile.gear_tracker')}</h2>
-                <span style={{ color: 'var(--classic-accent)', fontWeight: 'bold', fontSize: '0.85rem' }}>
+            <section className="card running-shoes-section running-shoes-clickable" onClick={() => navigate('/shoes')}>
+              <div className="card-header card-header-gap">
+                <h2 className="section-title-reset">{t('profile.gear_tracker')}</h2>
+                <span className="card-link-accent">
                   {t('profile.view_all_shoes')}
                 </span>
               </div>
               {profileShoes.length === 0 ? (
-                <div style={{ padding: '15px 0' }}>
+                <div className="run-empty-state">
                   <div className="loading-text">{t('profile.no_shoes')}</div>
                 </div>
               ) : (
                 <>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--classic-muted)', margin: '0 0 10px' }}>
+                  <p className="shoe-count-copy">
                     {t('profile.shoe_count', { count: profileShoes.filter(s => !s.retired).length })}
                   </p>
                   {profileShoes.slice(0, 3).map(shoe => {
@@ -1172,7 +1442,7 @@ export default function Profile() {
                       <div key={shoe.id} className="shoe-tracker">
                         <div className="shoe-info">
                           <strong>{name}</strong>
-                          {shoe.isPrimary && <span style={{ fontSize: '0.7rem', color: 'var(--classic-accent)', marginLeft: 6 }}>★</span>}
+                          {shoe.isPrimary && <span className="shoe-primary-star">★</span>}
                         </div>
                         <div className="mileage-bar-container"><div className="mileage-bar" style={{ width: `${pct}%` }} /></div>
                         <span className="mileage-text">
@@ -1338,7 +1608,7 @@ export default function Profile() {
                         </span>
                       </>
                     ) : (
-                      <span className="pr-table-none" style={{ gridColumn: 'span 3' }}>—</span>
+                      <span className="pr-table-none pr-table-none-wide">—</span>
                     )}
                   </div>
                 );
@@ -1346,6 +1616,183 @@ export default function Profile() {
             </div>
           </section>
         )}
+
+        <section className="card profile-system-status-section">
+          <div className="card-header profile-system-status-head">
+            <h2>{t('profile.system_status_title')}</h2>
+          </div>
+
+          <div className="profile-system-engine">
+            <div className="profile-system-engine-title">
+              <span className="profile-system-icon" aria-hidden="true">☀️</span>
+              <strong>{t('profile.system_heat_engine_title')}</strong>
+            </div>
+            <p className="profile-system-engine-copy">
+              {t('profile.system_heat_engine_line_1', {
+                current: formatTemp(systemStatus.currentTempC, 1),
+                baseline: formatTemp(systemStatus.baseline14dC, 2),
+              })}
+            </p>
+            <p className="profile-system-engine-copy">
+              {t('profile.system_heat_engine_line_2', {
+                delta: formatSignedTemp(systemStatus.impactDeltaC, 2),
+              })}
+            </p>
+          </div>
+
+          <div className="profile-system-bars">
+            <article className="profile-system-bar-card">
+              <div className="profile-system-bar-header">
+                <span className="profile-system-bar-label">
+                  <span className="profile-system-icon" aria-hidden="true">🌤️</span>
+                  {t('profile.system_heat_pace_bar')}
+                </span>
+                <strong>{formatSignedPaceSec(systemStatus.heatAdaptationSecPerKm)}</strong>
+              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarWarmBackground(heatPaceBarPct) }}
+              />
+            </article>
+
+            <article className="profile-system-bar-card">
+              <div className="profile-system-bar-header">
+                <span className="profile-system-bar-label">
+                  <span className="profile-system-icon" aria-hidden="true">🌡️</span>
+                  {t('profile.system_today_temp_bar')}
+                </span>
+                <strong>{formatSignedTemp(systemStatus.todayTempShiftC, 1)}</strong>
+              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarTempBackground(tempShiftBarPct) }}
+              />
+            </article>
+          </div>
+        </section>
+        <section className="card profile-weather-section">
+          <div className="profile-weather-header">
+            <div className="profile-weather-copy">
+              <span className="profile-weather-kicker">{t('profile.weather_card_kicker')}</span>
+              <h2>{t('profile.weather_card_title')}</h2>
+              <p>
+                {systemStatus.message
+                  || (systemStatus.available
+                    ? t('profile.weather_card_subtitle')
+                    : t('profile.weather_card_unavailable'))}
+              </p>
+            </div>
+
+            <div className="profile-weather-now-card">
+              <div className="profile-weather-now-icon">
+                <WeatherGlyph
+                  code={weatherSnapshot?.current?.code}
+                  title={t('profile.weather_condition_label')}
+                  className="profile-weather-now-glyph"
+                />
+              </div>
+              <div className="profile-weather-now-copy">
+                <span className="profile-weather-now-label">{t('profile.weather_current_label')}</span>
+                <strong>{formatAmbientTemp(weatherSnapshot?.current?.temp)}</strong>
+                <span className="profile-weather-now-meta">
+                  {systemStatus.available
+                    ? t('profile.weather_heat_day', { day: systemStatus.acclimatizationDay ?? '--' })
+                    : t('common.weather_error')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-weather-stat-strip">
+            <article className="profile-weather-stat-card">
+              <div className="profile-weather-stat-icon">
+                <TemperatureGlyph title={t('profile.weather_current_label')} />
+              </div>
+              <div className="profile-weather-stat-copy">
+                <span>{t('profile.weather_current_label')}</span>
+                <strong>{formatAmbientTemp(weatherSnapshot?.current?.temp)}</strong>
+              </div>
+            </article>
+            <article className="profile-weather-stat-card">
+              <div className="profile-weather-stat-icon">
+                <WeatherGlyph code={weatherSnapshot?.current?.code} title={t('profile.weather_baseline_label')} />
+              </div>
+              <div className="profile-weather-stat-copy">
+                <span>{t('profile.weather_baseline_label')}</span>
+                <strong>{displayMetricTemp(systemStatus.baseline14dC, 1)}</strong>
+              </div>
+            </article>
+            <article className="profile-weather-stat-card">
+              <div className="profile-weather-stat-icon">
+                <TemperatureGlyph title={t('profile.weather_shift_label')} />
+              </div>
+              <div className="profile-weather-stat-copy">
+                <span>{t('profile.weather_shift_label')}</span>
+                <strong>{displaySignedMetricTemp(systemStatus.todayTempShiftC, 1)}</strong>
+              </div>
+            </article>
+          </div>
+
+          <div className="profile-system-engine profile-weather-engine">
+            <div className="profile-system-engine-title">
+              <TemperatureGlyph className="profile-system-icon" title={t('profile.system_heat_engine_title')} />
+              <strong>{t('profile.system_heat_engine_title')}</strong>
+            </div>
+            <p className="profile-system-engine-copy">
+              {t('profile.system_heat_engine_line_1', {
+                current: displayMetricTemp(systemStatus.currentTempC, 1),
+                baseline: displayMetricTemp(systemStatus.baseline14dC, 2),
+              })}
+            </p>
+            <p className="profile-system-engine-copy">
+              {t('profile.system_heat_engine_line_2', {
+                delta: displaySignedMetricTemp(systemStatus.impactDeltaC, 2),
+              })}
+            </p>
+          </div>
+
+          <div className="profile-system-bars">
+            <article className="profile-system-bar-card">
+              <div className="profile-system-bar-header">
+                <span className="profile-system-bar-label">
+                  <TemperatureGlyph className="profile-system-icon" title={t('profile.system_heat_pace_bar')} />
+                  {t('profile.system_heat_pace_bar')}
+                </span>
+                <strong>{displaySignedPace(systemStatus.heatAdaptationSecPerKm)}</strong>
+              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarWarmBackground(heatPaceBarPct) }}
+              />
+            </article>
+
+            <article className="profile-system-bar-card">
+              <div className="profile-system-bar-header">
+                <span className="profile-system-bar-label">
+                  <WeatherGlyph code={weatherSnapshot?.current?.code} className="profile-system-icon" title={t('profile.system_today_temp_bar')} />
+                  {t('profile.system_today_temp_bar')}
+                </span>
+                <strong>{displaySignedMetricTemp(systemStatus.todayTempShiftC, 1)}</strong>
+              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarTempBackground(tempShiftBarPct) }}
+              />
+            </article>
+          </div>
+
+          <div className="profile-weather-forecast-shell">
+            <div className="profile-weather-forecast-head">
+              <strong>{t('common.weather_forecast')}</strong>
+              <span>{t('profile.weather_forecast_hint')}</span>
+            </div>
+            <WeatherTemperatureBar variant="inline" onSnapshotChange={setWeatherSnapshot} />
+          </div>
+        </section>
       </main>
 
       {/* Subscription plans */}
@@ -1456,7 +1903,7 @@ export default function Profile() {
       </Modal>
 
       {/* Import Modal */}
-      <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
+      <Modal isOpen={importModalOpen} onClose={() => setActiveImportModal(null)} title={t('profile.import_modal_title')}>
         <form onSubmit={handleImport}>
           <ImportDataGuide />
           <p className="modal-help">{t('profile.import_hint')}</p>
@@ -1471,7 +1918,7 @@ export default function Profile() {
               </div>
               <label className="modal-label">{t('profile.fit_export_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setFitExportFiles(e.target.files)} />
-              <p className="selected-file-name">{fitExportFiles?.length ? `${fitExportFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <p className="selected-file-name">{fitExportFiles?.length ? t('profile.selected_files_count', { count: fitExportFiles.length }) : t('profile.no_file_selected')}</p>
             </section>
             <section className="import-source-card">
               <div className="import-source-header">
@@ -1483,7 +1930,7 @@ export default function Profile() {
               </div>
               <label className="modal-label">{t('profile.coros_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setCorosFiles(e.target.files)} />
-              <p className="selected-file-name">{corosFiles?.length ? `${corosFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <p className="selected-file-name">{corosFiles?.length ? t('profile.selected_files_count', { count: corosFiles.length }) : t('profile.no_file_selected')}</p>
             </section>
             <section className="import-source-card">
               <div className="import-source-header">
@@ -1495,13 +1942,13 @@ export default function Profile() {
               </div>
               <label className="modal-label">{t('profile.huawei_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setHuaweiFiles(e.target.files)} />
-              <p className="selected-file-name">{huaweiFiles?.length ? `${huaweiFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <p className="selected-file-name">{huaweiFiles?.length ? t('profile.selected_files_count', { count: huaweiFiles.length }) : t('profile.no_file_selected')}</p>
             </section>
           </div>
           <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
           {importStatus && <div className="modal-status">{importStatus}</div>}
           <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setImportModalOpen(false)}>{t('profile.cancel')}</button>
+            <button type="button" className="btn-secondary modal-button" onClick={() => setActiveImportModal(null)}>{t('profile.cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('profile.upload_file')}</button>
           </div>
         </form>
@@ -1525,43 +1972,42 @@ export default function Profile() {
 
       {/* Sync Modal */}
       {syncModalOpen && (
-        <div className="modal-overlay" style={{ display: 'flex', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', zIndex: 2000, justifyContent: 'center', alignItems: 'center' }}>
-          <div className="sync-modal" style={{ background: 'var(--classic-surface, white)', width: '95%', maxWidth: 650, borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', borderBottom: '1px solid var(--classic-border)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500 }}>{t('profile.sync_modal_title')}</h3>
-              <span style={{ cursor: 'pointer', color: '#999' }} onClick={() => setSyncModalOpen(false)}>&#10005;</span>
+        <div className="modal-overlay modal-overlay-visible">
+          <div className="sync-modal">
+            <div className="sync-modal-header">
+              <h3 className="sync-modal-title">{t('profile.sync_modal_title')}</h3>
+              <span className="sync-modal-close" onClick={() => setSyncModalOpen(false)}>&#10005;</span>
             </div>
-            <div style={{ padding: 30, display: 'flex', gap: 30 }}>
-              <div style={{ flex: 1 }}>
+            <div className="sync-body">
+              <div className="sync-col">
                 <h4>{t('profile.sync_loaded_from_server')}</h4>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <span style={{ width: 70 }}>{t('profile.sync_activities')}</span>
-                  <div style={{ width: 18, height: 18, background: '#16a34a', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>&#10003;</div>
-                  <span style={{ flex: 1, textAlign: 'right', color: 'var(--classic-muted)' }}>({syncCount} activities)</span>
+                <div className="sync-row">
+                  <span className="sync-label sync-label-wide">{t('profile.sync_activities')}</span>
+                  <div className="sync-check">&#10003;</div>
+                  <span className="sync-value">{t('profile.sync_activity_count', { count: syncCount })}</span>
                 </div>
               </div>
-              <div style={{ flex: 1 }}>
+              <div className="sync-col">
                 <h4>{t('profile.sync_server_processing')}</h4>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <span style={{ width: 65 }}>{t('profile.sync_database')}</span>
-                  <div style={{ flex: 1, background: 'var(--classic-border)', height: 10, borderRadius: 5, margin: '0 10px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: '#16a34a', width: '100%', transition: 'width 0.5s ease' }} />
+                <div className="sync-row">
+                  <span className="sync-label">{t('profile.sync_database')}</span>
+                  <div className="status-bar-bg">
+                    <div className="status-bar-fill status-bar-full" />
                   </div>
                   <span>100%</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <span style={{ width: 65 }}>{t('profile.sync_statistics')}</span>
-                  <div style={{ flex: 1, background: 'var(--classic-border)', height: 10, borderRadius: 5, margin: '0 10px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: '#fa5d29', width: '100%', transition: 'width 0.5s ease' }} />
+                <div className="sync-row">
+                  <span className="sync-label">{t('profile.sync_statistics')}</span>
+                  <div className="status-bar-bg">
+                    <div className="status-bar-fill status-bar-orange status-bar-full" />
                   </div>
                   <span>100%</span>
                 </div>
               </div>
             </div>
-            <div style={{ padding: '15px 20px', borderTop: '1px solid var(--classic-border)', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="sync-modal-footer">
               <button
                 className="btn-close-modal"
-                style={{ padding: '8px 20px', borderRadius: 4, fontWeight: 'bold', cursor: 'pointer' }}
                 onClick={() => setSyncModalOpen(false)}
               >
                 {t('profile.close')}
@@ -1570,6 +2016,112 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* Garmin Connect Import Modal */}
+      <Modal isOpen={garminModalOpen} onClose={() => { if (!garminImporting) setActiveImportModal(null); }} title={t('profile.garmin_connect_modal_title')}>
+        <form onSubmit={handleGarminImport} className="garmin-import-form">
+          <section className="garmin-import-hero">
+            <div className="garmin-import-hero-main">
+              <div className="service-icon service-icon--garmin garmin-import-hero-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="8" />
+                  <path d="M12 7v7" />
+                  <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+                  <path d="M8 18h8" />
+                </svg>
+              </div>
+              <div className="garmin-import-hero-copy">
+                <strong>{t('profile.garmin_connect_title')}</strong>
+                <p>{t('profile.garmin_connect_brand_copy')}</p>
+              </div>
+            </div>
+            <span className="garmin-import-pill">{t('profile.garmin_connect_status')}</span>
+          </section>
+
+          <p className="garmin-credentials-note">
+            {t('profile.garmin_connect_credentials_note')}
+          </p>
+
+          <div className="garmin-import-field-grid">
+            <div className="garmin-import-field">
+              <label className="modal-label">{t('profile.garmin_connect_email_label')}</label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={garminEmail}
+                onChange={e => setGarminEmail(e.target.value)}
+                disabled={garminImporting}
+                required
+                autoComplete="username"
+              />
+            </div>
+
+            <div className="garmin-import-field">
+              <label className="modal-label">{t('profile.garmin_connect_password_label')}</label>
+              <input
+                type="password"
+                value={garminPassword}
+                onChange={e => setGarminPassword(e.target.value)}
+                disabled={garminImporting}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+          </div>
+
+          <div className="garmin-import-field">
+            <label className="modal-label">{t('profile.garmin_connect_limit_label')}</label>
+            <select
+              value={garminLimit}
+              onChange={e => setGarminLimit(Number(e.target.value))}
+              disabled={garminImporting}
+              className="garmin-import-limit"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </div>
+
+          {garminStatus && (
+            <div className={`garmin-import-status garmin-import-status--${garminStatusType || 'info'}`}>
+              {garminStatus}
+            </div>
+          )}
+
+          <div className="modal-actions garmin-import-actions">
+            <button
+              type="button"
+              className="btn-secondary modal-button"
+              onClick={() => { if (!garminImporting) setActiveImportModal(null); }}
+              disabled={garminImporting}
+            >
+              {t('profile.cancel')}
+            </button>
+            <button
+              type="submit"
+              className="btn-primary modal-button"
+              disabled={garminImporting || !garminEmail.trim() || !garminPassword.trim()}
+            >
+              {garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_start')}
+            </button>
+          </div>
+
+          <div className="garmin-import-secondary">
+            <span>{t('profile.garmin_connect_secondary_hint')}</span>
+            <button
+              type="button"
+              className="btn-secondary modal-button garmin-import-secondary-button"
+              onClick={openManualImportFromGarmin}
+              disabled={garminImporting}
+            >
+              {t('profile.garmin_connect_secondary_manual')}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useI18n } from '../contexts/I18nContext';
 
 export default function LanguageSwitcher() {
-  const { lang, setLang } = useI18n();
+  const { lang, setLang, t } = useI18n();
 
   return (
     <div className="lang-switcher">
@@ -12,7 +12,7 @@ export default function LanguageSwitcher() {
         aria-pressed={lang === 'zh-CN'}
         onClick={() => setLang('zh-CN')}
       >
-        中文
+        {t('common.lang_zh')}
       </button>
       <button
         type="button"
@@ -21,7 +21,7 @@ export default function LanguageSwitcher() {
         aria-pressed={lang === 'en'}
         onClick={() => setLang('en')}
       >
-        English
+        {t('common.lang_en')}
       </button>
     </div>
   );

@@ -7,12 +7,11 @@
  */
 export function formatDuration(totalSeconds) {
   const s = Math.max(0, Number(totalSeconds) || 0);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = Math.round(s % 60);
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  }
+  const whole = Math.round(s);
+  const h = Math.floor(whole / 3600);
+  const m = Math.floor((whole % 3600) / 60);
+  const sec = whole % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
@@ -78,9 +77,9 @@ export function formatPace(distanceKm, movingTimeSeconds, lang) {
     const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/公里';
     return `0:00 ${suffix}`;
   }
-  const paceSeconds = movingTimeSeconds / distanceKm;
+  const paceSeconds = Math.round(movingTimeSeconds / distanceKm);
   const minutes = Math.floor(paceSeconds / 60);
-  const seconds = Math.round(paceSeconds % 60);
+  const seconds = paceSeconds % 60;
   const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/公里';
   return `${minutes}:${String(seconds).padStart(2, '0')} ${suffix}`;
 }

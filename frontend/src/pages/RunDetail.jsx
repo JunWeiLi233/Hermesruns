@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import { formatDuration, formatLongDate, formatPace } from '../utils/format';
+import { formatShoeDisplayName } from '../utils/shoeNames';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import 'leaflet/dist/leaflet.css';
 
@@ -56,6 +57,9 @@ export default function RunDetail() {
   const [syncDisabled, setSyncDisabled] = useState(false);
   const [shoes, setShoes] = useState([]);
   const [shoeDropdownOpen, setShoeDropdownOpen] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
+  const [elevationStatus, setElevationStatus] = useState(null);
+  const [recalibratingElevation, setRecalibratingElevation] = useState(false);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -84,7 +88,7 @@ export default function RunDetail() {
         shoeId: shoeId === 0 ? null : shoeId,
         shoeName: shoeId === 0 ? null : (() => {
           const s = shoes.find(sh => sh.id === shoeId);
-          return s ? [s.brand, s.model].filter(Boolean).join(' ') || s.nickname : null;
+          return s ? formatShoeDisplayName({ brand: s.brand, model: s.model, nickname: s.nickname, lang }) : null;
         })(),
       }));
       setShoeDropdownOpen(false);
@@ -96,7 +100,11 @@ export default function RunDetail() {
     if (!run?.id || !isAuthenticated) return;
     async function fetchPoints() {
       try {
-        const res = await apiFetch(`/api/activities/${run.id}/points`);
+        const [res, analyticsRes, elevStatusRes] = await Promise.all([
+          apiFetch(`/api/activities/${run.id}/points`),
+          apiFetch(`/api/activities/${run.id}/analytics`),
+          apiFetch(`/api/activities/${run.id}/elevation/status`),
+        ]);
         if (!res.ok) return;
         const data = await res.json();
         const pts = Array.isArray(data)
@@ -104,10 +112,45 @@ export default function RunDetail() {
           : [];
         setPoints(pts);
         setInsights(buildInsights(pts, run));
+        if (analyticsRes.ok) {
+          const payload = await analyticsRes.json();
+          setAnalytics(payload && typeof payload === 'object' ? payload : null);
+        }
+        if (elevStatusRes.ok) {
+          const payload = await elevStatusRes.json();
+          setElevationStatus(payload && typeof payload === 'object' ? payload : null);
+        }
       } catch { /* ignored */ }
     }
     fetchPoints();
   }, [run, isAuthenticated]);
+
+  async function handleElevationRecalibration() {
+    if (!run?.id || recalibratingElevation) return;
+    setRecalibratingElevation(true);
+    try {
+      const res = await apiFetch(`/api/activities/${run.id}/elevation/recalibrate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coordinates: points.map(([latitude, longitude]) => ({ latitude, longitude })) }),
+      });
+      if (!res.ok) return;
+      const [analyticsRes, statusRes] = await Promise.all([
+        apiFetch(`/api/activities/${run.id}/analytics`),
+        apiFetch(`/api/activities/${run.id}/elevation/status`),
+      ]);
+      if (analyticsRes.ok) {
+        const payload = await analyticsRes.json();
+        setAnalytics(payload && typeof payload === 'object' ? payload : null);
+      }
+      if (statusRes.ok) {
+        const payload = await statusRes.json();
+        setElevationStatus(payload && typeof payload === 'object' ? payload : null);
+      }
+    } finally {
+      setRecalibratingElevation(false);
+    }
+  }
 
   // Render map
   useEffect(() => {
@@ -211,6 +254,24 @@ export default function RunDetail() {
     [t('run_detail.route_source_file'), run.sourceFileName || t('run_detail.not_available')],
   ] : [];
 
+  const elevationPoints = useMemo(() => {
+    const profile = analytics?.elevationProfile;
+    if (!Array.isArray(profile) || profile.length < 2) return null;
+    const xs = profile.map(p => Number(p.distanceKm || 0));
+    const ys = profile.map(p => Number(p.elevationMeters || 0));
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const width = 640, height = 180, pad = 16;
+    const spanX = Math.max(1e-9, maxX - minX);
+    const spanY = Math.max(1e-9, maxY - minY);
+    const path = profile.map((p, i) => {
+      const x = pad + ((p.distanceKm - minX) / spanX) * (width - pad * 2);
+      const y = height - pad - ((p.elevationMeters - minY) / spanY) * (height - pad * 2);
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' ');
+    return { path, minY, maxY };
+  }, [analytics]);
+
   const heroMeta = [dateText, run.provider, insights?.pointCount ? `${insights.pointCount.toLocaleString()} ${t('run_detail.gps_samples_suffix')}` : null].filter(Boolean).join(' \u2022 ') || t('run_detail.imported_activity');
 
   return (
@@ -306,7 +367,7 @@ export default function RunDetail() {
                   className={`shoe-run-option${s.id === run.shoeId ? ' active' : ''}`}
                   onClick={() => assignShoe(s.id)}
                 >
-                  {[s.brand, s.model].filter(Boolean).join(' ') || s.nickname || '—'}
+                  {formatShoeDisplayName({ brand: s.brand, model: s.model, nickname: s.nickname, lang })}
                   {s.isPrimary && ' ★'}
                 </button>
               ))}
@@ -315,6 +376,33 @@ export default function RunDetail() {
         </section>
 
         {/* Stats Grid */}
+        {elevationStatus?.flagged && (
+          <section className="section-card" style={{ marginBottom: 16, borderLeft: '4px solid #f59e0b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+              <div>
+                <strong>{lang === 'zh-CN' ? '检测到可疑海拔数据（可能气压漂移）' : 'Suspicious elevation data detected. Barometric drift likely.'}</strong>
+                <div style={{ marginTop: 6, fontSize: '0.86rem', color: 'var(--classic-muted)' }}>
+                  {lang === 'zh-CN' ? '气压爬升' : 'Barometric ascent'}: {elevationStatus.totalAscentBarometric?.toFixed?.(0) ?? '--'} m ·
+                  {' '}
+                  {lang === 'zh-CN' ? 'DEM 估算' : 'DEM check'}: {elevationStatus.totalAscentDem?.toFixed?.(0) ?? '--'} m ·
+                  {' '}
+                  {lang === 'zh-CN' ? '偏差' : 'Variance'}: {(Number(elevationStatus.variance || 0) * 100).toFixed(0)}%
+                </div>
+              </div>
+              <button
+                type="button"
+                className="sync-btn"
+                disabled={recalibratingElevation}
+                onClick={handleElevationRecalibration}
+              >
+                {recalibratingElevation
+                  ? (lang === 'zh-CN' ? '校准中...' : 'Recalibrating...')
+                  : (lang === 'zh-CN' ? '通过地形重校准' : 'Recalibrate via topography')}
+              </button>
+            </div>
+          </section>
+        )}
+
         <section className="section-grid">
           <article className="section-card">
             <h2>{t('run_detail.performance_metrics')}</h2>
@@ -332,6 +420,51 @@ export default function RunDetail() {
               ))}
             </div>
           </article>
+        </section>
+
+        <section className="section-grid" style={{ marginTop: 16 }}>
+          <article className="section-card">
+            <h2>Lap-by-lap Breakdown</h2>
+            <div className="stats-table">
+              {(analytics?.laps || []).slice(0, 30).map((lap) => (
+                <div key={`lap-${lap.lapIndex}`} className="stats-row">
+                  <span>Lap {lap.lapIndex} • {lap.distanceKm.toFixed(1)} km</span>
+                  <span>{lap.pace || '--'} • {lap.averageHeartRate ? `${lap.averageHeartRate} bpm` : '--'} • {lap.averageCadence ? `${lap.averageCadence} spm` : '--'}</span>
+                </div>
+              ))}
+              {(!analytics?.laps || analytics.laps.length === 0) && (
+                <div className="stats-row"><span>No lap data</span><span>--</span></div>
+              )}
+            </div>
+          </article>
+
+          <article className="section-card">
+            <h2>Cardiac Drift (Decoupling)</h2>
+            <div className="stats-table">
+              <div className="stats-row"><span>Decoupling</span><span>{analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}</span></div>
+              <div className="stats-row"><span>First Half</span><span>{analytics?.cardiacDrift ? `${analytics.cardiacDrift.firstHalfPace} • ${analytics.cardiacDrift.firstHalfAverageHeartRate.toFixed(0)} bpm` : '--'}</span></div>
+              <div className="stats-row"><span>Second Half</span><span>{analytics?.cardiacDrift ? `${analytics.cardiacDrift.secondHalfPace} • ${analytics.cardiacDrift.secondHalfAverageHeartRate.toFixed(0)} bpm` : '--'}</span></div>
+              <div className="stats-row"><span>Average Cadence</span><span>{analytics?.averageCadence ? `${analytics.averageCadence.toFixed(0)} spm` : '--'}</span></div>
+              <div className="stats-row"><span>Estimated Stride Length</span><span>{analytics?.averageStrideLengthMeters ? `${analytics.averageStrideLengthMeters.toFixed(2)} m` : '--'}</span></div>
+            </div>
+          </article>
+        </section>
+
+        <section className="section-card" style={{ marginTop: 16 }}>
+          <h2>Elevation Profile</h2>
+          {elevationPoints ? (
+            <div>
+              <svg viewBox="0 0 640 180" style={{ width: '100%', height: 180 }}>
+                <path d={elevationPoints.path} fill="none" stroke="#ff6b2c" strokeWidth="2.5" />
+              </svg>
+              <div className="stats-row">
+                <span>Min/Max Elevation</span>
+                <span>{elevationPoints.minY.toFixed(1)} m / {elevationPoints.maxY.toFixed(1)} m</span>
+              </div>
+            </div>
+          ) : (
+            <div className="stats-row"><span>No elevation stream available</span><span>--</span></div>
+          )}
         </section>
       </main>
     </div>

@@ -139,9 +139,31 @@ public class FitActivityFileParser implements ActivityFileParser {
                 return;
             }
 
+            Integer elapsedSeconds = null;
+            if (recordTime != null) {
+                LocalDateTime base = firstNonNull(sessionStartTime, lapStartTime, firstRecordTime);
+                if (base != null) {
+                    long sec = Duration.between(base, recordTime).getSeconds();
+                    if (sec >= 0 && sec <= Integer.MAX_VALUE) {
+                        elapsedSeconds = (int) sec;
+                    }
+                }
+            }
+
+            Double distanceMeters = toPositiveDouble(mesg.getDistance());
+            Double elevationMeters = toNullableDouble(mesg.getAltitude());
+            Integer heartRate = hr != null && hr > 0 ? hr.intValue() : null;
+            Short cadenceRaw = mesg.getCadence();
+            Integer cadence = (cadenceRaw != null && cadenceRaw > 0) ? cadenceRaw.intValue() * 2 : null;
+
             points.add(new ParsedTrackPoint(
                     semicirclesToDegrees(latitude),
-                    semicirclesToDegrees(longitude)
+                    semicirclesToDegrees(longitude),
+                    elapsedSeconds,
+                    distanceMeters,
+                    elevationMeters,
+                    heartRate,
+                    cadence
             ));
         }
 
@@ -210,6 +232,13 @@ public class FitActivityFileParser implements ActivityFileParser {
             return null;
         }
 
+        return value.doubleValue();
+    }
+
+    private Double toNullableDouble(Float value) {
+        if (value == null) {
+            return null;
+        }
         return value.doubleValue();
     }
 

@@ -5,6 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiJson } from '../api';
 import TopNav from '../components/TopNav';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 
 export default function TodayRun() {
@@ -13,6 +14,9 @@ export default function TodayRun() {
   const navigate = useNavigate();
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const [coachPayload, setCoachPayload] = useState(null);
+  const [weatherContext, setWeatherContext] = useState(null);
+  const [showHeatModal, setShowHeatModal] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -24,15 +28,35 @@ export default function TodayRun() {
 
   async function loadActivities() {
     try {
-      const data = await apiJson('/api/activities');
+      const [data, coach, weather] = await Promise.all([
+        apiJson('/api/activities'),
+        apiJson('/api/coach/today').catch(() => null),
+        apiJson('/api/v1/weather/context').catch(() => null),
+      ]);
       const list = Array.isArray(data) ? data : [];
       list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
       setRuns(list);
+      setCoachPayload(coach && typeof coach === 'object' ? coach : null);
+      setWeatherContext(weather && typeof weather === 'object' ? weather : null);
       setLoadState('ready');
     } catch {
       setLoadState('error');
     }
   }
+
+  useEffect(() => {
+    if (!weatherContext?.available || (weatherContext?.pacePenaltySecPerKm ?? 0) <= 0) {
+      setShowHeatModal(false);
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const dismissKey = `hermes_heat_modal_dismissed_${today}`;
+    if (window.localStorage.getItem(dismissKey) === '1') {
+      setShowHeatModal(false);
+      return;
+    }
+    setShowHeatModal(true);
+  }, [weatherContext]);
 
   const {
     recommendation,
@@ -59,6 +83,62 @@ export default function TodayRun() {
             <span className={`analysis-recommend-pill tone-${tone.key}`}>{recommendation.type}</span>
           </div>
 
+          {coachPayload?.today && (
+            <div className="today-run-coach-banner">
+              <div className="today-run-coach-head">
+                <span className="history-eyebrow">{t('today_run.coach_title')}</span>
+                <p className="history-copy coach-subcopy">{t('today_run.coach_subtitle')}</p>
+              </div>
+              <div className="today-run-summary-grid coach-grid">
+                <article className="today-run-summary-card">
+                  <span className="stat-label">{t('today_run.coach_session')}</span>
+                  <strong>{coachPayload.today.workoutType}</strong>
+                  {coachPayload.today.readinessAdjusted && (
+                    <span className="coach-readiness-pill">{t('today_run.coach_readiness')}</span>
+                  )}
+                </article>
+                <article className="today-run-summary-card">
+                  <span className="stat-label">{t('today_run.coach_km')}</span>
+                  <strong>
+                    {coachPayload.today.plannedDistanceKm != null
+                      ? coachPayload.today.plannedDistanceKm.toFixed(1)
+                      : '—'}
+                  </strong>
+                </article>
+                <article className="today-run-summary-card">
+                  <span className="stat-label">{t('today_run.coach_strides_label')}</span>
+                  <strong>
+                    {coachPayload.today.stridesSuggested
+                      ? t('today_run.coach_strides_yes')
+                      : t('today_run.coach_strides_no')}
+                  </strong>
+                </article>
+              </div>
+              {coachPayload.state && (
+                <div className="coach-metrics-row">
+                  <span>
+                    {t('today_run.coach_polarization')}
+                    {': '}
+                    <strong>
+                      {coachPayload.state.highIntensityRatioLast7d != null
+                        ? `${(coachPayload.state.highIntensityRatioLast7d * 100).toFixed(0)}%`
+                        : '—'}
+                    </strong>
+                  </span>
+                  <span>
+                    {t('today_run.coach_grey_zone')}
+                    {': '}
+                    <strong>{coachPayload.state.minutesGreyZ3Last7d ?? '—'}</strong>
+                  </span>
+                </div>
+              )}
+              {coachPayload.today.notes && (
+                <p className="coach-notes">{coachPayload.today.notes}</p>
+              )}
+              <p className="history-copy coach-hint">{t('today_run.coach_recovery_hint')}</p>
+            </div>
+          )}
+
           <div className="today-run-summary-grid">
             <article className={`today-run-summary-card tone-${tone.key}`}>
               <span className="stat-label">{t('profile.today_run_focus')}</span>
@@ -72,6 +152,16 @@ export default function TodayRun() {
               <span className="stat-label">{t('profile.today_run_pace')}</span>
               <strong>{recommendation.pace}</strong>
             </article>
+            {weatherContext?.available && (
+              <article className="today-run-summary-card">
+                <span className="stat-label">{t('today_run.acclimatization_title')}</span>
+                <strong>
+                  {(weatherContext.pacePenaltySecPerKm ?? 0) > 0
+                    ? t('today_run.acclimatization_penalty', { n: weatherContext.pacePenaltySecPerKm })
+                    : t('today_run.acclimatization_clear')}
+                </strong>
+              </article>
+            )}
           </div>
         </section>
 
@@ -99,7 +189,11 @@ export default function TodayRun() {
           <section className="card today-run-reasons-card">
             <div className="history-list-header">
               <h2>{t('today_run.reasons_title')}</h2>
-              <p>{recommendation.purpose}</p>
+              <p>
+                {(weatherContext?.pacePenaltySecPerKm ?? 0) > 0
+                  ? t('today_run.acclimatization_reason', { n: weatherContext.pacePenaltySecPerKm })
+                  : recommendation.purpose}
+              </p>
             </div>
 
             <div className="today-run-metric-strip">
@@ -128,6 +222,34 @@ export default function TodayRun() {
           </section>
         </div>
       </main>
+
+      {showHeatModal && (
+        <div className="modal-overlay" role="presentation">
+          <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="heat-modal-title">
+            <h2 id="heat-modal-title">{t('today_run.acclimatization_modal_title')}</h2>
+            <p>
+              {t('today_run.acclimatization_modal_body', {
+                n: weatherContext?.pacePenaltySecPerKm ?? 0,
+              })}
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  window.localStorage.setItem(`hermes_heat_modal_dismissed_${today}`, '1');
+                  setShowHeatModal(false);
+                }}
+              >
+                {t('profile.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <WeatherTemperatureBar />
     </div>
   );
 }

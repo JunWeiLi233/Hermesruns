@@ -56,8 +56,6 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
                 continue;
             }
 
-            points.add(new ParsedTrackPoint(latitude, longitude));
-
             LocalDateTime trackPointTime = parseDateTime(firstTextByLocalName(trackPointElement, "Time"));
             if (startTime == null && trackPointTime != null) {
                 startTime = trackPointTime;
@@ -65,6 +63,29 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
             if (trackPointTime != null) {
                 endTime = trackPointTime;
             }
+
+            Integer elapsedSeconds = null;
+            if (startTime != null && trackPointTime != null) {
+                long sec = java.time.Duration.between(startTime, trackPointTime).getSeconds();
+                if (sec >= 0 && sec <= Integer.MAX_VALUE) {
+                    elapsedSeconds = (int) sec;
+                }
+            }
+            Double distanceMetersTrack = parseDouble(firstTextByLocalName(trackPointElement, "DistanceMeters"));
+            Double elevationMeters = parseDouble(firstTextByLocalName(trackPointElement, "AltitudeMeters"));
+            Element hrElem = firstChildElementByLocalName(trackPointElement, "HeartRateBpm");
+            Integer heartRate = hrElem != null ? parseInt(firstTextByLocalName(hrElem, "Value")) : null;
+            Integer cadence = parseInt(firstTextByLocalName(trackPointElement, "Cadence"));
+
+            points.add(new ParsedTrackPoint(
+                    latitude,
+                    longitude,
+                    elapsedSeconds,
+                    distanceMetersTrack,
+                    elevationMeters,
+                    heartRate,
+                    cadence
+            ));
         }
 
         if (points.isEmpty()) {
@@ -92,5 +113,15 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
         }
 
         return fileNameStem(fileName);
+    }
+
+    private Integer parseInt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            int n = (int) Math.round(Double.parseDouble(value.trim()));
+            return n > 0 ? n : null;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }

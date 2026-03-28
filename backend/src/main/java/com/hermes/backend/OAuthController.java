@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -49,6 +50,8 @@ public class OAuthController {
     private final SecretEncryptionService secretEncryptionService;
     private final SystemConfigService systemConfigService;
     private final AiUsageService aiUsageService;
+    private final ApplicationEventPublisher applicationEventPublisher;
+    private final AutomatedCoachService automatedCoachService;
     private final RestTemplate restTemplate;
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
 
@@ -92,7 +95,9 @@ public class OAuthController {
                            ActivityRepository activityRepository, ActivityPointRepository activityPointRepository,
                            SecretEncryptionService secretEncryptionService, AiUsageService aiUsageService,
                            RestTemplate restTemplate,
-                           SystemConfigService systemConfigService) {
+                           SystemConfigService systemConfigService,
+                           ApplicationEventPublisher applicationEventPublisher,
+                           AutomatedCoachService automatedCoachService) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
@@ -101,6 +106,8 @@ public class OAuthController {
         this.aiUsageService = aiUsageService;
         this.restTemplate = restTemplate;
         this.systemConfigService = systemConfigService;
+        this.applicationEventPublisher = applicationEventPublisher;
+        this.automatedCoachService = automatedCoachService;
     }
 
     @PreDestroy
@@ -391,9 +398,16 @@ public class OAuthController {
         }
 
         Runner runner = runnerOpt.get();
-        String accessToken = resolveRunnerStravaAccessToken(runner);
+        String accessToken;
+        try {
+            accessToken = resolveRunnerStravaAccessToken(runner);
+        } catch (Exception ex) {
+            // Token/cipher mismatch should not bubble up as 500 in client-triggered sync.
+            System.err.println("Strava sync skipped for runner " + runner.getId() + ": " + ex.getMessage());
+            return ResponseEntity.ok("Strava token is invalid; please relink your Strava account.");
+        }
         if (accessToken == null || accessToken.isBlank()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No Strava account linked");
+            return ResponseEntity.ok("No Strava account linked");
         }
 
         CompletableFuture.runAsync(
@@ -602,60 +616,78 @@ public class OAuthController {
     private boolean fetchAndSaveGpsStream(Activity activity, String stravaId, String accessToken,
                                           RestTemplate restTemplate, HttpHeaders headers) {
         try {
-            String url = "https://www.strava.com/api/v3/activities/" + stravaId + "/streams?keys=latlng";
+            String url = "https://www.strava.com/api/v3/activities/" + stravaId
+                    + "/streams?keys=latlng,time,distance,altitude,heartrate,cadence";
             ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
                     url, HttpMethod.GET, new HttpEntity<>(headers),
                     new ParameterizedTypeReference<List<Map<String, Object>>>() {});
 
             List<Map<String, Object>> streams = response.getBody();
             if (streams == null) return true;
-
+            List<List<Double>> latlng = null;
+            List<Number> time = null;
+            List<Number> distance = null;
+            List<Number> altitude = null;
+            List<Number> heartRate = null;
+            List<Number> cadence = null;
             for (Map<String, Object> stream : streams) {
-                if ("latlng".equals(stream.get("type"))) {
-                    List<List<Double>> data = (List<List<Double>>) stream.get("data");
-                    if (data == null || data.isEmpty()) return true;
+                if (!stream.containsKey("type")) continue;
+                String type = String.valueOf(stream.get("type"));
+                Object dataObj = stream.get("data");
+                if ("latlng".equals(type) && dataObj instanceof List<?> l) latlng = (List<List<Double>>) l;
+                if ("time".equals(type) && dataObj instanceof List<?> l) time = (List<Number>) l;
+                if ("distance".equals(type) && dataObj instanceof List<?> l) distance = (List<Number>) l;
+                if ("altitude".equals(type) && dataObj instanceof List<?> l) altitude = (List<Number>) l;
+                if ("heartrate".equals(type) && dataObj instanceof List<?> l) heartRate = (List<Number>) l;
+                if ("cadence".equals(type) && dataObj instanceof List<?> l) cadence = (List<Number>) l;
+            }
+            if (latlng == null || latlng.isEmpty()) return true;
 
-                    // Memory optimization for small RAM servers:
-                    // avoid building the full points list; save incrementally.
-                    final int batchSize = STRAVA_POINTS_BATCH_SIZE;
-                    int total = data.size();
-                    int stride = total > MAX_POINTS_PER_ACTIVITY
-                            ? Math.max(1, (int) Math.ceil(total / (double) MAX_POINTS_PER_ACTIVITY))
-                            : 1;
+            // Memory optimization for small RAM servers:
+            // avoid building the full points list; save incrementally.
+            final int batchSize = STRAVA_POINTS_BATCH_SIZE;
+            int total = latlng.size();
+            int stride = total > MAX_POINTS_PER_ACTIVITY
+                    ? Math.max(1, (int) Math.ceil(total / (double) MAX_POINTS_PER_ACTIVITY))
+                    : 1;
 
-                    List<ActivityPoint> batch = new ArrayList<>(batchSize);
-                    int totalSaved = 0;
-                    int seq = 0;
+            List<ActivityPoint> batch = new ArrayList<>(batchSize);
+            int totalSaved = 0;
+            int seq = 0;
 
-                    for (int i = 0; i < total; i += stride) {
-                        List<Double> coord = data.get(i);
-                        if (coord == null || coord.size() < 2) continue;
+            for (int i = 0; i < total; i += stride) {
+                List<Double> coord = latlng.get(i);
+                if (coord == null || coord.size() < 2) continue;
 
-                        ActivityPoint point = new ActivityPoint();
-                        point.setActivity(activity);
-                        point.setLatitude(coord.get(0));
-                        point.setLongitude(coord.get(1));
-                        point.setSequenceIndex(seq++);
-                        batch.add(point);
+                ActivityPoint point = new ActivityPoint();
+                point.setActivity(activity);
+                point.setLatitude(coord.get(0));
+                point.setLongitude(coord.get(1));
+                point.setSequenceIndex(seq++);
+                point.setElapsedSeconds(numberAt(time, i) == null ? null : numberAt(time, i).intValue());
+                point.setDistanceMeters(numberAt(distance, i) == null ? null : numberAt(distance, i).doubleValue());
+                point.setElevationMeters(numberAt(altitude, i) == null ? null : numberAt(altitude, i).doubleValue());
+                point.setElevationRawMeters(numberAt(altitude, i) == null ? null : numberAt(altitude, i).doubleValue());
+                point.setHeartRate(numberAt(heartRate, i) == null ? null : numberAt(heartRate, i).intValue());
+                Number cad = numberAt(cadence, i);
+                point.setCadence(cad == null ? null : (int) Math.round(cad.doubleValue() * 2.0));
+                batch.add(point);
 
-                        if (batch.size() >= batchSize) {
-                            activityPointRepository.saveAll(batch);
-                            activityPointRepository.flush();
-                            totalSaved += batch.size();
-                            batch.clear();
-                        }
-                    }
-
-                    if (!batch.isEmpty()) {
-                        activityPointRepository.saveAll(batch);
-                        activityPointRepository.flush();
-                        totalSaved += batch.size();
-                    }
-
-                    System.out.println("GPS cached: " + stravaId + " (" + totalSaved + " pts)");
-                    return true;
+                if (batch.size() >= batchSize) {
+                    activityPointRepository.saveAll(batch);
+                    activityPointRepository.flush();
+                    totalSaved += batch.size();
+                    batch.clear();
                 }
             }
+
+            if (!batch.isEmpty()) {
+                activityPointRepository.saveAll(batch);
+                activityPointRepository.flush();
+                totalSaved += batch.size();
+            }
+
+            System.out.println("GPS cached: " + stravaId + " (" + totalSaved + " pts)");
             return true;
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {
@@ -669,6 +701,11 @@ public class OAuthController {
             System.err.println("GPS fetch skipped for " + stravaId + ": " + e.getMessage());
             return true;
         }
+    }
+
+    private static Number numberAt(List<Number> list, int i) {
+        if (list == null || i < 0 || i >= list.size()) return null;
+        return list.get(i);
     }
 
     /**
@@ -706,6 +743,7 @@ public class OAuthController {
                 .ifPresent(activity -> {
                     activityPointRepository.deleteByActivity(activity);
                     activityRepository.delete(activity);
+                    automatedCoachService.reaggregateRunner(runner.getId());
                 });
     }
 

@@ -88,8 +88,13 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
                 {t('profile.change_name') || 'Change Name'}
               </button>
               <button type="button" className="user-menu-item" onClick={() => { setMenuOpen(false); profile?.onImportData?.(); }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                {t('profile.import_data') || 'Import Data'}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="8" />
+                  <path d="M12 7v7" />
+                  <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+                  <path d="M8 18h8" />
+                </svg>
+                {t('profile.garmin_menu_entry') || t('profile.garmin_connect_import') || 'Garmin Import'}
               </button>
               <div className="user-menu-divider" />
               <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setMenuOpen(false); logout(); }}>

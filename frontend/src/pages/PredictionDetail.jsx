@@ -6,7 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import { formatDuration, formatPaceSeconds } from '../utils/format';
-import { predictRaceTime, RACE_DISTANCES, collectAllVdotEntries, computeRollingRepresentativeSeries, VDOT_LOOKBACK_MS } from '../utils/vdot';
+import { predictRaceTimeCalibrated, RACE_DISTANCES, collectAllVdotEntries, computeRollingRepresentativeSeries, VDOT_LOOKBACK_MS } from '../utils/vdot';
 import TopNav from '../components/TopNav';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, LineController, ScatterController, Title, Tooltip, Legend, Filler } from 'chart.js';
@@ -53,7 +53,7 @@ export default function PredictionDetail() {
       const week = Math.floor(pt.x / (7 * 24 * 60 * 60 * 1000));
       if (week !== lastWeek) {
         lastWeek = week;
-        const timeMin = predictRaceTime(pt.y, raceDist.meters);
+        const timeMin = predictRaceTimeCalibrated(pt.y, raceDist.meters, runs);
         samples.push({
           date: pt.x,
           timeSec: timeMin ? Math.round(timeMin * 60) : null,
@@ -63,7 +63,7 @@ export default function PredictionDetail() {
     });
 
     const last = rolling[rolling.length - 1];
-    const timeMinLast = predictRaceTime(last.y, raceDist.meters);
+    const timeMinLast = predictRaceTimeCalibrated(last.y, raceDist.meters, runs);
     const entry = {
       date: last.x,
       timeSec: timeMinLast ? Math.round(timeMinLast * 60) : null,
@@ -72,7 +72,7 @@ export default function PredictionDetail() {
     if (!samples.length || samples[samples.length - 1].date !== entry.date) samples.push(entry);
 
     return samples;
-  }, [allVdots, raceDist]);
+  }, [allVdots, raceDist, runs]);
 
   // Stats
   const stats = useMemo(() => {

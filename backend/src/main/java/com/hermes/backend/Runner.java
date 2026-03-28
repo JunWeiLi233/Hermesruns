@@ -43,6 +43,12 @@ public class Runner {
 
     private String displayName;
 
+    /** Optional profile override for coach HR zone math (bpm). */
+    private Integer maxHeartRateBpm;
+
+    /** Optional resting HR for readiness checks (bpm). */
+    private Integer restingHeartRateBpm;
+
     private Long stravaAthleteId;
 
     private String stravaUsername;
@@ -135,6 +141,22 @@ public class Runner {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public Integer getMaxHeartRateBpm() {
+        return maxHeartRateBpm;
+    }
+
+    public void setMaxHeartRateBpm(Integer maxHeartRateBpm) {
+        this.maxHeartRateBpm = maxHeartRateBpm;
+    }
+
+    public Integer getRestingHeartRateBpm() {
+        return restingHeartRateBpm;
+    }
+
+    public void setRestingHeartRateBpm(Integer restingHeartRateBpm) {
+        this.restingHeartRateBpm = restingHeartRateBpm;
     }
 
     public Long getStravaAthleteId() {
