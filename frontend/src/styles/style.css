@@ -7142,10 +7142,10 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
   display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 14px;
 }
 .shoe-img {
-  width: 72px; height: 72px; object-fit: contain; border-radius: 8px; flex-shrink: 0;
+  width: 100%; height: 100%; object-fit: contain; border-radius: 8px; display: block;
 }
 .shoe-img-placeholder {
-  width: 72px; height: 72px; border-radius: 8px; flex-shrink: 0;
+  width: 100%; height: 100%; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   background: var(--classic-border, #f3f4f6); font-size: 1.6rem;
 }
@@ -7153,12 +7153,15 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
   background: linear-gradient(90deg, var(--classic-border, #f3f4f6) 25%, #e5e7eb 50%, var(--classic-border, #f3f4f6) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+  width: 100%; height: 100%;
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* Image picker — clickable shoe image */
 .shoe-img-clickable {
   cursor: pointer; position: relative; border-radius: 8px; transition: box-shadow 0.2s;
+  width: 120px; height: 120px; flex-shrink: 0; overflow: hidden;
+  background: var(--classic-border, #f3f4f6);
 }
 .shoe-img-clickable:hover { box-shadow: 0 0 0 2px var(--brand-accent, #ff6b2c); }
 .shoe-img-clickable:hover::after {
@@ -7827,35 +7830,6 @@ body.theme-midnight .polarized-target-marker {
   font-size: 0.82rem; padding: 6px 16px;
 }
 
-/* Admin Certified Badge Layer */
-.shoe-certified-layer {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(16, 185, 129, 0.15); /* emerald green tint */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  color: #10b981;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.70rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  pointer-events: none;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  z-index: 2;
-}
-
-[data-theme='dark'] .shoe-certified-layer {
-  background: rgba(16, 185, 129, 0.25);
-  border-color: rgba(16, 185, 129, 0.6);
-  color: #34d399;
-}
 
 /* ============================================================
    Sport dashboard primitives
