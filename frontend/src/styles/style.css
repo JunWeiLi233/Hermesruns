@@ -7359,6 +7359,13 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
   color: var(--text-muted);
 }
 
+.shoe-reddit-link {
+  display: inline-block; margin-top: 10px;
+  font-size: 0.8rem; font-weight: 600;
+  color: #ff4500; text-decoration: none;
+}
+.shoe-reddit-link:hover { text-decoration: underline; }
+
 .shoe-performance-inline {
   margin-top: 12px;
   padding: 12px 14px;

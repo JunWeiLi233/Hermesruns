@@ -1,0 +1,3 @@
+import{i as l}from"./I18nContext-DiyGYYSZ.js";var s=l();function m({title:e,subtitle:c,actions:r,className:n="",bodyClassName:a="",children:i}){const o=["card","section-card",n].filter(Boolean).join(" "),d=["section-card-body",a].filter(Boolean).join(" ");return(0,s.jsxs)("section",{className:o,children:[(e||c||r)&&(0,s.jsxs)("header",{className:"section-card-header",children:[(0,s.jsxs)("div",{className:"section-card-copy",children:[e?(0,s.jsx)("h2",{children:e}):null,c?(0,s.jsx)("p",{children:c}):null]}),r?(0,s.jsx)("div",{className:"section-card-actions",children:r}):null]}),(0,s.jsx)("div",{className:d,children:i})]})}export{m as t};
+
+//# sourceMappingURL=SectionCard-5XWJDDhV.js.map

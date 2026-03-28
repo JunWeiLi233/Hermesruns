@@ -120,6 +120,33 @@ const TYPE_LABELS = {
   trail: 'type_trail', stability: 'type_stability',
 };
 
+const REDDIT_RECOMMENDED_SHOES = [
+  { brand: 'ASICS',        model: 'Gel-Nimbus 26',          type: 'daily',     paceRange: [300, 420], redditNote: 'r/RunningShoeGeeks all-time favorite daily trainer' },
+  { brand: 'New Balance',  model: 'Fresh Foam X 1080 v14',  type: 'daily',     paceRange: [300, 420], redditNote: 'r/RunningShoeGeeks top plush daily' },
+  { brand: 'ASICS',        model: 'Novablast 4',            type: 'daily',     paceRange: [270, 390], redditNote: 'r/RunningShoeGeeks most-hyped bouncy trainer' },
+  { brand: 'Saucony',      model: 'Endorphin Speed 4',      type: 'speed',     paceRange: [230, 330], redditNote: 'r/RunningShoeGeeks speed-day legend' },
+  { brand: 'Nike',         model: 'Pegasus 41',             type: 'daily',     paceRange: [280, 400], redditNote: 'r/RunningShoeGeeks proven daily workhorse' },
+  { brand: 'Saucony',      model: 'Ride 17',                type: 'daily',     paceRange: [290, 420], redditNote: 'r/RunningShoeGeeks versatile all-rounder' },
+  { brand: 'HOKA',         model: 'Clifton 9',              type: 'daily',     paceRange: [310, 450], redditNote: 'r/RunningShoeGeeks cushioned favorite' },
+  { brand: 'Brooks',       model: 'Ghost 16',               type: 'daily',     paceRange: [310, 450], redditNote: 'r/RunningShoeGeeks reliable classic' },
+  { brand: 'Nike',         model: 'Vomero 18',              type: 'daily',     paceRange: [300, 430], redditNote: 'r/RunningShoeGeeks max cushion pick' },
+  { brand: 'Adidas',       model: 'Boston 12',              type: 'speed',     paceRange: [240, 340], redditNote: 'r/RunningShoeGeeks tempo trainer pick' },
+  { brand: 'ASICS',        model: 'Magic Speed 4',          type: 'race',      paceRange: [220, 310], redditNote: 'r/RunningShoeGeeks budget race shoe' },
+  { brand: 'Nike',         model: 'Vaporfly 3',             type: 'race',      paceRange: [200, 290], redditNote: 'r/RunningShoeGeeks ultimate race day' },
+];
+
+function pickRedditRecommendation(avgPaceSecPerKm) {
+  if (!avgPaceSecPerKm || avgPaceSecPerKm <= 0) {
+    return REDDIT_RECOMMENDED_SHOES[0];
+  }
+  const matching = REDDIT_RECOMMENDED_SHOES.filter(
+    s => avgPaceSecPerKm >= s.paceRange[0] && avgPaceSecPerKm <= s.paceRange[1]
+  );
+  const pool = matching.length > 0 ? matching : REDDIT_RECOMMENDED_SHOES.filter(s => s.type === 'daily');
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  return pool[dayOfYear % pool.length];
+}
+
 /** AI 识图单次请求最多处理的图片数量 */
 const SHOE_SCAN_MAX_FILES = 5;
 
@@ -414,6 +441,39 @@ export default function Shoes() {
   const activeShoes = shoes.filter(s => !s.retired);
   const totalMileage = shoes.reduce((s, sh) => s + (sh.currentDistanceKm || 0), 0);
   const shoePerformanceInsights = useMemo(() => buildShoePerformanceInsights(shoes, runs, unit, t, lang), [shoes, runs, unit, t, lang]);
+
+  const performanceFallback = useMemo(() => {
+    if (shoePerformanceInsights.topInsight) return null;
+
+    const validRuns = runs.filter(r => {
+      const km = Number(r.distanceKm || (r.distanceMeters ? r.distanceMeters / 1000 : 0));
+      const sec = Number(r.movingTimeSeconds || r.durationSeconds || 0);
+      return km >= 1 && sec > 0;
+    });
+    if (validRuns.length === 0) return null;
+
+    const paces = validRuns.map(r => {
+      const km = Number(r.distanceKm || (r.distanceMeters ? r.distanceMeters / 1000 : 0));
+      const sec = Number(r.movingTimeSeconds || r.durationSeconds || 0);
+      return sec / km;
+    });
+    const avgPace = paces.reduce((a, b) => a + b, 0) / paces.length;
+
+    if (shoes.length === 0) {
+      const rec = pickRedditRecommendation(avgPace);
+      return { type: 'recommend', shoe: rec, avgPace, runCount: validRuns.length };
+    }
+
+    const best = [...shoes].sort((a, b) => (b.currentDistanceKm || 0) - (a.currentDistanceKm || 0))[0];
+    return {
+      type: 'best_shoe',
+      shoe: best,
+      name: formatShoeDisplayName({ brand: best.brand, model: best.model, nickname: best.nickname, lang }),
+      avgPace,
+      runCount: validRuns.length,
+    };
+  }, [shoePerformanceInsights, shoes, runs, lang]);
+
   const avgHealthLabel = (() => {
     if (activeShoes.length === 0) return '--';
     const healths = activeShoes.map(s => shoeHealth(s.currentDistanceKm || 0, s.maxDistanceKm || 650));
@@ -942,6 +1002,46 @@ export default function Shoes() {
                 )}
               </div>
             </>
+          ) : performanceFallback ? (
+            <div className="shoe-performance-fallback">
+              {performanceFallback.type === 'recommend' ? (
+                <>
+                  <div className="shoe-performance-highlight">
+                    <strong>{performanceFallback.shoe.brand} {performanceFallback.shoe.model}</strong>
+                    <p>{t('shoes.perf_recommend_summary', {
+                      pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t),
+                      note: performanceFallback.shoe.redditNote,
+                    })}</p>
+                  </div>
+                  <div className="shoe-performance-meta">
+                    <span>{t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })}</span>
+                    <span>{t('shoes.perf_based_on_runs', { count: performanceFallback.runCount })}</span>
+                  </div>
+                  <a
+                    className="shoe-reddit-link"
+                    href="https://www.reddit.com/r/RunningShoeGeeks/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    r/RunningShoeGeeks
+                  </a>
+                </>
+              ) : (
+                <>
+                  <div className="shoe-performance-highlight">
+                    <strong>{performanceFallback.name}</strong>
+                    <p>{t('shoes.perf_best_shoe_summary', {
+                      km: (performanceFallback.shoe.currentDistanceKm || 0).toFixed(0),
+                      pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t),
+                    })}</p>
+                  </div>
+                  <div className="shoe-performance-meta">
+                    <span>{t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })}</span>
+                    <span>{t('shoes.perf_based_on_runs', { count: performanceFallback.runCount })}</span>
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <p className="analysis-muted" style={{ marginTop: 10 }}>{t('shoes.performance_empty')}</p>
           )}

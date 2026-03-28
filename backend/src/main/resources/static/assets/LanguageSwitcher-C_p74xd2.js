@@ -1,3 +1,0 @@
-import{i as s,n as r}from"./I18nContext-qdY_35ku.js";var n=s();function c(){const{lang:e,setLang:a,t}=r();return(0,n.jsxs)("div",{className:"lang-switcher",children:[(0,n.jsx)("button",{type:"button","data-set-language":"zh-CN",className:e==="zh-CN"?"active":"","aria-pressed":e==="zh-CN",onClick:()=>a("zh-CN"),children:t("common.lang_zh")}),(0,n.jsx)("button",{type:"button","data-set-language":"en",className:e==="en"?"active":"","aria-pressed":e==="en",onClick:()=>a("en"),children:t("common.lang_en")})]})}export{c as t};
-
-//# sourceMappingURL=LanguageSwitcher-C_p74xd2.js.map
