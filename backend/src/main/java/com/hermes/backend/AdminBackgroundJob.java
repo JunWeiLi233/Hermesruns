@@ -33,8 +33,7 @@ public class AdminBackgroundJob {
     private int successCount;
     private int failureCount;
 
-    @Lob
-    @Column(columnDefinition = "CLOB")
+    @Column(columnDefinition = "text")
     private String detailsJson;
 
     @PrePersist

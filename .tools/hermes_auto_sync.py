@@ -70,6 +70,22 @@ def request_json(url, method="GET", headers=None, body=None, timeout=20):
         return json.loads(payload.decode("utf-8"))
 
 
+def auth_is_configured(auth):
+    """Return True if the watcher has real credentials (not placeholders)."""
+    if not auth or not isinstance(auth, dict):
+        return False
+    token = (auth.get("token") or "").strip()
+    if token:
+        return True
+    email = (auth.get("email") or "").strip()
+    password = (auth.get("password") or "").strip()
+    if not email or not password:
+        return False
+    if password.lower() in ("replace-with-your-password", "changeme"):
+        return False
+    return True
+
+
 def authenticate(base_url, auth_config):
     token = auth_config.get("token")
     if token:
@@ -250,6 +266,14 @@ def main():
     config = load_json(config_path, None)
     if not config:
         print(f"[Hermes Sync] Missing config: {config_path}")
+        return 1
+
+    auth_cfg = config.get("auth", {})
+    if not auth_is_configured(auth_cfg):
+        print("[Hermes Sync] Auth is not configured yet.")
+        print("  Edit this file and set auth.email + auth.password (Hermes login), or auth.token.")
+        print(f"  File: {config_path.resolve()}")
+        print("  See README: Garmin / COROS Auto-Import.")
         return 1
 
     base_url = config.get("base_url", "http://localhost:8080").rstrip("/")

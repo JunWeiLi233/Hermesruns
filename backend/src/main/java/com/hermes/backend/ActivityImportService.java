@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +24,7 @@ public class ActivityImportService {
     private final ActivityRepository activityRepository;
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     private static final int MAX_ZIP_ENTRIES = 200;
     private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry
@@ -34,11 +36,13 @@ public class ActivityImportService {
     public ActivityImportService(
             ActivityRepository activityRepository,
             List<ActivityFileParser> fileParsers,
-            ActivityPointRepository activityPointRepository
+            ActivityPointRepository activityPointRepository,
+            ApplicationEventPublisher applicationEventPublisher
     ) {
         this.activityRepository = activityRepository;
         this.fileParsers = fileParsers;
         this.activityPointRepository = activityPointRepository;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Transactional
@@ -174,6 +178,7 @@ public class ActivityImportService {
         // Persist the Activity first so we can bulk-insert ActivityPoint rows
         // without keeping the entire points list inside the Activity's JPA collection.
         Activity savedActivity = activityRepository.save(activity);
+        applicationEventPublisher.publishEvent(new ActivityIngestedEvent(runner.getId(), savedActivity.getId()));
 
         List<ActivityPoint> batch = new ArrayList<>(POINTS_BATCH_SIZE);
         List<ParsedTrackPoint> allPoints = parsedActivity.points();
@@ -192,6 +197,12 @@ public class ActivityImportService {
             activityPoint.setSequenceIndex(sequenceIndex++);
             activityPoint.setLatitude(point.latitude());
             activityPoint.setLongitude(point.longitude());
+                activityPoint.setElapsedSeconds(point.elapsedSeconds());
+                activityPoint.setDistanceMeters(point.distanceMeters());
+                activityPoint.setElevationMeters(point.elevationMeters());
+                activityPoint.setElevationRawMeters(point.elevationMeters());
+                activityPoint.setHeartRate(point.heartRate());
+                activityPoint.setCadence(point.cadence());
             batch.add(activityPoint);
                 keptPoints++;
 

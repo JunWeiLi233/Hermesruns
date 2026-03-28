@@ -28,7 +28,8 @@ public class SecurityHeadersFilter implements Filter {
         httpResponse.setHeader("X-Content-Type-Options", "nosniff");
         httpResponse.setHeader("X-XSS-Protection", "1; mode=block");
         httpResponse.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-        httpResponse.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+        // geolocation=(self): allow browser geolocation for same-origin UI (e.g. weather bar).
+        httpResponse.setHeader("Permissions-Policy", "geolocation=(self), microphone=(), camera=()");
         httpResponse.setHeader("Content-Security-Policy",
                 "default-src 'self'; " +
                 "script-src 'self' 'unsafe-inline'; " +
@@ -41,7 +42,8 @@ public class SecurityHeadersFilter implements Filter {
                 "form-action 'self'; " +
                 "connect-src 'self' https://www.strava.com https://accounts.google.com " +
                 "https://generativelanguage.googleapis.com " +
-                "https://api.stripe.com https://*.stripe.com");
+                "https://api.stripe.com https://*.stripe.com " +
+                "https://api.open-meteo.com");
         chain.doFilter(request, response);
     }
 }

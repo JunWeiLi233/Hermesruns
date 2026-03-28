@@ -22,8 +22,7 @@ public class RunnerAdminNote {
     private String authorEmail;
     private LocalDateTime createdAt;
 
-    @Lob
-    @Column(columnDefinition = "CLOB", nullable = false)
+    @Column(columnDefinition = "text", nullable = false)
     private String noteText;
 
     @PrePersist

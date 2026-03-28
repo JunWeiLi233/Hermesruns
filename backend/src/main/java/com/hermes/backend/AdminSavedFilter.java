@@ -21,8 +21,7 @@ public class AdminSavedFilter {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    @Lob
-    @Column(columnDefinition = "CLOB", nullable = false)
+    @Column(columnDefinition = "text", nullable = false)
     private String queryJson;
 
     @PrePersist

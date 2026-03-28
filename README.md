@@ -10,7 +10,7 @@
 
 A local-first running analytics platform — **React** frontend, **Spring Boot** backend.
 
-Import runs from Strava, Garmin, and COROS. Visualize routes on a heatmap, track VDOT progress, manage shoes and races, and get Daniels' training paces — all on your own machine.
+Import runs from Strava, Garmin Connect, and COROS. Visualize routes on a heatmap, track VDOT progress, manage shoes and races, and get Daniels' training paces — all on your own machine.
 
 ---
 
@@ -28,6 +28,7 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | Database | H2 (default, zero-config) or PostgreSQL |
 | Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0 |
 | File Import | Garmin FIT, GPX, TCX, ZIP |
+| Garmin Connect | Direct account import via GarminDB / garth |
 
 ### Frontend Pages
 
@@ -37,7 +38,7 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | `/signup` | Signup | Registration with OAuth |
 | `/admin` | Admin Login | System administrator sign-in |
 | `/dashboard` | Admin Dashboard | Runner management, shoe image verification across all users |
-| `/profile` | Profile | Activity heatmap, recent runs, stats, daily steps, personal records, file import, settings |
+| `/profile` | Profile | Activity heatmap, recent runs, stats, daily steps, personal records, file import, Garmin Connect import, settings |
 | `/runs` | Run History | Filterable list (all/year/month/day), pagination |
 | `/run/:id` | Run Detail | Route map, performance metrics, route intelligence |
 | `/analysis` | Deep Analytics | VDOT scoring, training paces, race predictions, training load (ACWR), recovery analysis |
@@ -328,7 +329,44 @@ After Strava OAuth, Hermes imports only running activities. If `APP_DATA_ENCRYPT
 
 ---
 
-### Garmin / COROS Auto-Import
+### Garmin Connect Import
+
+Import running activities directly from your Garmin Connect account — no manual file export needed. Uses [GarminDB](https://github.com/tcgoetz/GarminDB)'s `garth` authentication library to pull FIT files from Garmin's servers.
+
+#### Setup
+
+Install Python 3.9+ and the required packages:
+
+```bash
+pip install -r .tools/requirements-garmin.txt
+```
+
+#### Usage
+
+1. Open your **Profile** page in Hermes
+2. In **Connected Services**, find the **Garmin Connect** card and click **Import from Garmin**
+3. Enter your Garmin Connect email and password
+4. Choose the number of recent activities to pull (10–200)
+5. Click **Start import** — Hermes downloads FIT files, parses GPS and performance data, and saves running activities
+
+Credentials are used only for the current import session and are **not stored** on the server.
+
+#### How it works
+
+```
+Browser  →  POST /api/garmin/connect/import  →  Java backend
+         →  Python subprocess (garth SSO login → Garmin Connect API)
+         →  Downloads FIT files to temp dir
+         →  Java FIT parser extracts GPS, distance, HR, pace
+         →  Activities + points saved to DB
+         →  Temp files cleaned up
+```
+
+Duplicate activities are detected by Garmin activity ID and skipped automatically. Non-running activities are filtered out.
+
+---
+
+### Garmin / COROS File Auto-Import
 
 Supports `GPX`, `TCX`, `FIT`, and `ZIP` files with automatic folder watching.
 
@@ -368,7 +406,7 @@ Supports `GPX`, `TCX`, `FIT`, and `ZIP` files with automatic folder watching.
 
 Hermes 是一个本地运行的跑步分析平台 — **React** 前端，**Spring Boot** 后端。
 
-支持从 Strava、Garmin、COROS 导入跑步数据，热力图可视化路线，追踪 VDOT 进步，管理跑鞋与赛事，获取丹尼尔斯训练配速。
+支持从 Strava、Garmin Connect、COROS 导入跑步数据，热力图可视化路线，追踪 VDOT 进步，管理跑鞋与赛事，获取丹尼尔斯训练配速。
 
 ### 架构
 
@@ -385,7 +423,7 @@ backend/           Spring Boot 4 + JPA — REST API :8080，同时提供前端�
 | `/signup` | 注册 | 注册账号 |
 | `/admin` | 管理员登录 | 系统管理员登录 |
 | `/dashboard` | 管理面板 | 跑者管理、跑鞋图片审核（全用户生效） |
-| `/profile` | 个人主页 | 热力图、最近跑步、数据统计、每日步数、个人纪录、数据导入、设置 |
+| `/profile` | 个人主页 | 热力图、最近跑步、数据统计、每日步数、个人纪录、数据导入、Garmin Connect 导入、设置 |
 | `/runs` | 跑步历史 | 可筛选列表（全部/年/月/日）、分页 |
 | `/run/:id` | 跑步详情 | 路线地图、运动指标、路线分析 |
 | `/analysis` | 深度分析 | VDOT 评分、训练配速、比赛预测、训练负荷（ACWR）、恢复分析 |
@@ -626,7 +664,31 @@ $env:APP_DB_PASSWORD = "<你的密码>"
 
 ---
 
-### Garmin / COROS 自动导入
+### Garmin Connect 账号导入
+
+直接从 Garmin Connect 账号拉取跑步活动 — 无需手动导出文件。使用 [GarminDB](https://github.com/tcgoetz/GarminDB) 的 `garth` 认证库通过 Garmin SSO 登录并下载 FIT 文件。
+
+#### 安装
+
+安装 Python 3.9+ 和所需依赖：
+
+```bash
+pip install -r .tools/requirements-garmin.txt
+```
+
+#### 使用方法
+
+1. 打开 Hermes **个人主页**
+2. 在「数据连接」中找到 **Garmin Connect** 卡片，点击「从 Garmin 导入」
+3. 输入 Garmin Connect 邮箱和密码
+4. 选择要拉取的最近活动数量（10–200）
+5. 点击「开始导入」 — Hermes 会下载 FIT 文件、解析 GPS 和运动数据、保存跑步活动
+
+凭据仅用于当前导入会话，**不会存储**在服务器上。重复活动会按 Garmin 活动 ID 自动跳过，非跑步活动会被过滤。
+
+---
+
+### Garmin / COROS 文件自动导入
 
 支持 `GPX`、`TCX`、`FIT`、`ZIP` 文件，自动监控文件夹。
 

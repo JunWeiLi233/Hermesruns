@@ -1,0 +1,2 @@
+garth>=0.4
+garmindb>=3.7
