@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
-import TopNav from '../components/TopNav';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import Modal from '../components/Modal';
 import { formatDuration, formatPace } from '../utils/format';
 import worldRaceCatalog, { worldRaceCountries } from '../data/worldRaceCatalog';
@@ -394,23 +393,16 @@ export default function Races() {
   const longestRunKm = runs.reduce((max, run) => Math.max(max, Number(run.distanceKm || 0)), 0);
 
   return (
-    <div className="dashboard-body history-page races-page">
-      <LanguageSwitcher />
-
-      <TopNav
-        backLink={{ to: '/profile', label: 'HERMES' }}
-        rightContent={
-          <button type="button" className="top-nav-shortcut" onClick={openCreateModal}>
-            {t('races.add_button')}
-          </button>
-        }
-      />
+    <AuthenticatedPageChrome bodyClassName="history-page races-page">
 
       <main className="dashboard-container history-container">
         <section className="card history-hero">
           <span className="history-eyebrow">{t('races.eyebrow')}</span>
           <div className="history-hero-top">
             <h1 className="history-title">{t('races.heading')}</h1>
+            <button type="button" className="btn-secondary btn-inline-md" onClick={openCreateModal}>
+              {t('races.add_button')}
+            </button>
           </div>
           <p className="history-copy">{t('races.page_copy')}</p>
         </section>
@@ -743,6 +735,6 @@ export default function Races() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

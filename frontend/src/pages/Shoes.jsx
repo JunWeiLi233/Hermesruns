@@ -5,8 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
 import Modal from '../components/Modal';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-import HermesLogo from '../components/HermesLogo';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import shoeCatalog from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
@@ -931,15 +930,7 @@ export default function Shoes() {
   }
 
   return (
-    <div className="dashboard-body history-page shoes-page">
-      <LanguageSwitcher />
-      <header className="top-nav">
-        <Link to="/profile" className="logo logo-link"><HermesLogo /></Link>
-        <div className="history-actions">
-          <Link to="/races" className="top-nav-shortcut">{t('races.nav_label')}</Link>
-          <Link to="/profile" className="history-back-link">{t('shoes.back_to_profile')}</Link>
-        </div>
-      </header>
+    <AuthenticatedPageChrome bodyClassName="history-page shoes-page">
 
       <main className="dashboard-container history-container">
         {/* Hero */}
@@ -1385,6 +1376,6 @@ export default function Shoes() {
           </div>
         )}
       </Modal>
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

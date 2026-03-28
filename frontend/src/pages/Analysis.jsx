@@ -16,9 +16,8 @@ import {
   VDOT_LOOKBACK_MS,
   danielsRunningVo2CostMlKgMin,
 } from '../utils/vdot';
-import TopNav from '../components/TopNav';
 import Modal from '../components/Modal';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import ImportDataGuide from '../components/ImportDataGuide';
 import RunLevelMedal from '../components/RunLevelMedal';
 import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
@@ -348,7 +347,7 @@ function computeInjuryRiskInsight(runs, trainingLoadData, lang) {
 export default function Analysis() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
-  const { theme, setTheme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { unit, isMile } = useUnit();
   const navigate = useNavigate();
 
@@ -358,7 +357,6 @@ export default function Analysis() {
   // Modals
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [polarizedMode, setPolarizedMode] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [fitExportFiles, setFitExportFiles] = useState(null);
@@ -925,19 +923,13 @@ export default function Analysis() {
   }), []);
 
   return (
-    <div className="dashboard-body">
-      <LanguageSwitcher />
-      <TopNav
-        showProfile
-        profile={{
-          displayName: profile?.displayName,
-          email: profile?.email,
-          onSettings: () => setSettingsModalOpen(true),
-          onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
-          onImportData: () => setImportModalOpen(true),
-        }}
-        backLink={{ to: '/profile', label: 'HERMES' }}
-      />
+    <AuthenticatedPageChrome
+      profile={profile}
+      menuActions={{
+        onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
+        onImportData: () => setImportModalOpen(true),
+      }}
+    >
 
       <main className="dashboard-container analysis-container">
         {/* Page Header */}
@@ -1534,21 +1526,6 @@ export default function Analysis() {
         </form>
       </Modal>
 
-      {/* Settings Modal */}
-      <Modal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} title={t('profile.settings_modal_title')}>
-        <div className="settings-row">
-          <div className="settings-copy">
-            <strong>{t('profile.theme_title')}</strong>
-            <p>{t('profile.theme_hint')}</p>
-          </div>
-          <select className="theme-select" value={theme} onChange={e => setTheme(e.target.value)}>
-            <option value="light">{t('profile.theme_light')}</option>
-            <option value="midnight">{t('profile.theme_midnight')}</option>
-            <option value="high-contrast">{t('profile.theme_high_contrast')}</option>
-            <option value="high-contrast-light">{t('profile.theme_high_contrast_light')}</option>
-          </select>
-        </div>
-      </Modal>
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

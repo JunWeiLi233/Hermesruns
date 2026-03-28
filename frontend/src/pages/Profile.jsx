@@ -5,9 +5,8 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
-import TopNav from '../components/TopNav';
 import Modal from '../components/Modal';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import ImportDataGuide from '../components/ImportDataGuide';
 import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
 import { TemperatureGlyph, WeatherGlyph } from '../components/WeatherGlyph';
@@ -93,7 +92,7 @@ function pickNumber(...values) {
 export default function Profile() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
-  const { theme, setTheme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { isMile } = useUnit();
   const navigate = useNavigate();
 
@@ -106,7 +105,6 @@ export default function Profile() {
 
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [activeImportModal, setActiveImportModal] = useState(null);
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [nameStatus, setNameStatus] = useState('');
   const [importStatus, setImportStatus] = useState('');
@@ -1007,18 +1005,14 @@ export default function Profile() {
   }
 
   return (
-    <div className="dashboard-body classic-profile-page">
-      <LanguageSwitcher />
-      <TopNav
-        showProfile
-          profile={{
-            displayName: profile?.displayName,
-            email: profile?.email,
-            onSettings: () => setSettingsModalOpen(true),
-            onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
-            onImportData: () => setActiveImportModal('garmin'),
-          }}
-        />
+    <AuthenticatedPageChrome
+      bodyClassName="classic-profile-page"
+      profile={profile}
+      menuActions={{
+        onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
+        onImportData: () => setActiveImportModal('garmin'),
+      }}
+    >
 
       <main className="dashboard-container">
         <section className="profile-hero-strip">
@@ -1954,22 +1948,6 @@ export default function Profile() {
         </form>
       </Modal>
 
-      {/* Settings Modal */}
-      <Modal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} title={t('profile.settings_modal_title')}>
-        <div className="settings-row">
-          <div className="settings-copy">
-            <strong>{t('profile.theme_title')}</strong>
-            <p>{t('profile.theme_hint')}</p>
-          </div>
-          <select className="theme-select" value={theme} onChange={e => setTheme(e.target.value)}>
-            <option value="light">{t('profile.theme_light')}</option>
-            <option value="midnight">{t('profile.theme_midnight')}</option>
-            <option value="high-contrast">{t('profile.theme_high_contrast')}</option>
-            <option value="high-contrast-light">{t('profile.theme_high_contrast_light')}</option>
-          </select>
-        </div>
-      </Modal>
-
       {/* Sync Modal */}
       {syncModalOpen && (
         <div className="modal-overlay modal-overlay-visible">
@@ -2122,6 +2100,6 @@ export default function Profile() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

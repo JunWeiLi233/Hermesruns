@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,7 +20,7 @@ public class SpaForwardingController {
     @GetMapping(value = {
         "/", "/login", "/signup", "/admin", "/dashboard",
         "/profile", "/runs", "/run", "/run/{id}", "/analysis", "/shoes", "/races",
-        "/prediction/{distKey}", "/today-run"
+        "/prediction/{distKey}", "/today-run", "/muscle-training"
     }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> forward() throws IOException {
         try (InputStream in = getClass().getResourceAsStream("/static/index.html")) {
@@ -28,6 +29,9 @@ public class SpaForwardingController {
             }
             String html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             return ResponseEntity.ok()
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
                     .contentType(MediaType.TEXT_HTML)
                     .body(html);
         }

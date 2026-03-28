@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiJson } from '../api';
-import TopNav from '../components/TopNav';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 
@@ -67,10 +66,7 @@ export default function TodayRun() {
   } = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
 
   return (
-    <div className="dashboard-body today-run-page">
-      <LanguageSwitcher />
-
-      <TopNav backLink={{ to: '/profile', label: 'HERMES' }} />
+    <AuthenticatedPageChrome bodyClassName="today-run-page">
 
       <main className="dashboard-container today-run-container">
         <section className="card today-run-hero">
@@ -250,6 +246,6 @@ export default function TodayRun() {
       )}
 
       <WeatherTemperatureBar />
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

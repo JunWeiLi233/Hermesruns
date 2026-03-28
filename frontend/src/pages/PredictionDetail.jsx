@@ -7,8 +7,7 @@ import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import { formatDuration, formatPaceSeconds } from '../utils/format';
 import { predictRaceTimeCalibrated, RACE_DISTANCES, collectAllVdotEntries, computeRollingRepresentativeSeries, VDOT_LOOKBACK_MS } from '../utils/vdot';
-import TopNav from '../components/TopNav';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, LineController, ScatterController, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line, Scatter } from 'react-chartjs-2';
 
@@ -153,13 +152,12 @@ export default function PredictionDetail() {
 
   if (!raceDist) {
     return (
-      <div className="dashboard-body">
-        <TopNav backLink={{ to: '/analysis', label: 'HERMES' }} />
+      <AuthenticatedPageChrome>
         <main className="dashboard-container" style={{ padding: 40, textAlign: 'center' }}>
           <p>Unknown distance.</p>
           <Link to="/analysis">{t('analysis.back_to_profile')}</Link>
         </main>
-      </div>
+      </AuthenticatedPageChrome>
     );
   }
 
@@ -187,9 +185,7 @@ export default function PredictionDetail() {
   };
 
   return (
-    <div className="dashboard-body">
-      <LanguageSwitcher />
-      <TopNav backLink={{ to: '/analysis', label: 'HERMES' }} />
+    <AuthenticatedPageChrome>
 
       <main className="dashboard-container history-container">
         {/* Hero */}
@@ -340,6 +336,6 @@ export default function PredictionDetail() {
           </section>
         )}
       </main>
-    </div>
+    </AuthenticatedPageChrome>
   );
 }
