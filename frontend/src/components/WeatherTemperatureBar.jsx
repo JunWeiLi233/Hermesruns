@@ -40,9 +40,39 @@ export default function WeatherTemperatureBar({ variant = 'fixed', onSnapshotCha
           resolve(FALLBACK);
           return;
         }
+        const finish = (lat, lng) => resolve({ lat, lng });
+
+        try {
+          const perm = navigator.permissions?.query?.({ name: 'geolocation' });
+          if (perm && typeof perm.then === 'function') {
+            perm
+              .then((result) => {
+                if (result?.state === 'denied') {
+                  finish(FALLBACK.lat, FALLBACK.lng);
+                  return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => finish(pos.coords.latitude, pos.coords.longitude),
+                  () => finish(FALLBACK.lat, FALLBACK.lng),
+                  { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
+                );
+              })
+              .catch(() => {
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => finish(pos.coords.latitude, pos.coords.longitude),
+                  () => finish(FALLBACK.lat, FALLBACK.lng),
+                  { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
+                );
+              });
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
+
         navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => resolve(FALLBACK),
+          (pos) => finish(pos.coords.latitude, pos.coords.longitude),
+          () => finish(FALLBACK.lat, FALLBACK.lng),
           { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
         );
       });

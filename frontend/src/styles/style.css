@@ -210,10 +210,14 @@ body.theme-high-contrast-light .dashboard-body .hermes-logo--light .hermes-logo_
 
 html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100%;
 }
 
 body {
     min-height: 100vh;
+    overflow-x: hidden;
+    max-width: 100%;
     background:
         radial-gradient(circle at top left, rgba(255, 126, 95, 0.15), transparent 40%),
         radial-gradient(circle at 85% 20%, rgba(65, 108, 255, 0.15), transparent 40%),
@@ -221,6 +225,12 @@ body {
         var(--bg-body-base);
     color: var(--text-strong);
     font-family: var(--font-body);
+}
+
+#root {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 body::before {
@@ -450,15 +460,25 @@ body.theme-midnight .weather-temp-slot-deg,
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     box-shadow: none;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .weather-temperature-bar--inline .weather-temperature-bar-inner {
     min-height: auto;
+    min-width: 0;
+    max-width: 100%;
     padding: 0;
 }
 
 .weather-temperature-bar--inline .weather-temperature-bar--scroll {
     padding-right: 0;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .weather-temperature-bar--inline .weather-temp-slot {
@@ -1848,6 +1868,9 @@ select:focus {
 }
 
 .dashboard-body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     --sport-bg: #0b1220;
     --sport-surface: #111a2b;
     --sport-surface-2: #162238;
@@ -1869,12 +1892,14 @@ select:focus {
     padding-bottom: 56px;
 }
 
+/* Keep glow inside viewport — negative % left caused horizontal page scroll on some browsers */
 .dashboard-body::after {
     content: "";
     position: fixed;
-    inset: auto auto 8% -10%;
-    width: 420px;
-    height: 420px;
+    bottom: 8%;
+    left: 0;
+    width: min(420px, 70vw);
+    height: min(420px, 70vw);
     border-radius: 50%;
     background: rgba(255, 198, 168, 0.14);
     filter: blur(28px);
@@ -1894,12 +1919,26 @@ select:focus {
     border-bottom: 1px solid var(--line-soft, rgba(0,0,0,0.06));
     background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(18px);
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.top-nav .logo-link {
+    flex-shrink: 0;
+}
+
+.top-nav-actions {
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .top-nav-shortcuts {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .top-nav-shortcut {
@@ -2103,7 +2142,21 @@ select:focus {
 .dashboard-container,
 .analysis-container {
     width: min(1220px, calc(100% - 48px));
+    max-width: 100%;
+    min-width: 0;
     margin: 36px auto 0;
+}
+
+/* Prevent stray horizontal scroll on long flex/grid content (e.g. weather header, nav shortcuts) */
+.dashboard-body.classic-profile-page {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+.dashboard-container .card,
+.dashboard-container .section-card {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .card,
@@ -2185,6 +2238,14 @@ select:focus {
     border: 1px solid var(--line);
     border-radius: 24px;
     background: rgba(255, 255, 255, 0.55);
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Leaflet measures the container; cap width so tile layers cannot widen the page */
+.heatmap-map-shell .leaflet-container {
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 #map {
@@ -2217,6 +2278,14 @@ select:focus {
 .bottom-grid {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
     margin-top: 24px;
+    width: 100%;
+    min-width: 0;
+}
+
+.bottom-grid.profile-layout-grid > .analysis-split-card,
+.bottom-grid.profile-layout-grid > .right-column {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .profile-distribution-strip {
@@ -2389,6 +2458,9 @@ select:focus {
 .steps-chart {
   display: flex; gap: 4px; align-items: flex-end; height: 160px;
   padding: 0 2px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
 }
 .steps-bar-col {
   flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -2498,6 +2570,9 @@ select:focus {
     align-items: flex-end;
     height: 168px;
     padding: 0 2px;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .calories-bar-col {
@@ -2600,10 +2675,18 @@ select:focus {
 .pr-table {
   border: 1px solid var(--line-soft, #e5e7eb); border-radius: 12px;
   overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
 }
 .pr-table-header, .pr-table-row {
-  display: grid; grid-template-columns: 100px 1fr 1fr 1fr;
+  display: grid; grid-template-columns: minmax(72px, 100px) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   padding: 10px 16px; align-items: center;
+  min-width: 0;
+}
+.pr-table-header > span,
+.pr-table-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .pr-table-header {
   background: rgba(0, 0, 0, 0.03);
@@ -2709,8 +2792,10 @@ select:focus {
 }
 .subscription-tier-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
+    min-width: 0;
 }
 .subscription-badge {
     display: inline-block;
@@ -3171,6 +3256,9 @@ select:focus {
     margin-top: 14px;
     padding-top: 12px;
     border-top: 1px solid rgba(13, 148, 136, 0.15);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .analysis-vo2-chart-title {
@@ -3281,6 +3369,11 @@ select:focus {
     justify-content: space-between;
     gap: 14px;
     margin-bottom: 14px;
+    min-width: 0;
+}
+
+.analysis-recommend-header > div:first-child {
+    min-width: 0;
 }
 
 .analysis-recommend-header h3 {
@@ -3631,6 +3724,17 @@ body.theme-midnight .analysis-primary-fill-card {
     gap: 14px;
     padding: 16px 0;
     border-bottom: 1px solid var(--line);
+    min-width: 0;
+}
+
+.run-item .run-info {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.run-item .run-stats {
+    flex-shrink: 0;
+    text-align: right;
 }
 
 .run-item:last-child,
@@ -3657,6 +3761,14 @@ body.theme-midnight .analysis-primary-fill-card {
     height: 100%;
     border-radius: 999px;
     background: linear-gradient(90deg, var(--brand-accent) 0%, #ff9c5e 100%);
+}
+
+.shoe-tracker {
+    min-width: 0;
+}
+
+.shoe-tracker .shoe-info {
+    overflow-wrap: anywhere;
 }
 
 .table-card {
@@ -4432,7 +4544,7 @@ body.theme-high-contrast-light .dashboard-body select {
 .weekly-flashcard {
     margin-top: 18px;
     display: grid;
-    grid-template-columns: minmax(0, 1.9fr) minmax(240px, 0.9fr);
+    grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.9fr);
     gap: 28px;
     align-items: center;
     min-height: 180px;
@@ -7771,11 +7883,19 @@ body.theme-midnight .polarized-target-marker {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  min-width: 0;
 }
 
 .section-card-copy {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.section-card-actions .filter-dropdown {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .section-card-copy h2 {
@@ -7797,6 +7917,9 @@ body.theme-midnight .polarized-target-marker {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .action-bar {
@@ -7996,6 +8119,8 @@ body.theme-midnight .polarized-target-marker {
 .heatmap-map-canvas {
   height: 400px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border-radius: 8px;
 }
 
@@ -8199,6 +8324,8 @@ body.theme-midnight .polarized-target-marker {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .profile-system-bar-card {
@@ -8208,6 +8335,8 @@ body.theme-midnight .polarized-target-marker {
   padding: 12px;
   display: grid;
   gap: 10px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .profile-system-bar-header {
@@ -8215,6 +8344,7 @@ body.theme-midnight .polarized-target-marker {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .profile-system-bar-label {
@@ -8223,6 +8353,14 @@ body.theme-midnight .polarized-target-marker {
   gap: 6px;
   color: var(--text-muted, #64748b);
   font-size: 0.86rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+
+.profile-system-bar-header > strong {
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .profile-system-icon {
@@ -8232,26 +8370,17 @@ body.theme-midnight .polarized-target-marker {
   width: 20px;
 }
 
+/* Fill is drawn via inline linear-gradient on this single element (see Profile.jsx). */
 .profile-system-bar-track {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: 8px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.25);
   overflow: hidden;
-}
-
-.profile-system-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 220ms ease;
-}
-
-.profile-system-bar-fill-warm {
-  background: linear-gradient(90deg, #fb923c 0%, #f97316 100%);
-}
-
-.profile-system-bar-fill-temp {
-  background: linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);
+  display: block;
+  box-sizing: border-box;
 }
 
 .profile-system-status-section {
@@ -8267,15 +8396,19 @@ body.theme-midnight .polarized-target-marker {
 
 .profile-weather-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 18px;
   align-items: stretch;
+  min-width: 0;
 }
 
 .profile-weather-copy {
   display: grid;
   gap: 8px;
   max-width: 640px;
+  min-width: 0;
+  flex: 1 1 200px;
 }
 
 .profile-weather-kicker {
@@ -8298,7 +8431,8 @@ body.theme-midnight .polarized-target-marker {
 }
 
 .profile-weather-now-card {
-  min-width: 240px;
+  flex: 0 1 auto;
+  min-width: min(240px, 100%);
   border: 1px solid var(--line-soft, rgba(16, 32, 61, 0.12));
   background: linear-gradient(135deg, color-mix(in srgb, var(--surface-strong, #fff) 92%, transparent), color-mix(in srgb, var(--sport-accent, #ff6b2c) 12%, transparent));
   border-radius: 18px;
@@ -8394,6 +8528,8 @@ body.theme-midnight .polarized-target-marker {
   padding-top: 18px;
   display: grid;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .profile-weather-forecast-head {

@@ -6,7 +6,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
 import TopNav from '../components/TopNav';
-import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ImportDataGuide from '../components/ImportDataGuide';
@@ -69,6 +68,19 @@ const HEAT_GRADIENT_LIGHT = {
 const CARTO_TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 const CARTO_TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 const CARTO_ATTRIB = '\u00a9 OpenStreetMap \u00a9 CARTO';
+
+/** Track background only — one box, no inner % width (avoids grid/absolute overflow bugs). */
+const PROFILE_BAR_TRACK_EMPTY = 'rgba(148, 163, 184, 0.25)';
+
+function profileBarWarmBackground(pct) {
+  const p = Math.min(100, Math.max(0, Number(pct) || 0));
+  return `linear-gradient(90deg, #fb923c 0%, #f97316 ${p}%, ${PROFILE_BAR_TRACK_EMPTY} ${p}%, ${PROFILE_BAR_TRACK_EMPTY} 100%)`;
+}
+
+function profileBarTempBackground(pct) {
+  const p = Math.min(100, Math.max(0, Number(pct) || 0));
+  return `linear-gradient(90deg, #38bdf8 0%, #0284c7 ${p}%, ${PROFILE_BAR_TRACK_EMPTY} ${p}%, ${PROFILE_BAR_TRACK_EMPTY} 100%)`;
+}
 
 function pickNumber(...values) {
   for (const value of values) {
@@ -336,20 +348,10 @@ export default function Profile() {
       setHeatmapEmpty(false);
 
       if (heatLayerRef.current) map.removeLayer(heatLayerRef.current);
-      // Ensure map container has a valid size before drawing heat layer
-      map.invalidateSize();
-      const size = map.getSize();
-      if (size.x === 0 || size.y === 0) {
-        setHeatmapSummary(t('profile.heatmap_map_not_visible'));
-        return;
-      }
-      const currentGradient = document.body.classList.contains('theme-midnight') 
-        ? HEAT_GRADIENT_DARK 
-        : HEAT_GRADIENT_LIGHT;
 
-      heatLayerRef.current = (L.default || L).heatLayer(points, {
-        radius: 4, blur: 5, maxZoom: 18, max: 1.0, minOpacity: 0.4, gradient: currentGradient,
-      }).addTo(map);
+      const currentGradient = document.body.classList.contains('theme-midnight')
+        ? HEAT_GRADIENT_DARK
+        : HEAT_GRADIENT_LIGHT;
 
       // Compute bounds manually — avoids creating N L.latLng objects
       let minLat = points[0][0], maxLat = minLat, minLng = points[0][1], maxLng = minLng;
@@ -358,8 +360,23 @@ export default function Profile() {
         if (lat < minLat) minLat = lat; else if (lat > maxLat) maxLat = lat;
         if (lng < minLng) minLng = lng; else if (lng > maxLng) maxLng = lng;
       }
-      map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [30, 30], maxZoom: 14 });
-      setHeatmapSummary(t('profile.heatmap_points_summary', { count: points.length.toLocaleString() }));
+
+      // Defer heat layer until layout/paint: leaflet.heat uses a canvas that throws if width/height are 0.
+      const paintHeat = () => {
+        map.invalidateSize();
+        const size = map.getSize();
+        if (size.x === 0 || size.y === 0) {
+          setHeatmapSummary(t('profile.heatmap_map_not_visible'));
+          return;
+        }
+        heatLayerRef.current = (L.default || L).heatLayer(points, {
+          radius: 4, blur: 5, maxZoom: 18, max: 1.0, minOpacity: 0.4, gradient: currentGradient,
+        }).addTo(map);
+        map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [30, 30], maxZoom: 14 });
+        map.invalidateSize();
+        setHeatmapSummary(t('profile.heatmap_points_summary', { count: points.length.toLocaleString() }));
+      };
+      requestAnimationFrame(() => requestAnimationFrame(paintHeat));
     } catch {
       setHeatmapSummary(t('profile.heatmap_load_failed'));
     }
@@ -725,10 +742,11 @@ export default function Profile() {
     return Math.max(0, Math.min(100, ((sec + 30) / 60) * 100));
   }, [systemStatus.heatAdaptationSecPerKm]);
 
+  /** Maps °C shift vs 14d baseline to bar fill. ±15°C → 0–100% so typical days do not peg the bar. */
   const tempShiftBarPct = useMemo(() => {
     const delta = systemStatus.todayTempShiftC;
     if (!Number.isFinite(delta)) return 0;
-    return Math.max(0, Math.min(100, ((delta + 10) / 20) * 100));
+    return Math.max(0, Math.min(100, ((delta + 15) / 30) * 100));
   }, [systemStatus.todayTempShiftC]);
 
   function formatTemp(value, digits = 1) {
@@ -1088,10 +1106,6 @@ export default function Profile() {
 
         {/* Bottom Grid */}
         <div className="bottom-grid profile-layout-grid">
-          <section className="card profile-distribution-strip">
-            <ProfileDistributionCharts runs={runs} isMile={isMile} t={t} />
-          </section>
-
           <section className="card data-analyze-section analysis-split-card">
             <div
               className="analysis-primary-section"
@@ -1635,9 +1649,11 @@ export default function Profile() {
                 </span>
                 <strong>{formatSignedPaceSec(systemStatus.heatAdaptationSecPerKm)}</strong>
               </div>
-              <div className="profile-system-bar-track" aria-hidden="true">
-                <div className="profile-system-bar-fill profile-system-bar-fill-warm" style={{ width: `${heatPaceBarPct}%` }} />
-              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarWarmBackground(heatPaceBarPct) }}
+              />
             </article>
 
             <article className="profile-system-bar-card">
@@ -1648,9 +1664,11 @@ export default function Profile() {
                 </span>
                 <strong>{formatSignedTemp(systemStatus.todayTempShiftC, 1)}</strong>
               </div>
-              <div className="profile-system-bar-track" aria-hidden="true">
-                <div className="profile-system-bar-fill profile-system-bar-fill-temp" style={{ width: `${tempShiftBarPct}%` }} />
-              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarTempBackground(tempShiftBarPct) }}
+              />
             </article>
           </div>
         </section>
@@ -1744,9 +1762,11 @@ export default function Profile() {
                 </span>
                 <strong>{displaySignedPace(systemStatus.heatAdaptationSecPerKm)}</strong>
               </div>
-              <div className="profile-system-bar-track" aria-hidden="true">
-                <div className="profile-system-bar-fill profile-system-bar-fill-warm" style={{ width: `${heatPaceBarPct}%` }} />
-              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarWarmBackground(heatPaceBarPct) }}
+              />
             </article>
 
             <article className="profile-system-bar-card">
@@ -1757,9 +1777,11 @@ export default function Profile() {
                 </span>
                 <strong>{displaySignedMetricTemp(systemStatus.todayTempShiftC, 1)}</strong>
               </div>
-              <div className="profile-system-bar-track" aria-hidden="true">
-                <div className="profile-system-bar-fill profile-system-bar-fill-temp" style={{ width: `${tempShiftBarPct}%` }} />
-              </div>
+              <div
+                className="profile-system-bar-track"
+                aria-hidden="true"
+                style={{ background: profileBarTempBackground(tempShiftBarPct) }}
+              />
             </article>
           </div>
 
