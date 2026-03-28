@@ -3887,6 +3887,10 @@ body.theme-midnight .analysis-primary-fill-card {
 }
 .admin-shoe-verify-btn:hover:not(:disabled) { background: #f3f4f6; }
 .admin-shoe-verify-btn:disabled { opacity: 0.6; cursor: default; }
+.admin-shoe-delete-btn {
+  margin-top: 4px; font-size: 0.68rem; padding: 3px 10px;
+  border-radius: 6px;
+}
 .admin-shoe-unverify-btn {
   border-color: #fecaca;
   background: #fff1f2;

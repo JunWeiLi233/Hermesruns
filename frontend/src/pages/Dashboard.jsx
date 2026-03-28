@@ -288,6 +288,37 @@ export default function Dashboard() {
     await Promise.all([loadShoes(), loadQueues(), loadAudit()]);
   }
 
+  async function deleteShoe(shoe) {
+    const name = [shoe.brand, shoe.model].filter(Boolean).join(' ') || shoe.nickname || '?';
+    if (!window.confirm(t('dashboard.confirm_delete_shoe', { name, email: shoe.runnerEmail || '?' }))) return;
+    try {
+      await apiFetch(`/api/admin/shoes/${shoe.id}`, { method: 'DELETE' });
+      await Promise.all([loadShoes(), loadQueues(), loadAudit()]);
+    } catch { /* ignored */ }
+  }
+
+  const [catalogFormOpen, setCatalogFormOpen] = useState(false);
+  const [catalogBrand, setCatalogBrand] = useState('');
+  const [catalogModel, setCatalogModel] = useState('');
+  const [catalogType, setCatalogType] = useState('daily');
+
+  async function addToCatalog(e) {
+    e.preventDefault();
+    if (!catalogBrand.trim() || !catalogModel.trim()) return;
+    try {
+      await apiFetch('/api/admin/shoe-catalog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand: catalogBrand.trim(), model: catalogModel.trim(), type: catalogType }),
+      });
+      setMessage(t('dashboard.catalog_added', { brand: catalogBrand.trim(), model: catalogModel.trim() }));
+      setCatalogBrand('');
+      setCatalogModel('');
+      setCatalogType('daily');
+      setCatalogFormOpen(false);
+    } catch { /* ignored */ }
+  }
+
   async function downloadExport(path, filename) {
     const res = await apiFetch(path);
     const text = await res.text();
@@ -467,6 +498,7 @@ export default function Dashboard() {
                 <select className="admin-shoe-filter" value={shoeQuery.queue} onChange={e => setShoeQuery(prev => ({ ...prev, queue: e.target.value, page: 0 }))}><option value="">{t('dashboard.filter_all_shoes')}</option><option value="missing_photo">{t('dashboard.filter_missing_image')}</option><option value="unverified_photo">{t('dashboard.filter_unverified_image')}</option><option value="verified_photo">{t('dashboard.filter_verified_image')}</option></select>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => saveCurrentFilter('shoes')}>{t('dashboard.btn_save_filter')}</button>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => downloadExport(`/api/admin/shoes/export?search=${encodeURIComponent(shoeQuery.search)}&queue=${encodeURIComponent(shoeQuery.queue)}`, 'admin-shoes.csv')}>{t('dashboard.btn_export_csv')}</button>
+                <button type="button" className="btn-primary btn-inline-md" onClick={() => setCatalogFormOpen(true)}>{t('dashboard.btn_add_catalog')}</button>
               </ActionBar>
             </SectionCard>
             <SectionCard className="section-card--compact section-card--spaced">
@@ -474,6 +506,7 @@ export default function Dashboard() {
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => runShoeBulk('verify_photo')}>{t('dashboard.btn_bulk_verify')}</button>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => runShoeBulk('unverify_photo')}>{t('dashboard.btn_bulk_unverify')}</button>
                 <button type="button" className="delete-btn" onClick={() => runShoeBulk('clear_photo')}>{t('dashboard.btn_clear_photos')}</button>
+                <button type="button" className="delete-btn" onClick={() => runShoeBulk('permanent_delete')}>{t('dashboard.btn_bulk_delete')}</button>
               </ActionBar>
               <div className="admin-shoe-grid">
                 {shoesPage.items?.map(shoe => (
@@ -493,6 +526,9 @@ export default function Dashboard() {
                           {shoe.photoVerified ? t('dashboard.shoe_btn_unverify') : t('dashboard.shoe_btn_verify')}
                         </button>
                       )}
+                      <button type="button" className="delete-btn admin-shoe-delete-btn" onClick={() => deleteShoe(shoe)}>
+                        {t('dashboard.btn_delete_shoe')}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -582,6 +618,31 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal isOpen={catalogFormOpen} onClose={() => setCatalogFormOpen(false)} title={t('dashboard.catalog_title')}>
+        <form onSubmit={addToCatalog}>
+          <p className="modal-help">{t('dashboard.catalog_help')}</p>
+          <label className="modal-label">{t('dashboard.catalog_brand')}</label>
+          <input type="text" value={catalogBrand} onChange={e => setCatalogBrand(e.target.value)} placeholder="Nike, ASICS, Li-Ning..." required />
+
+          <label className="modal-label">{t('dashboard.catalog_model')}</label>
+          <input type="text" value={catalogModel} onChange={e => setCatalogModel(e.target.value)} placeholder="Pegasus 41, Gel-Nimbus 26..." required />
+
+          <label className="modal-label">{t('dashboard.catalog_type')}</label>
+          <select value={catalogType} onChange={e => setCatalogType(e.target.value)}>
+            <option value="daily">{t('dashboard.type_daily')}</option>
+            <option value="speed">{t('dashboard.type_speed')}</option>
+            <option value="race">{t('dashboard.type_race')}</option>
+            <option value="trail">{t('dashboard.type_trail')}</option>
+            <option value="stability">{t('dashboard.type_stability')}</option>
+          </select>
+
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogFormOpen(false)}>{t('dashboard.btn_cancel')}</button>
+            <button type="submit" className="btn-primary modal-button">{t('dashboard.btn_add_to_catalog')}</button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
