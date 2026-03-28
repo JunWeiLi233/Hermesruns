@@ -108,15 +108,15 @@ export default function Signup() {
       <div className="auth-page">
         <LanguageSwitcher />
         <div className="layout-wrapper">
-          <section className="form-section" style={{ width: '100%', maxWidth: 480, margin: '0 auto', padding: '2rem' }}>
-            <div className="auth-panel">
-              <div className="login-container">
+          <section className="form-section form-section--solo">
+            <div className="auth-panel auth-panel--solo">
+              <div className="login-container login-container--compact">
                 <h2 className="auth-card-title">{t('signup.check_email_title')}</h2>
-                <p className="auth-hero-text" style={{ marginTop: 16 }}>{doneInfo.message || t('signup.check_email_body')}</p>
+                <p className="auth-hero-text auth-hero-text--spaced">{doneInfo.message || t('signup.check_email_body')}</p>
                 {!doneInfo.verificationRequired && (
-                  <p className="auth-card-copy" style={{ marginTop: 12 }}>{t('signup.no_mail_server_note')}</p>
+                  <p className="auth-card-copy auth-card-copy--note">{t('signup.no_mail_server_note')}</p>
                 )}
-                <button type="button" className="btn-primary" style={{ marginTop: 24 }} onClick={() => navigate('/login')}>
+                <button type="button" className="btn-primary btn-primary--spaced" onClick={() => navigate('/login')}>
                   {t('signup.signin_link')}
                 </button>
               </div>
@@ -149,7 +149,7 @@ export default function Signup() {
               <div className="auth-card-header">
                 <p className="auth-card-kicker"><HermesLogo tone="light" showIcon={false} /></p>
                 <h2 className="auth-card-title">{t('signup.card_title')}</h2>
-                <p className="auth-card-copy" style={{ marginTop: 8 }}>{t('signup.strava_focus_copy')}</p>
+                <p className="auth-card-copy auth-card-copy--tight">{t('signup.strava_focus_copy')}</p>
               </div>
 
               <button type="button" className="btn-strava btn-strava--lead" onClick={() => startOAuth('strava')}>
@@ -167,14 +167,14 @@ export default function Signup() {
 
               {altRegisterOpen && (
               <form className="auth-alt-block" onSubmit={handleSubmit}>
-                <p className="auth-card-copy" style={{ marginBottom: 16 }}>{t('signup.form_title')}</p>
-                {error && <div className="error-alert" style={{ display: 'block' }}>{error}</div>}
+                <p className="auth-card-copy auth-card-copy--form-intro">{t('signup.form_title')}</p>
+                {error && <div className="error-alert is-visible">{error}</div>}
 
                 <div className="form-group">
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>{t('signup.password_rules_title')}</div>
-                  <ul style={{ fontSize: '0.8rem', color: 'var(--classic-muted, #666)', margin: '0 0 12px 1rem', lineHeight: 1.5 }}>
+                  <div className="password-rules-title">{t('signup.password_rules_title')}</div>
+                  <ul className="password-rules-list">
                     {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL', 'NOT_COMMON'].map(id => (
-                      <li key={id} style={{ color: displayFailed.includes(id) ? '#c02626' : 'inherit' }}>
+                      <li key={id} className={`password-rules-item${displayFailed.includes(id) ? ' is-failed' : ''}`}>
                         {ruleLabels[id] ? ruleLabels[id]() : id}
                       </li>
                     ))}

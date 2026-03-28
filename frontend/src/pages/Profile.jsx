@@ -10,6 +10,8 @@ import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
 import Modal from '../components/Modal';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import ImportDataGuide from '../components/ImportDataGuide';
+import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
+import { TemperatureGlyph, WeatherGlyph } from '../components/WeatherGlyph';
 import SectionCard from '../components/ui/SectionCard';
 import MetricCard from '../components/ui/MetricCard';
 import { formatDuration, formatPace } from '../utils/format';
@@ -91,7 +93,7 @@ export default function Profile() {
   const [years, setYears] = useState([]);
 
   const [nameModalOpen, setNameModalOpen] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [activeImportModal, setActiveImportModal] = useState(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [nameStatus, setNameStatus] = useState('');
@@ -100,13 +102,14 @@ export default function Profile() {
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
 
-  const [garminModalOpen, setGarminModalOpen] = useState(false);
   const [garminEmail, setGarminEmail] = useState('');
   const [garminPassword, setGarminPassword] = useState('');
   const [garminLimit, setGarminLimit] = useState(50);
   const [garminImporting, setGarminImporting] = useState(false);
   const [garminStatus, setGarminStatus] = useState('');
   const [garminStatusType, setGarminStatusType] = useState('');
+  const [weatherContext, setWeatherContext] = useState(null);
+  const [weatherSnapshot, setWeatherSnapshot] = useState(null);
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
@@ -126,6 +129,8 @@ export default function Profile() {
   const heatLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
   const heatmapIsDarkRef = useRef(undefined);
+  const importModalOpen = activeImportModal === 'manual';
+  const garminModalOpen = activeImportModal === 'garmin';
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -191,8 +196,12 @@ export default function Profile() {
 
   async function loadProfile() {
     try {
-      const data = await apiJson('/api/profile/me');
-      setProfile(data);
+      const [profileData, weatherData] = await Promise.all([
+        apiJson('/api/profile/me'),
+        apiJson('/api/v1/weather/context').catch(() => null),
+      ]);
+      setProfile(profileData);
+      setWeatherContext(weatherData && typeof weatherData === 'object' ? weatherData : null);
     } catch {
       navigate('/login');
     }
@@ -310,7 +319,7 @@ export default function Profile() {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    setHeatmapSummary('Loading\u2026');
+    setHeatmapSummary(t('profile.heatmap_loading'));
     const url = year ? `/api/activities/heatmap?year=${year}` : '/api/activities/heatmap';
     try {
       // Fetch data and preload leaflet modules in parallel
@@ -331,7 +340,7 @@ export default function Profile() {
       map.invalidateSize();
       const size = map.getSize();
       if (size.x === 0 || size.y === 0) {
-        setHeatmapSummary('Map not visible');
+        setHeatmapSummary(t('profile.heatmap_map_not_visible'));
         return;
       }
       const currentGradient = document.body.classList.contains('theme-midnight') 
@@ -350,11 +359,11 @@ export default function Profile() {
         if (lng < minLng) minLng = lng; else if (lng > maxLng) maxLng = lng;
       }
       map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [30, 30], maxZoom: 14 });
-      setHeatmapSummary(`${points.length.toLocaleString()} GPS points`);
+      setHeatmapSummary(t('profile.heatmap_points_summary', { count: points.length.toLocaleString() }));
     } catch {
-      setHeatmapSummary('Failed to load heatmap');
+      setHeatmapSummary(t('profile.heatmap_load_failed'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (mapReady && isAuthenticated) {
@@ -411,26 +420,26 @@ export default function Profile() {
 
     let headline;
     if (thisWeekRuns === 0) {
-      headline = `New week, fresh slate. Your first ${distanceUnitShort} is waiting.`;
+      headline = t('profile.weekly_flash.headline_empty', { unit: distanceUnitShort });
     } else if (unitLastWeek <= 0 && unitThisWeek > 0) {
-      headline = `You are on the board with ${unitThisWeek.toFixed(1)} ${distanceUnitShort} this week.`;
+      headline = t('profile.weekly_flash.headline_started', { distance: unitThisWeek.toFixed(1), unit: distanceUnitShort });
     } else if (delta > 0.05) {
-      headline = `You are up ${deltaAbs.toFixed(1)} ${distanceUnitShort} versus last week.`;
+      headline = t('profile.weekly_flash.headline_up', { delta: deltaAbs.toFixed(1), unit: distanceUnitShort });
     } else if (delta < -0.05) {
-      headline = `You are ${deltaAbs.toFixed(1)} ${distanceUnitShort} behind last week so far.`;
+      headline = t('profile.weekly_flash.headline_down', { delta: deltaAbs.toFixed(1), unit: distanceUnitShort });
     } else {
-      headline = `You are tracking almost exactly with last week.`;
+      headline = t('profile.weekly_flash.headline_even');
     }
 
     let kicker;
     if (thisWeekRuns >= 4) {
-      kicker = `Strong rhythm: ${thisWeekRuns} runs already this week.`;
+      kicker = t('profile.weekly_flash.kicker_rhythm', { count: thisWeekRuns });
     } else if (longestRunKm >= 10) {
-      kicker = `Your longest run this week is ${unitLongest.toFixed(1)} ${distanceUnitShort}.`;
+      kicker = t('profile.weekly_flash.kicker_longest', { distance: unitLongest.toFixed(1), unit: distanceUnitShort });
     } else if (unitLastWeek > unitThisWeek && unitLastWeek > 0) {
-      kicker = `A short run of ${(unitLastWeek - unitThisWeek).toFixed(1)} ${distanceUnitShort} matches last week.`;
+      kicker = t('profile.weekly_flash.kicker_gap', { distance: (unitLastWeek - unitThisWeek).toFixed(1), unit: distanceUnitShort });
     } else {
-      kicker = `Keep the streak warm with one more easy run.`;
+      kicker = t('profile.weekly_flash.kicker_easy');
     }
 
     return {
@@ -441,49 +450,49 @@ export default function Profile() {
       runCount: thisWeekRuns,
       longestRun: unitLongest,
     };
-  }, [runs, isMile, distanceUnitShort]);
+  }, [runs, isMile, distanceUnitShort, t]);
 
   const weeklyFlashcards = useMemo(() => {
     const cards = [
       {
-        eyebrow: 'This week',
+        eyebrow: t('profile.weekly_flash.eyebrow_this_week'),
         title: weeklyHook.headline,
         body: weeklyHook.kicker,
         accent: `${weeklyHook.thisWeekDistance.toFixed(1)} ${distanceUnitShort}`,
       },
       {
-        eyebrow: 'Volume',
+        eyebrow: t('profile.weekly_flash.eyebrow_volume'),
         title: weeklyHook.runCount > 0
-          ? `You have logged ${weeklyHook.runCount} run${weeklyHook.runCount > 1 ? 's' : ''} this week.`
-          : 'No runs logged this week yet.',
+          ? t('profile.weekly_flash.volume_title_runs', { count: weeklyHook.runCount })
+          : t('profile.weekly_flash.volume_title_empty'),
         body: weeklyHook.runCount > 0
-          ? `Your current weekly volume sits at ${weeklyHook.thisWeekDistance.toFixed(1)} ${distanceUnitShort}.`
-          : `A short opener this week will get the rhythm going again.`,
-        accent: `${weeklyHook.runCount} run${weeklyHook.runCount === 1 ? '' : 's'}`,
+          ? t('profile.weekly_flash.volume_body_runs', { distance: weeklyHook.thisWeekDistance.toFixed(1), unit: distanceUnitShort })
+          : t('profile.weekly_flash.volume_body_empty'),
+        accent: t('profile.weekly_flash.volume_accent', { count: weeklyHook.runCount }),
       },
       {
-        eyebrow: 'Longest run',
+        eyebrow: t('profile.weekly_flash.eyebrow_longest'),
         title: weeklyHook.longestRun > 0
-          ? `Your longest outing so far is ${weeklyHook.longestRun.toFixed(1)} ${distanceUnitShort}.`
-          : 'Your long run slot is still open this week.',
+          ? t('profile.weekly_flash.longest_title_value', { distance: weeklyHook.longestRun.toFixed(1), unit: distanceUnitShort })
+          : t('profile.weekly_flash.longest_title_empty'),
         body: weeklyHook.longestRun > 0
-          ? `That gives you a solid anchor for the rest of the week.`
-          : `One steady run could define the week in a good way.`,
+          ? t('profile.weekly_flash.longest_body_value')
+          : t('profile.weekly_flash.longest_body_empty'),
         accent: `${weeklyHook.longestRun.toFixed(1)} ${distanceUnitShort}`,
       },
       {
-        eyebrow: 'Compared to last week',
+        eyebrow: t('profile.weekly_flash.eyebrow_compare'),
         title: weeklyHook.lastWeekDistance > 0
-          ? `Last week at this point you had ${weeklyHook.lastWeekDistance.toFixed(1)} ${distanceUnitShort}.`
-          : 'Last week gives you a clean baseline to beat.',
+          ? t('profile.weekly_flash.compare_title_value', { distance: weeklyHook.lastWeekDistance.toFixed(1), unit: distanceUnitShort })
+          : t('profile.weekly_flash.compare_title_empty'),
         body: weeklyHook.thisWeekDistance >= weeklyHook.lastWeekDistance
-          ? 'You are holding or improving the trend.'
-          : 'One more run would close that gap fast.',
+          ? t('profile.weekly_flash.compare_body_ahead')
+          : t('profile.weekly_flash.compare_body_behind'),
         accent: `${weeklyHook.lastWeekDistance.toFixed(1)} ${distanceUnitShort}`,
       },
     ];
     return cards;
-  }, [weeklyHook, distanceUnitShort]);
+  }, [weeklyHook, distanceUnitShort, t]);
 
   const activeWeeklyFlashcard = weeklyFlashcards[weeklyFlashIndex % Math.max(weeklyFlashcards.length, 1)];
 
@@ -663,18 +672,21 @@ export default function Profile() {
 
   const systemStatus = useMemo(() => {
     const currentTempC = pickNumber(
+      weatherContext?.currentDewPointC,
       profile?.weather?.temperatureC,
       profile?.currentTemperatureC,
       profile?.currentTempC,
       profile?.systemStatus?.temperatureC,
     );
     const baseline14dC = pickNumber(
+      weatherContext?.baselineDewPoint14dC,
       profile?.weather?.baseline14dC,
       profile?.temperatureBaseline14dC,
       profile?.baseline14dC,
       profile?.systemStatus?.baseline14dC,
     );
     const impactDeltaC = pickNumber(
+      weatherContext?.climateShockDeltaC,
       profile?.weather?.impactDeltaC,
       profile?.temperatureImpactDeltaC,
       profile?.impactDeltaC,
@@ -682,19 +694,31 @@ export default function Profile() {
       currentTempC != null && baseline14dC != null ? currentTempC - baseline14dC : null,
     );
     const heatAdaptationSecPerKm = pickNumber(
+      weatherContext?.pacePenaltySecPerKm,
       profile?.weather?.heatAdaptationSecPerKm,
       profile?.heatAdaptationSecPerKm,
       profile?.systemStatus?.heatAdaptationSecPerKm,
       0,
     );
     const todayTempShiftC = pickNumber(
+      weatherContext?.climateShockDeltaC,
       profile?.weather?.todayTempShiftC,
       profile?.todayTempShiftC,
       profile?.systemStatus?.todayTempShiftC,
       impactDeltaC,
     );
-    return { currentTempC, baseline14dC, impactDeltaC, heatAdaptationSecPerKm, todayTempShiftC };
-  }, [profile]);
+    return {
+      available: weatherContext?.available ?? false,
+      currentTempC,
+      baseline14dC,
+      impactDeltaC,
+      heatAdaptationSecPerKm,
+      todayTempShiftC,
+      acclimatizationDay: weatherContext?.acclimatizationDay ?? null,
+      acclimatizationStatus: weatherContext?.acclimatizationStatus ?? null,
+      message: weatherContext?.message ?? '',
+    };
+  }, [profile, weatherContext]);
 
   const heatPaceBarPct = useMemo(() => {
     const sec = systemStatus.heatAdaptationSecPerKm ?? 0;
@@ -720,6 +744,35 @@ export default function Profile() {
 
   function formatSignedPaceSec(value) {
     if (!Number.isFinite(value)) return `— ${t('analysis.chart_unit_seconds_km')}`;
+    const rounded = Math.round(value);
+    const signed = rounded >= 0 ? `+${rounded}` : `${rounded}`;
+    return `${signed} ${t('analysis.chart_unit_seconds_km')}`;
+  }
+
+  const preferFahrenheit = useMemo(
+    () => typeof navigator !== 'undefined' && /^en-?US/i.test(navigator.language || ''),
+    [],
+  );
+
+  function formatAmbientTemp(value) {
+    if (!Number.isFinite(value)) return '--';
+    if (preferFahrenheit) return `${Math.round((value * 9) / 5 + 32)}°F`;
+    return `${Math.round(value)}°C`;
+  }
+
+  function displayMetricTemp(value, digits = 1) {
+    if (!Number.isFinite(value)) return '--';
+    return `${Number(value).toFixed(digits)}°C`;
+  }
+
+  function displaySignedMetricTemp(value, digits = 1) {
+    if (!Number.isFinite(value)) return '--';
+    const signed = value >= 0 ? `+${Number(value).toFixed(digits)}` : Number(value).toFixed(digits);
+    return `${signed}°C`;
+  }
+
+  function displaySignedPace(value) {
+    if (!Number.isFinite(value)) return `-- ${t('analysis.chart_unit_seconds_km')}`;
     const rounded = Math.round(value);
     const signed = rounded >= 0 ? `+${rounded}` : `${rounded}`;
     return `${signed} ${t('analysis.chart_unit_seconds_km')}`;
@@ -812,7 +865,7 @@ export default function Profile() {
       setProfile(prev => ({ ...prev, displayName: displayNameInput }));
       setNameModalOpen(false);
     } catch {
-      setNameStatus('Failed to save name');
+      setNameStatus(t('profile.name_save_failed'));
     }
   }
 
@@ -837,12 +890,17 @@ export default function Profile() {
     try {
       const res = await apiFetch('/api/import/batch', { method: 'POST', body: formData });
       if (!res.ok) throw new Error();
-      setImportModalOpen(false);
+      setActiveImportModal(null);
       loadActivities();
       renderHeatmap(selectedYear || null);
     } catch {
-      setImportStatus('Import failed');
+      setImportStatus(t('profile.import_failed'));
     }
+  }
+
+  function openManualImportFromGarmin() {
+    if (garminImporting) return;
+    setActiveImportModal('manual');
   }
 
   async function handleGarminImport(e) {
@@ -890,7 +948,7 @@ export default function Profile() {
           const statusData = await apiJson('/api/garmin/connect/import/status');
           if (statusData.active) {
             const progress = statusData.importedRuns > 0
-              ? `${statusData.importedRuns} runs...`
+              ? t('profile.garmin_connect_progress_count', { count: statusData.importedRuns })
               : t('profile.garmin_connect_importing');
             setGarminStatus(progress);
             setGarminStatusType('info');
@@ -935,14 +993,14 @@ export default function Profile() {
       <LanguageSwitcher />
       <TopNav
         showProfile
-        profile={{
-          displayName: profile?.displayName,
-          email: profile?.email,
-          onSettings: () => setSettingsModalOpen(true),
-          onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
-          onImportData: () => setImportModalOpen(true),
-        }}
-      />
+          profile={{
+            displayName: profile?.displayName,
+            email: profile?.email,
+            onSettings: () => setSettingsModalOpen(true),
+            onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
+            onImportData: () => setActiveImportModal('garmin'),
+          }}
+        />
 
       <main className="dashboard-container">
         <section className="profile-hero-strip">
@@ -955,7 +1013,7 @@ export default function Profile() {
           <MetricCard
             label={t('profile.avg_pace')}
             value={avgPaceStr}
-            hint={`${totalRuns} runs`}
+            hint={t('profile.run_count', { count: totalRuns })}
           />
           <MetricCard
             label={t('profile.today_run_title')}
@@ -990,7 +1048,7 @@ export default function Profile() {
         >
           <div className="heatmap-map-shell">
             <div ref={mapRef} className="heatmap-map-canvas" />
-            {heatmapEmpty && <div className="heatmap-empty-state">No imported routes yet.</div>}
+            {heatmapEmpty && <div className="heatmap-empty-state">{t('profile.heatmap_empty')}</div>}
           </div>
         </SectionCard>
 
@@ -1006,7 +1064,7 @@ export default function Profile() {
             }}
             role="button"
             tabIndex={0}
-            aria-label="Weekly running snapshot card"
+            aria-label={t('profile.weekly_flash.aria_label')}
           >
             <div className="weekly-flashcard-copy">
               <span className="weekly-flashcard-eyebrow">{activeWeeklyFlashcard.eyebrow}</span>
@@ -1015,7 +1073,7 @@ export default function Profile() {
             </div>
             <div className="weekly-flashcard-side">
               <strong>{activeWeeklyFlashcard.accent}</strong>
-              <span>Tap for next insight</span>
+              <span>{t('profile.weekly_flash.tap_next')}</span>
               <div className="weekly-flashcard-dots" aria-hidden="true">
                 {weeklyFlashcards.map((_, index) => (
                   <span
@@ -1283,12 +1341,13 @@ export default function Profile() {
               <h2 className="section-title-with-gap">{t('profile.connected_services')}</h2>
 
               {/* Garmin Connect — account-based import */}
-              <div className="service-row">
+              <div className="service-row service-row--primary">
                 <div className="service-icon service-icon--garmin">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-                    <path d="M12 6v6l4 4" />
-                    <circle cx="12" cy="12" r="3" fill="none" />
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 7v7" />
+                    <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+                    <path d="M8 18h8" />
                   </svg>
                 </div>
                 <div className="service-info">
@@ -1296,7 +1355,7 @@ export default function Profile() {
                   <span className="service-status service-status-off">{t('profile.garmin_connect_status')}</span>
                 </div>
                 <div className="service-action">
-                  <button className="btn-service btn-service-connect" type="button" onClick={() => setGarminModalOpen(true)}>
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setActiveImportModal('garmin')}>
                     {t('profile.garmin_connect_import')}
                   </button>
                 </div>
@@ -1316,7 +1375,7 @@ export default function Profile() {
                   <span className="service-status service-status-off">{t('profile.coros_watch_status')}</span>
                 </div>
                 <div className="service-action">
-                  <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setActiveImportModal('manual')}>
                     {t('profile.watch_import_files')}
                   </button>
                 </div>
@@ -1336,7 +1395,7 @@ export default function Profile() {
                   <span className="service-status service-status-off">{t('profile.huawei_watch_status')}</span>
                 </div>
                 <div className="service-action">
-                  <button className="btn-service btn-service-connect" type="button" onClick={() => setImportModalOpen(true)}>
+                  <button className="btn-service btn-service-connect" type="button" onClick={() => setActiveImportModal('manual')}>
                     {t('profile.watch_import_files')}
                   </button>
                 </div>
@@ -1595,6 +1654,123 @@ export default function Profile() {
             </article>
           </div>
         </section>
+        <section className="card profile-weather-section">
+          <div className="profile-weather-header">
+            <div className="profile-weather-copy">
+              <span className="profile-weather-kicker">{t('profile.weather_card_kicker')}</span>
+              <h2>{t('profile.weather_card_title')}</h2>
+              <p>
+                {systemStatus.message
+                  || (systemStatus.available
+                    ? t('profile.weather_card_subtitle')
+                    : t('profile.weather_card_unavailable'))}
+              </p>
+            </div>
+
+            <div className="profile-weather-now-card">
+              <div className="profile-weather-now-icon">
+                <WeatherGlyph
+                  code={weatherSnapshot?.current?.code}
+                  title={t('profile.weather_condition_label')}
+                  className="profile-weather-now-glyph"
+                />
+              </div>
+              <div className="profile-weather-now-copy">
+                <span className="profile-weather-now-label">{t('profile.weather_current_label')}</span>
+                <strong>{formatAmbientTemp(weatherSnapshot?.current?.temp)}</strong>
+                <span className="profile-weather-now-meta">
+                  {systemStatus.available
+                    ? t('profile.weather_heat_day', { day: systemStatus.acclimatizationDay ?? '--' })
+                    : t('common.weather_error')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-weather-stat-strip">
+            <article className="profile-weather-stat-card">
+              <div className="profile-weather-stat-icon">
+                <TemperatureGlyph title={t('profile.weather_current_label')} />
+              </div>
+              <div className="profile-weather-stat-copy">
+                <span>{t('profile.weather_current_label')}</span>
+                <strong>{formatAmbientTemp(weatherSnapshot?.current?.temp)}</strong>
+              </div>
+            </article>
+            <article className="profile-weather-stat-card">
+              <div className="profile-weather-stat-icon">
+                <WeatherGlyph code={weatherSnapshot?.current?.code} title={t('profile.weather_baseline_label')} />
+              </div>
+              <div className="profile-weather-stat-copy">
+                <span>{t('profile.weather_baseline_label')}</span>
+                <strong>{displayMetricTemp(systemStatus.baseline14dC, 1)}</strong>
+              </div>
+            </article>
+            <article className="profile-weather-stat-card">
+              <div className="profile-weather-stat-icon">
+                <TemperatureGlyph title={t('profile.weather_shift_label')} />
+              </div>
+              <div className="profile-weather-stat-copy">
+                <span>{t('profile.weather_shift_label')}</span>
+                <strong>{displaySignedMetricTemp(systemStatus.todayTempShiftC, 1)}</strong>
+              </div>
+            </article>
+          </div>
+
+          <div className="profile-system-engine profile-weather-engine">
+            <div className="profile-system-engine-title">
+              <TemperatureGlyph className="profile-system-icon" title={t('profile.system_heat_engine_title')} />
+              <strong>{t('profile.system_heat_engine_title')}</strong>
+            </div>
+            <p className="profile-system-engine-copy">
+              {t('profile.system_heat_engine_line_1', {
+                current: displayMetricTemp(systemStatus.currentTempC, 1),
+                baseline: displayMetricTemp(systemStatus.baseline14dC, 2),
+              })}
+            </p>
+            <p className="profile-system-engine-copy">
+              {t('profile.system_heat_engine_line_2', {
+                delta: displaySignedMetricTemp(systemStatus.impactDeltaC, 2),
+              })}
+            </p>
+          </div>
+
+          <div className="profile-system-bars">
+            <article className="profile-system-bar-card">
+              <div className="profile-system-bar-header">
+                <span className="profile-system-bar-label">
+                  <TemperatureGlyph className="profile-system-icon" title={t('profile.system_heat_pace_bar')} />
+                  {t('profile.system_heat_pace_bar')}
+                </span>
+                <strong>{displaySignedPace(systemStatus.heatAdaptationSecPerKm)}</strong>
+              </div>
+              <div className="profile-system-bar-track" aria-hidden="true">
+                <div className="profile-system-bar-fill profile-system-bar-fill-warm" style={{ width: `${heatPaceBarPct}%` }} />
+              </div>
+            </article>
+
+            <article className="profile-system-bar-card">
+              <div className="profile-system-bar-header">
+                <span className="profile-system-bar-label">
+                  <WeatherGlyph code={weatherSnapshot?.current?.code} className="profile-system-icon" title={t('profile.system_today_temp_bar')} />
+                  {t('profile.system_today_temp_bar')}
+                </span>
+                <strong>{displaySignedMetricTemp(systemStatus.todayTempShiftC, 1)}</strong>
+              </div>
+              <div className="profile-system-bar-track" aria-hidden="true">
+                <div className="profile-system-bar-fill profile-system-bar-fill-temp" style={{ width: `${tempShiftBarPct}%` }} />
+              </div>
+            </article>
+          </div>
+
+          <div className="profile-weather-forecast-shell">
+            <div className="profile-weather-forecast-head">
+              <strong>{t('common.weather_forecast')}</strong>
+              <span>{t('profile.weather_forecast_hint')}</span>
+            </div>
+            <WeatherTemperatureBar variant="inline" onSnapshotChange={setWeatherSnapshot} />
+          </div>
+        </section>
       </main>
 
       {/* Subscription plans */}
@@ -1705,7 +1881,7 @@ export default function Profile() {
       </Modal>
 
       {/* Import Modal */}
-      <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
+      <Modal isOpen={importModalOpen} onClose={() => setActiveImportModal(null)} title={t('profile.import_modal_title')}>
         <form onSubmit={handleImport}>
           <ImportDataGuide />
           <p className="modal-help">{t('profile.import_hint')}</p>
@@ -1720,7 +1896,7 @@ export default function Profile() {
               </div>
               <label className="modal-label">{t('profile.fit_export_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setFitExportFiles(e.target.files)} />
-              <p className="selected-file-name">{fitExportFiles?.length ? `${fitExportFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <p className="selected-file-name">{fitExportFiles?.length ? t('profile.selected_files_count', { count: fitExportFiles.length }) : t('profile.no_file_selected')}</p>
             </section>
             <section className="import-source-card">
               <div className="import-source-header">
@@ -1732,7 +1908,7 @@ export default function Profile() {
               </div>
               <label className="modal-label">{t('profile.coros_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setCorosFiles(e.target.files)} />
-              <p className="selected-file-name">{corosFiles?.length ? `${corosFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <p className="selected-file-name">{corosFiles?.length ? t('profile.selected_files_count', { count: corosFiles.length }) : t('profile.no_file_selected')}</p>
             </section>
             <section className="import-source-card">
               <div className="import-source-header">
@@ -1744,13 +1920,13 @@ export default function Profile() {
               </div>
               <label className="modal-label">{t('profile.huawei_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setHuaweiFiles(e.target.files)} />
-              <p className="selected-file-name">{huaweiFiles?.length ? `${huaweiFiles.length} file(s)` : t('profile.no_file_selected')}</p>
+              <p className="selected-file-name">{huaweiFiles?.length ? t('profile.selected_files_count', { count: huaweiFiles.length }) : t('profile.no_file_selected')}</p>
             </section>
           </div>
           <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
           {importStatus && <div className="modal-status">{importStatus}</div>}
           <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setImportModalOpen(false)}>{t('profile.cancel')}</button>
+            <button type="button" className="btn-secondary modal-button" onClick={() => setActiveImportModal(null)}>{t('profile.cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('profile.upload_file')}</button>
           </div>
         </form>
@@ -1786,7 +1962,7 @@ export default function Profile() {
                 <div className="sync-row">
                   <span className="sync-label sync-label-wide">{t('profile.sync_activities')}</span>
                   <div className="sync-check">&#10003;</div>
-                  <span className="sync-value">({syncCount} activities)</span>
+                  <span className="sync-value">{t('profile.sync_activity_count', { count: syncCount })}</span>
                 </div>
               </div>
               <div className="sync-col">
@@ -1820,72 +1996,84 @@ export default function Profile() {
       )}
 
       {/* Garmin Connect Import Modal */}
-      <Modal isOpen={garminModalOpen} onClose={() => { if (!garminImporting) setGarminModalOpen(false); }} title={t('profile.garmin_connect_modal_title')}>
-        <form onSubmit={handleGarminImport}>
-          <p className="garmin-credentials-note" style={{ fontSize: '0.82rem', color: 'var(--classic-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
+      <Modal isOpen={garminModalOpen} onClose={() => { if (!garminImporting) setActiveImportModal(null); }} title={t('profile.garmin_connect_modal_title')}>
+        <form onSubmit={handleGarminImport} className="garmin-import-form">
+          <section className="garmin-import-hero">
+            <div className="garmin-import-hero-main">
+              <div className="service-icon service-icon--garmin garmin-import-hero-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="8" />
+                  <path d="M12 7v7" />
+                  <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+                  <path d="M8 18h8" />
+                </svg>
+              </div>
+              <div className="garmin-import-hero-copy">
+                <strong>{t('profile.garmin_connect_title')}</strong>
+                <p>{t('profile.garmin_connect_brand_copy')}</p>
+              </div>
+            </div>
+            <span className="garmin-import-pill">{t('profile.garmin_connect_status')}</span>
+          </section>
+
+          <p className="garmin-credentials-note">
             {t('profile.garmin_connect_credentials_note')}
           </p>
 
-          <label className="modal-label">{t('profile.garmin_connect_email_label')}</label>
-          <input
-            type="email"
-            placeholder="you@example.com"
-            value={garminEmail}
-            onChange={e => setGarminEmail(e.target.value)}
-            disabled={garminImporting}
-            required
-            autoComplete="username"
-          />
+          <div className="garmin-import-field-grid">
+            <div className="garmin-import-field">
+              <label className="modal-label">{t('profile.garmin_connect_email_label')}</label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={garminEmail}
+                onChange={e => setGarminEmail(e.target.value)}
+                disabled={garminImporting}
+                required
+                autoComplete="username"
+              />
+            </div>
 
-          <label className="modal-label" style={{ marginTop: 12 }}>{t('profile.garmin_connect_password_label')}</label>
-          <input
-            type="password"
-            value={garminPassword}
-            onChange={e => setGarminPassword(e.target.value)}
-            disabled={garminImporting}
-            required
-            autoComplete="current-password"
-          />
+            <div className="garmin-import-field">
+              <label className="modal-label">{t('profile.garmin_connect_password_label')}</label>
+              <input
+                type="password"
+                value={garminPassword}
+                onChange={e => setGarminPassword(e.target.value)}
+                disabled={garminImporting}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+          </div>
 
-          <label className="modal-label" style={{ marginTop: 12 }}>{t('profile.garmin_connect_limit_label')}</label>
-          <select
-            value={garminLimit}
-            onChange={e => setGarminLimit(Number(e.target.value))}
-            disabled={garminImporting}
-            style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--classic-border, #ddd)' }}
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-            <option value={200}>200</option>
-          </select>
+          <div className="garmin-import-field">
+            <label className="modal-label">{t('profile.garmin_connect_limit_label')}</label>
+            <select
+              value={garminLimit}
+              onChange={e => setGarminLimit(Number(e.target.value))}
+              disabled={garminImporting}
+              className="garmin-import-limit"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </div>
 
           {garminStatus && (
-            <div
-              className="modal-status"
-              style={{
-                marginTop: 14,
-                padding: '10px 14px',
-                borderRadius: 6,
-                fontSize: '0.85rem',
-                background: garminStatusType === 'success' ? 'rgba(22,163,74,0.1)'
-                  : garminStatusType === 'error' ? 'rgba(220,38,38,0.1)'
-                  : 'rgba(59,130,246,0.1)',
-                color: garminStatusType === 'success' ? '#16a34a'
-                  : garminStatusType === 'error' ? '#dc2626'
-                  : 'var(--classic-text, #333)',
-              }}
-            >
+            <div className={`garmin-import-status garmin-import-status--${garminStatusType || 'info'}`}>
               {garminStatus}
             </div>
           )}
 
-          <div className="modal-actions">
+          <div className="modal-actions garmin-import-actions">
             <button
               type="button"
               className="btn-secondary modal-button"
-              onClick={() => { if (!garminImporting) setGarminModalOpen(false); }}
+              onClick={() => { if (!garminImporting) setActiveImportModal(null); }}
               disabled={garminImporting}
             >
               {t('profile.cancel')}
@@ -1896,6 +2084,18 @@ export default function Profile() {
               disabled={garminImporting || !garminEmail.trim() || !garminPassword.trim()}
             >
               {garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_start')}
+            </button>
+          </div>
+
+          <div className="garmin-import-secondary">
+            <span>{t('profile.garmin_connect_secondary_hint')}</span>
+            <button
+              type="button"
+              className="btn-secondary modal-button garmin-import-secondary-button"
+              onClick={openManualImportFromGarmin}
+              disabled={garminImporting}
+            >
+              {t('profile.garmin_connect_secondary_manual')}
             </button>
           </div>
         </form>

@@ -1,23 +1,23 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import { wmoWeatherIcon } from '../utils/weatherCodeIcon';
+import { WeatherGlyph } from './WeatherGlyph';
 
-const FALLBACK = { lat: 40.7128, lng: -74.006 }; // NYC — only if geolocation unavailable
+const FALLBACK = { lat: 40.7128, lng: -74.006 };
 
-function formatHour(d, locale) {
-  return d.toLocaleTimeString(locale, { hour: 'numeric', hour12: locale === 'en-US' });
+function formatHour(dateValue, locale) {
+  return dateValue.toLocaleTimeString(locale, { hour: 'numeric', hour12: locale === 'en-US' });
 }
 
-function celsiusLabel(c, preferF) {
-  if (!Number.isFinite(c)) return '—';
-  if (preferF) return `${Math.round((c * 9) / 5 + 32)}°F`;
-  return `${Math.round(c)}°C`;
+function celsiusLabel(value, preferFahrenheit) {
+  if (!Number.isFinite(value)) return '--';
+  if (preferFahrenheit) return `${Math.round((value * 9) / 5 + 32)}°F`;
+  return `${Math.round(value)}°C`;
 }
 
-export default function WeatherTemperatureBar() {
+export default function WeatherTemperatureBar({ variant = 'fixed', onSnapshotChange = null }) {
   const { t, lang } = useI18n();
   const locale = lang === 'zh-CN' ? 'zh-CN' : 'en-US';
-  const preferF = useMemo(
+  const preferFahrenheit = useMemo(
     () => typeof navigator !== 'undefined' && /^en-?US/i.test(navigator.language || ''),
     [],
   );
@@ -26,9 +26,10 @@ export default function WeatherTemperatureBar() {
   const [slots, setSlots] = useState([]);
 
   useEffect(() => {
+    if (variant !== 'fixed') return undefined;
     document.body.classList.add('has-weather-bar');
     return () => document.body.classList.remove('has-weather-bar');
-  }, []);
+  }, [variant]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +43,7 @@ export default function WeatherTemperatureBar() {
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
           () => resolve(FALLBACK),
-          { enableHighAccuracy: false, timeout: 8000, maximumAge: 600_000 },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
         );
       });
     }
@@ -52,33 +53,38 @@ export default function WeatherTemperatureBar() {
       try {
         const { lat, lng } = await pickLatLng();
         if (cancelled) return;
+
         const url = new URL('https://api.open-meteo.com/v1/forecast');
         url.searchParams.set('latitude', String(lat));
         url.searchParams.set('longitude', String(lng));
         url.searchParams.set('hourly', 'temperature_2m,weather_code');
         url.searchParams.set('forecast_days', '2');
         url.searchParams.set('timezone', 'auto');
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('forecast');
-        const data = await res.json();
+
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error('forecast');
+
+        const data = await response.json();
         const times = data?.hourly?.time || [];
-        const temps = data?.hourly?.temperature_2m || [];
-        const codes = data?.hourly?.weather_code || [];
+        const temperatures = data?.hourly?.temperature_2m || [];
+        const weatherCodes = data?.hourly?.weather_code || [];
         const nowMs = Date.now();
-        const next = [];
-        for (let i = 0; i < times.length && next.length < 18; i += 1) {
-          const tMs = new Date(times[i]).getTime();
-          if (tMs < nowMs - 45 * 60 * 1000) continue;
-          next.push({
-            key: times[i],
-            at: new Date(times[i]),
-            temp: Number(temps[i]),
-            code: codes[i],
+        const nextSlots = [];
+
+        for (let index = 0; index < times.length && nextSlots.length < 18; index += 1) {
+          const timestamp = new Date(times[index]).getTime();
+          if (timestamp < nowMs - 45 * 60 * 1000) continue;
+          nextSlots.push({
+            key: times[index],
+            at: new Date(times[index]),
+            temp: Number(temperatures[index]),
+            code: weatherCodes[index],
           });
         }
+
         if (cancelled) return;
-        setSlots(next);
-        setStatus(next.length ? 'ready' : 'error');
+        setSlots(nextSlots);
+        setStatus(nextSlots.length ? 'ready' : 'error');
       } catch {
         if (!cancelled) {
           setSlots([]);
@@ -87,14 +93,27 @@ export default function WeatherTemperatureBar() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!onSnapshotChange) return;
+    onSnapshotChange({
+      status,
+      current: slots[0] || null,
+      slots,
+    });
+  }, [status, slots, onSnapshotChange]);
+
+  const rootClassName = `weather-temperature-bar weather-temperature-bar--${variant}`;
 
   if (status === 'loading' && slots.length === 0) {
     return (
-      <aside className="weather-temperature-bar" aria-busy="true" aria-label={t('common.weather_forecast')}>
+      <aside className={rootClassName} aria-busy="true" aria-label={t('common.weather_forecast')}>
         <div className="weather-temperature-bar-inner weather-temperature-bar--loading">
-          <span className="weather-temp-loading-icon" aria-hidden>🌡️</span>
+          <WeatherGlyph className="weather-temp-loading-icon weather-temp-glyph" />
           <span>{t('common.weather_loading')}</span>
         </div>
       </aside>
@@ -103,9 +122,9 @@ export default function WeatherTemperatureBar() {
 
   if (status === 'error' || slots.length === 0) {
     return (
-      <aside className="weather-temperature-bar" aria-label={t('common.weather_forecast')}>
+      <aside className={rootClassName} aria-label={t('common.weather_forecast')}>
         <div className="weather-temperature-bar-inner weather-temperature-bar--empty">
-          <span className="weather-temp-loading-icon" aria-hidden>🌡️</span>
+          <WeatherGlyph className="weather-temp-loading-icon weather-temp-glyph" />
           <span>{t('common.weather_error')}</span>
         </div>
       </aside>
@@ -113,15 +132,13 @@ export default function WeatherTemperatureBar() {
   }
 
   return (
-    <aside className="weather-temperature-bar" aria-label={t('common.weather_forecast')}>
+    <aside className={rootClassName} aria-label={t('common.weather_forecast')}>
       <div className="weather-temperature-bar-inner weather-temperature-bar--scroll" role="list">
-        {slots.map((s) => (
-          <div key={s.key} className="weather-temp-slot" role="listitem">
-            <span className="weather-temp-slot-icon" aria-hidden>
-              {wmoWeatherIcon(s.code)}
-            </span>
-            <span className="weather-temp-slot-deg">{celsiusLabel(s.temp, preferF)}</span>
-            <span className="weather-temp-slot-hour">{formatHour(s.at, locale)}</span>
+        {slots.map((slot) => (
+          <div key={slot.key} className="weather-temp-slot" role="listitem">
+            <WeatherGlyph code={slot.code} className="weather-temp-slot-icon weather-temp-glyph" />
+            <span className="weather-temp-slot-deg">{celsiusLabel(slot.temp, preferFahrenheit)}</span>
+            <span className="weather-temp-slot-hour">{formatHour(slot.at, locale)}</span>
           </div>
         ))}
       </div>

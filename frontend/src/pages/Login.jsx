@@ -166,10 +166,10 @@ export default function Login() {
               </div>
 
               {stravaStatus && !stravaStatus.configured && (
-                <div className="error-alert" style={{ display: 'block' }}>
+                <div className="error-alert is-visible">
                   {t('common.strava_not_configured')}
                   {stravaStatus.reason && (
-                    <div style={{ marginTop: 6, fontSize: '0.9rem' }}>{stravaStatus.reason}</div>
+                    <div className="auth-status-detail">{stravaStatus.reason}</div>
                   )}
                 </div>
               )}
@@ -195,31 +195,31 @@ export default function Login() {
               {altLoginOpen && (
               <form className="auth-alt-block" onSubmit={handleSubmit}>
                 {banner === 'verified' && (
-                  <div className="error-alert" style={{ display: 'block', background: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.35)', color: '#166534' }}>
+                  <div className="error-alert error-alert--success is-visible">
                     {t('common.verified_banner')}
                   </div>
                 )}
                 {banner === 'invalid' && (
-                  <div className="error-alert" style={{ display: 'block' }}>{t('common.verify_error')}</div>
+                  <div className="error-alert is-visible">{t('common.verify_error')}</div>
                 )}
                 {banner === 'expired' && (
-                  <div className="error-alert" style={{ display: 'block' }}>{t('common.verify_expired')}</div>
+                  <div className="error-alert is-visible">{t('common.verify_expired')}</div>
                 )}
                 {banner === 'strava_not_configured' && (
-                  <div className="error-alert" style={{ display: 'block' }}>{t('common.strava_not_configured')}</div>
+                  <div className="error-alert is-visible">{t('common.strava_not_configured')}</div>
                 )}
                 {banner === 'strava_failed' && (
-                  <div className="error-alert" style={{ display: 'block' }}>{t('common.strava_login_failed')}</div>
+                  <div className="error-alert is-visible">{t('common.strava_login_failed')}</div>
                 )}
-                {error && <div className="error-alert" style={{ display: 'block' }}>{error}</div>}
+                {error && <div className="error-alert is-visible">{error}</div>}
 
                 {(showResend || banner === 'expired') && (
-                  <div style={{ marginBottom: 16, padding: '12px', background: 'var(--classic-bg, #f8fafc)', borderRadius: 8, border: '1px solid var(--classic-border, #e2e8f0)' }}>
-                    <p style={{ margin: '0 0 8px', fontSize: '0.85rem' }}>{t('common.resend_email_placeholder')}</p>
+                  <div className="auth-resend-box">
+                    <p className="auth-resend-copy">{t('common.resend_email_placeholder')}</p>
                     <button type="button" className="btn-secondary" disabled={resendBusy || !email.trim()} onClick={handleResend}>
                       {resendBusy ? '…' : t('common.resend_verification')}
                     </button>
-                    {resendMsg && <p style={{ margin: '8px 0 0', fontSize: '0.85rem' }}>{resendMsg}</p>}
+                    {resendMsg && <p className="auth-resend-message">{resendMsg}</p>}
                   </div>
                 )}
 

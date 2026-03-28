@@ -459,6 +459,7 @@ export default function MuscleTraining() {
   const navigate = useNavigate();
   const [displayLang, setDisplayLang] = useState(lang);
   const isZh = displayLang === 'zh-CN';
+  const placeholder = '—';
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -544,10 +545,10 @@ export default function MuscleTraining() {
   }
 
   return (
-    <div className="page-shell">
+    <div className="dashboard-body page-shell muscle-training-shell">
       <TopNav backLink={{ to: '/profile', label: 'HERMES' }} />
 
-      <div className="page-body muscle-training-page">
+      <div className="dashboard-container page-body muscle-training-page">
         <div className="muscle-training-hero">
           <div className="muscle-training-hero-copy">
             <div className="muscle-page-tools">
@@ -555,7 +556,7 @@ export default function MuscleTraining() {
                 <h1>{mt('muscle_training.heading')}</h1>
                 <p>{mt('muscle_training.subheading')}</p>
               </div>
-              <div className="muscle-lang-toggle" role="tablist" aria-label={isZh ? '训练语言切换' : 'Training language switch'}>
+              <div className="muscle-lang-toggle" role="tablist" aria-label={mt('muscle_training.language_toggle_label')}>
                 <button type="button" className={displayLang === 'zh-CN' ? 'active' : ''} onClick={() => setDisplayLang('zh-CN')}>
                   {mt('common.lang_zh')}
                 </button>
@@ -577,15 +578,15 @@ export default function MuscleTraining() {
             <div className="muscle-training-metrics">
               <div className="muscle-metric-card">
                 <div className="muscle-metric-label">{mt('muscle_training.weekly_volume')}</div>
-                <strong>{data.weeklyKmEstimate ?? '—'}{isZh ? ' 公里/周' : ' km/wk'}</strong>
+                <strong>{data.weeklyKmEstimate ?? placeholder} {mt('muscle_training.weekly_volume_unit')}</strong>
               </div>
               <div className="muscle-metric-card">
                 <div className="muscle-metric-label">{mt('muscle_training.recommended_frequency')}</div>
-                <strong>{data.sessionsPerWeek ?? '—'} {mt('muscle_training.sessions_per_week')}</strong>
+                <strong>{data.sessionsPerWeek ?? placeholder} {mt('muscle_training.sessions_per_week')}</strong>
               </div>
               <div className="muscle-metric-card">
                 <div className="muscle-metric-label">{mt('muscle_training.focus')}</div>
-                <strong>{translateMuscleText(data.focus) || '—'}</strong>
+                <strong>{translateMuscleText(data.focus) || placeholder}</strong>
               </div>
             </div>
 
@@ -616,7 +617,7 @@ export default function MuscleTraining() {
                       <div className="muscle-session-kicker">{mt('muscle_training.session')} {idx + 1}</div>
                       <h2>{translateMuscleText(s.title) || mt('muscle_training.session')}</h2>
                     </div>
-                    <div className="muscle-session-duration">{mt('muscle_training.duration', { minutes: s.durationMin ?? '—' })}</div>
+                    <div className="muscle-session-duration">{mt('muscle_training.duration', { minutes: s.durationMin ?? placeholder })}</div>
                   </div>
 
                   <div className="muscle-block-stack">
@@ -626,8 +627,8 @@ export default function MuscleTraining() {
                         {(() => {
                           const buckets = bucketExercises(b.exercises);
                           const sections = [
-                            { key: 'quiet', label: isZh ? '无声训练' : 'No Sound', items: buckets.quiet },
-                            { key: 'sound', label: isZh ? '有声训练' : 'Sound', items: buckets.sound },
+                            { key: 'quiet', label: mt('muscle_training.sound_quiet'), items: buckets.quiet },
+                            { key: 'sound', label: mt('muscle_training.sound_loud'), items: buckets.sound },
                           ];
                           return sections.filter(section => section.items.length > 0).map((section) => (
                             <div key={section.key} className="muscle-sound-section">
@@ -635,8 +636,8 @@ export default function MuscleTraining() {
                                 <span className="muscle-sound-dot" />
                                 <strong>{section.label}</strong>
                                 <span>{section.key === 'quiet'
-                                  ? (isZh ? '适合公寓、夜间、楼板敏感环境' : 'Best for apartments, late nights, and shared floors')
-                                  : (isZh ? '有落地声或冲击感，适合空间充足时做' : 'More impact or landing noise, best when space allows')}</span>
+                                  ? mt('muscle_training.sound_quiet_hint')
+                                  : mt('muscle_training.sound_loud_hint')}</span>
                               </div>
                               <div className="muscle-exercise-grid">
                                 {section.items.map(({ ex, guide }, ei) => (
@@ -664,7 +665,7 @@ export default function MuscleTraining() {
                                           rel="noreferrer"
                                           className="muscle-video-link"
                                         >
-                                          {isZh ? '看 YouTube 动作示范' : 'Watch YouTube demo'}
+                                          {mt('muscle_training.watch_demo')}
                                         </a>
                                       </div>
                                     </div>
