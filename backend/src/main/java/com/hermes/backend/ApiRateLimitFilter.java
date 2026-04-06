@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 /**
  * Global abuse protection for /api endpoints (scraping + bot mitigation).
@@ -27,9 +28,11 @@ public class ApiRateLimitFilter implements Filter {
     private static final Logger log = LoggerFactory.getLogger(ApiRateLimitFilter.class);
 
     private final ApiRateLimiter limiter;
+    private final AuthService authService;
 
-    public ApiRateLimitFilter(ApiRateLimiter limiter) {
+    public ApiRateLimitFilter(ApiRateLimiter limiter, AuthService authService) {
         this.limiter = limiter;
+        this.authService = authService;
     }
 
     @Override
@@ -81,16 +84,45 @@ public class ApiRateLimitFilter implements Filter {
             max = 20; // /min
         }
 
-        String key = ip + "|" + method + "|" + bucketPath(path);
-        if (!limiter.allow(key, max, windowSec)) {
-            log.warn("API rate limit hit ip={} method={} path={} maxPerMin={}", ip, method, path, max);
-            resp.setStatus(429);
-            resp.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            resp.getOutputStream().write("{\"error\":\"Too many requests\"}".getBytes(StandardCharsets.UTF_8));
+        String bucket = bucketPath(path);
+        String ipKey = "ip|" + ip + "|" + method + "|" + bucket;
+        if (!limiter.allow(ipKey, max, windowSec)) {
+            log.warn("API rate limit hit scope=ip ip={} method={} path={} maxPerWindow={} windowSeconds={}",
+                    ip, method, path, max, windowSec);
+            writeTooManyRequests(resp, windowSec, "Too many requests from this network. Please slow down and try again.");
             return;
         }
 
+        Optional<Runner> authenticatedRunner = authService.findByAuthorizationHeader(req.getHeader("Authorization"));
+        if (authenticatedRunner.isPresent()) {
+            int userMax = authenticatedLimit(max, method);
+            String userKey = "user|" + authenticatedRunner.get().getId() + "|" + method + "|" + bucket;
+            if (!limiter.allow(userKey, userMax, windowSec)) {
+                log.warn("API rate limit hit scope=user runnerId={} method={} path={} maxPerWindow={} windowSeconds={}",
+                        authenticatedRunner.get().getId(), method, path, userMax, windowSec);
+                writeTooManyRequests(resp, windowSec, "Too many requests for this account. Please wait a moment and try again.");
+                return;
+            }
+        }
+
         chain.doFilter(request, response);
+    }
+
+    private static int authenticatedLimit(int baseLimit, String method) {
+        if ("GET".equals(method) || "HEAD".equals(method)) {
+            return Math.max(baseLimit, Math.round(baseLimit * 1.5f));
+        }
+        return Math.max(baseLimit, Math.round(baseLimit * 1.25f));
+    }
+
+    private static void writeTooManyRequests(HttpServletResponse resp, long windowSec, String message) throws IOException {
+        resp.setStatus(429);
+        resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        resp.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        resp.setHeader("Retry-After", String.valueOf(windowSec));
+        resp.getOutputStream().write((
+                "{\"error\":\"" + message + "\",\"code\":\"RATE_LIMITED\",\"retryAfterSeconds\":" + windowSec + "}"
+        ).getBytes(StandardCharsets.UTF_8));
     }
 
     private static String bucketPath(String path) {
@@ -103,4 +135,3 @@ public class ApiRateLimitFilter implements Filter {
         return path;
     }
 }
-

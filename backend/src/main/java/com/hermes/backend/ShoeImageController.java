@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 @RestController
 @RequestMapping("/api/shoes")
 public class ShoeImageController {
+    private static final Set<String> QUERY_ONLY_FIELDS = Set.of("query");
+    private static final Set<String> PHOTO_ONLY_FIELDS = Set.of("photoUrl");
 
     private final AuthService authService;
     private final AiUsageService aiUsageService;
@@ -128,6 +130,7 @@ public class ShoeImageController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody(required = false) Map<String, Object> body) {
         try {
+            RequestBodyValidator.rejectUnexpectedFields(body, QUERY_ONLY_FIELDS);
             Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
             if (user.isEmpty() || !authService.isAdmin(user.get()))
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin only");
@@ -147,6 +150,8 @@ public class ShoeImageController {
                 images = searchShoeImageCandidates(brand, model);
             }
             return ResponseEntity.ok(Map.of("images", sanitizeImageUrls(images)));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
             System.err.println("Admin image search failed for shoe " + id + ": " + e.getMessage());
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
@@ -161,7 +166,7 @@ public class ShoeImageController {
     public ResponseEntity<?> adminSetPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, Object> body) {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty() || !authService.isAdmin(user.get()))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin only");
@@ -170,7 +175,13 @@ public class ShoeImageController {
         if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
 
         Shoe shoe = shoeOpt.get();
-        String photoUrlRaw = body != null ? body.getOrDefault("photoUrl", "") : "";
+        final String photoUrlRaw;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, PHOTO_ONLY_FIELDS);
+            photoUrlRaw = RequestBodyValidator.optionalString(body, "photoUrl", 2048);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
         String finalUrl;
         try {
             finalUrl = SafeUrlValidator.validateHttpUrlOrNull(photoUrlRaw, 2048, "photoUrl");
@@ -335,7 +346,7 @@ public class ShoeImageController {
     public ResponseEntity<?> searchShoeImages(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody(required = false) Map<String, String> body) {
+            @RequestBody(required = false) Map<String, Object> body) {
 
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
@@ -356,6 +367,8 @@ public class ShoeImageController {
                 images = searchShoeImageCandidates(brand, model);
             }
             return ResponseEntity.ok(Map.of("images", sanitizeImageUrls(images)));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
             System.err.println("Image search failed: " + e.getMessage());
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
@@ -369,7 +382,7 @@ public class ShoeImageController {
     public ResponseEntity<?> setShoePhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, Object> body) {
 
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
@@ -378,7 +391,13 @@ public class ShoeImageController {
         if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
 
         Shoe shoe = shoeOpt.get();
-        String photoUrlRaw = body != null ? body.getOrDefault("photoUrl", "") : "";
+        final String photoUrlRaw;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, PHOTO_ONLY_FIELDS);
+            photoUrlRaw = RequestBodyValidator.optionalString(body, "photoUrl", 2048);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
         String finalUrl;
         try {
             finalUrl = SafeUrlValidator.validateHttpUrlOrNull(photoUrlRaw, 2048, "photoUrl");
@@ -541,6 +560,7 @@ public class ShoeImageController {
     private String extractQuery(Map<String, ?> body) {
         if (body == null) return "";
         try {
+            RequestBodyValidator.rejectUnexpectedFields(body, QUERY_ONLY_FIELDS);
             Object raw = body.get("query");
             String q = raw == null ? "" : String.valueOf(raw).trim();
             if (q.length() > 200) {

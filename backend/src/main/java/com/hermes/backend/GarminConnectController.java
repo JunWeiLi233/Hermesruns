@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/garmin/connect")
 public class GarminConnectController {
+    private static final Set<String> IMPORT_FIELDS = Set.of("garminEmail", "garminPassword", "limit");
 
     private final AuthService authService;
     private final GarminConnectImportService garminConnectImportService;
@@ -29,9 +31,17 @@ public class GarminConnectController {
         if (runnerOpt.isEmpty()) {
             return error(HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
         }
-
-        String garminEmail = stringVal(body.get("garminEmail"));
-        String garminPassword = stringVal(body.get("garminPassword"));
+        final String garminEmail;
+        final String garminPassword;
+        final int limit;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, IMPORT_FIELDS);
+            garminEmail = RequestBodyValidator.requiredString(body, "garminEmail", 200);
+            garminPassword = RequestBodyValidator.requiredString(body, "garminPassword", 200);
+            limit = RequestBodyValidator.intOrDefault(body, "limit", 50, 1, 200);
+        } catch (IllegalArgumentException ex) {
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
 
         if (garminEmail == null || garminEmail.isBlank()) {
             return error(HttpStatus.BAD_REQUEST, "Garmin Connect email is required.");
@@ -41,12 +51,6 @@ public class GarminConnectController {
         }
         if (garminEmail.length() > 200 || garminPassword.length() > 200) {
             return error(HttpStatus.BAD_REQUEST, "Invalid credentials.");
-        }
-
-        int limit = 50;
-        Object limitVal = body.get("limit");
-        if (limitVal instanceof Number n) {
-            limit = n.intValue();
         }
 
         boolean started = garminConnectImportService.startImport(
@@ -81,11 +85,5 @@ public class GarminConnectController {
         Map<String, String> response = new HashMap<>();
         response.put("error", message);
         return ResponseEntity.status(status).body(response);
-    }
-
-    private String stringVal(Object v) {
-        if (v == null) return null;
-        String s = String.valueOf(v);
-        return s.isBlank() ? null : s.trim();
     }
 }

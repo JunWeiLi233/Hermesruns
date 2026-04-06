@@ -1,10 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
-import TopNav from '../components/TopNav';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import Modal from '../components/Modal';
 import { formatDuration, formatPace } from '../utils/format';
 import worldRaceCatalog, { worldRaceCountries } from '../data/worldRaceCatalog';
@@ -31,7 +30,7 @@ const DEFAULT_FORM = {
   nyrrNinePlusOneEligible: false,
 };
 
-function RaceMap({ races, selectedCountry, onSelectCountry, onAddRace, t, lang }) {
+function RaceMap({ races, selectedCountry, lang }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef(null);
@@ -66,7 +65,7 @@ function RaceMap({ races, selectedCountry, onSelectCountry, onAddRace, t, lang }
     };
   }, []);
 
-  function updateMarkers(L, map) {
+  const updateMarkers = useCallback((L, map) => {
     if (!markersRef.current) return;
     markersRef.current.clearLayers();
 
@@ -116,14 +115,14 @@ function RaceMap({ races, selectedCountry, onSelectCountry, onAddRace, t, lang }
         map.fitBounds(bounds, { maxZoom: 6, padding: [30, 30] });
       }
     }
-  }
+  }, [lang, races, selectedCountry]);
 
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     import('leaflet').then(L => {
       updateMarkers(L, mapInstanceRef.current);
     });
-  }, [selectedCountry, races]);
+  }, [selectedCountry, races, updateMarkers]);
 
   return <div ref={mapRef} className="race-leaflet-map" />;
 }
@@ -394,23 +393,16 @@ export default function Races() {
   const longestRunKm = runs.reduce((max, run) => Math.max(max, Number(run.distanceKm || 0)), 0);
 
   return (
-    <div className="dashboard-body history-page races-page">
-      <LanguageSwitcher />
-
-      <TopNav
-        backLink={{ to: '/profile', label: 'HERMES' }}
-        rightContent={
-          <button type="button" className="top-nav-shortcut" onClick={openCreateModal}>
-            {t('races.add_button')}
-          </button>
-        }
-      />
+    <AuthenticatedPageChrome bodyClassName="history-page races-page">
 
       <main className="dashboard-container history-container">
         <section className="card history-hero">
           <span className="history-eyebrow">{t('races.eyebrow')}</span>
           <div className="history-hero-top">
             <h1 className="history-title">{t('races.heading')}</h1>
+            <button type="button" className="btn-secondary btn-inline-md" onClick={openCreateModal}>
+              {t('races.add_button')}
+            </button>
           </div>
           <p className="history-copy">{t('races.page_copy')}</p>
         </section>
@@ -743,6 +735,6 @@ export default function Races() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

@@ -39,6 +39,7 @@ backend_log.txt
 credentials.json
 
 # backend local build/cache/database
+.m2repo/
 backend/target/
 backend/.mvn/repository/
 backend/*.mv.db
@@ -59,6 +60,9 @@ __pycache__/
 migration_export/
 .tools/migration_export/
 
+# Debug/probe files
+backend/probe.java
+
 # One-time migration tools
 .tools/H2AddColumn.java
 .tools/H2Inspector.java
@@ -74,5 +78,27 @@ migration_export/
 frontend/node_modules/
 frontend/dist/
 
-# Claude
+# Local AI workflow files
 .claude/
+.codex/
+AGENTS.md
+CLAUDE.md
+TASKS.md
+CODEX_DAILY_GUIDE.md
+CODEX_DAILY_GUIDE.txt
+CODEX_LOOP_GUIDE.txt
+CLAUDE_DAILY_GUIDE.txt
+
+# AI codebase index (auto-generated, regenerated on session start)
+.ai-codex/
+
+# Python virtual environment
+.venv/
+
+# Prompt optimizer (local tool, not project code)
+.tools/prompt_optimizer/
+.tools/example_prompt_optimizer.py
+.tools/requirements-prompt-optimizer.txt
+
+# Codex generator (local tool)
+.tools/generate-codex.js

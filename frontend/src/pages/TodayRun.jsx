@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiJson } from '../api';
-import TopNav from '../components/TopNav';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 
 export default function TodayRun() {
@@ -65,12 +63,10 @@ export default function TodayRun() {
     reasons,
     metrics,
   } = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
+  const isZh = lang === 'zh-CN';
 
   return (
-    <div className="dashboard-body today-run-page">
-      <LanguageSwitcher />
-
-      <TopNav backLink={{ to: '/profile', label: 'HERMES' }} />
+    <AuthenticatedPageChrome bodyClassName="today-run-page">
 
       <main className="dashboard-container today-run-container">
         <section className="card today-run-hero">
@@ -198,16 +194,16 @@ export default function TodayRun() {
 
             <div className="today-run-metric-strip">
               <article className="today-run-metric-card">
-                <span className="stat-label">VO₂max</span>
+                <span className="stat-label">{isZh ? '最大摄氧量' : 'VO₂max'}</span>
                 <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
               </article>
               <article className="today-run-metric-card">
-                <span className="stat-label">ACWR</span>
+                <span className="stat-label">{isZh ? '急慢性负荷比' : 'ACWR'}</span>
                 <strong>{metrics.acwr !== null ? metrics.acwr.toFixed(2) : '--'}</strong>
               </article>
               <article className="today-run-metric-card">
                 <span className="stat-label">{t('analysis.recovery')}</span>
-                <strong>{metrics.recoveryHours > 0 ? `${metrics.recoveryHours}h` : t('analysis.fully_recovered')}</strong>
+                <strong>{metrics.recoveryHours > 0 ? `${metrics.recoveryHours}${isZh ? ' 小时' : 'h'}` : t('analysis.fully_recovered')}</strong>
               </article>
             </div>
 
@@ -248,8 +244,6 @@ export default function TodayRun() {
           </div>
         </div>
       )}
-
-      <WeatherTemperatureBar />
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

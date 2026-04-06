@@ -15,11 +15,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/auth")
 public class LoginController {
     private static final Logger log = LoggerFactory.getLogger(LoginController.class);
+    private static final Set<String> LOGIN_FIELDS = Set.of("email", "password");
+    private static final Set<String> EMAIL_ONLY_FIELDS = Set.of("email");
+    private static final Set<String> PASSWORD_RESET_CONFIRM_FIELDS = Set.of("token", "password");
+    private static final Set<String> ADMIN_SUBSCRIPTION_FIELDS = Set.of("action", "months");
 
     private final RunnerRepository runnerRepository;
     private final AuthService authService;
@@ -58,17 +63,27 @@ public class LoginController {
     // 1. STANDARD LOGIN
     // ==========================================
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Runner loginRequest, HttpServletRequest request) {
+    public ResponseEntity<?> login(@RequestBody(required = false) Map<String, Object> body, HttpServletRequest request) {
         String ip = RequestIpResolver.clientIp(request);
         if (rateLimiter.isBlocked(ip)) {
             log.warn("Auth login rate-limited ip={}", ip);
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
         }
 
-        Optional<Runner> runnerOptional = authService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
+        final String email;
+        final String password;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, LOGIN_FIELDS);
+            email = authService.normalizeEmail(RequestBodyValidator.requiredString(body, "email", 254));
+            password = RequestBodyValidator.requiredString(body, "password", 512);
+        } catch (IllegalArgumentException ex) {
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+
+        Optional<Runner> runnerOptional = authService.authenticate(email, password);
         if (runnerOptional.isEmpty()) {
             rateLimiter.recordFailure(ip);
-            log.warn("Auth login failed ip={} email={}", ip, authService.normalizeEmail(loginRequest.getEmail()));
+            log.warn("Auth login failed ip={} email={}", ip, email);
             return error(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
         }
 
@@ -132,7 +147,7 @@ public class LoginController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<?> resendVerification(@RequestBody(required = false) Map<String, String> body,
+    public ResponseEntity<?> resendVerification(@RequestBody(required = false) Map<String, Object> body,
                                                 HttpServletRequest request) {
         String ip = RequestIpResolver.clientIp(request);
         if (!verificationResendLimiter.allow(ip)) {
@@ -140,8 +155,14 @@ public class LoginController {
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many requests. Try again later.");
         }
 
-        String email = body == null ? null : authService.normalizeEmail(body.get("email"));
+        String email;
         String generic = "If an unverified account exists for that address, a new verification email was sent.";
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, EMAIL_ONLY_FIELDS);
+            email = authService.normalizeEmail(RequestBodyValidator.optionalString(body, "email", 254));
+        } catch (IllegalArgumentException ignored) {
+            return ResponseEntity.ok(Map.of("message", generic));
+        }
 
         if (email == null || email.isBlank() || !PasswordStrengthChecker.looksLikeEmail(email)) {
             return ResponseEntity.ok(Map.of("message", generic));
@@ -173,15 +194,22 @@ public class LoginController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody Runner signupRequest, HttpServletRequest request) {
+    public ResponseEntity<?> signup(@RequestBody(required = false) Map<String, Object> body, HttpServletRequest request) {
         String ip = RequestIpResolver.clientIp(request);
         // Anti-bot: limit account creation per IP
         if (!apiRateLimiter.allow("signup:" + ip, 8, 3600)) { // 8 per hour
             log.warn("Auth signup rate-limited ip={}", ip);
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many sign-up attempts. Try again later.");
         }
-        String normalizedEmail = authService.normalizeEmail(signupRequest.getEmail());
-        String rawPassword = signupRequest.getPassword();
+        String normalizedEmail;
+        String rawPassword;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, LOGIN_FIELDS);
+            normalizedEmail = authService.normalizeEmail(RequestBodyValidator.requiredString(body, "email", 254));
+            rawPassword = RequestBodyValidator.requiredString(body, "password", 512);
+        } catch (IllegalArgumentException ex) {
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
 
         if (normalizedEmail == null || normalizedEmail.isBlank()) {
             return error(HttpStatus.BAD_REQUEST, "Email is required.");
@@ -222,14 +250,14 @@ public class LoginController {
             aiUsageService.initNewUser(runner);
         }
 
-        Map<String, Object> body = new LinkedHashMap<>();
+        Map<String, Object> responseBody = new LinkedHashMap<>();
         if (!emailVerificationService.isMailConfigured()) {
             runner.setEmailVerified(true);
             emailVerificationService.clearVerificationFields(runner);
             runnerRepository.save(runner);
-            body.put("message", "Account created. You can sign in (email verification is skipped because mail is not configured).");
-            body.put("verificationRequired", false);
-            return ResponseEntity.ok(body);
+            responseBody.put("message", "Account created. You can sign in (email verification is skipped because mail is not configured).");
+            responseBody.put("verificationRequired", false);
+            return ResponseEntity.ok(responseBody);
         }
 
         runner.setEmailVerified(false);
@@ -239,10 +267,10 @@ public class LoginController {
             return error(HttpStatus.SERVICE_UNAVAILABLE, "Could not send verification email. Try again later.");
         }
 
-        body.put("message", "Check your email to verify your address before signing in.");
-        body.put("verificationRequired", true);
-        body.put("email", normalizedEmail);
-        return ResponseEntity.ok(body);
+        responseBody.put("message", "Check your email to verify your address before signing in.");
+        responseBody.put("verificationRequired", true);
+        responseBody.put("email", normalizedEmail);
+        return ResponseEntity.ok(responseBody);
     }
 
     // ==========================================
@@ -251,7 +279,7 @@ public class LoginController {
 
     @PostMapping("/password-reset/request")
     public ResponseEntity<?> requestPasswordReset(
-            @RequestBody(required = false) Map<String, String> body,
+            @RequestBody(required = false) Map<String, Object> body,
             HttpServletRequest request
     ) {
         String ip = RequestIpResolver.clientIp(request);
@@ -263,7 +291,13 @@ public class LoginController {
         // Always return a generic success to avoid account enumeration.
         String generic = "If an account exists for that address, a password reset email was sent.";
 
-        String email = body == null ? null : authService.normalizeEmail(body.get("email"));
+        String email;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, EMAIL_ONLY_FIELDS);
+            email = authService.normalizeEmail(RequestBodyValidator.optionalString(body, "email", 254));
+        } catch (IllegalArgumentException ignored) {
+            return ResponseEntity.ok(Map.of("message", generic));
+        }
         if (email == null || email.isBlank() || !PasswordStrengthChecker.looksLikeEmail(email)) {
             return ResponseEntity.ok(Map.of("message", generic));
         }
@@ -299,7 +333,7 @@ public class LoginController {
 
     @PostMapping("/password-reset/confirm")
     public ResponseEntity<?> confirmPasswordReset(
-            @RequestBody(required = false) Map<String, String> body,
+            @RequestBody(required = false) Map<String, Object> body,
             HttpServletRequest request
     ) {
         String ip = RequestIpResolver.clientIp(request);
@@ -310,8 +344,16 @@ public class LoginController {
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
         }
 
-        String token = body == null ? null : body.get("token");
-        String newPassword = body == null ? null : body.get("password");
+        final String token;
+        final String newPassword;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, PASSWORD_RESET_CONFIRM_FIELDS);
+            token = RequestBodyValidator.requiredString(body, "token", 1024);
+            newPassword = RequestBodyValidator.requiredString(body, "password", 512);
+        } catch (IllegalArgumentException ex) {
+            rateLimiter.recordFailure(key);
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
         if (token == null || token.isBlank()) {
             rateLimiter.recordFailure(key);
             return error(HttpStatus.BAD_REQUEST, "Reset token is required.");
@@ -462,17 +504,20 @@ public class LoginController {
     // ==========================================
     @PostMapping("/admin-login")
     public ResponseEntity<?> adminLogin(
-            @RequestBody Map<String, String> body,
+            @RequestBody(required = false) Map<String, Object> body,
             HttpServletRequest request
     ) {
-        String ip = request.getRemoteAddr();
+        String ip = RequestIpResolver.clientIp(request);
         if (rateLimiter.isBlocked(ip)) {
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
         }
 
-        String email = body == null ? "" : body.getOrDefault("email", "");
-        String password = body == null ? "" : body.getOrDefault("password", "");
+        final String email;
+        final String password;
         try {
+            RequestBodyValidator.rejectUnexpectedFields(body, LOGIN_FIELDS);
+            email = RequestBodyValidator.requiredString(body, "email", 254);
+            password = RequestBodyValidator.requiredString(body, "password", 512);
             InputSanitizer.rejectControlChars(email, "email");
         } catch (IllegalArgumentException ignored) {
             return error(HttpStatus.UNAUTHORIZED, "Invalid admin credentials.");
@@ -500,7 +545,7 @@ public class LoginController {
     public ResponseEntity<?> updateSubscription(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-            @RequestBody Map<String, Object> body) {
+            @RequestBody(required = false) Map<String, Object> body) {
 
         Optional<Runner> adminOptional = authService.findByAuthorizationHeader(authorizationHeader)
                 .filter(authService::isAdmin);
@@ -514,9 +559,12 @@ public class LoginController {
         }
 
         Runner runner = runnerOptional.get();
-        Object actionRaw = body == null ? null : body.get("action");
-        String action = actionRaw instanceof String s ? s : "";
+        final String action;
+        final int months;
         try {
+            RequestBodyValidator.rejectUnexpectedFields(body, ADMIN_SUBSCRIPTION_FIELDS);
+            action = RequestBodyValidator.requiredSafeText(body, "action", 32);
+            months = RequestBodyValidator.intOrDefault(body, "months", 1, 1, 24);
             InputSanitizer.rejectControlChars(action, "action");
             InputSanitizer.rejectControlAndHtmlChars(action, "action");
         } catch (IllegalArgumentException ignored) {
@@ -524,7 +572,6 @@ public class LoginController {
         }
 
         if ("grant_pro".equals(action)) {
-            int months = body.containsKey("months") ? ((Number) body.get("months")).intValue() : 1;
             aiUsageService.grantPro(runner, months);
             return ResponseEntity.ok(messageResponse("Pro granted for " + months + " month(s)."));
         } else if ("revoke_pro".equals(action)) {

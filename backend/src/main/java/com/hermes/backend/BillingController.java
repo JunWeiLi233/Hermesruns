@@ -27,10 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/billing")
 public class BillingController {
+    private static final Set<String> CHECKOUT_FIELDS = Set.of("months");
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -112,12 +114,12 @@ public class BillingController {
             return error(HttpStatus.SERVICE_UNAVAILABLE, "Online checkout is not configured on this server.");
         }
 
-        int months = 1;
-        if (body != null && body.get("months") instanceof Number n) {
-            months = n.intValue();
-        }
-        if (months < 1 || months > 12) {
-            return error(HttpStatus.BAD_REQUEST, "months must be between 1 and 12.");
+        final int months;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, CHECKOUT_FIELDS);
+            months = RequestBodyValidator.intOrDefault(body, "months", 1, 1, 12);
+        } catch (IllegalArgumentException ex) {
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
 
         String successUrl = publicBaseUrl + "/profile?checkout=success&session_id={CHECKOUT_SESSION_ID}";
