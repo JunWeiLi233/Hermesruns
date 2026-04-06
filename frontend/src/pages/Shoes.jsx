@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -6,9 +6,11 @@ import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
 import Modal from '../components/Modal';
 import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
+import InfoDisclosure from '../components/ui/InfoDisclosure';
 import shoeCatalog from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
+import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
 
 function shoeHealth(current, max) {
   if (!max || max <= 0) return 'good';
@@ -28,7 +30,7 @@ function normalizeBrandKey(brand) {
 }
 
 function brandLogoSpec(brand) {
-  // Wordmark-style SVG “logos” (no external assets needed).
+  // Keep brand marks self-contained so the catalog works without external logo assets.
   // We still keep `shoeCatalog.logo` as a fallback/compat field.
   const key = normalizeBrandKey(brand);
 
@@ -52,25 +54,87 @@ function brandLogoSpec(brand) {
   if (key === 'puma') return make({ bg: '#0f172a', fg: '#ffffff', text: 'PUMA' });
   if (key === 'reebok') return make({ bg: '#f59e0b', fg: '#0f172a', text: 'REEB' });
   if (key === 'underarmour' || key === 'ua') return make({ bg: '#111827', fg: '#ffffff', text: 'UA' });
-  if (key === '361°' || key === '361' || key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361°' });
-  if (key === 'li-ning' || key === 'li ning' || (brand || '').includes('李宁')) return make({ bg: '#dc2626', fg: '#ffffff', text: '李宁' });
-  if (key === 'anta' || (brand || '').includes('安踏')) return make({ bg: '#f97316', fg: '#ffffff', text: '安踏' });
-  if (key === 'xtep' || (brand || '').includes('特步')) return make({ bg: '#2563eb', fg: '#ffffff', text: '特步' });
+  if (key === '361' || key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361' });
+  if (key === 'li-ning' || key === 'lining' || key === 'lining') return make({ bg: '#dc2626', fg: '#ffffff', text: 'LI' });
+  if (key === 'anta') return make({ bg: '#f97316', fg: '#ffffff', text: 'ANTA' });
+  if (key === 'xtep') return make({ bg: '#2563eb', fg: '#ffffff', text: 'XTEP' });
   if (key === 'skechers') return make({ bg: '#06b6d4', fg: '#ffffff', text: 'S' });
 
-  // Chinese / additional brands (requested)
-  if ((brand || '').includes('鸿星尔克') || key === 'erke') return make({ bg: '#60a5fa', fg: '#0b1220', text: '鸿星尔克' });
-  if ((brand || '').includes('匹克') || key === 'peak') return make({ bg: '#ef4444', fg: '#ffffff', text: '匹克' });
-  if ((brand || '').includes('乔丹') || key === 'qiaodan') return make({ bg: '#111827', fg: '#ffffff', text: '乔丹' });
-  if ((brand || '').includes('回力') || key === 'warrior') return make({ bg: '#dc2626', fg: '#ffffff', text: '回力' });
-  if ((brand || '').includes('双星') || key === 'double-star' || key === 'doublestar') return make({ bg: '#64748b', fg: '#ffffff', text: '双星' });
+  if (key === 'erke') return make({ bg: '#60a5fa', fg: '#0b1220', text: 'ERKE' });
+  if (key === 'peak') return make({ bg: '#ef4444', fg: '#ffffff', text: 'PEAK' });
+  if (key === 'qiaodan') return make({ bg: '#111827', fg: '#ffffff', text: 'QD' });
+  if (key === 'warrior') return make({ bg: '#dc2626', fg: '#ffffff', text: 'WAR' });
+  if (key === 'double-star' || key === 'doublestar') return make({ bg: '#64748b', fg: '#ffffff', text: 'DS' });
+
 
   return null;
 }
 
+function containsCjk(text) {
+  return /[\u3400-\u9fff]/.test(text || '');
+}
+
+function shouldPreferManualImageSearch(brand, model) {
+  const combined = `${brand || ''} ${model || ''}`;
+  const normalized = normalizeBrandKey(combined);
+  if (containsCjk(combined)) return true;
+  return [
+    '361',
+    'lining',
+    'li-ning',
+    'anta',
+    'xtep',
+    'erke',
+    'peak',
+    'qiaodan',
+    'warrior',
+    'double-star',
+    'doublestar',
+  ].some((keyword) => normalized.includes(normalizeBrandKey(keyword)));
+}
+
+const LOCAL_PHOTO_MAX_BYTES = 8 * 1024 * 1024;
+const LOCAL_PHOTO_MAX_DIMENSION = 1400;
+
+async function fileToOptimizedDataUrl(file, t) {
+  if (!(file instanceof File)) {
+    throw new Error(t('shoes.img_err_not_file'));
+  }
+  if (!(file.type || '').toLowerCase().startsWith('image/')) {
+    throw new Error(t('shoes.img_err_type'));
+  }
+  if (file.size > LOCAL_PHOTO_MAX_BYTES) {
+    throw new Error(t('shoes.img_err_size'));
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () => reject(new Error('Could not read that image file.'));
+      nextImage.src = objectUrl;
+    });
+
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+    const scale = Math.min(1, LOCAL_PHOTO_MAX_DIMENSION / Math.max(width || 1, height || 1));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error(t('shoes.img_err_prepare'));
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.86);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 function BrandLogo({ brand, fallbackEmoji }) {
   const spec = brandLogoSpec(brand);
-  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || '👟'}</span>;
+  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || 'S'}</span>;
 
   // Keep logo legible across themes: SVG uses fixed colors by design.
   return (
@@ -106,7 +170,7 @@ function ShoeImage({ src, alt }) {
   }, [src]);
 
   if (!src) {
-    return <div className="shoe-img-placeholder"><span>👟</span></div>;
+    return <div className="shoe-img-placeholder"><span>S</span></div>;
   }
   if (!processed) {
     return <div className="shoe-img-placeholder shoe-img-loading" />;
@@ -120,27 +184,41 @@ const TYPE_LABELS = {
 };
 
 const CATALOG_CATEGORY_META = {
-  'all': { zh: '全部', en: 'All' },
-  '综训': { zh: '综训', en: 'Trainer' },
-  '缓震': { zh: '缓震', en: 'Cushion' },
-  '竞速': { zh: '竞速', en: 'Race' },
-  '体测': { zh: '体测', en: 'Test' },
-  '稳定': { zh: '稳定', en: 'Stability' },
-  '支撑': { zh: '支撑', en: 'Support' },
-  '薄底': { zh: '薄底', en: 'Low Stack' },
-  '薄底通勤': { zh: '薄底通勤', en: 'Low Stack Commute' },
-  '薄底竞速': { zh: '薄底竞速', en: 'Low Stack Race' },
-  '薄底综训': { zh: '薄底综训', en: 'Low Stack Trainer' },
-  '厚底竞速': { zh: '厚底竞速', en: 'Super Shoe' },
-  '综训/竞速': { zh: '综训/竞速', en: 'Trainer/Race' },
-  '越野': { zh: '越野', en: 'Trail' },
+  all: { zh: 'All', en: 'All' },
+  trainer: { zh: 'Trainer', en: 'Trainer' },
+  cushion: { zh: 'Cushion', en: 'Cushion' },
+  race: { zh: 'Race', en: 'Race' },
+  test: { zh: 'Test', en: 'Test' },
+  stability: { zh: 'Stability', en: 'Stability' },
+  support: { zh: 'Support', en: 'Support' },
+  lowstack: { zh: 'Low Stack', en: 'Low Stack' },
+  lowstackcommute: { zh: 'Low Stack Commute', en: 'Low Stack Commute' },
+  lowstackrace: { zh: 'Low Stack Race', en: 'Low Stack Race' },
+  lowstacktrainer: { zh: 'Low Stack Trainer', en: 'Low Stack Trainer' },
+  supershoe: { zh: 'Super Shoe', en: 'Super Shoe' },
+  trainerrace: { zh: 'Trainer/Race', en: 'Trainer/Race' },
+  trail: { zh: 'Trail', en: 'Trail' },
 };
 
 function getCatalogCategoryLabel(category, lang) {
-  if (!category) return lang === 'zh-CN' ? '未分类' : 'Other';
-  const meta = CATALOG_CATEGORY_META[category];
-  if (meta) return lang === 'zh-CN' ? meta.zh : meta.en;
-  return category;
+  const raw = (category || '').toString();
+  if (!raw) return 'Other';
+  const normalized = normalizeBrandKey(raw);
+  if (normalized === 'all') return lang === 'zh-CN' ? CATALOG_CATEGORY_META.all.zh : CATALOG_CATEGORY_META.all.en;
+  if (normalized.includes('trail')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trail.zh : CATALOG_CATEGORY_META.trail.en;
+  if (normalized.includes('stability')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.stability.zh : CATALOG_CATEGORY_META.stability.en;
+  if (normalized.includes('support')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.support.zh : CATALOG_CATEGORY_META.support.en;
+  if (normalized.includes('cushion')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.cushion.zh : CATALOG_CATEGORY_META.cushion.en;
+  if (normalized.includes('test')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.test.zh : CATALOG_CATEGORY_META.test.en;
+  if (normalized.includes('super')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.supershoe.zh : CATALOG_CATEGORY_META.supershoe.en;
+  if (normalized.includes('trainerrace')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trainerrace.zh : CATALOG_CATEGORY_META.trainerrace.en;
+  if (normalized.includes('lowstackcommute')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstackcommute.zh : CATALOG_CATEGORY_META.lowstackcommute.en;
+  if (normalized.includes('lowstackrace')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstackrace.zh : CATALOG_CATEGORY_META.lowstackrace.en;
+  if (normalized.includes('lowstacktrainer')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstacktrainer.zh : CATALOG_CATEGORY_META.lowstacktrainer.en;
+  if (normalized.includes('lowstack')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstack.zh : CATALOG_CATEGORY_META.lowstack.en;
+  if (normalized.includes('race')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.race.zh : CATALOG_CATEGORY_META.race.en;
+  if (normalized.includes('trainer') || normalized.includes('daily')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trainer.zh : CATALOG_CATEGORY_META.trainer.en;
+  return raw;
 }
 
 function getCatalogModelLabel(item, lang) {
@@ -177,7 +255,7 @@ function pickRedditRecommendation(avgPaceSecPerKm) {
   return pool[dayOfYear % pool.length];
 }
 
-/** AI 识图单次请求最多处理的图片数量 */
+/** Maximum number of images processed per scan request. */
 const SHOE_SCAN_MAX_FILES = 5;
 
 function median(values) {
@@ -198,6 +276,23 @@ function formatPaceForDisplay(paceSecPerKm, unit, t) {
   const mins = Math.floor(converted / 60);
   const secs = Math.round(converted % 60).toString().padStart(2, '0');
   return `${mins}:${secs}/${unit === 'mile' ? t('analysis.unit_distance_mile') : t('analysis.unit_distance_km')}`;
+}
+
+function getRunTimestamp(run) {
+  const candidates = [
+    run?.startDateLocal,
+    run?.startDate,
+    run?.activityDate,
+    run?.date,
+    run?.createdAt,
+  ];
+  for (const value of candidates) {
+    if (!value) continue;
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) return timestamp;
+  }
+  const numericId = Number(run?.id || run?.activityId || 0);
+  return Number.isFinite(numericId) ? numericId : 0;
 }
 
 function buildShoePerformanceInsights(shoes, runs, unit, t, lang) {
@@ -285,16 +380,16 @@ export default function Shoes() {
   const [shoes, setShoes] = useState([]);
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
-  const [showRetired, setShowRetired] = useState(false);
   const [duplicateClusters, setDuplicateClusters] = useState([]);
   const [mergeBusy, setMergeBusy] = useState(false);
+  const [inventoryTab, setInventoryTab] = useState('active');
+  const [inventorySort, setInventorySort] = useState('recent');
+  const [browserBrandKey, setBrowserBrandKey] = useState('');
+  const [browserCategory, setBrowserCategory] = useState('all');
+  const [browserType, setBrowserType] = useState('all');
 
-  // Add modal — wizard steps: 'brand' → 'model' → 'details'
+  // Add modal
   const [addOpen, setAddOpen] = useState(false);
-  const [addStep, setAddStep] = useState('brand');
-  const [selectedBrand, setSelectedBrand] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Edit modal (simple form)
   const [editOpen, setEditOpen] = useState(false);
@@ -314,6 +409,10 @@ export default function Shoes() {
   const [imgSearching, setImgSearching] = useState(false);
   const [imgCustomQuery, setImgCustomQuery] = useState('');
   const [imgCustomUrl, setImgCustomUrl] = useState('');
+  const [imgUploadStatus, setImgUploadStatus] = useState('');
+  const [imgUploading, setImgUploading] = useState(false);
+  const [imgPendingUploadUrl, setImgPendingUploadUrl] = useState('');
+  const [imgPendingUploadName, setImgPendingUploadName] = useState('');
 
   // Scan modal
   const [scanOpen, setScanOpen] = useState(false);
@@ -324,24 +423,22 @@ export default function Shoes() {
   const [aiQuota, setAiQuota] = useState(null);
   const [catalog, setCatalog] = useState(shoeCatalog);
 
-  useEffect(() => {
-    if (!isAuthenticated) { navigate('/login'); return; }
-    loadShoes();
-    loadRuns();
-    checkScanAvailable();
-    loadCatalog();
-  }, [isAuthenticated]);
+  function applyPendingUploadState(nextState) {
+    setImgPendingUploadUrl(nextState.imgPendingUploadUrl);
+    setImgPendingUploadName(nextState.imgPendingUploadName);
+    setImgUploadStatus(nextState.imgUploadStatus);
+  }
 
-  async function loadRuns() {
+  const loadRuns = useCallback(async () => {
     try {
       const activities = await apiJson('/api/activities');
       setRuns(Array.isArray(activities) ? activities : []);
     } catch {
       setRuns([]);
     }
-  }
+  }, []);
 
-  async function loadCatalog() {
+  const loadCatalog = useCallback(async () => {
     try {
       const data = await apiJson('/api/shoe-catalog');
       const dynamicBrands = Array.isArray(data?.brands) ? data.brands : [];
@@ -362,7 +459,7 @@ export default function Shoes() {
         if (!existing) {
           byBrand.set(key, {
             brand: b.brand,
-            logo: b.logo || '👟',
+            logo: b.logo || 'S',
             models: Array.isArray(b.models) ? b.models.map(m => ({
               id: m.id,
               model: m.model,
@@ -392,12 +489,12 @@ export default function Shoes() {
       // Keep bundled catalog as fallback when API unavailable.
       setCatalog(shoeCatalog);
     }
-  }
+  }, []);
 
-  async function loadShoes() {
+  const loadShoes = useCallback(async () => {
     try {
       const [data, dupData] = await Promise.all([
-        apiJson(`/api/shoes?includeRetired=${showRetired}`),
+        apiJson('/api/shoes?includeRetired=true'),
         apiFetch('/api/shoes/duplicate-clusters').then(r => (r.ok ? r.json() : { clusters: [] })).catch(() => ({ clusters: [] })),
       ]);
       const list = Array.isArray(data) ? data : [];
@@ -408,7 +505,7 @@ export default function Shoes() {
     } catch (err) {
       if (err.message !== 'Unauthorized') setLoadState('error');
     }
-  }
+  }, []);
 
   async function mergeDuplicateCluster(cluster) {
     const list = [...(cluster.shoes || [])].sort((a, b) => (a.id || 0) - (b.id || 0));
@@ -430,9 +527,9 @@ export default function Shoes() {
 
   useEffect(() => {
     if (loadState === 'ready') loadShoes();
-  }, [showRetired]);
+  }, [loadShoes, loadState]);
 
-  async function checkScanAvailable() {
+  const checkScanAvailable = useCallback(async () => {
     try {
       const data = await apiJson('/api/shoes/scan-available');
       setScanAvailable(!!data.available);
@@ -450,9 +547,17 @@ export default function Shoes() {
         });
       }
     } catch { /* ignored */ }
-  }
+  }, []);
 
-  async function findShoeImage(shoeId) {
+  useEffect(() => {
+    if (!isAuthenticated) { navigate('/login'); return; }
+    loadShoes();
+    loadRuns();
+    checkScanAvailable();
+    loadCatalog();
+  }, [checkScanAvailable, isAuthenticated, loadCatalog, loadRuns, loadShoes, navigate]);
+
+  const findShoeImage = useCallback(async (shoeId) => {
     try {
       const res = await apiFetch(`/api/shoes/${shoeId}/find-image`, { method: 'POST' });
       if (res.ok) {
@@ -462,7 +567,7 @@ export default function Shoes() {
         }
       }
     } catch { /* ignored */ }
-  }
+  }, []);
 
   // Auto-find images for shoes that don't have one (lazy, staggered)
   useEffect(() => {
@@ -478,12 +583,27 @@ export default function Shoes() {
       }
     })();
     return () => { cancelled = true; };
-  }, [loadState]);
+  }, [findShoeImage, loadState, shoes]);
 
   // Stats
   const activeShoes = shoes.filter(s => !s.retired);
+  const retiredShoes = shoes.filter(s => s.retired);
   const totalMileage = shoes.reduce((s, sh) => s + (sh.currentDistanceKm || 0), 0);
   const shoePerformanceInsights = useMemo(() => buildShoePerformanceInsights(shoes, runs, unit, t, lang), [shoes, runs, unit, t, lang]);
+  const usageByShoe = useMemo(() => {
+    const usage = new Map();
+    for (const run of runs) {
+      const shoeId = run?.shoeId;
+      if (!shoeId) continue;
+      const nextStamp = getRunTimestamp(run);
+      const existing = usage.get(shoeId) || { count: 0, latest: 0 };
+      usage.set(shoeId, {
+        count: existing.count + 1,
+        latest: Math.max(existing.latest, nextStamp),
+      });
+    }
+    return usage;
+  }, [runs]);
 
   const performanceFallback = useMemo(() => {
     if (shoePerformanceInsights.topInsight) return null;
@@ -524,74 +644,78 @@ export default function Shoes() {
     if (healths.some(h => h === 'warn')) return t('shoes.health_warn');
     return t('shoes.health_good');
   })();
-
-  // ── Add shoe wizard ──
-  function openAddWizard() {
-    setAddStep('brand');
-    setSelectedBrand(null);
-    setSelectedCategory('all');
-    setSearchQuery('');
-    resetForm();
+  const primaryShoe = activeShoes.find((shoe) => shoe.isPrimary) || activeShoes[0] || null;
+  const retireSoonShoes = activeShoes
+    .filter((shoe) => shoeHealth(shoe.currentDistanceKm || 0, shoe.maxDistanceKm || 650) !== 'good')
+    .slice(0, 3);
+  function openManualAdd() {
+    setFormBrand('');
+    setFormModel('');
+    setFormNickname('');
+    setFormMaxDist('650');
+    setFormPrimary(false);
     setAddOpen(true);
   }
 
-  function resetForm() {
-    setFormBrand(''); setFormModel(''); setFormNickname('');
-    setFormMaxDist('650'); setFormPrimary(false);
-  }
-
-  function handlePickBrand(brand) {
-    setSelectedBrand(brand);
+  function openCatalogQuickPick(brand, model) {
     setFormBrand(brand.brand);
-    setSearchQuery('');
-    setSelectedCategory('all');
-  }
-
-  function handlePickModel(model, brandName = formBrand) {
-    setFormBrand(brandName || '');
     setFormModel(model.model);
-    setAddStep('details');
+    setFormNickname('');
+    setFormMaxDist('650');
+    setFormPrimary(false);
+    setAddOpen(true);
   }
 
-  function handleCustomShoe() {
-    setSelectedBrand(null);
-    setSelectedCategory('all');
-    setFormBrand(''); setFormModel('');
-    setAddStep('details');
-  }
-
-  // Search across all brands
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    const flatCatalog = catalog.flatMap(b => (b.models || []).map(m => ({
-      brand: b.brand,
-      model: m.model,
-      type: m.type,
-      category: m.category,
-    })));
-    return flatCatalog.filter(
-      s =>
-        (s.brand || '').toLowerCase().includes(q) ||
-        (s.model || '').toLowerCase().includes(q) ||
-        (s.category || '').toLowerCase().includes(q)
-    ).slice(0, 15);
-  }, [searchQuery, catalog]);
-
-  const visibleCatalogModels = useMemo(() => {
-    if (!selectedBrand) return [];
-    const models = Array.isArray(selectedBrand.models) ? selectedBrand.models : [];
-    if (selectedCategory === 'all') return models;
-    return models.filter((item) => (item.category || item.type || '') === selectedCategory);
-  }, [selectedBrand, selectedCategory]);
-
-  const availableCatalogCategories = useMemo(() => {
-    const source = selectedBrand?.models || catalog.flatMap((entry) => entry.models || []);
+  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Add shoe wizard 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
+  const browserBrands = useMemo(
+    () => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)).slice(0, 10),
+    [catalog],
+  );
+  const browserBrand = useMemo(
+    () => browserBrands.find((brand) => brand.brand === browserBrandKey) || browserBrands[0] || null,
+    [browserBrands, browserBrandKey],
+  );
+  const browserCategoryOptions = useMemo(() => {
+    const source = browserBrand?.models || [];
     const categories = Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)));
     return ['all', ...categories];
-  }, [selectedBrand, catalog]);
+  }, [browserBrand]);
+  const browserTypeOptions = useMemo(() => {
+    const source = browserBrand?.models || [];
+    const types = Array.from(new Set(source.map((item) => item.type).filter(Boolean)));
+    return ['all', ...types];
+  }, [browserBrand]);
+  const browserModels = useMemo(() => {
+    const source = Array.isArray(browserBrand?.models) ? browserBrand.models : [];
+    return source
+      .filter((item) => browserCategory === 'all' || (item.category || item.type || '') === browserCategory)
+      .filter((item) => browserType === 'all' || (item.type || '') === browserType)
+      .slice(0, 15);
+  }, [browserBrand, browserCategory, browserType]);
+  const inventoryShoes = useMemo(() => {
+    const source = inventoryTab === 'retired'
+      ? retiredShoes
+      : inventoryTab === 'all'
+        ? shoes
+        : activeShoes;
+    const ranked = [...source];
+    ranked.sort((left, right) => {
+      if (inventorySort === 'added') return (right.id || 0) - (left.id || 0);
+      if (inventorySort === 'mileage') return (right.currentDistanceKm || 0) - (left.currentDistanceKm || 0);
+      const leftUsage = usageByShoe.get(left.id) || { latest: 0 };
+      const rightUsage = usageByShoe.get(right.id) || { latest: 0 };
+      return rightUsage.latest - leftUsage.latest;
+    });
+    return ranked;
+  }, [activeShoes, inventorySort, inventoryTab, retiredShoes, shoes, usageByShoe]);
 
-  // ── Edit modal ──
+  useEffect(() => {
+    if (!browserBrandKey && browserBrands.length > 0) {
+      setBrowserBrandKey(browserBrands[0].brand);
+    }
+  }, [browserBrandKey, browserBrands]);
+
+  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Edit modal 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   function openEditForm(shoe) {
     setEditingShoe(shoe);
     setFormBrand(shoe.brand || '');
@@ -602,7 +726,7 @@ export default function Shoes() {
     setEditOpen(true);
   }
 
-  // ── Save shoe (add or edit) ──
+  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Save shoe (add or edit) 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   async function handleSave(e) {
     e.preventDefault();
     const body = {
@@ -646,7 +770,7 @@ export default function Shoes() {
     } catch { /* ignored */ }
   }
 
-  // ── Scan ──
+  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Scan 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   function compressImage(file, maxSize = 1024, quality = 0.8) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -791,7 +915,7 @@ export default function Shoes() {
             }),
           });
         } else if (!s._existing && s._action !== 'skip') {
-          // New shoe — add
+          // New shoe �?add
           await apiFetch('/api/shoes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -801,7 +925,7 @@ export default function Shoes() {
             }),
           });
         }
-        // _action === 'keep_existing' or 'skip' → do nothing
+        // _action === 'keep_existing' or 'skip' �?do nothing
       } catch { /* ignored */ }
     }
     setScanOpen(false);
@@ -810,16 +934,19 @@ export default function Shoes() {
     loadShoes();
   }
 
-  // ── Image Picker ──
+  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Image Picker 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   function openImagePicker(shoe) {
     setImgPickerShoe(shoe);
     setImgCandidates([]);
     setImgSearching(false);
-    setImgCustomQuery('');
+    setImgCustomQuery(`${shoe.brand || ''} ${shoe.model || ''}`.trim());
     setImgCustomUrl('');
+    applyPendingUploadState(clearPendingShoePhotoState());
+    setImgUploading(false);
     setImgPickerOpen(true);
-    // Auto-search on open
-    searchImages(shoe.id, '');
+    if (!shouldPreferManualImageSearch(shoe.brand, shoe.model)) {
+      searchImages(shoe.id, '');
+    }
   }
 
   async function searchImages(shoeId, query) {
@@ -842,6 +969,7 @@ export default function Shoes() {
   async function selectImage(url) {
     if (!imgPickerShoe) return;
     try {
+      setImgUploadStatus('');
       await apiFetch(`/api/shoes/${imgPickerShoe.id}/photo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -857,6 +985,7 @@ export default function Shoes() {
   async function clearImage() {
     if (!imgPickerShoe) return;
     try {
+      applyPendingUploadState(clearPendingShoePhotoState());
       await apiFetch(`/api/shoes/${imgPickerShoe.id}/photo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -868,154 +997,45 @@ export default function Shoes() {
     } catch { /* ignored */ }
   }
 
-  // ── Render helpers ──
-  function renderAddModalContent() {
-    if (addStep === 'brand') {
-      return (
-        <div className="shoe-wizard">
-          <div className="shoe-wizard-head">
-            <div>
-              <p className="shoe-wizard-step-label">{t('shoes.step_brand')}</p>
-              <h3 className="shoe-selector-title">
-                {selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoes.custom_shoe')}
-              </h3>
-            </div>
-            {selectedBrand && (
-              <button type="button" className="shoe-wizard-back" onClick={() => { setSelectedBrand(null); setSelectedCategory('all'); setFormBrand(''); }}>
-                &larr; {t('shoes.back')}
-              </button>
-            )}
-          </div>
+  async function handleLocalImagePick(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
 
-          <input
-            type="text"
-            className="shoe-search-input"
-            placeholder={t('shoes.search_placeholder')}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-
-          {/* Search results */}
-          {searchQuery.trim() && searchResults.length > 0 && (
-            <div className="shoe-search-results">
-              {searchResults.map((s, i) => (
-                <button
-                  key={i} type="button" className="shoe-search-item"
-                  onClick={() => {
-                    const matchedBrand = catalog.find((item) => item.brand === s.brand) || null;
-                    setSelectedBrand(matchedBrand);
-                    setSelectedCategory(s.category || 'all');
-                    setSearchQuery('');
-                    handlePickModel({ model: s.model }, s.brand);
-                  }}
-                >
-                  <span className="shoe-search-item-brand">{localizeShoeBrand(s.brand, lang)}</span>
-                  <span className="shoe-search-item-model">{localizeShoeModel(s.model, lang)}</span>
-                  <span className="shoe-category-badge">{getCatalogCategoryLabel(s.category, lang)}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {!searchQuery.trim() && (
-            <div className="shoe-selector-layout">
-              <aside className="shoe-selector-sidebar">
-                <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '品牌' : 'Brands'}</div>
-                <div className="shoe-brand-grid shoe-brand-grid-rail">
-                  {catalog.map((b) => (
-                    <button
-                      key={b.brand}
-                      type="button"
-                      className={`shoe-brand-card shoe-brand-card-rail${selectedBrand?.brand === b.brand ? ' active' : ''}`}
-                      onClick={() => handlePickBrand(b)}
-                    >
-                      <span className="shoe-brand-logo">
-                        <BrandLogo brand={b.brand} fallbackEmoji={b.logo} />
-                      </span>
-                      <span className="shoe-brand-name">{localizeShoeBrand(b.brand, lang)}</span>
-                      <span className="shoe-brand-count">{b.models.length}</span>
-                    </button>
-                  ))}
-                </div>
-              </aside>
-
-              <div className="shoe-selector-main">
-                <div className="shoe-selector-types">
-                  <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '类型' : 'Types'}</div>
-                  <div className="shoe-type-chip-row">
-                    {availableCatalogCategories.map((categoryKey) => (
-                      <button
-                        key={categoryKey}
-                        type="button"
-                        className={`shoe-type-chip${selectedCategory === categoryKey ? ' active' : ''}`}
-                        onClick={() => setSelectedCategory(categoryKey)}
-                        disabled={!selectedBrand && categoryKey !== 'all'}
-                      >
-                        {getCatalogCategoryLabel(categoryKey, lang)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="shoe-selector-list-shell">
-                  <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '鞋款' : 'Shoes'}</div>
-                  {!selectedBrand ? (
-                    <div className="shoe-selector-empty">
-                      {lang === 'zh-CN' ? '先从左侧选一个品牌' : 'Choose a brand from the left first'}
-                    </div>
-                  ) : (
-                    <div className="shoe-model-list shoe-model-list-grid">
-                      {visibleCatalogModels.map((m, i) => (
-                        <button
-                          key={`${selectedBrand.brand}-${m.model}-${i}`}
-                          type="button"
-                          className="shoe-model-item shoe-model-item-grid"
-                          onClick={() => handlePickModel(m, selectedBrand.brand)}
-                        >
-                          <span className="shoe-model-name">{getCatalogModelLabel(m, lang)}</span>
-                          <span className="shoe-model-meta">
-                            <span className="shoe-category-badge">{getCatalogCategoryLabel(m.category, lang)}</span>
-                            <span className={`shoe-type-badge shoe-type-${m.type}`}>{t(`shoes.${TYPE_LABELS[m.type]}`)}</span>
-                          </span>
-                        </button>
-                      ))}
-                      {visibleCatalogModels.length === 0 && (
-                        <div className="shoe-selector-empty">
-                          {lang === 'zh-CN' ? '这个分类下还没有鞋款' : 'No models in this category yet'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="shoe-wizard-footer">
-            <button type="button" className="btn-secondary shoe-wizard-custom" onClick={handleCustomShoe}>
-              {t('shoes.or_custom')}
-            </button>
-          </div>
-        </div>
+    setImgUploading(true);
+    applyPendingUploadState(clearPendingShoePhotoState());
+    try {
+      const dataUrl = await fileToOptimizedDataUrl(file, t);
+      applyPendingUploadState(
+        createPendingShoePhotoState(dataUrl, file.name || '', t('shoes.img_upload_ready'))
       );
+    } catch (error) {
+      setImgUploadStatus(error?.message || t('shoes.img_upload_failed'));
+    } finally {
+      setImgUploading(false);
     }
+  }
 
+  async function applyPendingLocalImage() {
+    if (!imgPendingUploadUrl) return;
+    await selectImage(imgPendingUploadUrl);
+    applyPendingUploadState(clearPendingShoePhotoState(t('shoes.img_upload_success')));
+  }
+
+  // Render helpers
+  function renderAddModalContent() {
     return (
       <div className="shoe-wizard">
-        <p className="shoe-wizard-step-label">{t('shoes.step_details')}</p>
-        <button type="button" className="shoe-wizard-back" onClick={() => setAddStep('brand')}>
-          &larr; {t('shoes.back')}
-        </button>
+        <p className="shoe-wizard-step-label">{formBrand || formModel ? t('shoes.step_details') : t('shoes.custom_shoe')}</p>
         <form onSubmit={handleSave}>
           <label className="modal-label">{t('shoes.brand')}</label>
-          <input type="text" value={formBrand} onChange={e => setFormBrand(e.target.value)} placeholder="Nike, Adidas, ASICS..." />
+          <input type="text" value={formBrand} onChange={e => setFormBrand(e.target.value)} placeholder={t('shoes.brand_placeholder')} />
 
           <label className="modal-label">{t('shoes.model')}</label>
-          <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} placeholder="Pegasus, Boston, 飞电..." />
+          <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} placeholder={t('shoes.model_placeholder')} />
 
           <label className="modal-label">{t('shoes.nickname')}</label>
-          <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={lang === 'en' ? 'Optional nickname' : '选填昵称'} />
+          <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={t('shoes.nickname_placeholder')} />
 
           <label className="modal-label">{t('shoes.max_distance')}</label>
           <input type="number" value={formMaxDist} onChange={e => setFormMaxDist(e.target.value)} min="100" max="2000" step="50" />
@@ -1038,42 +1058,256 @@ export default function Shoes() {
     <AuthenticatedPageChrome bodyClassName="history-page shoes-page">
 
       <main className="dashboard-container history-container">
-        {/* Hero */}
-        <section className="card history-hero">
-          <span className="history-eyebrow">{t('shoes.eyebrow')}</span>
-          <div className="history-hero-top">
-            <h1 className="history-title">{t('shoes.heading')}</h1>
-            <div className="shoe-action-btns">
-              <button type="button" className="btn-primary" onClick={() => navigate('/shoe-catalog')}>{t('shoes.add_shoe')}</button>
+        <section className="card shoe-locker-shell">
+          <div className="shoe-locker-topbar">
+            <div>
+              <span className="shoe-locker-kicker">Shoe Locker</span>
+              <h1 className="shoe-locker-title">All Running Shoes</h1>
+            </div>
+            <div className="shoe-locker-actions">
               <button type="button" className="btn-secondary" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
                 {t('shoes.scan_image')}
               </button>
+              <button type="button" className="btn-primary" onClick={openManualAdd}>{t('shoes.add_shoe')}</button>
             </div>
           </div>
-          <p className="history-copy">{t('shoes.page_copy')}</p>
+
+          <div className="shoe-locker-tabbar">
+            <button type="button" className={`shoe-locker-tab${inventoryTab === 'active' ? ' active' : ''}`} onClick={() => setInventoryTab('active')}>
+              {`Active (${activeShoes.length})`}
+            </button>
+            <button type="button" className={`shoe-locker-tab${inventoryTab === 'retired' ? ' active' : ''}`} onClick={() => setInventoryTab('retired')}>
+              {`Retired (${retiredShoes.length})`}
+            </button>
+            <button type="button" className={`shoe-locker-tab${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')}>
+              {`All (${shoes.length})`}
+            </button>
+          </div>
+
+          <div className="shoe-locker-sortbar">
+            <button type="button" className={`shoe-locker-sort${inventorySort === 'recent' ? ' active' : ''}`} onClick={() => setInventorySort('recent')}>
+              Recent use
+            </button>
+            <button type="button" className={`shoe-locker-sort${inventorySort === 'added' ? ' active' : ''}`} onClick={() => setInventorySort('added')}>
+              Recent added
+            </button>
+            <button type="button" className={`shoe-locker-sort${inventorySort === 'mileage' ? ' active' : ''}`} onClick={() => setInventorySort('mileage')}>
+              Total mileage
+            </button>
+          </div>
+
+          <div className="shoe-locker-layout">
+            <div className="shoe-locker-list">
+              {loadState === 'loading' && <div className="history-status">Loading...</div>}
+              {loadState === 'error' && <div className="history-status">Error loading shoes.</div>}
+              {loadState === 'ready' && inventoryShoes.length === 0 && (
+                <div className="history-status">{inventoryTab === 'retired' ? t('shoes.retired_label') : t('shoes.empty')}</div>
+              )}
+              {loadState === 'ready' && inventoryShoes.map((shoe) => {
+                const current = shoe.currentDistanceKm || 0;
+                const max = shoe.maxDistanceKm || 650;
+                const pct = Math.min(100, (current / max) * 100);
+                const health = shoeHealth(current, max);
+                const name = formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang });
+                const performanceInsight = shoePerformanceInsights.byShoe.get(shoe.id);
+                const usage = usageByShoe.get(shoe.id) || { count: 0, latest: 0 };
+
+                return (
+                  <article key={shoe.id} className={`shoe-locker-row${shoe.retired ? ' is-retired' : ''}`}>
+                    <div className="shoe-locker-art">
+                      <div className="shoe-img-clickable shoe-locker-image" title={t('shoes.img_pick')} onClick={() => openImagePicker(shoe)}>
+                        <ShoeImage src={shoe.photoUrl} alt={name} />
+                      </div>
+                      <div className="shoe-locker-progress-rail">
+                        <span className="shoe-locker-progress-fill" style={{ width: `${Math.max(8, pct)}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="shoe-locker-copy">
+                      <div className="shoe-locker-row-head">
+                        <div>
+                          <div className="shoe-locker-brand">{localizeShoeBrand(shoe.brand, lang)}</div>
+                          <h2 className="shoe-locker-row-title">
+                            {localizeShoeModel(shoe.model, lang) || name}
+                            {shoe.isPrimary && <span className="shoe-badge shoe-badge-primary">{t('shoes.primary_label')}</span>}
+                            {shoe.retired && <span className="shoe-badge shoe-badge-retired">{t('shoes.retired_label')}</span>}
+                          </h2>
+                          {shoe.nickname && (shoe.brand || shoe.model) && (
+                            <div className="shoe-locker-nickname">{shoe.nickname}</div>
+                          )}
+                        </div>
+                        <div className="shoe-locker-actions-inline">
+                          <button type="button" className="shoe-btn-edit" onClick={() => openImagePicker(shoe)}>Photo</button>
+                          <button type="button" className="shoe-btn-edit" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
+                          {!shoe.retired && (
+                            <button type="button" className="shoe-btn-retire" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
+                          )}
+                          <button type="button" className="shoe-btn-delete" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
+                        </div>
+                      </div>
+
+                      <div className="shoe-locker-stats">
+                        <span>{current.toFixed(1)} / {max} km</span>
+                        <span>{`${usage.count} uses`}</span>
+                        <span>{t(`shoes.${TYPE_LABELS[shoe.type] || 'type_daily'}`)}</span>
+                      </div>
+
+                      <div className="shoe-locker-status-row">
+                        <span className={`shoe-health-label shoe-health-${health}`}>
+                          {health === 'good' ? t('shoes.health_good') : health === 'warn' ? t('shoes.health_warn') : t('shoes.health_critical')}
+                        </span>
+                        <span className={`shoe-photo-mode-pill${shouldPreferManualImageSearch(shoe.brand, shoe.model) ? ' caution' : ''}`}>
+                          {shouldPreferManualImageSearch(shoe.brand, shoe.model)
+                            ? t('shoes.img_mode_manual') : t('shoes.img_mode_auto')}
+                        </span>
+                      </div>
+
+                      {performanceInsight && (
+                        <div className={`shoe-performance-inline${performanceInsight.positive ? ' positive' : ''}`}>
+                          <strong>{t('shoes.performance_inline_title')}</strong>
+                          <p>{performanceInsight.summary}</p>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <aside className="shoe-locker-sidebar">
+              <div className="shoe-locker-spotlight">
+                <span className="shoe-locker-sidebar-kicker">Current primary</span>
+                <strong>
+                  {primaryShoe
+                    ? formatShoeDisplayName({ brand: primaryShoe.brand, model: primaryShoe.model, nickname: primaryShoe.nickname, lang })
+                    : 'No shoes yet'}
+                </strong>
+                <span>
+                  {primaryShoe
+                    ? `${(primaryShoe.currentDistanceKm || 0).toFixed(0)} / ${primaryShoe.maxDistanceKm || 650} km`
+                    : 'Add your first pair to start tracking the rotation.'}
+                </span>
+              </div>
+
+              <div className="shoe-locker-metrics">
+                <div>
+                  <span>{t('shoes.active_shoes')}</span>
+                  <strong>{activeShoes.length}</strong>
+                </div>
+                <div>
+                  <span>{t('shoes.total_mileage')}</span>
+                  <strong>{totalMileage.toFixed(1)} km</strong>
+                </div>
+                <div>
+                  <span>{t('shoes.avg_health')}</span>
+                  <strong>{avgHealthLabel}</strong>
+                </div>
+              </div>
+
+              {retireSoonShoes.length > 0 && (
+                <div className="shoe-locker-alerts">
+                  <div className="shoe-locker-sidebar-kicker">Watchlist</div>
+                  {retireSoonShoes.map((shoe) => (
+                    <div key={shoe.id} className="shoe-locker-alert-card">
+                      <span>{formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}</span>
+                      <strong>{shoeHealth(shoe.currentDistanceKm || 0, shoe.maxDistanceKm || 650) === 'critical' ? t('shoes.health_critical') : t('shoes.health_warn')}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </aside>
+          </div>
         </section>
 
-        {/* Summary Grid */}
-        <section className="history-summary-grid">
-          <article className="card history-summary-card">
-            <span className="history-summary-label">{t('shoes.active_shoes')}</span>
-            <div className="history-summary-value">{activeShoes.length}</div>
-          </article>
-          <article className="card history-summary-card">
-            <span className="history-summary-label">{t('shoes.total_mileage')}</span>
-            <div className="history-summary-value">{totalMileage.toFixed(1)} km</div>
-          </article>
-          <article className="card history-summary-card">
-            <span className="history-summary-label">{t('shoes.avg_health')}</span>
-            <div className="history-summary-value">{avgHealthLabel}</div>
-          </article>
+        <section className="card shoe-browser-shell">
+          <div className="shoe-browser-head">
+            <div>
+              <span className="shoe-locker-kicker">Select Shoes</span>
+              <h2 className="shoe-browser-title">Browse by brand</h2>
+            </div>
+          </div>
+
+          <div className="shoe-browser-filter-row">
+            {browserCategoryOptions.slice(0, 6).map((categoryKey) => (
+              <button
+                key={categoryKey}
+                type="button"
+                className={`shoe-browser-filter${browserCategory === categoryKey ? ' active' : ''}`}
+                onClick={() => setBrowserCategory(categoryKey)}
+              >
+                {getCatalogCategoryLabel(categoryKey, lang)}
+              </button>
+            ))}
+            {browserTypeOptions.slice(0, 4).map((typeKey) => (
+              <button
+                key={typeKey}
+                type="button"
+                className={`shoe-browser-filter${browserType === typeKey ? ' active' : ''}`}
+                onClick={() => setBrowserType(typeKey)}
+              >
+                {typeKey === 'all' ? 'All types' : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}
+              </button>
+            ))}
+          </div>
+
+          <div className="shoe-browser-layout">
+            <aside className="shoe-browser-rail">
+              {browserBrands.map((brand) => (
+                <button
+                  key={brand.brand}
+                  type="button"
+                  className={`shoe-browser-rail-item${browserBrand?.brand === brand.brand ? ' active' : ''}`}
+                  onClick={() => {
+                    setBrowserBrandKey(brand.brand);
+                    setBrowserCategory('all');
+                    setBrowserType('all');
+                  }}
+                >
+                  <span className="shoe-browser-rail-logo">
+                    <BrandLogo brand={brand.brand} fallbackEmoji={brand.logo} />
+                  </span>
+                  <span>{localizeShoeBrand(brand.brand, lang)}</span>
+                </button>
+              ))}
+            </aside>
+
+            <div className="shoe-browser-panel">
+              <div className="shoe-browser-panel-head">
+                <strong>{browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : 'Brand'}</strong>
+                <span>{browserModels.length} models</span>
+              </div>
+              <div className="shoe-browser-grid">
+                {browserModels.map((model, index) => (
+                  <button
+                    key={`${browserBrand?.brand || 'brand'}-${model.model}-${index}`}
+                    type="button"
+                    className="shoe-browser-card"
+                    onClick={() => browserBrand && openCatalogQuickPick(browserBrand, model)}
+                  >
+                    <span className="shoe-browser-card-art">
+                      <BrandLogo brand={browserBrand?.brand || model.brand} fallbackEmoji={browserBrand?.logo} />
+                    </span>
+                    <strong>{getCatalogModelLabel(model, lang)}</strong>
+                    <span>{getCatalogCategoryLabel(model.category || model.type, lang)}</span>
+                  </button>
+                ))}
+                {browserModels.length === 0 && (
+                  <div className="shoe-selector-empty">
+                    {'No models for this filter yet'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="card shoe-performance-panel">
           <div className="shoe-performance-head">
             <div>
               <h2>{t('shoes.performance_heading')}</h2>
-              <p>{t('shoes.performance_copy')}</p>
+              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+                <p>{t('shoes.performance_copy')}</p>
+              </InfoDisclosure>
             </div>
             {shoePerformanceInsights.topInsight && (
               <div className={`shoe-performance-badge${shoePerformanceInsights.topInsight.positive ? ' positive' : ''}`}>
@@ -1146,7 +1380,9 @@ export default function Shoes() {
         {duplicateClusters.length > 0 && (
           <section className="card shoe-duplicate-panel">
             <h2 className="shoe-duplicate-title">{t('shoes.duplicate_title')}</h2>
-            <p className="shoe-duplicate-copy">{t('shoes.duplicate_copy')}</p>
+            <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+              <p className="shoe-duplicate-copy">{t('shoes.duplicate_copy')}</p>
+            </InfoDisclosure>
             {duplicateClusters.map((cluster, ci) => (
               <div key={cluster.identityKey || ci} className="shoe-duplicate-cluster">
                 <div className="shoe-duplicate-cluster-meta">
@@ -1164,7 +1400,9 @@ export default function Shoes() {
                   {(cluster.shoes || []).map(s => (
                     <li key={s.id}>
                       <strong>{localizeShoeBrand(s.brand, lang)}</strong> {localizeShoeModel(s.model, lang)}
-                      <span className="shoe-duplicate-mi"> · {Math.round((s.currentDistanceKm || 0) * 10) / 10} km</span>
+                      <span className="shoe-duplicate-mi">
+                        {t('shoes.duplicate_distance', { km: Math.round((s.currentDistanceKm || 0) * 10) / 10 })}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -1173,85 +1411,13 @@ export default function Shoes() {
           </section>
         )}
 
-        {/* Shoe List */}
-        <section className="card history-list-card">
-          <div className="history-list-header">
-            <h2>{t('shoes.heading')}</h2>
-            <label className="shoe-retired-toggle">
-              <input type="checkbox" checked={showRetired} onChange={e => setShowRetired(e.target.checked)} />
-              <span>{t('shoes.retired_label')}</span>
-            </label>
-          </div>
-
-          <div className="shoe-list">
-            {loadState === 'loading' && <div className="history-status">Loading...</div>}
-            {loadState === 'error' && <div className="history-status">Error loading shoes.</div>}
-            {loadState === 'ready' && shoes.length === 0 && <div className="history-status">{t('shoes.empty')}</div>}
-            {loadState === 'ready' && shoes.map(shoe => {
-              const current = shoe.currentDistanceKm || 0;
-              const max = shoe.maxDistanceKm || 650;
-              const pct = Math.min(100, (current / max) * 100);
-              const health = shoeHealth(current, max);
-              const name = formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang });
-              const performanceInsight = shoePerformanceInsights.byShoe.get(shoe.id);
-
-              return (
-                <article key={shoe.id} className={`shoe-card${shoe.retired ? ' shoe-retired' : ''}`}>
-                  <div className="shoe-card-top">
-                    <div className="shoe-img-clickable" title={t('shoes.img_pick')} onClick={() => openImagePicker(shoe)}>
-                      <ShoeImage src={shoe.photoUrl} alt={name} />
-                    </div>
-                    <div className="shoe-card-info">
-                      <p className="shoe-card-name">
-                        {name}
-                        {shoe.isPrimary && <span className="shoe-badge shoe-badge-primary">{t('shoes.primary_label')}</span>}
-                        {shoe.retired && <span className="shoe-badge shoe-badge-retired">{t('shoes.retired_label')}</span>}
-                      </p>
-                      {shoe.nickname && (shoe.brand || shoe.model) && (
-                        <span className="shoe-card-nickname">{shoe.nickname}</span>
-                      )}
-                    </div>
-                    <div className="shoe-card-actions">
-                      <button type="button" className="shoe-btn-edit" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
-                      {!shoe.retired && (
-                        <button type="button" className="shoe-btn-retire" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
-                      )}
-                      <button type="button" className="shoe-btn-delete" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
-                    </div>
-                  </div>
-                  <div className="shoe-mileage-row">
-                    <div className="shoe-mileage-bar-bg">
-                      <div
-                        className={`shoe-mileage-bar shoe-health-${health}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="shoe-mileage-text">
-                      {current.toFixed(1)} / {max} km
-                    </span>
-                  </div>
-                  <span className={`shoe-health-label shoe-health-${health}`}>
-                    {health === 'good' ? t('shoes.health_good') : health === 'warn' ? t('shoes.health_warn') : t('shoes.health_critical')}
-                  </span>
-                  {performanceInsight && (
-                    <div className={`shoe-performance-inline${performanceInsight.positive ? ' positive' : ''}`}>
-                      <strong>{t('shoes.performance_inline_title')}</strong>
-                      <p>{performanceInsight.summary}</p>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
       </main>
-
-      {/* Add Shoe Wizard Modal */}
+      {/* Add-shoe modal */}
       <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title={t('shoes.add_title')}>
         {renderAddModalContent()}
       </Modal>
 
-      {/* Edit Shoe Modal */}
+      {/* Edit-shoe modal */}
       <Modal isOpen={editOpen} onClose={() => { setEditOpen(false); setEditingShoe(null); }} title={t('shoes.edit_title')}>
         <form onSubmit={handleSave}>
           <label className="modal-label">{t('shoes.brand')}</label>
@@ -1261,7 +1427,7 @@ export default function Shoes() {
           <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} />
 
           <label className="modal-label">{t('shoes.nickname')}</label>
-          <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={lang === 'en' ? 'Optional nickname' : '选填昵称'} />
+          <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={t('shoes.nickname_placeholder')} />
 
           <label className="modal-label">{t('shoes.max_distance')}</label>
           <input type="number" value={formMaxDist} onChange={e => setFormMaxDist(e.target.value)} min="100" max="2000" step="50" />
@@ -1278,17 +1444,22 @@ export default function Shoes() {
         </form>
       </Modal>
 
-      {/* Image Picker Modal */}
+      {/* Image picker modal */}
       <Modal isOpen={imgPickerOpen} onClose={() => setImgPickerOpen(false)} title={t('shoes.img_picker_title')}>
         {imgPickerShoe && (
           <div className="img-picker">
+            {shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) && (
+              <div className="img-picker-manual-note">
+                {t('shoes.img_manual_search_note')}
+              </div>
+            )}
             {/* Current image */}
             <div className="img-picker-current">
               <span className="img-picker-label">{t('shoes.img_current')}</span>
               <div className="img-picker-preview">
                 {imgPickerShoe.photoUrl
                   ? <img src={imgPickerShoe.photoUrl} alt="current" className="img-picker-current-img" />
-                  : <div className="shoe-img-placeholder"><span>👟</span></div>}
+                  : <div className="shoe-img-placeholder"><span>S</span></div>}
               </div>
               {imgPickerShoe.photoUrl && (
                 <button type="button" className="btn-secondary img-picker-clear" onClick={clearImage}>
@@ -1311,6 +1482,53 @@ export default function Shoes() {
                 {t('shoes.img_apply')}
               </button>
             </div>
+
+            <div className="img-picker-upload-row">
+              <label className={`btn-secondary img-picker-upload-btn${imgUploading ? ' is-busy' : ''}`}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="img-picker-upload-input"
+                  disabled={imgUploading}
+                  onChange={handleLocalImagePick}
+                />
+                {imgUploading ? t('shoes.img_uploading') : t('shoes.img_upload_local')}
+              </label>
+              <span className="img-picker-upload-copy">{t('shoes.img_upload_hint')}</span>
+            </div>
+            {imgUploadStatus && <div className="modal-status img-picker-upload-status">{imgUploadStatus}</div>}
+            {imgPendingUploadUrl && (
+              <div className="img-picker-pending">
+                <div className="img-picker-pending-head">
+                  <span className="img-picker-label">{t('shoes.img_preview_title')}</span>
+                  {imgPendingUploadName && (
+                    <span className="img-picker-pending-name">{imgPendingUploadName}</span>
+                  )}
+                </div>
+                <div className="img-picker-pending-card">
+                  <img
+                    src={imgPendingUploadUrl}
+                    alt={t('shoes.img_preview_title')}
+                    className="img-picker-pending-img"
+                  />
+                  <div className="img-picker-pending-copy">
+                    <p>{t('shoes.img_preview_hint')}</p>
+                    <div className="img-picker-pending-actions">
+                      <button type="button" className="btn-primary img-picker-url-btn" onClick={applyPendingLocalImage}>
+                        {t('shoes.img_confirm_local')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary img-picker-clear"
+                        onClick={() => applyPendingUploadState(clearPendingShoePhotoState())}
+                      >
+                        {t('shoes.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Search bar */}
             <div className="img-picker-search-row">
@@ -1484,3 +1702,4 @@ export default function Shoes() {
     </AuthenticatedPageChrome>
   );
 }
+
