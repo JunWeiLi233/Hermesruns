@@ -49,19 +49,21 @@ ChartJS.register(
   Filler,
 );
 const HEAT_GRADIENT_DARK = {
-  0.0: '#1a0a00',
-  0.2: '#ff4500',
-  0.5: '#ff8c00',
-  0.8: '#ffd700',
-  1.0: '#ffffff',
+  0.0: '#0b1220',
+  0.18: '#166534',
+  0.4: '#22c55e',
+  0.62: '#facc15',
+  0.82: '#fb923c',
+  1.0: '#ef4444',
 };
 
 const HEAT_GRADIENT_LIGHT = {
-  0.2: '#b71c1c',
-  0.4: '#e53935',
-  0.6: '#fb8c00',
-  0.8: '#fdd835',
-  1.0: '#ffffff',
+  0.0: '#14532d',
+  0.2: '#22c55e',
+  0.42: '#84cc16',
+  0.64: '#facc15',
+  0.84: '#fb923c',
+  1.0: '#dc2626',
 };
 
 const CARTO_TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -87,6 +89,125 @@ function pickNumber(...values) {
     if (Number.isFinite(num)) return num;
   }
   return null;
+}
+
+function localizeStravaSyncMessage(message, t) {
+  const normalized = String(message || '').trim();
+  if (!normalized) return '';
+  if (normalized === 'Strava sync started') return t('profile.strava_sync_started');
+  if (normalized === 'No Strava account linked') return t('profile.strava_sync_not_linked');
+  if (normalized === 'Strava token is invalid; please relink your Strava account.') {
+    return t('profile.strava_sync_relink_required');
+  }
+  if (normalized === 'Invalid session') return t('common.session_expired');
+  return normalized;
+}
+
+function startOfWeek(date) {
+  const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  copy.setDate(copy.getDate() - copy.getDay());
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function getConsecutiveRunDayStreak(runs) {
+  const sortedDays = [...new Set(
+    runs
+      .map((run) => new Date(run.startTime || run.startDate || 0))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .map((date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()),
+  )].sort((a, b) => b - a);
+
+  if (sortedDays.length === 0) return 0;
+  let streak = 1;
+  for (let i = 1; i < sortedDays.length; i += 1) {
+    const diffDays = Math.round((sortedDays[i - 1] - sortedDays[i]) / 86400000);
+    if (diffDays === 1) streak += 1;
+    else break;
+  }
+  return streak;
+}
+
+function getConsecutiveRunWeekStreak(runs) {
+  const sortedWeeks = [...new Set(
+    runs
+      .map((run) => new Date(run.startTime || run.startDate || 0))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .map((date) => startOfWeek(date).getTime()),
+  )].sort((a, b) => b - a);
+
+  if (sortedWeeks.length === 0) return 0;
+  let streak = 1;
+  for (let i = 1; i < sortedWeeks.length; i += 1) {
+    const diffWeeks = Math.round((sortedWeeks[i - 1] - sortedWeeks[i]) / (7 * 86400000));
+    if (diffWeeks === 1) streak += 1;
+    else break;
+  }
+  return streak;
+}
+
+function countKeywordRuns(runs, pattern) {
+  return runs.reduce((total, run) => {
+    const haystack = `${run.name || ''} ${run.title || ''} ${run.description || ''}`;
+    return total + (pattern.test(haystack) ? 1 : 0);
+  }, 0);
+}
+
+function RewardGlyph({ icon }) {
+  if (icon === 'park') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3 C9 3 7 5.2 7 8 c0 1.6 0.6 3 1.7 4 H5.8 l2.8 3.6 h2.3 V21 h2.2 v-5.4 h2.3 l2.8-3.6 h-2.9 C16.4 11 17 9.6 17 8 c0-2.8-2-5-5-5 Z" />
+      </svg>
+    );
+  }
+  if (icon === 'bridge') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 17 h16 v2 H4 Z M5 15 c1.8 0 2.2-6 7-6 s5.2 6 7 6 v2 c-2 0-3.3-1.3-4.5-2.5 C13.5 13.3 13 13 12 13 s-1.5 0.3-2.5 1.5 C8.3 15.7 7 17 5 17 Z" />
+      </svg>
+    );
+  }
+  if (icon === 'city') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 20 h16 v2 H4 Z M6 8 h4 v12 H6 Z M11 4 h7 v16 h-7 Z M7.5 10.5 h1 v1 h-1 Z M7.5 13.5 h1 v1 h-1 Z M13 7 h1.2 v1.2 H13 Z M15.8 7 h1.2 v1.2 h-1.2 Z M13 10 h1.2 v1.2 H13 Z M15.8 10 h1.2 v1.2 h-1.2 Z M13 13 h1.2 v1.2 H13 Z M15.8 13 h1.2 v1.2 h-1.2 Z" />
+      </svg>
+    );
+  }
+  if (icon === 'calendar') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 2 h2 v3 H7 Z M15 2 h2 v3 h-2 Z M4 5 h16 v15 H4 Z M6 9 h12 v9 H6 Z" />
+      </svg>
+    );
+  }
+  if (icon === 'crown') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 18 h16 l-1.5 3 h-13 Z M5 7 l4 4 3-6 3 6 4-4 1 9 H4 Z" />
+      </svg>
+    );
+  }
+  if (icon === 'summit') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 20 11 6 l2.3 4 1.7-2 6 12 Z M13 6 h5 l-2 3 Z" />
+      </svg>
+    );
+  }
+  if (icon === 'streak') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M13 2 6 13 h4 l-1 9 7-11 h-4 l1-9 Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2 15 9 h7 l-5.5 4.2 2.1 7.1 L12 16.7 5.4 20.3 l2.1-7.1 L2 9 h7 Z" />
+    </svg>
+  );
 }
 
 export default function Profile() {
@@ -124,6 +245,7 @@ export default function Profile() {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
+  const [stravaSyncNotice, setStravaSyncNotice] = useState(null);
   const [profileShoes, setProfileShoes] = useState([]);
   const [aiQuota, setAiQuota] = useState(null);
   const [billingConfig, setBillingConfig] = useState(null);
@@ -139,6 +261,7 @@ export default function Profile() {
   const heatLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
   const heatmapIsDarkRef = useRef(undefined);
+  const stravaSyncPollRef = useRef(null);
   const importModalOpen = activeImportModal === 'manual';
   const garminModalOpen = activeImportModal === 'garmin';
 
@@ -172,18 +295,86 @@ export default function Profile() {
     if (!isAuthenticated || !profile?.stravaLinked || stravaSessionPullRef.current) return;
     stravaSessionPullRef.current = true;
     let cancelled = false;
+
+    async function pollStravaSyncStatus() {
+      try {
+        const response = await apiJson('/api/auth/strava/sync-status');
+        if (cancelled || !response || typeof response !== 'object') return;
+        if (response.status === 'FAILED') {
+          setStravaSyncNotice({
+            tone: 'error',
+            message: response.error || t('profile.strava_sync_failed'),
+          });
+          return;
+        }
+        if (response.status === 'RUNNING' || response.status === 'PENDING') {
+          setStravaSyncNotice({
+            tone: 'info',
+            message: t('profile.strava_sync_processing'),
+          });
+          stravaSyncPollRef.current = window.setTimeout(pollStravaSyncStatus, 4000);
+          return;
+        }
+        if (response.status === 'COMPLETED') {
+          setStravaSyncNotice({
+            tone: 'success',
+            message: t('profile.strava_sync_completed'),
+          });
+        }
+      } catch {
+        setStravaSyncNotice({
+          tone: 'error',
+          message: t('profile.strava_sync_failed'),
+        });
+      }
+    }
+
     (async () => {
       try {
         const prov = await apiJson('/api/auth/providers');
         if (cancelled || !prov.stravaConfigured) return;
         const res = await apiFetch('/api/strava/sync');
-        if (!res.ok || cancelled) return;
+        const rawMessage = (await res.text()).trim();
+        if (cancelled) return;
+        const localizedMessage = localizeStravaSyncMessage(rawMessage, t);
+        if (!res.ok) {
+          setStravaSyncNotice({
+            tone: 'error',
+            message: localizedMessage || t('profile.strava_sync_failed'),
+          });
+          return;
+        }
+        if (rawMessage && rawMessage !== 'Strava sync started') {
+          setStravaSyncNotice({
+            tone: rawMessage.includes('invalid') || rawMessage.includes('No Strava')
+              ? 'warning'
+              : 'info',
+            message: localizedMessage,
+          });
+          return;
+        }
+        setStravaSyncNotice({
+          tone: 'info',
+          message: t('profile.strava_sync_started'),
+        });
+        stravaSyncPollRef.current = window.setTimeout(pollStravaSyncStatus, 2500);
         await new Promise(r => setTimeout(r, 3500));
         if (!cancelled) loadActivities();
-      } catch { /* ignored */ }
+      } catch {
+        setStravaSyncNotice({
+          tone: 'error',
+          message: t('profile.strava_sync_failed'),
+        });
+      }
     })();
-    return () => { cancelled = true; };
-  }, [isAuthenticated, profile?.stravaLinked]);
+    return () => {
+      cancelled = true;
+      if (stravaSyncPollRef.current) {
+        window.clearTimeout(stravaSyncPollRef.current);
+        stravaSyncPollRef.current = null;
+      }
+    };
+  }, [isAuthenticated, profile?.stravaLinked, t]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -510,6 +701,87 @@ export default function Profile() {
   }, [weeklyHook, distanceUnitShort, t]);
 
   const activeWeeklyFlashcard = weeklyFlashcards[weeklyFlashIndex % Math.max(weeklyFlashcards.length, 1)];
+
+  const rewardShowcase = useMemo(() => {
+    const longestRunKm = runs.reduce((max, run) => Math.max(max, Number(run.distanceKm || 0)), 0);
+    const streakDays = getConsecutiveRunDayStreak(runs);
+    const streakWeeks = getConsecutiveRunWeekStreak(runs);
+    const parkRuns = countKeywordRuns(runs, /\b(park|garden|greenway|trail)\b/i);
+    const bridgeRuns = countKeywordRuns(runs, /\b(bridge|riverwalk|waterfront)\b/i);
+    const cityRuns = countKeywordRuns(runs, /\b(city|downtown|plaza|campus|tower|building)\b/i);
+    const earned = [
+      {
+        id: 'streak-7',
+        icon: 'streak',
+        title: lang === 'zh-CN' ? '七日连跑' : '7-Day Streak',
+        subtitle: lang === 'zh-CN' ? `连续 ${streakDays} 天保持跑步节奏` : `${streakDays} straight days on the run`,
+        earned: streakDays >= 7,
+      },
+      {
+        id: 'streak-30',
+        icon: 'calendar',
+        title: lang === 'zh-CN' ? '三十日挑战' : '30-Day Challenge',
+        subtitle: lang === 'zh-CN' ? '把短期坚持变成稳定习惯' : 'Turn consistency into a durable habit',
+        earned: streakDays >= 30,
+      },
+      {
+        id: 'weeks-4',
+        icon: 'crown',
+        title: lang === 'zh-CN' ? '四周连续训练' : '4-Week Flow',
+        subtitle: lang === 'zh-CN' ? `已连续 ${streakWeeks} 周完成跑步` : `${streakWeeks} consecutive training weeks`,
+        earned: streakWeeks >= 4,
+      },
+      {
+        id: 'park',
+        icon: 'park',
+        title: lang === 'zh-CN' ? '公园探索家' : 'Park Explorer',
+        subtitle: lang === 'zh-CN' ? `在路线名里捕捉到 ${parkRuns} 次公园或绿道探索` : `${parkRuns} park or trail themed efforts`,
+        earned: parkRuns >= 1,
+      },
+      {
+        id: 'bridge',
+        icon: 'bridge',
+        title: lang === 'zh-CN' ? '桥梁猎手' : 'Bridge Chaser',
+        subtitle: lang === 'zh-CN' ? `已记录 ${bridgeRuns} 次桥边路线` : `${bridgeRuns} bridge or waterfront routes logged`,
+        earned: bridgeRuns >= 1,
+      },
+      {
+        id: 'city',
+        icon: 'city',
+        title: lang === 'zh-CN' ? '城市地标收藏家' : 'City Landmark Hunter',
+        subtitle: lang === 'zh-CN' ? `已记录 ${cityRuns} 次城市地标路线` : `${cityRuns} city landmark style runs`,
+        earned: cityRuns >= 1,
+      },
+      {
+        id: 'long-run',
+        icon: 'summit',
+        title: lang === 'zh-CN' ? '长距离里程碑' : 'Long Run Milestone',
+        subtitle: lang === 'zh-CN' ? `单次最长 ${longestRunKm.toFixed(1)} km` : `Longest single run: ${longestRunKm.toFixed(1)} km`,
+        earned: longestRunKm >= 15,
+      },
+      {
+        id: 'hundred-runs',
+        icon: 'medal',
+        title: lang === 'zh-CN' ? '百跑徽章' : 'Hundred Run Badge',
+        subtitle: lang === 'zh-CN' ? `累计 ${runs.length} 次跑步` : `${runs.length} total runs recorded`,
+        earned: runs.length >= 100,
+      },
+    ];
+
+    const earnedRewards = earned.filter((item) => item.earned);
+    const upcomingRewards = earned.filter((item) => !item.earned).slice(0, 3);
+    const mapHighlights = [
+      parkRuns > 0 ? { key: 'park', icon: 'park', label: lang === 'zh-CN' ? '公园路线' : 'Park routes', count: parkRuns } : null,
+      bridgeRuns > 0 ? { key: 'bridge', icon: 'bridge', label: lang === 'zh-CN' ? '桥梁路线' : 'Bridge routes', count: bridgeRuns } : null,
+      cityRuns > 0 ? { key: 'city', icon: 'city', label: lang === 'zh-CN' ? '城市地标' : 'City landmarks', count: cityRuns } : null,
+    ].filter(Boolean);
+
+    return {
+      earnedRewards,
+      upcomingRewards,
+      mapHighlights,
+    };
+  }, [lang, runs]);
 
   const {
     recommendation: todayRecommendation,
@@ -1040,6 +1312,18 @@ export default function Profile() {
           />
         </section>
 
+        {stravaSyncNotice && (
+          <section className={`card strava-sync-notice strava-sync-notice--${stravaSyncNotice.tone}`}>
+            <div className="strava-sync-notice__icon" aria-hidden="true">
+              <RewardGlyph icon={stravaSyncNotice.tone === 'error' ? 'streak' : stravaSyncNotice.tone === 'warning' ? 'bridge' : 'medal'} />
+            </div>
+            <div className="strava-sync-notice__copy">
+              <strong>{t('profile.strava_sync_status_title')}</strong>
+              <p>{stravaSyncNotice.message}</p>
+            </div>
+          </section>
+        )}
+
         {/* Heatmap */}
         <SectionCard
           className="heatmap-section"
@@ -1060,8 +1344,68 @@ export default function Profile() {
         >
           <div className="heatmap-map-shell">
             <div ref={mapRef} className="heatmap-map-canvas" />
+            {rewardShowcase.mapHighlights.length > 0 && (
+              <div className="heatmap-landmark-overlay" aria-hidden="true">
+                {rewardShowcase.mapHighlights.map((highlight) => (
+                  <div key={highlight.key} className={`heatmap-landmark-chip heatmap-landmark-chip--${highlight.key}`}>
+                    <span className="heatmap-landmark-chip__icon">
+                      <RewardGlyph icon={highlight.icon} />
+                    </span>
+                    <span className="heatmap-landmark-chip__label">{highlight.label}</span>
+                    <span className="heatmap-landmark-chip__count">{highlight.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             {heatmapEmpty && <div className="heatmap-empty-state">{t('profile.heatmap_empty')}</div>}
           </div>
+          <div className="heatmap-scale-strip" aria-hidden="true">
+            <span>{t('profile.heatmap_scale_low')}</span>
+            <div className="heatmap-scale-bar" />
+            <span>{t('profile.heatmap_scale_high')}</span>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          className="reward-section"
+          title={t('profile.rewards_title')}
+          subtitle={t('profile.rewards_subtitle')}
+        >
+          <div className="reward-grid">
+            {rewardShowcase.earnedRewards.length > 0 ? rewardShowcase.earnedRewards.map((reward) => (
+              <article key={reward.id} className="reward-card reward-card--earned">
+                <div className="reward-card__icon">
+                  <RewardGlyph icon={reward.icon} />
+                </div>
+                <div className="reward-card__body">
+                  <h3>{reward.title}</h3>
+                  <p>{reward.subtitle}</p>
+                </div>
+                <span className="reward-card__badge">{t('profile.rewards_earned')}</span>
+              </article>
+            )) : (
+              <div className="reward-empty-state">{t('profile.rewards_empty')}</div>
+            )}
+          </div>
+          {rewardShowcase.upcomingRewards.length > 0 && (
+            <div className="reward-upcoming">
+              <div className="reward-upcoming__title">{t('profile.rewards_next')}</div>
+              <div className="reward-grid reward-grid--upcoming">
+                {rewardShowcase.upcomingRewards.map((reward) => (
+                  <article key={reward.id} className="reward-card reward-card--locked">
+                    <div className="reward-card__icon">
+                      <RewardGlyph icon={reward.icon} />
+                    </div>
+                    <div className="reward-card__body">
+                      <h3>{reward.title}</h3>
+                      <p>{reward.subtitle}</p>
+                    </div>
+                    <span className="reward-card__badge">{t('profile.rewards_locked')}</span>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
         </SectionCard>
 
         {activeWeeklyFlashcard && (

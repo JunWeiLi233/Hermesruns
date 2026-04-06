@@ -477,7 +477,8 @@ public class OAuthController {
         Runner runner = runnerOptional.get();
         RestTemplate restTemplate = this.restTemplate;
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        String currentAccessToken = accessToken;
+        headers.setBearerAuth(currentAccessToken);
 
         int page = 1;
         final int maxPages = recentOnly ? Math.max(1, stravaRecentSyncMaxPages) : Math.max(1, stravaFullSyncMaxPages);
@@ -485,13 +486,43 @@ public class OAuthController {
         try {
             while (page <= maxPages) {
                 String activitiesUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=" + page;
-                ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                        activitiesUrl,
-                        HttpMethod.GET,
-                        new HttpEntity<>(headers),
-                        new ParameterizedTypeReference<List<Map<String, Object>>>() {
-                        }
-                );
+                ResponseEntity<List<Map<String, Object>>> response;
+                try {
+                    response = restTemplate.exchange(
+                            activitiesUrl,
+                            HttpMethod.GET,
+                            new HttpEntity<>(headers),
+                            new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                            }
+                    );
+                } catch (org.springframework.web.client.HttpClientErrorException.Unauthorized unauthorized) {
+                    // Async syncs can start with an access token that expires before the request is sent.
+                    // Re-resolve the runner token once and retry the same page.
+                    Runner freshRunner = runnerRepository.findById(runnerId).orElse(runner);
+                    String refreshedAccessToken;
+                    try {
+                        refreshedAccessToken = resolveRunnerStravaAccessToken(freshRunner);
+                    } catch (Exception tokenException) {
+                        tracker.markFailed("Stored Strava token is invalid; please relink Strava.");
+                        return;
+                    }
+
+                    if (refreshedAccessToken == null || refreshedAccessToken.isBlank()
+                            || Objects.equals(refreshedAccessToken, currentAccessToken)) {
+                        throw unauthorized;
+                    }
+
+                    runner = freshRunner;
+                    currentAccessToken = refreshedAccessToken;
+                    headers.setBearerAuth(currentAccessToken);
+                    response = restTemplate.exchange(
+                            activitiesUrl,
+                            HttpMethod.GET,
+                            new HttpEntity<>(headers),
+                            new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                            }
+                    );
+                }
 
                 List<Map<String, Object>> activities = response.getBody();
                 if (activities == null || activities.isEmpty()) {
@@ -504,7 +535,7 @@ public class OAuthController {
                 int newOrUpdatedRunsOnPage = 0;
                 for (Map<String, Object> activityData : activities) {
                     StravaActivitySyncResult r = syncSingleStravaActivity(
-                            runner, tracker, activityData, gpsRateLimited, restTemplate, headers, accessToken);
+                            runner, tracker, activityData, gpsRateLimited, restTemplate, headers, currentAccessToken);
                     if (r == StravaActivitySyncResult.SKIPPED_NON_RUN) {
                         continue;
                     }

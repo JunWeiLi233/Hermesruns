@@ -39,6 +39,7 @@ backend_log.txt
 credentials.json
 
 # backend local build/cache/database
+.m2repo/
 backend/target/
 backend/.mvn/repository/
 backend/*.mv.db
@@ -74,5 +75,12 @@ migration_export/
 frontend/node_modules/
 frontend/dist/
 
-# Claude
+# Local AI workflow files
 .claude/
+.codex/
+AGENTS.md
+CLAUDE.md
+TASKS.md
+CODEX_DAILY_GUIDE.md
+CODEX_DAILY_GUIDE.txt
+CLAUDE_DAILY_GUIDE.txt

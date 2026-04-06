@@ -19,7 +19,7 @@ public class SpaForwardingController {
      */
     @GetMapping(value = {
         "/", "/login", "/signup", "/admin", "/dashboard",
-        "/profile", "/runs", "/run", "/run/{id}", "/analysis", "/shoes", "/races",
+        "/profile", "/runs", "/run", "/run/{id}", "/analysis", "/shoes", "/shoe-catalog", "/races",
         "/prediction/{distKey}", "/today-run", "/muscle-training"
     }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> forward() throws IOException {

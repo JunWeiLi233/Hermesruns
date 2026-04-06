@@ -1,3 +1,0 @@
-import{r as l}from"./I18nContext-RqZLO27Z.js";var s=l();function m({title:e,subtitle:r,actions:c,className:n="",bodyClassName:a="",children:o}){const i=["card","section-card",n].filter(Boolean).join(" "),d=["section-card-body",a].filter(Boolean).join(" ");return(0,s.jsxs)("section",{className:i,children:[(e||r||c)&&(0,s.jsxs)("header",{className:"section-card-header",children:[(0,s.jsxs)("div",{className:"section-card-copy",children:[e?(0,s.jsx)("h2",{children:e}):null,r?(0,s.jsx)("p",{children:r}):null]}),c?(0,s.jsx)("div",{className:"section-card-actions",children:c}):null]}),(0,s.jsx)("div",{className:d,children:o})]})}export{m as t};
-
-//# sourceMappingURL=SectionCard-BW2dxSvv.js.map

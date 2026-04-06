@@ -119,6 +119,37 @@ const TYPE_LABELS = {
   trail: 'type_trail', stability: 'type_stability',
 };
 
+const CATALOG_CATEGORY_META = {
+  'all': { zh: '全部', en: 'All' },
+  '综训': { zh: '综训', en: 'Trainer' },
+  '缓震': { zh: '缓震', en: 'Cushion' },
+  '竞速': { zh: '竞速', en: 'Race' },
+  '体测': { zh: '体测', en: 'Test' },
+  '稳定': { zh: '稳定', en: 'Stability' },
+  '支撑': { zh: '支撑', en: 'Support' },
+  '薄底': { zh: '薄底', en: 'Low Stack' },
+  '薄底通勤': { zh: '薄底通勤', en: 'Low Stack Commute' },
+  '薄底竞速': { zh: '薄底竞速', en: 'Low Stack Race' },
+  '薄底综训': { zh: '薄底综训', en: 'Low Stack Trainer' },
+  '厚底竞速': { zh: '厚底竞速', en: 'Super Shoe' },
+  '综训/竞速': { zh: '综训/竞速', en: 'Trainer/Race' },
+  '越野': { zh: '越野', en: 'Trail' },
+};
+
+function getCatalogCategoryLabel(category, lang) {
+  if (!category) return lang === 'zh-CN' ? '未分类' : 'Other';
+  const meta = CATALOG_CATEGORY_META[category];
+  if (meta) return lang === 'zh-CN' ? meta.zh : meta.en;
+  return category;
+}
+
+function getCatalogModelLabel(item, lang) {
+  if (!item) return '';
+  if (lang === 'zh-CN' && item.modelZh) return item.modelZh;
+  if (lang !== 'zh-CN' && item.modelEn) return item.modelEn;
+  return localizeShoeModel(item.model, lang);
+}
+
 const REDDIT_RECOMMENDED_SHOES = [
   { brand: 'ASICS',        model: 'Gel-Nimbus 26',          type: 'daily',     paceRange: [300, 420], redditNote: 'r/RunningShoeGeeks all-time favorite daily trainer' },
   { brand: 'New Balance',  model: 'Fresh Foam X 1080 v14',  type: 'daily',     paceRange: [300, 420], redditNote: 'r/RunningShoeGeeks top plush daily' },
@@ -262,6 +293,7 @@ export default function Shoes() {
   const [addOpen, setAddOpen] = useState(false);
   const [addStep, setAddStep] = useState('brand');
   const [selectedBrand, setSelectedBrand] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Edit modal (simple form)
@@ -331,7 +363,13 @@ export default function Shoes() {
           byBrand.set(key, {
             brand: b.brand,
             logo: b.logo || '👟',
-            models: Array.isArray(b.models) ? b.models.map(m => ({ model: m.model, type: m.type || 'daily' })) : [],
+            models: Array.isArray(b.models) ? b.models.map(m => ({
+              id: m.id,
+              model: m.model,
+              modelZh: m.modelZh || '',
+              modelEn: m.modelEn || '',
+              type: m.type || 'daily',
+            })) : [],
           });
           continue;
         }
@@ -339,7 +377,13 @@ export default function Shoes() {
         for (const m of (Array.isArray(b.models) ? b.models : [])) {
           const mk = (m.model || '').toLowerCase();
           if (!mk || modelNames.has(mk)) continue;
-          existing.models.push({ model: m.model, type: m.type || 'daily' });
+          existing.models.push({
+            id: m.id,
+            model: m.model,
+            modelZh: m.modelZh || '',
+            modelEn: m.modelEn || '',
+            type: m.type || 'daily',
+          });
           modelNames.add(mk);
         }
       }
@@ -485,6 +529,7 @@ export default function Shoes() {
   function openAddWizard() {
     setAddStep('brand');
     setSelectedBrand(null);
+    setSelectedCategory('all');
     setSearchQuery('');
     resetForm();
     setAddOpen(true);
@@ -499,16 +544,18 @@ export default function Shoes() {
     setSelectedBrand(brand);
     setFormBrand(brand.brand);
     setSearchQuery('');
-    setAddStep('model');
+    setSelectedCategory('all');
   }
 
-  function handlePickModel(model) {
+  function handlePickModel(model, brandName = formBrand) {
+    setFormBrand(brandName || '');
     setFormModel(model.model);
     setAddStep('details');
   }
 
   function handleCustomShoe() {
     setSelectedBrand(null);
+    setSelectedCategory('all');
     setFormBrand(''); setFormModel('');
     setAddStep('details');
   }
@@ -517,11 +564,32 @@ export default function Shoes() {
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
-    const flatCatalog = catalog.flatMap(b => (b.models || []).map(m => ({ brand: b.brand, model: m.model, type: m.type })));
+    const flatCatalog = catalog.flatMap(b => (b.models || []).map(m => ({
+      brand: b.brand,
+      model: m.model,
+      type: m.type,
+      category: m.category,
+    })));
     return flatCatalog.filter(
-      s => (s.brand || '').toLowerCase().includes(q) || (s.model || '').toLowerCase().includes(q)
+      s =>
+        (s.brand || '').toLowerCase().includes(q) ||
+        (s.model || '').toLowerCase().includes(q) ||
+        (s.category || '').toLowerCase().includes(q)
     ).slice(0, 15);
   }, [searchQuery, catalog]);
+
+  const visibleCatalogModels = useMemo(() => {
+    if (!selectedBrand) return [];
+    const models = Array.isArray(selectedBrand.models) ? selectedBrand.models : [];
+    if (selectedCategory === 'all') return models;
+    return models.filter((item) => (item.category || item.type || '') === selectedCategory);
+  }, [selectedBrand, selectedCategory]);
+
+  const availableCatalogCategories = useMemo(() => {
+    const source = selectedBrand?.models || catalog.flatMap((entry) => entry.models || []);
+    const categories = Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)));
+    return ['all', ...categories];
+  }, [selectedBrand, catalog]);
 
   // ── Edit modal ──
   function openEditForm(shoe) {
@@ -802,11 +870,23 @@ export default function Shoes() {
 
   // ── Render helpers ──
   function renderAddModalContent() {
-    // Step 1: Pick brand
     if (addStep === 'brand') {
       return (
         <div className="shoe-wizard">
-          <p className="shoe-wizard-step-label">{t('shoes.step_brand')}</p>
+          <div className="shoe-wizard-head">
+            <div>
+              <p className="shoe-wizard-step-label">{t('shoes.step_brand')}</p>
+              <h3 className="shoe-selector-title">
+                {selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoes.custom_shoe')}
+              </h3>
+            </div>
+            {selectedBrand && (
+              <button type="button" className="shoe-wizard-back" onClick={() => { setSelectedBrand(null); setSelectedCategory('all'); setFormBrand(''); }}>
+                &larr; {t('shoes.back')}
+              </button>
+            )}
+          </div>
+
           <input
             type="text"
             className="shoe-search-input"
@@ -822,31 +902,93 @@ export default function Shoes() {
               {searchResults.map((s, i) => (
                 <button
                   key={i} type="button" className="shoe-search-item"
-                  onClick={() => { setFormBrand(s.brand); setFormModel(s.model); setSearchQuery(''); setAddStep('details'); }}
+                  onClick={() => {
+                    const matchedBrand = catalog.find((item) => item.brand === s.brand) || null;
+                    setSelectedBrand(matchedBrand);
+                    setSelectedCategory(s.category || 'all');
+                    setSearchQuery('');
+                    handlePickModel({ model: s.model }, s.brand);
+                  }}
                 >
                   <span className="shoe-search-item-brand">{localizeShoeBrand(s.brand, lang)}</span>
                   <span className="shoe-search-item-model">{localizeShoeModel(s.model, lang)}</span>
-                  <span className={`shoe-type-badge shoe-type-${s.type}`}>{t(`shoes.${TYPE_LABELS[s.type]}`)}</span>
+                  <span className="shoe-category-badge">{getCatalogCategoryLabel(s.category, lang)}</span>
                 </button>
               ))}
             </div>
           )}
 
-          {/* Brand grid */}
           {!searchQuery.trim() && (
-            <div className="shoe-brand-grid">
-              {catalog.map(b => (
-                <button
-                  key={b.brand} type="button" className="shoe-brand-card"
-                  onClick={() => handlePickBrand(b)}
-                >
-                  <span className="shoe-brand-logo">
-                    <BrandLogo brand={b.brand} fallbackEmoji={b.logo} />
-                  </span>
-                  <span className="shoe-brand-name">{localizeShoeBrand(b.brand, lang)}</span>
-                  <span className="shoe-brand-count">{b.models.length}</span>
-                </button>
-              ))}
+            <div className="shoe-selector-layout">
+              <aside className="shoe-selector-sidebar">
+                <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '品牌' : 'Brands'}</div>
+                <div className="shoe-brand-grid shoe-brand-grid-rail">
+                  {catalog.map((b) => (
+                    <button
+                      key={b.brand}
+                      type="button"
+                      className={`shoe-brand-card shoe-brand-card-rail${selectedBrand?.brand === b.brand ? ' active' : ''}`}
+                      onClick={() => handlePickBrand(b)}
+                    >
+                      <span className="shoe-brand-logo">
+                        <BrandLogo brand={b.brand} fallbackEmoji={b.logo} />
+                      </span>
+                      <span className="shoe-brand-name">{localizeShoeBrand(b.brand, lang)}</span>
+                      <span className="shoe-brand-count">{b.models.length}</span>
+                    </button>
+                  ))}
+                </div>
+              </aside>
+
+              <div className="shoe-selector-main">
+                <div className="shoe-selector-types">
+                  <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '类型' : 'Types'}</div>
+                  <div className="shoe-type-chip-row">
+                    {availableCatalogCategories.map((categoryKey) => (
+                      <button
+                        key={categoryKey}
+                        type="button"
+                        className={`shoe-type-chip${selectedCategory === categoryKey ? ' active' : ''}`}
+                        onClick={() => setSelectedCategory(categoryKey)}
+                        disabled={!selectedBrand && categoryKey !== 'all'}
+                      >
+                        {getCatalogCategoryLabel(categoryKey, lang)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="shoe-selector-list-shell">
+                  <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '鞋款' : 'Shoes'}</div>
+                  {!selectedBrand ? (
+                    <div className="shoe-selector-empty">
+                      {lang === 'zh-CN' ? '先从左侧选一个品牌' : 'Choose a brand from the left first'}
+                    </div>
+                  ) : (
+                    <div className="shoe-model-list shoe-model-list-grid">
+                      {visibleCatalogModels.map((m, i) => (
+                        <button
+                          key={`${selectedBrand.brand}-${m.model}-${i}`}
+                          type="button"
+                          className="shoe-model-item shoe-model-item-grid"
+                          onClick={() => handlePickModel(m, selectedBrand.brand)}
+                        >
+                          <span className="shoe-model-name">{getCatalogModelLabel(m, lang)}</span>
+                          <span className="shoe-model-meta">
+                            <span className="shoe-category-badge">{getCatalogCategoryLabel(m.category, lang)}</span>
+                            <span className={`shoe-type-badge shoe-type-${m.type}`}>{t(`shoes.${TYPE_LABELS[m.type]}`)}</span>
+                          </span>
+                        </button>
+                      ))}
+                      {visibleCatalogModels.length === 0 && (
+                        <div className="shoe-selector-empty">
+                          {lang === 'zh-CN' ? '这个分类下还没有鞋款' : 'No models in this category yet'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -859,55 +1001,18 @@ export default function Shoes() {
       );
     }
 
-    // Step 2: Pick model
-    if (addStep === 'model' && selectedBrand) {
-      return (
-        <div className="shoe-wizard">
-          <p className="shoe-wizard-step-label">{t('shoes.step_model')}</p>
-          <button type="button" className="shoe-wizard-back" onClick={() => setAddStep('brand')}>
-            &larr; {t('shoes.back')}
-          </button>
-          <div className="shoe-brand-header">
-            <span className="shoe-brand-logo">
-              <BrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
-            </span>
-            <span className="shoe-brand-name-lg">{localizeShoeBrand(selectedBrand.brand, lang)}</span>
-          </div>
-          <div className="shoe-model-list">
-            {selectedBrand.models.map((m, i) => (
-              <button
-                key={i} type="button" className="shoe-model-item"
-                onClick={() => handlePickModel(m)}
-              >
-                <span className="shoe-model-name">{localizeShoeModel(m.model, lang)}</span>
-                <span className={`shoe-type-badge shoe-type-${m.type}`}>{t(`shoes.${TYPE_LABELS[m.type]}`)}</span>
-              </button>
-            ))}
-          </div>
-          <div className="shoe-wizard-footer">
-            <button type="button" className="btn-secondary shoe-wizard-custom" onClick={handleCustomShoe}>
-              {t('shoes.or_custom')}
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // Step 3: Confirm details
     return (
       <div className="shoe-wizard">
         <p className="shoe-wizard-step-label">{t('shoes.step_details')}</p>
-        {selectedBrand && (
-          <button type="button" className="shoe-wizard-back" onClick={() => setAddStep('model')}>
-            &larr; {t('shoes.back')}
-          </button>
-        )}
+        <button type="button" className="shoe-wizard-back" onClick={() => setAddStep('brand')}>
+          &larr; {t('shoes.back')}
+        </button>
         <form onSubmit={handleSave}>
           <label className="modal-label">{t('shoes.brand')}</label>
           <input type="text" value={formBrand} onChange={e => setFormBrand(e.target.value)} placeholder="Nike, Adidas, ASICS..." />
 
           <label className="modal-label">{t('shoes.model')}</label>
-          <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} placeholder="Pegasus 41, Ultraboost..." />
+          <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} placeholder="Pegasus, Boston, 飞电..." />
 
           <label className="modal-label">{t('shoes.nickname')}</label>
           <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={lang === 'en' ? 'Optional nickname' : '选填昵称'} />
@@ -939,7 +1044,7 @@ export default function Shoes() {
           <div className="history-hero-top">
             <h1 className="history-title">{t('shoes.heading')}</h1>
             <div className="shoe-action-btns">
-              <button type="button" className="btn-primary" onClick={openAddWizard}>{t('shoes.add_shoe')}</button>
+              <button type="button" className="btn-primary" onClick={() => navigate('/shoe-catalog')}>{t('shoes.add_shoe')}</button>
               <button type="button" className="btn-secondary" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
                 {t('shoes.scan_image')}
               </button>

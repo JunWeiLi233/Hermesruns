@@ -73,6 +73,9 @@ export default function Dashboard() {
   const [jobsPage, setJobsPage] = useState({ items: [], page: 0, totalPages: 0, totalItems: 0 });
   const [auditPage, setAuditPage] = useState({ items: [], page: 0, totalPages: 0, totalItems: 0 });
   const [savedFilters, setSavedFilters] = useState([]);
+  const [catalogInventory, setCatalogInventory] = useState([]);
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const [catalogTypeFilter, setCatalogTypeFilter] = useState('');
 
   const [userQuery, setUserQuery] = useState({ search: '', role: '', status: '', queue: '', page: 0 });
   const [shoeQuery, setShoeQuery] = useState({ search: '', queue: '', includeRetired: false, page: 0 });
@@ -111,9 +114,7 @@ export default function Dashboard() {
       loadUsers();
       loadSavedFilters('users');
     } else if (activeTab === 'shoes') {
-      loadShoes();
-      loadQueues();
-      loadSavedFilters('shoes');
+      loadCatalogInventory();
     } else if (activeTab === 'jobs') {
       loadJobs();
     } else if (activeTab === 'audit') {
@@ -171,6 +172,11 @@ export default function Dashboard() {
       includeRetired: String(Boolean(shoeQuery.includeRetired)),
     });
     setShoesPage(await apiJson(`/api/admin/shoes?${params.toString()}`));
+  }
+
+  async function loadCatalogInventory() {
+    const data = await apiJson('/api/shoe-catalog');
+    setCatalogInventory(Array.isArray(data?.brands) ? data.brands : []);
   }
 
   async function loadJobs() {
@@ -300,22 +306,69 @@ export default function Dashboard() {
   const [catalogFormOpen, setCatalogFormOpen] = useState(false);
   const [catalogBrand, setCatalogBrand] = useState('');
   const [catalogModel, setCatalogModel] = useState('');
+  const [catalogModelZh, setCatalogModelZh] = useState('');
+  const [catalogModelEn, setCatalogModelEn] = useState('');
   const [catalogType, setCatalogType] = useState('daily');
+  const [catalogEditOpen, setCatalogEditOpen] = useState(false);
+  const [catalogEditingItem, setCatalogEditingItem] = useState(null);
+  const [catalogEditModel, setCatalogEditModel] = useState('');
+  const [catalogEditModelZh, setCatalogEditModelZh] = useState('');
+  const [catalogEditModelEn, setCatalogEditModelEn] = useState('');
+  const [catalogEditType, setCatalogEditType] = useState('daily');
 
   async function addToCatalog(e) {
     e.preventDefault();
     if (!catalogBrand.trim() || !catalogModel.trim()) return;
     try {
-      await apiFetch('/api/admin/shoe-catalog', {
+      await apiJson('/api/shoe-catalog/admin/models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand: catalogBrand.trim(), model: catalogModel.trim(), type: catalogType }),
+        body: JSON.stringify({
+          brand: catalogBrand.trim(),
+          model: catalogModel.trim(),
+          modelZh: catalogModelZh.trim(),
+          modelEn: catalogModelEn.trim(),
+          type: catalogType,
+        }),
       });
       setMessage(t('dashboard.catalog_added', { brand: catalogBrand.trim(), model: catalogModel.trim() }));
       setCatalogBrand('');
       setCatalogModel('');
+      setCatalogModelZh('');
+      setCatalogModelEn('');
       setCatalogType('daily');
       setCatalogFormOpen(false);
+      await loadCatalogInventory();
+    } catch { /* ignored */ }
+  }
+
+  function openCatalogEditor(item) {
+    setCatalogEditingItem(item);
+    setCatalogEditModel(item.model || '');
+    setCatalogEditModelZh(item.modelZh || '');
+    setCatalogEditModelEn(item.modelEn || '');
+    setCatalogEditType(item.type || 'daily');
+    setCatalogEditOpen(true);
+  }
+
+  async function updateCatalogItem(e) {
+    e.preventDefault();
+    if (!catalogEditingItem || !catalogEditModel.trim()) return;
+    try {
+      await apiJson(`/api/shoe-catalog/admin/models/${catalogEditingItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: catalogEditModel.trim(),
+          modelZh: catalogEditModelZh.trim(),
+          modelEn: catalogEditModelEn.trim(),
+          type: catalogEditType,
+        }),
+      });
+      setMessage(t('dashboard.catalog_updated', { brand: catalogEditingItem.brand, model: catalogEditModel.trim() }));
+      setCatalogEditOpen(false);
+      setCatalogEditingItem(null);
+      await loadCatalogInventory();
     } catch { /* ignored */ }
   }
 
@@ -391,6 +444,29 @@ export default function Dashboard() {
       { titleKey: 'dashboard.queue_failed_syncs', count: queues.failedSyncs?.length || 0, key: 'FAILED', tab: 'jobs' },
     ];
   }, [queues]);
+
+  const catalogItems = useMemo(() => (
+    catalogInventory.flatMap(brand => (brand.models || []).map(model => ({
+      key: `${model.id || `${brand.id || brand.brand}-${model.model}`}`,
+      id: model.id,
+      brand: brand.brand,
+      model: model.model,
+      modelZh: model.modelZh || '',
+      modelEn: model.modelEn || '',
+      type: model.type || 'daily',
+    })))
+  ), [catalogInventory]);
+
+  const filteredCatalogItems = useMemo(() => {
+    const query = catalogQuery.trim().toLowerCase();
+    return catalogItems.filter(item => {
+      const matchesQuery = !query
+        || item.brand?.toLowerCase().includes(query)
+        || item.model?.toLowerCase().includes(query);
+      const matchesType = !catalogTypeFilter || item.type === catalogTypeFilter;
+      return matchesQuery && matchesType;
+    });
+  }, [catalogItems, catalogQuery, catalogTypeFilter]);
 
   if (loadState === 'loading') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_loading')}</div></div>;
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
@@ -506,7 +582,6 @@ export default function Dashboard() {
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => runShoeBulk('verify_photo')}>{t('dashboard.btn_bulk_verify')}</button>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => runShoeBulk('unverify_photo')}>{t('dashboard.btn_bulk_unverify')}</button>
                 <button type="button" className="delete-btn" onClick={() => runShoeBulk('clear_photo')}>{t('dashboard.btn_clear_photos')}</button>
-                <button type="button" className="delete-btn" onClick={() => runShoeBulk('permanent_delete')}>{t('dashboard.btn_bulk_delete')}</button>
               </ActionBar>
               <div className="admin-shoe-grid">
                 {shoesPage.items?.map(shoe => (
@@ -534,6 +609,50 @@ export default function Dashboard() {
                 ))}
               </div>
               <Pagination pageData={shoesPage} onPageChange={page => setShoeQuery(prev => ({ ...prev, page }))} t={t} />
+            </SectionCard>
+            <SectionCard className="section-card--compact section-card--spaced">
+              <div className="history-list-header">
+                <h3>{t('dashboard.catalog_title')}</h3>
+                <p>{t('dashboard.catalog_inventory_count', { count: filteredCatalogItems.length })}</p>
+              </div>
+              <ActionBar>
+                <input className="admin-shoe-filter" placeholder={t('dashboard.search_shoes')} value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)} />
+                <select className="admin-shoe-filter" value={catalogTypeFilter} onChange={e => setCatalogTypeFilter(e.target.value)}>
+                  <option value="">{t('dashboard.filter_all_shoes')}</option>
+                  <option value="daily">{t('dashboard.type_daily')}</option>
+                  <option value="speed">{t('dashboard.type_speed')}</option>
+                  <option value="race">{t('dashboard.type_race')}</option>
+                  <option value="trail">{t('dashboard.type_trail')}</option>
+                  <option value="stability">{t('dashboard.type_stability')}</option>
+                </select>
+                <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCatalogInventory()}>{t('dashboard.btn_refresh')}</button>
+              </ActionBar>
+              <div className="admin-shoe-grid">
+                {filteredCatalogItems.map(item => (
+                  <div key={item.key} className="admin-shoe-card">
+                    <div className="admin-shoe-img-wrap">
+                      <div className="admin-shoe-img-empty">{item.brand?.slice(0, 1) || '?'}</div>
+                    </div>
+                    <div className="admin-shoe-info">
+                      <span className="admin-shoe-name">{item.model}</span>
+                      <span className="admin-shoe-owner">{item.brand}</span>
+                      {(item.modelZh || item.modelEn) && (
+                        <div className="admin-shoe-badges">
+                          {item.modelZh && <span className="admin-shoe-status-badge admin-shoe-unset">ZH: {item.modelZh}</span>}
+                          {item.modelEn && <span className="admin-shoe-status-badge admin-shoe-unset">EN: {item.modelEn}</span>}
+                        </div>
+                      )}
+                      <div className="admin-shoe-badges">
+                        <span className="admin-shoe-status-badge admin-shoe-verified">{t(`dashboard.type_${item.type}`)}</span>
+                      </div>
+                      <button type="button" className="btn-secondary btn-inline-sm" onClick={() => openCatalogEditor(item)}>
+                        {t('dashboard.btn_edit_catalog')}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {filteredCatalogItems.length === 0 && <div className="history-status">{t('dashboard.catalog_inventory_empty')}</div>}
             </SectionCard>
           </>
         )}
@@ -629,6 +748,12 @@ export default function Dashboard() {
           <label className="modal-label">{t('dashboard.catalog_model')}</label>
           <input type="text" value={catalogModel} onChange={e => setCatalogModel(e.target.value)} placeholder="Pegasus 41, Gel-Nimbus 26..." required />
 
+          <label className="modal-label">{t('dashboard.catalog_model_zh')}</label>
+          <input type="text" value={catalogModelZh} onChange={e => setCatalogModelZh(e.target.value)} placeholder="飞马 41、赤兔..." />
+
+          <label className="modal-label">{t('dashboard.catalog_model_en')}</label>
+          <input type="text" value={catalogModelEn} onChange={e => setCatalogModelEn(e.target.value)} placeholder="Pegasus 41, Chitu..." />
+
           <label className="modal-label">{t('dashboard.catalog_type')}</label>
           <select value={catalogType} onChange={e => setCatalogType(e.target.value)}>
             <option value="daily">{t('dashboard.type_daily')}</option>
@@ -641,6 +766,40 @@ export default function Dashboard() {
           <div className="modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogFormOpen(false)}>{t('dashboard.btn_cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('dashboard.btn_add_to_catalog')}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={catalogEditOpen} onClose={() => setCatalogEditOpen(false)} title={t('dashboard.catalog_edit_title')}>
+        <form onSubmit={updateCatalogItem}>
+          <p className="modal-help">
+            {catalogEditingItem ? t('dashboard.catalog_edit_help', { brand: catalogEditingItem.brand }) : ''}
+          </p>
+
+          <label className="modal-label">{t('dashboard.catalog_brand')}</label>
+          <input type="text" value={catalogEditingItem?.brand || ''} disabled />
+
+          <label className="modal-label">{t('dashboard.catalog_model')}</label>
+          <input type="text" value={catalogEditModel} onChange={e => setCatalogEditModel(e.target.value)} required />
+
+          <label className="modal-label">{t('dashboard.catalog_model_zh')}</label>
+          <input type="text" value={catalogEditModelZh} onChange={e => setCatalogEditModelZh(e.target.value)} />
+
+          <label className="modal-label">{t('dashboard.catalog_model_en')}</label>
+          <input type="text" value={catalogEditModelEn} onChange={e => setCatalogEditModelEn(e.target.value)} />
+
+          <label className="modal-label">{t('dashboard.catalog_type')}</label>
+          <select value={catalogEditType} onChange={e => setCatalogEditType(e.target.value)}>
+            <option value="daily">{t('dashboard.type_daily')}</option>
+            <option value="speed">{t('dashboard.type_speed')}</option>
+            <option value="race">{t('dashboard.type_race')}</option>
+            <option value="trail">{t('dashboard.type_trail')}</option>
+            <option value="stability">{t('dashboard.type_stability')}</option>
+          </select>
+
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogEditOpen(false)}>{t('dashboard.btn_cancel')}</button>
+            <button type="submit" className="btn-primary modal-button">{t('dashboard.btn_save_catalog')}</button>
           </div>
         </form>
       </Modal>

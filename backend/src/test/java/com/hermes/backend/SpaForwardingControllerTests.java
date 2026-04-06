@@ -28,6 +28,14 @@ class SpaForwardingControllerTests {
     }
 
     @Test
+    void shoeCatalogRouteServesSpaShell() throws Exception {
+        mockMvc.perform(get("/shoe-catalog"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+    }
+
+    @Test
     void missingStaticResourceReturns404InsteadOfServerError() throws Exception {
         mockMvc.perform(get("/favicon.ico"))
                 .andExpect(status().isNotFound())

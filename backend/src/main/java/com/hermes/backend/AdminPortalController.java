@@ -40,6 +40,10 @@ public class AdminPortalController {
     private static final Set<String> SHOE_SORT_FIELDS = Set.of("id", "brand", "model", "createdAt");
     private static final Set<String> JOB_SORT_FIELDS = Set.of("id", "createdAt", "status", "jobType");
     private static final Set<String> AUDIT_SORT_FIELDS = Set.of("id", "createdAt", "action", "targetType");
+    private static final Set<String> NOTE_FIELDS = Set.of("noteText");
+    private static final Set<String> BULK_USER_FIELDS = Set.of("ids", "action", "dryRun", "months");
+    private static final Set<String> BULK_SHOE_FIELDS = Set.of("ids", "action", "dryRun");
+    private static final Set<String> FILTER_FIELDS = Set.of("scope", "name", "queryJson");
 
     private final AuthService authService;
     private final RunnerRepository runnerRepository;
@@ -172,9 +176,12 @@ public class AdminPortalController {
         Optional<Runner> runnerOptional = runnerRepository.findById(id);
         if (runnerOptional.isEmpty()) return notFound("Runner not found.", "runner_not_found");
 
-        String noteText = body != null && body.get("noteText") instanceof String s ? s.trim() : "";
-        if (noteText.isBlank() || noteText.length() > 4000) {
-            return badRequest("Note text is required and must be 4000 characters or fewer.", "invalid_note");
+        final String noteText;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, NOTE_FIELDS);
+            noteText = RequestBodyValidator.requiredSafeText(body, "noteText", 4000);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_note");
         }
         RunnerAdminNote note = new RunnerAdminNote();
         note.setRunner(runnerOptional.get());
@@ -206,12 +213,24 @@ public class AdminPortalController {
                                        @RequestBody(required = false) Map<String, Object> body) {
         Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
         if (adminOptional.isEmpty()) return forbidden();
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, BULK_USER_FIELDS);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_bulk_request");
+        }
         BulkSelection selection = parseSelection(body);
         if (selection.ids().isEmpty()) return badRequest("ids is required.", "missing_ids");
 
-        String action = body != null && body.get("action") instanceof String s ? s.trim() : "";
-        boolean dryRun = body != null && Boolean.TRUE.equals(body.get("dryRun"));
-        int months = body != null && body.get("months") instanceof Number n ? n.intValue() : 1;
+        final String action;
+        final boolean dryRun;
+        final int months;
+        try {
+            action = RequestBodyValidator.requiredSafeText(body, "action", 32);
+            dryRun = RequestBodyValidator.booleanOrDefault(body, "dryRun", false);
+            months = RequestBodyValidator.intOrDefault(body, "months", 1, 1, 24);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_bulk_request");
+        }
         List<Runner> runners = runnerRepository.findAllById(selection.ids());
         int affected = 0;
         for (Runner runner : runners) {
@@ -298,11 +317,22 @@ public class AdminPortalController {
                                        @RequestBody(required = false) Map<String, Object> body) {
         Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
         if (adminOptional.isEmpty()) return forbidden();
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, BULK_SHOE_FIELDS);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_bulk_request");
+        }
         BulkSelection selection = parseSelection(body);
         if (selection.ids().isEmpty()) return badRequest("ids is required.", "missing_ids");
 
-        String action = body != null && body.get("action") instanceof String s ? s.trim() : "";
-        boolean dryRun = body != null && Boolean.TRUE.equals(body.get("dryRun"));
+        final String action;
+        final boolean dryRun;
+        try {
+            action = RequestBodyValidator.requiredSafeText(body, "action", 32);
+            dryRun = RequestBodyValidator.booleanOrDefault(body, "dryRun", false);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_bulk_request");
+        }
         List<Shoe> shoes = shoeRepository.findAllById(selection.ids());
         int affected = (int) shoes.stream().filter(shoe -> isShoeBulkActionApplicable(shoe, action)).count();
         if (dryRun) return ResponseEntity.ok(Map.of("dryRun", true, "action", action, "selected", selection.ids().size(), "affected", affected));
@@ -393,11 +423,16 @@ public class AdminPortalController {
                                         @RequestBody(required = false) Map<String, Object> body) {
         Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
         if (adminOptional.isEmpty()) return forbidden();
-        String scope = body != null && body.get("scope") instanceof String s ? s.trim() : "";
-        String name = body != null && body.get("name") instanceof String s ? s.trim() : "";
-        String queryJson = body != null && body.get("queryJson") instanceof String s ? s.trim() : "";
-        if (scope.isBlank() || name.isBlank() || queryJson.isBlank()) {
-            return badRequest("scope, name, and queryJson are required.", "invalid_saved_filter");
+        final String scope;
+        final String name;
+        final String queryJson;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, FILTER_FIELDS);
+            scope = RequestBodyValidator.requiredSafeText(body, "scope", 50);
+            name = RequestBodyValidator.requiredSafeText(body, "name", 120);
+            queryJson = RequestBodyValidator.requiredString(body, "queryJson", 8000);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_saved_filter");
         }
         AdminSavedFilter filter = new AdminSavedFilter();
         filter.setOwnerRunnerId(adminOptional.get().getId());

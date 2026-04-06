@@ -829,69 +829,116 @@ function MuscleMap({ isZh }) {
 
 function ExerciseIllustration({ exerciseName }) {
   const mode = resolveExerciseVisualKey(exerciseName);
+  const stepOnePose = mode === 'bridge'
+    ? {
+        headCy: 34,
+        torso: 'M28 44 C32 38 40 36 47 38 C55 40 60 46 60 54 C60 62 54 68 47 69 C40 70 32 66 28 58 Z',
+        hip: 'M34 62 C40 57 50 57 56 62 C54 68 49 72 45 74 C40 72 36 68 34 62 Z',
+        armBack: 'M34 50 C24 54 18 60 12 68',
+        armFront: 'M57 52 C66 58 72 64 78 72',
+        legBack: 'M38 68 C28 72 22 77 18 86',
+        legFront: 'M54 68 C62 74 68 81 75 90',
+        calfBack: 'M18 86 C16 93 17 100 20 108',
+        calfFront: 'M75 90 C77 98 77 104 75 112',
+        primary: ['M36 60 C40 57 50 57 54 60 C51 68 40 68 36 60 Z', 'M32 66 C27 70 24 75 22 82 C28 82 34 78 38 72 Z'],
+        secondary: ['M56 66 C63 72 68 79 72 87 C66 88 60 84 54 76 Z'],
+      }
+    : {
+        headCy: 22,
+        torso: 'M34 34 C36 24 42 18 50 18 C58 18 64 24 66 34 L68 52 C69 62 62 72 52 74 L48 74 C38 72 31 62 32 52 Z',
+        hip: 'M40 68 C46 62 56 62 62 68 C60 76 55 82 51 84 C46 82 42 76 40 68 Z',
+        armBack: mode === 'deadbug' ? 'M34 40 C26 30 18 24 10 18' : 'M34 42 C26 48 20 56 18 66',
+        armFront: mode === 'core' ? 'M66 40 C74 30 80 24 88 18' : 'M66 42 C72 48 78 56 82 66',
+        legBack: mode === 'split' ? 'M44 80 C36 92 30 104 28 118' : mode === 'hinge' ? 'M44 80 C38 90 30 98 20 108' : 'M44 80 C40 92 38 104 38 118',
+        legFront: mode === 'hop' ? 'M58 80 C66 92 72 100 80 108' : mode === 'split' ? 'M58 80 C64 92 70 104 72 118' : 'M58 80 C62 92 64 104 64 118',
+        calfBack: mode === 'hinge' ? 'M20 108 C16 114 14 120 14 128' : 'M38 118 C36 124 36 130 38 136',
+        calfFront: mode === 'hop' ? 'M80 108 C84 114 86 120 84 128' : 'M64 118 C66 124 66 130 64 136',
+        primary: mode === 'calf'
+          ? ['M38 112 C35 120 35 128 38 135 Z', 'M64 112 C67 120 67 128 64 135 Z']
+          : mode === 'core' || mode === 'deadbug'
+            ? ['M41 38 C44 30 58 30 60 38 L60 62 C57 68 44 68 41 62 Z']
+            : ['M40 70 C44 64 56 64 60 70 C58 78 54 82 50 84 C46 82 42 78 40 70 Z', 'M44 80 C39 92 38 102 40 112 C45 106 48 98 49 88 Z'],
+        secondary: mode === 'split' || mode === 'hinge'
+          ? ['M58 80 C64 92 68 102 70 112 C64 108 60 100 56 90 Z']
+          : mode === 'hop'
+            ? ['M58 80 C66 92 72 98 78 104 C72 106 66 102 60 92 Z']
+            : ['M40 38 C43 30 57 30 60 38 L60 52 C56 56 45 56 40 52 Z'],
+      };
+  const stepTwoPose = mode === 'bridge'
+    ? {
+        headCy: 28,
+        torso: 'M26 40 C34 32 45 28 56 30 C67 32 74 40 76 50 C78 60 72 68 61 70 C50 72 37 68 29 60 Z',
+        hip: 'M36 58 C44 52 56 52 64 58 C61 66 54 72 48 74 C42 72 38 66 36 58 Z',
+        armBack: 'M32 46 C22 50 14 55 6 60',
+        armFront: 'M68 48 C76 54 84 60 92 68',
+        legBack: 'M38 66 C26 62 16 62 6 66',
+        legFront: 'M62 66 C74 60 84 54 92 48',
+        calfBack: 'M6 66 C2 74 2 84 6 92',
+        calfFront: 'M92 48 C96 58 96 68 94 80',
+        primary: ['M38 56 C44 52 56 52 62 56 C58 66 44 66 38 56 Z', 'M42 64 C34 66 26 66 18 68 C22 74 32 76 42 72 Z'],
+        secondary: ['M58 64 C68 60 78 54 86 48 C86 58 80 66 70 70 Z'],
+      }
+    : {
+        headCy: mode === 'hop' ? 20 : 22,
+        torso: mode === 'hinge'
+          ? 'M28 34 C34 24 42 18 52 18 C62 18 68 24 70 34 L74 52 C74 62 66 70 56 72 L48 72 C38 70 30 62 30 52 Z'
+          : 'M34 34 C36 24 42 18 50 18 C58 18 64 24 66 34 L68 52 C69 62 62 72 52 74 L48 74 C38 72 31 62 32 52 Z',
+        hip: 'M40 68 C46 62 56 62 62 68 C60 76 55 82 51 84 C46 82 42 76 40 68 Z',
+        armBack: mode === 'hop' ? 'M34 42 C26 34 20 26 16 18' : 'M34 42 C26 48 20 56 18 64',
+        armFront: mode === 'core' ? 'M66 42 C76 34 82 28 90 20' : 'M66 42 C72 48 78 56 84 66',
+        legBack: mode === 'split' ? 'M42 80 C34 92 28 104 26 118' : mode === 'hop' ? 'M42 80 C34 90 24 100 14 106' : 'M42 80 C38 94 38 106 40 118',
+        legFront: mode === 'hop' ? 'M58 80 C68 92 78 100 88 106' : mode === 'bridge' ? 'M58 80 C68 74 78 70 88 68' : 'M58 80 C62 94 64 106 62 118',
+        calfBack: mode === 'hop' ? 'M14 106 C10 112 8 118 8 126' : 'M40 118 C38 124 38 130 40 136',
+        calfFront: mode === 'hop' ? 'M88 106 C92 112 94 118 92 126' : 'M62 118 C64 124 64 130 62 136',
+        primary: mode === 'calf'
+          ? ['M40 112 C37 120 37 128 40 135 Z', 'M62 112 C65 120 65 128 62 135 Z']
+          : mode === 'core' || mode === 'deadbug'
+            ? ['M41 38 C44 30 58 30 60 38 L60 62 C57 68 44 68 41 62 Z']
+            : ['M40 70 C44 64 56 64 60 70 C58 78 54 82 50 84 C46 82 42 78 40 70 Z', 'M58 80 C62 92 63 102 62 112 C57 106 54 96 53 88 Z'],
+        secondary: mode === 'split' || mode === 'hinge'
+          ? ['M42 80 C36 92 32 102 30 112 C36 108 40 100 44 90 Z']
+          : mode === 'hop'
+            ? ['M58 80 C68 92 76 98 84 102 C80 108 70 108 60 96 Z']
+            : ['M40 38 C43 30 57 30 60 38 L60 52 C56 56 45 56 40 52 Z'],
+      };
+
+  function renderPose(pose, label) {
+    return (
+      <>
+        <rect x="0" y="0" width="82" height="122" rx="20" className="muscle-frame-panel" />
+        <text x="12" y="18" className="muscle-frame-title">{label}</text>
+        <ellipse cx="41" cy="112" rx="24" ry="6" className="muscle-figure-shadow" />
+        <path d="M14 108 H68" className="muscle-ground-line" />
+        <circle cx="50" cy={pose.headCy} r="10" className="muscle-figure-skin" />
+        <path d={pose.torso} className="muscle-figure-skin" />
+        <path d={pose.hip} className="muscle-figure-suit" />
+        <path d={pose.armBack} className="muscle-figure-limb-back" />
+        <path d={pose.armFront} className="muscle-figure-limb" />
+        <path d={pose.legBack} className="muscle-figure-limb-back" />
+        <path d={pose.legFront} className="muscle-figure-limb" />
+        <path d={pose.calfBack} className="muscle-figure-limb-back" />
+        <path d={pose.calfFront} className="muscle-figure-limb" />
+        {pose.primary.map((path, index) => (
+          <path key={`primary-${index}`} d={path} className="muscle-highlight-primary" />
+        ))}
+        {pose.secondary.map((path, index) => (
+          <path key={`secondary-${index}`} d={path} className="muscle-highlight-secondary" />
+        ))}
+        <path d={pose.torso} className="muscle-figure-outline" />
+      </>
+    );
+  }
 
   return (
-    <svg viewBox="0 0 180 160" className="muscle-exercise-figure" aria-hidden="true">
-      <rect x="10" y="10" width="160" height="140" rx="28" className="muscle-exercise-bg" />
-      <rect x="22" y="24" width="56" height="106" rx="18" className="muscle-demo-panel" />
-      <rect x="102" y="24" width="56" height="106" rx="18" className="muscle-demo-panel" />
-      <circle cx="38" cy="40" r="10" className="muscle-demo-step-dot" />
-      <circle cx="118" cy="40" r="10" className="muscle-demo-step-dot" />
-      <text x="38" y="44" textAnchor="middle" className="muscle-demo-step-text">1</text>
-      <text x="118" y="44" textAnchor="middle" className="muscle-demo-step-text">2</text>
-      <path d="M80 80 H98" className="muscle-demo-arrow-line" />
-      <path d="M94 74 L102 80 L94 86" className="muscle-demo-arrow-head" />
-
-      <g transform="translate(28 38)">
-        <ellipse cx="24" cy="80" rx="20" ry="6" className="muscle-human-shadow" />
-        <ellipse cx="24" cy="8" rx="8" ry="9" className="muscle-human-head" />
-        <path d="M14 22 C14 14 18 10 24 10 C30 10 34 14 34 22 L34 46 C34 54 30 60 24 60 C18 60 14 54 14 46 Z" className="muscle-human-torso" />
-        <path d={mode === 'bridge' ? 'M16 46 L6 62 L12 80' : mode === 'split' ? 'M16 46 L2 70 L4 88' : 'M16 46 L10 70 L12 92'} className="muscle-human-leg" />
-        <path d={mode === 'hinge' ? 'M32 46 L40 66 L52 84' : mode === 'split' ? 'M32 46 L46 58 L48 92' : 'M32 46 L36 70 L36 92'} className="muscle-human-leg" />
-        <path d={mode === 'deadbug' ? 'M14 24 L2 12' : 'M14 26 L4 40'} className="muscle-human-arm" />
-        <path d={mode === 'core' ? 'M34 26 L46 16' : 'M34 26 L44 38'} className="muscle-human-arm" />
-        <rect x={mode === 'calf' ? '18' : '16'} y={mode === 'core' || mode === 'deadbug' ? '24' : '48'} width="16" height="12" rx="6" className="muscle-human-highlight-core" opacity={mode === 'core' || mode === 'deadbug' ? 1 : 0.45} />
-        {(mode === 'hinge' || mode === 'bridge' || mode === 'split') && (
-          <>
-            <ellipse cx="18" cy="50" rx="7" ry="5" className="muscle-human-highlight" />
-            <ellipse cx="30" cy="50" rx="7" ry="5" className="muscle-human-highlight" />
-          </>
-        )}
-        {mode === 'calf' && (
-          <>
-            <path d="M12 72 C10 80 10 88 12 94" className="muscle-human-highlight-line" />
-            <path d="M36 72 C38 80 38 88 36 94" className="muscle-human-highlight-line" />
-          </>
-        )}
+    <svg viewBox="0 0 196 154" className="muscle-exercise-figure" aria-hidden="true">
+      <rect x="10" y="10" width="176" height="134" rx="30" className="muscle-exercise-bg" />
+      <g transform="translate(20 20)">
+        {renderPose(stepOnePose, 'SET')}
       </g>
-
-      <g transform="translate(108 38)">
-        <ellipse cx="24" cy="80" rx="20" ry="6" className="muscle-human-shadow" />
-        <ellipse cx="24" cy={mode === 'bridge' ? '16' : '8'} rx="8" ry="9" className="muscle-human-head" />
-        <path
-          d={mode === 'hinge'
-            ? 'M12 24 C12 14 18 10 24 10 C30 10 34 14 34 24 L38 48 C40 56 34 62 26 62 C18 62 12 58 12 48 Z'
-            : 'M14 22 C14 14 18 10 24 10 C30 10 34 14 34 22 L34 46 C34 54 30 60 24 60 C18 60 14 54 14 46 Z'}
-          className="muscle-human-torso"
-        />
-        <path d={mode === 'bridge' ? 'M14 46 L0 44 L-2 70' : mode === 'split' ? 'M16 46 L4 68 L2 92' : mode === 'hop' ? 'M16 46 L6 60 L0 76' : 'M16 46 L8 70 L10 92'} className="muscle-human-leg" />
-        <path d={mode === 'bridge' ? 'M34 46 L46 34 L48 62' : mode === 'split' ? 'M32 46 L44 56 L48 92' : mode === 'hop' ? 'M32 46 L44 64 L48 76' : 'M32 46 L36 70 L36 92'} className="muscle-human-leg" />
-        <path d={mode === 'deadbug' ? 'M14 22 L4 6' : mode === 'hop' ? 'M14 26 L4 18' : 'M14 26 L4 40'} className="muscle-human-arm" />
-        <path d={mode === 'core' ? 'M34 26 L46 14' : mode === 'hop' ? 'M34 26 L44 14' : 'M34 26 L44 38'} className="muscle-human-arm" />
-        <rect x={mode === 'calf' ? '18' : '16'} y={mode === 'core' || mode === 'deadbug' ? '24' : '48'} width="16" height="12" rx="6" className="muscle-human-highlight-core" opacity={mode === 'core' || mode === 'deadbug' ? 1 : 0.45} />
-        {(mode === 'hinge' || mode === 'bridge' || mode === 'split') && (
-          <>
-            <ellipse cx="18" cy="50" rx="7" ry="5" className="muscle-human-highlight" />
-            <ellipse cx="30" cy="50" rx="7" ry="5" className="muscle-human-highlight" />
-          </>
-        )}
-        {mode === 'calf' && (
-          <>
-            <path d="M12 72 C10 80 10 88 12 94" className="muscle-human-highlight-line" />
-            <path d="M36 72 C38 80 38 88 36 94" className="muscle-human-highlight-line" />
-          </>
-        )}
-        {mode === 'hop' && <path d="M6 94 L12 88 M36 82 L42 76" className="muscle-demo-burst" />}
+      <path d="M96 78 H108" className="muscle-demo-arrow-line" />
+      <path d="M104 72 L112 78 L104 84" className="muscle-demo-arrow-head" />
+      <g transform="translate(114 20)">
+        {renderPose(stepTwoPose, 'DRIVE')}
       </g>
     </svg>
   );
