@@ -13,7 +13,12 @@ if /i "%~1"=="--check-only" (
   set "CHECK_ONLY=1"
 )
 
+:: If java is already on PATH, use it directly
+where java >nul 2>nul
+if not errorlevel 1 goto :jdk_found
+
 :: Look for a bundled JDK 17 in .tools\jdk17\
+:: (no spaces in this path, so for /d wildcard works fine)
 for /d %%D in ("%ROOT%\.tools\jdk17\jdk-*") do (
   if exist "%%~fD\bin\java.exe" (
     set "JAVA_HOME=%%~fD"
@@ -21,36 +26,39 @@ for /d %%D in ("%ROOT%\.tools\jdk17\jdk-*") do (
   )
 )
 
-:: Fall back to common machine-wide JDK installs
-for /d %%D in ("%ProgramFiles%\Java\jdk-*") do (
-  if exist "%%~fD\bin\java.exe" (
-    set "JAVA_HOME=%%~fD"
+:: Fall back to common machine-wide JDK installs.
+:: for /d does NOT expand wildcards inside quoted paths (a CMD limitation),
+:: so we use "dir /b /ad" to enumerate subdirs and build the path ourselves.
+
+for /f "delims=" %%D in ('dir /b /ad "%ProgramFiles%\Java" 2^>nul') do (
+  if exist "%ProgramFiles%\Java\%%D\bin\java.exe" (
+    set "JAVA_HOME=%ProgramFiles%\Java\%%D"
     goto :jdk_found
   )
 )
 
-for /d %%D in ("%ProgramFiles%\Eclipse Adoptium\jdk-*") do (
-  if exist "%%~fD\bin\java.exe" (
-    set "JAVA_HOME=%%~fD"
+for /f "delims=" %%D in ('dir /b /ad "%ProgramFiles%\Eclipse Adoptium" 2^>nul') do (
+  if exist "%ProgramFiles%\Eclipse Adoptium\%%D\bin\java.exe" (
+    set "JAVA_HOME=%ProgramFiles%\Eclipse Adoptium\%%D"
     goto :jdk_found
   )
 )
 
-for /d %%D in ("%ProgramFiles%\Microsoft\jdk-*") do (
-  if exist "%%~fD\bin\java.exe" (
-    set "JAVA_HOME=%%~fD"
+for /f "delims=" %%D in ('dir /b /ad "%ProgramFiles%\Microsoft" 2^>nul') do (
+  if exist "%ProgramFiles%\Microsoft\%%D\bin\java.exe" (
+    set "JAVA_HOME=%ProgramFiles%\Microsoft\%%D"
     goto :jdk_found
   )
 )
 
 :: JetBrains IDEs often ship a bundled Java 17 runtime we can reuse locally.
-for /d %%D in ("%ProgramFiles%\JetBrains\*") do (
-  if exist "%%~fD\jbr\bin\java.exe" (
-    set "JAVA_HOME=%%~fD\jbr"
+for /f "delims=" %%D in ('dir /b /ad "%ProgramFiles%\JetBrains" 2^>nul') do (
+  if exist "%ProgramFiles%\JetBrains\%%D\jbr\bin\java.exe" (
+    set "JAVA_HOME=%ProgramFiles%\JetBrains\%%D\jbr"
     goto :jdk_found
   )
-  if exist "%%~fD\jbrsdk\bin\java.exe" (
-    set "JAVA_HOME=%%~fD\jbrsdk"
+  if exist "%ProgramFiles%\JetBrains\%%D\jbrsdk\bin\java.exe" (
+    set "JAVA_HOME=%ProgramFiles%\JetBrains\%%D\jbrsdk"
     goto :jdk_found
   )
 )

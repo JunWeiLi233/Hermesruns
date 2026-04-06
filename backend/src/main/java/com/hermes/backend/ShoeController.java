@@ -10,6 +10,11 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/shoes")
 public class ShoeController {
+    private static final Set<String> MATCH_BATCH_FIELDS = Set.of("items");
+    private static final Set<String> MATCH_BATCH_ITEM_FIELDS = Set.of("brand", "model");
+    private static final Set<String> MERGE_FIELDS = Set.of("keepShoeId", "mergeShoeIds");
+    private static final Set<String> CREATE_SHOE_FIELDS = Set.of("brand", "model", "nickname", "maxDistanceKm", "isPrimary", "initialDistanceKm", "photoUrl");
+    private static final Set<String> UPDATE_SHOE_FIELDS = Set.of("brand", "model", "nickname", "maxDistanceKm", "retired", "isPrimary", "initialDistanceKm", "photoUrl");
 
     private final AuthService authService;
     private final ShoeRepository shoeRepository;
@@ -90,9 +95,12 @@ public class ShoeController {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
-        Object raw = body.get("items");
-        if (!(raw instanceof List<?> list)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "items array required"));
+        final List<Map<String, Object>> list;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, MATCH_BATCH_FIELDS);
+            list = RequestBodyValidator.requireObjectList(body, "items", 50);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
 
         Runner runner = user.get();
@@ -108,17 +116,24 @@ public class ShoeController {
 
         List<Map<String, Object>> results = new ArrayList<>();
         int index = 0;
-        for (Object o : list) {
+        for (Map<String, Object> item : list) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("index", index++);
-            if (!(o instanceof Map<?, ?> item)) {
-                row.put("identityKey", "");
-                row.put("matches", List.of());
-                results.add(row);
-                continue;
+            try {
+                RequestBodyValidator.rejectUnexpectedFields(item, MATCH_BATCH_ITEM_FIELDS);
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
             }
             String brand = item.get("brand") instanceof String s ? s.trim() : "";
             String model = item.get("model") instanceof String s ? s.trim() : "";
+            try {
+                InputSanitizer.rejectControlAndHtmlChars(brand, "brand");
+                InputSanitizer.rejectControlAndHtmlChars(model, "model");
+                InputSanitizer.requireMaxLen(brand, 100, "brand");
+                InputSanitizer.requireMaxLen(model, 100, "model");
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+            }
             String idKey = shoeIdentityService.computeIdentityKey(brand, model);
             row.put("identityKey", idKey);
             List<Shoe> matches = new ArrayList<>(byIdentity.getOrDefault(idKey, List.of()));
@@ -142,25 +157,21 @@ public class ShoeController {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
-        Object keepRaw = body.get("keepShoeId");
-        if (!(keepRaw instanceof Number)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "keepShoeId required"));
-        }
-        long keepId = ((Number) keepRaw).longValue();
-
-        Object mergeRaw = body.get("mergeShoeIds");
-        if (!(mergeRaw instanceof List<?> mergeList) || mergeList.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "mergeShoeIds required"));
+        final long keepId;
+        final List<Long> mergeIdsList;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, MERGE_FIELDS);
+            keepId = RequestBodyValidator.intOrDefault(body, "keepShoeId", -1, 1, Integer.MAX_VALUE);
+            mergeIdsList = RequestBodyValidator.requireLongList(body, "mergeShoeIds", 50);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
 
         Optional<Shoe> keepOpt = shoeRepository.findByIdAndRunner(keepId, user.get());
         if (keepOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Keeper shoe not found"));
 
         Shoe keep = keepOpt.get();
-        Set<Long> mergeIds = new LinkedHashSet<>();
-        for (Object o : mergeList) {
-            if (o instanceof Number n) mergeIds.add(n.longValue());
-        }
+        Set<Long> mergeIds = new LinkedHashSet<>(mergeIdsList);
         mergeIds.remove(keepId);
         if (mergeIds.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "No merge targets"));
@@ -241,8 +252,19 @@ public class ShoeController {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
-        String brand = body.get("brand") instanceof String s ? s.trim() : "";
-        String model = body.get("model") instanceof String s ? s.trim() : "";
+        final String brand;
+        final String model;
+        final String nickname;
+        final boolean isPrimary;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, CREATE_SHOE_FIELDS);
+            brand = RequestBodyValidator.requiredSafeText(body, "brand", 100);
+            model = RequestBodyValidator.requiredSafeText(body, "model", 100);
+            nickname = RequestBodyValidator.optionalSafeText(body, "nickname", 80);
+            isPrimary = RequestBodyValidator.booleanOrDefault(body, "isPrimary", false);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
 
         try {
             InputSanitizer.rejectControlAndHtmlChars(brand, "brand");
@@ -259,7 +281,6 @@ public class ShoeController {
         shoe.setRunner(user.get());
         shoe.setBrand(brand);
         shoe.setModel(model);
-        String nickname = body.get("nickname") instanceof String s ? s.trim() : null;
         if (nickname != null) {
             try {
                 InputSanitizer.rejectControlAndHtmlChars(nickname, "nickname");
@@ -271,16 +292,26 @@ public class ShoeController {
             }
         }
         shoe.setNickname(nickname);
-        if (body.get("maxDistanceKm") instanceof Number n) {
-            double km = n.doubleValue();
+        if (body.containsKey("maxDistanceKm")) {
+            double km;
+            try {
+                km = RequestBodyValidator.optionalDouble(body, "maxDistanceKm", 0, 99999, null);
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid max distance.");
+            }
             if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid max distance.");
             shoe.setMaxDistanceKm(km);
         }
-        if (Boolean.TRUE.equals(body.get("isPrimary"))) {
+        if (isPrimary) {
             shoe.setIsPrimary(true);
         }
-        if (body.get("initialDistanceKm") instanceof Number n) {
-            double km = n.doubleValue();
+        if (body.containsKey("initialDistanceKm")) {
+            double km;
+            try {
+                km = RequestBodyValidator.optionalDouble(body, "initialDistanceKm", 0, 99999, null);
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid initial distance.");
+            }
             if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid initial distance.");
             shoe.setInitialDistanceKm(km);
         }
@@ -311,6 +342,12 @@ public class ShoeController {
 
         Optional<Shoe> shoeOpt = shoeRepository.findByIdAndRunner(id, user.get());
         if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, UPDATE_SHOE_FIELDS);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
 
         Shoe shoe = shoeOpt.get();
         if (body.containsKey("brand") && body.get("brand") instanceof String s) {
@@ -347,20 +384,36 @@ public class ShoeController {
             shoe.setNickname(v);
         }
         if (body.containsKey("maxDistanceKm") && body.get("maxDistanceKm") != null) {
-            if (!(body.get("maxDistanceKm") instanceof Number n)) {
+            double km;
+            try {
+                km = RequestBodyValidator.optionalDouble(body, "maxDistanceKm", 0, 99999, null);
+            } catch (IllegalArgumentException ex) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid maxDistanceKm.");
             }
-            double km = n.doubleValue();
             if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid max distance.");
             shoe.setMaxDistanceKm(km);
         }
-        if (body.containsKey("retired")) shoe.setRetired(Boolean.TRUE.equals(body.get("retired")));
-        if (body.containsKey("isPrimary")) shoe.setIsPrimary(Boolean.TRUE.equals(body.get("isPrimary")));
+        if (body.containsKey("retired")) {
+            try {
+                shoe.setRetired(RequestBodyValidator.booleanOrDefault(body, "retired", false));
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            }
+        }
+        if (body.containsKey("isPrimary")) {
+            try {
+                shoe.setIsPrimary(RequestBodyValidator.booleanOrDefault(body, "isPrimary", false));
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            }
+        }
         if (body.containsKey("initialDistanceKm") && body.get("initialDistanceKm") != null) {
-            if (!(body.get("initialDistanceKm") instanceof Number n)) {
+            double km;
+            try {
+                km = RequestBodyValidator.optionalDouble(body, "initialDistanceKm", 0, 99999, null);
+            } catch (IllegalArgumentException ex) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid initialDistanceKm.");
             }
-            double km = n.doubleValue();
             if (km < 0 || km > 99999) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid initial distance.");
             shoe.setInitialDistanceKm(km);
         }

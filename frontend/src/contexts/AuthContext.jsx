@@ -108,7 +108,7 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true; };
   }, [token]);
 
-  const login = useCallback((newToken, newEmail, _serverRole) => {
+  const login = useCallback((newToken, newEmail) => {
     // Commit token before callers run navigate(); otherwise route guards still see the old (empty) session.
     flushSync(() => {
       localStorage.setItem('hermes_jwt', newToken);

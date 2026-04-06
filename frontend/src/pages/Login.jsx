@@ -5,6 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
+import { parseLoginStatusQuery } from '../utils/stravaLinking';
 
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
@@ -43,34 +44,28 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get('verified') === '1') {
-      setBanner('verified');
-      setAltLoginOpen(true);
+    const bannerState = parseLoginStatusQuery(window.location.search, {
+      verifyInvalid: t('common.verify_error'),
+      verifyExpired: t('common.verify_expired'),
+      stravaConfirmationFallback: t('profile.strava_link_confirmation_required'),
+    });
+    if (bannerState.banner) {
+      setBanner(bannerState.banner);
+      setAltLoginOpen(bannerState.autoOpen);
+      if (bannerState.banner === 'strava_not_configured') {
+        setError(t('common.strava_not_configured'));
+      } else if (bannerState.banner === 'strava_failed') {
+        setError(bannerState.errorMessage || t('common.strava_login_failed'));
+      } else if (bannerState.banner === 'invalid' || bannerState.banner === 'expired') {
+        setError(bannerState.errorMessage || '');
+      } else {
+        setError(bannerState.errorMessage || t('profile.strava_link_confirmation_required'));
+      }
     }
-    const err = searchParams.get('error');
-    const details = searchParams.get('details');
-    if (err === 'verify_invalid') {
-      setBanner('invalid');
-      setAltLoginOpen(true);
-    }
-    if (err === 'verify_expired') {
-      setBanner('expired');
-      setAltLoginOpen(true);
-    }
-    if (err === 'STRAVA_NOT_CONFIGURED') {
-      setBanner('strava_not_configured');
-      setAltLoginOpen(true);
-      setError(t('common.strava_not_configured'));
-    } else if (err && err.startsWith('STRAVA_')) {
-      setBanner('strava_failed');
-      setAltLoginOpen(true);
-      // Show backend-provided details when present for easier debugging.
-      setError(details || t('common.strava_login_failed'));
-    }
-    if (searchParams.get('verified') || searchParams.get('error')) {
+    if (bannerState.shouldClear) {
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, t]);
 
   async function handleResend(e) {
     e?.preventDefault?.();
@@ -207,6 +202,9 @@ export default function Login() {
                 )}
                 {banner === 'strava_not_configured' && (
                   <div className="error-alert is-visible">{t('common.strava_not_configured')}</div>
+                )}
+                {banner === 'strava_link_confirmation_required' && (
+                  <div className="error-alert is-visible">{t('profile.strava_link_confirmation_required')}</div>
                 )}
                 {banner === 'strava_failed' && (
                   <div className="error-alert is-visible">{t('common.strava_login_failed')}</div>

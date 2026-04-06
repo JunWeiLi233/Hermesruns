@@ -8,7 +8,9 @@
     "build": "node scripts/run-vite-build.mjs",
     "build:debug": "node scripts/run-vite-build.mjs --minify=false --cssMinify=false",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "test": "powershell -Command \"& 'C:\\Program Files\\nodejs\\node.exe' src/utils/stravaLinking.test.js; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & 'C:\\Program Files\\nodejs\\node.exe' src/utils/shoeImagePickerState.test.js; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & 'C:\\Program Files\\nodejs\\node.exe' src/components/ui/infoDisclosure.smoke.test.js\" && node src/utils/shoePhotoModes.smoke.test.js",
+    "preview": "vite preview",
+    "codex": "node ../.tools/generate-codex.js"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

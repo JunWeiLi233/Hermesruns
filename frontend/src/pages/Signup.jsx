@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
+import { parseSignupStatusQuery } from '../utils/stravaLinking';
 
 function checkPasswordClient(password, minLength) {
   const failed = [];
@@ -20,6 +21,7 @@ function checkPasswordClient(password, minLength) {
 export default function Signup() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,6 +31,7 @@ export default function Signup() {
   const [pwRules, setPwRules] = useState({ minLength: 10 });
   const [doneInfo, setDoneInfo] = useState(null);
   const [altRegisterOpen, setAltRegisterOpen] = useState(false);
+  const [banner, setBanner] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +45,30 @@ export default function Signup() {
       } catch { /* ignore */ }
     })();
   }, []);
+
+  useEffect(() => {
+    const bannerState = parseSignupStatusQuery(window.location.search, {
+      stravaConfirmationFallback: t('profile.strava_link_confirmation_required'),
+    });
+    if (bannerState.prefillEmail) {
+      setEmail(bannerState.prefillEmail);
+      setAltRegisterOpen(true);
+    }
+    if (bannerState.banner) {
+      setBanner(bannerState.banner);
+      setAltRegisterOpen(bannerState.autoOpen);
+      if (bannerState.banner === 'strava_not_configured') {
+        setError(t('common.strava_not_configured'));
+      } else if (bannerState.banner === 'strava_failed') {
+        setError(bannerState.errorMessage || t('common.strava_login_failed'));
+      } else {
+        setError(bannerState.errorMessage || t('profile.strava_link_confirmation_required'));
+      }
+    }
+    if (bannerState.shouldClear) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, t]);
 
   const clientFailed = useMemo(() => checkPasswordClient(password, pwRules.minLength || 10), [password, pwRules.minLength]);
   const displayFailed = failedRules.length > 0 ? failedRules : clientFailed;
@@ -168,6 +195,15 @@ export default function Signup() {
               {altRegisterOpen && (
               <form className="auth-alt-block" onSubmit={handleSubmit}>
                 <p className="auth-card-copy auth-card-copy--form-intro">{t('signup.form_title')}</p>
+                {banner === 'strava_link_confirmation_required' && (
+                  <div className="error-alert is-visible">{t('profile.strava_link_confirmation_required')}</div>
+                )}
+                {banner === 'strava_not_configured' && (
+                  <div className="error-alert is-visible">{t('common.strava_not_configured')}</div>
+                )}
+                {banner === 'strava_failed' && (
+                  <div className="error-alert is-visible">{t('common.strava_login_failed')}</div>
+                )}
                 {error && <div className="error-alert is-visible">{error}</div>}
 
                 <div className="form-group">

@@ -16,6 +16,7 @@ const Runs = React.lazy(() => import('./pages/Runs'));
 const RunDetail = React.lazy(() => import('./pages/RunDetail'));
 const Analysis = React.lazy(() => import('./pages/Analysis'));
 const Shoes = React.lazy(() => import('./pages/Shoes'));
+const ShoeCatalog = React.lazy(() => import('./pages/ShoeCatalog'));
 const Races = React.lazy(() => import('./pages/Races'));
 const TodayRun = React.lazy(() => import('./pages/TodayRun'));
 const PredictionDetail = React.lazy(() => import('./pages/PredictionDetail'));
@@ -87,6 +88,7 @@ function App() {
               <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
               <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
               <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
+              <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
               <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
               <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />

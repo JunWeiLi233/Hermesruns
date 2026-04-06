@@ -23,6 +23,12 @@ public class ShoeCatalogModel {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(length = 100)
+    private String nameZh;
+
+    @Column(length = 100)
+    private String nameEn;
+
     @Column(nullable = false, length = 32)
     private String type = "daily";
 
@@ -43,10 +49,15 @@ public class ShoeCatalogModel {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
+    public String getNameZh() { return nameZh; }
+    public void setNameZh(String nameZh) { this.nameZh = nameZh; }
+
+    public String getNameEn() { return nameEn; }
+    public void setNameEn(String nameEn) { this.nameEn = nameEn; }
+
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
-

@@ -5,7 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import { formatDuration, formatLongDate, formatPace } from '../utils/format';
 import { formatShoeDisplayName } from '../utils/shoeNames';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import 'leaflet/dist/leaflet.css';
 
 function haversineMeters([lat1, lng1], [lat2, lng2]) {
@@ -23,7 +23,7 @@ function classifyRoute(distanceKm, gapM) {
   return 'Point to point';
 }
 
-function buildInsights(points, activity) {
+function buildInsights(points) {
   if (!points.length) {
     return { pointCount: 0, computedDistanceKm: null, startFinishGapMeters: null, boundingSpanKm: null, efficiency: null, routeShape: 'No GPS route', centerPoint: null, centerLabel: 'Not available' };
   }
@@ -111,7 +111,7 @@ export default function RunDetail() {
           ? data.map(p => [Number(p.latitude), Number(p.longitude)]).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]))
           : [];
         setPoints(pts);
-        setInsights(buildInsights(pts, run));
+        setInsights(buildInsights(pts));
         if (analyticsRes.ok) {
           const payload = await analyticsRes.json();
           setAnalytics(payload && typeof payload === 'object' ? payload : null);
@@ -123,7 +123,7 @@ export default function RunDetail() {
       } catch { /* ignored */ }
     }
     fetchPoints();
-  }, [run, isAuthenticated]);
+  }, [run, isAuthenticated, t]);
 
   async function handleElevationRecalibration() {
     if (!run?.id || recalibratingElevation) return;
@@ -185,7 +185,7 @@ export default function RunDetail() {
         mapInstanceRef.current = null;
       }
     };
-  }, [points, insights]);
+  }, [insights, points, t]);
 
   // Resolve distance/time
   const distKm = useMemo(() => {
@@ -218,13 +218,12 @@ export default function RunDetail() {
 
   if (!run) {
     return (
-      <div className="dashboard-body history-detail-page">
-        <LanguageSwitcher />
+      <AuthenticatedPageChrome bodyClassName="history-detail-page">
         <div className="empty-state" style={{ width: 'min(100%, 860px)', margin: '80px auto 0', padding: '42px 32px', borderRadius: 28, textAlign: 'center' }}>
           <h1>{t('run_detail.no_run_selected')}</h1>
           <p><Link to="/runs">{t('run_detail.back_to_runs')}</Link> {t('run_detail.no_run_selected_copy')}</p>
         </div>
-      </div>
+      </AuthenticatedPageChrome>
     );
   }
 
@@ -275,8 +274,7 @@ export default function RunDetail() {
   const heroMeta = [dateText, run.provider, insights?.pointCount ? `${insights.pointCount.toLocaleString()} ${t('run_detail.gps_samples_suffix')}` : null].filter(Boolean).join(' \u2022 ') || t('run_detail.imported_activity');
 
   return (
-    <div className="dashboard-body history-detail-page">
-      <LanguageSwitcher />
+    <AuthenticatedPageChrome bodyClassName="history-detail-page">
       <div className="topbar">
         <div className="topbar-left">
           <Link to="/runs" className="back-link">
@@ -467,6 +465,6 @@ export default function RunDetail() {
           )}
         </section>
       </main>
-    </div>
+    </AuthenticatedPageChrome>
   );
 }

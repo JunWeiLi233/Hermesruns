@@ -27,6 +27,43 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
     || t('profile.default_name');
 
   const initials = displayName.slice(0, 1).toUpperCase();
+  const menuItems = [
+    profile?.onSettings ? {
+      key: 'settings',
+      label: t('profile.settings') || 'Settings',
+      onClick: profile.onSettings,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      ),
+    } : null,
+    profile?.onChangeName ? {
+      key: 'change-name',
+      label: t('profile.change_name') || 'Change Name',
+      onClick: profile.onChangeName,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      ),
+    } : null,
+    profile?.onImportData ? {
+      key: 'import-data',
+      label: t('profile.garmin_menu_entry') || t('profile.garmin_connect_import') || 'Garmin Import',
+      onClick: profile.onImportData,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 7v7" />
+          <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+          <path d="M8 18h8" />
+        </svg>
+      ),
+    } : null,
+  ].filter(Boolean);
 
   return (
     <header className="top-nav">
@@ -78,24 +115,21 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
                 <span className="user-menu-header-name">{displayName}</span>
                 <span className="user-menu-header-email">{profile?.email || ''}</span>
               </div>
-              <div className="user-menu-divider" />
-              <button type="button" className="user-menu-item" onClick={() => { setMenuOpen(false); profile?.onSettings?.(); }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                {t('profile.settings') || 'Settings'}
-              </button>
-              <button type="button" className="user-menu-item" onClick={() => { setMenuOpen(false); profile?.onChangeName?.(); }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                {t('profile.change_name') || 'Change Name'}
-              </button>
-              <button type="button" className="user-menu-item" onClick={() => { setMenuOpen(false); profile?.onImportData?.(); }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M12 7v7" />
-                  <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
-                  <path d="M8 18h8" />
-                </svg>
-                {t('profile.garmin_menu_entry') || t('profile.garmin_connect_import') || 'Garmin Import'}
-              </button>
+              {menuItems.length > 0 && <div className="user-menu-divider" />}
+              {menuItems.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className="user-menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    item.onClick();
+                  }}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              ))}
               <div className="user-menu-divider" />
               <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setMenuOpen(false); logout(); }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
