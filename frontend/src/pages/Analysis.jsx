@@ -214,13 +214,6 @@ function average(values) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function median(values) {
-  if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
 function computeInjuryRiskInsight(runs, trainingLoadData, lang) {
   const now = Date.now();
   const recentStart = now - 14 * 24 * 60 * 60 * 1000;
@@ -366,7 +359,7 @@ export default function Analysis() {
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
     loadData();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   async function loadData() {
     try {
@@ -402,45 +395,6 @@ export default function Analysis() {
   }, [bestVdot, runs]);
 
   // Summary stats
-  const { totalKm, totalSec, roll7, roll28, elev28 } = useMemo(() => {
-    let km = 0;
-    let sec = 0;
-    const now = Date.now();
-    const d7 = 7 * 24 * 60 * 60 * 1000;
-    const d28 = 28 * 24 * 60 * 60 * 1000;
-    let km7 = 0;
-    let km28 = 0;
-    let eg28 = 0;
-    let n7 = 0;
-    let n28 = 0;
-    runs.forEach((r) => {
-      const k = Number(r.distanceKm || 0);
-      const s = Number(r.movingTimeSeconds || 0);
-      km += k;
-      sec += s;
-      const t = new Date(r.startTime || r.startDate).getTime();
-      if (Number.isNaN(t)) return;
-      const age = now - t;
-      if (age <= d7) {
-        km7 += k;
-        n7 += 1;
-      }
-      if (age <= d28) {
-        km28 += k;
-        n28 += 1;
-        const eg = Number(r.totalElevationGain);
-        if (Number.isFinite(eg) && eg > 0) eg28 += eg;
-      }
-    });
-    return {
-      totalKm: km,
-      totalSec: sec,
-      roll7: { km: km7, runs: n7 },
-      roll28: { km: km28, runs: n28 },
-      elev28: eg28,
-    };
-  }, [runs]);
-
   // Recovery state (matches old analysis.html logic)
   const recoveryState = useMemo(() => {
     return computeRecoveryState(runs, bestVdot);

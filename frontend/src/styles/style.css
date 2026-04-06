@@ -5248,67 +5248,63 @@ body.theme-midnight .weekly-flashcard-graph-track {
     height: auto;
 }
 
-.muscle-exercise-figure .muscle-frame-panel {
-    fill: color-mix(in srgb, var(--surface-strong, rgba(255, 255, 255, 0.98)) 90%, transparent);
-    stroke: rgba(255, 107, 53, 0.12);
+.muscle-exercise-figure .muscle-exercise-bg {
+    fill: rgba(13, 18, 28, 0.98);
+    stroke: rgba(255, 255, 255, 0.06);
     stroke-width: 1.2;
 }
 
-.muscle-exercise-figure .muscle-frame-title {
-    font-size: 0.68rem;
+.muscle-exercise-figure .muscle-map-panel {
+    fill: rgba(7, 10, 16, 0.96);
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1.1;
+}
+
+.muscle-exercise-figure .muscle-map-panel-label,
+.muscle-exercise-figure .muscle-map-legend-copy {
+    font-size: 0.56rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
-    fill: rgba(100, 116, 139, 0.9);
+    letter-spacing: 0.18em;
+    fill: rgba(226, 232, 240, 0.8);
+    text-transform: uppercase;
 }
 
-.muscle-exercise-figure .muscle-figure-shadow {
-    fill: rgba(15, 23, 42, 0.08);
+.muscle-exercise-figure .muscle-map-shadow {
+    fill: rgba(255, 255, 255, 0.08);
 }
 
-.muscle-exercise-figure .muscle-figure-skin {
-    fill: #f1c9b4;
-    stroke: rgba(146, 64, 14, 0.16);
+.muscle-exercise-figure .muscle-body-head,
+.muscle-exercise-figure .muscle-body-core {
+    fill: rgba(27, 32, 40, 0.98);
+    stroke: rgba(255, 255, 255, 0.1);
     stroke-width: 1;
 }
 
-.muscle-exercise-figure .muscle-figure-suit {
-    fill: rgba(15, 23, 42, 0.92);
-}
-
-.muscle-exercise-figure .muscle-figure-limb {
+.muscle-exercise-figure .muscle-body-limb {
     fill: none;
-    stroke: #f1c9b4;
-    stroke-width: 8;
+    stroke: rgba(27, 32, 40, 0.98);
+    stroke-width: 10;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
-.muscle-exercise-figure .muscle-figure-limb-back {
-    fill: none;
-    stroke: rgba(241, 201, 180, 0.55);
-    stroke-width: 7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+.muscle-exercise-figure .muscle-body-limb-lower {
+    stroke-width: 9;
 }
 
-.muscle-exercise-figure .muscle-figure-outline {
+.muscle-exercise-figure .muscle-body-inner-line {
     fill: none;
-    stroke: rgba(15, 23, 42, 0.18);
+    stroke: rgba(255, 255, 255, 0.1);
     stroke-width: 1.2;
-}
-
-.muscle-exercise-figure .muscle-highlight-primary {
-    fill: rgba(249, 115, 22, 0.7);
-}
-
-.muscle-exercise-figure .muscle-highlight-secondary {
-    fill: rgba(244, 63, 94, 0.52);
-}
-
-.muscle-exercise-figure .muscle-ground-line {
-    stroke: rgba(148, 163, 184, 0.34);
-    stroke-width: 2;
     stroke-linecap: round;
+}
+
+.muscle-exercise-figure .muscle-region-primary {
+    fill: rgba(255, 111, 76, 0.95);
+}
+
+.muscle-exercise-figure .muscle-region-secondary {
+    fill: rgba(255, 181, 88, 0.92);
 }
 
 .reward-section {

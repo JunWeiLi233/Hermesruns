@@ -12,8 +12,9 @@ import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
 import { TemperatureGlyph, WeatherGlyph } from '../components/WeatherGlyph';
 import SectionCard from '../components/ui/SectionCard';
 import MetricCard from '../components/ui/MetricCard';
-import { formatDuration, formatPace } from '../utils/format';
+import { formatDuration } from '../utils/format';
 import { getTodayRunRecommendation } from '../utils/todayRun';
+import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
 import {
   estimateCurrentVdot,
   collectAllVdotEntries,
@@ -246,6 +247,7 @@ export default function Profile() {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
   const [stravaSyncNotice, setStravaSyncNotice] = useState(null);
+  const [stravaLinkBusy, setStravaLinkBusy] = useState(false);
   const [profileShoes, setProfileShoes] = useState([]);
   const [aiQuota, setAiQuota] = useState(null);
   const [billingConfig, setBillingConfig] = useState(null);
@@ -265,6 +267,50 @@ export default function Profile() {
   const importModalOpen = activeImportModal === 'manual';
   const garminModalOpen = activeImportModal === 'garmin';
 
+  const loadProfile = useCallback(async () => {
+    try {
+      const [profileData, weatherData] = await Promise.all([
+        apiJson('/api/profile/me'),
+        apiJson('/api/v1/weather/context').catch(() => null),
+      ]);
+      setProfile(profileData);
+      setWeatherContext(weatherData && typeof weatherData === 'object' ? weatherData : null);
+    } catch {
+      navigate('/login');
+    }
+  }, [navigate]);
+
+  const loadAiQuota = useCallback(async () => {
+    try {
+      const data = await apiJson('/api/shoes/ai-usage');
+      setAiQuota(data);
+    } catch { /* ignored */ }
+  }, []);
+
+  const loadShoes = useCallback(async () => {
+    try {
+      const data = await apiJson('/api/shoes/recent');
+      setProfileShoes(Array.isArray(data) ? data : []);
+    } catch { /* ignored */ }
+  }, []);
+
+  const loadActivities = useCallback(async () => {
+    try {
+      const data = await apiJson('/api/activities');
+      const list = Array.isArray(data) ? data : [];
+      list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+      setRuns(list);
+      populateYears(list);
+
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('source') === 'strava') {
+        setSyncCount(list.length);
+        setSyncModalOpen(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } catch { /* ignored */ }
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -274,7 +320,7 @@ export default function Profile() {
     loadActivities();
     loadShoes();
     loadAiQuota();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate, loadProfile, loadActivities, loadShoes, loadAiQuota]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -374,12 +420,11 @@ export default function Profile() {
         stravaSyncPollRef.current = null;
       }
     };
-  }, [isAuthenticated, profile?.stravaLinked, t]);
+  }, [isAuthenticated, profile?.stravaLinked, t, loadActivities]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const params = new URLSearchParams(window.location.search);
-    const co = params.get('checkout');
+    const co = parseCheckoutBannerQuery(window.location.search);
     if (co !== 'success' && co !== 'cancel') return;
     setCheckoutBanner(co);
     (async () => {
@@ -392,28 +437,55 @@ export default function Profile() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (subscriptionModalOpen) setSubscriptionCheckoutError('');
-  }, [subscriptionModalOpen]);
+    if (!isAuthenticated) return;
+    const params = new URLSearchParams(window.location.search);
+    const linkingNotice = parseProfileLinkingQuery(window.location.search, {
+      success: t('profile.strava_link_success'),
+      confirmationRequired: t('profile.strava_link_confirmation_required'),
+      conflict: t('profile.strava_link_conflict'),
+      sessionExpired: t('profile.strava_link_session_expired'),
+    });
+    if (!linkingNotice) {
+      return;
+    }
+    setStravaSyncNotice(linkingNotice);
+    if (linkingNotice.tone === 'success') {
+      loadProfile();
+    }
+    params.delete('source');
+    params.delete('linking');
+    params.delete('error');
+    params.delete('details');
+    const nextQuery = params.toString();
+    window.history.replaceState(
+      {},
+      document.title,
+      nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname,
+    );
+  }, [isAuthenticated, t, loadProfile]);
 
-  async function loadProfile() {
+  async function handleStravaLinkStart() {
+    setStravaLinkBusy(true);
     try {
-      const [profileData, weatherData] = await Promise.all([
-        apiJson('/api/profile/me'),
-        apiJson('/api/v1/weather/context').catch(() => null),
-      ]);
-      setProfile(profileData);
-      setWeatherContext(weatherData && typeof weatherData === 'object' ? weatherData : null);
-    } catch {
-      navigate('/login');
+      const data = await apiJson('/api/auth/strava/link-url', { method: 'POST' });
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error(t('profile.strava_link_start_failed'));
+    } catch (error) {
+      setStravaSyncNotice({
+        tone: 'error',
+        message: error?.message || t('profile.strava_link_start_failed'),
+      });
+    } finally {
+      setStravaLinkBusy(false);
     }
   }
 
-  async function loadAiQuota() {
-    try {
-      const data = await apiJson('/api/shoes/ai-usage');
-      setAiQuota(data);
-    } catch { /* ignored */ }
-  }
+  useEffect(() => {
+    if (subscriptionModalOpen) setSubscriptionCheckoutError('');
+  }, [subscriptionModalOpen]);
 
   async function startStripeCheckout(ev) {
     ev?.stopPropagation?.();
@@ -434,30 +506,6 @@ export default function Profile() {
     } finally {
       setCheckoutLoading(false);
     }
-  }
-
-  async function loadShoes() {
-    try {
-      const data = await apiJson('/api/shoes/recent');
-      setProfileShoes(Array.isArray(data) ? data : []);
-    } catch { /* ignored */ }
-  }
-
-  async function loadActivities() {
-    try {
-      const data = await apiJson('/api/activities');
-      const list = Array.isArray(data) ? data : [];
-      list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
-      setRuns(list);
-      populateYears(list);
-
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.get('source') === 'strava') {
-        setSyncCount(list.length);
-        setSyncModalOpen(true);
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    } catch { /* ignored */ }
   }
 
   function populateYears(list) {
@@ -484,7 +532,7 @@ export default function Profile() {
       mapInstanceRef.current = map;
       setMapReady(true);
     });
-  }, []);
+  }, [isDark]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -1691,6 +1739,36 @@ export default function Profile() {
             {/* Connected Services */}
             <section className="card connected-services-section">
               <h2 className="section-title-with-gap">{t('profile.connected_services')}</h2>
+
+              <div className="service-row service-row--primary">
+                <div className="service-icon service-icon--garmin">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 18 10 6l4 8 2-4 3 8" />
+                    <path d="M6 18h12" />
+                  </svg>
+                </div>
+                <div className="service-info">
+                  <strong>{t('profile.strava_link_title')}</strong>
+                  <span className={`service-status ${profile?.stravaLinked ? 'service-status-on' : 'service-status-off'}`}>
+                    {profile?.stravaLinked ? t('profile.strava_link_status_on') : t('profile.strava_link_status_off')}
+                  </span>
+                </div>
+                <div className="service-action">
+                  <button
+                    className="btn-service btn-service-connect"
+                    type="button"
+                    disabled={stravaLinkBusy}
+                    onClick={handleStravaLinkStart}
+                  >
+                    {stravaLinkBusy
+                      ? t('profile.strava_link_connecting')
+                      : profile?.stravaLinked
+                        ? t('profile.strava_link_reconnect')
+                        : t('profile.strava_link_connect')}
+                  </button>
+                </div>
+              </div>
+              <p className="service-hint">{t('profile.strava_link_hint')}</p>
 
               {/* Garmin Connect — account-based import */}
               <div className="service-row service-row--primary">

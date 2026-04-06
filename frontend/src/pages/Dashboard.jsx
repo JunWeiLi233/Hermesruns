@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -97,13 +97,85 @@ export default function Dashboard() {
   const [imgCustomUrl, setImgCustomUrl] = useState('');
   const [verifyingShoeId, setVerifyingShoeId] = useState(null);
 
+  const loadOverview = useCallback(async () => {
+    const data = await apiJson('/api/admin/overview');
+    setOverview(data);
+  }, []);
+
+  const loadQueues = useCallback(async () => {
+    const data = await apiJson('/api/admin/queues');
+    setQueues(data);
+  }, []);
+
+  const loadUsers = useCallback(async () => {
+    const params = new URLSearchParams({
+      page: String(userQuery.page || 0),
+      search: userQuery.search || '',
+      role: userQuery.role || '',
+      status: userQuery.status || '',
+      queue: userQuery.queue || '',
+    });
+    setUsersPage(await apiJson(`/api/admin/users?${params.toString()}`));
+  }, [userQuery.page, userQuery.search, userQuery.role, userQuery.status, userQuery.queue]);
+
+  async function loadShoes() {
+    const params = new URLSearchParams({
+      page: String(shoeQuery.page || 0),
+      search: shoeQuery.search || '',
+      queue: shoeQuery.queue || '',
+      includeRetired: String(Boolean(shoeQuery.includeRetired)),
+    });
+    setShoesPage(await apiJson(`/api/admin/shoes?${params.toString()}`));
+  }
+
+  const loadCatalogInventory = useCallback(async () => {
+    const data = await apiJson('/api/shoe-catalog');
+    setCatalogInventory(Array.isArray(data?.brands) ? data.brands : []);
+  }, []);
+
+  const loadJobs = useCallback(async () => {
+    const params = new URLSearchParams({
+      page: String(jobQuery.page || 0),
+      jobType: jobQuery.jobType || '',
+      status: jobQuery.status || '',
+    });
+    setJobsPage(await apiJson(`/api/admin/jobs?${params.toString()}`));
+  }, [jobQuery.page, jobQuery.jobType, jobQuery.status]);
+
+  const loadAudit = useCallback(async () => {
+    const params = new URLSearchParams({
+      page: String(auditQuery.page || 0),
+      search: auditQuery.search || '',
+    });
+    setAuditPage(await apiJson(`/api/admin/audit?${params.toString()}`));
+  }, [auditQuery.page, auditQuery.search]);
+
+  const loadSavedFilters = useCallback(async (scope) => {
+    setSavedFilters(await apiJson(`/api/admin/filters?scope=${scope}`));
+  }, []);
+
+  const bootstrap = useCallback(async () => {
+    setLoadState('loading');
+    try {
+      const session = await apiJson('/api/auth/protected/ping');
+      if (session.role !== 'ADMIN') {
+        navigate('/profile');
+        return;
+      }
+      await Promise.all([loadOverview(), loadQueues()]);
+      setLoadState('ready');
+    } catch {
+      setLoadState('error');
+    }
+  }, [navigate, loadOverview, loadQueues]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/admin');
       return;
     }
     bootstrap();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate, bootstrap]);
 
   useEffect(() => {
     if (loadState === 'loading') return;
@@ -122,83 +194,15 @@ export default function Dashboard() {
     }
   }, [
     activeTab,
-    userQuery.page, userQuery.search, userQuery.role, userQuery.status, userQuery.queue,
-    shoeQuery.page, shoeQuery.search, shoeQuery.queue, shoeQuery.includeRetired,
-    jobQuery.page, jobQuery.jobType, jobQuery.status,
-    auditQuery.page, auditQuery.search,
+    loadAudit,
+    loadCatalogInventory,
+    loadJobs,
+    loadOverview,
+    loadQueues,
+    loadSavedFilters,
+    loadState,
+    loadUsers,
   ]);
-
-  async function bootstrap() {
-    setLoadState('loading');
-    try {
-      const session = await apiJson('/api/auth/protected/ping');
-      if (session.role !== 'ADMIN') {
-        navigate('/profile');
-        return;
-      }
-      await Promise.all([loadOverview(), loadQueues()]);
-      setLoadState('ready');
-    } catch {
-      setLoadState('error');
-    }
-  }
-
-  async function loadOverview() {
-    const data = await apiJson('/api/admin/overview');
-    setOverview(data);
-  }
-
-  async function loadQueues() {
-    const data = await apiJson('/api/admin/queues');
-    setQueues(data);
-  }
-
-  async function loadUsers() {
-    const params = new URLSearchParams({
-      page: String(userQuery.page || 0),
-      search: userQuery.search || '',
-      role: userQuery.role || '',
-      status: userQuery.status || '',
-      queue: userQuery.queue || '',
-    });
-    setUsersPage(await apiJson(`/api/admin/users?${params.toString()}`));
-  }
-
-  async function loadShoes() {
-    const params = new URLSearchParams({
-      page: String(shoeQuery.page || 0),
-      search: shoeQuery.search || '',
-      queue: shoeQuery.queue || '',
-      includeRetired: String(Boolean(shoeQuery.includeRetired)),
-    });
-    setShoesPage(await apiJson(`/api/admin/shoes?${params.toString()}`));
-  }
-
-  async function loadCatalogInventory() {
-    const data = await apiJson('/api/shoe-catalog');
-    setCatalogInventory(Array.isArray(data?.brands) ? data.brands : []);
-  }
-
-  async function loadJobs() {
-    const params = new URLSearchParams({
-      page: String(jobQuery.page || 0),
-      jobType: jobQuery.jobType || '',
-      status: jobQuery.status || '',
-    });
-    setJobsPage(await apiJson(`/api/admin/jobs?${params.toString()}`));
-  }
-
-  async function loadAudit() {
-    const params = new URLSearchParams({
-      page: String(auditQuery.page || 0),
-      search: auditQuery.search || '',
-    });
-    setAuditPage(await apiJson(`/api/admin/audit?${params.toString()}`));
-  }
-
-  async function loadSavedFilters(scope) {
-    setSavedFilters(await apiJson(`/api/admin/filters?scope=${scope}`));
-  }
 
   async function openUser(user) {
     setSelectedUser(user);

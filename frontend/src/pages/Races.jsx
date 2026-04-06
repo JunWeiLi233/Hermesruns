@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -30,7 +30,7 @@ const DEFAULT_FORM = {
   nyrrNinePlusOneEligible: false,
 };
 
-function RaceMap({ races, selectedCountry, onSelectCountry, onAddRace, t, lang }) {
+function RaceMap({ races, selectedCountry, lang }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef(null);
@@ -65,7 +65,7 @@ function RaceMap({ races, selectedCountry, onSelectCountry, onAddRace, t, lang }
     };
   }, []);
 
-  function updateMarkers(L, map) {
+  const updateMarkers = useCallback((L, map) => {
     if (!markersRef.current) return;
     markersRef.current.clearLayers();
 
@@ -115,14 +115,14 @@ function RaceMap({ races, selectedCountry, onSelectCountry, onAddRace, t, lang }
         map.fitBounds(bounds, { maxZoom: 6, padding: [30, 30] });
       }
     }
-  }
+  }, [lang, races, selectedCountry]);
 
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     import('leaflet').then(L => {
       updateMarkers(L, mapInstanceRef.current);
     });
-  }, [selectedCountry, races]);
+  }, [selectedCountry, races, updateMarkers]);
 
   return <div ref={mapRef} className="race-leaflet-map" />;
 }

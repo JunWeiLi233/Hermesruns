@@ -32,7 +32,7 @@ export default function PredictionDetail() {
     apiJson('/api/activities').then(data => {
       setRuns(Array.isArray(data) ? data : []);
     }).catch(() => {});
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   const raceDist = RACE_DISTANCES.find(rd => rd.key === distKey);
   const color = DIST_COLORS[distKey] || '#3b82f6';

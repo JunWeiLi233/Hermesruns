@@ -12,21 +12,26 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PreDestroy;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,6 +59,7 @@ public class OAuthController {
     private final AutomatedCoachService automatedCoachService;
     private final RestTemplate restTemplate;
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
+    private static final long STRAVA_LINK_REQUEST_TTL_MS = 10 * 60 * 1000L;
 
     // Bound background sync parallelism for small-RAM deployments.
     private final ExecutorService stravaBackgroundExecutor = Executors.newFixedThreadPool(
@@ -152,19 +158,26 @@ public class OAuthController {
         if (!isStravaConfigured()) {
             return errorRedirect("Strava sign-in is not configured.", state);
         }
+        return new RedirectView(buildStravaAuthUrl(state));
+    }
 
-        String authUrl = "https://www.strava.com/oauth/authorize"
-                + "?client_id=" + urlEncode(stravaClientId)
-                + "&redirect_uri=" + urlEncode(stravaRedirectUri)
-                + "&response_type=code"
-                + "&approval_prompt=auto"
-                + "&scope=" + urlEncode("read,activity:read_all");
-
-        if (state != null && !state.isBlank()) {
-            authUrl += "&state=" + urlEncode(state);
+    @PostMapping("/auth/strava/link-url")
+    public ResponseEntity<?> createStravaLinkUrl(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid session"));
+        }
+        if (!isStravaConfigured()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "Strava sign-in is not configured."));
         }
 
-        return new RedirectView(authUrl);
+        return ResponseEntity.ok(Map.of(
+                "url", buildStravaAuthUrl(createProfileLinkState(runnerOptional.get())),
+                "expiresInSeconds", STRAVA_LINK_REQUEST_TTL_MS / 1000
+        ));
     }
 
     @GetMapping("/auth/google/callback")
@@ -328,11 +341,28 @@ public class OAuthController {
                 );
             }
 
-            Runner runner = runnerRepository.findByStravaAthleteId(athleteId)
-                    .filter(existingRunner -> !existingRunner.isDeleted())
-                    .orElseGet(() -> runnerRepository.findByEmailIgnoreCase(stravaEmail(athleteId))
-                            .filter(existingRunner -> !existingRunner.isDeleted())
-                            .orElseGet(Runner::new));
+            Optional<PendingStravaLinkRequest> pendingLinkRequest = decodeProfileLinkState(state);
+            Optional<Runner> linkedRunner = runnerRepository.findByStravaAthleteId(athleteId)
+                    .filter(existingRunner -> !existingRunner.isDeleted());
+            Optional<Runner> legacyShadowRunner = runnerRepository.findByEmailIgnoreCase(stravaEmail(athleteId))
+                    .filter(existingRunner -> !existingRunner.isDeleted());
+            if (pendingLinkRequest.isPresent()) {
+                return completeAuthenticatedStravaLink(
+                        pendingLinkRequest.get(),
+                        linkedRunner,
+                        legacyShadowRunner,
+                        athlete,
+                        athleteId,
+                        accessToken,
+                        refreshToken,
+                        expiresAt
+                );
+            }
+            if (linkedRunner.isEmpty() && legacyShadowRunner.isEmpty()) {
+                return stravaLinkConfirmationRedirect(state, athleteId, athlete);
+            }
+
+            Runner runner = linkedRunner.orElseGet(legacyShadowRunner::get);
 
             if (runner.getEmail() == null || runner.getEmail().isBlank()) {
                 runner.setEmail(stravaEmail(athleteId));
@@ -867,6 +897,111 @@ public class OAuthController {
         return new RedirectView(base);
     }
 
+    @Transactional
+    RedirectView completeAuthenticatedStravaLink(
+            PendingStravaLinkRequest pendingLinkRequest,
+            Optional<Runner> linkedRunner,
+            Optional<Runner> legacyShadowRunner,
+            Map<String, Object> athlete,
+            Long athleteId,
+            String accessToken,
+            String refreshToken,
+            Long expiresAt
+    ) {
+        Optional<Runner> runnerOptional = runnerRepository.findById(pendingLinkRequest.runnerId())
+                .filter(existingRunner -> !existingRunner.isDeleted());
+        if (runnerOptional.isEmpty()) {
+            return errorRedirectCode(
+                    "STRAVA_LINK_SESSION_EXPIRED",
+                    "Your Strava linking session expired. Please start from your Hermes profile again.",
+                    "profile-link"
+            );
+        }
+
+        Runner currentRunner = runnerOptional.get();
+        if (!Objects.equals(currentRunner.getSessionToken(), pendingLinkRequest.sessionFingerprint())) {
+            return errorRedirectCode(
+                    "STRAVA_LINK_SESSION_EXPIRED",
+                    "Your Strava linking session expired. Please start from your Hermes profile again.",
+                    "profile-link"
+            );
+        }
+        if (linkedRunner.isPresent() && !Objects.equals(linkedRunner.get().getId(), currentRunner.getId())) {
+            return errorRedirectCode(
+                    "STRAVA_LINK_CONFLICT",
+                    "This Strava account is already linked to another Hermes runner.",
+                    "profile-link"
+            );
+        }
+
+        if (legacyShadowRunner.isPresent() && !Objects.equals(legacyShadowRunner.get().getId(), currentRunner.getId())) {
+            mergeLegacyShadowRunnerIntoCurrent(currentRunner, legacyShadowRunner.get());
+        }
+
+        if (currentRunner.getRole() == null || currentRunner.getRole().isBlank()) {
+            currentRunner.setRole("USER");
+        }
+        if (currentRunner.getDisplayName() == null || currentRunner.getDisplayName().isBlank()) {
+            currentRunner.setDisplayName(resolveStravaDisplayName(athlete, athleteId));
+        }
+        currentRunner.setDeleted(false);
+        currentRunner.setStatus("ACTIVE_STRAVA");
+        currentRunner.setStravaAthleteId(athleteId);
+        currentRunner.setStravaUsername(stringValue(athlete.get("username")));
+        currentRunner.setStravaAccessToken(secretEncryptionService.encrypt(accessToken));
+        currentRunner.setStravaRefreshToken(secretEncryptionService.encrypt(refreshToken));
+        currentRunner.setStravaTokenExpiresAt(expiresAt);
+        currentRunner.setEmailVerified(true);
+        runnerRepository.save(currentRunner);
+
+        CompletableFuture.runAsync(
+                () -> fetchAndSaveStravaActivities(accessToken, currentRunner.getId(), false),
+                stravaBackgroundExecutor
+        );
+
+        return new RedirectView("/profile?linking=linked");
+    }
+
+    @Transactional
+    void mergeLegacyShadowRunnerIntoCurrent(Runner currentRunner, Runner shadowRunner) {
+        if (currentRunner.getDisplayName() == null || currentRunner.getDisplayName().isBlank()) {
+            currentRunner.setDisplayName(shadowRunner.getDisplayName());
+        }
+
+        List<Activity> shadowActivities = activityRepository.findByRunnerOrderByIdDesc(shadowRunner);
+        for (Activity activity : shadowActivities) {
+            activity.setRunner(currentRunner);
+        }
+        if (!shadowActivities.isEmpty()) {
+            activityRepository.saveAll(shadowActivities);
+        }
+
+        shadowRunner.setDeleted(true);
+        shadowRunner.setSessionToken(null);
+        shadowRunner.setStravaAthleteId(null);
+        shadowRunner.setStravaUsername(null);
+        shadowRunner.setStravaAccessToken(null);
+        shadowRunner.setStravaRefreshToken(null);
+        shadowRunner.setStravaTokenExpiresAt(null);
+        runnerRepository.save(shadowRunner);
+    }
+
+    private RedirectView stravaLinkConfirmationRedirect(String state, Long athleteId, Map<String, Object> athlete) {
+        String base = resolveEntryPage(state)
+                + "?error=" + urlEncode("STRAVA_LINK_CONFIRMATION_REQUIRED")
+                + "&source=strava"
+                + "&linking=confirmation_required";
+        String details = "Hermes found your Strava athlete but needs manual confirmation before linking it to a Hermes account.";
+        String athleteLabel = resolveStravaDisplayName(athlete, athleteId);
+        if (athleteLabel != null && !athleteLabel.isBlank()) {
+            details += " Athlete: " + athleteLabel + ".";
+        }
+        if (athleteId != null) {
+            details += " Strava athlete id: " + athleteId + ".";
+        }
+        return new RedirectView(base + "&details=" + urlEncode(details));
+    }
+
     private String safeMessage(Exception exception) {
         try {
             String msg = exception.getMessage();
@@ -880,7 +1015,88 @@ public class OAuthController {
     }
 
     private String resolveEntryPage(String state) {
+        if (isProfileLinkState(state)) {
+            return "/profile";
+        }
         return Objects.equals(state, "signup") ? "/signup" : "/login";
+    }
+
+    private String buildStravaAuthUrl(String state) {
+        String authUrl = "https://www.strava.com/oauth/authorize"
+                + "?client_id=" + urlEncode(stravaClientId)
+                + "&redirect_uri=" + urlEncode(stravaRedirectUri)
+                + "&response_type=code"
+                + "&approval_prompt=auto"
+                + "&scope=" + urlEncode("read,activity:read_all");
+
+        if (state != null && !state.isBlank()) {
+            authUrl += "&state=" + urlEncode(state);
+        }
+        return authUrl;
+    }
+
+    private Optional<PendingStravaLinkRequest> decodeProfileLinkState(String state) {
+        if (!isProfileLinkState(state)) {
+            return Optional.empty();
+        }
+        String encodedPayload = state.substring("profile-link:".length());
+        String[] parts = encodedPayload.split("\\.", 2);
+        if (parts.length != 2) {
+            return Optional.empty();
+        }
+        String payload;
+        try {
+            payload = new String(java.util.Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
+
+        String expectedSignature = signProfileLinkPayload(payload);
+        if (!MessageDigest.isEqual(
+                expectedSignature.getBytes(StandardCharsets.UTF_8),
+                parts[1].getBytes(StandardCharsets.UTF_8)
+        )) {
+            return Optional.empty();
+        }
+
+        String[] payloadParts = payload.split(":", 3);
+        if (payloadParts.length < 2) {
+            return Optional.empty();
+        }
+        try {
+            long runnerId = Long.parseLong(payloadParts[0]);
+            long expiresAtMs = Long.parseLong(payloadParts[1]);
+            if (expiresAtMs < System.currentTimeMillis()) {
+                return Optional.empty();
+            }
+            String sessionFingerprint = payloadParts.length >= 3 ? payloadParts[2] : "";
+            return Optional.of(new PendingStravaLinkRequest(runnerId, expiresAtMs, sessionFingerprint));
+        } catch (NumberFormatException exception) {
+            return Optional.empty();
+        }
+    }
+
+    private boolean isProfileLinkState(String state) {
+        return state != null && state.startsWith("profile-link:");
+    }
+
+    private String createProfileLinkState(Runner runner) {
+        long expiresAtMs = System.currentTimeMillis() + STRAVA_LINK_REQUEST_TTL_MS;
+        String payload = runner.getId() + ":" + expiresAtMs + ":" + blankToEmpty(runner.getSessionToken());
+        String encodedPayload = java.util.Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+        return "profile-link:" + encodedPayload + "." + signProfileLinkPayload(payload);
+    }
+
+    private String signProfileLinkPayload(String payload) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] signature = digest.digest((payload + ":" + stravaClientSecret).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(signature);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available.", exception);
+        }
     }
 
     private String stravaEmail(Long athleteId) {
@@ -1101,4 +1317,6 @@ public class OAuthController {
         long cutoff = System.currentTimeMillis() - 1_800_000; // 30 minutes
         stravaSyncStates.entrySet().removeIf(entry -> entry.getValue().isStale(cutoff));
     }
+
+    private record PendingStravaLinkRequest(Long runnerId, long expiresAtMs, String sessionFingerprint) {}
 }

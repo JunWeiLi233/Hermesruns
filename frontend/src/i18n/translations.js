@@ -341,6 +341,7 @@ const translations = {
       strava_sync_failed: 'Strava 同步失败，请稍后重试。',
       strava_sync_not_linked: '当前账号还没有绑定 Strava，暂时无法自动同步。',
       strava_sync_relink_required: 'Strava 授权已失效，请重新绑定你的 Strava 账号。',
+      strava_link_confirmation_required: 'Hermes 已识别到你的 Strava 账号，但为了避免创建重复账号，需要你先手动确认要绑定到哪个 Hermes 账号。',
       name_save_failed: '保存名称失败',
       import_failed: '导入失败',
       sync_activity_count: '（{count} 个活动）',
@@ -1452,6 +1453,7 @@ const translations = {
       strava_sync_failed: 'Strava sync failed. Please try again shortly.',
       strava_sync_not_linked: 'This account is not linked to Strava yet.',
       strava_sync_relink_required: 'Your Strava authorization expired. Please relink your account.',
+      strava_link_confirmation_required: 'Hermes found your Strava account, but it needs manual confirmation before linking so we do not create a duplicate runner.',
       name_save_failed: 'Failed to save name',
       import_failed: 'Import failed',
       sync_activity_count: '({count} activities)',
@@ -2222,5 +2224,48 @@ const translations = {
     },
   },
 };
+
+const profileLinkTranslationOverrides = {
+  'zh-CN': {
+    profile: {
+      strava_link_success: 'Strava 已成功绑定到当前 Hermes 账号，后续活动会自动同步。',
+      strava_link_conflict: '这个 Strava 账号已经绑定到其他 Hermes 账号，请先解除绑定或切换账号。',
+      strava_link_session_expired: 'Strava 绑定会话已过期，请从个人页重新开始。',
+      strava_link_start_failed: '暂时无法启动 Strava 绑定流程，请稍后再试。',
+      strava_link_title: 'Strava 账号',
+      strava_link_status_on: '已绑定',
+      strava_link_status_off: '未绑定',
+      strava_link_connect: '连接 Strava',
+      strava_link_reconnect: '重新连接',
+      strava_link_connecting: '正在跳转...',
+      strava_link_hint: '通过安全的 OAuth 流程把 Strava 活动同步到当前登录的 Hermes 账号。',
+    },
+  },
+  en: {
+    profile: {
+      strava_link_success: 'Your Strava account is now linked to this Hermes runner.',
+      strava_link_conflict: 'This Strava account is already linked to another Hermes runner.',
+      strava_link_session_expired: 'Your Strava linking session expired. Please start again from Profile.',
+      strava_link_start_failed: 'Unable to start the Strava linking flow right now.',
+      strava_link_title: 'Strava account',
+      strava_link_status_on: 'Linked',
+      strava_link_status_off: 'Not linked',
+      strava_link_connect: 'Connect Strava',
+      strava_link_reconnect: 'Reconnect',
+      strava_link_connecting: 'Redirecting...',
+      strava_link_hint: 'Use the secure OAuth flow to attach your Strava activities to this signed-in Hermes runner.',
+    },
+  },
+};
+
+Object.entries(profileLinkTranslationOverrides).forEach(([language, sections]) => {
+  translations[language] = {
+    ...translations[language],
+    profile: {
+      ...translations[language].profile,
+      ...sections.profile,
+    },
+  };
+});
 
 export default translations;

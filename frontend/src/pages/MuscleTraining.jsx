@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -781,165 +781,165 @@ function getExerciseVideoUrl(name) {
 }
 
 function MuscleMap({ isZh }) {
-  const labels = isZh
-    ? { glutes: '臀部', hamstrings: '腘绳肌', calves: '小腿', core: '核心' }
-    : { glutes: 'Glutes', hamstrings: 'Hamstrings', calves: 'Calves', core: 'Core' };
+  const setsLabel = isZh ? '4组' : '4 sets';
+
+  const frontHighlights = [
+    { d: 'M44 50 C48 44 56 44 60 50 L58 70 C55 75 49 75 46 70 Z', o: 0.92 },
+    { d: 'M41 82 C45 86 47 100 44 118 C39 114 38 95 39 86 Z', o: 0.78 },
+    { d: 'M63 82 C59 86 57 100 60 118 C65 114 66 95 65 86 Z', o: 0.78 },
+  ];
+
+  const backHighlights = [
+    { d: 'M40 76 C47 71 54 74 56 86 C53 92 45 92 40 87 Z', o: 0.92 },
+    { d: 'M64 76 C57 71 50 74 48 86 C51 92 59 92 64 87 Z', o: 0.92 },
+    { d: 'M43 90 C47 98 48 112 45 126 C40 122 39 104 40 94 Z', o: 0.8 },
+    { d: 'M61 90 C57 98 56 112 59 126 C64 122 65 104 64 94 Z', o: 0.8 },
+    { d: 'M45 127 C48 135 48 150 45 164 C42 158 42 140 43 130 Z', o: 0.7 },
+    { d: 'M59 127 C56 135 56 150 59 164 C62 158 62 140 61 130 Z', o: 0.7 },
+  ];
+
+  function renderBody(highlights) {
+    return (
+      <>
+        <circle cx="52" cy="18" r="10" className="mm-head" />
+        <path d="M40 32 C42 24 47 20 52 20 C57 20 62 24 64 32 L66 46 C67 54 61 62 52 64 C43 62 37 54 38 46 Z" className="mm-torso" />
+        <path d="M37 38 C32 46 28 58 26 68" className="mm-limb" />
+        <path d="M67 38 C72 46 76 58 78 68" className="mm-limb" />
+        <path d="M45 65 C40 76 38 90 38 102" className="mm-limb" />
+        <path d="M59 65 C64 76 66 90 66 102" className="mm-limb" />
+        <path d="M38 102 C37 115 38 130 40 146" className="mm-limb mm-limb-lower" />
+        <path d="M66 102 C67 115 66 130 64 146" className="mm-limb mm-limb-lower" />
+        <path d="M45 64 C47 76 47 90 45 104" className="mm-def" />
+        <path d="M59 64 C57 76 57 90 59 104" className="mm-def" />
+        <path d="M44 42 C47 50 48 58 49 64" className="mm-def" />
+        <path d="M60 42 C57 50 56 58 55 64" className="mm-def" />
+        {highlights.map((h, i) => (
+          <path key={i} d={h.d} className="mm-highlight" opacity={h.o} />
+        ))}
+      </>
+    );
+  }
 
   return (
     <div className="muscle-map-card">
-      <svg viewBox="0 0 240 220" className="muscle-map-figure" aria-hidden="true">
+      <svg viewBox="0 0 400 290" className="muscle-map-figure" aria-hidden="true">
         <defs>
-          <linearGradient id="muscleGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fb923c" />
-            <stop offset="100%" stopColor="#f43f5e" />
-          </linearGradient>
+          <filter id="mglow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3.5" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
         </defs>
-        <g transform="translate(18 14)">
-          <ellipse cx="56" cy="188" rx="34" ry="8" fill="rgba(148, 163, 184, 0.16)" />
-          <ellipse cx="56" cy="18" rx="18" ry="18" fill="#f8d8c0" />
-          <path d="M28 48 C30 24 40 10 56 10 C72 10 82 24 84 48 C86 82 80 116 66 138 L46 138 C32 116 26 82 28 48 Z" fill="#f8d8c0" />
-          <path d="M52 48 L34 112" fill="none" stroke="#f8d8c0" strokeWidth="12" strokeLinecap="round" />
-          <path d="M60 48 L78 112" fill="none" stroke="#f8d8c0" strokeWidth="12" strokeLinecap="round" />
-          <rect x="44" y="42" width="24" height="32" rx="10" fill="url(#muscleGlow)" opacity="0.7" />
-          <ellipse cx="46" cy="124" rx="12" ry="10" fill="url(#muscleGlow)" opacity="0.85" />
-          <ellipse cx="66" cy="124" rx="12" ry="10" fill="url(#muscleGlow)" opacity="0.85" />
-          <path d="M50 140 C44 160 42 178 44 198" fill="none" stroke="url(#muscleGlow)" strokeWidth="12" strokeLinecap="round" opacity="0.78" />
-          <path d="M62 140 C68 160 70 178 68 198" fill="none" stroke="url(#muscleGlow)" strokeWidth="12" strokeLinecap="round" opacity="0.78" />
-          <path d="M48 170 C46 182 46 194 48 206" fill="none" stroke="url(#muscleGlow)" strokeWidth="8" strokeLinecap="round" opacity="0.62" />
-          <path d="M64 170 C66 182 66 194 64 206" fill="none" stroke="url(#muscleGlow)" strokeWidth="8" strokeLinecap="round" opacity="0.62" />
+
+        {/* Front body */}
+        <g transform="translate(48, 10) scale(1.7)">
+          {renderBody(frontHighlights)}
         </g>
-        <g transform="translate(128 16)">
-          <ellipse cx="42" cy="184" rx="28" ry="8" fill="rgba(148, 163, 184, 0.16)" />
-          <ellipse cx="42" cy="18" rx="18" ry="18" fill="#f8d8c0" />
-          <path d="M18 48 C20 24 30 10 42 10 C54 10 64 24 66 48 C68 80 64 114 54 138 L30 138 C20 114 16 80 18 48 Z" fill="#f8d8c0" />
-          <path d="M38 48 C34 68 30 90 30 112" fill="none" stroke="url(#muscleGlow)" strokeWidth="12" strokeLinecap="round" opacity="0.8" />
-          <path d="M46 48 C50 68 54 90 54 112" fill="none" stroke="url(#muscleGlow)" strokeWidth="12" strokeLinecap="round" opacity="0.8" />
-          <path d="M38 140 C32 160 30 178 32 198" fill="none" stroke="url(#muscleGlow)" strokeWidth="12" strokeLinecap="round" opacity="0.74" />
-          <path d="M48 140 C54 160 56 178 54 198" fill="none" stroke="url(#muscleGlow)" strokeWidth="12" strokeLinecap="round" opacity="0.74" />
+
+        {/* Back body */}
+        <g transform="translate(210, 10) scale(1.7)">
+          {renderBody(backHighlights)}
         </g>
+
+        {/* Front labels */}
+        <text x="28" y="108" className="mm-label">{setsLabel}</text>
+        <line x1="58" y1="106" x2="120" y2="106" className="mm-leader" />
+
+        <text x="28" y="188" className="mm-label">{setsLabel}</text>
+        <line x1="58" y1="186" x2="110" y2="186" className="mm-leader" />
+
+        {/* Back labels */}
+        <text x="374" y="150" className="mm-label" textAnchor="end">{setsLabel}</text>
+        <line x1="344" y1="148" x2="310" y2="148" className="mm-leader" />
+
+        <text x="374" y="228" className="mm-label" textAnchor="end">{setsLabel}</text>
+        <line x1="344" y1="226" x2="316" y2="226" className="mm-leader" />
       </svg>
-      <div className="muscle-map-labels">
-        {Object.entries(labels).map(([key, value]) => (
-          <span key={key} className={`muscle-pill muscle-pill-${key}`}>{value}</span>
-        ))}
-      </div>
     </div>
   );
 }
 
 function ExerciseIllustration({ exerciseName }) {
   const mode = resolveExerciseVisualKey(exerciseName);
-  const stepOnePose = mode === 'bridge'
-    ? {
-        headCy: 34,
-        torso: 'M28 44 C32 38 40 36 47 38 C55 40 60 46 60 54 C60 62 54 68 47 69 C40 70 32 66 28 58 Z',
-        hip: 'M34 62 C40 57 50 57 56 62 C54 68 49 72 45 74 C40 72 36 68 34 62 Z',
-        armBack: 'M34 50 C24 54 18 60 12 68',
-        armFront: 'M57 52 C66 58 72 64 78 72',
-        legBack: 'M38 68 C28 72 22 77 18 86',
-        legFront: 'M54 68 C62 74 68 81 75 90',
-        calfBack: 'M18 86 C16 93 17 100 20 108',
-        calfFront: 'M75 90 C77 98 77 104 75 112',
-        primary: ['M36 60 C40 57 50 57 54 60 C51 68 40 68 36 60 Z', 'M32 66 C27 70 24 75 22 82 C28 82 34 78 38 72 Z'],
-        secondary: ['M56 66 C63 72 68 79 72 87 C66 88 60 84 54 76 Z'],
-      }
-    : {
-        headCy: 22,
-        torso: 'M34 34 C36 24 42 18 50 18 C58 18 64 24 66 34 L68 52 C69 62 62 72 52 74 L48 74 C38 72 31 62 32 52 Z',
-        hip: 'M40 68 C46 62 56 62 62 68 C60 76 55 82 51 84 C46 82 42 76 40 68 Z',
-        armBack: mode === 'deadbug' ? 'M34 40 C26 30 18 24 10 18' : 'M34 42 C26 48 20 56 18 66',
-        armFront: mode === 'core' ? 'M66 40 C74 30 80 24 88 18' : 'M66 42 C72 48 78 56 82 66',
-        legBack: mode === 'split' ? 'M44 80 C36 92 30 104 28 118' : mode === 'hinge' ? 'M44 80 C38 90 30 98 20 108' : 'M44 80 C40 92 38 104 38 118',
-        legFront: mode === 'hop' ? 'M58 80 C66 92 72 100 80 108' : mode === 'split' ? 'M58 80 C64 92 70 104 72 118' : 'M58 80 C62 92 64 104 64 118',
-        calfBack: mode === 'hinge' ? 'M20 108 C16 114 14 120 14 128' : 'M38 118 C36 124 36 130 38 136',
-        calfFront: mode === 'hop' ? 'M80 108 C84 114 86 120 84 128' : 'M64 118 C66 124 66 130 64 136',
-        primary: mode === 'calf'
-          ? ['M38 112 C35 120 35 128 38 135 Z', 'M64 112 C67 120 67 128 64 135 Z']
-          : mode === 'core' || mode === 'deadbug'
-            ? ['M41 38 C44 30 58 30 60 38 L60 62 C57 68 44 68 41 62 Z']
-            : ['M40 70 C44 64 56 64 60 70 C58 78 54 82 50 84 C46 82 42 78 40 70 Z', 'M44 80 C39 92 38 102 40 112 C45 106 48 98 49 88 Z'],
-        secondary: mode === 'split' || mode === 'hinge'
-          ? ['M58 80 C64 92 68 102 70 112 C64 108 60 100 56 90 Z']
-          : mode === 'hop'
-            ? ['M58 80 C66 92 72 98 78 104 C72 106 66 102 60 92 Z']
-            : ['M40 38 C43 30 57 30 60 38 L60 52 C56 56 45 56 40 52 Z'],
-      };
-  const stepTwoPose = mode === 'bridge'
-    ? {
-        headCy: 28,
-        torso: 'M26 40 C34 32 45 28 56 30 C67 32 74 40 76 50 C78 60 72 68 61 70 C50 72 37 68 29 60 Z',
-        hip: 'M36 58 C44 52 56 52 64 58 C61 66 54 72 48 74 C42 72 38 66 36 58 Z',
-        armBack: 'M32 46 C22 50 14 55 6 60',
-        armFront: 'M68 48 C76 54 84 60 92 68',
-        legBack: 'M38 66 C26 62 16 62 6 66',
-        legFront: 'M62 66 C74 60 84 54 92 48',
-        calfBack: 'M6 66 C2 74 2 84 6 92',
-        calfFront: 'M92 48 C96 58 96 68 94 80',
-        primary: ['M38 56 C44 52 56 52 62 56 C58 66 44 66 38 56 Z', 'M42 64 C34 66 26 66 18 68 C22 74 32 76 42 72 Z'],
-        secondary: ['M58 64 C68 60 78 54 86 48 C86 58 80 66 70 70 Z'],
-      }
-    : {
-        headCy: mode === 'hop' ? 20 : 22,
-        torso: mode === 'hinge'
-          ? 'M28 34 C34 24 42 18 52 18 C62 18 68 24 70 34 L74 52 C74 62 66 70 56 72 L48 72 C38 70 30 62 30 52 Z'
-          : 'M34 34 C36 24 42 18 50 18 C58 18 64 24 66 34 L68 52 C69 62 62 72 52 74 L48 74 C38 72 31 62 32 52 Z',
-        hip: 'M40 68 C46 62 56 62 62 68 C60 76 55 82 51 84 C46 82 42 76 40 68 Z',
-        armBack: mode === 'hop' ? 'M34 42 C26 34 20 26 16 18' : 'M34 42 C26 48 20 56 18 64',
-        armFront: mode === 'core' ? 'M66 42 C76 34 82 28 90 20' : 'M66 42 C72 48 78 56 84 66',
-        legBack: mode === 'split' ? 'M42 80 C34 92 28 104 26 118' : mode === 'hop' ? 'M42 80 C34 90 24 100 14 106' : 'M42 80 C38 94 38 106 40 118',
-        legFront: mode === 'hop' ? 'M58 80 C68 92 78 100 88 106' : mode === 'bridge' ? 'M58 80 C68 74 78 70 88 68' : 'M58 80 C62 94 64 106 62 118',
-        calfBack: mode === 'hop' ? 'M14 106 C10 112 8 118 8 126' : 'M40 118 C38 124 38 130 40 136',
-        calfFront: mode === 'hop' ? 'M88 106 C92 112 94 118 92 126' : 'M62 118 C64 124 64 130 62 136',
-        primary: mode === 'calf'
-          ? ['M40 112 C37 120 37 128 40 135 Z', 'M62 112 C65 120 65 128 62 135 Z']
-          : mode === 'core' || mode === 'deadbug'
-            ? ['M41 38 C44 30 58 30 60 38 L60 62 C57 68 44 68 41 62 Z']
-            : ['M40 70 C44 64 56 64 60 70 C58 78 54 82 50 84 C46 82 42 78 40 70 Z', 'M58 80 C62 92 63 102 62 112 C57 106 54 96 53 88 Z'],
-        secondary: mode === 'split' || mode === 'hinge'
-          ? ['M42 80 C36 92 32 102 30 112 C36 108 40 100 44 90 Z']
-          : mode === 'hop'
-            ? ['M58 80 C68 92 76 98 84 102 C80 108 70 108 60 96 Z']
-            : ['M40 38 C43 30 57 30 60 38 L60 52 C56 56 45 56 40 52 Z'],
-      };
+  const regions = {
+    front: {
+      abs: 'M52 56 C58 48 70 48 76 56 L73 88 C68 94 60 94 55 88 Z',
+      obliqueLeft: 'M46 58 C52 62 55 72 54 86 C49 84 46 78 43 68 Z',
+      obliqueRight: 'M82 58 C76 62 73 72 74 86 C79 84 82 78 85 68 Z',
+      quadsLeft: 'M52 104 C58 110 60 130 56 154 C49 149 46 125 48 110 Z',
+      quadsRight: 'M76 104 C70 110 68 130 72 154 C79 149 82 125 80 110 Z',
+      adductorLeft: 'M60 106 C63 118 63 138 61 154 C57 143 56 123 57 110 Z',
+      adductorRight: 'M68 106 C65 118 65 138 67 154 C71 143 72 123 71 110 Z',
+      calfLeft: 'M52 156 C57 166 57 186 53 202 C48 194 48 171 50 159 Z',
+      calfRight: 'M76 156 C71 166 71 186 75 202 C80 194 80 171 78 159 Z',
+      shinLeft: 'M59 158 C61 170 60 188 56 204 C53 192 53 173 55 160 Z',
+      shinRight: 'M69 158 C67 170 68 188 72 204 C75 192 75 173 73 160 Z',
+      hipFlexorLeft: 'M54 96 C60 98 62 106 60 114 C55 111 53 103 54 96 Z',
+      hipFlexorRight: 'M74 96 C68 98 66 106 68 114 C73 111 75 103 74 96 Z',
+    },
+    back: {
+      upperBackLeft: 'M49 52 C55 48 59 50 60 62 C55 67 49 64 46 56 Z',
+      upperBackRight: 'M79 52 C73 48 69 50 68 62 C73 67 79 64 82 56 Z',
+      lowerBack: 'M60 72 C64 68 70 68 74 72 L72 96 C68 100 64 100 60 96 Z',
+      gluteLeft: 'M51 98 C60 92 67 96 69 110 C65 118 56 118 50 111 Z',
+      gluteRight: 'M77 98 C68 92 61 96 59 110 C63 118 72 118 78 111 Z',
+      hamLeft: 'M54 114 C60 124 61 142 57 160 C50 154 49 132 50 118 Z',
+      hamRight: 'M74 114 C68 124 67 142 71 160 C78 154 79 132 78 118 Z',
+      calfLeft: 'M56 160 C60 170 60 188 56 204 C51 197 51 176 53 163 Z',
+      calfRight: 'M72 160 C68 170 68 188 72 204 C77 197 77 176 75 163 Z',
+    },
+  };
 
-  function renderPose(pose, label) {
+  const regionSets = {
+    deadbug: { frontPrimary: ['abs'], frontSecondary: ['obliqueLeft', 'obliqueRight', 'hipFlexorLeft', 'hipFlexorRight'], backSecondary: ['lowerBack'] },
+    core: { frontPrimary: ['abs', 'obliqueLeft', 'obliqueRight'], backSecondary: ['lowerBack'] },
+    bridge: { backPrimary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight'], frontSecondary: ['abs'] },
+    split: { frontPrimary: ['quadsLeft', 'quadsRight', 'adductorLeft', 'adductorRight'], backSecondary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight'] },
+    hinge: { backPrimary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight', 'lowerBack'], frontSecondary: ['abs'] },
+    calf: { backPrimary: ['calfLeft', 'calfRight'], frontSecondary: ['shinLeft', 'shinRight'] },
+    hop: { frontPrimary: ['quadsLeft', 'quadsRight', 'calfLeft', 'calfRight'], backSecondary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight'] },
+    standing: { frontPrimary: ['quadsLeft', 'quadsRight'], backSecondary: ['gluteLeft', 'gluteRight'] },
+  };
+
+  const active = regionSets[mode] || regionSets.standing;
+
+  function renderRegions(side, names, tone) {
+    return (names || []).map((name) => (
+      <path key={`${side}-${tone}-${name}`} d={regions[side][name]} className={tone === 'primary' ? 'muscle-region-primary' : 'muscle-region-secondary'} />
+    ));
+  }
+
+  function renderBody(side, label, x) {
     return (
-      <>
-        <rect x="0" y="0" width="82" height="122" rx="20" className="muscle-frame-panel" />
-        <text x="12" y="18" className="muscle-frame-title">{label}</text>
-        <ellipse cx="41" cy="112" rx="24" ry="6" className="muscle-figure-shadow" />
-        <path d="M14 108 H68" className="muscle-ground-line" />
-        <circle cx="50" cy={pose.headCy} r="10" className="muscle-figure-skin" />
-        <path d={pose.torso} className="muscle-figure-skin" />
-        <path d={pose.hip} className="muscle-figure-suit" />
-        <path d={pose.armBack} className="muscle-figure-limb-back" />
-        <path d={pose.armFront} className="muscle-figure-limb" />
-        <path d={pose.legBack} className="muscle-figure-limb-back" />
-        <path d={pose.legFront} className="muscle-figure-limb" />
-        <path d={pose.calfBack} className="muscle-figure-limb-back" />
-        <path d={pose.calfFront} className="muscle-figure-limb" />
-        {pose.primary.map((path, index) => (
-          <path key={`primary-${index}`} d={path} className="muscle-highlight-primary" />
-        ))}
-        {pose.secondary.map((path, index) => (
-          <path key={`secondary-${index}`} d={path} className="muscle-highlight-secondary" />
-        ))}
-        <path d={pose.torso} className="muscle-figure-outline" />
-      </>
+      <g transform={`translate(${x} 18)`}>
+        <rect x="0" y="0" width="92" height="138" rx="28" className="muscle-map-panel" />
+        <text x="46" y="16" textAnchor="middle" className="muscle-map-panel-label">{label}</text>
+        <ellipse cx="46" cy="126" rx="24" ry="6" className="muscle-map-shadow" />
+        <circle cx="46" cy="23" r="11" className="muscle-body-head" />
+        <path d="M33 38 C35 27 40 22 46 22 C52 22 57 27 59 38 L62 55 C63 65 56 75 46 77 C36 75 29 65 30 55 Z" className="muscle-body-core" />
+        <path d="M30 46 C24 56 20 69 18 81" className="muscle-body-limb" />
+        <path d="M62 46 C68 56 72 69 74 81" className="muscle-body-limb" />
+        <path d="M39 79 C33 92 30 109 31 126" className="muscle-body-limb" />
+        <path d="M53 79 C59 92 62 109 61 126" className="muscle-body-limb" />
+        <path d="M31 126 C30 141 31 158 34 176" className="muscle-body-limb muscle-body-limb-lower" />
+        <path d="M61 126 C62 141 61 158 58 176" className="muscle-body-limb muscle-body-limb-lower" />
+        <path d="M39 78 C41 92 41 110 38 128" className="muscle-body-inner-line" />
+        <path d="M53 78 C51 92 51 110 54 128" className="muscle-body-inner-line" />
+        <path d="M37 51 C40 62 42 71 43 79" className="muscle-body-inner-line" />
+        <path d="M55 51 C52 62 50 71 49 79" className="muscle-body-inner-line" />
+        {side === 'front' ? renderRegions('front', active.frontSecondary, 'secondary') : renderRegions('back', active.backSecondary, 'secondary')}
+        {side === 'front' ? renderRegions('front', active.frontPrimary, 'primary') : renderRegions('back', active.backPrimary, 'primary')}
+      </g>
     );
   }
 
   return (
-    <svg viewBox="0 0 196 154" className="muscle-exercise-figure" aria-hidden="true">
-      <rect x="10" y="10" width="176" height="134" rx="30" className="muscle-exercise-bg" />
-      <g transform="translate(20 20)">
-        {renderPose(stepOnePose, 'SET')}
-      </g>
-      <path d="M96 78 H108" className="muscle-demo-arrow-line" />
-      <path d="M104 72 L112 78 L104 84" className="muscle-demo-arrow-head" />
-      <g transform="translate(114 20)">
-        {renderPose(stepTwoPose, 'DRIVE')}
-      </g>
+    <svg viewBox="0 0 220 176" className="muscle-exercise-figure" aria-hidden="true">
+      <rect x="8" y="8" width="204" height="160" rx="30" className="muscle-exercise-bg" />
+      {renderBody('back', 'BACK', 16)}
+      {renderBody('front', 'FRONT', 112)}
+      <text x="110" y="162" textAnchor="middle" className="muscle-map-legend-copy">Primary / Secondary</text>
+      <circle cx="82" cy="159" r="4" className="muscle-region-primary" />
+      <circle cx="138" cy="159" r="4" className="muscle-region-secondary" />
     </svg>
   );
 }

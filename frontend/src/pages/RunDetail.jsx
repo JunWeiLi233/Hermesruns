@@ -23,7 +23,7 @@ function classifyRoute(distanceKm, gapM) {
   return 'Point to point';
 }
 
-function buildInsights(points, activity) {
+function buildInsights(points) {
   if (!points.length) {
     return { pointCount: 0, computedDistanceKm: null, startFinishGapMeters: null, boundingSpanKm: null, efficiency: null, routeShape: 'No GPS route', centerPoint: null, centerLabel: 'Not available' };
   }
@@ -111,7 +111,7 @@ export default function RunDetail() {
           ? data.map(p => [Number(p.latitude), Number(p.longitude)]).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]))
           : [];
         setPoints(pts);
-        setInsights(buildInsights(pts, run));
+        setInsights(buildInsights(pts));
         if (analyticsRes.ok) {
           const payload = await analyticsRes.json();
           setAnalytics(payload && typeof payload === 'object' ? payload : null);
@@ -123,7 +123,7 @@ export default function RunDetail() {
       } catch { /* ignored */ }
     }
     fetchPoints();
-  }, [run, isAuthenticated]);
+  }, [run, isAuthenticated, t]);
 
   async function handleElevationRecalibration() {
     if (!run?.id || recalibratingElevation) return;
@@ -185,7 +185,7 @@ export default function RunDetail() {
         mapInstanceRef.current = null;
       }
     };
-  }, [points, insights]);
+  }, [insights, points, t]);
 
   // Resolve distance/time
   const distKm = useMemo(() => {

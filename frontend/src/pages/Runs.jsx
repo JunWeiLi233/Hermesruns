@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -25,7 +25,7 @@ export default function Runs() {
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
     loadRuns();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   async function loadRuns() {
     try {

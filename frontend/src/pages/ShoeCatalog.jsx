@@ -121,10 +121,6 @@ export default function ShoeCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [formBrand, setFormBrand] = useState('');
   const [formModel, setFormModel] = useState('');
-  const [formNickname, setFormNickname] = useState('');
-  const [formMaxDist, setFormMaxDist] = useState('650');
-  const [formPrimary, setFormPrimary] = useState(false);
-  const [saving, setSaving] = useState(false);
   const seriesSectionRef = useRef(null);
 
   useEffect(() => {
@@ -133,7 +129,7 @@ export default function ShoeCatalog() {
       return;
     }
     loadCatalog();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   async function loadCatalog() {
     try {
@@ -187,25 +183,6 @@ export default function ShoeCatalog() {
     }
   }
 
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    const flatCatalog = catalog.flatMap((entry) =>
-      (entry.models || []).map((item) => ({
-        brand: entry.brand,
-        model: item.model,
-        type: item.type,
-        category: item.category,
-      }))
-    );
-    return flatCatalog.filter(
-      (item) =>
-        (item.brand || '').toLowerCase().includes(q) ||
-        (item.model || '').toLowerCase().includes(q) ||
-        (item.category || '').toLowerCase().includes(q)
-    );
-  }, [catalog, searchQuery]);
-
   const availableCatalogCategories = useMemo(() => {
     const source = selectedBrand?.models || catalog.flatMap((entry) => entry.models || []);
     const categories = Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)));
@@ -239,27 +216,6 @@ export default function ShoeCatalog() {
     setSelectedCategory('all');
     setFormBrand('');
     setFormModel('');
-  }
-
-  async function handleSave(event) {
-    event.preventDefault();
-    setSaving(true);
-    try {
-      await apiFetch('/api/shoes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brand: formBrand,
-          model: formModel,
-          nickname: formNickname,
-          maxDistanceKm: Number(formMaxDist) || 650,
-          isPrimary: formPrimary,
-        }),
-      });
-      navigate('/shoes');
-    } finally {
-      setSaving(false);
-    }
   }
 
   return (
