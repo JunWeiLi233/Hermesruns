@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
+import InfoDisclosure from '../components/ui/InfoDisclosure';
 import Modal from '../components/Modal';
 import { formatDuration, formatPace } from '../utils/format';
 import worldRaceCatalog, { worldRaceCountries } from '../data/worldRaceCatalog';
@@ -34,36 +35,6 @@ function RaceMap({ races, selectedCountry, lang }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef(null);
-
-  useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
-    import('leaflet').then(L => {
-      const map = L.map(mapRef.current, {
-        scrollWheelZoom: true,
-        dragging: true,
-        zoomControl: true,
-        minZoom: 2,
-        maxZoom: 12,
-      }).setView([25, 10], 2);
-
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '\u00a9 OpenStreetMap \u00a9 CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19,
-      }).addTo(map);
-
-      mapInstanceRef.current = map;
-      markersRef.current = L.layerGroup().addTo(map);
-      updateMarkers(L, map);
-    });
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-        markersRef.current = null;
-      }
-    };
-  }, []);
 
   const updateMarkers = useCallback((L, map) => {
     if (!markersRef.current) return;
@@ -118,11 +89,41 @@ function RaceMap({ races, selectedCountry, lang }) {
   }, [lang, races, selectedCountry]);
 
   useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return;
+    import('leaflet').then(L => {
+      const map = L.map(mapRef.current, {
+        scrollWheelZoom: true,
+        dragging: true,
+        zoomControl: true,
+        minZoom: 2,
+        maxZoom: 12,
+      }).setView([25, 10], 2);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '\u00a9 OpenStreetMap \u00a9 CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
+      markersRef.current = L.layerGroup().addTo(map);
+      updateMarkers(L, map);
+    });
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markersRef.current = null;
+      }
+    };
+  }, [updateMarkers]);
+
+  useEffect(() => {
     if (!mapInstanceRef.current) return;
     import('leaflet').then(L => {
       updateMarkers(L, mapInstanceRef.current);
     });
-  }, [selectedCountry, races, updateMarkers]);
+  }, [updateMarkers]);
 
   return <div ref={mapRef} className="race-leaflet-map" />;
 }
@@ -399,36 +400,48 @@ export default function Races() {
         <section className="card history-hero">
           <span className="history-eyebrow">{t('races.eyebrow')}</span>
           <div className="history-hero-top">
-            <h1 className="history-title">{t('races.heading')}</h1>
+            <div className="inline-info-heading">
+              <h1 className="history-title">{t('races.heading')}</h1>
+              <InfoDisclosure className="history-copy-toggle">
+                <p>{t('races.page_copy')}</p>
+              </InfoDisclosure>
+            </div>
             <button type="button" className="btn-secondary btn-inline-md" onClick={openCreateModal}>
               {t('races.add_button')}
             </button>
           </div>
-          <p className="history-copy">{t('races.page_copy')}</p>
         </section>
 
         <section className="history-summary-grid">
           <article className="card history-summary-card">
             <span className="history-summary-label">{t('races.catalog_label')}</span>
             <div className="history-summary-value">{worldRaceCatalog.length}</div>
-            <div className="history-summary-note">{t('races.catalog_note')}</div>
+            <InfoDisclosure className="history-summary-info">
+              <p>{t('races.catalog_note')}</p>
+            </InfoDisclosure>
           </article>
           <article className="card history-summary-card">
             <span className="history-summary-label">{t('races.completed_targets')}</span>
             <div className="history-summary-value">{completedTargets} / {raceTargets.length}</div>
-            <div className="history-summary-note">{t('races.completed_targets_note')}</div>
+            <InfoDisclosure className="history-summary-info">
+              <p>{t('races.completed_targets_note')}</p>
+            </InfoDisclosure>
           </article>
           <article className="card history-summary-card">
             <span className="history-summary-label">{t('races.longest_run')}</span>
             <div className="history-summary-value">{longestRunKm > 0 ? `${longestRunKm.toFixed(1)} km` : '--'}</div>
-            <div className="history-summary-note">{t('races.longest_run_note')}</div>
+            <InfoDisclosure className="history-summary-info">
+              <p>{t('races.longest_run_note')}</p>
+            </InfoDisclosure>
           </article>
         </section>
 
         <section className="card world-race-card">
           <div className="history-list-header">
             <h2>{t('races.world_catalog_title')}</h2>
-            <p>{t('races.world_catalog_copy')}</p>
+            <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+              <p>{t('races.world_catalog_copy')}</p>
+            </InfoDisclosure>
           </div>
 
           <div className="world-map-card">
@@ -440,14 +453,16 @@ export default function Races() {
                     ? t('races.all_countries')
                     : selectedCountry}
                 </strong>
-                <span className="race-coach-muted">
-                  {selectedCountryMeta
-                    ? t('races.selected_country_meta', {
-                        region: selectedCountryMeta.region,
-                        count: countryCounts[selectedCountry] || 0,
-                      })
-                    : t('races.selected_country_meta_all', { count: worldRaceCatalog.length })}
-                </span>
+                <InfoDisclosure className="history-copy-toggle race-meta-toggle">
+                  <p className="race-coach-muted">
+                    {selectedCountryMeta
+                      ? t('races.selected_country_meta', {
+                          region: selectedCountryMeta.region,
+                          count: countryCounts[selectedCountry] || 0,
+                        })
+                      : t('races.selected_country_meta_all', { count: worldRaceCatalog.length })}
+                  </p>
+                </InfoDisclosure>
               </div>
             </div>
 
@@ -547,7 +562,9 @@ export default function Races() {
                 />
               </div>
             </div>
-            <p className="history-summary-note">{t('races.progress_note_auto', { count: nyrrSummary.eligibleCount })}</p>
+            <InfoDisclosure className="history-summary-info">
+              <p>{t('races.progress_note_auto', { count: nyrrSummary.eligibleCount })}</p>
+            </InfoDisclosure>
           </section>
         )}
 
@@ -555,7 +572,9 @@ export default function Races() {
           <section className="card race-list-card">
             <div className="history-list-header">
               <h2>{t('races.list_title')}</h2>
-              <p>{t('races.list_copy')}</p>
+              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+                <p>{t('races.list_copy')}</p>
+              </InfoDisclosure>
             </div>
 
             {loadState === 'loading' && <div className="history-status">{t('runs.loading')}</div>}
@@ -629,7 +648,9 @@ export default function Races() {
           <section className="card race-coach-card">
             <div className="history-list-header">
               <h2>{t('races.coach_title')}</h2>
-              <p>{t('races.coach_copy')}</p>
+              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+                <p>{t('races.coach_copy')}</p>
+              </InfoDisclosure>
             </div>
 
             <div className="race-coach-next">
@@ -653,7 +674,9 @@ export default function Races() {
         <section className="card race-targets-card">
           <div className="history-list-header">
             <h2>{t('races.target_section')}</h2>
-            <p>{t('races.target_section_copy')}</p>
+            <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+              <p>{t('races.target_section_copy')}</p>
+            </InfoDisclosure>
           </div>
 
           {loadState === 'ready' && (

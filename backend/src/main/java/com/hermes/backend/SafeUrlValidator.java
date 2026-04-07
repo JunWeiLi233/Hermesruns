@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import java.net.URI;
+import java.util.Locale;
 
 /**
  * Very conservative outbound URL validation to reduce SSRF / unsafe scheme injection.
@@ -10,6 +11,8 @@ import java.net.URI;
  * </p>
  */
 public final class SafeUrlValidator {
+    private static final int MAX_DATA_URL_METADATA_LENGTH = 64;
+
     private SafeUrlValidator() {}
 
     public static String validateHttpUrlOrNull(String url, int maxLen, String fieldName) {
@@ -62,5 +65,59 @@ public final class SafeUrlValidator {
 
         return s;
     }
-}
 
+    /**
+     * Allows the standard remote http(s) URLs plus small inline {@code data:image/...;base64,...}
+     * payloads for user-selected local shoe photos.
+     */
+    public static String validateHttpUrlOrImageDataUrlOrNull(String url, int maxLen, String fieldName) {
+        if (url == null) return null;
+        String s = url.trim();
+        if (s.isEmpty()) return null;
+        if (s.regionMatches(true, 0, "data:image/", 0, 11)) {
+            return validateImageDataUrl(s, maxLen, fieldName);
+        }
+        return validateHttpUrlOrNull(s, maxLen, fieldName);
+    }
+
+    private static String validateImageDataUrl(String url, int maxLen, String fieldName) {
+        if (url.length() > maxLen) {
+            throw new IllegalArgumentException(fieldName + " too long.");
+        }
+
+        int comma = url.indexOf(',');
+        if (comma <= 0 || comma == url.length() - 1) {
+            throw new IllegalArgumentException(fieldName + " must be a valid image data URL.");
+        }
+
+        String metadata = url.substring(5, comma);
+        if (metadata.length() > MAX_DATA_URL_METADATA_LENGTH) {
+            throw new IllegalArgumentException(fieldName + " metadata is too long.");
+        }
+        String lowerMetadata = metadata.toLowerCase(Locale.ROOT);
+        if (!lowerMetadata.startsWith("image/")) {
+            throw new IllegalArgumentException(fieldName + " must be an image.");
+        }
+        if (!lowerMetadata.contains(";base64")) {
+            throw new IllegalArgumentException(fieldName + " must use base64 encoding.");
+        }
+
+        String base64 = url.substring(comma + 1).trim();
+        if (base64.isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " is empty.");
+        }
+        for (int i = 0; i < base64.length(); i++) {
+            char ch = base64.charAt(i);
+            boolean allowed =
+                    (ch >= 'A' && ch <= 'Z') ||
+                    (ch >= 'a' && ch <= 'z') ||
+                    (ch >= '0' && ch <= '9') ||
+                    ch == '+' || ch == '/' || ch == '=' || Character.isWhitespace(ch);
+            if (!allowed) {
+                throw new IllegalArgumentException(fieldName + " contains invalid base64 data.");
+            }
+        }
+
+        return url;
+    }
+}

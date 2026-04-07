@@ -6,6 +6,8 @@ import fs from 'node:fs'
 const frontendDir = fileURLToPath(new URL('.', import.meta.url))
 const projectRoot = path.resolve(frontendDir, '..')
 const cleanScript = path.join(projectRoot, 'scripts', 'clean-backend-static-assets.mjs')
+const backendStaticDir = path.resolve(projectRoot, '../backend/src/main/resources/static')
+const backendLiveStaticDir = path.resolve(projectRoot, '../backend/target/classes/static')
 
 // Defaults: minified output.
 let minify = true
@@ -55,5 +57,10 @@ if (result.status !== 0) {
   process.exit(result.status ?? 1)
 }
 
-process.exitCode = 0
+if (fs.existsSync(backendLiveStaticDir)) {
+  fs.rmSync(path.join(backendLiveStaticDir, 'assets'), { recursive: true, force: true })
+  fs.cpSync(backendStaticDir, backendLiveStaticDir, { recursive: true, force: true })
+  console.log(`[frontend] Synced live backend static dir: ${backendLiveStaticDir}`)
+}
 
+process.exitCode = 0

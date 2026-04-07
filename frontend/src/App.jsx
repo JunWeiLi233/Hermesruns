@@ -21,6 +21,8 @@ const Races = React.lazy(() => import('./pages/Races'));
 const TodayRun = React.lazy(() => import('./pages/TodayRun'));
 const PredictionDetail = React.lazy(() => import('./pages/PredictionDetail'));
 const MuscleTraining = React.lazy(() => import('./pages/MuscleTraining'));
+const Rewards = React.lazy(() => import('./pages/Rewards'));
+const Settings = React.lazy(() => import('./pages/Settings'));
 
 function ScrollToTop() {
   const location = useLocation();
@@ -45,7 +47,7 @@ function ScrollToTop() {
 }
 
 function RouteLoading() {
-  return <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted, #64748b)' }}>Loading…</div>;
+  return <div className="route-loading">Loading...</div>;
 }
 
 function AdminOnlyRoute({ children }) {
@@ -71,30 +73,32 @@ function App() {
     <I18nProvider>
       <ThemeProvider>
         <UnitProvider>
-        <AuthProvider>
-          <Suspense fallback={<div style={{ textAlign: 'center', padding: '4rem' }}>Loading...</div>}>
-            <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/admin" element={<AdminLogin />} />
-              <Route path="/dashboard" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
-              <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
-              <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
-              <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
-              <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
-              <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
-              <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
-              <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
-              <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
-              <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
-              <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
-              <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </AuthProvider>
+          <AuthProvider>
+            <Suspense fallback={<div className="route-loading">Loading...</div>}>
+              <ScrollToTop />
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/admin" element={<AdminLogin />} />
+                <Route path="/dashboard" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
+                <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
+                <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
+                <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+                <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+                <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
+                <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
+                <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
+                <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
+                <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
+                <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
+                <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
+                <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
+                <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </AuthProvider>
         </UnitProvider>
       </ThemeProvider>
     </I18nProvider>

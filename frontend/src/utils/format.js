@@ -60,27 +60,38 @@ export function formatLongDate(value, lang) {
 
 /**
  * Format a distance in km with unit label.
- * e.g. "5.0 km" or "5.0 公里"
+ * e.g. "5.0 km" or "5.0 鍏噷"
  */
-export function formatDistance(km, digits = 1, lang) {
+export function formatDistanceValue(km, unit = 'km', digits = 1) {
   const value = Number(km || 0);
-  const unit = (lang || 'zh-CN') === 'en' ? 'km' : '公里';
-  return `${value.toFixed(digits)} ${unit}`;
+  const converted = unit === 'mile' ? value * 0.621371 : value;
+  return converted.toFixed(digits);
+}
+
+export function getDistanceUnitLabel(lang, unit = 'km') {
+  if (unit === 'mile') {
+    return (lang || 'zh-CN') === 'en' ? 'mi' : '英里';
+  }
+  return (lang || 'zh-CN') === 'en' ? 'km' : '公里';
+}
+
+export function formatDistance(km, digits = 1, lang, unit = 'km') {
+  return `${formatDistanceValue(km, unit, digits)} ${getDistanceUnitLabel(lang, unit)}`;
 }
 
 /**
  * Format pace from distance and time.
- * e.g. "5:30 /km" or "5:30 /公里"
+ * e.g. "5:30 /km" or "5:30 /鍏噷"
  */
 export function formatPace(distanceKm, movingTimeSeconds, lang) {
   if (!distanceKm || !movingTimeSeconds) {
-    const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/公里';
+    const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/鍏噷';
     return `0:00 ${suffix}`;
   }
   const paceSeconds = Math.round(movingTimeSeconds / distanceKm);
   const minutes = Math.floor(paceSeconds / 60);
   const seconds = paceSeconds % 60;
-  const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/公里';
+  const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/鍏噷';
   return `${minutes}:${String(seconds).padStart(2, '0')} ${suffix}`;
 }
 
@@ -94,3 +105,4 @@ export function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+

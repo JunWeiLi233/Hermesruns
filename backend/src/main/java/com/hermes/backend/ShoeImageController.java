@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 @RestController
 @RequestMapping("/api/shoes")
 public class ShoeImageController {
+    private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> QUERY_ONLY_FIELDS = Set.of("query");
     private static final Set<String> PHOTO_ONLY_FIELDS = Set.of("photoUrl");
 
@@ -178,13 +179,13 @@ public class ShoeImageController {
         final String photoUrlRaw;
         try {
             RequestBodyValidator.rejectUnexpectedFields(body, PHOTO_ONLY_FIELDS);
-            photoUrlRaw = RequestBodyValidator.optionalString(body, "photoUrl", 2048);
+            photoUrlRaw = RequestBodyValidator.optionalString(body, "photoUrl", MAX_PHOTO_REFERENCE_LENGTH);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
         String finalUrl;
         try {
-            finalUrl = SafeUrlValidator.validateHttpUrlOrNull(photoUrlRaw, 2048, "photoUrl");
+            finalUrl = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(photoUrlRaw, MAX_PHOTO_REFERENCE_LENGTH, "photoUrl");
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
@@ -394,13 +395,13 @@ public class ShoeImageController {
         final String photoUrlRaw;
         try {
             RequestBodyValidator.rejectUnexpectedFields(body, PHOTO_ONLY_FIELDS);
-            photoUrlRaw = RequestBodyValidator.optionalString(body, "photoUrl", 2048);
+            photoUrlRaw = RequestBodyValidator.optionalString(body, "photoUrl", MAX_PHOTO_REFERENCE_LENGTH);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
         String finalUrl;
         try {
-            finalUrl = SafeUrlValidator.validateHttpUrlOrNull(photoUrlRaw, 2048, "photoUrl");
+            finalUrl = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(photoUrlRaw, MAX_PHOTO_REFERENCE_LENGTH, "photoUrl");
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }

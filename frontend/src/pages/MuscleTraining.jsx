@@ -1293,13 +1293,13 @@ export default function MuscleTraining() {
     }));
   }, [isMile]);
 
-  function applyLoadedData(nextProfile, nextPlan) {
+  const applyLoadedData = useCallback((nextProfile, nextPlan) => {
     const normalized = normalizeProfile(nextProfile);
     setProfile(normalized);
     setDraft(normalized);
     setPlan(nextPlan);
     setCheckInDraft(buildCheckInDraft(nextPlan, isMile));
-  }
+  }, [isMile]);
 
   function applyPlanOnly(nextPlan) {
     setPlan(nextPlan);
@@ -1337,7 +1337,7 @@ export default function MuscleTraining() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, isZh, navigate]);
+  }, [applyLoadedData, isAuthenticated, isZh, navigate]);
 
   function updateDraft(field, value) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -1793,8 +1793,16 @@ export default function MuscleTraining() {
                                   <div className="muscle-exercise-grid">
                                     {(block.exercises || []).map((exercise) => {
                                       const exerciseCopy = getExerciseCardContent(exercise, isZh);
+                                      const legacyGuide = getExerciseGuide(exercise.name, isZh);
+                                      const legacyCopy = getLocalizedExerciseContent(exercise, isZh);
+                                      const exerciseTitle = `${formatExercisePrescription(exercise, isZh)} · ${legacyGuide.muscles.join(' / ')}`;
                                       return (
-                                        <article key={`${day.date}-${block.title}-${exercise.name}`} className="muscle-exercise-card muscle-exercise-plan-card">
+                                        <article
+                                          key={`${day.date}-${block.title}-${exercise.name}`}
+                                          className="muscle-exercise-card muscle-exercise-plan-card"
+                                          title={exerciseTitle}
+                                          data-legacy-intent={legacyCopy.intent || ''}
+                                        >
                                           <ExerciseIllustration exerciseName={exercise.name} />
                                           <div className="muscle-exercise-copy">
                                             <div className="muscle-exercise-top">

@@ -26,6 +26,7 @@ Hermes.local.env.*.ps1
 backend_log.txt
 *.pid
 *.seed
+tmp_*
 
 # local sync config (may contain paths/tokens)
 .tools/hermes_sync_config.json
@@ -81,13 +82,22 @@ frontend/dist/
 # Local AI workflow files
 .claude/
 .codex/
+.agents/
+.ai/
 AGENTS.md
 CLAUDE.md
 TASKS.md
+PRODUCT.md
 CODEX_DAILY_GUIDE.md
 CODEX_DAILY_GUIDE.txt
 CODEX_LOOP_GUIDE.txt
 CLAUDE_DAILY_GUIDE.txt
+CLAUDE_LOOP_GUIDE.md
+CLAUDE_LOOP_GUIDE.txt
+*_DAILY_GUIDE.md
+*_DAILY_GUIDE.txt
+*_LOOP_GUIDE.md
+*_LOOP_GUIDE.txt
 
 # AI codebase index (auto-generated, regenerated on session start)
 .ai-codex/
@@ -99,6 +109,13 @@ CLAUDE_DAILY_GUIDE.txt
 .tools/prompt_optimizer/
 .tools/example_prompt_optimizer.py
 .tools/requirements-prompt-optimizer.txt
+.tools/optimize-agent-context.mjs
 
 # Codex generator (local tool)
 .tools/generate-codex.js
+.tools/check-translations.mjs
+
+# Local workflow / QA docs (not project code)
+ALLOW_LIST_TERMINAL_COMMANDS.txt
+TRANSLATION_WORKFLOW.md
+frontend/VISUAL_QA_LIGHT_SYSTEM.md

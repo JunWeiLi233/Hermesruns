@@ -27,6 +27,13 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
     || t('profile.default_name');
 
   const initials = displayName.slice(0, 1).toUpperCase();
+  const primaryNavItems = [
+    { to: '/runs', label: t('runs.heading') },
+    { to: '/analysis', label: t('profile.analysis_title') },
+    { to: '/shoes', label: t('shoes.heading') },
+    { to: '/races', label: t('races.nav_label') },
+    { to: '/muscle-training', label: t('muscle_training.nav_label') },
+  ];
   const menuItems = [
     profile?.onSettings ? {
       key: 'settings',
@@ -63,32 +70,42 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
         </svg>
       ),
     } : null,
+    profile?.onRewards ? {
+      key: 'rewards',
+      label: t('profile.rewards_title'),
+      onClick: profile.onRewards,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l2.7 5.48 6.05.88-4.38 4.27 1.03 6.02L12 16.9l-5.4 2.84 1.03-6.02L3.25 9.36l6.05-.88L12 3z" />
+        </svg>
+      ),
+    } : null,
   ].filter(Boolean);
 
   return (
     <header className="top-nav">
       {backLink ? (
-        <Link to={backLink.to} className="logo logo-link">
+        <Link to={backLink.to} className="logo logo-link top-nav-brand-shell">
           {backLink.label && backLink.label !== 'HERMES' ? backLink.label : <HermesLogo />}
         </Link>
       ) : (
-        <Link to="/profile" className="logo logo-link"><HermesLogo /></Link>
+        <Link to="/profile" className="logo logo-link top-nav-brand-shell"><HermesLogo /></Link>
       )}
 
       <div className="top-nav-actions">
-        <div className="top-nav-shortcuts">
-          <NavLink
-            to="/races"
-            className={({ isActive }) => `top-nav-shortcut${isActive ? ' active' : ''}`}
-          >
-            {t('races.nav_label')}
-          </NavLink>
-          <NavLink
-            to="/muscle-training"
-            className={({ isActive }) => `top-nav-shortcut${isActive ? ' active' : ''}`}
-          >
-            {t('muscle_training.nav_label')}
-          </NavLink>
+        <div className="top-nav-shortcuts top-nav-shortcuts--primary">
+          {primaryNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `top-nav-shortcut${isActive ? ' active' : ''}`}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="top-nav-shortcuts top-nav-shortcuts--utility">
           <div className="unit-toggle">
             <button type="button" className={unit === 'km' ? 'active' : ''} onClick={() => setUnit('km')}>km</button>
             <button type="button" className={unit === 'mile' ? 'active' : ''} onClick={() => setUnit('mile')}>mi</button>
