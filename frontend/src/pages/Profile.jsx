@@ -648,12 +648,59 @@ export default function Profile() {
 
   const rewardShowcase = useMemo(() => buildRewardShowcase(runs, lang), [lang, runs]);
 
+  const latestRunAgeDays = useMemo(() => {
+    if (!runs || runs.length === 0) return null;
+    const latest = runs[0];
+    const latestDate = new Date(latest.startDate || latest.date);
+    if (isNaN(latestDate)) return null;
+    const diffMs = Date.now() - latestDate.getTime();
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  }, [runs]);
+
   const {
     recommendation: todayRecommendation,
     tone: recommendationTone,
   } = getTodayRunRecommendation({ runs, t, lang });
 
   const profileVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
+
+  const rollingVdotSeries = useMemo(() => {
+    const sorted = collectAllVdotEntries(runs);
+    if (sorted.length === 0) return [];
+    return computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
+  }, [runs]);
+
+  const vdotSparklineSvg = useMemo(() => {
+    if (!rollingVdotSeries || rollingVdotSeries.length < 5) return null;
+    const nowMs = Date.now();
+    const ms60d = 60 * 24 * 60 * 60 * 1000;
+    const points = rollingVdotSeries.filter(p => nowMs - p.x <= ms60d);
+    if (points.length < 5) return null;
+
+    const minX = points[0].x;
+    const maxX = points[points.length - 1].x;
+    const minY = Math.min(...points.map(p => p.y));
+    const maxY = Math.max(...points.map(p => p.y));
+
+    if (maxX === minX || maxY === minY) return null;
+
+    const width = 50;
+    const height = 18;
+    
+    const scaled = points.map(p => {
+      const x = ((p.x - minX) / (maxX - minX)) * width;
+      const y = height - ((p.y - minY) / (maxY - minY)) * height;
+      return `${x},${y}`;
+    });
+
+    const pathD = `M ${scaled.join(' L ')}`;
+
+    return (
+      <svg width={width} height={height} viewBox={`-1 -1 ${width + 2} ${height + 2}`} style={{ marginLeft: 8, display: 'inline-block', verticalAlign: 'middle', opacity: 0.8 }}>
+        <path d={pathD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }, [rollingVdotSeries]);
 
   const vo2ProgressChart = useMemo(() => {
     const sorted = collectAllVdotEntries(runs);
@@ -662,8 +709,7 @@ export default function Profile() {
       x: e.date.getTime(),
       y: Math.round(e.vdot * 10) / 10,
     }));
-    const rolling = computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
-    const lineData = rolling.map((p) => ({ x: p.x, y: p.y }));
+    const lineData = rollingVdotSeries.map((p) => ({ x: p.x, y: p.y }));
     return {
       datasets: [
         {
@@ -691,7 +737,7 @@ export default function Profile() {
         },
       ],
     };
-  }, [runs, t]);
+  }, [runs, t, rollingVdotSeries]);
 
   const vo2ChartOptions = useMemo(() => {
     const textColor = isDark ? '#e2e8f0' : '#334155';
@@ -1177,6 +1223,21 @@ export default function Profile() {
           <p className="profile-settings-hint">
             <Link to="/settings" className="profile-settings-link">{t('profile.manage_settings_hint')}</Link>
           </p>
+          {latestRunAgeDays != null && latestRunAgeDays > 7 && (
+            <div className="data-freshness-notice" role="status">
+              <span className="data-freshness-notice__icon" aria-hidden="true">⏱</span>
+              <span className="data-freshness-notice__text">
+                {t('profile.data_freshness_stale', { days: latestRunAgeDays })}
+              </span>
+              <button
+                type="button"
+                className="data-freshness-notice__action"
+                onClick={profile?.stravaLinked ? () => setSyncModalOpen(true) : () => setActiveImportModal('garmin')}
+              >
+                {profile?.stravaLinked ? t('profile.hero_sync_ready') : t('profile.import_data')}
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="profile-hero-strip">
@@ -1347,6 +1408,7 @@ export default function Profile() {
                     <div className="analysis-vo2-value-row">
                       <span className="analysis-vo2-value">{profileVdot.toFixed(1)}</span>
                       <span className="analysis-vo2-unit">{t('profile.vo2_unit_short')}</span>
+                      {vdotSparklineSvg}
                     </div>
                     <p className="analysis-vo2-copy">{t('profile.vo2_card_copy')}</p>
                   </>

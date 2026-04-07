@@ -37,13 +37,13 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | `/login` | Login | Email/password, Strava OAuth, Google OAuth |
 | `/signup` | Signup | Registration with OAuth |
 | `/admin` | Admin Login | System administrator sign-in |
-| `/dashboard` | Admin Dashboard | Premium admin portal with quick-actions panel, KPI grid, runner management, shoe image verification, job queues, and audit log |
+| `/dashboard` | Admin Dashboard | Premium admin portal with ops status strip, quick-actions panel, KPI grid, runner management, shoe image verification, job queues, and audit log |
 | `/profile` | Profile | Activity heatmap, hero metric strip, weekly flash cards, daily steps, personal records, VO₂max trend, file import, Garmin Connect import |
-| `/runs` | Run History | Filterable list (all/year/month/day) with sort controls (recent / longest / fastest), pagination |
+| `/runs` | Run History | Filterable list (all/year/month/day) with sort controls (recent / longest / fastest), pagination, sticky reset |
 | `/run/:id` | Run Detail | Route map, performance metrics, route intelligence |
 | `/analysis` | Deep Analytics | Summary insight band, VDOT scoring, VO₂max glossary disclosure, training paces, race predictions, training load (ACWR), recovery analysis |
 | `/today-run` | Today's Run | Personalized session plan, coach guidance (polarized training), inline weather-readiness strip for heat/acclimatization |
-| `/shoes` | Shoe Inventory | Health-summary row, owned-brand filters, mileage tracking, AI photo scanning, catalog browser |
+| `/shoes` | Shoe Inventory | Health-summary row, owned-brand filters, sticky locker reset, mileage tracking, AI photo scanning, catalog browser |
 | `/races` | Race Center | Interactive world map (Leaflet), 60+ race catalog, NYRR 9+1 progress, race targets, training advice |
 | `/muscle-training` | Muscle Training | Anatomical SVG muscle figure, session planning, training log |
 | `/rewards` | Rewards | Achievement badges, progression surface |
@@ -449,13 +449,13 @@ backend/           Spring Boot 4 + JPA — REST API :8080，同时提供前端�
 | `/login` | 登录 | 邮箱/密码、Strava OAuth、Google OAuth |
 | `/signup` | 注册 | 注册账号 |
 | `/admin` | 管理员登录 | 系统管理员登录 |
-| `/dashboard` | 管理面板 | 高级管理门户，含快捷操作面板、KPI 看板、用户管理、跑鞋图片审核、任务队列和审计日志 |
+| `/dashboard` | 管理面板 | 高级管理门户，含运维状态条、快捷操作面板、KPI 看板、用户管理、跑鞋图片审核、任务队列和审计日志 |
 | `/profile` | 个人主页 | 热力图、指标摘要条、周快报卡片、每日步数、个人纪录、VO₂max 趋势、数据导入、Garmin Connect 导入 |
-| `/runs` | 跑步历史 | 可筛选列表（全部/年/月/日）、排序控制（最近/最长/最快）、分页 |
+| `/runs` | 跑步历史 | 可筛选列表（全部/年/月/日）、排序控制（最近/最长/最快）、分页、吸附式重置 |
 | `/run/:id` | 跑步详情 | 路线地图、运动指标、路线分析 |
 | `/analysis` | 深度分析 | 摘要洞察栏、VDOT 评分、VO₂max 术语解释、训练配速、比赛预测、训练负荷（ACWR）、恢复分析 |
 | `/today-run` | 今日训练 | 个性化训练计划、教练建议（极化训练）、天气准备度内联展示 |
-| `/shoes` | 跑鞋管理 | 健康摘要栏、按品牌筛选、里程追踪、AI 图片扫描、跑鞋目录 |
+| `/shoes` | 跑鞋管理 | 健康摘要栏、按品牌筛选、吸附式重置、里程追踪、AI 图片扫描、跑鞋目录 |
 | `/races` | 赛事中心 | 交互式世界地图（Leaflet）、60+ 赛事目录、NYRR 9+1 进度、比赛目标、训练建议 |
 | `/muscle-training` | 肌肉训练 | 解剖 SVG 肌肉图、训练计划、训练记录 |
 | `/rewards` | 成就奖励 | 成就徽章、进阶激励 |

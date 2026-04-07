@@ -390,6 +390,13 @@ export default function Shoes() {
   const [browserBrandKey, setBrowserBrandKey] = useState('');
   const [browserCategory, setBrowserCategory] = useState('all');
   const [browserType, setBrowserType] = useState('all');
+  const isFiltered = inventoryTab !== 'active' || inventorySort !== 'recent' || lockerBrandFilter !== 'all';
+
+  const resetLocker = () => {
+    setInventoryTab('active');
+    setInventorySort('recent');
+    setLockerBrandFilter('all');
+  };
 
   // Add modal
   const [addOpen, setAddOpen] = useState(false);
@@ -1089,6 +1096,11 @@ export default function Shoes() {
             <button type="button" className={`shoe-locker-tab${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')}>
               {t('shoes.inventory_all', { count: shoes.length })}
             </button>
+            {isFiltered && (
+              <button type="button" className="shoe-locker-reset-btn" onClick={resetLocker}>
+                ✕ {lang === 'zh-CN' ? '重置筛选' : 'Reset locker'}
+              </button>
+            )}
           </div>
 
           <div className="shoe-locker-sortbar">
