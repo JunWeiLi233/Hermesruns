@@ -5,7 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
-import { formatDuration, formatPaceSeconds } from '../utils/format';
+import { formatDuration, formatPaceSeconds, formatDistance } from '../utils/format';
 import {
   computeTrainingPaces,
   predictRaceTimeCalibrated,
@@ -17,6 +17,7 @@ import {
   danielsRunningVo2CostMlKgMin,
 } from '../utils/vdot';
 import Modal from '../components/Modal';
+import InfoDisclosure from '../components/ui/InfoDisclosure';
 import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import ImportDataGuide from '../components/ImportDataGuide';
 import RunLevelMedal from '../components/RunLevelMedal';
@@ -393,6 +394,13 @@ export default function Analysis() {
       return { ...rd, timeMin };
     });
   }, [bestVdot, runs]);
+
+  // Hero insight band stats
+  const totalKm = useMemo(() => runs.reduce((s, r) => s + (r.distanceKm || (r.distanceMeters ? r.distanceMeters / 1000 : 0)), 0), [runs]);
+  const totalSec = useMemo(() => runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0), [runs]);
+  const totalRunsCount = runs.length;
+  const unitTotalKm = isMile ? totalKm / KM_TO_MILE : totalKm;
+  const unitLabel = isMile ? 'mile' : 'km';
 
   // Summary stats
   // Recovery state (matches old analysis.html logic)
@@ -892,8 +900,49 @@ export default function Analysis() {
             <span className="analysis-back-icon">&lsaquo;</span>
             <span>{t('analysis.back_to_profile')}</span>
           </Link>
-          <h1 className="analysis-title">{t('analysis.heading')}</h1>
+          <div className="page-intro-stack">
+            <span className="page-intro-kicker">{t('analysis.eyebrow')}</span>
+            <h1 className="analysis-title">{t('analysis.heading')}</h1>
+            <p className="page-intro-text">{t('analysis.hero_copy')}</p>
+          </div>
+          <div className="page-intro-actions">
+            <button type="button" className="btn-primary" onClick={() => setImportModalOpen(true)}>
+              {t('analysis.open_import')}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => navigate('/runs')}>
+              {t('analysis.open_runs')}
+            </button>
+          </div>
         </section>
+
+        {/* Insight summary band */}
+        {totalRunsCount > 0 && (
+          <section className="analysis-insight-band">
+            <div className="analysis-insight-metric">
+              <span className="analysis-insight-label">{t('analysis.total_runs_label')}</span>
+              <strong className="analysis-insight-value">{totalRunsCount}</strong>
+            </div>
+            <div className="analysis-insight-metric">
+              <span className="analysis-insight-label">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span>
+              <strong className="analysis-insight-value">{formatDistance(totalKm, 1, lang, unitLabel)}</strong>
+            </div>
+            {totalKm > 0 && (
+              <div className="analysis-insight-metric">
+                <span className="analysis-insight-label">{t('analysis.avg_pace_label')}</span>
+                <strong className="analysis-insight-value">
+                  {formatDuration(totalSec / unitTotalKm)}&nbsp;
+                  <span className="analysis-insight-unit">/{isMile ? 'mi' : 'km'}</span>
+                </strong>
+              </div>
+            )}
+            {bestVdot > 0 && (
+              <div className="analysis-insight-metric analysis-insight-metric--accent">
+                <span className="analysis-insight-label">{t('analysis.vo2max_label')}</span>
+                <strong className="analysis-insight-value">{bestVdot.toFixed(1)}</strong>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Run Level — medal centered in doughnut hole */}
         <section className="card analysis-card-center">
@@ -1097,7 +1146,12 @@ export default function Analysis() {
         <section className="card analysis-vdot-card">
           <div className="analysis-vdot-header">
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.vdot_auto_heading')}</h2>
+              <div className="inline-info-heading">
+                <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.vdot_auto_heading')}</h2>
+                <InfoDisclosure className="history-copy-toggle analysis-vdot-disclosure">
+                  <p>{t('analysis.vdot_glossary')}</p>
+                </InfoDisclosure>
+              </div>
               <p className="analysis-vdot-copy analysis-muted">{t('analysis.vdot_auto_copy')}</p>
             </div>
             {bestVdot > 0 && (

@@ -5,10 +5,12 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiJson } from '../api';
 import { formatDuration, formatDistance, formatPace, formatDate } from '../utils/format';
 import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
+import InfoDisclosure from '../components/ui/InfoDisclosure';
 
 const BATCH_SIZE = 10;
 const MONTH_NAMES_ZH = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 const MONTH_NAMES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES_ZH_CLEAN = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
 export default function Runs() {
   const { isAuthenticated } = useAuth();
@@ -21,6 +23,7 @@ export default function Runs() {
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const [runsSort, setRunsSort] = useState('date');
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -122,8 +125,20 @@ export default function Runs() {
     return t('runs.count_label', { count });
   }
 
-  const visibleRuns = filteredRuns.slice(0, visibleCount);
-  const monthNames = lang === 'en' ? MONTH_NAMES_EN : MONTH_NAMES_ZH;
+  const sortedRuns = useMemo(() => {
+    if (runsSort === 'distance') return [...filteredRuns].sort((a, b) => (b.distanceKm || 0) - (a.distanceKm || 0));
+    if (runsSort === 'pace') {
+      return [...filteredRuns].sort((a, b) => {
+        const paceA = a.distanceKm > 0 ? (a.movingTimeSeconds || 0) / a.distanceKm : Infinity;
+        const paceB = b.distanceKm > 0 ? (b.movingTimeSeconds || 0) / b.distanceKm : Infinity;
+        return paceA - paceB;
+      });
+    }
+    return filteredRuns;
+  }, [filteredRuns, runsSort]);
+
+  const visibleRuns = sortedRuns.slice(0, visibleCount);
+  const monthNames = lang === 'en' ? MONTH_NAMES_EN : MONTH_NAMES_ZH_CLEAN;
 
   // Auto-select first year for year/month modes
   useEffect(() => {
@@ -149,7 +164,12 @@ export default function Runs() {
         <section className="card history-hero">
           <span className="history-eyebrow">{t('runs.eyebrow')}</span>
           <div className="history-hero-top">
-            <h1 className="history-title">{t('runs.heading')}</h1>
+            <div className="inline-info-heading">
+              <h1 className="history-title">{t('runs.heading')}</h1>
+              <InfoDisclosure className="history-copy-toggle">
+                <p>{t('runs.page_copy')}</p>
+              </InfoDisclosure>
+            </div>
             <div className="history-count-pill">{countLabel(filteredRuns.length)}</div>
             <div className="history-filter-tabs">
               {['all', 'year', 'month', 'day'].map(mode => (
@@ -164,6 +184,7 @@ export default function Runs() {
               ))}
             </div>
           </div>
+          <p className="history-hero-copy">{t('runs.page_copy')}</p>
 
           {/* Sub-tabs */}
           <div className="history-filter-sub-tabs">
@@ -181,7 +202,6 @@ export default function Runs() {
             ))}
           </div>
 
-          <p className="history-copy">{t('runs.page_copy')}</p>
         </section>
 
         {/* Summary Grid */}
@@ -189,17 +209,23 @@ export default function Runs() {
           <article className="card history-summary-card">
             <span className="history-summary-label">{t('runs.total_distance')}</span>
             <div className="history-summary-value">{formatDistance(totalDist, 1, lang)}</div>
-            <div className="history-summary-note">{t('runs.total_distance_note')}</div>
+            <InfoDisclosure className="history-summary-info">
+              <p>{t('runs.total_distance_note')}</p>
+            </InfoDisclosure>
           </article>
           <article className="card history-summary-card">
             <span className="history-summary-label">{t('runs.average_pace')}</span>
             <div className="history-summary-value">{totalDist > 0 ? formatPace(totalDist, totalSec, lang) : (lang === 'en' ? '0:00 /km' : '0:00 /公里')}</div>
-            <div className="history-summary-note">{t('runs.average_pace_note')}</div>
+            <InfoDisclosure className="history-summary-info">
+              <p>{t('runs.average_pace_note')}</p>
+            </InfoDisclosure>
           </article>
           <article className="card history-summary-card">
             <span className="history-summary-label">{t('runs.latest_source')}</span>
             <div className="history-summary-value">{latestSource}</div>
-            <div className="history-summary-note">{t('runs.latest_source_note')}</div>
+            <InfoDisclosure className="history-summary-info">
+              <p>{t('runs.latest_source_note')}</p>
+            </InfoDisclosure>
           </article>
         </section>
 
@@ -207,7 +233,21 @@ export default function Runs() {
         <section className="card history-list-card">
           <div className="history-list-header">
             <h2>{t('runs.full_history')}</h2>
-            <p>{t('runs.full_history_copy')}</p>
+            <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+              <p>{t('runs.full_history_copy')}</p>
+            </InfoDisclosure>
+          </div>
+          <div className="runs-sortbar">
+            {['date', 'distance', 'pace'].map(sort => (
+              <button
+                key={sort}
+                type="button"
+                className={`runs-sort-btn${runsSort === sort ? ' active' : ''}`}
+                onClick={() => setRunsSort(sort)}
+              >
+                {t(`runs.sort_${sort}`)}
+              </button>
+            ))}
           </div>
 
           <div className="history-list">
@@ -215,7 +255,7 @@ export default function Runs() {
             {loadState === 'error' && <div className="history-status">{t('runs.load_error')}</div>}
             {loadState === 'ready' && filteredRuns.length === 0 && <div className="history-status">{t('runs.empty')}</div>}
             {loadState === 'ready' && visibleRuns.map((run, i) => {
-              const provider = run.provider || (lang === 'en' ? 'Manual' : '手动导入');
+              const provider = run.provider || (lang === 'en' ? 'Manual import' : '手动导入');
               const runName = run.name || t('runs.default_run_name');
               return (
                 <article key={i} className="history-row" onClick={() => openRun(run)}>

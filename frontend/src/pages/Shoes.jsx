@@ -9,6 +9,7 @@ import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
 import shoeCatalog from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
+import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
 
@@ -376,6 +377,7 @@ export default function Shoes() {
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
+  const distanceUnitLabel = getDistanceUnitLabel(lang, unit);
 
   const [shoes, setShoes] = useState([]);
   const [runs, setRuns] = useState([]);
@@ -384,6 +386,7 @@ export default function Shoes() {
   const [mergeBusy, setMergeBusy] = useState(false);
   const [inventoryTab, setInventoryTab] = useState('active');
   const [inventorySort, setInventorySort] = useState('recent');
+  const [lockerBrandFilter, setLockerBrandFilter] = useState('all');
   const [browserBrandKey, setBrowserBrandKey] = useState('');
   const [browserCategory, setBrowserCategory] = useState('all');
   const [browserType, setBrowserType] = useState('all');
@@ -665,8 +668,6 @@ export default function Shoes() {
     setFormPrimary(false);
     setAddOpen(true);
   }
-
-  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Add shoe wizard 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   const browserBrands = useMemo(
     () => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)).slice(0, 10),
     [catalog],
@@ -692,13 +693,24 @@ export default function Shoes() {
       .filter((item) => browserType === 'all' || (item.type || '') === browserType)
       .slice(0, 15);
   }, [browserBrand, browserCategory, browserType]);
+  const lockerBrands = useMemo(() => {
+    const brands = new Set();
+    for (const s of shoes) {
+      if (s.brand) brands.add(s.brand);
+    }
+    return Array.from(brands).sort();
+  }, [shoes]);
+
   const inventoryShoes = useMemo(() => {
     const source = inventoryTab === 'retired'
       ? retiredShoes
       : inventoryTab === 'all'
         ? shoes
         : activeShoes;
-    const ranked = [...source];
+    const filtered = lockerBrandFilter === 'all'
+      ? source
+      : source.filter(s => s.brand === lockerBrandFilter);
+    const ranked = [...filtered];
     ranked.sort((left, right) => {
       if (inventorySort === 'added') return (right.id || 0) - (left.id || 0);
       if (inventorySort === 'mileage') return (right.currentDistanceKm || 0) - (left.currentDistanceKm || 0);
@@ -707,15 +719,13 @@ export default function Shoes() {
       return rightUsage.latest - leftUsage.latest;
     });
     return ranked;
-  }, [activeShoes, inventorySort, inventoryTab, retiredShoes, shoes, usageByShoe]);
+  }, [activeShoes, inventorySort, inventoryTab, lockerBrandFilter, retiredShoes, shoes, usageByShoe]);
 
   useEffect(() => {
     if (!browserBrandKey && browserBrands.length > 0) {
       setBrowserBrandKey(browserBrands[0].brand);
     }
   }, [browserBrandKey, browserBrands]);
-
-  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Edit modal 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   function openEditForm(shoe) {
     setEditingShoe(shoe);
     setFormBrand(shoe.brand || '');
@@ -725,8 +735,6 @@ export default function Shoes() {
     setFormPrimary(!!shoe.isPrimary);
     setEditOpen(true);
   }
-
-  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Save shoe (add or edit) 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   async function handleSave(e) {
     e.preventDefault();
     const body = {
@@ -769,8 +777,6 @@ export default function Shoes() {
       loadShoes();
     } catch { /* ignored */ }
   }
-
-  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Scan 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
   function compressImage(file, maxSize = 1024, quality = 0.8) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -915,7 +921,7 @@ export default function Shoes() {
             }),
           });
         } else if (!s._existing && s._action !== 'skip') {
-          // New shoe �?add
+          // Add a brand-new shoe from the scan result.
           await apiFetch('/api/shoes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -925,7 +931,7 @@ export default function Shoes() {
             }),
           });
         }
-        // _action === 'keep_existing' or 'skip' �?do nothing
+        // keep_existing / skip intentionally leave the current shoe untouched.
       } catch { /* ignored */ }
     }
     setScanOpen(false);
@@ -934,7 +940,7 @@ export default function Shoes() {
     loadShoes();
   }
 
-  // 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?Image Picker 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柟闂寸绾惧綊鏌熼梻瀵割槮缁炬儳缍婇弻鐔兼⒒鐎靛壊妲紒鐐劤缂嶅﹪寮婚悢鍏尖拻閻庨潧澹婂Σ顔剧磼閻愵剙鍔ょ紓宥咃躬瀵鎮㈤崗灏栨嫽闁诲酣娼ф竟濠偽ｉ鍓х＜闁绘劦鍓欓崝銈囩磽瀹ュ拑韬€殿喖顭烽幃銏ゅ礂鐏忔牗瀚介梺璇查叄濞佳勭珶婵犲伣锝夘敊閸撗咃紲闂佽鍨庨崘锝嗗瘱闂備胶顢婂▍鏇㈠箲閸ヮ剙鐏抽柡鍐ㄧ墕缁€鍐┿亜韫囧海顦﹀ù婊堢畺閺屻劌鈹戦崱娆忓毈缂備降鍔岄妶鎼佸蓟閻斿吋鍎岄柛婵勫劤琚﹂梻浣告惈閻绱炴笟鈧妴浣割潨閳ь剟骞冨▎鎾崇妞ゆ挾鍣ュΛ褔姊婚崒娆戠獢婵炰匠鍏炬稑鈻庨幋鐐存闂佸湱鍎ら〃鎰礊閺嶃劎绡€闂傚牊渚楅崕鎰版煛閸涱喚鍙€闁哄本绋戦埥澶愬础閻愬樊娼绘俊鐐€戦崕鎻掔暆缁嬫娼栭柧蹇氼潐鐎氭岸鏌涘▎蹇ｆЦ闁衡偓椤撶儐娓婚柕鍫濋娴滄粍銇勯敂璇茬仯闁告瑥鎳樺娲箰鎼淬垻顦ラ梺绋匡攻閹倸鐣疯ぐ鎺戠＜闁绘劖娼欐禒顖涗繆閵堝繘妾悗绗涘浂鏁傞柣妯肩帛閻撴盯鏌涢埥鍡楀箹妞も晩鍓涚槐鎺撴綇閵娿儳顑傞梺閫炲苯澧剧紓宥呮瀹曪絾鎯旈妸銉ユ優闂佹寧娲栭崐褰掓偂濞戙垺鐓曢柟鎵虫櫅婵″灝顭胯濞茬喖寮婚敐澶婄闁瑰濮崇划鐢告⒑闂堟稒鎼愰悗姘嵆閻涱噣骞掑Δ鈧粻锝嗙節閸偄濮冮柟顕嗙悼缁辨挻鎷呴崫鍕闂佺瀛╂繛濠冧繆閸洖绠瑰ù锝嗙摃閹芥洟姊洪崫鍕窛闁哥姵鎸惧褔鍩€椤掑嫭顥婃い鎰╁灪婢跺嫰鏌熺亸鏍ㄦ珔閻撱倖銇勯幘璺盒ョ痪鎹愭闇夐柨婵嗘噹缁狙勩亜鎼粹剝顥㈤柡灞剧〒閳ь剨缍嗛崑鍛焊椤撱垺鐓冮悷娆忓閻忔挳鏌熼瑙勬珚鐎规洖缍婇、鏇㈡晲閸℃瑦顫栧┑鐘垫暩婵敻顢欓弽顓炵獥婵°倕鎳庣粻浼存煕閹邦垰鐨洪柡鍡畵閺岀喖鏌囬敃鈧弸銈囩棯閹冩倯濞ｅ洤锕、娑橆煥閸涱厾顐奸梻浣虹帛缁诲嫰宕楀Ο渚綎婵炲樊浜滄导鐘绘煕閺囥劌澧紒鎰⊕缁绘繂鈻撻崹顔界亪闂佹悶鍨肩亸顏堟倶鐎ｎ亶娓婚柕鍫濇婢ч亶鏌涚€ｎ剙浠遍柟顔光偓鏂ユ瀻闁规壋鏅欑花濠氭⒑閸濆嫯鐧侀柛鏇炵仛椤ワ綁姊绘担瑙勩仧闁告挻鐟╂俊鍓佺矙鐠恒劍娈鹃梺闈涳紡閳ь剟宕戦幘缁樻櫜閹肩补鍓濋悘宥夋⒑閹惰姤鏁遍柛銊ユ健瀵鈽夊Ο閿嬫杸闂佺硶鍓濋〃蹇斿閳ь剟姊绘担绛嬪殭缂佺粯蓱缁傚秹宕奸弴鐐舵憰濠电偞鍨崹娲磻閹邦喒鍋撶憴鍕婵炲眰鍊濋崺鍛般亹閹烘挴鎷烘繛鏉戝悑閻熝囧礆娴煎瓨鐓曢柕蹇ョ磿閸欌偓闂佺偨鍎荤粻鎾翠繆閹间礁鐓涘ù锝嗙摃閳ь剙娼″娲礃閸欏鍎撻梺绋匡攻閸旀瑩銆佸Δ鍛妞ゆ垼濮ょ€氬吋绻濆▓鍨灓闁硅櫕鎸哥叅闁靛牆顦伴崐鎸庣箾瀹割喕绨奸柣鎾存礋閺屾洘绻涢悙顒佺彃闂佽鐓＄粻鏍蓟閻旂⒈鏁嶆慨姗嗗墻娴煎啫顪冮妶鍐ㄧ仾闁烩晩鍨堕獮鍐ㄢ枎閹炬潙娈ら梺鑲╊焾閻忔岸宕ú顏呪拻闁稿本鐟ч崝宥夋倵缁楁稑鎳忓畷鏌ユ煕瀹€鈧崐娑㈠炊椤掑鏅┑鐘诧工閹冲秶绮径瀣瘈闁汇垽娼ф牎缂佺偓婢樼粔褰掑箖閿熺姴鍗抽柕蹇ョ磿閸樼敻姊绘笟鍥у伎缂佺姵鍨堕弲鍫曨敊閸撗咃紲闂佺粯鐟﹂悷銉р偓姘煎枤缁粯銈ｉ崘鈺冨幈濡炪倖鍔х徊璺ㄧ不閵夆晜鐓熼柟鎯у暱閹垿鏌熸笟鍨缂佺粯绻堝畷姗€鍩炴径姝屾闂佽姘﹂～澶娒洪敃鍌氱；濠电姴鍊婚弳锕傛煟閺冨倵鎷￠柡浣告闇夐柨婵嗘处閸も偓濡炪倕绻戞竟鍡欐閹捐纾兼慨姗嗗厴閸嬫挻顦版惔锝囩劶婵炴挻鍩冮崑鎾淬亜閵忥紕澧电€规洖宕埥澶娾枎韫囧海缍嶅┑鐘垫暩婵挳鏁冮妶澶婄疇閹兼番鍔岄崹鍌涚節闂堟侗鍎愰柛瀣剁秮閺屾盯濡烽敐鍛瀷闂侀潧鐗嗛悺銊︾┍婵犲洤绠甸柟鐑樻煥閳敻姊洪崫鍕拱婵炲弶绻勭划璇测槈閵忕姴宓嗛梺缁樺姈閸旀垿宕曢弻銉ノ﹂柛鏇ㄥ灠缁秹鏌嶈閸撶喖鐛幋锕€鐐婄憸婊冾焽閺嶃劎绠剧€瑰壊鍠曠花鑽も偓鐟版啞缁诲倿鍩為幋锔藉亹闁圭粯宸婚崑鎾诲箹娓氬﹦绋忛梺鍛婄☉閻°劑鍩涢幋锕€绾ч柣鎰綑椤庢粍銇勯弬娆炬█闁哄矉绻濆畷銊╊敍濮橈絾鐎伴柣搴㈩問閸ｎ噣宕戞繝鍌滄殾闁圭儤顨嗛崐鐑芥煛婢跺鐏ｉ柟顕嗙秮閺岋絾鎯旈垾鍐茶緟闂佺顑嗛幑鍥蓟瀹ュ牜妾ㄩ梺鍛婃尵閸犳牠�?
+  // Keep shoe-photo search, upload preview, and apply actions in one helper flow.
   function openImagePicker(shoe) {
     setImgPickerShoe(shoe);
     setImgCandidates([]);
@@ -1061,8 +1067,9 @@ export default function Shoes() {
         <section className="card shoe-locker-shell">
           <div className="shoe-locker-topbar">
             <div>
-              <span className="shoe-locker-kicker">Shoe Locker</span>
-              <h1 className="shoe-locker-title">All Running Shoes</h1>
+              <span className="shoe-locker-kicker">{t('shoes.eyebrow')}</span>
+              <h1 className="shoe-locker-title">{t('shoes.heading')}</h1>
+              <p className="shoe-locker-subcopy">{t('shoes.page_copy')}</p>
             </div>
             <div className="shoe-locker-actions">
               <button type="button" className="btn-secondary" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
@@ -1074,32 +1081,71 @@ export default function Shoes() {
 
           <div className="shoe-locker-tabbar">
             <button type="button" className={`shoe-locker-tab${inventoryTab === 'active' ? ' active' : ''}`} onClick={() => setInventoryTab('active')}>
-              {`Active (${activeShoes.length})`}
+              {t('shoes.inventory_active', { count: activeShoes.length })}
             </button>
             <button type="button" className={`shoe-locker-tab${inventoryTab === 'retired' ? ' active' : ''}`} onClick={() => setInventoryTab('retired')}>
-              {`Retired (${retiredShoes.length})`}
+              {t('shoes.inventory_retired', { count: retiredShoes.length })}
             </button>
             <button type="button" className={`shoe-locker-tab${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')}>
-              {`All (${shoes.length})`}
+              {t('shoes.inventory_all', { count: shoes.length })}
             </button>
           </div>
 
           <div className="shoe-locker-sortbar">
             <button type="button" className={`shoe-locker-sort${inventorySort === 'recent' ? ' active' : ''}`} onClick={() => setInventorySort('recent')}>
-              Recent use
+              {t('shoes.sort_recent')}
             </button>
             <button type="button" className={`shoe-locker-sort${inventorySort === 'added' ? ' active' : ''}`} onClick={() => setInventorySort('added')}>
-              Recent added
+              {t('shoes.sort_added')}
             </button>
             <button type="button" className={`shoe-locker-sort${inventorySort === 'mileage' ? ' active' : ''}`} onClick={() => setInventorySort('mileage')}>
-              Total mileage
+              {t('shoes.sort_mileage')}
             </button>
           </div>
 
+          {lockerBrands.length > 1 && (
+            <div className="shoe-locker-brandbar">
+              <button
+                type="button"
+                className={`shoe-locker-brand${lockerBrandFilter === 'all' ? ' active' : ''}`}
+                onClick={() => setLockerBrandFilter('all')}
+              >
+                {t('shoes.locker_all_brands')}
+              </button>
+              {lockerBrands.map(brand => (
+                <button
+                  key={brand}
+                  type="button"
+                  className={`shoe-locker-brand${lockerBrandFilter === brand ? ' active' : ''}`}
+                  onClick={() => setLockerBrandFilter(brand)}
+                >
+                  {brand}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeShoes.length > 0 && inventoryTab !== 'retired' && (
+            <div className="shoe-health-summary-row">
+              <div className="shoe-health-summary-pill">
+                <span className="shoe-health-summary-label">{t('shoes.health_summary_active', { count: activeShoes.length })}</span>
+              </div>
+              {retireSoonShoes.length > 0 && (
+                <div className="shoe-health-summary-pill shoe-health-summary-pill--warn">
+                  <span className="shoe-health-summary-label">{t('shoes.health_summary_retire_soon', { count: retireSoonShoes.length })}</span>
+                </div>
+              )}
+              <div className="shoe-health-summary-pill shoe-health-summary-pill--health">
+                <span className="shoe-health-summary-label">{t('shoes.health_summary_rotation')}</span>
+                <strong>{avgHealthLabel}</strong>
+              </div>
+            </div>
+          )}
+
           <div className="shoe-locker-layout">
             <div className="shoe-locker-list">
-              {loadState === 'loading' && <div className="history-status">Loading...</div>}
-              {loadState === 'error' && <div className="history-status">Error loading shoes.</div>}
+              {loadState === 'loading' && <div className="history-status">{t('shoes.loading')}</div>}
+              {loadState === 'error' && <div className="history-status">{t('shoes.load_error')}</div>}
               {loadState === 'ready' && inventoryShoes.length === 0 && (
                 <div className="history-status">{inventoryTab === 'retired' ? t('shoes.retired_label') : t('shoes.empty')}</div>
               )}
@@ -1137,7 +1183,7 @@ export default function Shoes() {
                           )}
                         </div>
                         <div className="shoe-locker-actions-inline">
-                          <button type="button" className="shoe-btn-edit" onClick={() => openImagePicker(shoe)}>Photo</button>
+                          <button type="button" className="shoe-btn-edit" onClick={() => openImagePicker(shoe)}>{t('shoes.photo_action')}</button>
                           <button type="button" className="shoe-btn-edit" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
                           {!shoe.retired && (
                             <button type="button" className="shoe-btn-retire" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
@@ -1147,8 +1193,8 @@ export default function Shoes() {
                       </div>
 
                       <div className="shoe-locker-stats">
-                        <span>{current.toFixed(1)} / {max} km</span>
-                        <span>{`${usage.count} uses`}</span>
+                        <span>{formatDistanceValue(current, unit, 1)} / {formatDistanceValue(max, unit, 0)} {distanceUnitLabel}</span>
+                        <span>{t('shoes.uses_count', { count: usage.count })}</span>
                         <span>{t(`shoes.${TYPE_LABELS[shoe.type] || 'type_daily'}`)}</span>
                       </div>
 
@@ -1176,16 +1222,16 @@ export default function Shoes() {
 
             <aside className="shoe-locker-sidebar">
               <div className="shoe-locker-spotlight">
-                <span className="shoe-locker-sidebar-kicker">Current primary</span>
+                <span className="shoe-locker-sidebar-kicker">{t('shoes.sidebar_primary')}</span>
                 <strong>
                   {primaryShoe
                     ? formatShoeDisplayName({ brand: primaryShoe.brand, model: primaryShoe.model, nickname: primaryShoe.nickname, lang })
-                    : 'No shoes yet'}
+                    : t('shoes.sidebar_empty_title')}
                 </strong>
                 <span>
                   {primaryShoe
-                    ? `${(primaryShoe.currentDistanceKm || 0).toFixed(0)} / ${primaryShoe.maxDistanceKm || 650} km`
-                    : 'Add your first pair to start tracking the rotation.'}
+                    ? `${formatDistanceValue(primaryShoe.currentDistanceKm || 0, unit, 0)} / ${formatDistanceValue(primaryShoe.maxDistanceKm || 650, unit, 0)} ${distanceUnitLabel}`
+                    : t('shoes.sidebar_empty_copy')}
                 </span>
               </div>
 
@@ -1196,7 +1242,7 @@ export default function Shoes() {
                 </div>
                 <div>
                   <span>{t('shoes.total_mileage')}</span>
-                  <strong>{totalMileage.toFixed(1)} km</strong>
+                  <strong>{formatDistanceValue(totalMileage, unit, 1)} {distanceUnitLabel}</strong>
                 </div>
                 <div>
                   <span>{t('shoes.avg_health')}</span>
@@ -1206,7 +1252,7 @@ export default function Shoes() {
 
               {retireSoonShoes.length > 0 && (
                 <div className="shoe-locker-alerts">
-                  <div className="shoe-locker-sidebar-kicker">Watchlist</div>
+                  <div className="shoe-locker-sidebar-kicker">{t('shoes.watchlist')}</div>
                   {retireSoonShoes.map((shoe) => (
                     <div key={shoe.id} className="shoe-locker-alert-card">
                       <span>{formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}</span>
@@ -1222,8 +1268,9 @@ export default function Shoes() {
         <section className="card shoe-browser-shell">
           <div className="shoe-browser-head">
             <div>
-              <span className="shoe-locker-kicker">Select Shoes</span>
-              <h2 className="shoe-browser-title">Browse by brand</h2>
+              <span className="shoe-locker-kicker">{t('shoes.browser_kicker')}</span>
+              <h2 className="shoe-browser-title">{t('shoes.browser_heading')}</h2>
+              <p className="shoe-browser-copy">{t('shoes.browser_copy')}</p>
             </div>
           </div>
 
@@ -1245,7 +1292,7 @@ export default function Shoes() {
                 className={`shoe-browser-filter${browserType === typeKey ? ' active' : ''}`}
                 onClick={() => setBrowserType(typeKey)}
               >
-                {typeKey === 'all' ? 'All types' : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}
+                {typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}
               </button>
             ))}
           </div>
@@ -1273,8 +1320,8 @@ export default function Shoes() {
 
             <div className="shoe-browser-panel">
               <div className="shoe-browser-panel-head">
-                <strong>{browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : 'Brand'}</strong>
-                <span>{browserModels.length} models</span>
+                <strong>{browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : t('shoes.browser_brand')}</strong>
+                <span>{t('shoes.model_count', { count: browserModels.length })}</span>
               </div>
               <div className="shoe-browser-grid">
                 {browserModels.map((model, index) => (
@@ -1293,7 +1340,7 @@ export default function Shoes() {
                 ))}
                 {browserModels.length === 0 && (
                   <div className="shoe-selector-empty">
-                    {'No models for this filter yet'}
+                    {t('shoes.browser_empty')}
                   </div>
                 )}
               </div>
@@ -1303,7 +1350,7 @@ export default function Shoes() {
 
         <section className="card shoe-performance-panel">
           <div className="shoe-performance-head">
-            <div>
+            <div className="inline-info-heading">
               <h2>{t('shoes.performance_heading')}</h2>
               <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
                 <p>{t('shoes.performance_copy')}</p>
@@ -1379,10 +1426,12 @@ export default function Shoes() {
 
         {duplicateClusters.length > 0 && (
           <section className="card shoe-duplicate-panel">
-            <h2 className="shoe-duplicate-title">{t('shoes.duplicate_title')}</h2>
-            <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
-              <p className="shoe-duplicate-copy">{t('shoes.duplicate_copy')}</p>
-            </InfoDisclosure>
+            <div className="inline-info-heading">
+              <h2 className="shoe-duplicate-title">{t('shoes.duplicate_title')}</h2>
+              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+                <p className="shoe-duplicate-copy">{t('shoes.duplicate_copy')}</p>
+              </InfoDisclosure>
+            </div>
             {duplicateClusters.map((cluster, ci) => (
               <div key={cluster.identityKey || ci} className="shoe-duplicate-cluster">
                 <div className="shoe-duplicate-cluster-meta">
@@ -1702,4 +1751,7 @@ export default function Shoes() {
     </AuthenticatedPageChrome>
   );
 }
+
+
+
 

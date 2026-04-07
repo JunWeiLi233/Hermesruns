@@ -15,7 +15,9 @@ export function useTheme() {
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return AVAILABLE_THEMES.includes(saved) ? saved : 'light';
+    if (saved === 'light') return 'light';
+    localStorage.setItem(STORAGE_KEY, 'light');
+    return 'light';
   });
 
   const setTheme = useCallback((newTheme) => {

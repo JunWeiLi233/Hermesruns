@@ -124,6 +124,19 @@ assert.deepEqual(
   }
 );
 
+assert.deepEqual(
+  parseSignupStatusQuery('?email=runner%40hermes.com&error=STRAVA_LINK_CONFIRMATION_REQUIRED&details=Choose%20runner', {
+    stravaConfirmationFallback: 'fallback',
+  }),
+  {
+    banner: 'strava_link_confirmation_required',
+    autoOpen: true,
+    errorMessage: 'Choose runner',
+    shouldClear: true,
+    prefillEmail: 'runner@hermes.com',
+  }
+);
+
 assert.equal(parseCheckoutBannerQuery('?checkout=success'), 'success');
 assert.equal(parseCheckoutBannerQuery('?checkout=cancel'), 'cancel');
 assert.equal(parseCheckoutBannerQuery('?foo=bar'), null);

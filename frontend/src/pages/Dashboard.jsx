@@ -486,16 +486,19 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <div className="dashboard-container">
+      <div className="dashboard-container admin-portal-container">
         {message && <div className="admin-shoe-status dashboard-message">{message}</div>}
-        <div className="dashboard-header dashboard-header--spaced">
-          <h2>{t('dashboard.portal_title')}</h2>
-          <p>{t('dashboard.portal_desc')}</p>
-        </div>
+        <section className="admin-portal-header">
+          <div className="admin-portal-header__stack">
+            <span className="admin-portal-header__eyebrow">{t('dashboard.portal_eyebrow')}</span>
+            <h1 className="admin-portal-header__title">{t('dashboard.portal_title')}</h1>
+            <p className="admin-portal-header__desc">{t('dashboard.portal_desc')}</p>
+          </div>
+        </section>
 
-        <div className="dashboard-tab-row">
+        <div className="admin-portal-tabbar">
           {TAB_KEYS.map(key => (
-            <button key={key} type="button" className={`history-filter-tab${activeTab === key ? ' active' : ''}`} onClick={() => setActiveTab(key)}>
+            <button key={key} type="button" className={`admin-portal-tab${activeTab === key ? ' active' : ''}`} onClick={() => setActiveTab(key)}>
               {t(`dashboard.tab_${key}`)}
             </button>
           ))}
@@ -503,6 +506,32 @@ export default function Dashboard() {
 
         {activeTab === 'overview' && overview && (
           <>
+            <div className="admin-quick-actions">
+              <span className="admin-quick-actions__label">{t('dashboard.quick_actions_title')}</span>
+              <div className="admin-quick-actions__row">
+                <button type="button" className="admin-quick-action-btn" onClick={() => setActiveTab('users')}>
+                  <span className="admin-quick-action-icon">👤</span>
+                  <span>{t('dashboard.quick_action_users')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={() => { setActiveTab('shoes'); setShoeQuery(prev => ({ ...prev, queue: 'unverified_photo', page: 0 })); }}>
+                  <span className="admin-quick-action-icon">👟</span>
+                  <span>{t('dashboard.quick_action_shoe_review')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={() => setActiveTab('jobs')}>
+                  <span className="admin-quick-action-icon">⚙</span>
+                  <span>{t('dashboard.quick_action_jobs')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={() => setActiveTab('audit')}>
+                  <span className="admin-quick-action-icon">🔍</span>
+                  <span>{t('dashboard.quick_action_audit')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={triggerSync}>
+                  <span className="admin-quick-action-icon">↻</span>
+                  <span>{t('dashboard.nav_sync_strava')}</span>
+                </button>
+              </div>
+            </div>
+
             <div className="history-summary-grid history-summary-grid--spaced">
               {overview.kpis?.map(kpi => (
                 <article key={kpi.label} className="card history-summary-card">

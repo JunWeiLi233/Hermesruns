@@ -1015,7 +1015,7 @@ public class OAuthController {
     }
 
     private String resolveEntryPage(String state) {
-        if (isProfileLinkState(state)) {
+        if (isProfileLinkState(state) || Objects.equals(state, "profile-link")) {
             return "/profile";
         }
         return Objects.equals(state, "signup") ? "/signup" : "/login";

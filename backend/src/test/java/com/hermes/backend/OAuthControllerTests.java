@@ -258,8 +258,9 @@ class OAuthControllerTests {
         RedirectView redirectView = controller.handleStravaCallback("oauth-code", null, state);
 
         assertNotNull(redirectView.getUrl());
-        assertTrue(redirectView.getUrl().contains("/profile?linking=confirmation_required"));
+        assertTrue(redirectView.getUrl().startsWith("/profile?"));
         assertTrue(redirectView.getUrl().contains("error=STRAVA_LINK_SESSION_EXPIRED"));
+        assertTrue(redirectView.getUrl().contains("details="));
         assertTrue(Objects.equals(currentRunner.getStravaAthleteId(), null));
         verify(runnerRepository, never()).save(any(Runner.class));
         verify(authService, never()).issueSessionToken(any(Runner.class));

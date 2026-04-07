@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
-import { apiFetch, apiJson } from '../api';
+import { apiJson } from '../api';
 import shoeCatalog from '../data/shoeCatalog';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -118,7 +118,6 @@ export default function ShoeCatalog() {
   const [catalog, setCatalog] = useState(shoeCatalog);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const [formBrand, setFormBrand] = useState('');
   const [formModel, setFormModel] = useState('');
   const seriesSectionRef = useRef(null);
@@ -200,7 +199,6 @@ export default function ShoeCatalog() {
     setSelectedBrand(brand);
     setSelectedCategory('all');
     setFormBrand(brand.brand);
-    setSearchQuery('');
     requestAnimationFrame(() => {
       seriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });

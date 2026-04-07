@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -12,7 +12,9 @@ import WeatherTemperatureBar from '../components/WeatherTemperatureBar';
 import { TemperatureGlyph, WeatherGlyph } from '../components/WeatherGlyph';
 import SectionCard from '../components/ui/SectionCard';
 import MetricCard from '../components/ui/MetricCard';
-import { formatDuration } from '../utils/format';
+import InfoDisclosure from '../components/ui/InfoDisclosure';
+import { formatDuration, formatDistance } from '../utils/format';
+import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
 import {
@@ -104,112 +106,6 @@ function localizeStravaSyncMessage(message, t) {
   return normalized;
 }
 
-function startOfWeek(date) {
-  const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  copy.setDate(copy.getDate() - copy.getDay());
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
-function getConsecutiveRunDayStreak(runs) {
-  const sortedDays = [...new Set(
-    runs
-      .map((run) => new Date(run.startTime || run.startDate || 0))
-      .filter((date) => !Number.isNaN(date.getTime()))
-      .map((date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()),
-  )].sort((a, b) => b - a);
-
-  if (sortedDays.length === 0) return 0;
-  let streak = 1;
-  for (let i = 1; i < sortedDays.length; i += 1) {
-    const diffDays = Math.round((sortedDays[i - 1] - sortedDays[i]) / 86400000);
-    if (diffDays === 1) streak += 1;
-    else break;
-  }
-  return streak;
-}
-
-function getConsecutiveRunWeekStreak(runs) {
-  const sortedWeeks = [...new Set(
-    runs
-      .map((run) => new Date(run.startTime || run.startDate || 0))
-      .filter((date) => !Number.isNaN(date.getTime()))
-      .map((date) => startOfWeek(date).getTime()),
-  )].sort((a, b) => b - a);
-
-  if (sortedWeeks.length === 0) return 0;
-  let streak = 1;
-  for (let i = 1; i < sortedWeeks.length; i += 1) {
-    const diffWeeks = Math.round((sortedWeeks[i - 1] - sortedWeeks[i]) / (7 * 86400000));
-    if (diffWeeks === 1) streak += 1;
-    else break;
-  }
-  return streak;
-}
-
-function countKeywordRuns(runs, pattern) {
-  return runs.reduce((total, run) => {
-    const haystack = `${run.name || ''} ${run.title || ''} ${run.description || ''}`;
-    return total + (pattern.test(haystack) ? 1 : 0);
-  }, 0);
-}
-
-function RewardGlyph({ icon }) {
-  if (icon === 'park') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 3 C9 3 7 5.2 7 8 c0 1.6 0.6 3 1.7 4 H5.8 l2.8 3.6 h2.3 V21 h2.2 v-5.4 h2.3 l2.8-3.6 h-2.9 C16.4 11 17 9.6 17 8 c0-2.8-2-5-5-5 Z" />
-      </svg>
-    );
-  }
-  if (icon === 'bridge') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 17 h16 v2 H4 Z M5 15 c1.8 0 2.2-6 7-6 s5.2 6 7 6 v2 c-2 0-3.3-1.3-4.5-2.5 C13.5 13.3 13 13 12 13 s-1.5 0.3-2.5 1.5 C8.3 15.7 7 17 5 17 Z" />
-      </svg>
-    );
-  }
-  if (icon === 'city') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 20 h16 v2 H4 Z M6 8 h4 v12 H6 Z M11 4 h7 v16 h-7 Z M7.5 10.5 h1 v1 h-1 Z M7.5 13.5 h1 v1 h-1 Z M13 7 h1.2 v1.2 H13 Z M15.8 7 h1.2 v1.2 h-1.2 Z M13 10 h1.2 v1.2 H13 Z M15.8 10 h1.2 v1.2 h-1.2 Z M13 13 h1.2 v1.2 H13 Z M15.8 13 h1.2 v1.2 h-1.2 Z" />
-      </svg>
-    );
-  }
-  if (icon === 'calendar') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M7 2 h2 v3 H7 Z M15 2 h2 v3 h-2 Z M4 5 h16 v15 H4 Z M6 9 h12 v9 H6 Z" />
-      </svg>
-    );
-  }
-  if (icon === 'crown') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 18 h16 l-1.5 3 h-13 Z M5 7 l4 4 3-6 3 6 4-4 1 9 H4 Z" />
-      </svg>
-    );
-  }
-  if (icon === 'summit') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3 20 11 6 l2.3 4 1.7-2 6 12 Z M13 6 h5 l-2 3 Z" />
-      </svg>
-    );
-  }
-  if (icon === 'streak') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M13 2 6 13 h4 l-1 9 7-11 h-4 l1-9 Z" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 2 15 9 h7 l-5.5 4.2 2.1 7.1 L12 16.7 5.4 20.3 l2.1-7.1 L2 9 h7 Z" />
-    </svg>
-  );
-}
 
 export default function Profile() {
   const { isAuthenticated } = useAuth();
@@ -750,86 +646,7 @@ export default function Profile() {
 
   const activeWeeklyFlashcard = weeklyFlashcards[weeklyFlashIndex % Math.max(weeklyFlashcards.length, 1)];
 
-  const rewardShowcase = useMemo(() => {
-    const longestRunKm = runs.reduce((max, run) => Math.max(max, Number(run.distanceKm || 0)), 0);
-    const streakDays = getConsecutiveRunDayStreak(runs);
-    const streakWeeks = getConsecutiveRunWeekStreak(runs);
-    const parkRuns = countKeywordRuns(runs, /\b(park|garden|greenway|trail)\b/i);
-    const bridgeRuns = countKeywordRuns(runs, /\b(bridge|riverwalk|waterfront)\b/i);
-    const cityRuns = countKeywordRuns(runs, /\b(city|downtown|plaza|campus|tower|building)\b/i);
-    const earned = [
-      {
-        id: 'streak-7',
-        icon: 'streak',
-        title: lang === 'zh-CN' ? '七日连跑' : '7-Day Streak',
-        subtitle: lang === 'zh-CN' ? `连续 ${streakDays} 天保持跑步节奏` : `${streakDays} straight days on the run`,
-        earned: streakDays >= 7,
-      },
-      {
-        id: 'streak-30',
-        icon: 'calendar',
-        title: lang === 'zh-CN' ? '三十日挑战' : '30-Day Challenge',
-        subtitle: lang === 'zh-CN' ? '把短期坚持变成稳定习惯' : 'Turn consistency into a durable habit',
-        earned: streakDays >= 30,
-      },
-      {
-        id: 'weeks-4',
-        icon: 'crown',
-        title: lang === 'zh-CN' ? '四周连续训练' : '4-Week Flow',
-        subtitle: lang === 'zh-CN' ? `已连续 ${streakWeeks} 周完成跑步` : `${streakWeeks} consecutive training weeks`,
-        earned: streakWeeks >= 4,
-      },
-      {
-        id: 'park',
-        icon: 'park',
-        title: lang === 'zh-CN' ? '公园探索家' : 'Park Explorer',
-        subtitle: lang === 'zh-CN' ? `在路线名里捕捉到 ${parkRuns} 次公园或绿道探索` : `${parkRuns} park or trail themed efforts`,
-        earned: parkRuns >= 1,
-      },
-      {
-        id: 'bridge',
-        icon: 'bridge',
-        title: lang === 'zh-CN' ? '桥梁猎手' : 'Bridge Chaser',
-        subtitle: lang === 'zh-CN' ? `已记录 ${bridgeRuns} 次桥边路线` : `${bridgeRuns} bridge or waterfront routes logged`,
-        earned: bridgeRuns >= 1,
-      },
-      {
-        id: 'city',
-        icon: 'city',
-        title: lang === 'zh-CN' ? '城市地标收藏家' : 'City Landmark Hunter',
-        subtitle: lang === 'zh-CN' ? `已记录 ${cityRuns} 次城市地标路线` : `${cityRuns} city landmark style runs`,
-        earned: cityRuns >= 1,
-      },
-      {
-        id: 'long-run',
-        icon: 'summit',
-        title: lang === 'zh-CN' ? '长距离里程碑' : 'Long Run Milestone',
-        subtitle: lang === 'zh-CN' ? `单次最长 ${longestRunKm.toFixed(1)} km` : `Longest single run: ${longestRunKm.toFixed(1)} km`,
-        earned: longestRunKm >= 15,
-      },
-      {
-        id: 'hundred-runs',
-        icon: 'medal',
-        title: lang === 'zh-CN' ? '百跑徽章' : 'Hundred Run Badge',
-        subtitle: lang === 'zh-CN' ? `累计 ${runs.length} 次跑步` : `${runs.length} total runs recorded`,
-        earned: runs.length >= 100,
-      },
-    ];
-
-    const earnedRewards = earned.filter((item) => item.earned);
-    const upcomingRewards = earned.filter((item) => !item.earned).slice(0, 3);
-    const mapHighlights = [
-      parkRuns > 0 ? { key: 'park', icon: 'park', label: lang === 'zh-CN' ? '公园路线' : 'Park routes', count: parkRuns } : null,
-      bridgeRuns > 0 ? { key: 'bridge', icon: 'bridge', label: lang === 'zh-CN' ? '桥梁路线' : 'Bridge routes', count: bridgeRuns } : null,
-      cityRuns > 0 ? { key: 'city', icon: 'city', label: lang === 'zh-CN' ? '城市地标' : 'City landmarks', count: cityRuns } : null,
-    ].filter(Boolean);
-
-    return {
-      earnedRewards,
-      upcomingRewards,
-      mapHighlights,
-    };
-  }, [lang, runs]);
+  const rewardShowcase = useMemo(() => buildRewardShowcase(runs, lang), [lang, runs]);
 
   const {
     recommendation: todayRecommendation,
@@ -1335,11 +1152,38 @@ export default function Profile() {
     >
 
       <main className="dashboard-container">
+        <section className="card profile-page-intro">
+          <div className="page-intro-stack">
+            <span className="page-intro-kicker">{t('profile.hero_kicker')}</span>
+            <h1 className="page-intro-title">{t('profile.hero_heading')}</h1>
+            <p className="page-intro-text">{t('profile.hero_copy')}</p>
+          </div>
+          <div className="page-intro-actions">
+            <button type="button" className="btn-primary" onClick={() => navigate('/today-run')}>
+              {t('profile.hero_open_today')}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => navigate('/analysis')}>
+              {t('profile.hero_open_analysis')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={stravaLinkBusy}
+              onClick={profile?.stravaLinked ? () => setSyncModalOpen(true) : handleStravaLinkStart}
+            >
+              {profile?.stravaLinked ? t('profile.hero_sync_ready') : t('profile.hero_connect_strava')}
+            </button>
+          </div>
+          <p className="profile-settings-hint">
+            <Link to="/settings" className="profile-settings-link">{t('profile.manage_settings_hint')}</Link>
+          </p>
+        </section>
+
         <section className="profile-hero-strip">
           <MetricCard
             tone="accent"
             label={t('profile.weekly_mileage')}
-            value={`${unitDistance.toFixed(1)} ${distanceUnitShort}`}
+            value={formatDistance(totalKm, 1, lang, isMile ? 'mile' : 'km')}
             hint={t('profile.analysis_hint')}
           />
           <MetricCard
@@ -1412,48 +1256,6 @@ export default function Profile() {
             <div className="heatmap-scale-bar" />
             <span>{t('profile.heatmap_scale_high')}</span>
           </div>
-        </SectionCard>
-
-        <SectionCard
-          className="reward-section"
-          title={t('profile.rewards_title')}
-          subtitle={t('profile.rewards_subtitle')}
-        >
-          <div className="reward-grid">
-            {rewardShowcase.earnedRewards.length > 0 ? rewardShowcase.earnedRewards.map((reward) => (
-              <article key={reward.id} className="reward-card reward-card--earned">
-                <div className="reward-card__icon">
-                  <RewardGlyph icon={reward.icon} />
-                </div>
-                <div className="reward-card__body">
-                  <h3>{reward.title}</h3>
-                  <p>{reward.subtitle}</p>
-                </div>
-                <span className="reward-card__badge">{t('profile.rewards_earned')}</span>
-              </article>
-            )) : (
-              <div className="reward-empty-state">{t('profile.rewards_empty')}</div>
-            )}
-          </div>
-          {rewardShowcase.upcomingRewards.length > 0 && (
-            <div className="reward-upcoming">
-              <div className="reward-upcoming__title">{t('profile.rewards_next')}</div>
-              <div className="reward-grid reward-grid--upcoming">
-                {rewardShowcase.upcomingRewards.map((reward) => (
-                  <article key={reward.id} className="reward-card reward-card--locked">
-                    <div className="reward-card__icon">
-                      <RewardGlyph icon={reward.icon} />
-                    </div>
-                    <div className="reward-card__body">
-                      <h3>{reward.title}</h3>
-                      <p>{reward.subtitle}</p>
-                    </div>
-                    <span className="reward-card__badge">{t('profile.rewards_locked')}</span>
-                  </article>
-                ))}
-              </div>
-            </div>
-          )}
         </SectionCard>
 
         {activeWeeklyFlashcard && (
@@ -1768,7 +1570,9 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <p className="service-hint">{t('profile.strava_link_hint')}</p>
+              <InfoDisclosure className="history-copy-toggle service-hint-disclosure">
+                <p className="service-hint">{t('profile.strava_link_hint')}</p>
+              </InfoDisclosure>
 
               {/* Garmin Connect — account-based import */}
               <div className="service-row service-row--primary">
@@ -1790,7 +1594,9 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <p className="service-hint">{t('profile.garmin_connect_hint')}</p>
+              <InfoDisclosure className="history-copy-toggle service-hint-disclosure">
+                <p className="service-hint">{t('profile.garmin_connect_hint')}</p>
+              </InfoDisclosure>
 
               {/* COROS — file import */}
               <div className="service-row service-row-separated">
@@ -1810,7 +1616,9 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <p className="service-hint">{t('profile.coros_watch_hint')}</p>
+              <InfoDisclosure className="history-copy-toggle service-hint-disclosure">
+                <p className="service-hint">{t('profile.coros_watch_hint')}</p>
+              </InfoDisclosure>
 
               {/* Huawei Health — file import */}
               <div className="service-row service-row-offset">
@@ -1830,7 +1638,9 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              <p className="service-hint">{t('profile.huawei_watch_hint')}</p>
+              <InfoDisclosure className="history-copy-toggle service-hint-disclosure">
+                <p className="service-hint">{t('profile.huawei_watch_hint')}</p>
+              </InfoDisclosure>
             </section>
 
             <section className="card running-shoes-section running-shoes-clickable" onClick={() => navigate('/shoes')}>
@@ -2039,21 +1849,23 @@ export default function Profile() {
           </div>
 
           <div className="profile-system-engine">
-            <div className="profile-system-engine-title">
+            <div className="profile-system-engine-title inline-info-heading">
               <span className="profile-system-icon" aria-hidden="true">☀️</span>
               <strong>{t('profile.system_heat_engine_title')}</strong>
+              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+                <p className="profile-system-engine-copy">
+                  {t('profile.system_heat_engine_line_1', {
+                    current: formatTemp(systemStatus.currentTempC, 1),
+                    baseline: formatTemp(systemStatus.baseline14dC, 2),
+                  })}
+                </p>
+                <p className="profile-system-engine-copy">
+                  {t('profile.system_heat_engine_line_2', {
+                    delta: formatSignedTemp(systemStatus.impactDeltaC, 2),
+                  })}
+                </p>
+              </InfoDisclosure>
             </div>
-            <p className="profile-system-engine-copy">
-              {t('profile.system_heat_engine_line_1', {
-                current: formatTemp(systemStatus.currentTempC, 1),
-                baseline: formatTemp(systemStatus.baseline14dC, 2),
-              })}
-            </p>
-            <p className="profile-system-engine-copy">
-              {t('profile.system_heat_engine_line_2', {
-                delta: formatSignedTemp(systemStatus.impactDeltaC, 2),
-              })}
-            </p>
           </div>
 
           <div className="profile-system-bars">
@@ -2092,13 +1904,17 @@ export default function Profile() {
           <div className="profile-weather-header">
             <div className="profile-weather-copy">
               <span className="profile-weather-kicker">{t('profile.weather_card_kicker')}</span>
-              <h2>{t('profile.weather_card_title')}</h2>
-              <p>
-                {systemStatus.message
-                  || (systemStatus.available
-                    ? t('profile.weather_card_subtitle')
-                    : t('profile.weather_card_unavailable'))}
-              </p>
+              <div className="inline-info-heading">
+                <h2>{t('profile.weather_card_title')}</h2>
+                <InfoDisclosure className="history-copy-toggle">
+                  <p>
+                    {systemStatus.message
+                      || (systemStatus.available
+                        ? t('profile.weather_card_subtitle')
+                        : t('profile.weather_card_unavailable'))}
+                  </p>
+                </InfoDisclosure>
+              </div>
             </div>
 
             <div className="profile-weather-now-card">
@@ -2152,21 +1968,23 @@ export default function Profile() {
           </div>
 
           <div className="profile-system-engine profile-weather-engine">
-            <div className="profile-system-engine-title">
+            <div className="profile-system-engine-title inline-info-heading">
               <TemperatureGlyph className="profile-system-icon" title={t('profile.system_heat_engine_title')} />
               <strong>{t('profile.system_heat_engine_title')}</strong>
+              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+                <p className="profile-system-engine-copy">
+                  {t('profile.system_heat_engine_line_1', {
+                    current: displayMetricTemp(systemStatus.currentTempC, 1),
+                    baseline: displayMetricTemp(systemStatus.baseline14dC, 2),
+                  })}
+                </p>
+                <p className="profile-system-engine-copy">
+                  {t('profile.system_heat_engine_line_2', {
+                    delta: displaySignedMetricTemp(systemStatus.impactDeltaC, 2),
+                  })}
+                </p>
+              </InfoDisclosure>
             </div>
-            <p className="profile-system-engine-copy">
-              {t('profile.system_heat_engine_line_1', {
-                current: displayMetricTemp(systemStatus.currentTempC, 1),
-                baseline: displayMetricTemp(systemStatus.baseline14dC, 2),
-              })}
-            </p>
-            <p className="profile-system-engine-copy">
-              {t('profile.system_heat_engine_line_2', {
-                delta: displaySignedMetricTemp(systemStatus.impactDeltaC, 2),
-              })}
-            </p>
           </div>
 
           <div className="profile-system-bars">
@@ -2204,7 +2022,9 @@ export default function Profile() {
           <div className="profile-weather-forecast-shell">
             <div className="profile-weather-forecast-head">
               <strong>{t('common.weather_forecast')}</strong>
-              <span>{t('profile.weather_forecast_hint')}</span>
+              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
+                <p>{t('profile.weather_forecast_hint')}</p>
+              </InfoDisclosure>
             </div>
             <WeatherTemperatureBar variant="inline" onSnapshotChange={setWeatherSnapshot} />
           </div>
@@ -2322,7 +2142,9 @@ export default function Profile() {
       <Modal isOpen={importModalOpen} onClose={() => setActiveImportModal(null)} title={t('profile.import_modal_title')}>
         <form onSubmit={handleImport}>
           <ImportDataGuide />
-          <p className="modal-help">{t('profile.import_hint')}</p>
+          <InfoDisclosure className="history-copy-toggle import-helper-disclosure">
+            <p className="modal-help">{t('profile.import_hint')}</p>
+          </InfoDisclosure>
           <div className="import-source-grid">
             <section className="import-source-card">
               <div className="import-source-header">
@@ -2361,7 +2183,9 @@ export default function Profile() {
               <p className="selected-file-name">{huaweiFiles?.length ? t('profile.selected_files_count', { count: huaweiFiles.length }) : t('profile.no_file_selected')}</p>
             </section>
           </div>
-          <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
+          <InfoDisclosure className="history-copy-toggle import-helper-disclosure">
+            <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
+          </InfoDisclosure>
           {importStatus && <div className="modal-status">{importStatus}</div>}
           <div className="modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => setActiveImportModal(null)}>{t('profile.cancel')}</button>
