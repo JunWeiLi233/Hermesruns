@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/shoes")
 public class ShoeController {
+    private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> MATCH_BATCH_FIELDS = Set.of("items");
     private static final Set<String> MATCH_BATCH_ITEM_FIELDS = Set.of("brand", "model");
     private static final Set<String> MERGE_FIELDS = Set.of("keepShoeId", "mergeShoeIds");
@@ -316,9 +317,9 @@ public class ShoeController {
             shoe.setInitialDistanceKm(km);
         }
         if (body.get("photoUrl") instanceof String url) {
-            if (url.length() > 2048) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Photo URL too long.");
+            if (url.length() > MAX_PHOTO_REFERENCE_LENGTH) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Photo URL too long.");
             try {
-                shoe.setPhotoUrl(SafeUrlValidator.validateHttpUrlOrNull(url, 2048, "photoUrl"));
+                shoe.setPhotoUrl(SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(url, MAX_PHOTO_REFERENCE_LENGTH, "photoUrl"));
             } catch (IllegalArgumentException ex) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
             }
@@ -421,7 +422,7 @@ public class ShoeController {
             Object urlRaw = body.get("photoUrl");
             String url = urlRaw instanceof String s ? s : null;
             try {
-                shoe.setPhotoUrl(SafeUrlValidator.validateHttpUrlOrNull(url, 2048, "photoUrl"));
+                shoe.setPhotoUrl(SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(url, MAX_PHOTO_REFERENCE_LENGTH, "photoUrl"));
             } catch (IllegalArgumentException ex) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
             }

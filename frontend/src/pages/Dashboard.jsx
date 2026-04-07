@@ -59,7 +59,7 @@ function Sparkline({ trend }) {
 
 export default function Dashboard() {
   const { logout, login, isAuthenticated } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -472,6 +472,55 @@ export default function Dashboard() {
     });
   }, [catalogItems, catalogQuery, catalogTypeFilter]);
 
+  const totalQueueCount = useMemo(
+    () => queueCards.reduce((sum, card) => sum + Number(card.count || 0), 0),
+    [queueCards],
+  );
+
+  const adminStatusItems = useMemo(() => {
+    const failedSyncCount = queueCards.find((card) => card.key === 'FAILED')?.count || 0;
+    const failedJobsSummary = failedSyncCount > 0
+      ? (lang === 'zh-CN' ? `${failedSyncCount} 个失败任务` : `${failedSyncCount} failed jobs`)
+      : (lang === 'zh-CN' ? '当前没有失败任务' : 'No failed jobs right now');
+
+    return [
+      {
+        label: lang === 'zh-CN' ? '队列健康' : 'Queue health',
+        tone: totalQueueCount === 0 ? 'ready' : failedSyncCount > 0 ? 'action' : 'warning',
+        value: totalQueueCount === 0
+          ? (lang === 'zh-CN' ? '当前健康' : 'Healthy now')
+          : failedSyncCount > 0
+            ? (lang === 'zh-CN' ? `${failedSyncCount} 项待处理` : `${failedSyncCount} need attention`)
+            : (lang === 'zh-CN' ? `${totalQueueCount} 项在队列中` : `${totalQueueCount} queued`),
+        helper: failedJobsSummary,
+        onClick: () => setActiveTab('overview'),
+      },
+      {
+        label: lang === 'zh-CN' ? '后台任务' : 'Jobs',
+        tone: failedSyncCount > 0 ? 'warning' : 'ready',
+        value: failedSyncCount > 0
+          ? (lang === 'zh-CN' ? '查看失败任务' : 'View failed jobs')
+          : (lang === 'zh-CN' ? '任务面板就绪' : 'Jobs panel ready'),
+        helper: failedJobsSummary,
+        onClick: () => {
+          setActiveTab('jobs');
+          if (failedSyncCount > 0) setJobQuery(prev => ({ ...prev, status: 'FAILED', page: 0 }));
+        },
+      },
+      {
+        label: lang === 'zh-CN' ? '审计准备度' : 'Audit readiness',
+        tone: totalQueueCount > 0 ? 'warning' : 'ready',
+        value: totalQueueCount > 0
+          ? (lang === 'zh-CN' ? '建议追踪变更' : 'Track this round')
+          : (lang === 'zh-CN' ? '当前直接审计' : 'Clean to review'),
+        helper: failedSyncCount > 0
+          ? (lang === 'zh-CN' ? `先处理 ${failedSyncCount} 个失败任务。` : `Clear ${failedSyncCount} failed jobs first.`)
+          : (lang === 'zh-CN' ? '适合直接检查审计记录。' : 'Safe to review audit logs.'),
+        onClick: () => setActiveTab('audit'),
+      },
+    ];
+  }, [lang, queueCards, totalQueueCount]);
+
   if (loadState === 'loading') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_loading')}</div></div>;
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
 
@@ -486,16 +535,37 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <div className="dashboard-container">
+      <div className="dashboard-container admin-portal-container">
         {message && <div className="admin-shoe-status dashboard-message">{message}</div>}
-        <div className="dashboard-header dashboard-header--spaced">
-          <h2>{t('dashboard.portal_title')}</h2>
-          <p>{t('dashboard.portal_desc')}</p>
-        </div>
+        <section className="admin-portal-header">
+          <div className="admin-portal-header__stack">
+            <span className="admin-portal-header__eyebrow">{t('dashboard.portal_eyebrow')}</span>
+            <h1 className="admin-portal-header__title">{t('dashboard.portal_title')}</h1>
+            <p className="admin-portal-header__desc">{t('dashboard.portal_desc')}</p>
+          </div>
+        </section>
 
-        <div className="dashboard-tab-row">
+        <section className="card section-intro-card admin-status-strip">
+          <div className="section-intro-row">
+            <div>
+              <span className="section-intro-kicker">{lang === 'zh-CN' ? '运营概览' : 'Ops overview'}</span>
+              <h2 className="section-intro-title">{lang === 'zh-CN' ? '监控核心队列和任务状态' : 'Monitor core queues and job statuses at a glance'}</h2>
+            </div>
+          </div>
+          <div className="status-chip-row">
+            {adminStatusItems.map((item) => (
+              <button key={item.label} type="button" className={`status-chip status-chip--${item.tone} status-chip--button`} onClick={item.onClick}>
+                <span className="status-chip__label">{item.label}</span>
+                <strong className="status-chip__value">{item.value}</strong>
+                <span className="status-chip__helper">{item.helper}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <div className="admin-portal-tabbar">
           {TAB_KEYS.map(key => (
-            <button key={key} type="button" className={`history-filter-tab${activeTab === key ? ' active' : ''}`} onClick={() => setActiveTab(key)}>
+            <button key={key} type="button" className={`admin-portal-tab${activeTab === key ? ' active' : ''}`} onClick={() => setActiveTab(key)}>
               {t(`dashboard.tab_${key}`)}
             </button>
           ))}
@@ -503,6 +573,32 @@ export default function Dashboard() {
 
         {activeTab === 'overview' && overview && (
           <>
+            <div className="admin-quick-actions">
+              <span className="admin-quick-actions__label">{t('dashboard.quick_actions_title')}</span>
+              <div className="admin-quick-actions__row">
+                <button type="button" className="admin-quick-action-btn" onClick={() => setActiveTab('users')}>
+                  <span className="admin-quick-action-icon">👤</span>
+                  <span>{t('dashboard.quick_action_users')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={() => { setActiveTab('shoes'); setShoeQuery(prev => ({ ...prev, queue: 'unverified_photo', page: 0 })); }}>
+                  <span className="admin-quick-action-icon">👟</span>
+                  <span>{t('dashboard.quick_action_shoe_review')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={() => setActiveTab('jobs')}>
+                  <span className="admin-quick-action-icon">⚙</span>
+                  <span>{t('dashboard.quick_action_jobs')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={() => setActiveTab('audit')}>
+                  <span className="admin-quick-action-icon">🔍</span>
+                  <span>{t('dashboard.quick_action_audit')}</span>
+                </button>
+                <button type="button" className="admin-quick-action-btn" onClick={triggerSync}>
+                  <span className="admin-quick-action-icon">↻</span>
+                  <span>{t('dashboard.nav_sync_strava')}</span>
+                </button>
+              </div>
+            </div>
+
             <div className="history-summary-grid history-summary-grid--spaced">
               {overview.kpis?.map(kpi => (
                 <article key={kpi.label} className="card history-summary-card">
@@ -662,13 +758,38 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'jobs' && (
-          <DataTable>
-            <table className="data-table">
-              <thead><tr><th>{t('dashboard.th_job_id')}</th><th>{t('dashboard.th_job_type')}</th><th>{t('dashboard.th_job_status')}</th><th>{t('dashboard.th_job_created_by')}</th><th>{t('dashboard.th_job_summary')}</th><th>{t('dashboard.th_job_success')}</th><th>{t('dashboard.th_job_fail')}</th></tr></thead>
-              <tbody>{jobsPage.items?.map(job => <tr key={job.id}><td>{job.id}</td><td>{job.jobType}</td><td>{job.status}</td><td>{job.createdByEmail || '-'}</td><td>{job.summary}</td><td>{job.successCount}</td><td>{job.failureCount}</td></tr>)}</tbody>
-            </table>
-            <Pagination pageData={jobsPage} onPageChange={page => setJobQuery(prev => ({ ...prev, page }))} t={t} />
-          </DataTable>
+          <>
+            <SectionCard className="section-card--compact section-card--spaced">
+              <ActionBar>
+                <select className="admin-shoe-filter" value={jobQuery.status} onChange={e => setJobQuery(prev => ({ ...prev, status: e.target.value, page: 0 }))}>
+                  <option value="">{lang === 'zh-CN' ? '全部状态' : 'All statuses'}</option>
+                  <option value="COMPLETED">{lang === 'zh-CN' ? '已完成' : 'Completed'}</option>
+                  <option value="RUNNING">{lang === 'zh-CN' ? '运行中' : 'Running'}</option>
+                  <option value="PENDING">{lang === 'zh-CN' ? '等待中' : 'Pending'}</option>
+                  <option value="FAILED">{lang === 'zh-CN' ? '失败' : 'Failed'}</option>
+                </select>
+                <select className="admin-shoe-filter" value={jobQuery.jobType} onChange={e => setJobQuery(prev => ({ ...prev, jobType: e.target.value, page: 0 }))}>
+                  <option value="">{lang === 'zh-CN' ? '全部类型' : 'All types'}</option>
+                  <option value="STRAVA_SYNC">Strava sync</option>
+                  <option value="GARMIN_IMPORT">Garmin import</option>
+                  <option value="FILE_IMPORT">File import</option>
+                </select>
+                {(jobQuery.status || jobQuery.jobType) && (
+                  <button type="button" className="btn-secondary btn-inline-md" onClick={() => setJobQuery({ jobType: '', status: '', page: 0 })}>
+                    {lang === 'zh-CN' ? '清除筛选' : 'Clear filter'}
+                  </button>
+                )}
+                <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadJobs()}>{t('dashboard.btn_refresh')}</button>
+              </ActionBar>
+            </SectionCard>
+            <DataTable>
+              <table className="data-table">
+                <thead><tr><th>{t('dashboard.th_job_id')}</th><th>{t('dashboard.th_job_type')}</th><th>{t('dashboard.th_job_status')}</th><th>{t('dashboard.th_job_created_by')}</th><th>{t('dashboard.th_job_summary')}</th><th>{t('dashboard.th_job_success')}</th><th>{t('dashboard.th_job_fail')}</th></tr></thead>
+                <tbody>{jobsPage.items?.map(job => <tr key={job.id}><td>{job.id}</td><td>{job.jobType}</td><td>{job.status}</td><td>{job.createdByEmail || '-'}</td><td>{job.summary}</td><td>{job.successCount}</td><td>{job.failureCount}</td></tr>)}</tbody>
+              </table>
+              <Pagination pageData={jobsPage} onPageChange={page => setJobQuery(prev => ({ ...prev, page }))} t={t} />
+            </DataTable>
+          </>
         )}
 
         {activeTab === 'audit' && (

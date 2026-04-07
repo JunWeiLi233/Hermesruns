@@ -37,13 +37,17 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | `/login` | Login | Email/password, Strava OAuth, Google OAuth |
 | `/signup` | Signup | Registration with OAuth |
 | `/admin` | Admin Login | System administrator sign-in |
-| `/dashboard` | Admin Dashboard | Runner management, shoe image verification across all users |
-| `/profile` | Profile | Activity heatmap, recent runs, stats, daily steps, personal records, file import, Garmin Connect import, settings |
-| `/runs` | Run History | Filterable list (all/year/month/day), pagination |
+| `/dashboard` | Admin Dashboard | Premium admin portal with ops status strip, quick-actions panel, KPI grid, runner management, shoe image verification, job queues, and audit log |
+| `/profile` | Profile | Activity heatmap, hero metric strip, weekly flash cards, daily steps, personal records, VO₂max trend, file import, Garmin Connect import |
+| `/runs` | Run History | Filterable list (all/year/month/day) with sort controls (recent / longest / fastest), pagination, sticky reset |
 | `/run/:id` | Run Detail | Route map, performance metrics, route intelligence |
-| `/analysis` | Deep Analytics | VDOT scoring, training paces, race predictions, training load (ACWR), recovery analysis |
-| `/shoes` | Shoe Tracker | Shoe inventory, mileage tracking, photo search with background removal |
+| `/analysis` | Deep Analytics | Summary insight band, VDOT scoring, VO₂max glossary disclosure, training paces, race predictions, training load (ACWR), recovery analysis |
+| `/today-run` | Today's Run | Personalized session plan, coach guidance (polarized training), inline weather-readiness strip for heat/acclimatization |
+| `/shoes` | Shoe Inventory | Health-summary row, owned-brand filters, sticky locker reset, mileage tracking, AI photo scanning, catalog browser |
 | `/races` | Race Center | Interactive world map (Leaflet), 60+ race catalog, NYRR 9+1 progress, race targets, training advice |
+| `/muscle-training` | Muscle Training | Anatomical SVG muscle figure, session planning, training log |
+| `/rewards` | Rewards | Achievement badges, progression surface |
+| `/settings` | Settings | Language, distance unit, theme, display name, connected services (Strava), account controls |
 
 ---
 
@@ -386,6 +390,29 @@ Supports `GPX`, `TCX`, `FIT`, and `ZIP` files with automatic folder watching.
 
 ---
 
+### AI Development Workflow
+
+This repo uses **Claude Code** and **Codex** as AI coding agents guided by `CLAUDE.md` / `AGENTS.md` and `TASKS.md`.
+
+#### How tasks work
+- Active tasks live in `TASKS.md → ## Active Tasks`. Agents work through them one at a time.
+- Completed tasks are deleted from Active and logged in `## Daily Log` (one line per task).
+- Suggested follow-up tasks sit in `## Suggested Next Tasks` and are promoted automatically in loop mode.
+
+#### When agents push
+Agents commit and push to `origin main` only when **all** of the following are true:
+1. `## Active Tasks` is empty — no unchecked tasks remain
+2. `## Suggested Next Tasks` is empty or no further tasks are promotable
+3. Frontend lint passes (`cd frontend && npm run lint`)
+4. Backend compiles cleanly (`cd backend && ./mvnw -DskipTests compile`)
+
+Agents **never** push partial work, broken builds, or AI-workflow-only changes (those files are gitignored).
+
+#### Codebase index
+Run `node .tools/generate-codex.js` to regenerate `.ai-codex/` — compact index files (routes, pages, schema, components, lib exports) that agents use instead of scanning source files every session. Regenerated automatically on each Claude Code session start.
+
+---
+
 ### Troubleshooting
 
 **`ERR_CONNECTION_REFUSED`** — Start the backend with `.\start_hermes.bat`.
@@ -422,13 +449,17 @@ backend/           Spring Boot 4 + JPA — REST API :8080，同时提供前端�
 | `/login` | 登录 | 邮箱/密码、Strava OAuth、Google OAuth |
 | `/signup` | 注册 | 注册账号 |
 | `/admin` | 管理员登录 | 系统管理员登录 |
-| `/dashboard` | 管理面板 | 跑者管理、跑鞋图片审核（全用户生效） |
-| `/profile` | 个人主页 | 热力图、最近跑步、数据统计、每日步数、个人纪录、数据导入、Garmin Connect 导入、设置 |
-| `/runs` | 跑步历史 | 可筛选列表（全部/年/月/日）、分页 |
+| `/dashboard` | 管理面板 | 高级管理门户，含运维状态条、快捷操作面板、KPI 看板、用户管理、跑鞋图片审核、任务队列和审计日志 |
+| `/profile` | 个人主页 | 热力图、指标摘要条、周快报卡片、每日步数、个人纪录、VO₂max 趋势、数据导入、Garmin Connect 导入 |
+| `/runs` | 跑步历史 | 可筛选列表（全部/年/月/日）、排序控制（最近/最长/最快）、分页、吸附式重置 |
 | `/run/:id` | 跑步详情 | 路线地图、运动指标、路线分析 |
-| `/analysis` | 深度分析 | VDOT 评分、训练配速、比赛预测、训练负荷（ACWR）、恢复分析 |
-| `/shoes` | 跑鞋管理 | 跑鞋库存、里程追踪、图片搜索与背景消除 |
+| `/analysis` | 深度分析 | 摘要洞察栏、VDOT 评分、VO₂max 术语解释、训练配速、比赛预测、训练负荷（ACWR）、恢复分析 |
+| `/today-run` | 今日训练 | 个性化训练计划、教练建议（极化训练）、天气准备度内联展示 |
+| `/shoes` | 跑鞋管理 | 健康摘要栏、按品牌筛选、吸附式重置、里程追踪、AI 图片扫描、跑鞋目录 |
 | `/races` | 赛事中心 | 交互式世界地图（Leaflet）、60+ 赛事目录、NYRR 9+1 进度、比赛目标、训练建议 |
+| `/muscle-training` | 肌肉训练 | 解剖 SVG 肌肉图、训练计划、训练记录 |
+| `/rewards` | 成就奖励 | 成就徽章、进阶激励 |
+| `/settings` | 设置 | 语言、距离单位、主题、显示名称、已连接服务（Strava）、账户操作 |
 
 ---
 
@@ -705,6 +736,29 @@ pip install -r .tools/requirements-garmin.txt
 - **修改配置后需重启后端**。
 - **不要把密钥提交到 Git**。
 - **`APP_DATA_ENCRYPTION_KEY` 请使用强密钥**。
+
+---
+
+### AI 开发工作流
+
+本项目使用 **Claude Code** 和 **Codex** 作为 AI 编码助手，由 `CLAUDE.md` / `AGENTS.md` 和 `TASKS.md` 驱动。
+
+#### 任务机制
+- 待完成任务在 `TASKS.md → ## Active Tasks`，每次只处理一个。
+- 任务完成后从 Active 删除，并在 `## Daily Log` 写入一行记录。
+- 待提升的后续任务在 `## Suggested Next Tasks`，循环模式下自动提升。
+
+#### 何时 push
+AI agent 在以下**所有**条件满足时才提交并推送到 `origin main`：
+1. `## Active Tasks` 为空 — 无未完成任务
+2. `## Suggested Next Tasks` 为空或无可提升任务
+3. 前端 lint 通过（`cd frontend && npm run lint`）
+4. 后端编译通过（`cd backend && ./mvnw -DskipTests compile`）
+
+不会推送：部分完成的功能、编译失败的代码、仅涉及 AI 工作流文件的变更（这些文件已加入 .gitignore）。
+
+#### 代码索引
+运行 `node .tools/generate-codex.js` 生成 `.ai-codex/` 紧凑索引（路由、页面、数据库、组件、工具函数），供 AI agent 直接查阅而无需逐文件扫描。每次 Claude Code 会话启动时自动刷新。
 
 ---
 
