@@ -44,7 +44,7 @@ public class ActivityController {
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
 
         if (activeUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
 
         List<Activity> runs = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(activeUser.get(), ActivityType.RUN);
@@ -58,7 +58,7 @@ public class ActivityController {
 
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
         if (activeUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
 
         Runner runner = activeUser.get();
@@ -66,7 +66,7 @@ public class ActivityController {
         if (year != null) {
             // Prevent weird ranges that could stress queries or return unexpected data.
             if (year < 1900 || year > 2100) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid year.");
+                return err(HttpStatus.BAD_REQUEST, "INVALID_PARAM", "Invalid year.");
             }
             java.time.LocalDateTime yearStart = java.time.LocalDateTime.of(year, 1, 1, 0, 0);
             java.time.LocalDateTime yearEnd = java.time.LocalDateTime.of(year + 1, 1, 1, 0, 0);
@@ -90,12 +90,12 @@ public class ActivityController {
 
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
         if (activeUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
 
         Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
         if (activityOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activity not found");
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
 
         Activity activity = activityOpt.get();
@@ -129,12 +129,12 @@ public class ActivityController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
         if (activeUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
 
         Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
         if (activityOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activity not found");
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         Activity activity = activityOpt.get();
 
@@ -185,11 +185,11 @@ public class ActivityController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
         if (activeUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
         Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
         if (activityOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activity not found");
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         return ResponseEntity.ok(elevationCorrectionService.computeStatus(activityOpt.get()));
     }
@@ -201,14 +201,18 @@ public class ActivityController {
             @RequestBody(required = false) ElevationCorrectionService.RecalibrateRequest request) {
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
         if (activeUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
         Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
         if (activityOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activity not found");
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         ElevationCorrectionService.RecalibrateResult result = elevationCorrectionService.recalibrate(activityOpt.get(), request);
         return ResponseEntity.ok(result);
+    }
+
+    private static ResponseEntity<Map<String, String>> err(HttpStatus status, String code, String message) {
+        return ResponseEntity.status(status).body(Map.of("error", message, "code", code));
     }
 
     private List<LatLngPoint> fetchLatLngPoints(Long activityId) {

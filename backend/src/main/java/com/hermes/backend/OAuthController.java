@@ -424,7 +424,7 @@ public class OAuthController {
 
         Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authorizationHeader);
         if (runnerOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid session");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid or expired session token.", "code", "UNAUTHORIZED"));
         }
 
         Runner runner = runnerOpt.get();

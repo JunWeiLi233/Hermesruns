@@ -125,7 +125,8 @@ public class ActivityImportService {
                 aggregate.importedPoints(),
                 aggregate.skippedDuplicates(),
                 aggregate.skippedNonRuns(),
-                message
+                message,
+                aggregate.rejectedFiles() != null ? aggregate.rejectedFiles() : List.of()
         );
     }
 
@@ -138,7 +139,7 @@ public class ActivityImportService {
 
         String checksum = sha256(fileBytes);
         if (activityRepository.existsByRunnerAndProviderAndSourceChecksum(runner, provider, checksum)) {
-            return new ImportResult(provider.name(), 0, 0, 1, 0, "This activity file was already imported.");
+            return new ImportResult(provider.name(), 0, 0, 1, 0, "This activity file was already imported.", List.of());
         }
 
         ParsedActivityData parsedActivity = parser.parse(fileName, fileBytes);
@@ -155,7 +156,8 @@ public class ActivityImportService {
                     0,
                     0,
                     1,
-                    "Only running activities can be imported into Recent Runs. This file was skipped."
+                    "Only running activities can be imported into Recent Runs. This file was skipped.",
+                    List.of()
             );
         }
 
@@ -228,7 +230,8 @@ public class ActivityImportService {
                 keptPoints,
                 0,
                 0,
-                "Import completed successfully."
+                "Import completed successfully.",
+                List.of()
         );
     }
 

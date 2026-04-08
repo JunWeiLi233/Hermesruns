@@ -771,3 +771,62 @@ AI agent 在以下**所有**条件满足时才提交并推送到 `origin main`�
 **OAuth 回调失败** — 确认后端运行在 `localhost:8080`，回调地址完全匹配。
 
 **前端修改未生效** — 在 `frontend/` 中运行 `npm run build`，然后刷新页面。
+
+---
+
+### Regression Checklist — Page-Break and Data-Loss Scenarios
+
+Run this manually after any change to auth, import, upload, or third-party integration flows.
+
+#### 1. Expired session during active use
+
+**Trigger**: In browser DevTools (Network tab), block or stub any API call to return `401` while on a page with edits in progress (e.g. open the import modal in Settings, then force a `401` on the batch endpoint).
+
+**Expected behavior**:
+- App redirects to `/login?return=<current-path>&reason=expired`
+- Login page shows the "session expired" notice (not a blank page)
+- After re-login, app navigates back to the original route
+
+**Failure indicator**: Blank page, hard redirect to `/login` with no notice, or loss of the return path.
+
+#### 2. Partial batch import (one valid + one invalid file)
+
+**Trigger**: Upload a valid `.gpx` file and an oversized or zero-byte file in the same import batch.
+
+**Expected behavior**:
+- Response returns `200` with `importedActivities >= 1` and `rejectedFiles` listing the bad file with a reason
+- Settings import modal stays open and shows "X file(s) were skipped" with the rejected filenames
+- Modal does NOT close as if everything succeeded
+
+**Failure indicator**: Modal closes after any `200`, or rejected files silently disappear.
+
+#### 3. Weather provider outage
+
+**Trigger**: Block the `api.open-meteo.com` fetch (via DevTools or host-file block) and open any page with the weather bar.
+
+**Expected behavior**:
+- Weather bar shows the error/empty state (e.g. "Weather unavailable") rather than a blank area
+- The rest of the page loads and functions normally
+
+**Failure indicator**: Blank strip, JS error in console causing page crash, or infinite loading spinner.
+
+#### 4. Malformed analytics response
+
+**Trigger**: Stub `GET /api/activities/{id}/analytics` to return `500` or invalid JSON, then open a Run Detail page.
+
+**Expected behavior**:
+- Run Detail page renders (hero, map, performance metrics visible)
+- An inline error card appears above the analytics sections with a "Reload" action
+- No blank white sections, no uncaught JS exceptions
+
+**Failure indicator**: Blank analytics panels with no explanation, or a white-screen crash.
+
+#### 5. Batch file count cap
+
+**Trigger**: Submit more than 50 files in a single import batch request.
+
+**Expected behavior**:
+- Backend returns `400` with a JSON body containing `error` explaining the limit
+- Frontend shows the error in the import modal without closing it
+
+**Failure indicator**: Server accepts the request, or frontend shows a generic "Import failed" without the limit explanation.
