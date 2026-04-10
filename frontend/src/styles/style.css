@@ -13617,24 +13617,87 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .weekly-flashcard,
 .rewards-hero-card,
 .shoes-page .shoe-locker-shell,
-.shoes-page .shoe-browser-shell {
-  border-radius: 28px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
-}
-
-.history-hero,
-.analysis-page-header,
-.today-run-hero,
-.weekly-flashcard,
-.rewards-hero-card {
-  background:
-    radial-gradient(circle at top left, rgba(255, 107, 53, 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
+.shoes-page .shoe-browser-shell,
+.world-race-card,
+.nyrr-progress-card,
+.race-list-card,
+.race-coach-card,
+.race-targets-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-card);
 }
 
 .history-hero {
-  padding: 36px;
+  background: radial-gradient(circle at top left, rgba(234, 88, 12, 0.08), transparent 26%), var(--bg-glass-strong);
+  padding: 40px;
+}
+
+.history-summary-card {
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: var(--transition);
+}
+
+.history-summary-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.race-row {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 16px;
+  transition: var(--transition);
+}
+
+.race-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--color-primary);
+}
+
+.modal-content {
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+  padding: 40px;
+}
+
+.modal-label {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.modal input[type="text"],
+.modal input[type="number"],
+.modal input[type="date"],
+.modal select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-foreground);
+  padding: 12px 16px;
+  width: 100%;
+  margin-bottom: 20px;
+  transition: var(--transition);
+}
+
+.modal input:focus,
+.modal select:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .analysis-onboarding-strip {

@@ -727,7 +727,7 @@ export default function Races() {
           <input type="date" value={form.eventDate} onChange={(e) => setForm((prev) => ({ ...prev, eventDate: e.target.value }))} required />
 
           <label className="modal-label">{t('races.form_distance')}</label>
-          <input type="number" min="1" step="0.1" value={form.distanceKm} onChange={(e) => setForm((prev) => ({ ...prev, distanceKm: e.target.value }))} />
+          <input type="number" min="1" step="0.001" value={form.distanceKm} onChange={(e) => setForm((prev) => ({ ...prev, distanceKm: e.target.value }))} />
 
           <label className="modal-label">{t('races.form_status')}</label>
           <select value={form.registrationStatus} onChange={(e) => setForm((prev) => ({ ...prev, registrationStatus: e.target.value }))}>
