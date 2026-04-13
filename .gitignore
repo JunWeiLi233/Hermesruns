@@ -150,6 +150,24 @@ entities.json
 HERMES_SELF_EVOLVING_ENGINE.md
 .ai-sync/
 
+# Local AI workflow tools/reports that should stay out of GitHub
+.tools/agent-sync.mjs
+.tools/auto-commit.ps1
+.tools/auto-hermes-controller.mjs
+.tools/auto-hermes-executor.example.json
+.tools/auto-hermes-finish.mjs
+.tools/auto-hermes-loop.mjs
+.tools/auto-hermes-max-merge.mjs
+.tools/auto-hermes-max-plan.example.json
+.tools/auto-hermes-max.mjs
+.tools/auto-hermes-round-close.mjs
+.tools/auto-hermes-self-check.mjs
+.tools/mempalace/
+.tools/token_tester/
+.tools/verify-backend-runtime-sync.mjs
+.tools/verify-frontend-runtime-sync.mjs
+.tools/write-agent-checkpoint.mjs
+
 # Local workflow / QA docs (not project code)
 ALLOW_LIST_TERMINAL_COMMANDS.txt
 TRANSLATION_WORKFLOW.md

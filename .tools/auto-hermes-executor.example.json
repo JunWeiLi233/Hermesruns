@@ -1,4 +1,0 @@
-{
-  "label": "example-worker-runner",
-  "command": "Write-Host 'Replace this executor with a real Codex worker command that consumes {promptFile} in {cwd}'; exit 1"
-}
