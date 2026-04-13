@@ -27,6 +27,8 @@ backend_log.txt
 *.pid
 *.seed
 tmp_*
+.tmp/
+.tmp-*
 
 # local sync config (may contain paths/tokens)
 .tools/hermes_sync_config.json
@@ -71,6 +73,11 @@ backend/probe.java
 .tools/h2_counts.sql
 .tools/h2_tables.sql
 
+# Images (local reference screenshots / design assets)
+images/
+task-images/*
+!task-images/.gitkeep
+
 # Cloned repos
 /run/
 /Hermes/
@@ -99,6 +106,21 @@ CLAUDE_LOOP_GUIDE.txt
 *_LOOP_GUIDE.md
 *_LOOP_GUIDE.txt
 
+# Local personal/reference artifacts
+*.code-workspace
+Desktop.ini
+*.url
+*.lnk
+*.heic
+*.psd
+*.sketch
+*.fig
+*.drawio
+*.csv
+*.tsv
+*export*.json
+*backup*.json
+
 # AI codebase index (auto-generated, regenerated on session start)
 .ai-codex/
 
@@ -111,9 +133,22 @@ CLAUDE_LOOP_GUIDE.txt
 .tools/requirements-prompt-optimizer.txt
 .tools/optimize-agent-context.mjs
 
-# Codex generator (local tool)
+# Local token test scratch output
+.tools/token_tester/tmp/
+
+# Codex generator / task suggester (local tools)
 .tools/generate-codex.js
 .tools/check-translations.mjs
+.tools/suggest-tasks.mjs
+
+# MemPalace (local AI memory layer)
+mempalace.yaml
+entities.json
+.mempalace/
+
+# Self-evolving engine + AI sync (local workflow)
+HERMES_SELF_EVOLVING_ENGINE.md
+.ai-sync/
 
 # Local workflow / QA docs (not project code)
 ALLOW_LIST_TERMINAL_COMMANDS.txt
