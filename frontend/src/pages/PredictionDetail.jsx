@@ -1,341 +1,532 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
+import AppIcon from '../components/AppIcon';
+import HermesLogo from '../components/HermesLogo';
 import { formatDuration, formatPaceSeconds } from '../utils/format';
-import { predictRaceTimeCalibrated, RACE_DISTANCES, collectAllVdotEntries, computeRollingRepresentativeSeries, VDOT_LOOKBACK_MS } from '../utils/vdot';
-import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, LineController, ScatterController, Title, Tooltip, Legend, Filler } from 'chart.js';
+import {
+  collectAllVdotEntries,
+  computeRollingRepresentativeSeries,
+  predictRaceTimeCalibrated,
+  RACE_DISTANCES,
+  VDOT_LOOKBACK_MS,
+} from '../utils/vdot';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  Filler,
+  Legend,
+  LineController,
+  LineElement,
+  LinearScale,
+  PointElement,
+  ScatterController,
+  Title,
+  Tooltip,
+} from 'chart.js';
 import { Line, Scatter } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, ScatterController, Title, Tooltip, Legend, Filler);
 
 const KM_TO_MILE = 1.60934;
+const DIST_COLORS = { '5k': '#4ccd73', '10k': '#5b8cff', half: '#f4b860', marathon: '#f07561' };
+const cx = (...parts) => parts.filter(Boolean).join(' ');
 
-const DIST_COLORS = { '5k': '#22c55e', '10k': '#3b82f6', 'half': '#f59e0b', 'marathon': '#dc2626' };
+function detailColor(distKey) {
+  return DIST_COLORS[distKey] || '#f07561';
+}
 
 export default function PredictionDetail() {
   const { distKey } = useParams();
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
-  const { isDark } = useTheme();
-  const { isMile } = useUnit();
+  const { unit } = useUnit();
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [loadState, setLoadState] = useState('loading');
 
   useEffect(() => {
-    if (!isAuthenticated) { navigate('/login'); return; }
-    apiJson('/api/activities').then(data => {
-      setRuns(Array.isArray(data) ? data : []);
-    }).catch(() => {});
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    (async () => {
+      setLoadState('loading');
+      try {
+        const [profileData, activitiesData] = await Promise.all([
+          apiJson('/api/profile/me'),
+          apiJson('/api/activities'),
+        ]);
+        const list = Array.isArray(activitiesData) ? activitiesData : [];
+        list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+        setProfile(profileData);
+        setRuns(list);
+        setLoadState('ready');
+      } catch {
+        setLoadState('error');
+      }
+    })();
   }, [isAuthenticated, navigate]);
 
-  const raceDist = RACE_DISTANCES.find(rd => rd.key === distKey);
-  const color = DIST_COLORS[distKey] || '#3b82f6';
-  const textColor = isDark ? '#e2e8f0' : '#334155';
-  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-
+  const raceDist = RACE_DISTANCES.find((distance) => distance.key === distKey) || null;
+  const accentColor = detailColor(distKey);
   const allVdots = useMemo(() => collectAllVdotEntries(runs), [runs]);
 
   const historyData = useMemo(() => {
-    if (!raceDist || allVdots.length < 1) return null;
+    if (!raceDist || allVdots.length < 1) return [];
     const rolling = computeRollingRepresentativeSeries(allVdots, VDOT_LOOKBACK_MS);
-    if (!rolling.length) return null;
+    if (!rolling.length) return [];
 
     const samples = [];
     let lastWeek = -1;
-    rolling.forEach((pt) => {
-      const week = Math.floor(pt.x / (7 * 24 * 60 * 60 * 1000));
+    rolling.forEach((point) => {
+      const week = Math.floor(point.x / (7 * 24 * 60 * 60 * 1000));
       if (week !== lastWeek) {
         lastWeek = week;
-        const timeMin = predictRaceTimeCalibrated(pt.y, raceDist.meters, runs);
+        const timeMin = predictRaceTimeCalibrated(point.y, raceDist.meters, runs);
         samples.push({
-          date: pt.x,
+          date: point.x,
           timeSec: timeMin ? Math.round(timeMin * 60) : null,
-          vdot: pt.y,
+          vdot: point.y,
         });
       }
     });
 
-    const last = rolling[rolling.length - 1];
-    const timeMinLast = predictRaceTimeCalibrated(last.y, raceDist.meters, runs);
-    const entry = {
+    const last = rolling.at(-1);
+    const latestMin = predictRaceTimeCalibrated(last.y, raceDist.meters, runs);
+    const latestEntry = {
       date: last.x,
-      timeSec: timeMinLast ? Math.round(timeMinLast * 60) : null,
+      timeSec: latestMin ? Math.round(latestMin * 60) : null,
       vdot: last.y,
     };
-    if (!samples.length || samples[samples.length - 1].date !== entry.date) samples.push(entry);
-
-    return samples;
+    if (!samples.length || samples.at(-1).date !== latestEntry.date) samples.push(latestEntry);
+    return samples.filter((sample) => sample.timeSec > 0);
   }, [allVdots, raceDist, runs]);
 
-  // Stats
-  const stats = useMemo(() => {
-    if (!historyData || historyData.length < 1) return null;
-    const times = historyData.filter(s => s.timeSec > 0).map(s => s.timeSec);
-    if (!times.length) return null;
-    const best = Math.min(...times);
-    const worst = Math.max(...times);
-    const latest = times[times.length - 1];
-    const earliest = times[0];
-    const improved = latest < earliest;
-    const diffSec = earliest - latest;
-    // Pace
-    const latestPaceSec = latest / (raceDist.meters / 1000);
-    return { best, worst, latest, earliest, improved, diffSec, latestPaceSec };
-  }, [historyData, raceDist]);
-
-  // Actual runs near this distance (±20%)
   const nearRuns = useMemo(() => {
     if (!raceDist) return [];
     const targetKm = raceDist.meters / 1000;
-    const lo = targetKm * 0.8, hi = targetKm * 1.2;
+    const lower = targetKm * 0.8;
+    const upper = targetKm * 1.2;
     return runs
-      .filter(r => {
-        const km = Number(r.distanceKm || 0);
-        return km >= lo && km <= hi;
+      .filter((run) => {
+        const km = Number(run.distanceKm || 0);
+        return km >= lower && km <= upper;
       })
-      .map(r => {
-        const km = Number(r.distanceKm || 0);
-        const sec = Number(r.movingTimeSeconds || 0);
-        // Normalize to target distance
-        const paceSec = sec / km;
-        const normalizedSec = Math.round(paceSec * targetKm);
+      .map((run) => {
+        const km = Number(run.distanceKm || 0);
+        const sec = Number(run.movingTimeSeconds || 0);
+        const paceSec = km > 0 ? sec / km : 0;
         return {
-          ...r,
-          normalizedSec,
-          date: new Date(r.startTime || r.startDate || 0),
+          ...run,
+          normalizedSec: Math.round(paceSec * targetKm),
           paceSecPerKm: paceSec,
+          date: new Date(run.startTime || run.startDate || 0),
         };
       })
+      .filter((run) => run.normalizedSec > 0)
       .sort((a, b) => a.date - b.date);
-  }, [runs, raceDist]);
+  }, [raceDist, runs]);
 
-  // Chart: prediction trend line
+  const stats = useMemo(() => {
+    if (!raceDist || !historyData.length) return null;
+    const times = historyData.map((sample) => sample.timeSec).filter((value) => value > 0);
+    if (!times.length) return null;
+    const latest = times.at(-1);
+    const earliest = times[0];
+    const best = Math.min(...times);
+    const worst = Math.max(...times);
+    const diffSec = earliest - latest;
+    const latestPaceSec = latest / (raceDist.meters / 1000);
+    return {
+      best,
+      worst,
+      latest,
+      earliest,
+      diffSec,
+      improved: latest < earliest,
+      latestPaceSec,
+      confidence: Math.max(68, Math.min(96, 74 + (times.length * 4) + Math.min(nearRuns.length, 4))),
+    };
+  }, [historyData, nearRuns.length, raceDist]);
+
   const trendChartData = useMemo(() => {
-    if (!historyData || historyData.length < 2) return null;
+    if (historyData.length < 2) return null;
     return {
       datasets: [{
         label: t('analysis.pred_detail_predicted'),
-        data: historyData.map(s => ({ x: s.date, y: s.timeSec })),
-        borderColor: color,
-        backgroundColor: color + '20',
+        data: historyData.map((sample) => ({ x: sample.date, y: sample.timeSec })),
+        borderColor: accentColor,
+        backgroundColor: `${accentColor}20`,
         borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: color,
-        pointHoverRadius: 8,
-        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        pointBackgroundColor: accentColor,
+        tension: 0.28,
         fill: true,
       }],
     };
-  }, [historyData, color, t]);
+  }, [accentColor, historyData, t]);
 
-  // Chart: actual runs scatter
   const actualRunsChartData = useMemo(() => {
     if (!nearRuns.length) return null;
     return {
       datasets: [{
         label: t('analysis.pred_detail_actual'),
-        data: nearRuns.map(r => ({ x: r.date.getTime(), y: r.normalizedSec })),
-        backgroundColor: color + '60',
-        borderColor: color,
+        data: nearRuns.map((run) => ({ x: run.date.getTime(), y: run.normalizedSec })),
+        backgroundColor: `${accentColor}66`,
+        borderColor: accentColor,
         pointRadius: 6,
-        pointHoverRadius: 9,
+        pointHoverRadius: 8,
         showLine: false,
       }],
     };
-  }, [nearRuns, color, t]);
+  }, [accentColor, nearRuns, t]);
 
-  if (!raceDist) {
-    return (
-      <AuthenticatedPageChrome>
-        <main className="dashboard-container" style={{ padding: 40, textAlign: 'center' }}>
-          <p>Unknown distance.</p>
-          <Link to="/analysis">{t('analysis.back_to_profile')}</Link>
-        </main>
-      </AuthenticatedPageChrome>
-    );
-  }
+  const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
+  const distLabel = raceDist ? (lang === 'en' ? raceDist.labelEn : raceDist.labelZh) : '--';
+  const paceUnitLabel = t(unit === 'mile' ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km');
+  const fmtPace = (secPerKm) => formatPaceSeconds(unit === 'mile' ? secPerKm * KM_TO_MILE : secPerKm);
+  const rangeLabel = useMemo(() => {
+    if (!raceDist) return '--';
+    const targetKm = raceDist.meters / 1000;
+    return `${(targetKm * 0.8).toFixed(1)}-${(targetKm * 1.2).toFixed(1)} km`;
+  }, [raceDist]);
 
-  const distLabel = lang === 'en' ? raceDist.labelEn : raceDist.labelZh;
-  const fmtPace = (secPerKm) => formatPaceSeconds(isMile ? secPerKm * KM_TO_MILE : secPerKm);
-
-  const scaleOpts = {
+  const scaleOpts = useMemo(() => ({
     x: {
       type: 'linear',
       grid: { display: false },
       ticks: {
-        color: textColor,
-        maxTicksLimit: 10,
-        callback: (value) => new Date(value).toLocaleDateString(lang, { month: 'short', year: '2-digit' }),
+        color: 'rgba(232, 226, 220, 0.55)',
+        maxTicksLimit: 8,
+        callback: (value) => new Date(value).toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { month: 'short', year: '2-digit' }),
       },
     },
     y: {
       reverse: true,
-      grid: { color: gridColor },
+      grid: { color: 'rgba(255,255,255,0.08)' },
       ticks: {
-        color: textColor,
-        callback: (v) => formatDuration(v),
+        color: 'rgba(232, 226, 220, 0.7)',
+        callback: (value) => formatDuration(value),
       },
     },
-  };
+  }), [lang]);
+
+  const navItems = [
+    { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
+    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights', active: true },
+    { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
+    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
+    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
+    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
+    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
+  ];
+
+  if (!raceDist) {
+    return (
+      <div className="analysis-stitch-page analysis-stitch-page--loading">
+        <div className="analysis-stitch-loading">
+          <p>{t('analysis.pred_detail_empty_title')}</p>
+          <Link to="/analysis" className="analysis-stitch-inline-btn">{t('analysis.pred_detail_back')}</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadState !== 'ready') {
+    return <div className="analysis-stitch-page analysis-stitch-page--loading"><div className="analysis-stitch-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div></div>;
+  }
 
   return (
-    <AuthenticatedPageChrome>
+    <div className={`analysis-stitch-page runner-dashboard-page prediction-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="analysis-stitch-sidebar">
+        <div className="analysis-stitch-brand runner-dashboard-brand">
+          <div className="runner-dashboard-brand-copy">
+            <HermesLogo dark />
+            <span>{t('analysis.stitch_brand_subtitle')}</span>
+          </div>
+          <button
+            type="button"
+            className="runner-dashboard-sidebar-toggle"
+            onClick={() => setIsSidebarCollapsed((current) => !current)}
+            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
+            aria-pressed={isSidebarCollapsed}
+          >
+            <span className="runner-dashboard-toggle-glyph" aria-hidden="true">
+              {isSidebarCollapsed ? '>' : '<'}
+            </span>
+          </button>
+        </div>
+        <nav className="analysis-stitch-side-nav">
+          {navItems.map((item) => (
+            <button key={item.key} type="button" className={cx('analysis-stitch-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)}>
+              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+              <span className="runner-dashboard-side-link-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="analysis-stitch-sidebar-footer">
+          <button
+            type="button"
+            className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+            onClick={() => navigate('/today-run')}
+            aria-label={t('profile.dashboard_start_workout')}
+          >
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+            <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
+          </button>
+        </div>
+      </aside>
 
-      <main className="dashboard-container history-container">
-        {/* Hero */}
-        <section className="card" style={{ marginBottom: 24 }}>
-          <Link to="/analysis" style={{ fontSize: '0.85rem', color: 'var(--classic-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
-            &lsaquo; {t('analysis.pred_detail_back')}
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ width: 8, height: 48, borderRadius: 4, background: color }} />
-            <div>
-              <h1 style={{ margin: 0, fontSize: '1.8rem' }}>{distLabel}</h1>
-              <p className="analysis-muted" style={{ margin: '4px 0 0' }}>{t('analysis.pred_detail_subtitle')}</p>
+      <main className="analysis-stitch-main">
+        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
+          <div className="analysis-stitch-topbar-left">
+            <div className="schedule-stitch-topnav">
+              <span className="schedule-stitch-topnav-link is-active">{distLabel}</span>
             </div>
-            {stats && (
-              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-strong, #1e293b)' }}>{formatDuration(stats.latest)}</div>
-                {stats.diffSec !== 0 && (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: stats.improved ? '#16a34a' : '#dc2626' }}>
-                    {stats.improved ? '\u25BC' : '\u25B2'} {formatDuration(Math.abs(stats.diffSec))} {t('analysis.pred_history_since_start')}
+          </div>
+          <div className="analysis-stitch-topbar-actions">
+            <div className="analysis-stitch-topbar-profile-actions">
+              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
+                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
+              </button>
+              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+                <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+              </button>
+              <button type="button" className="analysis-stitch-avatar" aria-label={t('analysis.stitch_edit_profile')} onClick={() => navigate('/profile')}>
+                {initials}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="analysis-stitch-canvas">
+          <section className="analysis-stitch-grid analysis-stitch-grid--hero prediction-detail-grid">
+            <article className="analysis-stitch-card prediction-detail-hero-card">
+              <div className="prediction-detail-band" style={{ background: `linear-gradient(135deg, ${accentColor}, #2d2b2b)` }}>
+                <span>{t('analysis.pred_detail_hero_kicker')}</span>
+                <strong>{distLabel}</strong>
+              </div>
+              <div className="prediction-detail-hero-body">
+                <div className="prediction-detail-hero-copy">
+                  <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_subtitle')}</span>
+                  <h2>{stats ? formatDuration(stats.latest) : '--'}</h2>
+                  <p>{t('analysis.pred_detail_signal_copy', { dist: distLabel })}</p>
+                </div>
+                <div className="prediction-detail-hero-meta">
+                  <div className="prediction-detail-kpi">
+                    <span>{t('analysis.pred_detail_pace')}</span>
+                    <strong>{stats ? `${fmtPace(stats.latestPaceSec)} ${paceUnitLabel}` : '--'}</strong>
                   </div>
-                )}
+                  <div className="prediction-detail-kpi">
+                    <span>{t('analysis.pred_detail_runs')}</span>
+                    <strong>{nearRuns.length}</strong>
+                  </div>
+                  <div className="prediction-detail-kpi">
+                    <span>{t('analysis.stitch_confidence', { value: stats?.confidence ?? 0 })}</span>
+                    <strong>{historyData.length}</strong>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <div className="analysis-stitch-side-stack">
+              <article className="analysis-stitch-card prediction-detail-sidecard">
+                <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_signal_title')}</span>
+                <strong className="prediction-detail-sidecard-value" style={{ color: accentColor }}>
+                  {stats?.diffSec ? `${stats.improved ? '-' : '+'}${formatDuration(Math.abs(stats.diffSec))}` : '--'}
+                </strong>
+                <p>{t('analysis.pred_history_since_start')}</p>
+                <div className="prediction-detail-chip-row">
+                  <span className={cx('analysis-stitch-status-pill', stats?.improved ? 'is-good' : 'is-warn')}>{stats?.improved ? t('profile.dashboard_readiness_ready') : t('profile.dashboard_readiness_build')}</span>
+                  <span className="analysis-stitch-status-pill">{rangeLabel}</span>
+                </div>
+              </article>
+
+              <article className="analysis-stitch-card prediction-detail-sidecard">
+                <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_actual_title')}</span>
+                <strong className="prediction-detail-sidecard-value">{nearRuns.length ? formatDuration(Math.min(...nearRuns.map((run) => run.normalizedSec))) : '--'}</strong>
+                <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+              </article>
+            </div>
+          </section>
+
+          <section className="analysis-stitch-grid analysis-stitch-grid--summary prediction-detail-summary-grid">
+            <article className="analysis-stitch-card analysis-stitch-card--metric analysis-stitch-card--metric-accent">
+              <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_best')}</span>
+              <strong>{stats ? formatDuration(stats.best) : '--'}</strong>
+              <p>{t('analysis.pred_detail_trend_copy')}</p>
+            </article>
+            <article className="analysis-stitch-card analysis-stitch-card--metric">
+              <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_worst')}</span>
+              <strong>{stats ? formatDuration(stats.worst) : '--'}</strong>
+              <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+            </article>
+            <article className="analysis-stitch-card analysis-stitch-card--metric">
+              <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_runs')}</span>
+              <strong>{nearRuns.length}</strong>
+              <p>{t('analysis.pred_detail_table_title')}</p>
+            </article>
+          </section>
+
+          <section className="analysis-stitch-card prediction-detail-chart-card">
+            <div className="analysis-stitch-table-head prediction-detail-chart-head">
+              <div>
+                <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_trend_title')}</span>
+                <h2>{distLabel}</h2>
+              </div>
+              <span className="analysis-stitch-confidence-pill">{t('analysis.stitch_confidence', { value: stats?.confidence ?? 0 })}</span>
+            </div>
+            {trendChartData ? (
+              <div className="prediction-detail-chart-wrap">
+                <Line
+                  data={trendChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          title: (items) => (items.length ? new Date(items[0].parsed.x).toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long' }) : ''),
+                          label: (context) => `${t('analysis.pred_detail_predicted')}: ${formatDuration(context.parsed.y)}`,
+                        },
+                      },
+                    },
+                    scales: scaleOpts,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="prediction-detail-empty">
+                <strong>{t('analysis.pred_detail_empty_title')}</strong>
+                <p>{t('analysis.pred_detail_empty_copy')}</p>
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Stats row */}
-        {stats && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
-            <div className="card" style={{ textAlign: 'center', padding: '18px 14px' }}>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>{t('analysis.pred_detail_best')}</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color }}>{formatDuration(stats.best)}</div>
-            </div>
-            <div className="card" style={{ textAlign: 'center', padding: '18px 14px' }}>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>{t('analysis.pred_detail_worst')}</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-strong)' }}>{formatDuration(stats.worst)}</div>
-            </div>
-            <div className="card" style={{ textAlign: 'center', padding: '18px 14px' }}>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>{t('analysis.pred_detail_pace')}</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-strong)' }}>{fmtPace(stats.latestPaceSec)} {t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}</div>
-            </div>
-            <div className="card" style={{ textAlign: 'center', padding: '18px 14px' }}>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>{t('analysis.pred_detail_runs')}</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-strong)' }}>{nearRuns.length}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Main prediction trend chart */}
-        {trendChartData && (
-          <section className="card" style={{ marginBottom: 24 }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem' }}>{t('analysis.pred_detail_trend_title')}</h2>
-            <p className="analysis-muted" style={{ margin: '0 0 16px', fontSize: '0.85rem' }}>{t('analysis.pred_detail_trend_copy')}</p>
-            <div style={{ position: 'relative', height: 360 }}>
-              <Line data={trendChartData} options={{
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      title: (items) => items.length ? new Date(items[0].parsed.x).toLocaleDateString(lang, { year: 'numeric', month: 'long' }) : '',
-                      label: (ctx) => ctx.parsed.y ? `${t('analysis.pred_detail_predicted')}: ${formatDuration(ctx.parsed.y)}` : '--',
-                    },
-                  },
-                },
-                scales: scaleOpts,
-              }} />
-            </div>
           </section>
-        )}
 
-        {/* Actual runs scatter */}
-        {actualRunsChartData && (
-          <section className="card" style={{ marginBottom: 24 }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.15rem' }}>{t('analysis.pred_detail_actual_title')}</h2>
-            <p className="analysis-muted" style={{ margin: '0 0 16px', fontSize: '0.85rem' }}>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
-            <div style={{ position: 'relative', height: 320 }}>
-              <Scatter data={actualRunsChartData} options={{
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      title: (items) => {
-                        if (!items.length) return '';
-                        const idx = items[0].dataIndex;
-                        const run = nearRuns[idx];
-                        return run ? (run.name || t('runs.default_run_name')) : '';
-                      },
-                      label: (ctx) => {
-                        const idx = ctx.dataIndex;
-                        const run = nearRuns[idx];
-                        const lines = [];
-                        if (run) {
-                          lines.push(`${run.date.toLocaleDateString(lang, { year: 'numeric', month: 'short', day: 'numeric' })}`);
-                          lines.push(`${t('analysis.pred_detail_normalized')}: ${formatDuration(ctx.parsed.y)}`);
-                          lines.push(`${t('runs.metric_distance')}: ${Number(run.distanceKm).toFixed(2)} km`);
-                        }
-                        return lines;
+          <section className="analysis-stitch-card prediction-detail-chart-card">
+            <div className="analysis-stitch-table-head prediction-detail-chart-head">
+              <div>
+                <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_actual_title')}</span>
+                <h2>{t('analysis.pred_detail_actual_title')}</h2>
+              </div>
+              <span className="analysis-stitch-confidence-pill">{rangeLabel}</span>
+            </div>
+            {actualRunsChartData ? (
+              <div className="prediction-detail-chart-wrap prediction-detail-chart-wrap--short">
+                <Scatter
+                  data={actualRunsChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          title: (items) => {
+                            if (!items.length) return '';
+                            const run = nearRuns[items[0].dataIndex];
+                            return run ? (run.name || t('runs.default_run_name')) : '';
+                          },
+                          label: (context) => {
+                            const run = nearRuns[context.dataIndex];
+                            if (!run) return [];
+                            return [
+                              run.date.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+                              `${t('analysis.pred_detail_normalized')}: ${formatDuration(context.parsed.y)}`,
+                              `${t('runs.metric_distance')}: ${Number(run.distanceKm).toFixed(2)} km`,
+                            ];
+                          },
+                        },
                       },
                     },
-                  },
-                },
-                scales: scaleOpts,
-              }} />
-            </div>
+                    scales: scaleOpts,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="prediction-detail-empty">
+                <strong>{t('analysis.pred_detail_empty_title')}</strong>
+                <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+              </div>
+            )}
           </section>
-        )}
 
-        {/* Run table */}
-        {nearRuns.length > 0 && (
-          <section className="card">
-            <h2 style={{ margin: '0 0 12px', fontSize: '1.15rem' }}>{t('analysis.pred_detail_table_title')}</h2>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border-color, #e2e8f0)' }}>
-                    <th style={{ textAlign: 'left', padding: '10px 8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('analysis.pred_detail_col_date')}</th>
-                    <th style={{ textAlign: 'left', padding: '10px 8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('analysis.pred_detail_col_name')}</th>
-                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('runs.metric_distance')}</th>
-                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('analysis.pred_detail_col_time')}</th>
-                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('analysis.pred_detail_col_norm')}</th>
-                    <th style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t('analysis.pred_detail_col_pace')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {nearRuns.slice().reverse().map((r, i) => {
-                    const isBest = r.normalizedSec === stats?.best;
-                    return (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border-color, #eee)', background: isBest ? color + '10' : 'transparent' }}>
-                        <td style={{ padding: '10px 8px', fontSize: '0.85rem' }}>{r.date.toLocaleDateString(lang, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                        <td style={{ padding: '10px 8px', fontSize: '0.85rem', fontWeight: isBest ? 700 : 400 }}>
-                          <Link to={`/run/${r.id}`} style={{ color: isBest ? color : 'var(--text-strong)', textDecoration: 'none' }}>
-                            {r.name || t('runs.default_run_name')}
-                          </Link>
-                          {isBest && <span style={{ marginLeft: 6, fontSize: '0.7rem', background: color, color: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>PR</span>}
-                        </td>
-                        <td style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.85rem' }}>{Number(r.distanceKm).toFixed(2)} km</td>
-                        <td style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.85rem' }}>{formatDuration(Number(r.movingTimeSeconds))}</td>
-                        <td style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.85rem', fontWeight: 700, color: isBest ? color : 'var(--text-strong)' }}>{formatDuration(r.normalizedSec)}</td>
-                        <td style={{ textAlign: 'right', padding: '10px 8px', fontSize: '0.85rem' }}>{fmtPace(r.paceSecPerKm)}</td>
+          <section className="analysis-stitch-card analysis-stitch-card--table">
+            <div className="analysis-stitch-table-head">
+              <div>
+                <span className="analysis-stitch-card-kicker">{t('analysis.pred_detail_actual_title')}</span>
+                <h2>{t('analysis.pred_detail_table_title')}</h2>
+              </div>
+              <span className="analysis-stitch-confidence-pill">{t('analysis.pred_detail_runs')}: {nearRuns.length}</span>
+            </div>
+            {nearRuns.length ? (
+              <>
+                <div className="analysis-stitch-table-wrap">
+                  <table className="analysis-stitch-table prediction-detail-table">
+                    <thead>
+                      <tr>
+                        <th>{t('analysis.pred_detail_col_date')}</th>
+                        <th>{t('analysis.pred_detail_col_name')}</th>
+                        <th>{t('runs.metric_distance')}</th>
+                        <th>{t('analysis.pred_detail_col_time')}</th>
+                        <th>{t('analysis.pred_detail_col_norm')}</th>
+                        <th>{t('analysis.pred_detail_col_pace')}</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {nearRuns.slice().reverse().map((run) => {
+                        const isBest = run.normalizedSec === stats?.best;
+                        return (
+                          <tr key={run.id || `${run.name}-${run.date.getTime()}`} onClick={() => navigate(`/run/${run.id}`)}>
+                            <td>{run.date.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                            <td className={isBest ? 'is-accent' : ''}>
+                              <div className="prediction-detail-run-cell">
+                                <span>{run.name || t('runs.default_run_name')}</span>
+                                {isBest ? <span className="prediction-detail-pr-badge">PR</span> : null}
+                              </div>
+                            </td>
+                            <td>{Number(run.distanceKm).toFixed(2)} km</td>
+                            <td>{formatDuration(Number(run.movingTimeSeconds || 0))}</td>
+                            <td className="is-accent">{formatDuration(run.normalizedSec)}</td>
+                            <td>{fmtPace(run.paceSecPerKm)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="analysis-stitch-table-actions">
+                  <button type="button" className="analysis-stitch-inline-btn" onClick={() => navigate('/runs')}>{t('analysis.stitch_open_runs')}</button>
+                  <button type="button" className="analysis-stitch-inline-btn" onClick={() => navigate('/analysis')}>{t('analysis.pred_detail_back')}</button>
+                </div>
+              </>
+            ) : (
+              <div className="prediction-detail-empty">
+                <strong>{t('analysis.pred_detail_empty_title')}</strong>
+                <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+              </div>
+            )}
           </section>
-        )}
+
+          <footer className="analysis-stitch-footer">
+            <a href="/terms">{t('landing.stitch_footer_terms')}</a>
+            <a href="/privacy">{t('landing.stitch_footer_privacy')}</a>
+            <a href="#support">{t('landing.stitch_footer_support')}</a>
+            <a href="#contact">{t('landing.stitch_footer_contact')}</a>
+            <p>{t('landing.stitch_footer_copy')}</p>
+          </footer>
+        </div>
       </main>
-    </AuthenticatedPageChrome>
+    </div>
   );
 }

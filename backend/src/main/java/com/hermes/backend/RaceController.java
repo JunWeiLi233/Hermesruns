@@ -19,15 +19,18 @@ public class RaceController {
     private final AuthService authService;
     private final RaceEventRepository raceEventRepository;
     private final ActivityRepository activityRepository;
+    private final RaceOfficialImageService raceOfficialImageService;
 
     public RaceController(
             AuthService authService,
             RaceEventRepository raceEventRepository,
-            ActivityRepository activityRepository
+            ActivityRepository activityRepository,
+            RaceOfficialImageService raceOfficialImageService
     ) {
         this.authService = authService;
         this.raceEventRepository = raceEventRepository;
         this.activityRepository = activityRepository;
+        this.raceOfficialImageService = raceOfficialImageService;
     }
 
     @GetMapping
@@ -116,6 +119,25 @@ public class RaceController {
 
         raceEventRepository.delete(raceOptional.get());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/official-image")
+    public ResponseEntity<?> officialImage(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("website") String website
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        try {
+            String imageUrl = raceOfficialImageService.resolveOfficialImage(website);
+            return ResponseEntity.ok(Map.of("imageUrl", imageUrl == null ? "" : imageUrl));
+        } catch (IllegalArgumentException error) {
+            return error(HttpStatus.BAD_REQUEST, error.getMessage());
+        } catch (Exception error) {
+            return ResponseEntity.ok(Map.of("imageUrl", ""));
+        }
     }
 
     private void applyRequest(RaceEvent raceEvent, RaceEventRequest request) {

@@ -1,50 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import { apiJson } from '../api';
+import AppIcon from '../components/AppIcon';
+import HermesLogo from '../components/HermesLogo';
 import shoeCatalog from '../data/shoeCatalog';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
-
-const TYPE_LABELS = {
-  daily: 'type_daily',
-  speed: 'type_speed',
-  race: 'type_race',
-  trail: 'type_trail',
-  stability: 'type_stability',
-};
-
-const CATALOG_CATEGORY_META = {
-  all: { zh: '全部', en: 'All' },
-  '综训': { zh: '综训', en: 'Trainer' },
-  '缓震': { zh: '缓震', en: 'Cushion' },
-  '竞速': { zh: '竞速', en: 'Race' },
-  '体测': { zh: '体测', en: 'Test' },
-  '稳定': { zh: '稳定', en: 'Stability' },
-  '支撑': { zh: '支撑', en: 'Support' },
-  '薄底': { zh: '薄底', en: 'Low Stack' },
-  '薄底通勤': { zh: '薄底通勤', en: 'Low Stack Commute' },
-  '薄底竞速': { zh: '薄底竞速', en: 'Low Stack Race' },
-  '薄底综训': { zh: '薄底综训', en: 'Low Stack Trainer' },
-  '厚底竞速': { zh: '厚底竞速', en: 'Super Shoe' },
-  '综训/竞速': { zh: '综训/竞速', en: 'Trainer/Race' },
-  '越野': { zh: '越野', en: 'Trail' },
-};
-
-function getCatalogCategoryLabel(category, lang) {
-  if (!category) return lang === 'zh-CN' ? '未分类' : 'Other';
-  const meta = CATALOG_CATEGORY_META[category];
-  if (meta) return lang === 'zh-CN' ? meta.zh : meta.en;
-  return category;
-}
-
-function getCatalogModelLabel(item, lang) {
-  if (!item) return '';
-  if (lang === 'zh-CN' && item.modelZh) return item.modelZh;
-  if (lang !== 'zh-CN' && item.modelEn) return item.modelEn;
-  return localizeShoeModel(item.model, lang);
-}
 
 function normalizeBrandKey(brand) {
   return (brand || '')
@@ -75,22 +37,16 @@ function brandLogoSpec(brand) {
   if (key === 'mizuno') return make({ bg: '#8b5cf6', fg: '#ffffff', text: 'M' });
   if (key === 'altra') return make({ bg: '#a16207', fg: '#ffffff', text: 'AL' });
   if (key === 'puma') return make({ bg: '#0f172a', fg: '#ffffff', text: 'PUMA' });
-  if (key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361°' });
+  if (key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361' });
   if (key === 'lining' || (brand || '').includes('李宁')) return make({ bg: '#dc2626', fg: '#ffffff', text: '李宁' });
   if (key === 'anta' || (brand || '').includes('安踏')) return make({ bg: '#f97316', fg: '#ffffff', text: '安踏' });
   if (key === 'xtep' || (brand || '').includes('特步')) return make({ bg: '#2563eb', fg: '#ffffff', text: '特步' });
-  if ((brand || '').includes('鸿星尔克')) return make({ bg: '#60a5fa', fg: '#0b1220', text: '鸿星尔克' });
-  if ((brand || '').includes('匹克')) return make({ bg: '#ef4444', fg: '#ffffff', text: '匹克' });
-  if ((brand || '').includes('乔丹')) return make({ bg: '#111827', fg: '#ffffff', text: '乔丹' });
-  if ((brand || '').includes('必迈')) return make({ bg: '#7c3aed', fg: '#ffffff', text: '必迈' });
-  if ((brand || '').includes('多威')) return make({ bg: '#92400e', fg: '#ffffff', text: '多威' });
-  if ((brand || '').includes('大鲶')) return make({ bg: '#57534e', fg: '#ffffff', text: '大鲶' });
   return null;
 }
 
 function BrandLogo({ brand, fallbackEmoji }) {
   const spec = brandLogoSpec(brand);
-  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || '👟'}</span>;
+  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || 'S'}</span>;
   return (
     <svg className="shoe-brand-logo-svg" viewBox="0 0 40 40" role="img" aria-label={`${brand} logo`}>
       <rect x="2" y="2" width="36" height="36" rx="10" fill={spec.bg} />
@@ -110,16 +66,46 @@ function BrandLogo({ brand, fallbackEmoji }) {
   );
 }
 
+const CATALOG_CATEGORY_META = {
+  all: { zh: '全部', en: 'All' },
+  trainer: { zh: '日常训练', en: 'Trainer' },
+  daily: { zh: '日常训练', en: 'Daily' },
+  cushion: { zh: '缓震', en: 'Cushion' },
+  race: { zh: '比赛', en: 'Race' },
+  test: { zh: '测试', en: 'Test' },
+  stability: { zh: '稳定', en: 'Stability' },
+  support: { zh: '支撑', en: 'Support' },
+  lowstack: { zh: '低堆栈', en: 'Low Stack' },
+  supershoe: { zh: '超级鞋', en: 'Super Shoe' },
+  trail: { zh: '越野', en: 'Trail' },
+};
+
+function getCatalogCategoryLabel(category, lang) {
+  const raw = (category || '').toString();
+  if (!raw) return lang === 'zh-CN' ? '其他' : 'Other';
+  const normalized = normalizeBrandKey(raw);
+  const meta = CATALOG_CATEGORY_META[normalized];
+  if (meta) return lang === 'zh-CN' ? meta.zh : meta.en;
+  return raw;
+}
+
+function getCatalogModelLabel(item, lang) {
+  if (!item) return '';
+  if (lang === 'zh-CN' && item.modelZh) return item.modelZh;
+  if (lang !== 'zh-CN' && item.modelEn) return item.modelEn;
+  return localizeShoeModel(item.model, lang);
+}
+
 export default function ShoeCatalog() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
   const [catalog, setCatalog] = useState(shoeCatalog);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [formBrand, setFormBrand] = useState('');
-  const [formModel, setFormModel] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const seriesSectionRef = useRef(null);
 
   useEffect(() => {
@@ -163,7 +149,7 @@ export default function ShoeCatalog() {
         if (!existing) {
           byBrand.set(key, {
             brand: entry.brand,
-            logo: entry.logo || '👟',
+            logo: entry.logo || 'S',
             models: nextModels,
           });
           continue;
@@ -182,6 +168,16 @@ export default function ShoeCatalog() {
     }
   }
 
+  const navItems = [
+    { key: 'dashboard', icon: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile' },
+    { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
+    { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
+    { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
+    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
+    { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
+    { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
+  ];
+
   const availableCatalogCategories = useMemo(() => {
     const source = selectedBrand?.models || catalog.flatMap((entry) => entry.models || []);
     const categories = Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)));
@@ -198,105 +194,215 @@ export default function ShoeCatalog() {
   function handlePickBrand(brand) {
     setSelectedBrand(brand);
     setSelectedCategory('all');
-    setFormBrand(brand.brand);
     requestAnimationFrame(() => {
       seriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   }
 
-  function handlePickModel(item, brandName = formBrand) {
-    setFormBrand(brandName);
-    setFormModel(item.model);
-  }
-
   function handleCustom() {
     setSelectedBrand(null);
     setSelectedCategory('all');
-    setFormBrand('');
-    setFormModel('');
+    setSelectedModel('');
   }
 
   return (
-    <AuthenticatedPageChrome bodyClassName="history-page shoes-page" topNavProps={{ backLink: { to: '/shoes', label: lang === 'zh-CN' ? '返回跑鞋库' : 'Back to Shoes' } }}>
-      <main className="dashboard-container history-container">
-        <section className="card shoe-catalog-browser">
-          <div className="shoe-wizard-head">
-            <div>
-              <p className="shoe-wizard-step-label">{t('shoes.step_brand')}</p>
-              <h2 className="shoe-selector-title">
-                {selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoes.pick_brand')}
-              </h2>
-            </div>
-            <button type="button" className="shoe-wizard-back" onClick={handleCustom}>
-              {lang === 'zh-CN' ? '清空选择' : 'Clear'}
+    <div className={`analysis-stitch-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="analysis-stitch-sidebar">
+        <div className="analysis-stitch-brand runner-dashboard-brand">
+          <div className="runner-dashboard-brand-copy">
+            <HermesLogo dark />
+            <span>{t('shoes.stitch_surface_label')}</span>
+          </div>
+          <button
+            type="button"
+            className="runner-dashboard-sidebar-toggle"
+            onClick={() => setIsSidebarCollapsed((current) => !current)}
+            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
+            aria-pressed={isSidebarCollapsed}
+          >
+            <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
+          </button>
+        </div>
+
+        <nav className="analysis-stitch-side-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+              onClick={() => navigate(item.route)}
+            >
+              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+              <span className="runner-dashboard-side-link-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="analysis-stitch-sidebar-footer">
+          <button type="button" className="analysis-stitch-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+            <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
+          </button>
+        </div>
+      </aside>
+
+      <main className="analysis-stitch-main">
+        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
+          <div className="analysis-stitch-topbar-left">
+            <button type="button" className="add-shoes-topbar-back" onClick={() => navigate('/shoes')}>
+              <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
+              <span>{lang === 'zh-CN' ? '返回跑鞋库' : 'Back to shoes'}</span>
             </button>
           </div>
 
-          <div className="shoe-selector-layout">
-            <div className="shoe-selector-sidebar">
-              <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '品牌' : 'Brands'}</div>
-              <div className="shoe-brand-grid shoe-brand-grid-rail">
-                {catalog.map((entry) => (
-                  <button
-                    key={entry.brand}
-                    type="button"
-                    className={`shoe-brand-card shoe-brand-card-rail${selectedBrand?.brand === entry.brand ? ' active' : ''}`}
-                    onClick={() => handlePickBrand(entry)}
-                  >
-                    <span className="shoe-brand-logo">
-                      <BrandLogo brand={entry.brand} fallbackEmoji={entry.logo} />
-                    </span>
-                    <span className="shoe-brand-name">{localizeShoeBrand(entry.brand, lang)}</span>
-                    <span className="shoe-brand-count">{entry.models.length}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div ref={seriesSectionRef} className="shoe-selector-list-shell">
-              <div className="shoe-selector-sidebar-title">{lang === 'zh-CN' ? '系列' : 'Series'}</div>
-
-              {!selectedBrand ? (
-                <div className="shoe-selector-empty">
-                  {lang === 'zh-CN' ? '先点击一个品牌，再查看对应系列' : 'Click a brand to view its series'}
-                </div>
-              ) : (
-                <>
-                  <div className="shoe-type-chip-row">
-                    {availableCatalogCategories.map((categoryKey) => (
-                      <button
-                        key={categoryKey}
-                        type="button"
-                        className={`shoe-type-chip${selectedCategory === categoryKey ? ' active' : ''}`}
-                        onClick={() => setSelectedCategory(categoryKey)}
-                      >
-                        {getCatalogCategoryLabel(categoryKey, lang)}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="shoe-model-list shoe-model-list-grid">
-                    {visibleCatalogModels.map((item, index) => (
-                      <button
-                        key={`${selectedBrand.brand}-${item.model}-${index}`}
-                        type="button"
-                        className={`shoe-model-item shoe-model-item-grid${formModel === item.model ? ' active' : ''}`}
-                        onClick={() => handlePickModel(item, selectedBrand.brand)}
-                      >
-                        <span className="shoe-model-name">{getCatalogModelLabel(item, lang)}</span>
-                        <span className="shoe-model-meta">
-                          <span className="shoe-category-badge">{getCatalogCategoryLabel(item.category, lang)}</span>
-                          <span className={`shoe-type-badge shoe-type-${item.type}`}>{t(`shoes.${TYPE_LABELS[item.type]}`)}</span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+          <div className="analysis-stitch-topbar-actions">
+            <button type="button" className="analysis-stitch-topbar-link" onClick={() => navigate('/add-shoes')}>
+              {t('shoes.add_page_title')}
+            </button>
+            <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label="Profile">
+              H
+            </button>
           </div>
-        </section>
+        </header>
+
+        <div className="analysis-stitch-canvas">
+          <div className="add-shoes-shell">
+            <section className="add-shoes-browser-panel shoe-catalog-browser-panel">
+              <div className="add-shoes-browser-head">
+                <div>
+                  <span className="add-shoes-panel-kicker">{t('shoes.browser_kicker')}</span>
+                  <h1>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoes.pick_brand')}</h1>
+                  <p>
+                    {lang === 'zh-CN'
+                      ? '把品牌、系列和类型放在同一层里快速浏览，再决定跳去添加哪一双。'
+                      : 'Browse brands, series, and use-cases in one editorial layer before deciding which pair to add.'}
+                  </p>
+                </div>
+                <button type="button" className="analysis-stitch-inline-btn" onClick={handleCustom}>
+                  {lang === 'zh-CN' ? '清空' : 'Clear'}
+                </button>
+              </div>
+
+              <div className="add-shoes-browser-layout">
+                <aside className="add-shoes-brand-rail">
+                  {catalog.map((entry) => (
+                    <button
+                      key={entry.brand}
+                      type="button"
+                      className={`add-shoes-brand-item${selectedBrand?.brand === entry.brand ? ' is-active' : ''}`}
+                      onClick={() => handlePickBrand(entry)}
+                    >
+                      <span className="add-shoes-brand-logo">
+                        <BrandLogo brand={entry.brand} fallbackEmoji={entry.logo} />
+                      </span>
+                      <div className="add-shoes-brand-copy">
+                        <strong>{localizeShoeBrand(entry.brand, lang)}</strong>
+                        <span>{t('shoes.model_count', { count: entry.models.length })}</span>
+                      </div>
+                    </button>
+                  ))}
+                </aside>
+
+                <div ref={seriesSectionRef} className="add-shoes-model-grid-shell">
+                  <div className="add-shoes-model-grid-head">
+                    <strong>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : (lang === 'zh-CN' ? '系列' : 'Series')}</strong>
+                    <span>{selectedBrand ? t('shoes.model_count', { count: visibleCatalogModels.length }) : t('shoes.stitch_preview_label')}</span>
+                  </div>
+
+                  {!selectedBrand ? (
+                    <div className="add-shoes-model-empty">
+                      {lang === 'zh-CN' ? '先点一个品牌，这里才会展开对应系列。' : 'Pick a brand first to open the matching series grid.'}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="add-shoes-filter-row">
+                        {availableCatalogCategories.map((categoryKey) => (
+                          <button
+                            key={categoryKey}
+                            type="button"
+                            className={`add-shoes-filter-chip${selectedCategory === categoryKey ? ' is-active' : ''}`}
+                            onClick={() => setSelectedCategory(categoryKey)}
+                          >
+                            {getCatalogCategoryLabel(categoryKey, lang)}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="add-shoes-model-grid">
+                        {visibleCatalogModels.map((item, index) => (
+                          <button
+                            key={`${selectedBrand.brand}-${item.model}-${index}`}
+                            type="button"
+                            className={`add-shoes-model-card${selectedModel === item.model ? ' is-active' : ''}`}
+                            onClick={() => setSelectedModel(item.model)}
+                          >
+                            <span className="add-shoes-model-art">
+                              <BrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
+                            </span>
+                            <strong>{getCatalogModelLabel(item, lang)}</strong>
+                            <span>{getCatalogCategoryLabel(item.category || item.type, lang)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <aside className="add-shoes-side-rail">
+              <section className="add-shoes-side-card">
+                <span className="add-shoes-panel-kicker">{t('shoes.add_page_selected_kicker')}</span>
+                <strong>{selectedModel || t('shoes.add_page_selected_empty')}</strong>
+                <p>
+                  {selectedModel
+                    ? lang === 'zh-CN'
+                      ? '已选型号可以直接带入新版添加跑鞋流程。'
+                      : 'The selected model can be carried straight into the newer add-shoe flow.'
+                    : t('shoes.add_page_selected_copy')}
+                </p>
+              </section>
+
+              <section className="add-shoes-side-card">
+                <span className="add-shoes-panel-kicker">{t('shoes.stitch_actions')}</span>
+                <p>
+                  {lang === 'zh-CN'
+                    ? '找到目标鞋款后，跳到新版添加页完成库存写入和主力鞋设置。'
+                    : 'Once you find the right pair, jump to the newer add page to create the inventory entry and set a primary shoe.'}
+                </p>
+                <div className="today-run-marathon-cta-row">
+                  <button
+                    type="button"
+                    className="shoe-inventory-cta"
+                    onClick={() => navigate('/add-shoes', {
+                      state: selectedBrand && selectedModel ? { brand: selectedBrand.brand, model: selectedModel } : undefined,
+                    })}
+                  >
+                    <AppIcon name="add" className="runner-dashboard-side-link-icon" />
+                    <span>{t('shoes.add_shoe')}</span>
+                  </button>
+                </div>
+              </section>
+
+              <section className="add-shoes-side-card">
+                <span className="add-shoes-panel-kicker">{t('shoes.stitch_preview_label')}</span>
+                <p>
+                  {lang === 'zh-CN'
+                    ? '这个页面保留为浏览入口，不再停留在旧 top-nav 壳层里。'
+                    : 'This route stays as a browse-first utility surface instead of living inside the older top-nav chrome.'}
+                </p>
+              </section>
+            </aside>
+          </div>
+
+          <footer className="analysis-stitch-footer runner-dashboard-footer">
+            <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
+            <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
+            <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
+            <button type="button" onClick={logout}>{t('profile.logout')}</button>
+          </footer>
+        </div>
       </main>
-    </AuthenticatedPageChrome>
+    </div>
   );
 }

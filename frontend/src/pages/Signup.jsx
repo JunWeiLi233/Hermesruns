@@ -2,9 +2,65 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch } from '../api';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-import HermesLogo from '../components/HermesLogo';
+import AppIcon from '../components/AppIcon';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
+
+const SIGNUP_STITCH_COPY = {
+  'zh-CN': {
+    login_nav: '返回登录',
+    hero_line_one: '提高你的',
+    hero_line_two: '每一步',
+    hero_line_three: '表现。',
+    hero_copy: '把训练记录、表现判断和下一步建议放进同一个入口。连接 Strava 后，Hermes 会把新的跑步数据持续带回你的训练面板。',
+    standard: '数字节律',
+    strava_cta: '使用 Strava 继续',
+    email_divider: '或使用邮箱',
+    email_label: '跑者邮箱',
+    password_label: '密码 / PASSKEY',
+    confirm_password_label: '确认密码',
+    security_title: '密码要求',
+    submit: '创建账号',
+    done_line_one: '欢迎加入',
+    done_line_two: 'Hermes',
+    legal_prefix: '继续即表示你同意',
+    legal_joiner: '与',
+    confirm_password_mismatch: '两次输入的密码不一致。',
+    footer_support: '支持',
+    footer_terms: '条款',
+    footer_privacy: '隐私',
+    footer_contact: '联系',
+    footer_copy: '为认真训练的跑者准备的入场页。',
+  },
+  en: {
+    login_nav: 'Back to login',
+    hero_line_one: 'Elevate your',
+    hero_line_two: 'every',
+    hero_line_three: 'stride.',
+    hero_copy: 'Bring training history, performance signals, and the next best action into one entry point. Once Strava is connected, Hermes keeps pulling fresh run data back into your coaching dashboard.',
+    standard: 'Digital pulse',
+    strava_cta: 'Continue with Strava',
+    email_divider: 'or use email',
+    email_label: 'Runner email',
+    password_label: 'Password / Passkey',
+    confirm_password_label: 'Confirm password',
+    security_title: 'Password rules',
+    submit: 'Create account',
+    done_line_one: 'Welcome to',
+    done_line_two: 'Hermes',
+    legal_prefix: 'By continuing you agree to the',
+    legal_joiner: 'and',
+    confirm_password_mismatch: 'Passwords do not match.',
+    footer_support: 'Support',
+    footer_terms: 'Terms',
+    footer_privacy: 'Privacy',
+    footer_contact: 'Contact',
+    footer_copy: 'A better training entry point for serious runners.',
+  },
+};
+
+function formatLocalCopy(template, vars = {}) {
+  return String(template || '').replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
+}
 
 function checkPasswordClient(password, minLength) {
   const failed = [];
@@ -19,18 +75,20 @@ function checkPasswordClient(password, minLength) {
 }
 
 export default function Signup() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
+  const stitchCopy = useMemo(() => SIGNUP_STITCH_COPY[lang] || SIGNUP_STITCH_COPY.en, [lang]);
+  const s = (key, vars) => formatLocalCopy(stitchCopy[key] || key, vars);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [failedRules, setFailedRules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pwRules, setPwRules] = useState({ minLength: 10 });
   const [doneInfo, setDoneInfo] = useState(null);
-  const [altRegisterOpen, setAltRegisterOpen] = useState(false);
   const [banner, setBanner] = useState(null);
 
   useEffect(() => {
@@ -42,7 +100,9 @@ export default function Signup() {
           const data = await res.json();
           if (data.minLength) setPwRules(data);
         }
-      } catch { /* ignore */ }
+      } catch {
+        // Ignore password rule fetch failures and keep the local fallback.
+      }
     })();
   }, []);
 
@@ -50,13 +110,13 @@ export default function Signup() {
     const bannerState = parseSignupStatusQuery(window.location.search, {
       stravaConfirmationFallback: t('profile.strava_link_confirmation_required'),
     });
+
     if (bannerState.prefillEmail) {
       setEmail(bannerState.prefillEmail);
-      setAltRegisterOpen(true);
     }
+
     if (bannerState.banner) {
       setBanner(bannerState.banner);
-      setAltRegisterOpen(bannerState.autoOpen);
       if (bannerState.banner === 'strava_not_configured') {
         setError(t('common.strava_not_configured'));
       } else if (bannerState.banner === 'strava_failed') {
@@ -65,12 +125,16 @@ export default function Signup() {
         setError(bannerState.errorMessage || t('profile.strava_link_confirmation_required'));
       }
     }
+
     if (bannerState.shouldClear) {
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams, t]);
+  }, [setSearchParams, t]);
 
-  const clientFailed = useMemo(() => checkPasswordClient(password, pwRules.minLength || 10), [password, pwRules.minLength]);
+  const clientFailed = useMemo(
+    () => checkPasswordClient(password, pwRules.minLength || 10),
+    [password, pwRules.minLength],
+  );
   const displayFailed = failedRules.length > 0 ? failedRules : clientFailed;
 
   const ruleLabels = {
@@ -87,9 +151,14 @@ export default function Signup() {
     setError('');
     setFailedRules([]);
 
-    const f = checkPasswordClient(password, pwRules.minLength || 10);
-    if (f.length > 0) {
-      setFailedRules(f);
+    if (password !== confirmPassword) {
+      setError(s('confirm_password_mismatch'));
+      return;
+    }
+
+    const failed = checkPasswordClient(password, pwRules.minLength || 10);
+    if (failed.length > 0) {
+      setFailedRules(failed);
       setError(t('signup.password_rules_title'));
       return;
     }
@@ -132,139 +201,171 @@ export default function Signup() {
 
   if (doneInfo) {
     return (
-      <div className="auth-page">
-        <LanguageSwitcher />
-        <div className="layout-wrapper">
-          <section className="form-section form-section--solo">
-            <div className="auth-panel auth-panel--solo">
-              <div className="login-container login-container--compact">
-                <h2 className="auth-card-title">{t('signup.check_email_title')}</h2>
-                <p className="auth-hero-text auth-hero-text--spaced">{doneInfo.message || t('signup.check_email_body')}</p>
-                {!doneInfo.verificationRequired && (
-                  <p className="auth-card-copy auth-card-copy--note">{t('signup.no_mail_server_note')}</p>
-                )}
-                <button type="button" className="btn-primary btn-primary--spaced" onClick={() => navigate('/login')}>
-                  {t('signup.signin_link')}
-                </button>
-              </div>
+      <div className="auth-page auth-page--stitch-signup">
+        <div className="signup-stitch-bg" />
+        <main className="signup-stitch-shell signup-stitch-shell--done">
+          <section className="signup-stitch-copy signup-stitch-copy--done">
+            <div className="signup-stitch-copy-stack">
+              <Link to="/" className="signup-stitch-wordmark">HERMES</Link>
+              <h1 className="signup-stitch-hero">
+                <span>{s('done_line_one')}</span>
+                <span className="is-accent">{s('done_line_two')}</span>
+              </h1>
+              <p className="signup-stitch-text">{doneInfo.message || t('signup.check_email_body')}</p>
+              {!doneInfo.verificationRequired && (
+                <p className="signup-stitch-subtle">{t('signup.no_mail_server_note')}</p>
+              )}
+              <button type="button" className="signup-stitch-primary" onClick={() => navigate('/login')}>
+                {t('signup.signin_link')}
+              </button>
             </div>
           </section>
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="auth-page">
-      <LanguageSwitcher />
-      <div className="layout-wrapper">
-        <section className="brand-section">
-          <div className="brand-content">
-            <div className="brand-badge">
-              <HermesLogo mark={t('common.logo_mark')} tone="dark" />
+    <div className="auth-page auth-page--stitch-signup">
+      <div className="signup-stitch-bg" />
+
+      <nav className="signup-stitch-nav">
+        <Link to="/" className="signup-stitch-wordmark">HERMES</Link>
+        <Link to="/login" className="signup-stitch-login-link">{s('login_nav')}</Link>
+      </nav>
+
+      <main className="signup-stitch-shell">
+        <section className="signup-stitch-copy">
+          <div className="signup-stitch-copy-stack">
+            <h1 className="signup-stitch-hero">
+              <span>{s('hero_line_one')}</span>
+              <span>{s('hero_line_two')}</span>
+              <span className="is-accent">{s('hero_line_three')}</span>
+            </h1>
+            <p className="signup-stitch-text">{s('hero_copy')}</p>
+            <div className="signup-stitch-standard">
+              <span className="signup-stitch-standard-line" />
+              <span>{s('standard')}</span>
             </div>
-            <h1 className="auth-hero-title">{t('signup.hero_title').split('\n').map((line, i) => (
-              <span key={i}>{line}{i === 0 && <br />}</span>
-            ))}</h1>
-            <p className="auth-hero-text">{t('signup.hero_text')}</p>
+            <div className="signup-stitch-rail" aria-hidden="true">
+              <span className="is-active" />
+              <span />
+              <span />
+            </div>
           </div>
         </section>
 
-        <section className="form-section">
-          <div className="auth-panel">
-            <div className="login-container">
-              <div className="auth-card-header">
-                <p className="auth-card-kicker"><HermesLogo tone="light" showIcon={false} /></p>
-                <h2 className="auth-card-title">{t('signup.card_title')}</h2>
-                <p className="auth-card-copy auth-card-copy--tight">{t('signup.strava_focus_copy')}</p>
+        <section className="signup-stitch-panel-wrap">
+          <div className="signup-stitch-panel">
+            <button type="button" className="signup-stitch-strava" onClick={() => startOAuth('strava')}>
+              <AppIcon name="directions_run" className="signup-stitch-strava-icon" />
+              <span>{s('strava_cta')}</span>
+            </button>
+
+            <div className="signup-stitch-divider">
+              <span />
+              <strong>{s('email_divider')}</strong>
+              <span />
+            </div>
+
+            <form className="signup-stitch-form" onSubmit={handleSubmit}>
+              {banner === 'strava_link_confirmation_required' && (
+                <div className="error-alert is-visible">{t('profile.strava_link_confirmation_required')}</div>
+              )}
+              {banner === 'strava_not_configured' && (
+                <div className="error-alert is-visible">{t('common.strava_not_configured')}</div>
+              )}
+              {banner === 'strava_failed' && (
+                <div className="error-alert is-visible">{t('common.strava_login_failed')}</div>
+              )}
+              {error && <div className="error-alert is-visible">{error}</div>}
+
+              <div className="signup-stitch-field">
+                <label htmlFor="email">{s('email_label')}</label>
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="athlete@hermes.io"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
 
-              <button type="button" className="btn-strava btn-strava--lead" onClick={() => startOAuth('strava')}>
-                {t('signup.strava')}
+              <div className="signup-stitch-field">
+                <label htmlFor="password">{s('password_label')}</label>
+                <input
+                  type="password"
+                  id="password"
+                  placeholder="********"
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFailedRules([]);
+                  }}
+                />
+              </div>
+
+              <div className="signup-stitch-field">
+                <label htmlFor="confirm-password">{s('confirm_password_label')}</label>
+                <input
+                  type="password"
+                  id="confirm-password"
+                  placeholder="********"
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+
+              <div className="signup-stitch-rules">
+                <h3>{s('security_title')}</h3>
+                <ul>
+                  {['MIN_LENGTH', 'DIGIT', 'SPECIAL'].map((id) => (
+                    <li key={id} className={displayFailed.includes(id) ? '' : 'is-passed'}>
+                      <span aria-hidden="true">{displayFailed.includes(id) ? '○' : '●'}</span>
+                      <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <button type="submit" className="signup-stitch-primary" disabled={loading}>
+                {loading ? t('signup.submit_loading') : s('submit')}
               </button>
 
               <button
                 type="button"
-                className="auth-alt-toggle"
-                onClick={() => setAltRegisterOpen(o => !o)}
-                aria-expanded={altRegisterOpen}
+                className="signup-stitch-google"
+                onClick={() => startOAuth('google')}
               >
-                {altRegisterOpen ? t('signup.alt_register_hide') : t('signup.alt_register_show')}
+                {t('signup.google')}
               </button>
+            </form>
 
-              {altRegisterOpen && (
-              <form className="auth-alt-block" onSubmit={handleSubmit}>
-                <p className="auth-card-copy auth-card-copy--form-intro">{t('signup.form_title')}</p>
-                {banner === 'strava_link_confirmation_required' && (
-                  <div className="error-alert is-visible">{t('profile.strava_link_confirmation_required')}</div>
-                )}
-                {banner === 'strava_not_configured' && (
-                  <div className="error-alert is-visible">{t('common.strava_not_configured')}</div>
-                )}
-                {banner === 'strava_failed' && (
-                  <div className="error-alert is-visible">{t('common.strava_login_failed')}</div>
-                )}
-                {error && <div className="error-alert is-visible">{error}</div>}
-
-                <div className="form-group">
-                  <div className="password-rules-title">{t('signup.password_rules_title')}</div>
-                  <ul className="password-rules-list">
-                    {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL', 'NOT_COMMON'].map(id => (
-                      <li key={id} className={`password-rules-item${displayFailed.includes(id) ? ' is-failed' : ''}`}>
-                        {ruleLabels[id] ? ruleLabels[id]() : id}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email">{t('signup.email_label')}</label>
-                  <input
-                    type="email"
-                    id="email"
-                    placeholder="runner@hermes.com"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="password">{t('signup.password_label')}</label>
-                  <input
-                    type="password"
-                    id="password"
-                    placeholder={t('signup.password_placeholder')}
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setFailedRules([]); }}
-                  />
-                </div>
-
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? t('signup.submit_loading') : t('signup.submit')}
-                </button>
-
-                <div className="divider"><span>{t('signup.divider_alt')}</span></div>
-
-                <div className="social-login social-login--single">
-                  <button type="button" className="btn-google" onClick={() => startOAuth('google')}>
-                    {t('signup.google')}
-                  </button>
-                </div>
-              </form>
-              )}
-
-              <div className="signup-link">
-                <span>{t('signup.signin_prompt')}</span>
-                <Link to="/login">{t('signup.signin_link')}</Link>
-              </div>
-            </div>
+            <p className="signup-stitch-legal">
+              {s('legal_prefix')}{' '}
+              <a href="/terms">{s('footer_terms')}</a>{' '}
+              {s('legal_joiner')}{' '}
+              <a href="/privacy">{s('footer_privacy')}</a>.
+            </p>
           </div>
         </section>
-      </div>
+      </main>
+
+      <footer className="signup-stitch-footer">
+        <div className="signup-stitch-footer-links">
+          <a href="mailto:support@hermes.run">{s('footer_support')}</a>
+          <a href="/terms">{s('footer_terms')}</a>
+          <a href="/privacy">{s('footer_privacy')}</a>
+          <a href="mailto:support@hermes.run">{s('footer_contact')}</a>
+        </div>
+        <p>{s('footer_copy')}</p>
+      </footer>
     </div>
   );
 }

@@ -130,8 +130,17 @@ public class OAuthController {
     }
 
     @GetMapping("/auth/strava/status")
-    public ResponseEntity<Map<String, Object>> getStravaStatus() {
-        return ResponseEntity.ok(systemConfigService.getStravaStatus());
+    public ResponseEntity<Map<String, Object>> getStravaStatus(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Map<String, Object> status = new HashMap<>(systemConfigService.getStravaStatus());
+        boolean linked = authService.findByAuthorizationHeader(authorizationHeader)
+                .map(runner -> runner.getStravaAthleteId() != null
+                        && runner.getStravaRefreshToken() != null
+                        && !runner.getStravaRefreshToken().isBlank())
+                .orElse(false);
+        status.put("linked", linked);
+        return ResponseEntity.ok(status);
     }
 
     @GetMapping("/auth/google/start")
@@ -359,6 +368,26 @@ public class OAuthController {
                 );
             }
             if (linkedRunner.isEmpty() && legacyShadowRunner.isEmpty()) {
+                if (shouldAutoProvisionStravaRunner(state)) {
+                    Runner newRunner = buildNewStravaRunner(athlete, athleteId, accessToken, refreshToken, expiresAt);
+                    newRunner = runnerRepository.save(newRunner);
+
+                    Long runnerId = newRunner.getId();
+                    CompletableFuture.runAsync(
+                            () -> fetchAndSaveStravaActivities(accessToken, runnerId, false),
+                            stravaBackgroundExecutor
+                    );
+
+                    String token = authService.issueSessionToken(newRunner);
+                    String targetPage = authService.isAdmin(newRunner) ? "/dashboard" : "/profile";
+
+                    return new RedirectView(
+                            targetPage
+                                    + "#source=strava"
+                                    + "&token=" + urlEncode(token)
+                                    + "&email=" + urlEncode(newRunner.getEmail())
+                    );
+                }
                 return stravaLinkConfirmationRedirect(state, athleteId, athlete);
             }
 
@@ -1000,6 +1029,39 @@ public class OAuthController {
             details += " Strava athlete id: " + athleteId + ".";
         }
         return new RedirectView(base + "&details=" + urlEncode(details));
+    }
+
+    private boolean shouldAutoProvisionStravaRunner(String state) {
+        if (isProfileLinkState(state) || Objects.equals(state, "profile-link")) {
+            return false;
+        }
+        return state == null
+                || state.isBlank()
+                || Objects.equals(state, "login")
+                || Objects.equals(state, "signup");
+    }
+
+    private Runner buildNewStravaRunner(
+            Map<String, Object> athlete,
+            Long athleteId,
+            String accessToken,
+            String refreshToken,
+            Long expiresAt
+    ) {
+        Runner runner = new Runner();
+        runner.setEmail(stravaEmail(athleteId));
+        runner.setRole("USER");
+        runner.setStatus("ACTIVE_STRAVA");
+        runner.setDeleted(false);
+        runner.setStravaAthleteId(athleteId);
+        runner.setStravaUsername(stringValue(athlete.get("username")));
+        runner.setStravaAccessToken(secretEncryptionService.encrypt(accessToken));
+        runner.setStravaRefreshToken(secretEncryptionService.encrypt(refreshToken));
+        runner.setStravaTokenExpiresAt(expiresAt);
+        runner.setDisplayName(resolveStravaDisplayName(athlete, athleteId));
+        runner.setEmailVerified(true);
+        aiUsageService.initNewUser(runner);
+        return runner;
     }
 
     private String safeMessage(Exception exception) {

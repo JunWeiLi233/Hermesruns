@@ -5,8 +5,21 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import { formatDuration, formatLongDate, formatPace } from '../utils/format';
 import { formatShoeDisplayName } from '../utils/shoeNames';
-import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import 'leaflet/dist/leaflet.css';
+
+function readSelectedRunFromSession(expectedId) {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem('hermes_selected_run');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (expectedId != null && String(parsed.id) !== String(expectedId)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 function haversineMeters([lat1, lng1], [lat2, lng2]) {
   const R = 6371000;
@@ -25,24 +38,50 @@ function classifyRoute(distanceKm, gapM) {
 
 function buildInsights(points) {
   if (!points.length) {
-    return { pointCount: 0, computedDistanceKm: null, startFinishGapMeters: null, boundingSpanKm: null, efficiency: null, routeShape: 'No GPS route', centerPoint: null, centerLabel: 'Not available' };
+    return {
+      pointCount: 0,
+      computedDistanceKm: null,
+      startFinishGapMeters: null,
+      boundingSpanKm: null,
+      efficiency: null,
+      routeShape: 'No GPS route',
+      centerPoint: null,
+      centerLabel: 'Not available',
+    };
   }
-  let dist = 0, minLat = points[0][0], maxLat = points[0][0], minLng = points[0][1], maxLng = points[0][1];
-  for (let i = 1; i < points.length; i++) {
+  let dist = 0;
+  let minLat = points[0][0];
+  let maxLat = points[0][0];
+  let minLng = points[0][1];
+  let maxLng = points[0][1];
+  for (let i = 1; i < points.length; i += 1) {
     dist += haversineMeters(points[i - 1], points[i]);
-    minLat = Math.min(minLat, points[i][0]); maxLat = Math.max(maxLat, points[i][0]);
-    minLng = Math.min(minLng, points[i][1]); maxLng = Math.max(maxLng, points[i][1]);
+    minLat = Math.min(minLat, points[i][0]);
+    maxLat = Math.max(maxLat, points[i][0]);
+    minLng = Math.min(minLng, points[i][1]);
+    maxLng = Math.max(maxLng, points[i][1]);
   }
   const center = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
   const gap = haversineMeters(points[0], points[points.length - 1]);
   const span = haversineMeters([minLat, minLng], [maxLat, maxLng]);
   const distKm = dist / 1000;
   return {
-    pointCount: points.length, computedDistanceKm: distKm, startFinishGapMeters: gap,
-    boundingSpanKm: span / 1000, efficiency: dist > 0 ? span / dist : null,
-    routeShape: classifyRoute(distKm, gap), centerPoint: center,
+    pointCount: points.length,
+    computedDistanceKm: distKm,
+    startFinishGapMeters: gap,
+    boundingSpanKm: span / 1000,
+    efficiency: dist > 0 ? span / dist : null,
+    routeShape: classifyRoute(distKm, gap),
+    centerPoint: center,
     centerLabel: `${center[0].toFixed(4)}, ${center[1].toFixed(4)}`,
   };
+}
+
+function formatLapElevation(lap) {
+  const raw = lap?.elevationGainMeters ?? lap?.elevationGain ?? lap?.elevationDeltaMeters;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return '--';
+  return `${value > 0 ? '+' : ''}${value.toFixed(0)} m`;
 }
 
 export default function RunDetail() {
@@ -50,7 +89,8 @@ export default function RunDetail() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
 
-  const [run, setRun] = useState(null);
+  const [run, setRun] = useState(() => readSelectedRunFromSession(id));
+  const [isBootstrappingRun, setIsBootstrappingRun] = useState(true);
   const [points, setPoints] = useState([]);
   const [insights, setInsights] = useState(null);
   const [syncBtnText, setSyncBtnText] = useState('');
@@ -60,42 +100,83 @@ export default function RunDetail() {
   const [analytics, setAnalytics] = useState(null);
   const [elevationStatus, setElevationStatus] = useState(null);
   const [recalibratingElevation, setRecalibratingElevation] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState('');
+  const [showAllSplits, setShowAllSplits] = useState(false);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
-  // Load run from sessionStorage or by ID
   useEffect(() => {
-    const raw = sessionStorage.getItem('hermes_selected_run');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      setRun(parsed);
+    const cachedRun = readSelectedRunFromSession(id);
+    if (cachedRun) {
+      setRun(cachedRun);
+      setIsBootstrappingRun(false);
+      return;
     }
-  }, [id]);
 
-  // Load available shoes
+    if (!isAuthenticated || !id) {
+      setRun(null);
+      setIsBootstrappingRun(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function bootstrapRunFromActivities() {
+      setIsBootstrappingRun(true);
+      try {
+        const activities = await apiJson('/api/activities');
+        if (cancelled) return;
+        const matchedRun = Array.isArray(activities)
+          ? activities.find((activity) => String(activity?.id) === String(id))
+          : null;
+        setRun(matchedRun || null);
+        if (matchedRun && typeof window !== 'undefined') {
+          sessionStorage.setItem('hermes_selected_run', JSON.stringify(matchedRun));
+        }
+      } catch {
+        if (!cancelled) {
+          setRun(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsBootstrappingRun(false);
+        }
+      }
+    }
+
+    bootstrapRunFromActivities();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isAuthenticated]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
-    apiJson('/api/shoes').then(data => setShoes(Array.isArray(data) ? data : [])).catch(() => {});
+    apiJson('/api/shoes').then((data) => setShoes(Array.isArray(data) ? data : [])).catch(() => {});
   }, [isAuthenticated]);
 
   async function assignShoe(shoeId) {
     if (!run?.id) return;
     try {
       await apiFetch(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' });
-      setRun(prev => ({
+      setRun((prev) => ({
         ...prev,
         shoeId: shoeId === 0 ? null : shoeId,
         shoeName: shoeId === 0 ? null : (() => {
-          const s = shoes.find(sh => sh.id === shoeId);
-          return s ? formatShoeDisplayName({ brand: s.brand, model: s.model, nickname: s.nickname, lang }) : null;
+          const shoe = shoes.find((item) => item.id === shoeId);
+          return shoe
+            ? formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })
+            : null;
         })(),
       }));
       setShoeDropdownOpen(false);
-    } catch { /* ignored */ }
+    } catch {
+      // ignored
+    }
   }
 
-  // Fetch GPS points
   useEffect(() => {
     if (!run?.id || !isAuthenticated) return;
     async function fetchPoints() {
@@ -108,7 +189,7 @@ export default function RunDetail() {
         if (!res.ok) return;
         const data = await res.json();
         const pts = Array.isArray(data)
-          ? data.map(p => [Number(p.latitude), Number(p.longitude)]).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]))
+          ? data.map((p) => [Number(p.latitude), Number(p.longitude)]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
           : [];
         setPoints(pts);
         setInsights(buildInsights(pts));
@@ -120,10 +201,12 @@ export default function RunDetail() {
           const payload = await elevStatusRes.json();
           setElevationStatus(payload && typeof payload === 'object' ? payload : null);
         }
-      } catch { /* ignored */ }
+      } catch {
+        // ignored
+      }
     }
     fetchPoints();
-  }, [run, isAuthenticated, t]);
+  }, [run, isAuthenticated]);
 
   async function handleElevationRecalibration() {
     if (!run?.id || recalibratingElevation) return;
@@ -152,27 +235,26 @@ export default function RunDetail() {
     }
   }
 
-  // Render map
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current || !insights) return;
     if (!points.length) return;
 
-    import('leaflet').then(L => {
+    import('leaflet').then((L) => {
       const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: true, dragging: true });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
 
-      const line = L.polyline(points, { color: '#ff6b2c', weight: 4, opacity: 0.92 }).addTo(map);
+      const line = L.polyline(points, { color: '#f07561', weight: 4, opacity: 0.92 }).addTo(map);
       map.fitBounds(line.getBounds(), { padding: [24, 24] });
 
-      L.circleMarker(points[0], { radius: 7, color: '#16a34a', fillColor: '#16a34a', fillOpacity: 1 })
+      L.circleMarker(points[0], { radius: 6, color: '#121212', fillColor: '#121212', fillOpacity: 1, weight: 2 })
         .bindTooltip(t('run_detail.start')).addTo(map);
-      L.circleMarker(points[points.length - 1], { radius: 7, color: '#10203d', fillColor: '#10203d', fillOpacity: 1 })
+      L.circleMarker(points[points.length - 1], { radius: 7, color: '#f49787', fillColor: '#f49787', fillOpacity: 1 })
         .bindTooltip(t('run_detail.finish')).addTo(map);
 
       if (insights.centerPoint) {
-        L.circleMarker(insights.centerPoint, { radius: 5, color: '#ea4f1f', fillColor: '#ffd2bf', fillOpacity: 0.95 })
+        L.circleMarker(insights.centerPoint, { radius: 5, color: '#fce6de', fillColor: '#fce6de', fillOpacity: 0.95 })
           .bindTooltip(t('run_detail.route_center_marker')).addTo(map);
       }
 
@@ -187,22 +269,64 @@ export default function RunDetail() {
     };
   }, [insights, points, t]);
 
-  // Resolve distance/time
   const distKm = useMemo(() => {
     if (!run) return null;
-    const src = Number(run.distanceKm || 0);
-    if (src > 0) return src;
+    const direct = Number(run.distanceKm || 0);
+    if (direct > 0) return direct;
     if (run.distanceMeters > 0) return run.distanceMeters / 1000;
     return insights?.computedDistanceKm;
   }, [run, insights]);
 
   const movingSec = useMemo(() => {
     if (!run) return null;
-    const m = Number(run.movingTimeSeconds || 0);
-    if (m > 0) return m;
-    const d = Number(run.durationSeconds || 0);
-    return d > 0 ? d : null;
+    const moving = Number(run.movingTimeSeconds || 0);
+    if (moving > 0) return moving;
+    const duration = Number(run.durationSeconds || 0);
+    return duration > 0 ? duration : null;
   }, [run]);
+
+  const lapRows = useMemo(() => (Array.isArray(analytics?.laps) ? analytics.laps : []), [analytics]);
+
+  const heartRateSeries = useMemo(() => {
+    const source = lapRows
+      .map((lap, index) => ({ index, hr: Number(lap.averageHeartRate || 0) }))
+      .filter((point) => point.hr > 0);
+    if (source.length < 2) return null;
+    const minHr = Math.min(...source.map((point) => point.hr));
+    const maxHr = Math.max(...source.map((point) => point.hr), minHr + 1);
+    const span = Math.max(1, maxHr - minHr);
+    const linePath = source.map((point, index) => {
+      const x = source.length === 1 ? 50 : (index / (source.length - 1)) * 100;
+      const y = 84 - (((point.hr - minHr) / span) * 58);
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    }).join(' ');
+    return {
+      linePath,
+      areaPath: `${linePath} L 100 92 L 0 92 Z`,
+    };
+  }, [lapRows]);
+
+  const elevationPoints = useMemo(() => {
+    const profile = analytics?.elevationProfile;
+    if (!Array.isArray(profile) || profile.length < 2) return null;
+    const xs = profile.map((p) => Number(p.distanceKm || 0));
+    const ys = profile.map((p) => Number(p.elevationMeters || 0));
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const width = 640;
+    const height = 180;
+    const pad = 16;
+    const spanX = Math.max(1e-9, maxX - minX);
+    const spanY = Math.max(1e-9, maxY - minY);
+    const path = profile.map((p, index) => {
+      const x = pad + ((p.distanceKm - minX) / spanX) * (width - pad * 2);
+      const y = height - pad - ((p.elevationMeters - minY) / spanY) * (height - pad * 2);
+      return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' ');
+    return { path, minY, maxY };
+  }, [analytics]);
 
   async function handleResync() {
     setSyncDisabled(true);
@@ -213,21 +337,71 @@ export default function RunDetail() {
     } catch {
       setSyncBtnText(t('run_detail.sync_failed'));
     }
-    setTimeout(() => { setSyncDisabled(false); setSyncBtnText(''); }, 3200);
+    window.setTimeout(() => {
+      setSyncDisabled(false);
+      setSyncBtnText('');
+    }, 3200);
+  }
+
+  async function handleShare() {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: run?.name || t('run_detail.detail_title'),
+          text: t('run_detail.share_summary'),
+          url,
+        });
+      } else if (navigator.clipboard?.writeText && url) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        throw new Error('share-unavailable');
+      }
+      setShareFeedback(t('run_detail.share_success'));
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      setShareFeedback(t('run_detail.share_failed'));
+    }
+    window.setTimeout(() => setShareFeedback(''), 2600);
+  }
+
+  if (isBootstrappingRun) {
+    return (
+      <div className="run-detail-stitch-page">
+        <div className="run-detail-stitch-loading-card" aria-live="polite">
+          <span className="run-detail-stitch-loading-kicker">{t('run_detail.hero_eyebrow')}</span>
+          <h1>{t('run_detail.loading_summary')}</h1>
+          <div className="run-detail-stitch-loading-bars" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!run) {
     return (
-      <AuthenticatedPageChrome bodyClassName="history-detail-page">
+      <div className="run-detail-stitch-page">
         <div className="empty-state" style={{ width: 'min(100%, 860px)', margin: '80px auto 0', padding: '42px 32px', borderRadius: 28, textAlign: 'center' }}>
           <h1>{t('run_detail.no_run_selected')}</h1>
           <p><Link to="/runs">{t('run_detail.back_to_runs')}</Link> {t('run_detail.no_run_selected_copy')}</p>
         </div>
-      </AuthenticatedPageChrome>
+      </div>
     );
   }
 
   const dateText = formatLongDate(run.startTime || run.startDate, lang);
+  const startDate = new Date(run.startTime || run.startDate || 0);
+  const timeText = Number.isNaN(startDate.getTime())
+    ? null
+    : startDate.toLocaleTimeString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { hour: 'numeric', minute: '2-digit' });
+  const heroMeta = [
+    dateText,
+    timeText,
+    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
+  ].filter(Boolean).join(' • ') || t('run_detail.imported_activity');
 
   const performanceRows = [
     [t('run_detail.perf_distance'), distKm != null ? `${distKm.toFixed(2)} km` : t('run_detail.not_available')],
@@ -253,218 +427,312 @@ export default function RunDetail() {
     [t('run_detail.route_source_file'), run.sourceFileName || t('run_detail.not_available')],
   ] : [];
 
-  const elevationPoints = useMemo(() => {
-    const profile = analytics?.elevationProfile;
-    if (!Array.isArray(profile) || profile.length < 2) return null;
-    const xs = profile.map(p => Number(p.distanceKm || 0));
-    const ys = profile.map(p => Number(p.elevationMeters || 0));
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const width = 640, height = 180, pad = 16;
-    const spanX = Math.max(1e-9, maxX - minX);
-    const spanY = Math.max(1e-9, maxY - minY);
-    const path = profile.map((p, i) => {
-      const x = pad + ((p.distanceKm - minX) / spanX) * (width - pad * 2);
-      const y = height - pad - ((p.elevationMeters - minY) / spanY) * (height - pad * 2);
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).join(' ');
-    return { path, minY, maxY };
-  }, [analytics]);
+  const linkedShoe = run?.shoeId ? shoes.find((shoe) => shoe.id === run.shoeId) : null;
+  const linkedShoeName = run?.shoeName
+    || (linkedShoe
+      ? formatShoeDisplayName({ brand: linkedShoe.brand, model: linkedShoe.model, nickname: linkedShoe.nickname, lang })
+      : null);
+  const linkedShoeMileage = linkedShoe?.currentDistanceKm != null
+    ? `${linkedShoe.currentDistanceKm.toFixed(0)} km`
+    : null;
+  const linkedShoeUsage = linkedShoe?.maxDistanceKm > 0 && linkedShoe?.currentDistanceKm >= 0
+    ? Math.min(100, (linkedShoe.currentDistanceKm / linkedShoe.maxDistanceKm) * 100)
+    : null;
 
-  const heroMeta = [dateText, run.provider, insights?.pointCount ? `${insights.pointCount.toLocaleString()} ${t('run_detail.gps_samples_suffix')}` : null].filter(Boolean).join(' \u2022 ') || t('run_detail.imported_activity');
+  const visibleLapRows = showAllSplits ? lapRows : lapRows.slice(0, 5);
+  const fastestVisibleLapIndex = visibleLapRows.reduce((bestIndex, lap, index, source) => {
+    if (!lap?.pace) return bestIndex;
+    if (bestIndex === -1) return index;
+    return String(lap.pace) < String(source[bestIndex]?.pace || '') ? index : bestIndex;
+  }, -1);
+
+  const distanceValue = distKm != null ? distKm.toFixed(2) : '--';
+  const paceValue = distKm && movingSec ? formatPace(distKm, movingSec, lang) : '--';
+  const timeValue = movingSec ? formatDuration(movingSec) : '--';
+  const cadenceValue = analytics?.averageCadence || run.averageCadence;
+  const strideLengthValue = analytics?.averageStrideLengthMeters;
+  const powerValue = run.averageWatts;
 
   return (
-    <AuthenticatedPageChrome bodyClassName="history-detail-page">
-      <div className="topbar">
-        <div className="topbar-left">
-          <Link to="/runs" className="back-link">
-            <span>&larr;</span>
-            <span>{t('run_detail.back_to_runs')}</span>
+    <div className="run-detail-stitch-page">
+      <div className="run-detail-stitch-topbar">
+        <div className="run-detail-stitch-topbar-left">
+          <Link to="/runs" className="run-detail-stitch-icon-btn" aria-label={t('run_detail.back_to_runs')}>
+            <span aria-hidden="true">&larr;</span>
           </Link>
-          <div className="topbar-title">
-            <strong>{run.name || 'Run'}</strong>
-            <span>{dateText || t('run_detail.date_unavailable')}</span>
+          <div className="run-detail-stitch-heading">
+            <h1>{run.name || 'Run'}</h1>
+            <p>{heroMeta}</p>
           </div>
         </div>
-        <div className="topbar-actions">
-          {run.provider && <div className="provider-pill">{run.provider}</div>}
+        <div className="run-detail-stitch-topbar-actions">
+          {run.provider && <div className="run-detail-stitch-provider-pill">{run.provider}</div>}
           {run.provider === 'STRAVA' && (
-            <button className="sync-btn" disabled={syncDisabled} onClick={handleResync}>
+            <button className="run-detail-stitch-action-btn" disabled={syncDisabled} onClick={handleResync}>
               {syncBtnText || t('run_detail.resync_strava')}
             </button>
           )}
+          <button type="button" className="run-detail-stitch-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
+            <span>{shareFeedback || t('run_detail.share')}</span>
+          </button>
         </div>
       </div>
 
-      {/* Map */}
-      <div className="map-shell">
-        {points.length > 0 ? (
-          <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
-        ) : (
-          <div className="no-map-state" style={{ display: 'flex' }}>{t('run_detail.no_map')}</div>
-        )}
-      </div>
-
-      <main className="shell">
-        {/* Hero Card */}
-        <section className="hero-card">
-          <div>
-            <span className="eyebrow">{t('run_detail.hero_eyebrow')}</span>
-            <h1 className="hero-title">{run.name || 'Run'}</h1>
-            <div className="hero-meta">{heroMeta}</div>
+      <main className="run-detail-stitch-shell">
+        <section className="run-detail-stitch-hero-grid">
+          <div className="run-detail-stitch-map-card">
+            {points.length > 0 ? (
+              <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <div className="run-detail-stitch-no-map">{t('run_detail.no_map')}</div>
+            )}
+            <div className="run-detail-stitch-map-overlay">
+              <span>{t('run_detail.metric_distance')}</span>
+              <strong>{distanceValue} km</strong>
+            </div>
           </div>
-          <div className="hero-metrics">
-            <article className="metric-card">
-              <span className="metric-label">{t('run_detail.metric_distance')}</span>
-              <span className="metric-value">{distKm != null ? `${distKm.toFixed(2)} km` : '--'}</span>
-              <span className="metric-subtext">
-                {insights?.computedDistanceKm != null
-                  ? t('run_detail.gps_trace_estimate', { distance: insights.computedDistanceKm.toFixed(2) })
-                  : t('run_detail.source_distance_only')}
-              </span>
+          <div className="run-detail-stitch-stat-rail">
+            <article className="run-detail-stitch-stat-card is-accent">
+              <span>{t('run_detail.metric_distance')}</span>
+              <strong>{distanceValue}<em>km</em></strong>
             </article>
-            <article className="metric-card">
-              <span className="metric-label">{t('run_detail.metric_moving_time')}</span>
-              <span className="metric-value">{movingSec ? formatDuration(movingSec) : '--'}</span>
-              <span className="metric-subtext">{t('run_detail.metric_moving_time_note')}</span>
+            <article className="run-detail-stitch-stat-card">
+              <span>{t('run_detail.metric_average_pace')}</span>
+              <strong>{paceValue}<em>/km</em></strong>
             </article>
-            <article className="metric-card">
-              <span className="metric-label">{t('run_detail.metric_average_pace')}</span>
-              <span className="metric-value">{distKm && movingSec ? formatPace(distKm, movingSec, lang) : '--'}</span>
-              <span className="metric-subtext">{t('run_detail.metric_average_pace_note')}</span>
-            </article>
-            <article className="metric-card">
-              <span className="metric-label">{t('run_detail.metric_route_shape')}</span>
-              <span className="metric-value">{insights?.routeShape || '--'}</span>
-              <span className="metric-subtext">{t('run_detail.metric_route_shape_note')}</span>
+            <article className="run-detail-stitch-stat-card">
+              <span>{t('run_detail.metric_moving_time')}</span>
+              <strong>{timeValue}</strong>
             </article>
           </div>
         </section>
 
-        {/* Shoe Section */}
-        <section className="shoe-run-section">
-          <span className="shoe-run-label">{t('run_detail.shoe')}</span>
-          {run.shoeId ? (
-            <div className="shoe-run-linked">
-              <span className="shoe-run-name">{run.shoeName}</span>
-              <button type="button" className="shoe-run-btn" onClick={() => setShoeDropdownOpen(!shoeDropdownOpen)}>{t('run_detail.change_shoe')}</button>
-              <button type="button" className="shoe-run-btn shoe-run-unlink" onClick={() => assignShoe(0)}>{t('run_detail.unlink_shoe')}</button>
-            </div>
-          ) : (
-            <div className="shoe-run-linked">
-              <span className="shoe-run-empty">{t('run_detail.no_shoe')}</span>
-              <button type="button" className="shoe-run-btn" onClick={() => setShoeDropdownOpen(!shoeDropdownOpen)}>{t('run_detail.link_shoe')}</button>
-            </div>
-          )}
-          {shoeDropdownOpen && shoes.length > 0 && (
-            <div className="shoe-run-dropdown">
-              {shoes.filter(s => !s.retired).map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`shoe-run-option${s.id === run.shoeId ? ' active' : ''}`}
-                  onClick={() => assignShoe(s.id)}
-                >
-                  {formatShoeDisplayName({ brand: s.brand, model: s.model, nickname: s.nickname, lang })}
-                  {s.isPrimary && ' ★'}
+        <section className="run-detail-stitch-main-grid">
+          <div className="run-detail-stitch-primary-column">
+            <section className="run-detail-stitch-section">
+              <h2>{t('run_detail.physiological_response')}</h2>
+              <div className="run-detail-stitch-panel">
+                <div className="run-detail-stitch-panel-head">
+                  <div>
+                    <span>{t('run_detail.average_hr')}</span>
+                    <strong>{run.averageHeartRate != null ? Math.round(run.averageHeartRate) : '--'} <em>bpm</em></strong>
+                  </div>
+                  <div className="is-right">
+                    <span>{t('run_detail.max_hr')}</span>
+                    <strong>{run.maxHeartRate != null ? Math.round(run.maxHeartRate) : '--'} <em>bpm</em></strong>
+                  </div>
+                </div>
+                <div className="run-detail-stitch-hr-chart">
+                  <div className="run-detail-stitch-hr-zones">
+                    <span>Z5</span>
+                    <span>Z4</span>
+                    <span>Z3</span>
+                    <span>Z2</span>
+                    <span>Z1</span>
+                  </div>
+                  {heartRateSeries ? (
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      <defs>
+                        <linearGradient id="run-detail-hr-fill" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(240,117,97,0.34)" />
+                          <stop offset="100%" stopColor="rgba(240,117,97,0)" />
+                        </linearGradient>
+                      </defs>
+                      <path d={heartRateSeries.areaPath} fill="url(#run-detail-hr-fill)" />
+                      <path d={heartRateSeries.linePath} fill="none" stroke="#f49787" strokeWidth="2.3" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <div className="run-detail-stitch-chart-empty">{t('run_detail.no_heart_rate_data')}</div>
+                  )}
+                </div>
+                <div className="run-detail-stitch-chip-row">
+                  <span className="run-detail-stitch-chip">
+                    {t('run_detail.decoupling')}: {analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}
+                  </span>
+                  <span className="run-detail-stitch-chip">
+                    {t('run_detail.first_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.firstHalfPace : '--'}
+                  </span>
+                  <span className="run-detail-stitch-chip">
+                    {t('run_detail.second_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.secondHalfPace : '--'}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section className="run-detail-stitch-section">
+              <div className="run-detail-stitch-section-head">
+                <h2>{t('run_detail.splits')}</h2>
+                {lapRows.length > 5 && (
+                  <button type="button" className="run-detail-stitch-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
+                    {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
+                  </button>
+                )}
+              </div>
+              <div className="run-detail-stitch-panel run-detail-stitch-table-panel">
+                <table className="run-detail-stitch-splits-table">
+                  <thead>
+                    <tr>
+                      <th>{t('run_detail.split_unit')}</th>
+                      <th>{t('run_detail.split_pace')}</th>
+                      <th>{t('run_detail.split_elev')}</th>
+                      <th>{t('run_detail.split_hr')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => (
+                      <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
+                        <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} km` : `#${lap.lapIndex || index + 1}`}</td>
+                        <td>{lap.pace || '--'}</td>
+                        <td>{formatLapElevation(lap)}</td>
+                        <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="4" className="is-empty">{t('run_detail.no_lap_data')}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <aside className="run-detail-stitch-side-column">
+            <section className="run-detail-stitch-panel run-detail-stitch-efficiency-panel">
+              <h3>{t('run_detail.efficiency')}</h3>
+              <div className="run-detail-stitch-side-metric">
+                <span>{t('run_detail.cadence')}</span>
+                <strong>{cadenceValue ? Math.round(cadenceValue) : '--'} <em>spm</em></strong>
+              </div>
+              <div className="run-detail-stitch-divider" />
+              <div className="run-detail-stitch-side-metric">
+                <span>{t('run_detail.stride_length')}</span>
+                <strong>{strideLengthValue ? strideLengthValue.toFixed(2) : '--'} <em>m</em></strong>
+              </div>
+              <div className="run-detail-stitch-divider" />
+              <div className="run-detail-stitch-side-metric">
+                <span>{t('run_detail.running_power')}</span>
+                <strong>{powerValue ? Math.round(powerValue) : '--'} <em>W</em></strong>
+              </div>
+            </section>
+
+            <section className="run-detail-stitch-panel run-detail-stitch-gear-panel">
+              <span className="run-detail-stitch-panel-label">{t('run_detail.gear_linked')}</span>
+              <div className="run-detail-stitch-gear-row">
+                <div className="run-detail-stitch-gear-art">
+                  {linkedShoe?.photoUrl ? (
+                    <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} />
+                  ) : (
+                    <div className="run-detail-stitch-gear-placeholder">H</div>
+                  )}
+                </div>
+                <div className="run-detail-stitch-gear-copy">
+                  <strong>{linkedShoeName || t('run_detail.no_shoe')}</strong>
+                  <span>{linkedShoeMileage ? t('run_detail.linked_shoe_mileage', { mileage: linkedShoeMileage }) : t('run_detail.no_shoe')}</span>
+                  {linkedShoeUsage != null && (
+                    <div className="run-detail-stitch-gear-usage">
+                      <div style={{ width: `${linkedShoeUsage}%` }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="run-detail-stitch-gear-actions">
+                <button type="button" className="run-detail-stitch-link-btn" onClick={() => setShoeDropdownOpen((prev) => !prev)}>
+                  {run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
                 </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Stats Grid */}
-        {elevationStatus?.flagged && (
-          <section className="section-card" style={{ marginBottom: 16, borderLeft: '4px solid #f59e0b' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-              <div>
-                <strong>{lang === 'zh-CN' ? '检测到可疑海拔数据（可能气压漂移）' : 'Suspicious elevation data detected. Barometric drift likely.'}</strong>
-                <div style={{ marginTop: 6, fontSize: '0.86rem', color: 'var(--classic-muted)' }}>
-                  {lang === 'zh-CN' ? '气压爬升' : 'Barometric ascent'}: {elevationStatus.totalAscentBarometric?.toFixed?.(0) ?? '--'} m ·
-                  {' '}
-                  {lang === 'zh-CN' ? 'DEM 估算' : 'DEM check'}: {elevationStatus.totalAscentDem?.toFixed?.(0) ?? '--'} m ·
-                  {' '}
-                  {lang === 'zh-CN' ? '偏差' : 'Variance'}: {(Number(elevationStatus.variance || 0) * 100).toFixed(0)}%
-                </div>
+                {run.shoeId && (
+                  <button type="button" className="run-detail-stitch-link-btn is-danger" onClick={() => assignShoe(0)}>
+                    {t('run_detail.unlink_shoe')}
+                  </button>
+                )}
               </div>
-              <button
-                type="button"
-                className="sync-btn"
-                disabled={recalibratingElevation}
-                onClick={handleElevationRecalibration}
-              >
-                {recalibratingElevation
-                  ? (lang === 'zh-CN' ? '校准中...' : 'Recalibrating...')
-                  : (lang === 'zh-CN' ? '通过地形重校准' : 'Recalibrate via topography')}
-              </button>
-            </div>
-          </section>
-        )}
-
-        <section className="section-grid">
-          <article className="section-card">
-            <h2>{t('run_detail.performance_metrics')}</h2>
-            <div className="stats-table">
-              {performanceRows.map(([label, value], i) => (
-                <div key={i} className="stats-row"><span>{label}</span><span>{value}</span></div>
-              ))}
-            </div>
-          </article>
-          <article className="section-card">
-            <h2>{t('run_detail.route_intelligence')}</h2>
-            <div className="stats-table">
-              {routeRows.map(([label, value], i) => (
-                <div key={i} className="stats-row"><span>{label}</span><span>{value}</span></div>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <section className="section-grid" style={{ marginTop: 16 }}>
-          <article className="section-card">
-            <h2>Lap-by-lap Breakdown</h2>
-            <div className="stats-table">
-              {(analytics?.laps || []).slice(0, 30).map((lap) => (
-                <div key={`lap-${lap.lapIndex}`} className="stats-row">
-                  <span>Lap {lap.lapIndex} • {lap.distanceKm.toFixed(1)} km</span>
-                  <span>{lap.pace || '--'} • {lap.averageHeartRate ? `${lap.averageHeartRate} bpm` : '--'} • {lap.averageCadence ? `${lap.averageCadence} spm` : '--'}</span>
+              {shoeDropdownOpen && shoes.length > 0 && (
+                <div className="shoe-run-dropdown run-detail-stitch-dropdown">
+                  {shoes.filter((shoe) => !shoe.retired).map((shoe) => (
+                    <button
+                      key={shoe.id}
+                      type="button"
+                      className={`shoe-run-option${shoe.id === run.shoeId ? ' active' : ''}`}
+                      onClick={() => assignShoe(shoe.id)}
+                    >
+                      {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
+                    </button>
+                  ))}
                 </div>
-              ))}
-              {(!analytics?.laps || analytics.laps.length === 0) && (
-                <div className="stats-row"><span>No lap data</span><span>--</span></div>
               )}
+            </section>
+
+            <section className="run-detail-stitch-panel">
+              <h3>{t('run_detail.route_intelligence')}</h3>
+              <div className="run-detail-stitch-info-list">
+                <div><span>{t('run_detail.metric_route_shape')}</span><strong>{insights?.routeShape || '--'}</strong></div>
+                <div><span>{t('run_detail.route_gps_samples')}</span><strong>{insights?.pointCount ? insights.pointCount.toLocaleString() : '--'}</strong></div>
+                <div><span>{t('run_detail.perf_elevation_gain')}</span><strong>{run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} m` : '--'}</strong></div>
+              </div>
+              {elevationStatus?.flagged && (
+                <div className="run-detail-stitch-warning">
+                  <p>{t('run_detail.elevation_warning')}</p>
+                  <button type="button" className="run-detail-stitch-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
+                    {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
+                  </button>
+                </div>
+              )}
+            </section>
+          </aside>
+        </section>
+
+        <section className="run-detail-stitch-bottom-grid">
+          <article className="run-detail-stitch-panel">
+            <h3>{t('run_detail.performance_metrics')}</h3>
+            <div className="run-detail-stitch-stat-list">
+              {performanceRows.map(([label, value], index) => (
+                <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
+              ))}
             </div>
           </article>
-
-          <article className="section-card">
-            <h2>Cardiac Drift (Decoupling)</h2>
-            <div className="stats-table">
-              <div className="stats-row"><span>Decoupling</span><span>{analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}</span></div>
-              <div className="stats-row"><span>First Half</span><span>{analytics?.cardiacDrift ? `${analytics.cardiacDrift.firstHalfPace} • ${analytics.cardiacDrift.firstHalfAverageHeartRate.toFixed(0)} bpm` : '--'}</span></div>
-              <div className="stats-row"><span>Second Half</span><span>{analytics?.cardiacDrift ? `${analytics.cardiacDrift.secondHalfPace} • ${analytics.cardiacDrift.secondHalfAverageHeartRate.toFixed(0)} bpm` : '--'}</span></div>
-              <div className="stats-row"><span>Average Cadence</span><span>{analytics?.averageCadence ? `${analytics.averageCadence.toFixed(0)} spm` : '--'}</span></div>
-              <div className="stats-row"><span>Estimated Stride Length</span><span>{analytics?.averageStrideLengthMeters ? `${analytics.averageStrideLengthMeters.toFixed(2)} m` : '--'}</span></div>
-            </div>
+          <article className="run-detail-stitch-panel">
+            <h3>{t('run_detail.elevation_profile')}</h3>
+            {elevationPoints ? (
+              <>
+                <svg viewBox="0 0 640 180" className="run-detail-stitch-elevation-graph" aria-hidden="true">
+                  <path d={elevationPoints.path} fill="none" stroke="#f49787" strokeWidth="2.5" />
+                </svg>
+                <div className="run-detail-stitch-info-list">
+                  <div>
+                    <span>{t('run_detail.min_max_elevation')}</span>
+                    <strong>{elevationPoints.minY.toFixed(1)} m / {elevationPoints.maxY.toFixed(1)} m</strong>
+                  </div>
+                  <div>
+                    <span>{t('run_detail.route_efficiency')}</span>
+                    <strong>{insights?.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : '--'}</strong>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="run-detail-stitch-chart-empty is-inline">{t('run_detail.no_elevation_stream')}</div>
+            )}
           </article>
         </section>
 
-        <section className="section-card" style={{ marginTop: 16 }}>
-          <h2>Elevation Profile</h2>
-          {elevationPoints ? (
-            <div>
-              <svg viewBox="0 0 640 180" style={{ width: '100%', height: 180 }}>
-                <path d={elevationPoints.path} fill="none" stroke="#ff6b2c" strokeWidth="2.5" />
-              </svg>
-              <div className="stats-row">
-                <span>Min/Max Elevation</span>
-                <span>{elevationPoints.minY.toFixed(1)} m / {elevationPoints.maxY.toFixed(1)} m</span>
-              </div>
+        <section className="run-detail-stitch-bottom-grid">
+          <article className="run-detail-stitch-panel">
+            <h3>{t('run_detail.route_intelligence')}</h3>
+            <div className="run-detail-stitch-stat-list">
+              {routeRows.map(([label, value], index) => (
+                <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
+              ))}
             </div>
-          ) : (
-            <div className="stats-row"><span>No elevation stream available</span><span>--</span></div>
-          )}
+          </article>
+          <article className="run-detail-stitch-panel">
+            <h3>{t('run_detail.analysis_notes')}</h3>
+            <div className="run-detail-stitch-info-list">
+              <div><span>{t('run_detail.metric_average_pace')}</span><strong>{paceValue}</strong></div>
+              <div><span>{t('run_detail.metric_moving_time')}</span><strong>{timeValue}</strong></div>
+              <div><span>{t('run_detail.route_source_file')}</span><strong>{run.sourceFileName || t('run_detail.not_available')}</strong></div>
+            </div>
+          </article>
         </section>
       </main>
-    </AuthenticatedPageChrome>
+    </div>
   );
 }

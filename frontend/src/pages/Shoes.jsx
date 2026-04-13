@@ -1,17 +1,22 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
+import AppIcon from '../components/AppIcon';
 import Modal from '../components/Modal';
-import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
+import HermesLogo from '../components/HermesLogo';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
-import shoeCatalog from '../data/shoeCatalog';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
+import {
+  buildRecentShoeSignal,
+  getRunTimestamp,
+  RECENT_SHOE_SIGNAL_WINDOW_DAYS,
+} from '../utils/shoeRotation';
 
 function shoeHealth(current, max) {
   if (!max || max <= 0) return 'good';
@@ -179,6 +184,16 @@ function ShoeImage({ src, alt }) {
   return <img className="shoe-img" src={processed} alt={alt} />;
 }
 
+function PreviewShoeArt({ tone, label }) {
+  return (
+    <div className={`shoe-preview-art shoe-preview-art--${tone || 'ember'}`} aria-hidden="true">
+      <div className="shoe-preview-art-shoe" />
+      <div className="shoe-preview-art-ground" />
+      <span className="shoe-preview-art-label">{label}</span>
+    </div>
+  );
+}
+
 const TYPE_LABELS = {
   daily: 'type_daily', speed: 'type_speed', race: 'type_race',
   trail: 'type_trail', stability: 'type_stability',
@@ -201,74 +216,14 @@ const CATALOG_CATEGORY_META = {
   trail: { zh: 'Trail', en: 'Trail' },
 };
 
-function getCatalogCategoryLabel(category, lang) {
-  const raw = (category || '').toString();
-  if (!raw) return 'Other';
-  const normalized = normalizeBrandKey(raw);
-  if (normalized === 'all') return lang === 'zh-CN' ? CATALOG_CATEGORY_META.all.zh : CATALOG_CATEGORY_META.all.en;
-  if (normalized.includes('trail')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trail.zh : CATALOG_CATEGORY_META.trail.en;
-  if (normalized.includes('stability')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.stability.zh : CATALOG_CATEGORY_META.stability.en;
-  if (normalized.includes('support')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.support.zh : CATALOG_CATEGORY_META.support.en;
-  if (normalized.includes('cushion')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.cushion.zh : CATALOG_CATEGORY_META.cushion.en;
-  if (normalized.includes('test')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.test.zh : CATALOG_CATEGORY_META.test.en;
-  if (normalized.includes('super')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.supershoe.zh : CATALOG_CATEGORY_META.supershoe.en;
-  if (normalized.includes('trainerrace')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trainerrace.zh : CATALOG_CATEGORY_META.trainerrace.en;
-  if (normalized.includes('lowstackcommute')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstackcommute.zh : CATALOG_CATEGORY_META.lowstackcommute.en;
-  if (normalized.includes('lowstackrace')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstackrace.zh : CATALOG_CATEGORY_META.lowstackrace.en;
-  if (normalized.includes('lowstacktrainer')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstacktrainer.zh : CATALOG_CATEGORY_META.lowstacktrainer.en;
-  if (normalized.includes('lowstack')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstack.zh : CATALOG_CATEGORY_META.lowstack.en;
-  if (normalized.includes('race')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.race.zh : CATALOG_CATEGORY_META.race.en;
-  if (normalized.includes('trainer') || normalized.includes('daily')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trainer.zh : CATALOG_CATEGORY_META.trainer.en;
-  return raw;
-}
 
-function getCatalogModelLabel(item, lang) {
-  if (!item) return '';
-  if (lang === 'zh-CN' && item.modelZh) return item.modelZh;
-  if (lang !== 'zh-CN' && item.modelEn) return item.modelEn;
-  return localizeShoeModel(item.model, lang);
-}
-
-const REDDIT_RECOMMENDED_SHOES = [
-  { brand: 'ASICS',        model: 'Gel-Nimbus 26',          type: 'daily',     paceRange: [300, 420], redditNote: 'r/RunningShoeGeeks all-time favorite daily trainer' },
-  { brand: 'New Balance',  model: 'Fresh Foam X 1080 v14',  type: 'daily',     paceRange: [300, 420], redditNote: 'r/RunningShoeGeeks top plush daily' },
-  { brand: 'ASICS',        model: 'Novablast 4',            type: 'daily',     paceRange: [270, 390], redditNote: 'r/RunningShoeGeeks most-hyped bouncy trainer' },
-  { brand: 'Saucony',      model: 'Endorphin Speed 4',      type: 'speed',     paceRange: [230, 330], redditNote: 'r/RunningShoeGeeks speed-day legend' },
-  { brand: 'Nike',         model: 'Pegasus 41',             type: 'daily',     paceRange: [280, 400], redditNote: 'r/RunningShoeGeeks proven daily workhorse' },
-  { brand: 'Saucony',      model: 'Ride 17',                type: 'daily',     paceRange: [290, 420], redditNote: 'r/RunningShoeGeeks versatile all-rounder' },
-  { brand: 'HOKA',         model: 'Clifton 9',              type: 'daily',     paceRange: [310, 450], redditNote: 'r/RunningShoeGeeks cushioned favorite' },
-  { brand: 'Brooks',       model: 'Ghost 16',               type: 'daily',     paceRange: [310, 450], redditNote: 'r/RunningShoeGeeks reliable classic' },
-  { brand: 'Nike',         model: 'Vomero 18',              type: 'daily',     paceRange: [300, 430], redditNote: 'r/RunningShoeGeeks max cushion pick' },
-  { brand: 'Adidas',       model: 'Boston 12',              type: 'speed',     paceRange: [240, 340], redditNote: 'r/RunningShoeGeeks tempo trainer pick' },
-  { brand: 'ASICS',        model: 'Magic Speed 4',          type: 'race',      paceRange: [220, 310], redditNote: 'r/RunningShoeGeeks budget race shoe' },
-  { brand: 'Nike',         model: 'Vaporfly 3',             type: 'race',      paceRange: [200, 290], redditNote: 'r/RunningShoeGeeks ultimate race day' },
-];
-
-function pickRedditRecommendation(avgPaceSecPerKm) {
-  if (!avgPaceSecPerKm || avgPaceSecPerKm <= 0) {
-    return REDDIT_RECOMMENDED_SHOES[0];
-  }
-  const matching = REDDIT_RECOMMENDED_SHOES.filter(
-    s => avgPaceSecPerKm >= s.paceRange[0] && avgPaceSecPerKm <= s.paceRange[1]
-  );
-  const pool = matching.length > 0 ? matching : REDDIT_RECOMMENDED_SHOES.filter(s => s.type === 'daily');
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-  return pool[dayOfYear % pool.length];
-}
 
 /** Maximum number of images processed per scan request. */
 const SHOE_SCAN_MAX_FILES = 5;
 
-function median(values) {
-  if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-function average(values) {
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+function getRunnerDisplayName(email, fallback) {
+  const raw = (email || '').split('@')[0]?.trim() || fallback;
+  return raw.replace(/^./, (char) => char.toUpperCase());
 }
 
 function formatPaceForDisplay(paceSecPerKm, unit, t) {
@@ -279,101 +234,17 @@ function formatPaceForDisplay(paceSecPerKm, unit, t) {
   return `${mins}:${secs}/${unit === 'mile' ? t('analysis.unit_distance_mile') : t('analysis.unit_distance_km')}`;
 }
 
-function getRunTimestamp(run) {
-  const candidates = [
-    run?.startDateLocal,
-    run?.startDate,
-    run?.activityDate,
-    run?.date,
-    run?.createdAt,
-  ];
-  for (const value of candidates) {
-    if (!value) continue;
-    const timestamp = Date.parse(value);
-    if (!Number.isNaN(timestamp)) return timestamp;
-  }
-  const numericId = Number(run?.id || run?.activityId || 0);
-  return Number.isFinite(numericId) ? numericId : 0;
+function matchesInventoryCategory(shoe, category) {
+  if (!category || category === 'all') return true;
+  if (category === 'daily') return ['daily', 'stability'].includes(shoe?.type);
+  if (category === 'race') return ['race', 'speed'].includes(shoe?.type);
+  if (category === 'trail') return shoe?.type === 'trail';
+  return true;
 }
 
-function buildShoePerformanceInsights(shoes, runs, unit, t, lang) {
-  const eligibleRuns = runs
-    .map((run) => {
-      const shoeId = run.shoeId;
-      const distanceKm = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
-      const movingTimeSeconds = Number(run.movingTimeSeconds || run.durationSeconds || 0);
-      const averageHeartRate = Number(run.averageHeartRate || 0);
-      const averageCadence = Number(run.averageCadence || 0);
-      if (!shoeId || distanceKm < 4 || movingTimeSeconds <= 0 || averageHeartRate <= 0) return null;
-      return {
-        shoeId,
-        distanceKm,
-        movingTimeSeconds,
-        averageHeartRate,
-        averageCadence: averageCadence > 0 ? averageCadence : null,
-        paceSecPerKm: movingTimeSeconds / Math.max(distanceKm, 0.001),
-      };
-    })
-    .filter(Boolean);
-
-  const byShoe = new Map();
-  for (const run of eligibleRuns) {
-    if (!byShoe.has(run.shoeId)) byShoe.set(run.shoeId, []);
-    byShoe.get(run.shoeId).push(run);
-  }
-
-  const insights = new Map();
-  let topInsight = null;
-
-  for (const shoe of shoes) {
-    const shoeRuns = byShoe.get(shoe.id) || [];
-    if (shoeRuns.length < 3) continue;
-
-    const anchorPace = Math.round(median(shoeRuns.map((run) => run.paceSecPerKm)) / 15) * 15;
-    const samePaceRuns = shoeRuns.filter((run) => Math.abs(run.paceSecPerKm - anchorPace) <= 20);
-    const comparisonRuns = eligibleRuns.filter((run) => run.shoeId !== shoe.id && Math.abs(run.paceSecPerKm - anchorPace) <= 20);
-    if (samePaceRuns.length < 2 || comparisonRuns.length < 2) continue;
-
-    const shoeHr = average(samePaceRuns.map((run) => run.averageHeartRate));
-    const otherHr = average(comparisonRuns.map((run) => run.averageHeartRate));
-    const deltaHr = otherHr - shoeHr;
-    const shoeCadenceValues = samePaceRuns.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
-    const otherCadenceValues = comparisonRuns.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
-    const cadenceDelta = shoeCadenceValues.length >= 2 && otherCadenceValues.length >= 2
-      ? average(shoeCadenceValues) - average(otherCadenceValues)
-      : null;
-
-    const insight = {
-      shoeId: shoe.id,
-      paceSecPerKm: anchorPace,
-      deltaHr,
-      cadenceDelta,
-      sampleCount: samePaceRuns.length,
-      compareCount: comparisonRuns.length,
-      positive: deltaHr > 0.8,
-      name: formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang }),
-      summary: deltaHr > 0
-        ? t('shoes.performance_positive', {
-          bpm: Math.abs(deltaHr).toFixed(1),
-          pace: formatPaceForDisplay(anchorPace, unit, t),
-        })
-        : t('shoes.performance_negative', {
-          bpm: Math.abs(deltaHr).toFixed(1),
-          pace: formatPaceForDisplay(anchorPace, unit, t),
-        }),
-    };
-
-    insights.set(shoe.id, insight);
-    if (!topInsight || Math.abs(deltaHr) > Math.abs(topInsight.deltaHr)) {
-      topInsight = insight;
-    }
-  }
-
-  return { byShoe: insights, topInsight };
-}
 
 export default function Shoes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -387,19 +258,21 @@ export default function Shoes() {
   const [inventoryTab, setInventoryTab] = useState('active');
   const [inventorySort, setInventorySort] = useState('recent');
   const [lockerBrandFilter, setLockerBrandFilter] = useState('all');
-  const [browserBrandKey, setBrowserBrandKey] = useState('');
-  const [browserCategory, setBrowserCategory] = useState('all');
-  const [browserType, setBrowserType] = useState('all');
-  const isFiltered = inventoryTab !== 'active' || inventorySort !== 'recent' || lockerBrandFilter !== 'all';
+  const [inventoryCategory, setInventoryCategory] = useState('all');
+  const [inventoryQuery, setInventoryQuery] = useState('');
+  const isFiltered = inventoryTab !== 'active'
+    || inventorySort !== 'recent'
+    || lockerBrandFilter !== 'all'
+    || inventoryCategory !== 'all'
+    || inventoryQuery.trim().length > 0;
 
   const resetLocker = () => {
     setInventoryTab('active');
     setInventorySort('recent');
     setLockerBrandFilter('all');
+    setInventoryCategory('all');
+    setInventoryQuery('');
   };
-
-  // Add modal
-  const [addOpen, setAddOpen] = useState(false);
 
   // Edit modal (simple form)
   const [editOpen, setEditOpen] = useState(false);
@@ -417,12 +290,14 @@ export default function Shoes() {
   const [imgPickerShoe, setImgPickerShoe] = useState(null);
   const [imgCandidates, setImgCandidates] = useState([]);
   const [imgSearching, setImgSearching] = useState(false);
+  const [imgSearchStatus, setImgSearchStatus] = useState('');
   const [imgCustomQuery, setImgCustomQuery] = useState('');
   const [imgCustomUrl, setImgCustomUrl] = useState('');
   const [imgUploadStatus, setImgUploadStatus] = useState('');
   const [imgUploading, setImgUploading] = useState(false);
   const [imgPendingUploadUrl, setImgPendingUploadUrl] = useState('');
   const [imgPendingUploadName, setImgPendingUploadName] = useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Scan modal
   const [scanOpen, setScanOpen] = useState(false);
@@ -431,7 +306,9 @@ export default function Shoes() {
   const [scanStatus, setScanStatus] = useState('');
   const [scannedShoes, setScannedShoes] = useState([]);
   const [aiQuota, setAiQuota] = useState(null);
-  const [catalog, setCatalog] = useState(shoeCatalog);
+  const [isInventoryCollapsed, setIsInventoryCollapsed] = useState(false);
+  const displayName = getRunnerDisplayName(email, t('profile.default_name'));
+  const initials = displayName.slice(0, 1).toUpperCase();
 
   function applyPendingUploadState(nextState) {
     setImgPendingUploadUrl(nextState.imgPendingUploadUrl);
@@ -445,59 +322,6 @@ export default function Shoes() {
       setRuns(Array.isArray(activities) ? activities : []);
     } catch {
       setRuns([]);
-    }
-  }, []);
-
-  const loadCatalog = useCallback(async () => {
-    try {
-      const data = await apiJson('/api/shoe-catalog');
-      const dynamicBrands = Array.isArray(data?.brands) ? data.brands : [];
-      if (dynamicBrands.length === 0) return;
-
-      const byBrand = new Map();
-      for (const b of shoeCatalog) {
-        byBrand.set((b.brand || '').toLowerCase(), {
-          brand: b.brand,
-          logo: b.logo,
-          models: Array.isArray(b.models) ? [...b.models] : [],
-        });
-      }
-      for (const b of dynamicBrands) {
-        const key = (b.brand || '').toLowerCase();
-        if (!key) continue;
-        const existing = byBrand.get(key);
-        if (!existing) {
-          byBrand.set(key, {
-            brand: b.brand,
-            logo: b.logo || 'S',
-            models: Array.isArray(b.models) ? b.models.map(m => ({
-              id: m.id,
-              model: m.model,
-              modelZh: m.modelZh || '',
-              modelEn: m.modelEn || '',
-              type: m.type || 'daily',
-            })) : [],
-          });
-          continue;
-        }
-        const modelNames = new Set(existing.models.map(m => (m.model || '').toLowerCase()));
-        for (const m of (Array.isArray(b.models) ? b.models : [])) {
-          const mk = (m.model || '').toLowerCase();
-          if (!mk || modelNames.has(mk)) continue;
-          existing.models.push({
-            id: m.id,
-            model: m.model,
-            modelZh: m.modelZh || '',
-            modelEn: m.modelEn || '',
-            type: m.type || 'daily',
-          });
-          modelNames.add(mk);
-        }
-      }
-      setCatalog(Array.from(byBrand.values()).sort((a, b) => a.brand.localeCompare(b.brand, 'zh-Hans-CN')));
-    } catch {
-      // Keep bundled catalog as fallback when API unavailable.
-      setCatalog(shoeCatalog);
     }
   }, []);
 
@@ -564,8 +388,7 @@ export default function Shoes() {
     loadShoes();
     loadRuns();
     checkScanAvailable();
-    loadCatalog();
-  }, [checkScanAvailable, isAuthenticated, loadCatalog, loadRuns, loadShoes, navigate]);
+  }, [checkScanAvailable, isAuthenticated, loadRuns, loadShoes, navigate]);
 
   const findShoeImage = useCallback(async (shoeId) => {
     try {
@@ -598,8 +421,33 @@ export default function Shoes() {
   // Stats
   const activeShoes = shoes.filter(s => !s.retired);
   const retiredShoes = shoes.filter(s => s.retired);
-  const totalMileage = shoes.reduce((s, sh) => s + (sh.currentDistanceKm || 0), 0);
-  const shoePerformanceInsights = useMemo(() => buildShoePerformanceInsights(shoes, runs, unit, t, lang), [shoes, runs, unit, t, lang]);
+  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs), [shoes, runs]);
+  const recentPerformanceRuns = shoeSignal.recentPerformanceRuns;
+  const performanceFallback = shoeSignal.recommendation;
+  const shoePerformanceInsights = useMemo(() => {
+    const topInsight = shoeSignal.performanceInsights.topInsight;
+    if (!topInsight) return shoeSignal.performanceInsights;
+
+    const matchedShoe = shoes.find((shoe) => shoe.id === topInsight.shoeId);
+    return {
+      ...shoeSignal.performanceInsights,
+      topInsight: {
+        ...topInsight,
+        name: matchedShoe
+          ? formatShoeDisplayName({ brand: matchedShoe.brand, model: matchedShoe.model, nickname: matchedShoe.nickname, lang })
+          : '',
+        summary: topInsight.deltaHr > 0
+          ? t('shoes.performance_positive', {
+            bpm: Math.abs(topInsight.deltaHr).toFixed(1),
+            pace: formatPaceForDisplay(topInsight.paceSecPerKm, unit, t),
+          })
+          : t('shoes.performance_negative', {
+            bpm: Math.abs(topInsight.deltaHr).toFixed(1),
+            pace: formatPaceForDisplay(topInsight.paceSecPerKm, unit, t),
+          }),
+      },
+    };
+  }, [lang, shoeSignal.performanceInsights, shoes, t, unit]);
   const usageByShoe = useMemo(() => {
     const usage = new Map();
     for (const run of runs) {
@@ -615,91 +463,154 @@ export default function Shoes() {
     return usage;
   }, [runs]);
 
-  const performanceFallback = useMemo(() => {
-    if (shoePerformanceInsights.topInsight) return null;
+  const recentWindowLabel = lang === 'zh-CN'
+    ? `最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天`
+    : `Last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days`;
+  const recentSignalCopy = lang === 'zh-CN'
+    ? '优先看最近 21 天里同配速下的心率和步频变化，再判断哪双鞋更省力。'
+    : 'Reads the last 21 days first, then compares heart rate and cadence at matched paces so your rotation advice reflects your current training block.';
+  const recentRotationEmpty = lang === 'zh-CN'
+    ? '先在最近几周里给跑步记录标记鞋子，这里才会开始给出可信的轮换判断。'
+    : 'Tag a few runs with shoes over the next few weeks and Hermes will start surfacing a trustworthy recent-rotation signal here.';
+  const recentRotationSummary = performanceFallback?.type === 'rotation'
+    ? (lang === 'zh-CN'
+      ? `这双鞋在最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天承接了你最多的已标记跑步，共 ${performanceFallback.runCount} 次，平均配速约 ${formatPaceForDisplay(performanceFallback.avgPace, unit, t)}。`
+      : `This pair handled the most shoe-tagged work in your last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days: ${performanceFallback.runCount} runs at about ${formatPaceForDisplay(performanceFallback.avgPace, unit, t)}.`)
+    : '';
+  const recentRotationMeta = performanceFallback?.type === 'rotation'
+    ? (lang === 'zh-CN'
+      ? `最近窗口共 ${performanceFallback.totalRecentRuns} 次跑步`
+      : `${performanceFallback.totalRecentRuns} total runs in this recent block`)
+    : '';
 
-    const validRuns = runs.filter(r => {
-      const km = Number(r.distanceKm || (r.distanceMeters ? r.distanceMeters / 1000 : 0));
-      const sec = Number(r.movingTimeSeconds || r.durationSeconds || 0);
-      return km >= 1 && sec > 0;
-    });
-    if (validRuns.length === 0) return null;
+  const rotationSignalFeatureTitle = shoePerformanceInsights.topInsight
+    ? shoePerformanceInsights.topInsight.name
+    : performanceFallback
+      ? (performanceFallback.type === 'recommend'
+        ? `${performanceFallback.shoe.brand} ${performanceFallback.shoe.model}`
+        : formatShoeDisplayName({
+          brand: performanceFallback.shoe.brand,
+          model: performanceFallback.shoe.model,
+          nickname: performanceFallback.shoe.nickname,
+          lang,
+        }))
+      : t('shoes.performance_inline_title');
+  const rotationSignalFeatureSummary = shoePerformanceInsights.topInsight
+    ? shoePerformanceInsights.topInsight.summary
+    : performanceFallback
+      ? (performanceFallback.type === 'recommend'
+        ? t('shoes.perf_recommend_summary', {
+          pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t),
+          note: performanceFallback.shoe.redditNote,
+        })
+        : recentRotationSummary)
+      : recentRotationEmpty;
+  const rotationSignalMetaItems = shoePerformanceInsights.topInsight
+    ? [
+      t('shoes.performance_sample', { count: shoePerformanceInsights.topInsight.sampleCount }),
+      t('shoes.performance_compare_sample', { count: shoePerformanceInsights.topInsight.compareCount }),
+      shoePerformanceInsights.topInsight.cadenceDelta != null
+        ? t('shoes.performance_cadence_delta', { value: `${shoePerformanceInsights.topInsight.cadenceDelta > 0 ? '+' : ''}${shoePerformanceInsights.topInsight.cadenceDelta.toFixed(1)}` })
+        : null,
+    ].filter(Boolean)
+    : performanceFallback
+      ? [
+        t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) }),
+        t('shoes.perf_based_on_runs', { count: performanceFallback.runCount }),
+        performanceFallback.type === 'rotation' ? recentRotationMeta : null,
+      ].filter(Boolean)
+      : [];
+  const rotationSignalSideTitle = shoePerformanceInsights.topInsight
+    ? (shoePerformanceInsights.topInsight.positive
+      ? t('shoes.performance_badge_gain')
+      : t('shoes.performance_badge_watch'))
+    : performanceFallback?.type === 'recommend'
+      ? t('shoes.performance_badge_watch')
+      : recentWindowLabel;
+  const rotationSignalSideCopy = shoePerformanceInsights.topInsight
+    ? t('shoes.perf_based_on_runs', { count: recentPerformanceRuns.length })
+    : performanceFallback?.type === 'rotation'
+      ? recentRotationMeta
+      : performanceFallback
+        ? t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })
+        : recentRotationEmpty;
 
-    const paces = validRuns.map(r => {
-      const km = Number(r.distanceKm || (r.distanceMeters ? r.distanceMeters / 1000 : 0));
-      const sec = Number(r.movingTimeSeconds || r.durationSeconds || 0);
-      return sec / km;
-    });
-    const avgPace = paces.reduce((a, b) => a + b, 0) / paces.length;
+  const renderRotationSignal = (inside = false) => (
+    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && performanceFallback?.type === 'recommend' ? ' is-recommend' : ''}`}>
+      <div className="shoe-rotation-signal-head">
+        <div className="shoe-rotation-signal-copy">
+          <span className="shoe-inventory-panel-kicker">{t('shoes.performance_inline_title')}</span>
+          <h2>{t('shoes.performance_heading')}</h2>
+          <p>{recentSignalCopy}</p>
+        </div>
+        <div className="shoe-rotation-signal-pills">
+          <span className="shoe-rotation-signal-pill">{recentWindowLabel}</span>
+          <span className="shoe-rotation-signal-pill is-soft">{t('shoes.perf_based_on_runs', { count: recentPerformanceRuns.length })}</span>
+          {shoePerformanceInsights.topInsight && (
+            <span className={`shoe-rotation-signal-pill${shoePerformanceInsights.topInsight.positive ? ' is-positive' : ' is-watch'}`}>
+              {shoePerformanceInsights.topInsight.positive
+                ? t('shoes.performance_badge_gain')
+                : t('shoes.performance_badge_watch')}
+            </span>
+          )}
+        </div>
+      </div>
 
-    if (shoes.length === 0) {
-      const rec = pickRedditRecommendation(avgPace);
-      return { type: 'recommend', shoe: rec, avgPace, runCount: validRuns.length };
-    }
+      <div className="shoe-rotation-signal-body">
+        {(shoePerformanceInsights.topInsight || performanceFallback) ? (
+          <>
+            <div className="shoe-rotation-signal-highlight">
+              <span className="shoe-rotation-signal-highlight-kicker">{t('shoes.performance_inline_title')}</span>
+              <strong>{rotationSignalFeatureTitle}</strong>
+              <p>{rotationSignalFeatureSummary}</p>
+            </div>
+            <div className="shoe-rotation-signal-sidecar">
+              <div className="shoe-rotation-signal-glass">
+                <span className="shoe-inventory-panel-kicker">{recentWindowLabel}</span>
+                <strong>{rotationSignalSideTitle}</strong>
+                <p>{rotationSignalSideCopy}</p>
+              </div>
+              <div className="shoe-rotation-signal-meta">
+                {rotationSignalMetaItems.map((item) => (
+                  <span key={item} className="shoe-rotation-signal-stat">{item}</span>
+                ))}
+                {performanceFallback?.type === 'recommend' && (
+                  <a
+                    className="shoe-rotation-signal-source"
+                    href="https://www.reddit.com/r/RunningShoeGeeks/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    r/RunningShoeGeeks
+                  </a>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="shoe-rotation-signal-empty">
+            <span className="shoe-rotation-signal-highlight-kicker">{t('shoes.performance_inline_title')}</span>
+            <strong>{t('shoes.performance_heading')}</strong>
+            <p>{recentRotationEmpty}</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 
-    const best = [...shoes].sort((a, b) => (b.currentDistanceKm || 0) - (a.currentDistanceKm || 0))[0];
-    return {
-      type: 'best_shoe',
-      shoe: best,
-      name: formatShoeDisplayName({ brand: best.brand, model: best.model, nickname: best.nickname, lang }),
-      avgPace,
-      runCount: validRuns.length,
-    };
-  }, [shoePerformanceInsights, shoes, runs, lang]);
+  const navItems = [
+    { key: 'dashboard', icon: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile' },
+    { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
+    { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
+    { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
+    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
+    { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
+    { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
+  ];
 
-  const avgHealthLabel = (() => {
-    if (activeShoes.length === 0) return '--';
-    const healths = activeShoes.map(s => shoeHealth(s.currentDistanceKm || 0, s.maxDistanceKm || 650));
-    if (healths.some(h => h === 'critical')) return t('shoes.health_critical');
-    if (healths.some(h => h === 'warn')) return t('shoes.health_warn');
-    return t('shoes.health_good');
-  })();
-  const primaryShoe = activeShoes.find((shoe) => shoe.isPrimary) || activeShoes[0] || null;
-  const retireSoonShoes = activeShoes
-    .filter((shoe) => shoeHealth(shoe.currentDistanceKm || 0, shoe.maxDistanceKm || 650) !== 'good')
-    .slice(0, 3);
   function openManualAdd() {
-    setFormBrand('');
-    setFormModel('');
-    setFormNickname('');
-    setFormMaxDist('650');
-    setFormPrimary(false);
-    setAddOpen(true);
+    navigate('/add-shoes');
   }
-
-  function openCatalogQuickPick(brand, model) {
-    setFormBrand(brand.brand);
-    setFormModel(model.model);
-    setFormNickname('');
-    setFormMaxDist('650');
-    setFormPrimary(false);
-    setAddOpen(true);
-  }
-  const browserBrands = useMemo(
-    () => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)).slice(0, 10),
-    [catalog],
-  );
-  const browserBrand = useMemo(
-    () => browserBrands.find((brand) => brand.brand === browserBrandKey) || browserBrands[0] || null,
-    [browserBrands, browserBrandKey],
-  );
-  const browserCategoryOptions = useMemo(() => {
-    const source = browserBrand?.models || [];
-    const categories = Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)));
-    return ['all', ...categories];
-  }, [browserBrand]);
-  const browserTypeOptions = useMemo(() => {
-    const source = browserBrand?.models || [];
-    const types = Array.from(new Set(source.map((item) => item.type).filter(Boolean)));
-    return ['all', ...types];
-  }, [browserBrand]);
-  const browserModels = useMemo(() => {
-    const source = Array.isArray(browserBrand?.models) ? browserBrand.models : [];
-    return source
-      .filter((item) => browserCategory === 'all' || (item.category || item.type || '') === browserCategory)
-      .filter((item) => browserType === 'all' || (item.type || '') === browserType)
-      .slice(0, 15);
-  }, [browserBrand, browserCategory, browserType]);
   const lockerBrands = useMemo(() => {
     const brands = new Set();
     for (const s of shoes) {
@@ -717,7 +628,23 @@ export default function Shoes() {
     const filtered = lockerBrandFilter === 'all'
       ? source
       : source.filter(s => s.brand === lockerBrandFilter);
-    const ranked = [...filtered];
+    const typed = filtered.filter((shoe) => matchesInventoryCategory(shoe, inventoryCategory));
+    const queried = inventoryQuery.trim()
+      ? typed.filter((shoe) => {
+        const haystack = [
+          shoe.brand,
+          shoe.model,
+          shoe.nickname,
+          localizeShoeBrand(shoe.brand, lang),
+          localizeShoeModel(shoe.model, lang),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(inventoryQuery.trim().toLowerCase());
+      })
+      : typed;
+    const ranked = [...queried];
     ranked.sort((left, right) => {
       if (inventorySort === 'added') return (right.id || 0) - (left.id || 0);
       if (inventorySort === 'mileage') return (right.currentDistanceKm || 0) - (left.currentDistanceKm || 0);
@@ -726,13 +653,7 @@ export default function Shoes() {
       return rightUsage.latest - leftUsage.latest;
     });
     return ranked;
-  }, [activeShoes, inventorySort, inventoryTab, lockerBrandFilter, retiredShoes, shoes, usageByShoe]);
-
-  useEffect(() => {
-    if (!browserBrandKey && browserBrands.length > 0) {
-      setBrowserBrandKey(browserBrands[0].brand);
-    }
-  }, [browserBrandKey, browserBrands]);
+  }, [activeShoes, inventoryCategory, inventoryQuery, inventorySort, inventoryTab, lang, lockerBrandFilter, retiredShoes, shoes, usageByShoe]);
   function openEditForm(shoe) {
     setEditingShoe(shoe);
     setFormBrand(shoe.brand || '');
@@ -757,13 +678,6 @@ export default function Shoes() {
           body: JSON.stringify(body),
         });
         setEditOpen(false);
-      } else {
-        await apiFetch('/api/shoes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        setAddOpen(false);
       }
       setEditingShoe(null);
       loadShoes();
@@ -952,6 +866,7 @@ export default function Shoes() {
     setImgPickerShoe(shoe);
     setImgCandidates([]);
     setImgSearching(false);
+    setImgSearchStatus('');
     setImgCustomQuery(`${shoe.brand || ''} ${shoe.model || ''}`.trim());
     setImgCustomUrl('');
     applyPendingUploadState(clearPendingShoePhotoState());
@@ -965,6 +880,7 @@ export default function Shoes() {
   async function searchImages(shoeId, query) {
     setImgSearching(true);
     setImgCandidates([]);
+    setImgSearchStatus('');
     try {
       const res = await apiFetch(`/api/shoes/${shoeId}/search-images`, {
         method: 'POST',
@@ -974,8 +890,18 @@ export default function Shoes() {
       if (res.ok) {
         const data = await res.json();
         setImgCandidates(data.images || []);
+      } else {
+        const errorData = await res.json().catch(() => null);
+        const message = errorData?.error || '';
+        if (message.includes('APP_AI_API_KEY') || message.toLowerCase().includes('not configured')) {
+          setImgSearchStatus(t('shoes.img_search_unavailable'));
+        } else {
+          setImgSearchStatus(t('shoes.img_search_failed'));
+        }
       }
-    } catch { /* ignored */ }
+    } catch {
+      setImgSearchStatus(t('shoes.img_search_failed'));
+    }
     setImgSearching(false);
   }
 
@@ -1035,409 +961,265 @@ export default function Shoes() {
     applyPendingUploadState(clearPendingShoePhotoState(t('shoes.img_upload_success')));
   }
 
-  // Render helpers
-  function renderAddModalContent() {
+  function renderInventoryCard(shoe, { preview = false } = {}) {
+    const current = shoe.currentDistanceKm || 0;
+    const max = shoe.maxDistanceKm || 650;
+    const health = shoeHealth(current, max);
+    const name = formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang });
+    const performanceInsight = preview ? null : shoePerformanceInsights.byShoe.get(shoe.id);
+    const usage = preview ? { count: 0, latest: 0 } : (usageByShoe.get(shoe.id) || { count: 0, latest: 0 });
+    const typeLabel = t(`shoes.${TYPE_LABELS[shoe.type] || 'type_daily'}`);
+    const lifespanPct = Math.max(8, Math.min(100, max > 0 ? (current / max) * 100 : 0));
+
     return (
-      <div className="shoe-wizard">
-        <p className="shoe-wizard-step-label">{formBrand || formModel ? t('shoes.step_details') : t('shoes.custom_shoe')}</p>
-        <form onSubmit={handleSave}>
-          <label className="modal-label">{t('shoes.brand')}</label>
-          <input type="text" value={formBrand} onChange={e => setFormBrand(e.target.value)} placeholder={t('shoes.brand_placeholder')} />
-
-          <label className="modal-label">{t('shoes.model')}</label>
-          <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} placeholder={t('shoes.model_placeholder')} />
-
-          <label className="modal-label">{t('shoes.nickname')}</label>
-          <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={t('shoes.nickname_placeholder')} />
-
-          <label className="modal-label">{t('shoes.max_distance')}</label>
-          <input type="number" value={formMaxDist} onChange={e => setFormMaxDist(e.target.value)} min="100" max="2000" step="50" />
-
-          <label className="shoe-checkbox-label">
-            <input type="checkbox" checked={formPrimary} onChange={e => setFormPrimary(e.target.checked)} />
-            <span>{t('shoes.set_primary')}</span>
-          </label>
-
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setAddOpen(false)}>{t('shoes.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button">{t('shoes.add_shoe')}</button>
+      <article key={shoe.id} className={`shoe-inventory-card${shoe.isPrimary ? ' is-primary' : ''}${shoe.retired ? ' is-retired' : ''}${preview ? ' is-preview' : ''}`}>
+        <div className="shoe-inventory-card-art">
+          <div className="shoe-img-clickable shoe-inventory-card-image" title={preview ? name : t('shoes.img_pick')} onClick={preview ? undefined : () => openImagePicker(shoe)}>
+            {preview
+              ? <PreviewShoeArt tone={shoe.previewTone} label={localizeShoeBrand(shoe.brand, lang)} />
+              : <ShoeImage src={shoe.photoUrl} alt={name} />}
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div className="shoe-inventory-card-copy">
+          <div className="shoe-inventory-card-head">
+            <h2>{localizeShoeModel(shoe.model, lang) || name}</h2>
+            <span className={`shoe-inventory-card-type-badge${shoe.retired ? ' is-muted' : ''}`}>{typeLabel}</span>
+          </div>
+          <p className="shoe-inventory-card-subtitle">
+            {shoe.nickname || performanceInsight?.summary || localizeShoeBrand(shoe.brand, lang)}
+          </p>
+          <div className="shoe-inventory-card-metrics">
+            <div className="shoe-inventory-card-metric">
+              <span className="shoe-inventory-brand-label">{t('shoes.sort_mileage')}</span>
+              <div className={`shoe-inventory-card-metric-value is-${health}`}>
+                <strong>{formatDistanceValue(current, unit, 0)}</strong>
+                <span>{distanceUnitLabel}</span>
+              </div>
+            </div>
+            <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
+              <span className="shoe-inventory-brand-label">{t('shoes.lifespan')}</span>
+              <div className="shoe-inventory-card-progress">
+                <div className={`shoe-inventory-card-progress-fill is-${health}`} style={{ width: `${lifespanPct}%` }} />
+              </div>
+            </div>
+          </div>
+          <div className="shoe-inventory-card-actions">
+            {preview ? (
+              <button type="button" className="shoe-inventory-card-action shoe-inventory-card-action--cta" onClick={openManualAdd}>{t('shoes.add_shoe')}</button>
+            ) : (
+              <>
+                <button type="button" className="shoe-inventory-card-action" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
+                <button type="button" className="shoe-inventory-card-action" onClick={() => openImagePicker(shoe)}>{t('shoes.photo_action')}</button>
+                {!shoe.retired && <button type="button" className="shoe-inventory-card-action" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>}
+                <button type="button" className="shoe-inventory-card-action is-danger" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="shoe-inventory-card-side">
+          {shoe.isPrimary && <span className="shoe-inventory-inline-pill">{t('shoes.primary_label')}</span>}
+          {!shoe.isPrimary && preview && <span className="shoe-inventory-inline-pill">{t('shoes.browser_kicker')}</span>}
+          <button type="button" className="shoe-inventory-chevron" onClick={preview ? openManualAdd : () => openEditForm(shoe)} aria-label={preview ? t('shoes.add_shoe') : t('shoes.edit')}>
+            <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
+          </button>
+          <div className="shoe-inventory-card-meta">
+            <span>{localizeShoeBrand(shoe.brand, lang)}</span>
+            <span>{preview ? t('shoes.stitch_preview_label') : t('shoes.uses_count', { count: usage.count })}</span>
+          </div>
+        </div>
+      </article>
     );
   }
 
   return (
-    <AuthenticatedPageChrome bodyClassName="history-page shoes-page">
-
-      <main className="dashboard-container history-container">
-        <section className="card shoe-locker-shell">
-          <div className="shoe-locker-topbar">
-            <div>
-              <span className="shoe-locker-kicker">{t('shoes.eyebrow')}</span>
-              <h1 className="shoe-locker-title">{t('shoes.heading')}</h1>
-              <p className="shoe-locker-subcopy">{t('shoes.page_copy')}</p>
+    <>
+      <div className={`analysis-stitch-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+        <aside className="analysis-stitch-sidebar">
+          <div className="analysis-stitch-brand runner-dashboard-brand">
+            <div className="runner-dashboard-brand-copy">
+              <HermesLogo dark />
+              <span>{t('profile.dashboard_tagline')}</span>
             </div>
-            <div className="shoe-locker-actions">
-              <button type="button" className="btn-secondary" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
-                {t('shoes.scan_image')}
-              </button>
-              <button type="button" className="btn-primary" onClick={openManualAdd}>{t('shoes.add_shoe')}</button>
-            </div>
-          </div>
-
-          <div className="shoe-locker-tabbar">
-            <button type="button" className={`shoe-locker-tab${inventoryTab === 'active' ? ' active' : ''}`} onClick={() => setInventoryTab('active')}>
-              {t('shoes.inventory_active', { count: activeShoes.length })}
-            </button>
-            <button type="button" className={`shoe-locker-tab${inventoryTab === 'retired' ? ' active' : ''}`} onClick={() => setInventoryTab('retired')}>
-              {t('shoes.inventory_retired', { count: retiredShoes.length })}
-            </button>
-            <button type="button" className={`shoe-locker-tab${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')}>
-              {t('shoes.inventory_all', { count: shoes.length })}
-            </button>
-            {isFiltered && (
-              <button type="button" className="shoe-locker-reset-btn" onClick={resetLocker}>
-                ✕ {lang === 'zh-CN' ? '重置筛选' : 'Reset locker'}
-              </button>
-            )}
-          </div>
-
-          <div className="shoe-locker-sortbar">
-            <button type="button" className={`shoe-locker-sort${inventorySort === 'recent' ? ' active' : ''}`} onClick={() => setInventorySort('recent')}>
-              {t('shoes.sort_recent')}
-            </button>
-            <button type="button" className={`shoe-locker-sort${inventorySort === 'added' ? ' active' : ''}`} onClick={() => setInventorySort('added')}>
-              {t('shoes.sort_added')}
-            </button>
-            <button type="button" className={`shoe-locker-sort${inventorySort === 'mileage' ? ' active' : ''}`} onClick={() => setInventorySort('mileage')}>
-              {t('shoes.sort_mileage')}
+            <button
+              type="button"
+              className="runner-dashboard-sidebar-toggle"
+              onClick={() => setIsSidebarCollapsed((current) => !current)}
+              aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
+              aria-pressed={isSidebarCollapsed}
+            >
+              <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
             </button>
           </div>
 
-          {lockerBrands.length > 1 && (
-            <div className="shoe-locker-brandbar">
+          <nav className="analysis-stitch-side-nav">
+            {navItems.map((item) => (
               <button
+                key={item.key}
                 type="button"
-                className={`shoe-locker-brand${lockerBrandFilter === 'all' ? ' active' : ''}`}
-                onClick={() => setLockerBrandFilter('all')}
+                className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+                onClick={() => navigate(item.route)}
+                aria-label={item.label}
               >
-                {t('shoes.locker_all_brands')}
-              </button>
-              {lockerBrands.map(brand => (
-                <button
-                  key={brand}
-                  type="button"
-                  className={`shoe-locker-brand${lockerBrandFilter === brand ? ' active' : ''}`}
-                  onClick={() => setLockerBrandFilter(brand)}
-                >
-                  {brand}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {activeShoes.length > 0 && inventoryTab !== 'retired' && (
-            <div className="shoe-health-summary-row">
-              <div className="shoe-health-summary-pill">
-                <span className="shoe-health-summary-label">{t('shoes.health_summary_active', { count: activeShoes.length })}</span>
-              </div>
-              {retireSoonShoes.length > 0 && (
-                <div className="shoe-health-summary-pill shoe-health-summary-pill--warn">
-                  <span className="shoe-health-summary-label">{t('shoes.health_summary_retire_soon', { count: retireSoonShoes.length })}</span>
-                </div>
-              )}
-              <div className="shoe-health-summary-pill shoe-health-summary-pill--health">
-                <span className="shoe-health-summary-label">{t('shoes.health_summary_rotation')}</span>
-                <strong>{avgHealthLabel}</strong>
-              </div>
-            </div>
-          )}
-
-          <div className="shoe-locker-layout">
-            <div className="shoe-locker-list">
-              {loadState === 'loading' && <div className="history-status">{t('shoes.loading')}</div>}
-              {loadState === 'error' && <div className="history-status">{t('shoes.load_error')}</div>}
-              {loadState === 'ready' && inventoryShoes.length === 0 && (
-                <div className="history-status">{inventoryTab === 'retired' ? t('shoes.retired_label') : t('shoes.empty')}</div>
-              )}
-              {loadState === 'ready' && inventoryShoes.map((shoe) => {
-                const current = shoe.currentDistanceKm || 0;
-                const max = shoe.maxDistanceKm || 650;
-                const pct = Math.min(100, (current / max) * 100);
-                const health = shoeHealth(current, max);
-                const name = formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang });
-                const performanceInsight = shoePerformanceInsights.byShoe.get(shoe.id);
-                const usage = usageByShoe.get(shoe.id) || { count: 0, latest: 0 };
-
-                return (
-                  <article key={shoe.id} className={`shoe-locker-row${shoe.retired ? ' is-retired' : ''}`}>
-                    <div className="shoe-locker-art">
-                      <div className="shoe-img-clickable shoe-locker-image" title={t('shoes.img_pick')} onClick={() => openImagePicker(shoe)}>
-                        <ShoeImage src={shoe.photoUrl} alt={name} />
-                      </div>
-                      <div className="shoe-locker-progress-rail">
-                        <span className="shoe-locker-progress-fill" style={{ width: `${Math.max(8, pct)}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="shoe-locker-copy">
-                      <div className="shoe-locker-row-head">
-                        <div>
-                          <div className="shoe-locker-brand">{localizeShoeBrand(shoe.brand, lang)}</div>
-                          <h2 className="shoe-locker-row-title">
-                            {localizeShoeModel(shoe.model, lang) || name}
-                            {shoe.isPrimary && <span className="shoe-badge shoe-badge-primary">{t('shoes.primary_label')}</span>}
-                            {shoe.retired && <span className="shoe-badge shoe-badge-retired">{t('shoes.retired_label')}</span>}
-                          </h2>
-                          {shoe.nickname && (shoe.brand || shoe.model) && (
-                            <div className="shoe-locker-nickname">{shoe.nickname}</div>
-                          )}
-                        </div>
-                        <div className="shoe-locker-actions-inline">
-                          <button type="button" className="shoe-btn-edit" onClick={() => openImagePicker(shoe)}>{t('shoes.photo_action')}</button>
-                          <button type="button" className="shoe-btn-edit" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
-                          {!shoe.retired && (
-                            <button type="button" className="shoe-btn-retire" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
-                          )}
-                          <button type="button" className="shoe-btn-delete" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
-                        </div>
-                      </div>
-
-                      <div className="shoe-locker-stats">
-                        <span>{formatDistanceValue(current, unit, 1)} / {formatDistanceValue(max, unit, 0)} {distanceUnitLabel}</span>
-                        <span>{t('shoes.uses_count', { count: usage.count })}</span>
-                        <span>{t(`shoes.${TYPE_LABELS[shoe.type] || 'type_daily'}`)}</span>
-                      </div>
-
-                      <div className="shoe-locker-status-row">
-                        <span className={`shoe-health-label shoe-health-${health}`}>
-                          {health === 'good' ? t('shoes.health_good') : health === 'warn' ? t('shoes.health_warn') : t('shoes.health_critical')}
-                        </span>
-                        <span className={`shoe-photo-mode-pill${shouldPreferManualImageSearch(shoe.brand, shoe.model) ? ' caution' : ''}`}>
-                          {shouldPreferManualImageSearch(shoe.brand, shoe.model)
-                            ? t('shoes.img_mode_manual') : t('shoes.img_mode_auto')}
-                        </span>
-                      </div>
-
-                      {performanceInsight && (
-                        <div className={`shoe-performance-inline${performanceInsight.positive ? ' positive' : ''}`}>
-                          <strong>{t('shoes.performance_inline_title')}</strong>
-                          <p>{performanceInsight.summary}</p>
-                        </div>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-
-            <aside className="shoe-locker-sidebar">
-              <div className="shoe-locker-spotlight">
-                <span className="shoe-locker-sidebar-kicker">{t('shoes.sidebar_primary')}</span>
-                <strong>
-                  {primaryShoe
-                    ? formatShoeDisplayName({ brand: primaryShoe.brand, model: primaryShoe.model, nickname: primaryShoe.nickname, lang })
-                    : t('shoes.sidebar_empty_title')}
-                </strong>
-                <span>
-                  {primaryShoe
-                    ? `${formatDistanceValue(primaryShoe.currentDistanceKm || 0, unit, 0)} / ${formatDistanceValue(primaryShoe.maxDistanceKm || 650, unit, 0)} ${distanceUnitLabel}`
-                    : t('shoes.sidebar_empty_copy')}
-                </span>
-              </div>
-
-              <div className="shoe-locker-metrics">
-                <div>
-                  <span>{t('shoes.active_shoes')}</span>
-                  <strong>{activeShoes.length}</strong>
-                </div>
-                <div>
-                  <span>{t('shoes.total_mileage')}</span>
-                  <strong>{formatDistanceValue(totalMileage, unit, 1)} {distanceUnitLabel}</strong>
-                </div>
-                <div>
-                  <span>{t('shoes.avg_health')}</span>
-                  <strong>{avgHealthLabel}</strong>
-                </div>
-              </div>
-
-              {retireSoonShoes.length > 0 && (
-                <div className="shoe-locker-alerts">
-                  <div className="shoe-locker-sidebar-kicker">{t('shoes.watchlist')}</div>
-                  {retireSoonShoes.map((shoe) => (
-                    <div key={shoe.id} className="shoe-locker-alert-card">
-                      <span>{formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}</span>
-                      <strong>{shoeHealth(shoe.currentDistanceKm || 0, shoe.maxDistanceKm || 650) === 'critical' ? t('shoes.health_critical') : t('shoes.health_warn')}</strong>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </aside>
-          </div>
-        </section>
-
-        <section className="card shoe-browser-shell">
-          <div className="shoe-browser-head">
-            <div>
-              <span className="shoe-locker-kicker">{t('shoes.browser_kicker')}</span>
-              <h2 className="shoe-browser-title">{t('shoes.browser_heading')}</h2>
-              <p className="shoe-browser-copy">{t('shoes.browser_copy')}</p>
-            </div>
-          </div>
-
-          <div className="shoe-browser-filter-row">
-            {browserCategoryOptions.slice(0, 6).map((categoryKey) => (
-              <button
-                key={categoryKey}
-                type="button"
-                className={`shoe-browser-filter${browserCategory === categoryKey ? ' active' : ''}`}
-                onClick={() => setBrowserCategory(categoryKey)}
-              >
-                {getCatalogCategoryLabel(categoryKey, lang)}
+                <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+                <span className="runner-dashboard-side-link-label">{item.label}</span>
               </button>
             ))}
-            {browserTypeOptions.slice(0, 4).map((typeKey) => (
-              <button
-                key={typeKey}
-                type="button"
-                className={`shoe-browser-filter${browserType === typeKey ? ' active' : ''}`}
-                onClick={() => setBrowserType(typeKey)}
-              >
-                {typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}
-              </button>
-            ))}
-          </div>
+          </nav>
 
-          <div className="shoe-browser-layout">
-            <aside className="shoe-browser-rail">
-              {browserBrands.map((brand) => (
-                <button
-                  key={brand.brand}
-                  type="button"
-                  className={`shoe-browser-rail-item${browserBrand?.brand === brand.brand ? ' active' : ''}`}
-                  onClick={() => {
-                    setBrowserBrandKey(brand.brand);
-                    setBrowserCategory('all');
-                    setBrowserType('all');
-                  }}
-                >
-                  <span className="shoe-browser-rail-logo">
-                    <BrandLogo brand={brand.brand} fallbackEmoji={brand.logo} />
-                  </span>
-                  <span>{localizeShoeBrand(brand.brand, lang)}</span>
+          <div className="analysis-stitch-sidebar-footer">
+            <button
+              type="button"
+              className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+              onClick={() => navigate('/today-run')}
+              aria-label={t('profile.dashboard_start_workout')}
+            >
+              <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+              <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
+            </button>
+          </div>
+        </aside>
+
+        <main className="analysis-stitch-main">
+          <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
+            <div className="analysis-stitch-topbar-left">
+              <div className="schedule-stitch-topnav">
+                <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_shoes')}</span>
+              </div>
+            </div>
+
+            <div className="analysis-stitch-topbar-actions">
+              <div className="analysis-stitch-topbar-profile-actions">
+                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
+                  <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
                 </button>
-              ))}
-            </aside>
-
-            <div className="shoe-browser-panel">
-              <div className="shoe-browser-panel-head">
-                <strong>{browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : t('shoes.browser_brand')}</strong>
-                <span>{t('shoes.model_count', { count: browserModels.length })}</span>
-              </div>
-              <div className="shoe-browser-grid">
-                {browserModels.map((model, index) => (
-                  <button
-                    key={`${browserBrand?.brand || 'brand'}-${model.model}-${index}`}
-                    type="button"
-                    className="shoe-browser-card"
-                    onClick={() => browserBrand && openCatalogQuickPick(browserBrand, model)}
-                  >
-                    <span className="shoe-browser-card-art">
-                      <BrandLogo brand={browserBrand?.brand || model.brand} fallbackEmoji={browserBrand?.logo} />
-                    </span>
-                    <strong>{getCatalogModelLabel(model, lang)}</strong>
-                    <span>{getCatalogCategoryLabel(model.category || model.type, lang)}</span>
-                  </button>
-                ))}
-                {browserModels.length === 0 && (
-                  <div className="shoe-selector-empty">
-                    {t('shoes.browser_empty')}
-                  </div>
-                )}
+                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+                  <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+                </button>
+                <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
+                  {initials}
+                </button>
               </div>
             </div>
-          </div>
-        </section>
+          </header>
 
-        <section className="card shoe-performance-panel">
-          <div className="shoe-performance-head">
-            <div className="inline-info-heading">
-              <h2>{t('shoes.performance_heading')}</h2>
-              <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
-                <p>{t('shoes.performance_copy')}</p>
-              </InfoDisclosure>
+          <div className="analysis-stitch-canvas">
+            <div className="shoe-inventory-screen shoes-dashboard-shell">
+        {renderRotationSignal()}
+
+        <section className="shoe-inventory-stage">
+          <header className="shoe-inventory-topbar">
+            <div className="shoe-inventory-topbar-title">
+              <button
+                type="button"
+                className="shoe-inventory-topbar-toggle"
+                onClick={() => setIsInventoryCollapsed((current) => !current)}
+                aria-expanded={!isInventoryCollapsed}
+                aria-label={isInventoryCollapsed ? 'Expand running shoes inventory' : 'Collapse running shoes inventory'}
+              >
+                <AppIcon
+                  name={isInventoryCollapsed ? 'chevron_right' : 'change_history'}
+                  className="runner-dashboard-side-link-icon"
+                />
+              </button>
+              <h2>{t('shoes.stitch_surface_label')}</h2>
             </div>
-            {shoePerformanceInsights.topInsight && (
-              <div className={`shoe-performance-badge${shoePerformanceInsights.topInsight.positive ? ' positive' : ''}`}>
-                {shoePerformanceInsights.topInsight.positive
-                  ? t('shoes.performance_badge_gain')
-                  : t('shoes.performance_badge_watch')}
-              </div>
-            )}
-          </div>
+            <div className="shoe-inventory-topbar-actions">
+              <label className="shoe-inventory-search">
+                <AppIcon name="search" className="runner-dashboard-side-link-icon" />
+                <input
+                  type="search"
+                  value={inventoryQuery}
+                  onChange={(event) => setInventoryQuery(event.target.value)}
+                  placeholder={t('shoes.search_placeholder')}
+                  aria-label={t('shoes.search_placeholder')}
+                />
+              </label>
+              <button type="button" className="shoe-inventory-cta" onClick={openManualAdd}>
+                <AppIcon name="add" className="runner-dashboard-side-link-icon" />
+                <span>{t('shoes.add_shoe')}</span>
+              </button>
+            </div>
+          </header>
 
-          {shoePerformanceInsights.topInsight ? (
+          {!isInventoryCollapsed && (
             <>
-              <div className="shoe-performance-highlight">
-                <strong>{shoePerformanceInsights.topInsight.name}</strong>
-                <p>{shoePerformanceInsights.topInsight.summary}</p>
+              <div className="shoe-inventory-hero">
+                <div className="shoe-inventory-hero-copy">
+                  <h1>{t('shoes.stitch_inventory_title')}</h1>
+                </div>
+                <div className="shoe-inventory-hero-tabs" role="tablist" aria-label={t('shoes.stitch_surface_label')}>
+                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')}>
+                    {t('shoes.inventory_all', { count: shoes.length })}
+                  </button>
+                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'active' ? ' active' : ''}`} onClick={() => setInventoryTab('active')}>
+                    {t('shoes.inventory_active', { count: activeShoes.length })}
+                  </button>
+                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'retired' ? ' active' : ''}`} onClick={() => setInventoryTab('retired')}>
+                    {t('shoes.inventory_retired', { count: retiredShoes.length })}
+                  </button>
+                </div>
               </div>
-              <div className="shoe-performance-meta">
-                <span>{t('shoes.performance_sample', { count: shoePerformanceInsights.topInsight.sampleCount })}</span>
-                <span>{t('shoes.performance_compare_sample', { count: shoePerformanceInsights.topInsight.compareCount })}</span>
-                {shoePerformanceInsights.topInsight.cadenceDelta != null && (
-                  <span>{t('shoes.performance_cadence_delta', { value: `${shoePerformanceInsights.topInsight.cadenceDelta > 0 ? '+' : ''}${shoePerformanceInsights.topInsight.cadenceDelta.toFixed(1)}` })}</span>
-                )}
+
+              <div className="shoe-inventory-manage-strip">
+                <div className="shoe-inventory-manage-head">
+                  <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_actions')}</span>
+                  <div className="shoe-inventory-manage-actions">
+                    <button type="button" className="shoe-inventory-action-btn" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
+                      {t('shoes.scan_image')}
+                    </button>
+                    {isFiltered && <button type="button" className="shoe-inventory-action-btn is-muted" onClick={resetLocker}>{t('shoes.stitch_reset')}</button>}
+                  </div>
+                </div>
+
+                <div className="shoe-inventory-manage-grid">
+                  <div className="shoe-inventory-manage-group">
+                    <span className="shoe-inventory-panel-kicker">{t('shoes.sort_mileage')}</span>
+                    <div className="shoe-inventory-brand-pills">
+                      <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'recent' ? ' active' : ''}`} onClick={() => setInventorySort('recent')}>{t('shoes.sort_recent')}</button>
+                      <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'added' ? ' active' : ''}`} onClick={() => setInventorySort('added')}>{t('shoes.sort_added')}</button>
+                      <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'mileage' ? ' active' : ''}`} onClick={() => setInventorySort('mileage')}>{t('shoes.sort_mileage')}</button>
+                    </div>
+                  </div>
+
+                  <div className="shoe-inventory-manage-group">
+                    <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_brand_label')}</span>
+                    <div className="shoe-inventory-brand-pills">
+                      <button type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === 'all' ? ' active' : ''}`} onClick={() => setLockerBrandFilter('all')}>{t('shoes.locker_all_brands')}</button>
+                      {lockerBrands.map((brand) => (
+                        <button key={brand} type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === brand ? ' active' : ''}`} onClick={() => setLockerBrandFilter(brand)}>{brand}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="shoe-inventory-manage-group">
+                    <span className="shoe-inventory-panel-kicker">{t('shoes.browser_kicker')}</span>
+                    <div className="shoe-inventory-brand-pills">
+                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'all' ? ' active' : ''}`} onClick={() => setInventoryCategory('all')}>{t('shoes.locker_all_brands')}</button>
+                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'daily' ? ' active' : ''}`} onClick={() => setInventoryCategory('daily')}>{t('shoes.stitch_filter_daily')}</button>
+                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'race' ? ' active' : ''}`} onClick={() => setInventoryCategory('race')}>{t('shoes.stitch_filter_race')}</button>
+                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'trail' ? ' active' : ''}`} onClick={() => setInventoryCategory('trail')}>{t('shoes.stitch_filter_trail')}</button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </>
-          ) : performanceFallback ? (
-            <div className="shoe-performance-fallback">
-              {performanceFallback.type === 'recommend' ? (
-                <>
-                  <div className="shoe-performance-highlight">
-                    <strong>{performanceFallback.shoe.brand} {performanceFallback.shoe.model}</strong>
-                    <p>{t('shoes.perf_recommend_summary', {
-                      pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t),
-                      note: performanceFallback.shoe.redditNote,
-                    })}</p>
-                  </div>
-                  <div className="shoe-performance-meta">
-                    <span>{t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })}</span>
-                    <span>{t('shoes.perf_based_on_runs', { count: performanceFallback.runCount })}</span>
-                  </div>
-                  <a
-                    className="shoe-reddit-link"
-                    href="https://www.reddit.com/r/RunningShoeGeeks/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    r/RunningShoeGeeks
-                  </a>
-                </>
-              ) : (
-                <>
-                  <div className="shoe-performance-highlight">
-                    <strong>{performanceFallback.name}</strong>
-                    <p>{t('shoes.perf_best_shoe_summary', {
-                      km: (performanceFallback.shoe.currentDistanceKm || 0).toFixed(0),
-                      pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t),
-                    })}</p>
-                  </div>
-                  <div className="shoe-performance-meta">
-                    <span>{t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })}</span>
-                    <span>{t('shoes.perf_based_on_runs', { count: performanceFallback.runCount })}</span>
-                  </div>
-                </>
+
+              {loadState === 'loading' && <div className="shoe-inventory-status">{t('shoes.loading')}</div>}
+              {loadState === 'error' && <div className="shoe-inventory-status">{t('shoes.load_error')}</div>}
+              {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_label') : t('shoes.stitch_inventory_empty')}</div>}
+
+              {loadState === 'ready' && inventoryShoes.length > 0 && (
+                <div className="shoe-inventory-grid">
+                  {inventoryShoes.map((shoe) => renderInventoryCard(shoe))}
+                </div>
               )}
-            </div>
-          ) : (
-            <p className="analysis-muted" style={{ marginTop: 10 }}>{t('shoes.performance_empty')}</p>
+            </>
           )}
         </section>
 
         {duplicateClusters.length > 0 && (
-          <section className="card shoe-duplicate-panel">
+          <section className="shoe-inventory-intel-panel shoe-inventory-intel-panel--duplicate">
             <div className="inline-info-heading">
               <h2 className="shoe-duplicate-title">{t('shoes.duplicate_title')}</h2>
               <InfoDisclosure className="history-copy-toggle history-copy-toggle--inline">
@@ -1472,12 +1254,16 @@ export default function Shoes() {
           </section>
         )}
 
-      </main>
-      {/* Add-shoe modal */}
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title={t('shoes.add_title')}>
-        {renderAddModalContent()}
-      </Modal>
-
+            <footer className="analysis-stitch-footer runner-dashboard-footer">
+              <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
+              <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
+              <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
+              <button type="button" onClick={() => navigate('/settings')}>{t('profile.settings')}</button>
+            </footer>
+            </div>
+          </div>
+        </main>
+      </div>
       {/* Edit-shoe modal */}
       <Modal isOpen={editOpen} onClose={() => { setEditOpen(false); setEditingShoe(null); }} title={t('shoes.edit_title')}>
         <form onSubmit={handleSave}>
@@ -1506,120 +1292,170 @@ export default function Shoes() {
       </Modal>
 
       {/* Image picker modal */}
-      <Modal isOpen={imgPickerOpen} onClose={() => setImgPickerOpen(false)} title={t('shoes.img_picker_title')}>
+      <Modal
+        isOpen={imgPickerOpen}
+        onClose={() => setImgPickerOpen(false)}
+        title={t('shoes.img_picker_title')}
+        shellClassName="settings-modal-shell img-picker-modal-shell"
+        cardClassName="settings-modal-card img-picker-modal-card"
+      >
         {imgPickerShoe && (
           <div className="img-picker">
+            <section className="img-picker-hero">
+              <div className="img-picker-hero-copy">
+                <span className="img-picker-kicker">{t('shoes.img_picker_title')}</span>
+                <h3>{formatShoeDisplayName({ brand: imgPickerShoe.brand, model: imgPickerShoe.model, nickname: imgPickerShoe.nickname, lang })}</h3>
+                <p>{t('shoes.img_picker_copy')}</p>
+              </div>
+              <div className="img-picker-hero-meta">
+                <span className="img-picker-meta-pill">{localizeShoeBrand(imgPickerShoe.brand, lang) || t('shoes.brand')}</span>
+                <span className="img-picker-meta-pill">{localizeShoeModel(imgPickerShoe.model, lang) || t('shoes.model')}</span>
+              </div>
+            </section>
+
             {shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) && (
               <div className="img-picker-manual-note">
                 {t('shoes.img_manual_search_note')}
               </div>
             )}
-            {/* Current image */}
-            <div className="img-picker-current">
-              <span className="img-picker-label">{t('shoes.img_current')}</span>
-              <div className="img-picker-preview">
-                {imgPickerShoe.photoUrl
-                  ? <img src={imgPickerShoe.photoUrl} alt="current" className="img-picker-current-img" />
-                  : <div className="shoe-img-placeholder"><span>S</span></div>}
-              </div>
-              {imgPickerShoe.photoUrl && (
-                <button type="button" className="btn-secondary img-picker-clear" onClick={clearImage}>
-                  {t('shoes.img_clear')}
-                </button>
-              )}
-            </div>
+            <div className="img-picker-layout">
+              <div className="img-picker-side">
+                <section className="img-picker-panel img-picker-current-panel">
+                  <div className="img-picker-section-head">
+                    <span className="img-picker-label">{t('shoes.img_current')}</span>
+                    {imgPickerShoe.photoUrl && (
+                      <button type="button" className="btn-secondary img-picker-clear" onClick={clearImage}>
+                        {t('shoes.img_clear')}
+                      </button>
+                    )}
+                  </div>
+                  <div className="img-picker-preview">
+                    {imgPickerShoe.photoUrl
+                      ? <img src={imgPickerShoe.photoUrl} alt="current" className="img-picker-current-img" />
+                      : <div className="shoe-img-placeholder"><span>S</span></div>}
+                  </div>
+                </section>
 
-            {/* Custom URL input */}
-            <div className="img-picker-url-row">
-              <input
-                type="text" className="img-picker-url-input"
-                placeholder={t('shoes.img_paste_url')}
-                value={imgCustomUrl}
-                onChange={e => setImgCustomUrl(e.target.value)}
-              />
-              <button type="button" className="btn-primary img-picker-url-btn"
-                disabled={!imgCustomUrl.trim()}
-                onClick={() => { selectImage(imgCustomUrl.trim()); setImgCustomUrl(''); }}>
-                {t('shoes.img_apply')}
-              </button>
-            </div>
-
-            <div className="img-picker-upload-row">
-              <label className={`btn-secondary img-picker-upload-btn${imgUploading ? ' is-busy' : ''}`}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="img-picker-upload-input"
-                  disabled={imgUploading}
-                  onChange={handleLocalImagePick}
-                />
-                {imgUploading ? t('shoes.img_uploading') : t('shoes.img_upload_local')}
-              </label>
-              <span className="img-picker-upload-copy">{t('shoes.img_upload_hint')}</span>
-            </div>
-            {imgUploadStatus && <div className="modal-status img-picker-upload-status">{imgUploadStatus}</div>}
-            {imgPendingUploadUrl && (
-              <div className="img-picker-pending">
-                <div className="img-picker-pending-head">
-                  <span className="img-picker-label">{t('shoes.img_preview_title')}</span>
-                  {imgPendingUploadName && (
-                    <span className="img-picker-pending-name">{imgPendingUploadName}</span>
+                <section className="img-picker-panel img-picker-upload-panel">
+                  <div className="img-picker-section-head">
+                    <span className="img-picker-label">{t('shoes.img_upload_local')}</span>
+                  </div>
+                  <label className={`img-picker-upload-row img-picker-upload-btn${imgUploading ? ' is-busy' : ''}`}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="img-picker-upload-input"
+                      disabled={imgUploading}
+                      onChange={handleLocalImagePick}
+                    />
+                    <span className="img-picker-upload-icon" aria-hidden="true">+</span>
+                    <div className="img-picker-upload-body">
+                      <strong>{imgUploading ? t('shoes.img_uploading') : t('shoes.img_upload_local')}</strong>
+                      <span className="img-picker-upload-copy">{t('shoes.img_upload_hint')}</span>
+                    </div>
+                  </label>
+                  {imgUploadStatus && <div className="modal-status img-picker-upload-status">{imgUploadStatus}</div>}
+                  {imgPendingUploadUrl && (
+                    <div className="img-picker-pending">
+                      <div className="img-picker-pending-head">
+                        <span className="img-picker-label">{t('shoes.img_preview_title')}</span>
+                        {imgPendingUploadName && (
+                          <span className="img-picker-pending-name">{imgPendingUploadName}</span>
+                        )}
+                      </div>
+                      <div className="img-picker-pending-card">
+                        <img
+                          src={imgPendingUploadUrl}
+                          alt={t('shoes.img_preview_title')}
+                          className="img-picker-pending-img"
+                        />
+                        <div className="img-picker-pending-copy">
+                          <p>{t('shoes.img_preview_hint')}</p>
+                          <div className="img-picker-pending-actions">
+                            <button type="button" className="btn-primary img-picker-url-btn" onClick={applyPendingLocalImage}>
+                              {t('shoes.img_confirm_local')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary img-picker-clear"
+                              onClick={() => applyPendingUploadState(clearPendingShoePhotoState())}
+                            >
+                              {t('shoes.cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </div>
-                <div className="img-picker-pending-card">
-                  <img
-                    src={imgPendingUploadUrl}
-                    alt={t('shoes.img_preview_title')}
-                    className="img-picker-pending-img"
-                  />
-                  <div className="img-picker-pending-copy">
-                    <p>{t('shoes.img_preview_hint')}</p>
-                    <div className="img-picker-pending-actions">
-                      <button type="button" className="btn-primary img-picker-url-btn" onClick={applyPendingLocalImage}>
-                        {t('shoes.img_confirm_local')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary img-picker-clear"
-                        onClick={() => applyPendingUploadState(clearPendingShoePhotoState())}
-                      >
-                        {t('shoes.cancel')}
-                      </button>
+                </section>
+
+                <section className="img-picker-panel img-picker-url-panel">
+                  <div className="img-picker-section-head">
+                    <span className="img-picker-label">{t('shoes.img_paste_url')}</span>
+                  </div>
+                  <div className="img-picker-url-row">
+                    <input
+                      type="text" className="img-picker-url-input"
+                      placeholder={t('shoes.img_paste_url')}
+                      value={imgCustomUrl}
+                      onChange={e => setImgCustomUrl(e.target.value)}
+                    />
+                    <button type="button" className="btn-primary img-picker-url-btn"
+                      disabled={!imgCustomUrl.trim()}
+                      onClick={() => { selectImage(imgCustomUrl.trim()); setImgCustomUrl(''); }}>
+                      {t('shoes.img_apply')}
+                    </button>
+                  </div>
+                </section>
+              </div>
+
+              <div className="img-picker-main">
+                <section className="img-picker-panel img-picker-search-panel">
+                  <div className="img-picker-search-head">
+                    <div>
+                      <span className="img-picker-label">{t('shoes.img_search_title')}</span>
+                      <p className="img-picker-search-copy">{t('shoes.img_search_copy')}</p>
                     </div>
                   </div>
-                </div>
+
+                  <div className="img-picker-search-row">
+                    <input
+                      type="text" className="img-picker-search-input"
+                      placeholder={t('shoes.img_search_hint')}
+                      value={imgCustomQuery}
+                      onChange={e => setImgCustomQuery(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchImages(imgPickerShoe.id, imgCustomQuery); } }}
+                    />
+                    <button type="button" className="btn-primary img-picker-search-btn"
+                      disabled={imgSearching}
+                      onClick={() => searchImages(imgPickerShoe.id, imgCustomQuery)}>
+                      {imgSearching ? '...' : t('shoes.img_search')}
+                    </button>
+                  </div>
+
+                  <div className="img-picker-grid">
+                    {imgSearching && <div className="img-picker-loading">{t('shoes.img_searching')}</div>}
+                    {!imgSearching && imgSearchStatus && (
+                      <div className="img-picker-search-status">
+                        {imgSearchStatus}
+                      </div>
+                    )}
+                    {!imgSearching && imgCandidates.length === 0 && (
+                      <div className="img-picker-empty">
+                        <strong>{t('shoes.img_no_results')}</strong>
+                        <span>{t('shoes.img_empty_copy')}</span>
+                      </div>
+                    )}
+                    {imgCandidates.map((url, i) => (
+                      <button key={i} type="button" className="img-picker-candidate"
+                        onClick={() => selectImage(url)}>
+                        <img src={url} alt={`candidate ${i + 1}`}
+                          onError={e => { e.target.parentElement.style.display = 'none'; }} />
+                      </button>
+                    ))}
+                  </div>
+                </section>
               </div>
-            )}
-
-            {/* Search bar */}
-            <div className="img-picker-search-row">
-              <input
-                type="text" className="img-picker-search-input"
-                placeholder={t('shoes.img_search_hint')}
-                value={imgCustomQuery}
-                onChange={e => setImgCustomQuery(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchImages(imgPickerShoe.id, imgCustomQuery); } }}
-              />
-              <button type="button" className="btn-primary img-picker-search-btn"
-                disabled={imgSearching}
-                onClick={() => searchImages(imgPickerShoe.id, imgCustomQuery)}>
-                {imgSearching ? '...' : t('shoes.img_search')}
-              </button>
-            </div>
-
-            {/* Candidates grid */}
-            <div className="img-picker-grid">
-              {imgSearching && <div className="img-picker-loading">{t('shoes.img_searching')}</div>}
-              {!imgSearching && imgCandidates.length === 0 && (
-                <div className="img-picker-empty">{t('shoes.img_no_results')}</div>
-              )}
-              {imgCandidates.map((url, i) => (
-                <button key={i} type="button" className="img-picker-candidate"
-                  onClick={() => selectImage(url)}>
-                  <img src={url} alt={`candidate ${i + 1}`}
-                    onError={e => { e.target.parentElement.style.display = 'none'; }} />
-                </button>
-              ))}
             </div>
 
             <div className="modal-actions">
@@ -1760,9 +1596,14 @@ export default function Shoes() {
           </div>
         )}
       </Modal>
-    </AuthenticatedPageChrome>
+    </>
   );
 }
+
+
+
+
+
 
 
 

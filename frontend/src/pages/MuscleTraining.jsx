@@ -4,7 +4,7 @@ import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
-import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -1282,6 +1282,92 @@ export default function MuscleTraining() {
     [plan],
   );
   const todayPlan = useMemo(() => (plan?.days || [])[0] || null, [plan]);
+  const featuredDay = todayPlan;
+  const featuredSession = useMemo(
+    () => (featuredDay?.strength ? sessionByType.get(featuredDay.strength.sessionType) : null),
+    [featuredDay, sessionByType],
+  );
+  const protocolItems = useMemo(
+    () => (featuredSession?.blocks || []).flatMap((block, blockIndex) => (
+      (block.exercises || []).map((exercise, exerciseIndex) => ({
+        block,
+        blockIndex,
+        exercise,
+        exerciseIndex,
+      }))
+    )),
+    [featuredSession],
+  );
+  const muscleFocus = useMemo(() => {
+    const labels = [];
+    protocolItems.forEach(({ exercise }) => {
+      getExerciseCardContent(exercise, isZh).muscles.forEach((muscle) => {
+        if (!labels.includes(muscle)) labels.push(muscle);
+      });
+    });
+    return labels.slice(0, 4);
+  }, [isZh, protocolItems]);
+  const coachingCues = useMemo(
+    () => protocolItems.slice(0, 3).map(({ exercise, exerciseIndex }) => {
+      const content = getExerciseCardContent(exercise, isZh);
+      return {
+        key: `${exercise.name}-${exerciseIndex}`,
+        title: content.name,
+        body: content.steps[0] || content.intent,
+      };
+    }),
+    [isZh, protocolItems],
+  );
+  const estimatedBurn = useMemo(() => {
+    const minutes = featuredDay?.strength?.durationMinutes;
+    if (minutes == null) return null;
+    const rpe = featuredDay?.strength?.targetRpe || 6;
+    const loadFactor = rpe >= 8 ? 10.2 : rpe >= 7 ? 9.4 : 8.6;
+    return Math.round(minutes * loadFactor);
+  }, [featuredDay]);
+  const heroTags = useMemo(() => {
+    const tags = [];
+    if (featuredDay?.strength?.optional) tags.push(isZh ? '可选剂量' : 'Optional dose');
+    if (featuredDay?.run?.keyRun) tags.push(isZh ? '关键跑保护' : 'Key-run safe');
+    if (featuredDay?.run?.longRun) tags.push(isZh ? '长跑周边' : 'Long-run support');
+    if (featuredSession?.emphasis) tags.push(featuredSession.emphasis);
+    return tags.slice(0, 3);
+  }, [featuredDay, featuredSession, isZh]);
+  const stitchCopy = useMemo(() => ({
+    dashboard: isZh ? '仪表盘' : 'Dashboard',
+    analysis: isZh ? '分析' : 'Analysis',
+    schedule: isZh ? '计划' : 'Schedule',
+    strength: isZh ? '力量' : 'Strength',
+    seriesLabel: isZh ? '力量模块' : 'Strength block',
+    durationLabel: isZh ? '时长' : 'Duration',
+    burnLabel: isZh ? '负荷估算' : 'Load burn',
+    loadLabel: isZh ? '动作数' : 'Exercise count',
+    protocolTitle: isZh ? '今日协议' : 'Today protocol',
+    readyTitle: isZh ? '准备开练？' : 'Ready to lift?',
+    readyHint: isZh ? '先完成上方协议，再在下方控制台记录今天的训练与恢复反馈。' : 'Run the protocol above, then use the control deck below to log the session and update coach state.',
+    startWorkout: isZh ? '开始训练' : 'Start workout',
+    enterWorkout: isZh ? '打开控制台' : 'Open control deck',
+    noStrengthTitle: isZh ? '今天不安排正式力量' : 'No formal strength today',
+    noStrengthHint: isZh ? '教练引擎把今天留给跑步恢复或关键课前缓冲。' : 'The coach engine is keeping today clear for run recovery or a key-session buffer.',
+    muscleFocusTitle: isZh ? '肌群焦点' : 'Muscle focus',
+    coachingCuesTitle: isZh ? '执行提示' : 'Coaching cues',
+    recoveryImpactTitle: isZh ? '恢复影响' : 'Recovery impact',
+    coachDeckTitle: isZh ? '教练控制台' : 'Coach control deck',
+    coachDeckHint: isZh ? '下面保留了真实 Hermes 偏好、check-in、周状态和 7 天力量计划，让这个页面既像成品，也继续像工具。' : 'The real Hermes preferences, check-in, weekly status, and 7-day planner stay live below so this surface keeps its coach utility.',
+    support: isZh ? '支持' : 'Support',
+    settings: isZh ? '设置' : 'Settings',
+  }), [isZh]);
+  const heroTheme = useMemo(() => {
+    const focus = pickLabel(copy.currentFocus, plan?.weekContext?.currentFocus, featuredSession?.emphasis || '');
+    const split = String(focus || '').split(/[\s/]+/).filter(Boolean);
+    if (split.length >= 2) {
+      return { lineOne: split[0], lineTwo: split.slice(1).join(' ') };
+    }
+    return {
+      lineOne: isZh ? '力量' : 'Strength',
+      lineTwo: focus || (isZh ? '就绪' : 'Ready'),
+    };
+  }, [copy.currentFocus, featuredSession, isZh, plan]);
 
   useEffect(() => {
     const previousIsMile = previousIsMileRef.current;
@@ -1440,8 +1526,50 @@ export default function MuscleTraining() {
     }
   }
 
+  function scrollToControls() {
+    document.getElementById('muscle-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
-    <AuthenticatedPageChrome bodyClassName="page-shell muscle-training-shell">
+    <div className="dashboard-body muscle-stitch-shell">
+      <LanguageSwitcher />
+
+      <div className="muscle-stitch-topbar">
+        <button type="button" className="muscle-stitch-brand" onClick={() => navigate('/profile')}>HERMES</button>
+        <nav className="muscle-stitch-toplinks">
+          <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
+          <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
+          <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
+          <button type="button" onClick={() => navigate('/schedule')}>{stitchCopy.schedule}</button>
+        </nav>
+        <div className="muscle-stitch-topicons">
+          <button type="button" aria-label="Notifications">N</button>
+          <button type="button" aria-label="Settings" onClick={() => navigate('/settings')}>S</button>
+          <button type="button" className="muscle-stitch-avatar" onClick={() => navigate('/settings')}>H</button>
+        </div>
+      </div>
+
+      <aside className="muscle-stitch-sidebar">
+        <div className="muscle-stitch-sidebrand">
+          <strong>HERMES</strong>
+          <span>Elite Performance</span>
+        </div>
+        <div className="muscle-stitch-sidenav">
+          <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
+          <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
+          <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
+          <button type="button" onClick={() => navigate('/shoes')}>Shoes</button>
+          <button type="button" onClick={() => navigate('/races')}>Race Center</button>
+          <button type="button" onClick={() => navigate('/schedule')}>{stitchCopy.schedule}</button>
+        </div>
+        <button type="button" className="muscle-stitch-sidebar-cta" onClick={scrollToControls}>{stitchCopy.startWorkout}</button>
+        <div className="muscle-stitch-sidefooter">
+          <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.support}</button>
+          <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.settings}</button>
+        </div>
+      </aside>
+
+      <main className="muscle-stitch-main">
 
       <div className="dashboard-container page-body muscle-training-page">
         <div className="muscle-training-hero">
@@ -1459,11 +1587,136 @@ export default function MuscleTraining() {
           <MuscleMap isZh={isZh} />
         </div>
 
+        {!loading && !error && plan && (
+          <section className="muscle-stitch-hero-shell">
+            <section className="muscle-stitch-hero">
+              <div className="muscle-stitch-hero-copy">
+                <span className="muscle-stitch-kicker">{stitchCopy.seriesLabel}</span>
+                <h1>
+                  {heroTheme.lineOne}
+                  <span>{heroTheme.lineTwo}</span>
+                </h1>
+                <div className="muscle-stitch-metrics">
+                  <div>
+                    <span>{stitchCopy.durationLabel}</span>
+                    <strong>{featuredDay?.strength?.durationMinutes ? formatMinutes(featuredDay.strength.durationMinutes, isZh) : '-'}</strong>
+                  </div>
+                  <div>
+                    <span>{stitchCopy.burnLabel}</span>
+                    <strong>{estimatedBurn != null ? `${estimatedBurn} kcal` : '-'}</strong>
+                  </div>
+                  <div>
+                    <span>{stitchCopy.loadLabel}</span>
+                    <strong>{String(protocolItems.length).padStart(2, '0')}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="muscle-stitch-hero-actions">
+                <button type="button" className="muscle-stitch-primary-btn" onClick={scrollToControls}>
+                  {stitchCopy.startWorkout}
+                </button>
+                <div className="muscle-stitch-hero-tags">
+                  {heroTags.map((tag) => <span key={tag}>{tag}</span>)}
+                </div>
+              </div>
+            </section>
+
+            <section className="muscle-stitch-content-grid">
+              <div className="muscle-stitch-protocol">
+                <span className="muscle-stitch-section-label">{stitchCopy.protocolTitle}</span>
+                {protocolItems.length > 0 ? (
+                  <div className="muscle-stitch-protocol-list">
+                    {protocolItems.map(({ block, blockIndex, exercise, exerciseIndex }) => {
+                      const exerciseCopy = getExerciseCardContent(exercise, isZh);
+                      return (
+                        <article key={`${block.title}-${exercise.name}-${exerciseIndex}`} className="muscle-stitch-exercise-row">
+                          <div className="muscle-stitch-exercise-media">
+                            <ExerciseIllustration exerciseName={exercise.name} />
+                          </div>
+                          <div className="muscle-stitch-exercise-copy">
+                            <span className="muscle-stitch-exercise-kicker">
+                              {String(blockIndex + 1).padStart(2, '0')} / {pickLabel(copy.blockTitles, block.title, block.title)}
+                            </span>
+                            <h3>{exerciseCopy.name}</h3>
+                            <p>{exerciseCopy.steps.slice(0, 2).join(' ')}</p>
+                          </div>
+                          <div className="muscle-stitch-exercise-meta">
+                            <div>
+                              <span>{isZh ? '组数 x 次数/时长' : 'Sets x reps/duration'}</span>
+                              <strong>{exercise.sets} x {exercise.repsOrDuration}</strong>
+                            </div>
+                            <em>RPE {exercise.targetRpe}</em>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="muscle-stitch-empty-panel">
+                    <h3>{stitchCopy.noStrengthTitle}</h3>
+                    <p>{pickLabel(copy.noStrengthReasons, featuredDay?.noStrengthReasonCode, stitchCopy.noStrengthHint)}</p>
+                  </div>
+                )}
+
+                <div className="muscle-stitch-cta-panel">
+                  <h3>{stitchCopy.readyTitle}</h3>
+                  <p>{stitchCopy.readyHint}</p>
+                  <button type="button" className="muscle-stitch-primary-btn" onClick={scrollToControls}>
+                    {stitchCopy.enterWorkout}
+                  </button>
+                </div>
+              </div>
+
+              <aside className="muscle-stitch-rail">
+                <section className="muscle-stitch-rail-card">
+                  <span className="muscle-stitch-section-label">{stitchCopy.muscleFocusTitle}</span>
+                  <div className="muscle-stitch-map-wrap">
+                    <MuscleMap isZh={isZh} />
+                  </div>
+                  <div className="muscle-stitch-focus-pills">
+                    {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
+                  </div>
+                </section>
+
+                <section className="muscle-stitch-rail-card">
+                  <span className="muscle-stitch-section-label">{stitchCopy.coachingCuesTitle}</span>
+                  <div className="muscle-stitch-cues">
+                    {coachingCues.map((cue, index) => (
+                      <article key={cue.key} className="muscle-stitch-cue">
+                        <span>{String(index + 1).padStart(2, '0')}</span>
+                        <div>
+                          <h4>{cue.title}</h4>
+                          <p>{cue.body}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="muscle-stitch-impact-card">
+                  <span className="muscle-stitch-section-label">{stitchCopy.recoveryImpactTitle}</span>
+                  <strong>{plan.weekContext?.acwr != null ? trimNumber(plan.weekContext.acwr, 2) : '0.00'}</strong>
+                  <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} · {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
+                </section>
+              </aside>
+            </section>
+          </section>
+        )}
+
         {loading && <div style={{ padding: '22px 0', color: 'var(--text-muted)' }}>{copy.loading}</div>}
         {!loading && error && <div className="error-alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
 
         {!loading && !error && plan && (
           <>
+            <section id="muscle-controls" className="muscle-stitch-control-deck">
+              <div className="muscle-stitch-control-head">
+                <div>
+                  <span className="muscle-stitch-section-label">{stitchCopy.coachDeckTitle}</span>
+                  <p>{stitchCopy.coachDeckHint}</p>
+                </div>
+              </div>
+
             <section className="card muscle-panel muscle-preference-panel muscle-checkin-panel">
               <div className="muscle-preference-head">
                 <div>
@@ -1871,9 +2124,19 @@ export default function MuscleTraining() {
                 })}
               </div>
             </section>
+            </section>
           </>
         )}
       </div>
-    </AuthenticatedPageChrome>
+      </main>
+
+      <nav className="muscle-stitch-mobile-dock">
+        <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
+        <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
+        <button type="button" onClick={scrollToControls}>{stitchCopy.startWorkout}</button>
+        <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
+        <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.settings}</button>
+      </nav>
+    </div>
   );
 }

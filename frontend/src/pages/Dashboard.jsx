@@ -59,7 +59,7 @@ function Sparkline({ trend }) {
 
 export default function Dashboard() {
   const { logout, login, isAuthenticated } = useAuth();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -480,27 +480,27 @@ export default function Dashboard() {
   const adminStatusItems = useMemo(() => {
     const failedSyncCount = queueCards.find((card) => card.key === 'FAILED')?.count || 0;
     const failedJobsSummary = failedSyncCount > 0
-      ? (lang === 'zh-CN' ? `${failedSyncCount} 个失败任务` : `${failedSyncCount} failed jobs`)
-      : (lang === 'zh-CN' ? '当前没有失败任务' : 'No failed jobs right now');
+      ? t('dashboard.status_failed_jobs_count', { count: failedSyncCount })
+      : t('dashboard.status_failed_jobs_none');
 
     return [
       {
-        label: lang === 'zh-CN' ? '队列健康' : 'Queue health',
+        label: t('dashboard.status_queue_health_label'),
         tone: totalQueueCount === 0 ? 'ready' : failedSyncCount > 0 ? 'action' : 'warning',
         value: totalQueueCount === 0
-          ? (lang === 'zh-CN' ? '当前健康' : 'Healthy now')
+          ? t('dashboard.status_queue_health_healthy')
           : failedSyncCount > 0
-            ? (lang === 'zh-CN' ? `${failedSyncCount} 项待处理` : `${failedSyncCount} need attention`)
-            : (lang === 'zh-CN' ? `${totalQueueCount} 项在队列中` : `${totalQueueCount} queued`),
+            ? t('dashboard.status_queue_health_attention', { count: failedSyncCount })
+            : t('dashboard.status_queue_health_queued', { count: totalQueueCount }),
         helper: failedJobsSummary,
         onClick: () => setActiveTab('overview'),
       },
       {
-        label: lang === 'zh-CN' ? '后台任务' : 'Jobs',
+        label: t('dashboard.status_jobs_label'),
         tone: failedSyncCount > 0 ? 'warning' : 'ready',
         value: failedSyncCount > 0
-          ? (lang === 'zh-CN' ? '查看失败任务' : 'View failed jobs')
-          : (lang === 'zh-CN' ? '任务面板就绪' : 'Jobs panel ready'),
+          ? t('dashboard.status_jobs_failed')
+          : t('dashboard.status_jobs_ready'),
         helper: failedJobsSummary,
         onClick: () => {
           setActiveTab('jobs');
@@ -508,18 +508,18 @@ export default function Dashboard() {
         },
       },
       {
-        label: lang === 'zh-CN' ? '审计准备度' : 'Audit readiness',
+        label: t('dashboard.status_audit_label'),
         tone: totalQueueCount > 0 ? 'warning' : 'ready',
         value: totalQueueCount > 0
-          ? (lang === 'zh-CN' ? '建议追踪变更' : 'Track this round')
-          : (lang === 'zh-CN' ? '当前直接审计' : 'Clean to review'),
+          ? t('dashboard.status_audit_track')
+          : t('dashboard.status_audit_clean'),
         helper: failedSyncCount > 0
-          ? (lang === 'zh-CN' ? `先处理 ${failedSyncCount} 个失败任务。` : `Clear ${failedSyncCount} failed jobs first.`)
-          : (lang === 'zh-CN' ? '适合直接检查审计记录。' : 'Safe to review audit logs.'),
+          ? t('dashboard.status_audit_failed_helper', { count: failedSyncCount })
+          : t('dashboard.status_audit_ready_helper'),
         onClick: () => setActiveTab('audit'),
       },
     ];
-  }, [lang, queueCards, totalQueueCount]);
+  }, [queueCards, t, totalQueueCount]);
 
   if (loadState === 'loading') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_loading')}</div></div>;
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
@@ -548,8 +548,8 @@ export default function Dashboard() {
         <section className="card section-intro-card admin-status-strip">
           <div className="section-intro-row">
             <div>
-              <span className="section-intro-kicker">{lang === 'zh-CN' ? '运营概览' : 'Ops overview'}</span>
-              <h2 className="section-intro-title">{lang === 'zh-CN' ? '监控核心队列和任务状态' : 'Monitor core queues and job statuses at a glance'}</h2>
+              <span className="section-intro-kicker">{t('dashboard.ops_overview_kicker')}</span>
+              <h2 className="section-intro-title">{t('dashboard.ops_overview_title')}</h2>
             </div>
           </div>
           <div className="status-chip-row">
@@ -762,21 +762,21 @@ export default function Dashboard() {
             <SectionCard className="section-card--compact section-card--spaced">
               <ActionBar>
                 <select className="admin-shoe-filter" value={jobQuery.status} onChange={e => setJobQuery(prev => ({ ...prev, status: e.target.value, page: 0 }))}>
-                  <option value="">{lang === 'zh-CN' ? '全部状态' : 'All statuses'}</option>
-                  <option value="COMPLETED">{lang === 'zh-CN' ? '已完成' : 'Completed'}</option>
-                  <option value="RUNNING">{lang === 'zh-CN' ? '运行中' : 'Running'}</option>
-                  <option value="PENDING">{lang === 'zh-CN' ? '等待中' : 'Pending'}</option>
-                  <option value="FAILED">{lang === 'zh-CN' ? '失败' : 'Failed'}</option>
+                  <option value="">{t('dashboard.jobs_filter_all_statuses')}</option>
+                  <option value="COMPLETED">{t('dashboard.jobs_filter_status_completed')}</option>
+                  <option value="RUNNING">{t('dashboard.jobs_filter_status_running')}</option>
+                  <option value="PENDING">{t('dashboard.jobs_filter_status_pending')}</option>
+                  <option value="FAILED">{t('dashboard.jobs_filter_status_failed')}</option>
                 </select>
                 <select className="admin-shoe-filter" value={jobQuery.jobType} onChange={e => setJobQuery(prev => ({ ...prev, jobType: e.target.value, page: 0 }))}>
-                  <option value="">{lang === 'zh-CN' ? '全部类型' : 'All types'}</option>
-                  <option value="STRAVA_SYNC">Strava sync</option>
-                  <option value="GARMIN_IMPORT">Garmin import</option>
-                  <option value="FILE_IMPORT">File import</option>
+                  <option value="">{t('dashboard.jobs_filter_all_types')}</option>
+                  <option value="STRAVA_SYNC">{t('dashboard.jobs_type_strava_sync')}</option>
+                  <option value="GARMIN_IMPORT">{t('dashboard.jobs_type_garmin_import')}</option>
+                  <option value="FILE_IMPORT">{t('dashboard.jobs_type_file_import')}</option>
                 </select>
                 {(jobQuery.status || jobQuery.jobType) && (
                   <button type="button" className="btn-secondary btn-inline-md" onClick={() => setJobQuery({ jobType: '', status: '', page: 0 })}>
-                    {lang === 'zh-CN' ? '清除筛选' : 'Clear filter'}
+                    {t('dashboard.jobs_filter_clear')}
                   </button>
                 )}
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadJobs()}>{t('dashboard.btn_refresh')}</button>

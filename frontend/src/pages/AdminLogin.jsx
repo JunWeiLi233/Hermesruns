@@ -50,53 +50,88 @@ export default function AdminLogin() {
   }
 
   return (
-    <div>
+    <div className="auth-page auth-page--stitch-login auth-page--stitch-admin">
       <LanguageSwitcher />
-      <div className="login-container">
-        <div className="logo">
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-            <HermesLogo tone="light" />
+      <main className="auth-stitch-shell">
+        <section className="auth-stitch-brand">
+          <div className="auth-stitch-brand-inner">
+            <div className="auth-stitch-wordmark-wrap">
+              <HermesLogo tone="light" />
+              <span className="auth-stitch-pulse">ADMIN OPS</span>
+            </div>
+
+            <div className="auth-stitch-copy">
+              <h1 className="auth-stitch-hero">
+                <span>{t('admin.brand')}</span>
+                <span className="is-accent">{t('admin.form_title')}</span>
+              </h1>
+              <p className="auth-stitch-text">{t('admin.subtitle')}</p>
+
+              <div className="auth-stitch-stats auth-stitch-stats--admin">
+                <div>
+                  <strong>Ops</strong>
+                  <span>{t('admin.brand')}</span>
+                </div>
+                <div>
+                  <strong>Hermes</strong>
+                  <span>{t('admin.back_link')}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="auth-stitch-dots" aria-hidden="true">
+              <span className="is-active" />
+              <span />
+              <span />
+            </div>
           </div>
-          <h1 style={{ color: 'var(--brand-accent)', textAlign: 'center' }}>{t('admin.brand')}</h1>
-          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: 30 }}>{t('admin.subtitle')}</p>
-        </div>
+        </section>
 
-        <h2 className="auth-card-title" style={{ textAlign: 'center' }}>{t('admin.form_title')}</h2>
+        <section className="auth-stitch-formside">
+          <div className="auth-stitch-card auth-stitch-card--admin">
+            <div className="auth-stitch-header">
+              <h3>{t('admin.form_title')}</h3>
+              <p>{t('admin.subtitle')}</p>
+            </div>
 
-        <form onSubmit={handleSubmit}>
-          {error && <div className="error-alert" style={{ display: 'block' }}>{error}</div>}
+            <form className="auth-stitch-form" onSubmit={handleSubmit}>
+              {error && <div className="error-alert is-visible">{error}</div>}
 
-          <div className="form-group">
-            <label htmlFor="admin-email">{t('admin.email_label')}</label>
-            <input
-              type="text"
-              id="admin-email"
-              required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
+              <div className="form-group form-group--stitch">
+                <label htmlFor="admin-email">{t('admin.email_label')}</label>
+                <input
+                  type="text"
+                  id="admin-email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group form-group--stitch">
+                <label htmlFor="admin-password">{t('admin.password_label')}</label>
+                <input
+                  type="password"
+                  id="admin-password"
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="auth-stitch-btn auth-stitch-btn--submit" disabled={loading}>
+                <span>{loading ? t('admin.submit_loading') : t('admin.submit')}</span>
+              </button>
+            </form>
+
+            <div className="auth-stitch-legal">
+              <Link to="/login">{t('admin.back_link')}</Link>
+              <Link to="/terms">Terms</Link>
+              <Link to="/privacy">Privacy</Link>
+            </div>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="admin-password">{t('admin.password_label')}</label>
-            <input
-              type="password"
-              id="admin-password"
-              required
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-          </div>
-
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? t('admin.submit_loading') : t('admin.submit')}
-          </button>
-
-          <div className="signup-link">
-            <Link to="/login">{t('admin.back_link')}</Link>
-          </div>
-        </form>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

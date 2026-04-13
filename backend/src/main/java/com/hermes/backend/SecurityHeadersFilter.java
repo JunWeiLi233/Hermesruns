@@ -33,9 +33,9 @@ public class SecurityHeadersFilter implements Filter {
         httpResponse.setHeader("Content-Security-Policy",
                 "default-src 'self'; " +
                 "script-src 'self' 'unsafe-inline'; " +
-                "style-src 'self' 'unsafe-inline'; " +
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
                 "img-src 'self' data: https:; " +
-                "font-src 'self'; " +
+                "font-src 'self' https://fonts.gstatic.com; " +
                 "frame-src 'none'; " +
                 "object-src 'none'; " +
                 "base-uri 'self'; " +

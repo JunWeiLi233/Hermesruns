@@ -239,6 +239,12 @@ public class Runner {
 
     private LocalDate aiMonthlyResetDate;
 
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int aiDailyScansUsed = 0;
+
+    private LocalDate aiDailyResetDate;
+
     /** False until the user completes email verification (password sign-up only). OAuth users are verified by the provider. */
     @Column(nullable = false)
     @ColumnDefault("true")
@@ -290,6 +296,12 @@ public class Runner {
 
     public LocalDate getAiMonthlyResetDate() { return aiMonthlyResetDate; }
     public void setAiMonthlyResetDate(LocalDate aiMonthlyResetDate) { this.aiMonthlyResetDate = aiMonthlyResetDate; }
+
+    public int getAiDailyScansUsed() { return aiDailyScansUsed; }
+    public void setAiDailyScansUsed(int aiDailyScansUsed) { this.aiDailyScansUsed = aiDailyScansUsed; }
+
+    public LocalDate getAiDailyResetDate() { return aiDailyResetDate; }
+    public void setAiDailyResetDate(LocalDate aiDailyResetDate) { this.aiDailyResetDate = aiDailyResetDate; }
 
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }

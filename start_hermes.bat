@@ -11,6 +11,29 @@ set "HEALTH_URL=http://localhost:8080"
 set "PYTHON_EXE="
 set "SYNC_CONFIG=%ROOT%.tools\hermes_sync_config.json"
 set "BOOT_SCRIPT=%TEMP%\hermes_boot_%RANDOM%.cmd"
+set "LOCAL_ENV_PS1=%ROOT%Hermes.local.env.ps1"
+set "LOCAL_ENV_BOOT=%TEMP%\hermes_env_%RANDOM%.cmd"
+
+if exist "%LOCAL_ENV_PS1%" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$ErrorActionPreference = 'Stop';" ^
+        "$envPath = [IO.Path]::GetFullPath('%LOCAL_ENV_PS1%');" ^
+        "$bootPath = [IO.Path]::GetFullPath('%LOCAL_ENV_BOOT%');" ^
+        "$vars = @('APP_DB_URL','APP_DB_DRIVER','APP_DB_USERNAME','APP_DB_PASSWORD','STRAVA_CLIENT_ID','STRAVA_CLIENT_SECRET','STRAVA_REDIRECT_URI','APP_DATA_ENCRYPTION_KEY','APP_GOOGLE_CLIENT_ID','APP_GOOGLE_CLIENT_SECRET','APP_GOOGLE_REDIRECT_URI','APP_BOOTSTRAP_ADMIN_EMAIL','APP_BOOTSTRAP_ADMIN_PASSWORD','APP_JPA_DDL_AUTO','APP_AI_API_KEY','APP_AI_MODEL','APP_AI_PROVIDER','SPRING_MAIL_HOST','SPRING_MAIL_PORT','SPRING_MAIL_USERNAME','SPRING_MAIL_PASSWORD','APP_MAIL_FROM','APP_PUBLIC_BASE_URL','HERMES_ENV','SPRING_PROFILES_ACTIVE','APP_ENABLE_HSTS','APP_CORS_ALLOWED_ORIGINS','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_PRO_MONTHLY');" ^
+        ". $envPath;" ^
+        "$lines = foreach ($name in $vars) { $value = [Environment]::GetEnvironmentVariable($name, 'Process'); if (-not [string]::IsNullOrWhiteSpace($value)) { 'set ""' + $name + '=' + ($value -replace '%%', '%%%%') + '""' } };" ^
+        "[IO.File]::WriteAllLines($bootPath, $lines, [Text.Encoding]::ASCII)"
+    if errorlevel 1 (
+        echo [Hermes] Failed to load local env from Hermes.local.env.ps1.
+        del "%LOCAL_ENV_BOOT%" >nul 2>nul
+        goto :startup_failed
+    )
+    call "%LOCAL_ENV_BOOT%"
+    del "%LOCAL_ENV_BOOT%" >nul 2>nul
+    echo [Hermes] Loaded local env from Hermes.local.env.ps1
+) else (
+    echo [Hermes] Hermes.local.env.ps1 not found. Using existing shell env only.
+)
 
 if exist "%ROOT%.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%ROOT%.venv\Scripts\python.exe"

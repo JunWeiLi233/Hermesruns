@@ -15,14 +15,20 @@ const Profile = React.lazy(() => import('./pages/Profile'));
 const Runs = React.lazy(() => import('./pages/Runs'));
 const RunDetail = React.lazy(() => import('./pages/RunDetail'));
 const Analysis = React.lazy(() => import('./pages/Analysis'));
+const Heatmap = React.lazy(() => import('./pages/Heatmap'));
+const AnalysisInsightDetail = React.lazy(() => import('./pages/AnalysisInsightDetail'));
+const Vo2MaxDetail = React.lazy(() => import('./pages/Vo2MaxDetail'));
+const AddShoes = React.lazy(() => import('./pages/AddShoes'));
 const Shoes = React.lazy(() => import('./pages/Shoes'));
 const ShoeCatalog = React.lazy(() => import('./pages/ShoeCatalog'));
 const Races = React.lazy(() => import('./pages/Races'));
+const Schedule = React.lazy(() => import('./pages/Schedule'));
 const TodayRun = React.lazy(() => import('./pages/TodayRun'));
 const PredictionDetail = React.lazy(() => import('./pages/PredictionDetail'));
 const MuscleTraining = React.lazy(() => import('./pages/MuscleTraining'));
 const Rewards = React.lazy(() => import('./pages/Rewards'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+const LegalPage = React.lazy(() => import('./pages/LegalPage'));
 
 function ScrollToTop() {
   const location = useLocation();
@@ -80,6 +86,8 @@ function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/terms" element={<LegalPage variant="terms" />} />
+                <Route path="/privacy" element={<LegalPage variant="privacy" />} />
                 <Route path="/admin" element={<AdminLogin />} />
                 <Route path="/dashboard" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
                 <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
@@ -87,13 +95,18 @@ function App() {
                 <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
                 <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
                 <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
+                <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
+                <Route path="/analysis/vo2max" element={<UserOnlyRoute><Vo2MaxDetail /></UserOnlyRoute>} />
+                <Route path="/analysis/:insightKey" element={<UserOnlyRoute><AnalysisInsightDetail /></UserOnlyRoute>} />
                 <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
                 <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
                 <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
                 <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
                 <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
+                <Route path="/add-shoes" element={<UserOnlyRoute><AddShoes /></UserOnlyRoute>} />
                 <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
                 <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
+                <Route path="/schedule" element={<UserOnlyRoute><Schedule /></UserOnlyRoute>} />
                 <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

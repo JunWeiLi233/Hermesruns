@@ -51,6 +51,34 @@ public class ActivityController {
         return ResponseEntity.ok(runs);
     }
 
+    @GetMapping("/analysis")
+    public ResponseEntity<?> getAnalysisRuns(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
+
+        if (activeUser.isEmpty()) {
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
+        }
+
+        List<ActivityRepository.AnalysisActivitySummaryProjection> runs =
+                activityRepository.findAnalysisSummariesByRunnerAndActivityType(activeUser.get(), ActivityType.RUN);
+        List<AnalysisActivitySummary> response = runs.stream()
+                .map(run -> new AnalysisActivitySummary(
+                        run.getId(),
+                        run.getName(),
+                        run.getDistanceKm(),
+                        run.getDistanceMeters(),
+                        run.getMovingTimeSeconds(),
+                        run.getStartDate(),
+                        run.getStartTime(),
+                        run.getAverageHeartRate(),
+                        run.getMaxHeartRate(),
+                        run.getAverageCadence(),
+                        run.getMaxSpeedMps()
+                ))
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/heatmap")
     public ResponseEntity<?> getHeatmapPoints(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -558,6 +586,19 @@ public class ActivityController {
     }
 
     public record LatLngPoint(double latitude, double longitude) {}
+    public record AnalysisActivitySummary(
+            Long id,
+            String name,
+            Double distanceKm,
+            Double distanceMeters,
+            Integer movingTimeSeconds,
+            String startDate,
+            java.time.LocalDateTime startTime,
+            Double averageHeartRate,
+            Double maxHeartRate,
+            Double averageCadence,
+            Double maxSpeedMps
+    ) {}
     private record SamplePoint(
             double latitude,
             double longitude,

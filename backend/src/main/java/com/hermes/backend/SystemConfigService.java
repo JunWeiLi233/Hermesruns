@@ -74,6 +74,7 @@ public class SystemConfigService {
         boolean clientSecretPresent = isPresent(stravaClientSecret);
         boolean encryptionKeyConfigured = secretEncryptionService.isConfigured();
         boolean configured = isStravaConfigured();
+        String mode = configured ? "configured" : "config-missing";
 
         String reason = null;
         if (!clientIdPresent) {
@@ -85,6 +86,7 @@ public class SystemConfigService {
         }
 
         Map<String, Object> response = new LinkedHashMap<>();
+        response.put("mode", mode);
         response.put("configured", configured);
         response.put("clientIdPresent", clientIdPresent);
         response.put("clientSecretPresent", clientSecretPresent);
@@ -135,4 +137,3 @@ public class SystemConfigService {
         return root;
     }
 }
-
