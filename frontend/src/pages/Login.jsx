@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
+import FooterNavLinks from '../components/FooterNavLinks';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
 
 export default function Login() {
@@ -138,23 +139,23 @@ export default function Login() {
     : t('index.stitch_strava_hint');
 
   return (
-    <div className="auth-page auth-page--stitch-login">
-      <main className="auth-stitch-shell">
-        <section className="auth-stitch-brand">
-          <div className="auth-stitch-brand-inner">
-            <div className="auth-stitch-wordmark-wrap">
-              <h1 className="auth-stitch-wordmark">HERMES</h1>
-              <span className="auth-stitch-pulse">{t('index.stitch_pulse')}</span>
+    <div className="auth-page auth-page--login">
+      <main className="auth-flow-shell">
+        <section className="auth-flow-brand">
+          <div className="auth-flow-brand-inner">
+            <div className="auth-flow-wordmark-wrap">
+              <h1 className="auth-flow-wordmark">HERMES</h1>
+              <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
             </div>
 
-            <div className="auth-stitch-copy">
-              <h2 className="auth-stitch-hero">
+            <div className="auth-flow-copy">
+              <h2 className="auth-flow-hero">
                 <span>{t('index.stitch_hero_line_one')}</span>
                 <span className="is-accent">{t('index.stitch_hero_line_two')}</span>
               </h2>
-              <p className="auth-stitch-text">{t('index.stitch_hero_copy')}</p>
+              <p className="auth-flow-text">{t('index.stitch_hero_copy')}</p>
 
-              <div className="auth-stitch-stats">
+              <div className="auth-flow-stats">
                 <div>
                   <strong>12k+</strong>
                   <span>{t('index.stitch_stat_athletes')}</span>
@@ -166,7 +167,7 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="auth-stitch-dots" aria-hidden="true">
+            <div className="auth-flow-dots" aria-hidden="true">
               <span className="is-active" />
               <span />
               <span />
@@ -174,45 +175,45 @@ export default function Login() {
           </div>
         </section>
 
-        <section className="auth-stitch-formside">
-          <div className="auth-stitch-card">
-            <div className="auth-stitch-header">
+        <section className="auth-flow-formside">
+          <div className="auth-flow-card">
+            <div className="auth-flow-header">
               <h3>{t('index.stitch_welcome')}</h3>
               <p>{t('index.stitch_access')}</p>
             </div>
 
-            <div className="auth-stitch-social">
+            <div className="auth-flow-social">
               <button
                 type="button"
-                className="auth-stitch-btn auth-stitch-btn--strava"
+                className="auth-flow-btn auth-flow-btn--strava"
                 disabled={!stravaConfigured}
                 onClick={() => startOAuth('strava')}
               >
-                <span className="auth-stitch-btn__icon auth-stitch-btn__icon--bolt" aria-hidden="true">+</span>
+                <span className="auth-flow-btn__icon auth-flow-btn__icon--bolt" aria-hidden="true">+</span>
                 <span>{t(stravaConfigured ? 'index.stitch_strava_cta' : 'index.stitch_strava_unavailable')}</span>
               </button>
 
               {!stravaConfigured && (
-                <p className="auth-stitch-status-note">{stravaUnavailableHint}</p>
+                <p className="auth-flow-status-note">{stravaUnavailableHint}</p>
               )}
 
               <button
                 type="button"
-                className="auth-stitch-btn auth-stitch-btn--google"
+                className="auth-flow-btn auth-flow-btn--google"
                 onClick={() => startOAuth('google')}
               >
-                <span className="auth-stitch-google-g" aria-hidden="true">G</span>
+                <span className="auth-flow-google-g" aria-hidden="true">G</span>
                 <span>{t('index.google')}</span>
               </button>
             </div>
 
-            <div className="auth-stitch-divider">
+            <div className="auth-flow-divider">
               <span />
               <strong>{t('index.divider')}</strong>
               <span />
             </div>
 
-            <form className="auth-stitch-form" onSubmit={handleSubmit}>
+            <form className="auth-flow-form" onSubmit={handleSubmit}>
               {banner === 'verified' && (
                 <div className="error-alert error-alert--success is-visible">
                   {t('index.verified_banner')}
@@ -236,7 +237,7 @@ export default function Login() {
               {error && <div className="error-alert is-visible">{error}</div>}
 
               {(showResend || banner === 'expired') && (
-                <div className="auth-resend-box auth-resend-box--stitch">
+                <div className="auth-resend-box auth-resend-box--login">
                   <p className="auth-resend-copy">{t('index.resend_email_placeholder')}</p>
                   <button type="button" className="btn-secondary" disabled={resendBusy || !email.trim()} onClick={handleResend}>
                     {resendBusy ? '...' : t('index.resend_verification')}
@@ -245,7 +246,7 @@ export default function Login() {
                 </div>
               )}
 
-              <div className="form-group form-group--stitch">
+              <div className="form-group form-group--auth">
                 <label htmlFor="email">{t('index.email_label')}</label>
                 <input
                   type="email"
@@ -258,10 +259,10 @@ export default function Login() {
                 />
               </div>
 
-              <div className="form-group form-group--stitch">
-                <div className="label-row label-row--stitch">
+              <div className="form-group form-group--auth">
+                <div className="label-row label-row--auth">
                   <label htmlFor="password">{t('index.password_label')}</label>
-                  <a href="#" className="forgot-password forgot-password--stitch" onClick={(e) => e.preventDefault()}>
+                  <a href="#" className="forgot-password forgot-password--auth" onClick={(e) => e.preventDefault()}>
                     {t('index.forgot_password')}
                   </a>
                 </div>
@@ -276,21 +277,19 @@ export default function Login() {
                 />
               </div>
 
-              <button type="submit" className="auth-stitch-btn auth-stitch-btn--submit" disabled={loading}>
+              <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>
                 {loading ? t('index.submit_loading') : t('index.submit')}
               </button>
             </form>
 
-            <div className="signup-link signup-link--stitch">
+            <div className="signup-link signup-link--auth">
               <span>{t('index.signup_prompt')}</span>
               <Link to="/signup">{t('index.signup_link')}</Link>
             </div>
           </div>
 
-          <footer className="auth-stitch-legal">
-            <a href="/terms">{t('landing.stitch_footer_terms')}</a>
-            <a href="/privacy">{t('landing.stitch_footer_privacy')}</a>
-            <a href="#" onClick={(e) => e.preventDefault()}>{t('landing.stitch_footer_support')}</a>
+          <footer className="auth-flow-legal">
+            <FooterNavLinks />
           </footer>
         </section>
       </main>

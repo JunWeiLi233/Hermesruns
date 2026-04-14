@@ -7,7 +7,9 @@ import { apiFetch, apiJson } from '../api';
 import Modal from '../components/Modal';
 import ImportDataGuide from '../components/ImportDataGuide';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration } from '../utils/format';
 import { buildAnalysisSnapshot } from '../utils/analysisInsights';
 
@@ -18,12 +20,12 @@ function Gauge({ value, color }) {
   const progressPct = Math.max(0, Math.min((clamped / 1.8) * 100, 100));
   const path = 'M 24 126 A 86 86 0 0 1 196 126';
   return (
-    <svg viewBox="0 0 220 140" className="analysis-stitch-gauge-svg" aria-hidden="true">
-      <path d={path} pathLength="100" className="analysis-stitch-gauge-track" />
+    <svg viewBox="0 0 220 140" className="analysis-overview-gauge-svg" aria-hidden="true">
+      <path d={path} pathLength="100" className="analysis-overview-gauge-track" />
       <path
         d={path}
         pathLength="100"
-        className="analysis-stitch-gauge-progress"
+        className="analysis-overview-gauge-progress"
         style={{ stroke: color, strokeDasharray: `${progressPct} 100` }}
       />
     </svg>
@@ -100,6 +102,10 @@ export default function Analysis() {
   const marathonRow = snapshot.marathonRow;
   const marathonDelta = snapshot.marathonDeltaSeconds;
   const hasRuns = runs.length > 0;
+  const injuryKicker = t('analysis.stitch_injury_signal');
+  const injuryTitle = t('analysis.stitch_injury_title');
+  const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
+  const injuryCopy = t('analysis.stitch_injury_copy');
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const navItems = [
@@ -136,7 +142,11 @@ export default function Analysis() {
   async function handleSaveName(event) {
     event.preventDefault();
     try {
-      await apiFetch('/api/profile/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ displayName: displayNameInput }) });
+      await apiFetch('/api/profile/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: displayNameInput }),
+      });
       setProfile((current) => ({ ...current, displayName: displayNameInput }));
       setNameModalOpen(false);
     } catch {
@@ -145,9 +155,9 @@ export default function Analysis() {
   }
 
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page analysis-page-shell${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+    <div className={`runner-shell-page runner-dashboard-page analysis-page-shell${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('analysis.stitch_brand_subtitle')}</span>
@@ -164,18 +174,18 @@ export default function Analysis() {
             </span>
           </button>
         </div>
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('analysis-stitch-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
           ))}
         </nav>
-        <div className="analysis-stitch-sidebar-footer">
+        <div className="runner-shell-sidebar-footer">
           <button
             type="button"
-            className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
@@ -185,24 +195,22 @@ export default function Analysis() {
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_analysis')}</span>
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_analysis')}</span>
             </div>
           </div>
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
               <button
                 type="button"
-                className="analysis-stitch-avatar"
+                className="runner-shell-avatar"
                 aria-label={t('analysis.stitch_edit_profile')}
                 onClick={() => {
                   setDisplayNameInput(profile?.displayName || '');
@@ -215,10 +223,10 @@ export default function Analysis() {
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas">
+        <div className="runner-shell-canvas">
           {runsState === 'loading' ? (
-            <section className="analysis-stitch-empty-shell">
-              <div className="premium-empty-state analysis-stitch-empty-state">
+            <section className="analysis-overview-empty-shell">
+              <div className="premium-empty-state analysis-overview-empty-state">
                 <div className="premium-empty-state__icon" aria-hidden="true">
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>
@@ -227,34 +235,34 @@ export default function Analysis() {
               </div>
             </section>
           ) : runsState === 'error' ? (
-            <section className="analysis-stitch-empty-shell">
-              <div className="premium-empty-state analysis-stitch-empty-state">
+            <section className="analysis-overview-empty-shell">
+              <div className="premium-empty-state analysis-overview-empty-state">
                 <div className="premium-empty-state__icon" aria-hidden="true">
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>
                 <h2 className="premium-empty-state__heading">{t('analysis.stitch_load_error')}</h2>
                 <p className="premium-empty-state__copy">{t('analysis.stitch_empty_helper')}</p>
-                <div className="analysis-stitch-empty-actions">
-                  <button type="button" className="analysis-stitch-inline-btn analysis-stitch-empty-action is-primary" onClick={() => window.location.reload()}>
+                <div className="analysis-overview-empty-actions">
+                  <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={() => window.location.reload()}>
                     {t('profile.retry_strava')}
                   </button>
                 </div>
               </div>
             </section>
           ) : !hasRuns ? (
-            <section className="analysis-stitch-empty-shell">
-              <div className="premium-empty-state analysis-stitch-empty-state">
+            <section className="analysis-overview-empty-shell">
+              <div className="premium-empty-state analysis-overview-empty-state">
                 <div className="premium-empty-state__icon" aria-hidden="true">
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>
                 <h2 className="premium-empty-state__heading">{t('analysis.stitch_empty_title')}</h2>
                 <p className="premium-empty-state__copy">{t('analysis.stitch_empty_copy')}</p>
                 <p className="premium-empty-state__helper">{t('analysis.stitch_empty_helper')}</p>
-                <div className="analysis-stitch-empty-actions">
-                  <button type="button" className="analysis-stitch-inline-btn analysis-stitch-empty-action is-primary" onClick={() => setImportModalOpen(true)}>
+                <div className="analysis-overview-empty-actions">
+                  <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={() => setImportModalOpen(true)}>
                     {t('analysis.stitch_import_data')}
                   </button>
-                  <button type="button" className="analysis-stitch-inline-btn analysis-stitch-empty-action" onClick={() => navigate('/runs')}>
+                  <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action" onClick={() => navigate('/runs')}>
                     {t('analysis.stitch_open_runs')}
                   </button>
                 </div>
@@ -262,157 +270,169 @@ export default function Analysis() {
             </section>
           ) : (
             <>
-          <section className="analysis-stitch-grid analysis-stitch-grid--hero">
-            <button
-              type="button"
-              className="analysis-stitch-card analysis-stitch-card--vo2 analysis-stitch-card--vo2-clickable analysis-stitch-card--interactive"
-              onClick={() => navigate('/analysis/vo2max')}
-            >
-              <div className="analysis-stitch-card-head">
-                <div>
-                  <span className="analysis-stitch-card-kicker">{t('analysis.stitch_vo2_kicker')}</span>
-                  <h2>{t('analysis.stitch_vo2_title')}</h2>
-                </div>
-                <div className="analysis-stitch-hero-value">
-                  <strong>{bestVdot ? bestVdot.toFixed(1) : '--'}</strong>
-                  <span>{t('analysis.stitch_vo2_band')}</span>
-                </div>
-              </div>
-              <div className="analysis-stitch-vo2-bars">
-                {vo2Bars.map((bar) => (
-                  <div key={bar.key} className="analysis-stitch-vo2-bar-col">
-                    <div className={cx('analysis-stitch-vo2-bar', bar.current && 'is-current')} style={{ height: `${bar.height}%` }}>
-                      {bar.current && bar.value != null ? <span className="analysis-stitch-vo2-tag">{bar.value.toFixed(1)}</span> : null}
+              <section className="analysis-overview-grid analysis-overview-grid--hero">
+                <button
+                  type="button"
+                  className="analysis-overview-card analysis-overview-card--vo2 analysis-overview-card--vo2-clickable analysis-overview-card--interactive"
+                  onClick={() => navigate('/analysis/vo2max')}
+                >
+                  <div className="analysis-overview-card-head">
+                    <div>
+                      <span className="analysis-overview-card-kicker">{t('analysis.stitch_vo2_kicker')}</span>
+                      <h2>{t('analysis.stitch_vo2_title')}</h2>
                     </div>
-                    <span className={cx('analysis-stitch-vo2-label', bar.current && 'is-current')}>{bar.label}</span>
+                    <div className="analysis-overview-hero-value">
+                      <strong>{bestVdot ? bestVdot.toFixed(1) : '--'}</strong>
+                      <span>{t('analysis.stitch_vo2_band')}</span>
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div className="analysis-stitch-vo2-link-row">
-                <span>{t('analysis.vo2_detail_cta')}</span>
-                <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
-              </div>
-            </button>
+                  <div className="analysis-overview-vo2-bars">
+                    {vo2Bars.map((bar) => (
+                      <div key={bar.key} className="analysis-overview-vo2-bar-col">
+                        <div className={cx('analysis-overview-vo2-bar', bar.current && 'is-current')} style={{ height: `${bar.height}%` }}>
+                          {bar.current && bar.value != null ? <span className="analysis-overview-vo2-tag">{bar.value.toFixed(1)}</span> : null}
+                        </div>
+                        <span className={cx('analysis-overview-vo2-label', bar.current && 'is-current')}>{bar.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="analysis-overview-vo2-link-row">
+                    <span>{t('analysis.vo2_detail_cta')}</span>
+                    <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
+                  </div>
+                </button>
 
-            <div className="analysis-stitch-side-stack">
-              <button
-                type="button"
-                className="analysis-stitch-card analysis-stitch-card--gauge analysis-stitch-card--interactive"
-                onClick={() => navigate('/analysis/load-balance')}
-              >
-                <span className="analysis-stitch-card-kicker">{t('analysis.stitch_acwr_title')}</span>
-                <Gauge value={trainingLoad?.lastAcwr || 0} color={loadZone.color} />
-                <div className="analysis-stitch-gauge-value">{trainingLoad?.lastAcwr != null ? trainingLoad.lastAcwr.toFixed(2) : '--'}</div>
-                <span className={cx('analysis-stitch-status-pill', `is-${loadZone.tone}`)}>{t(loadZone.key === 'optimal' ? 'analysis.stitch_optimal_zone' : `analysis.stitch_acwr_${loadZone.key}`)}</span>
-                <p>{t('analysis.stitch_acwr_copy')}</p>
-              </button>
+                <div className="analysis-overview-side-stack">
+                  <button
+                    type="button"
+                    className="analysis-overview-card analysis-overview-card--load analysis-overview-card--interactive"
+                    onClick={() => navigate('/analysis/load-balance')}
+                  >
+                    <span className="analysis-overview-card-kicker">{t('analysis.stitch_acwr_title')}</span>
+                    <Gauge value={trainingLoad?.lastAcwr || 0} color={loadZone.color} />
+                    <div className="analysis-overview-gauge-value">{trainingLoad?.lastAcwr != null ? trainingLoad.lastAcwr.toFixed(2) : '--'}</div>
+                    <span className={cx('analysis-overview-status-pill', `is-${loadZone.tone}`)}>
+                      {t(loadZone.key === 'optimal' ? 'analysis.stitch_optimal_zone' : `analysis.stitch_acwr_${loadZone.key}`)}
+                    </span>
+                    <p>{t('analysis.stitch_acwr_copy')}</p>
+                  </button>
 
-              <button
-                type="button"
-                className="analysis-stitch-card analysis-stitch-card--coach analysis-stitch-card--interactive"
-                onClick={() => navigate('/analysis/coach-insight')}
-              >
-                <span className="analysis-stitch-card-kicker">{t('analysis.stitch_coach_title')}</span>
-                <h3>{t('analysis.stitch_coach_quote')}</h3>
-              </button>
-            </div>
-          </section>
+                  <button
+                    type="button"
+                    className="analysis-overview-card analysis-overview-card--coach analysis-overview-card--interactive"
+                    onClick={() => navigate('/analysis/coach-insight')}
+                  >
+                    <span className="analysis-overview-card-kicker">{t('analysis.stitch_coach_title')}</span>
+                    <h3>{t('analysis.stitch_coach_quote')}</h3>
+                  </button>
+                </div>
+              </section>
 
-          <section className="analysis-stitch-grid analysis-stitch-grid--summary">
-            <button
-              type="button"
-              className="analysis-stitch-card analysis-stitch-card--metric analysis-stitch-card--metric-accent analysis-stitch-card--interactive"
-              onClick={() => navigate('/analysis/intensity')}
-            >
-              <span className="analysis-stitch-card-kicker">{t('analysis.stitch_intensity_title')}</span>
-              <div className="analysis-stitch-ratio-row">
-                <strong>{polarized ? `${polarized.easyPct}/${polarized.hardPct}` : '--/--'}</strong>
-                <AppIcon name="check_circle" className="runner-dashboard-side-link-icon" />
-              </div>
-              <div className="analysis-stitch-ratio-bar">
-                <span style={{ width: `${polarized?.easyPct || 0}%` }} />
-                <span className="is-hard" style={{ width: `${polarized?.hardPct || 0}%` }} />
-              </div>
-              <div className="analysis-stitch-ratio-labels">
-                <span>{t('analysis.stitch_low_intensity', { value: polarized?.easyPct ?? 0 })}</span>
-                <span>{t('analysis.stitch_high_intensity', { value: polarized?.hardPct ?? 0 })}</span>
-              </div>
-            </button>
+              <section className="analysis-overview-grid analysis-overview-grid--summary">
+                <button
+                  type="button"
+                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--intensity analysis-overview-card--interactive"
+                  onClick={() => navigate('/analysis/intensity')}
+                >
+                  <span className="analysis-overview-card-kicker">{t('analysis.stitch_intensity_title')}</span>
+                  <div className="analysis-overview-intensity-row">
+                    <strong>
+                      {polarized
+                        ? `${polarized.easySharePct}/${polarized.moderateSharePct}/${polarized.hardSharePct}`
+                        : '--/--/--'}
+                    </strong>
+                    <AppIcon name="check_circle" className="runner-dashboard-side-link-icon" />
+                  </div>
+                  <div className="analysis-overview-intensity-bar">
+                    <span style={{ width: `${polarized?.easySharePct || 0}%` }} />
+                    <span className="is-moderate" style={{ width: `${polarized?.moderateSharePct || 0}%` }} />
+                    <span className="is-hard" style={{ width: `${polarized?.hardSharePct || 0}%` }} />
+                  </div>
+                  <div className="analysis-overview-intensity-labels">
+                    <span>{t('analysis.stitch_low_intensity', { value: polarized?.easySharePct ?? 0 })}</span>
+                    <span>{t('analysis.stitch_moderate_intensity', { value: polarized?.moderateSharePct ?? 0 })}</span>
+                    <span>{t('analysis.stitch_high_intensity', { value: polarized?.hardSharePct ?? 0 })}</span>
+                  </div>
+                </button>
 
-            <button
-              type="button"
-              className="analysis-stitch-card analysis-stitch-card--metric analysis-stitch-card--interactive"
-              onClick={() => navigate('/analysis/injury-risk')}
-            >
-              <span className="analysis-stitch-card-kicker">{t('analysis.stitch_injury_title')}</span>
-              <strong className={cx('analysis-stitch-risk-level', `is-${injury.level}`)}>{t(`analysis.stitch_injury_${injury.level}`)}</strong>
-              <div className="analysis-stitch-risk-meter">
-                <span className={injury.level === 'low' ? 'is-on is-green' : ''} />
-                <span className={injury.level === 'moderate' ? 'is-on is-warn' : ''} />
-                <span className={injury.level === 'high' ? 'is-on is-danger' : ''} />
-                <span />
-              </div>
-              <p>{t('analysis.stitch_injury_copy')}</p>
-            </button>
+                <button
+                  type="button"
+                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--injury analysis-overview-card--interactive"
+                  onClick={() => navigate('/analysis/injury-risk')}
+                >
+                  <div className="analysis-overview-card-title-block">
+                    <span className="analysis-overview-card-kicker">{injuryKicker}</span>
+                    <h3 className="analysis-overview-metric-title">{injuryTitle}</h3>
+                  </div>
+                  <strong className={cx('analysis-overview-risk-level', `is-${injury.level}`)}>{injuryLevelLabel}</strong>
+                  <div className="analysis-overview-risk-labels">
+                    <span>{lang === 'en' ? 'Low risk' : '低风险'}</span>
+                    <span>{lang === 'en' ? 'Moderate risk' : '中风险'}</span>
+                    <span>{lang === 'en' ? 'High risk' : '高风险'}</span>
+                  </div>
+                  <div className="analysis-overview-risk-meter">
+                    <span className={injury.level === 'low' ? 'is-on is-green' : ''} />
+                    <span className={injury.level === 'moderate' ? 'is-on is-warn' : ''} />
+                    <span className={injury.level === 'high' ? 'is-on is-danger' : ''} />
+                  </div>
+                  <p>{injuryCopy}</p>
+                </button>
 
-            <button
-              type="button"
-              className="analysis-stitch-card analysis-stitch-card--metric analysis-stitch-card--forecast analysis-stitch-card--interactive"
-              onClick={() => navigate('/prediction/marathon')}
-            >
-              <span className="analysis-stitch-card-kicker">{t('analysis.stitch_forecast_title')}</span>
-              <strong>{marathonRow?.timeLabel || '--'}</strong>
-              <div className="analysis-stitch-forecast-footer">
-                <span className={cx('analysis-stitch-forecast-delta', marathonDelta != null && marathonDelta < 0 && 'is-positive')}>
-                  {marathonDelta == null ? t('analysis.stitch_no_delta') : `${marathonDelta < 0 ? '' : '+'}${formatDuration(Math.abs(marathonDelta))} ${t('analysis.stitch_vs_prev')}`}
-                </span>
-                <span className="analysis-stitch-arrow-link" aria-hidden="true">
-                  <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
-                </span>
-              </div>
-            </button>
-          </section>
+                <button
+                  type="button"
+                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--forecast analysis-overview-card--interactive"
+                  onClick={() => navigate('/prediction/marathon')}
+                >
+                  <span className="analysis-overview-card-kicker">{t('analysis.stitch_forecast_title')}</span>
+                  <strong>{marathonRow?.timeLabel || '--'}</strong>
+                  <div className="analysis-overview-forecast-footer">
+                    <span className={cx('analysis-overview-forecast-delta', marathonDelta != null && marathonDelta < 0 && 'is-positive')}>
+                      {marathonDelta == null ? t('analysis.stitch_no_delta') : `${marathonDelta < 0 ? '' : '+'}${formatDuration(Math.abs(marathonDelta))} ${t('analysis.stitch_vs_prev')}`}
+                    </span>
+                    <span className="analysis-overview-arrow-link" aria-hidden="true">
+                      <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
+                    </span>
+                  </div>
+                </button>
+              </section>
 
-          <section className="analysis-stitch-card analysis-stitch-card--table">
-            <div className="analysis-stitch-table-head">
-              <h2>{t('analysis.stitch_predictions_title')}</h2>
-              <span className="analysis-stitch-confidence-pill">{t('analysis.stitch_confidence', { value: 94 })}</span>
-            </div>
-            <div className="analysis-stitch-table-wrap">
-              <table className="analysis-stitch-table">
-                <thead>
-                  <tr>
-                    <th>{t('analysis.stitch_event_distance')}</th>
-                    <th>{t('analysis.stitch_estimated_time')}</th>
-                    <th>{t(unit === 'mile' ? 'analysis.stitch_pace_per_mile' : 'analysis.stitch_pace_per_km')}</th>
-                    <th>{t('analysis.stitch_vdot_equivalent')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {predictionRows.map((row) => (
-                    <tr key={row.key} onClick={() => navigate(`/prediction/${row.key}`)}>
-                      <td>{row.label}</td>
-                      <td className="is-accent">{row.timeLabel}</td>
-                      <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>
-                      <td>{row.vdotLabel}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="analysis-stitch-table-actions">
-              <button type="button" className="analysis-stitch-inline-btn" onClick={() => setImportModalOpen(true)}>{t('analysis.stitch_import_data')}</button>
-              <button type="button" className="analysis-stitch-inline-btn" onClick={() => navigate('/runs')}>{t('analysis.stitch_open_runs')}</button>
-            </div>
-          </section>
+              <section className="analysis-overview-card analysis-overview-card--prediction-table">
+                <div className="analysis-overview-table-head">
+                  <h2>{t('analysis.stitch_predictions_title')}</h2>
+                  <span className="analysis-overview-confidence-pill">{t('analysis.stitch_confidence', { value: 94 })}</span>
+                </div>
+                <div className="analysis-overview-table-wrap">
+                  <table className="analysis-overview-table">
+                    <thead>
+                      <tr>
+                        <th>{t('analysis.stitch_event_distance')}</th>
+                        <th>{t('analysis.stitch_estimated_time')}</th>
+                        <th>{t(unit === 'mile' ? 'analysis.stitch_pace_per_mile' : 'analysis.stitch_pace_per_km')}</th>
+                        <th>{t('analysis.stitch_vdot_equivalent')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {predictionRows.map((row) => (
+                        <tr key={row.key} onClick={() => navigate(`/prediction/${row.key}`)}>
+                          <td>{row.label}</td>
+                          <td className="is-accent">{row.timeLabel}</td>
+                          <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>
+                          <td>{row.vdotLabel}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="analysis-overview-table-actions">
+                  <button type="button" className="runner-shell-inline-btn" onClick={() => setImportModalOpen(true)}>{t('analysis.stitch_import_data')}</button>
+                  <button type="button" className="runner-shell-inline-btn" onClick={() => navigate('/runs')}>{t('analysis.stitch_open_runs')}</button>
+                </div>
+              </section>
 
-          <footer className="analysis-stitch-footer">
-            <a href="/terms">{t('landing.stitch_footer_terms')}</a>
-            <a href="/privacy">{t('landing.stitch_footer_privacy')}</a>
-            <a href="#support">{t('landing.stitch_footer_support')}</a>
-            <a href="#contact">{t('landing.stitch_footer_contact')}</a>
-            <p>{t('landing.stitch_footer_copy')}</p>
-          </footer>
+              <footer className="runner-shell-footer">
+                <FooterNavLinks />
+                <p>{t('landing.stitch_footer_copy')}</p>
+              </footer>
             </>
           )}
         </div>

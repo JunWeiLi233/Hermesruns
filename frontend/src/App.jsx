@@ -103,7 +103,8 @@ function App() {
                 <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
                 <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
                 <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
-                <Route path="/add-shoes" element={<UserOnlyRoute><AddShoes /></UserOnlyRoute>} />
+                <Route path="/shoes/add" element={<UserOnlyRoute><AddShoes /></UserOnlyRoute>} />
+                <Route path="/add-shoes" element={<Navigate to="/shoes/add" replace />} />
                 <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
                 <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
                 <Route path="/schedule" element={<UserOnlyRoute><Schedule /></UserOnlyRoute>} />

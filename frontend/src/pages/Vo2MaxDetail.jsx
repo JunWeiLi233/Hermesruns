@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import TopbarNotifications from '../components/TopbarNotifications';
 import {
   collectAllVdotEntries,
   computeRollingRepresentativeSeries,
@@ -78,7 +79,8 @@ function buildChartModel(entries, rollingSeries, lang) {
   const maxY = Math.ceil((maxDomain + 1.5) / 2) * 2;
   const safeSpanY = Math.max(6, maxY - minY);
   const firstTs = entries[0].date.getTime();
-  const lastTs = entries[entries.length - 1].date.getTime();
+  const rawLastTs = entries[entries.length - 1].date.getTime();
+  const lastTs = rawLastTs + 7 * 24 * 60 * 60 * 1000; // 7-day right-side padding
   const safeSpanX = Math.max(1, lastTs - firstTs);
   const plotWidth = width - padLeft - padRight;
   const plotHeight = height - padTop - padBottom;
@@ -160,6 +162,7 @@ export default function Vo2MaxDetail() {
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [scrubber, setScrubber] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -242,7 +245,7 @@ export default function Vo2MaxDetail() {
 
   const copy = {
     back: lang === 'zh-CN' ? '返回分析' : 'Back to Analysis',
-    deepAnalysis: lang === 'zh-CN' ? 'VO2MAX 深度分析' : 'VO2MAX DEEP ANALYSIS',
+    deepAnalysis: lang === 'zh-CN' ? 'VO2max 深度分析' : 'VO2max Deep Analysis',
     detail: lang === 'zh-CN' ? '详情' : 'Detail',
     peak: lang === 'zh-CN' ? '峰值' : 'Peak',
     average: lang === 'zh-CN' ? '平均' : 'Average',
@@ -251,10 +254,53 @@ export default function Vo2MaxDetail() {
     latestSession: lang === 'zh-CN' ? '最近一次样本' : 'Latest session',
     healthInsight: lang === 'zh-CN' ? '健康洞察' : 'Health Insight',
     primaryDriver: lang === 'zh-CN' ? '主要驱动' : 'Primary Driver',
-    reportCta: lang === 'zh-CN' ? '返回完整分析' : 'Return to Full Analysis',
     chartAria: lang === 'zh-CN' ? 'VO2max 详情图表' : 'VO2max detail chart',
     noSamples: lang === 'zh-CN' ? '还没有足够样本来生成 VO2max 详情。' : 'There are not enough samples yet to render the VO2max detail view.',
   };
+
+  const handleChartPointerMove = useCallback((event) => {
+    if (!chart) return;
+    const svg = event.currentTarget;
+
+    // Use SVG's own coordinate transform — handles scaling/viewBox correctly
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const svgX = svgPt.x;
+
+    // Always snap to the trend line (orange curve) — individual run dots are decorative scatter
+    let nearestTrend = null;
+    let nearestTrendDist = Infinity;
+    for (const point of chart.trendPoints) {
+      const dist = Math.abs(point.cx - svgX);
+      if (dist < nearestTrendDist) {
+        nearestTrendDist = dist;
+        nearestTrend = point;
+      }
+    }
+
+    if (!nearestTrend) return;
+
+    // Check if an individual run dot is very close in X — use it for the label/vdot value
+    const plotWidth = chart.width - chart.padLeft - chart.padRight;
+    const plotHeight = chart.height - chart.padTop - chart.padBottom;
+    const tooltipLeft = Math.min(80, Math.max(5, ((nearestTrend.cx - chart.padLeft) / plotWidth) * 100));
+    const tooltipTop = Math.min(70, Math.max(5, ((nearestTrend.cy - chart.padTop) / plotHeight) * 100));
+
+    setScrubber({
+      point: {
+        vdot: nearestTrend.y,
+        label: nearestTrend.label,
+      },
+      cx: nearestTrend.cx,
+      cy: nearestTrend.cy,
+      tooltipLeft,
+      tooltipTop,
+    });
+  }, [chart]);
+
+  const handleChartPointerLeave = useCallback(() => setScrubber(null), []);
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
@@ -268,16 +314,16 @@ export default function Vo2MaxDetail() {
 
   if (loadState !== 'ready') {
     return (
-      <div className="analysis-stitch-page analysis-stitch-page--loading">
-        <div className="analysis-stitch-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div>
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div>
       </div>
     );
   }
 
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page analysis-vo2-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+    <div className={`runner-shell-page runner-dashboard-page analysis-vo2-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('analysis.stitch_brand_subtitle')}</span>
@@ -294,12 +340,12 @@ export default function Vo2MaxDetail() {
             </span>
           </button>
         </div>
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
-              className={cx('analysis-stitch-side-link', item.active && 'is-active')}
+              className={cx('runner-shell-side-link', item.active && 'is-active')}
               onClick={() => navigate(item.route)}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -307,10 +353,10 @@ export default function Vo2MaxDetail() {
             </button>
           ))}
         </nav>
-        <div className="analysis-stitch-sidebar-footer">
+        <div className="runner-shell-sidebar-footer">
           <button
             type="button"
-            className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
@@ -320,29 +366,27 @@ export default function Vo2MaxDetail() {
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_analysis')}</span>
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_analysis')}</span>
             </div>
           </div>
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="analysis-stitch-avatar" aria-label={profile?.displayName || 'Hermes'} onClick={() => navigate('/profile')}>
+              <button type="button" className="runner-shell-avatar" aria-label={profile?.displayName || 'Hermes'} onClick={() => navigate('/profile')}>
                 {initials}
               </button>
             </div>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas analysis-vo2-page-canvas">
+        <div className="runner-shell-canvas analysis-vo2-page-canvas">
           <section className="analysis-vo2-kinetic-dashboard">
             <div className="analysis-vo2-kinetic-nav">
               <button type="button" className="analysis-vo2-page-back is-kinetic" onClick={() => navigate('/analysis')}>
@@ -358,7 +402,7 @@ export default function Vo2MaxDetail() {
             <header className="analysis-vo2-kinetic-header">
               <div className="analysis-vo2-kinetic-title">
                 <h1>
-                  VO<span>2</span> {copy.detail}
+                  VO<span>2</span>max {copy.detail}
                 </h1>
                 <p>{subtitleCopy}</p>
               </div>
@@ -406,17 +450,32 @@ export default function Vo2MaxDetail() {
                   ) : null}
 
                   <div
-                    className="analysis-vo2-kinetic-tooltip"
-                    style={{ left: `${latestTooltipLeft}%`, top: `${latestTooltipTop}%` }}
+                    className={`analysis-vo2-kinetic-tooltip${scrubber ? ' is-scrubbing' : ''}`}
+                    style={{
+                      left: `${scrubber ? scrubber.tooltipLeft : latestTooltipLeft}%`,
+                      top: `${scrubber ? scrubber.tooltipTop : latestTooltipTop}%`,
+                    }}
                   >
-                    <p>{latestEntry ? latestEntry.label : copy.latestSession}</p>
+                    <p>{scrubber ? scrubber.point.label : (latestEntry ? latestEntry.label : copy.latestSession)}</p>
                     <strong>
-                      {latestEntry ? latestEntry.vdot.toFixed(1) : '--'} <span>VO2MAX</span>
+                      {scrubber
+                        ? (scrubber.point.vdot != null ? Number(scrubber.point.vdot).toFixed(1) : '--')
+                        : (latestEntry ? latestEntry.vdot.toFixed(1) : '--')}{' '}
+                      <span>VO2max</span>
                     </strong>
                   </div>
 
                   <div className="analysis-vo2-chart-shell analysis-vo2-chart-shell--kinetic">
-                    <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="analysis-vo2-chart-svg" role="img" aria-label={copy.chartAria}>
+                    <svg
+                      viewBox={`0 0 ${chart.width} ${chart.height}`}
+                      className="analysis-vo2-chart-svg"
+                      aria-label={copy.chartAria}
+                      style={{ cursor: 'crosshair' }}
+                      onPointerMove={handleChartPointerMove}
+                      onPointerLeave={handleChartPointerLeave}
+                    >
+                      {/* Transparent hit-area — ensures pointer events fire over empty SVG space */}
+                      <rect x="0" y="0" width={chart.width} height={chart.height} fill="transparent" />
                       <defs>
                         <linearGradient id="analysisVo2TrendFill" x1="0%" y1="0%" x2="0%" y2="100%">
                           <stop offset="0%" stopColor="#ff9d72" stopOpacity="0.52" />
@@ -466,17 +525,17 @@ export default function Vo2MaxDetail() {
                         {chart.trendPath ? <path d={chart.trendPath} className="analysis-vo2-trend-path-glow" filter="url(#analysisVo2TrendGlow)" /> : null}
                         {chart.trendPath ? <path d={chart.trendPath} className="analysis-vo2-trend-path" /> : null}
 
-                        {chart.points.map((point) => (
+                        {false && chart.points.map((point) => (
                           <circle key={`${point.run?.id || point.date.getTime()}-${point.vdot}`} cx={point.cx} cy={point.cy} r="4.2" className="analysis-vo2-run-dot">
                             <title>{`${point.label} · ${point.vdot.toFixed(1)} VO2max`}</title>
                           </circle>
                         ))}
 
-                        {chart.latestTrendPoint ? (
+                        {false && chart.latestTrendPoint ? (
                           <circle cx={chart.latestTrendPoint.cx} cy={chart.latestTrendPoint.cy} r="28" className="analysis-vo2-latest-glow" />
                         ) : null}
 
-                        {chart.trendPoints.map((point, index) => (
+                        {false && chart.trendPoints.map((point, index) => (
                           <circle
                             key={`${point.x}-${point.y}`}
                             cx={point.cx}
@@ -487,6 +546,30 @@ export default function Vo2MaxDetail() {
                             <title>{`${point.label} · ${point.y.toFixed(1)} VO2max`}</title>
                           </circle>
                         ))}
+
+                        {scrubber && (
+                          <>
+                            <line
+                              x1={scrubber.cx}
+                              x2={scrubber.cx}
+                              y1={chart.padTop}
+                              y2={chart.height - chart.padBottom}
+                              className="analysis-vo2-scrubber-line"
+                            />
+                            <circle
+                              cx={scrubber.cx}
+                              cy={scrubber.cy}
+                              r="22"
+                              className="analysis-vo2-scrubber-glow"
+                            />
+                            <circle
+                              cx={scrubber.cx}
+                              cy={scrubber.cy}
+                              r="7"
+                              className="analysis-vo2-scrubber-dot"
+                            />
+                          </>
+                        )}
                       </g>
                     </svg>
                   </div>
@@ -510,11 +593,6 @@ export default function Vo2MaxDetail() {
               <div className="analysis-vo2-kinetic-footer-copy">
                 <h4>{copy.primaryDriver}</h4>
                 <p>{primaryDriver}</p>
-              </div>
-              <div className="analysis-vo2-kinetic-footer-action">
-                <button type="button" className="analysis-vo2-kinetic-report-btn" onClick={() => navigate('/analysis')}>
-                  {copy.reportCta}
-                </button>
               </div>
             </footer>
           </section>

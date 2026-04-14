@@ -30,10 +30,10 @@ function haversineMeters([lat1, lng1], [lat2, lng2]) {
 }
 
 function classifyRoute(distanceKm, gapM) {
-  if (!distanceKm || distanceKm <= 0) return 'Unknown';
-  if (gapM <= Math.max(120, distanceKm * 40)) return 'Loop';
-  if (gapM <= distanceKm * 160) return 'Out and back';
-  return 'Point to point';
+  if (!distanceKm || distanceKm <= 0) return 'unknown';
+  if (gapM <= Math.max(120, distanceKm * 40)) return 'loop';
+  if (gapM <= distanceKm * 160) return 'out_and_back';
+  return 'point_to_point';
 }
 
 function buildInsights(points) {
@@ -44,9 +44,9 @@ function buildInsights(points) {
       startFinishGapMeters: null,
       boundingSpanKm: null,
       efficiency: null,
-      routeShape: 'No GPS route',
+      routeShapeKey: 'none',
       centerPoint: null,
-      centerLabel: 'Not available',
+      centerLabel: null,
     };
   }
   let dist = 0;
@@ -71,7 +71,7 @@ function buildInsights(points) {
     startFinishGapMeters: gap,
     boundingSpanKm: span / 1000,
     efficiency: dist > 0 ? span / dist : null,
-    routeShape: classifyRoute(distKm, gap),
+    routeShapeKey: classifyRoute(distKm, gap),
     centerPoint: center,
     centerLabel: `${center[0].toFixed(4)}, ${center[1].toFixed(4)}`,
   };
@@ -105,6 +105,21 @@ export default function RunDetail() {
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+
+  function getRouteShapeLabel(shapeKey) {
+    switch (shapeKey) {
+      case 'loop':
+        return t('run_detail.route_shape_loop');
+      case 'out_and_back':
+        return t('run_detail.route_shape_out_and_back');
+      case 'point_to_point':
+        return t('run_detail.route_shape_point_to_point');
+      case 'none':
+        return t('run_detail.route_shape_none');
+      default:
+        return t('run_detail.route_shape_unknown');
+    }
+  }
 
   useEffect(() => {
     const cachedRun = readSelectedRunFromSession(id);
@@ -367,11 +382,11 @@ export default function RunDetail() {
 
   if (isBootstrappingRun) {
     return (
-      <div className="run-detail-stitch-page">
-        <div className="run-detail-stitch-loading-card" aria-live="polite">
-          <span className="run-detail-stitch-loading-kicker">{t('run_detail.hero_eyebrow')}</span>
+      <div className="run-detail-page">
+        <div className="run-detail-loading-card" aria-live="polite">
+          <span className="run-detail-loading-kicker">{t('run_detail.hero_eyebrow')}</span>
           <h1>{t('run_detail.loading_summary')}</h1>
-          <div className="run-detail-stitch-loading-bars" aria-hidden="true">
+          <div className="run-detail-loading-bars" aria-hidden="true">
             <span />
             <span />
             <span />
@@ -383,8 +398,8 @@ export default function RunDetail() {
 
   if (!run) {
     return (
-      <div className="run-detail-stitch-page">
-        <div className="empty-state" style={{ width: 'min(100%, 860px)', margin: '80px auto 0', padding: '42px 32px', borderRadius: 28, textAlign: 'center' }}>
+      <div className="run-detail-page">
+        <div className="empty-state run-detail-empty-state" style={{ width: 'min(100%, 860px)', margin: '80px auto 0', padding: '42px 32px', borderRadius: 28, textAlign: 'center' }}>
           <h1>{t('run_detail.no_run_selected')}</h1>
           <p><Link to="/runs">{t('run_detail.back_to_runs')}</Link> {t('run_detail.no_run_selected_copy')}</p>
         </div>
@@ -402,6 +417,24 @@ export default function RunDetail() {
     timeText,
     run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
   ].filter(Boolean).join(' • ') || t('run_detail.imported_activity');
+
+  const localizedHeroMeta = [
+    dateText,
+    timeText,
+    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
+  ].filter(Boolean).join(' · ') || t('run_detail.imported_activity');
+
+  const heroMetaDisplay = [
+    dateText,
+    timeText,
+    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
+  ].filter(Boolean).join(' · ') || t('run_detail.imported_activity');
+
+  const heroMetaText = [
+    dateText,
+    timeText,
+    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
+  ].filter(Boolean).join(' - ') || heroMeta || localizedHeroMeta || heroMetaDisplay || t('run_detail.imported_activity');
 
   const performanceRows = [
     [t('run_detail.perf_distance'), distKm != null ? `${distKm.toFixed(2)} km` : t('run_detail.not_available')],
@@ -421,9 +454,9 @@ export default function RunDetail() {
     [t('run_detail.route_gps_distance'), insights.computedDistanceKm != null ? `${insights.computedDistanceKm.toFixed(2)} km` : t('run_detail.not_available')],
     [t('run_detail.route_start_finish_gap'), insights.startFinishGapMeters != null ? `${Math.round(insights.startFinishGapMeters)} m` : t('run_detail.not_available')],
     [t('run_detail.route_bounding_span'), insights.boundingSpanKm != null ? `${insights.boundingSpanKm.toFixed(2)} km` : t('run_detail.not_available')],
-    [t('run_detail.route_shape'), insights.routeShape],
+    [t('run_detail.route_shape'), getRouteShapeLabel(insights.routeShapeKey)],
     [t('run_detail.route_efficiency'), insights.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : t('run_detail.not_available')],
-    [t('run_detail.route_center'), insights.centerLabel],
+    [t('run_detail.route_center'), insights.centerLabel || t('run_detail.not_available')],
     [t('run_detail.route_source_file'), run.sourceFileName || t('run_detail.not_available')],
   ] : [];
 
@@ -454,65 +487,65 @@ export default function RunDetail() {
   const powerValue = run.averageWatts;
 
   return (
-    <div className="run-detail-stitch-page">
-      <div className="run-detail-stitch-topbar">
-        <div className="run-detail-stitch-topbar-left">
-          <Link to="/runs" className="run-detail-stitch-icon-btn" aria-label={t('run_detail.back_to_runs')}>
+    <div className="run-detail-page">
+      <div className="run-detail-topbar">
+        <div className="run-detail-topbar-left">
+          <Link to="/runs" className="run-detail-icon-btn" aria-label={t('run_detail.back_to_runs')}>
             <span aria-hidden="true">&larr;</span>
           </Link>
-          <div className="run-detail-stitch-heading">
-            <h1>{run.name || 'Run'}</h1>
-            <p>{heroMeta}</p>
+          <div className="run-detail-heading">
+            <h1>{run.name || t('run_detail.detail_title')}</h1>
+            <p>{heroMetaText}</p>
           </div>
         </div>
-        <div className="run-detail-stitch-topbar-actions">
-          {run.provider && <div className="run-detail-stitch-provider-pill">{run.provider}</div>}
+        <div className="run-detail-topbar-actions">
+          {run.provider && <div className="run-detail-provider-pill">{run.provider}</div>}
           {run.provider === 'STRAVA' && (
-            <button className="run-detail-stitch-action-btn" disabled={syncDisabled} onClick={handleResync}>
+            <button className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
               {syncBtnText || t('run_detail.resync_strava')}
             </button>
           )}
-          <button type="button" className="run-detail-stitch-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
+          <button type="button" className="run-detail-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
             <span>{shareFeedback || t('run_detail.share')}</span>
           </button>
         </div>
       </div>
 
-      <main className="run-detail-stitch-shell">
-        <section className="run-detail-stitch-hero-grid">
-          <div className="run-detail-stitch-map-card">
+      <main className="run-detail-shell">
+        <section className="run-detail-hero-grid">
+          <div className="run-detail-map-card">
             {points.length > 0 ? (
               <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
             ) : (
-              <div className="run-detail-stitch-no-map">{t('run_detail.no_map')}</div>
+              <div className="run-detail-no-map">{t('run_detail.no_map')}</div>
             )}
-            <div className="run-detail-stitch-map-overlay">
+            <div className="run-detail-map-overlay">
               <span>{t('run_detail.metric_distance')}</span>
               <strong>{distanceValue} km</strong>
             </div>
           </div>
-          <div className="run-detail-stitch-stat-rail">
-            <article className="run-detail-stitch-stat-card is-accent">
+          <div className="run-detail-stat-rail">
+            <article className="run-detail-stat-card is-accent">
               <span>{t('run_detail.metric_distance')}</span>
               <strong>{distanceValue}<em>km</em></strong>
             </article>
-            <article className="run-detail-stitch-stat-card">
+            <article className="run-detail-stat-card">
               <span>{t('run_detail.metric_average_pace')}</span>
               <strong>{paceValue}<em>/km</em></strong>
             </article>
-            <article className="run-detail-stitch-stat-card">
+            <article className="run-detail-stat-card">
               <span>{t('run_detail.metric_moving_time')}</span>
               <strong>{timeValue}</strong>
             </article>
           </div>
         </section>
 
-        <section className="run-detail-stitch-main-grid">
-          <div className="run-detail-stitch-primary-column">
-            <section className="run-detail-stitch-section">
+        <section className="run-detail-main-grid">
+          <div className="run-detail-primary-column">
+            <section className="run-detail-section">
               <h2>{t('run_detail.physiological_response')}</h2>
-              <div className="run-detail-stitch-panel">
-                <div className="run-detail-stitch-panel-head">
+              <div className="run-detail-panel">
+                <div className="run-detail-panel-head">
                   <div>
                     <span>{t('run_detail.average_hr')}</span>
                     <strong>{run.averageHeartRate != null ? Math.round(run.averageHeartRate) : '--'} <em>bpm</em></strong>
@@ -522,8 +555,8 @@ export default function RunDetail() {
                     <strong>{run.maxHeartRate != null ? Math.round(run.maxHeartRate) : '--'} <em>bpm</em></strong>
                   </div>
                 </div>
-                <div className="run-detail-stitch-hr-chart">
-                  <div className="run-detail-stitch-hr-zones">
+                <div className="run-detail-hr-chart">
+                  <div className="run-detail-hr-zones">
                     <span>Z5</span>
                     <span>Z4</span>
                     <span>Z3</span>
@@ -542,34 +575,34 @@ export default function RunDetail() {
                       <path d={heartRateSeries.linePath} fill="none" stroke="#f49787" strokeWidth="2.3" strokeLinecap="round" />
                     </svg>
                   ) : (
-                    <div className="run-detail-stitch-chart-empty">{t('run_detail.no_heart_rate_data')}</div>
+                    <div className="run-detail-chart-empty">{t('run_detail.no_heart_rate_data')}</div>
                   )}
                 </div>
-                <div className="run-detail-stitch-chip-row">
-                  <span className="run-detail-stitch-chip">
+                <div className="run-detail-chip-row">
+                  <span className="run-detail-chip">
                     {t('run_detail.decoupling')}: {analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}
                   </span>
-                  <span className="run-detail-stitch-chip">
+                  <span className="run-detail-chip">
                     {t('run_detail.first_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.firstHalfPace : '--'}
                   </span>
-                  <span className="run-detail-stitch-chip">
+                  <span className="run-detail-chip">
                     {t('run_detail.second_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.secondHalfPace : '--'}
                   </span>
                 </div>
               </div>
             </section>
 
-            <section className="run-detail-stitch-section">
-              <div className="run-detail-stitch-section-head">
+            <section className="run-detail-section">
+              <div className="run-detail-section-head">
                 <h2>{t('run_detail.splits')}</h2>
                 {lapRows.length > 5 && (
-                  <button type="button" className="run-detail-stitch-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
+                  <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
                     {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
                   </button>
                 )}
               </div>
-              <div className="run-detail-stitch-panel run-detail-stitch-table-panel">
-                <table className="run-detail-stitch-splits-table">
+              <div className="run-detail-panel run-detail-table-panel">
+                <table className="run-detail-splits-table">
                   <thead>
                     <tr>
                       <th>{t('run_detail.split_unit')}</th>
@@ -597,57 +630,57 @@ export default function RunDetail() {
             </section>
           </div>
 
-          <aside className="run-detail-stitch-side-column">
-            <section className="run-detail-stitch-panel run-detail-stitch-efficiency-panel">
+          <aside className="run-detail-side-column">
+            <section className="run-detail-panel run-detail-efficiency-panel">
               <h3>{t('run_detail.efficiency')}</h3>
-              <div className="run-detail-stitch-side-metric">
+              <div className="run-detail-side-metric">
                 <span>{t('run_detail.cadence')}</span>
                 <strong>{cadenceValue ? Math.round(cadenceValue) : '--'} <em>spm</em></strong>
               </div>
-              <div className="run-detail-stitch-divider" />
-              <div className="run-detail-stitch-side-metric">
+              <div className="run-detail-divider" />
+              <div className="run-detail-side-metric">
                 <span>{t('run_detail.stride_length')}</span>
                 <strong>{strideLengthValue ? strideLengthValue.toFixed(2) : '--'} <em>m</em></strong>
               </div>
-              <div className="run-detail-stitch-divider" />
-              <div className="run-detail-stitch-side-metric">
+              <div className="run-detail-divider" />
+              <div className="run-detail-side-metric">
                 <span>{t('run_detail.running_power')}</span>
                 <strong>{powerValue ? Math.round(powerValue) : '--'} <em>W</em></strong>
               </div>
             </section>
 
-            <section className="run-detail-stitch-panel run-detail-stitch-gear-panel">
-              <span className="run-detail-stitch-panel-label">{t('run_detail.gear_linked')}</span>
-              <div className="run-detail-stitch-gear-row">
-                <div className="run-detail-stitch-gear-art">
+            <section className="run-detail-panel run-detail-gear-panel">
+              <span className="run-detail-panel-label">{t('run_detail.gear_linked')}</span>
+              <div className="run-detail-gear-row">
+                <div className="run-detail-gear-art">
                   {linkedShoe?.photoUrl ? (
                     <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} />
                   ) : (
-                    <div className="run-detail-stitch-gear-placeholder">H</div>
+                    <div className="run-detail-gear-placeholder">H</div>
                   )}
                 </div>
-                <div className="run-detail-stitch-gear-copy">
+                <div className="run-detail-gear-copy">
                   <strong>{linkedShoeName || t('run_detail.no_shoe')}</strong>
                   <span>{linkedShoeMileage ? t('run_detail.linked_shoe_mileage', { mileage: linkedShoeMileage }) : t('run_detail.no_shoe')}</span>
                   {linkedShoeUsage != null && (
-                    <div className="run-detail-stitch-gear-usage">
+                    <div className="run-detail-gear-usage">
                       <div style={{ width: `${linkedShoeUsage}%` }} />
                     </div>
                   )}
                 </div>
               </div>
-              <div className="run-detail-stitch-gear-actions">
-                <button type="button" className="run-detail-stitch-link-btn" onClick={() => setShoeDropdownOpen((prev) => !prev)}>
+              <div className="run-detail-gear-actions">
+                <button type="button" className="run-detail-link-btn" onClick={() => setShoeDropdownOpen((prev) => !prev)}>
                   {run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
                 </button>
                 {run.shoeId && (
-                  <button type="button" className="run-detail-stitch-link-btn is-danger" onClick={() => assignShoe(0)}>
+                  <button type="button" className="run-detail-link-btn is-danger" onClick={() => assignShoe(0)}>
                     {t('run_detail.unlink_shoe')}
                   </button>
                 )}
               </div>
               {shoeDropdownOpen && shoes.length > 0 && (
-                <div className="shoe-run-dropdown run-detail-stitch-dropdown">
+                <div className="shoe-run-dropdown run-detail-dropdown">
                   {shoes.filter((shoe) => !shoe.retired).map((shoe) => (
                     <button
                       key={shoe.id}
@@ -662,17 +695,17 @@ export default function RunDetail() {
               )}
             </section>
 
-            <section className="run-detail-stitch-panel">
+            <section className="run-detail-panel">
               <h3>{t('run_detail.route_intelligence')}</h3>
-              <div className="run-detail-stitch-info-list">
-                <div><span>{t('run_detail.metric_route_shape')}</span><strong>{insights?.routeShape || '--'}</strong></div>
+              <div className="run-detail-info-list">
+                <div><span>{t('run_detail.metric_route_shape')}</span><strong>{insights ? getRouteShapeLabel(insights.routeShapeKey) : '--'}</strong></div>
                 <div><span>{t('run_detail.route_gps_samples')}</span><strong>{insights?.pointCount ? insights.pointCount.toLocaleString() : '--'}</strong></div>
                 <div><span>{t('run_detail.perf_elevation_gain')}</span><strong>{run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} m` : '--'}</strong></div>
               </div>
               {elevationStatus?.flagged && (
-                <div className="run-detail-stitch-warning">
+                <div className="run-detail-warning">
                   <p>{t('run_detail.elevation_warning')}</p>
-                  <button type="button" className="run-detail-stitch-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
+                  <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
                     {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
                   </button>
                 </div>
@@ -681,23 +714,23 @@ export default function RunDetail() {
           </aside>
         </section>
 
-        <section className="run-detail-stitch-bottom-grid">
-          <article className="run-detail-stitch-panel">
+        <section className="run-detail-bottom-grid">
+          <article className="run-detail-panel">
             <h3>{t('run_detail.performance_metrics')}</h3>
-            <div className="run-detail-stitch-stat-list">
+            <div className="run-detail-stat-list">
               {performanceRows.map(([label, value], index) => (
                 <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
               ))}
             </div>
           </article>
-          <article className="run-detail-stitch-panel">
+          <article className="run-detail-panel">
             <h3>{t('run_detail.elevation_profile')}</h3>
             {elevationPoints ? (
               <>
-                <svg viewBox="0 0 640 180" className="run-detail-stitch-elevation-graph" aria-hidden="true">
+                <svg viewBox="0 0 640 180" className="run-detail-elevation-graph" aria-hidden="true">
                   <path d={elevationPoints.path} fill="none" stroke="#f49787" strokeWidth="2.5" />
                 </svg>
-                <div className="run-detail-stitch-info-list">
+                <div className="run-detail-info-list">
                   <div>
                     <span>{t('run_detail.min_max_elevation')}</span>
                     <strong>{elevationPoints.minY.toFixed(1)} m / {elevationPoints.maxY.toFixed(1)} m</strong>
@@ -709,23 +742,23 @@ export default function RunDetail() {
                 </div>
               </>
             ) : (
-              <div className="run-detail-stitch-chart-empty is-inline">{t('run_detail.no_elevation_stream')}</div>
+              <div className="run-detail-chart-empty is-inline">{t('run_detail.no_elevation_stream')}</div>
             )}
           </article>
         </section>
 
-        <section className="run-detail-stitch-bottom-grid">
-          <article className="run-detail-stitch-panel">
+        <section className="run-detail-bottom-grid">
+          <article className="run-detail-panel">
             <h3>{t('run_detail.route_intelligence')}</h3>
-            <div className="run-detail-stitch-stat-list">
+            <div className="run-detail-stat-list">
               {routeRows.map(([label, value], index) => (
                 <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
               ))}
             </div>
           </article>
-          <article className="run-detail-stitch-panel">
+          <article className="run-detail-panel">
             <h3>{t('run_detail.analysis_notes')}</h3>
-            <div className="run-detail-stitch-info-list">
+            <div className="run-detail-info-list">
               <div><span>{t('run_detail.metric_average_pace')}</span><strong>{paceValue}</strong></div>
               <div><span>{t('run_detail.metric_moving_time')}</span><strong>{timeValue}</strong></div>
               <div><span>{t('run_detail.route_source_file')}</span><strong>{run.sourceFileName || t('run_detail.not_available')}</strong></div>

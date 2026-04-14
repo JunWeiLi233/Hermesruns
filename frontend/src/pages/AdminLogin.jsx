@@ -50,24 +50,24 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="auth-page auth-page--stitch-login auth-page--stitch-admin">
+    <div className="auth-page auth-page--login auth-page--admin">
       <LanguageSwitcher />
-      <main className="auth-stitch-shell">
-        <section className="auth-stitch-brand">
-          <div className="auth-stitch-brand-inner">
-            <div className="auth-stitch-wordmark-wrap">
+      <main className="auth-flow-shell">
+        <section className="auth-flow-brand">
+          <div className="auth-flow-brand-inner">
+            <div className="auth-flow-wordmark-wrap">
               <HermesLogo tone="light" />
-              <span className="auth-stitch-pulse">ADMIN OPS</span>
+              <span className="auth-flow-pulse">ADMIN OPS</span>
             </div>
 
-            <div className="auth-stitch-copy">
-              <h1 className="auth-stitch-hero">
+            <div className="auth-flow-copy">
+              <h1 className="auth-flow-hero">
                 <span>{t('admin.brand')}</span>
                 <span className="is-accent">{t('admin.form_title')}</span>
               </h1>
-              <p className="auth-stitch-text">{t('admin.subtitle')}</p>
+              <p className="auth-flow-text">{t('admin.subtitle')}</p>
 
-              <div className="auth-stitch-stats auth-stitch-stats--admin">
+              <div className="auth-flow-stats auth-flow-stats--admin">
                 <div>
                   <strong>Ops</strong>
                   <span>{t('admin.brand')}</span>
@@ -79,7 +79,7 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            <div className="auth-stitch-dots" aria-hidden="true">
+            <div className="auth-flow-dots" aria-hidden="true">
               <span className="is-active" />
               <span />
               <span />
@@ -87,17 +87,17 @@ export default function AdminLogin() {
           </div>
         </section>
 
-        <section className="auth-stitch-formside">
-          <div className="auth-stitch-card auth-stitch-card--admin">
-            <div className="auth-stitch-header">
+        <section className="auth-flow-formside">
+          <div className="auth-flow-card auth-flow-card--admin">
+            <div className="auth-flow-header">
               <h3>{t('admin.form_title')}</h3>
               <p>{t('admin.subtitle')}</p>
             </div>
 
-            <form className="auth-stitch-form" onSubmit={handleSubmit}>
+            <form className="auth-flow-form" onSubmit={handleSubmit}>
               {error && <div className="error-alert is-visible">{error}</div>}
 
-              <div className="form-group form-group--stitch">
+              <div className="form-group form-group--auth">
                 <label htmlFor="admin-email">{t('admin.email_label')}</label>
                 <input
                   type="text"
@@ -108,7 +108,7 @@ export default function AdminLogin() {
                 />
               </div>
 
-              <div className="form-group form-group--stitch">
+              <div className="form-group form-group--auth">
                 <label htmlFor="admin-password">{t('admin.password_label')}</label>
                 <input
                   type="password"
@@ -119,12 +119,12 @@ export default function AdminLogin() {
                 />
               </div>
 
-              <button type="submit" className="auth-stitch-btn auth-stitch-btn--submit" disabled={loading}>
+              <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>
                 <span>{loading ? t('admin.submit_loading') : t('admin.submit')}</span>
               </button>
             </form>
 
-            <div className="auth-stitch-legal">
+            <div className="auth-flow-legal">
               <Link to="/login">{t('admin.back_link')}</Link>
               <Link to="/terms">Terms</Link>
               <Link to="/privacy">Privacy</Link>

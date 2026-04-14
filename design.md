@@ -1,67 +1,365 @@
-# Design System Strategy: The Cinematic Athlete
+# Hermes Design System: Kinetic Editorial
 
-## 1. Overview & Creative North Star
+This file is the canonical visual authority for Hermes UI work.
 
-The Creative North Star for this design system is **"The Digital Pulse."** It is an aesthetic that marries the raw, visceral energy of elite performance with the sophisticated precision of high-end data analytics.
+It defines one design language with two explicit runtime expressions:
+- `dark mode`: **The Cinematic Athlete**
+- `light mode`: **The Aerodynamic Gallery**
 
-Unlike standard "SaaS-looking" dashboards that rely on rigid grids and excessive borders, this system treats the UI as an editorial experience. We break the template by using **intentional asymmetry**, where data visualizations might bleed off the edge of a container, and **cinematic layering**, where information sits on translucent "sheets" that feel like a high-tech HUD (Heads-Up Display) overlaying a dark track. It is confident, focused, and premium - designed for the athlete who views their data as a competitive edge.
+`/auto-hermes` must treat this file as mode-aware design authority, not as a dark-only mood board.
 
-## 2. Colors
+## 1. Creative North Star
 
-Our palette is rooted in the "Deep Dark" philosophy. We don't use flat blacks; we use nuanced, charcoal-inspired tones to create a sense of infinite space.
+Hermes should not look like a generic SaaS dashboard in either theme.
 
-- **Primary Accent (`#ffb4a7` / `#f07561`):** A warm, energetic coral that evokes a sense of rising heat and "red-lining" during a sprint. Use this sparingly to highlight critical performance metrics and primary calls to action.
-- **The "No-Line" Rule:** To maintain a premium feel, **1px solid borders are strictly prohibited** for sectioning. Structural boundaries must be defined through background color shifts. For instance, a `surface-container-low` section should sit directly on a `surface` background to define its edge.
-- **Surface Hierarchy & Nesting:** Use the `surface-container` tiers (`Lowest` to `Highest`) to create depth. A typical layout might involve:
-  - `surface-dim` (Background)
-  - `surface-container-low` (Main content area)
-  - `surface-container-high` (Interactive cards or data widgets)
-- **The "Glass & Gradient" Rule:** Floating elements, such as navigation bars or quick-action menus, must use **Glassmorphism**. Apply `surface-container` colors with a 60-80% opacity and a `20px` backdrop blur.
-- **Signature Textures:** For hero sections or significant performance "milestone" cards, use a subtle linear gradient transitioning from `primary` to `primary-container` at a 45-degree angle to add "soul" and movement.
+The product aesthetic is **Kinetic Editorial**:
+- premium sports journalism meets high-trust performance analytics
+- intentional asymmetry over rigid utility grids
+- tonal layering over hard separators
+- cinematic hierarchy over equal-weight card walls
+- data as a coached narrative, not a pile of widgets
 
-## 3. Typography
+The dark and light themes are not separate products. They are two tonal interpretations of the same Hermes design language:
+- dark mode is the athlete inside the arena
+- light mode is the athlete inside the gallery
 
-The typography is designed to mimic the high-contrast headlines of a luxury sports magazine.
+In both modes, Hermes should feel:
+- premium
+- focused
+- breathable
+- coach-like
+- visually decisive
 
-- **Display & Headlines (Manrope):** This is our "mechanical" voice. Manrope's geometric structure feels engineered and precise. Use `display-lg` for single-word performance metrics (e.g., your Pace or Heart Rate) to give them an authoritative presence.
-- **Body & Labels (Inter):** Inter provides maximum legibility at high speeds. It is the "functional" voice that handles the heavy lifting of data descriptions and analytical insights.
-- **Editorial Hierarchy:** Use a "Size-as-Weight" strategy. Rather than just bolding text, use significant jumps in the typography scale (e.g., a `display-md` headline followed by a `body-sm` description) to create a sophisticated, editorial rhythm.
+## 2. Mode Selection Rules For Auto-Hermes
 
-## 4. Elevation & Depth
+When `/auto-hermes` performs meaningful frontend work, it must lock the target theme mode before editing.
 
-In this design system, depth is a function of light and translucency, not just shadow.
+Use this order:
+1. explicit user request
+2. the active runtime theme on the touched surface
+3. the visual mode implied by the provided mockup or screenshot
+4. the existing approved surface baseline from `.ai-sync/CONTEXT_LEDGER.md`
+5. fallback to both-mode-safe styling when the change is shared infrastructure
 
-- **The Layering Principle:** Stacking `surface-container` tiers is the primary way to show hierarchy. Placing a `surface-container-lowest` card on a `surface-container-low` background creates a "recessed" look, perfect for secondary data.
-- **Ambient Shadows:** For "floating" elements (like a training plan modal), use extra-diffused shadows.
-  - *Spec:* `0px 24px 48px rgba(0, 0, 0, 0.4)`.
-  - Shadows should never be pure black; they should feel like a deep, tinted occlusion of the background color.
-- **The "Ghost Border" Fallback:** If a divider is required for extreme clarity (e.g., in a complex data table), use a "Ghost Border": `outline-variant` at 15% opacity. It should be felt, not seen.
-- **Glassmorphism & Depth:** By using `backdrop-blur` (min 16px) on surface-tinted containers, we allow the "pulse" of the background (like a blurred image of a runner) to bleed through. This makes the app feel like a single, cohesive environment rather than a collection of separate boxes.
+Before non-trivial frontend implementation, `/auto-hermes` must define:
+- target surface
+- target mode:
+  - `dark`
+  - `light`
+  - `dual-mode`
+- what visual behaviors must remain shared across both modes
+- whether the untouched counterpart mode needs a regression check
 
-## 5. Components
+If a change touches shared tokens, shared cards, shared shell, shared overlays, or theme selectors, treat it as `dual-mode` by default.
 
-Our components are "app-like" - they feature generous touch targets and tactile feedback.
+If the user supplies only a light-mode or dark-mode reference:
+- match that target mode closely
+- preserve the same structural hierarchy in the opposite mode
+- do not copy colors mechanically into the other mode
 
-- **Buttons:**
-  - *Primary:* `primary-container` background, `on-primary-container` text. Roundedness: `full`.
-  - *Secondary:* `surface-container-highest` background, ghost-border outline.
-  - *Tertiary:* Text-only using `primary` color, used for "Learn More" or "Cancel."
-- **Data Chips:** Use `secondary-container` with `md` (0.75rem) roundedness. These should feel like physical tabs.
-- **Input Fields:** Use `surface-container-highest` for the field background. No borders. Use a 2px `primary` bottom-border only when the field is focused to simulate a "gauge" filling up.
-- **Cards & Lists:** **Strictly no divider lines.** Use vertical whitespace (e.g., 24px/32px) to separate list items. For cards, use `surface-container-low` with a soft `lg` corner radius.
-- **Performance Gauges (Custom Component):** Circular or semi-circular progress indicators using the `primary` to `tertiary` gradient to represent intensity zones.
+## 3. Shared Invariants Across Both Modes
 
-## 6. Do's and Don'ts
+These rules apply in both dark and light themes.
 
-**Do:**
+### 3.1 The No-Line Rule
 
-- **Do** use asymmetrical layouts where text is left-aligned and visuals bleed to the right edge.
-- **Do** use "Overlapping Elements." Let a floating data chip partially overlap the edge of a chart to create 3D depth.
-- **Do** prioritize high-contrast typography for key numbers (Time, Distance, Pace).
+1px solid borders must not be the normal way Hermes defines containment.
 
-**Don't:**
+Prefer:
+- surface shifts
+- tonal contrast
+- layered backgrounds
+- spacing
+- glass surfaces
+- ghost-border fallback only when clarity demands it
 
-- **Don't** use 1px solid white or grey borders. This immediately breaks the "premium" feel.
-- **Don't** use standard "drop shadows." If it doesn't look like ambient light, it's too heavy.
-- **Don't** clutter the screen. If a piece of data isn't vital to the "current run," hide it in a sub-layer. Premium design is about what you leave out.
-- **Don't** use pure `#000000`. Use the `surface` and `surface-container` tokens to ensure the dark mode has "breathable" air.
+### 3.2 Typography Pairing
+
+Use:
+- `Manrope` for display and headline authority
+- `Inter` for body, metadata, and controls
+
+Typography should create hierarchy through:
+- scale contrast
+- spacing
+- rhythm
+- restraint
+
+Do not rely on bolding alone.
+
+### 3.3 Cinematic Hierarchy
+
+Each screen should have:
+- a clear first focus
+- a readable second layer
+- restrained supporting metadata
+
+Do not let every card scream at the same volume.
+
+### 3.4 Ambient Depth
+
+Depth should come primarily from:
+- surface stacking
+- translucency
+- soft ambient shadows
+- overlap
+
+Avoid:
+- tight default web shadows
+- box-inside-box repetition
+- divider-heavy layouts
+
+### 3.5 Coach Value First
+
+A design change is good only if it improves one or more of:
+- decision clarity
+- training trust
+- perceived readiness
+- motivation
+- next-action usefulness
+
+Decorative polish without runner value is not enough.
+
+## 4. Dark Mode: The Cinematic Athlete
+
+## 4.1 Overview
+
+Dark mode should feel like a premium performance HUD on a deep track at night.
+
+It should communicate:
+- focus
+- athletic intensity
+- compression of noise
+- strong visual confidence
+
+## 4.2 Tonal Architecture
+
+Dark mode is rooted in nuanced charcoal tones, never flat black.
+
+Preferred foundation:
+- `surface-dim` for the atmospheric background
+- `surface-container-low` for main content fields
+- `surface-container-high` for interactive cards
+- `surface-container-highest` for select controls and raised utilities
+
+Key rules:
+- do not use pure `#000000`
+- separate sections through tonal steps, not white/grey borders
+- use glassmorphism for top bars, floating actions, and overlays with 60-80% tinted fills and at least `16px` blur
+- hero surfaces may use a subtle 45-degree coral gradient
+
+## 4.3 Color Role
+
+Use coral accents sparingly and purposefully:
+- `#ffb4a7`
+- `#f07561`
+
+Coral should signal:
+- hero metrics
+- active states
+- CTA emphasis
+- high-value cues
+
+Do not flood the page with coral.
+
+## 4.4 Typography
+
+Dark mode typography should feel high-contrast and engineered.
+
+Recommended behavior:
+- large Manrope displays for hero metrics and major page hooks
+- smaller Inter labels for metadata
+- dramatic size jumps to create editorial cadence
+
+## 4.5 Components
+
+### Buttons
+- Primary: `primary-container` fill, `on-primary-container` text, rounded `full`
+- Secondary: `surface-container-highest` fill with ghost-border-level separation
+- Tertiary: text-only in `primary`
+
+### Inputs
+- `surface-container-highest` fill
+- no full border
+- 2px `primary` emphasis only on focus
+
+### Cards And Lists
+- no divider lines between list rows
+- use vertical spacing instead
+- use `surface-container-low` or `surface-container-high` as the main container step
+
+### Gauges
+- semicircular or circular gauges should use the `primary -> tertiary` gradient and remain readable against charcoal layers
+
+## 4.6 Dark Mode Do / Don't
+
+Do:
+- use asymmetry
+- let visuals bleed to edges
+- overlap chips or labels onto charts when useful
+- prioritize high-contrast hero numbers
+
+Don't:
+- use 1px white or grey borders
+- use heavy default shadows
+- overfill the screen with low-value detail
+- flatten the whole page into one undifferentiated dark slab
+
+## 5. Light Mode: The Aerodynamic Gallery
+
+## 5.1 Overview
+
+Light mode should feel like a warm editorial gallery, not a clinical enterprise dashboard.
+
+It should communicate:
+- refinement
+- motion through space
+- breathable hierarchy
+- soft confidence
+
+## 5.2 Tonal Architecture
+
+Light mode transitions into a warm-smoke vellum environment.
+
+Preferred foundation:
+- `background` `#f5f6f7`
+- `surface-container-low` `#eff1f2`
+- `surface-container-lowest` `#ffffff`
+
+Key rules:
+- use surface shifts instead of borders for separation
+- glass surfaces should use `surface` around 70% opacity with `20px` blur
+- primary CTAs should use a 135-degree gradient from `#a0392a` to `#fc7e69`
+- ambient depth should come from white-on-vellum stacking, not hard outlines
+
+## 5.3 Color Role
+
+Light mode keeps the same coral family, but with softer environment contrast.
+
+Use coral for:
+- CTA hierarchy
+- featured metrics
+- active selections
+- directional cues
+
+Do not let supporting copy fade into the background. Light mode must preserve clear contrast for:
+- hero numbers
+- helper copy
+- labels on charts and gauges
+- pills and chips on pale surfaces
+
+## 5.4 Typography
+
+Light mode should still feel cinematic, not lightweight.
+
+Recommended behavior:
+- `display-lg` `3.5rem` and `display-md` `2.75rem` in Manrope Bold for hero metrics
+- `headline-lg` `2rem` in Manrope for section anchors
+- `body-lg` `1rem` and `body-md` `0.875rem` in Inter with relaxed line-height
+- technical labels in muted `on_surface_variant` tones with slight tracking expansion
+
+## 5.5 Components
+
+### Buttons
+- Primary: gradient from `primary` to `primary-container`, sharp modern corners
+- Tertiary: no background, no border, underline only on hover with a 2px accent stroke
+
+### Inputs
+- use `surface-container-high` fills
+- very small corners
+- on focus, shift toward `surface-container-highest` and add a primary ghost-border
+
+### Cards And Lists
+- no divider lines
+- separate rows through 16px or 24px whitespace
+- on hover, cards should move from `surface` toward `surface-container-lowest` with a slightly stronger ambient shadow
+
+### Metric Blocks
+- large Manrope values
+- labels above or beside the value rather than always stacked below
+- keep number contrast explicit on pale surfaces
+
+## 5.6 Light Mode Do / Don't
+
+Do:
+- use asymmetry and diagonal flow
+- let imagery bleed where it strengthens the composition
+- layer glass over photography when needed for readability
+- preserve warm editorial contrast
+
+Don't:
+- box content into repetitive white cards inside white cards
+- use pure black text
+- use default web shadows
+- leave dark-mode text colors on light cards
+
+## 6. Shared Component Translation Rules
+
+When the same component exists in both modes, preserve:
+- information hierarchy
+- spacing logic
+- component purpose
+- interaction semantics
+- coach-value clarity
+
+Translate between modes through:
+- tonal architecture
+- contrast strategy
+- ambient shadow behavior
+- surface layering
+- overlay intensity
+
+Do not translate between modes by merely inverting colors.
+
+Examples:
+- a dark glass HUD card becomes a vellum layered card in light mode
+- a dark overlay over photography becomes a lighter, fogged editorial veil in light mode
+- a bright-on-dark muted label becomes a darker muted label with preserved contrast, not a washed-out near-white
+
+## 7. Auto-Hermes Design Review Requirements
+
+For non-trivial frontend rounds, `/auto-hermes` must review design with theme-awareness.
+
+If the round is `dark` or `light` only, the reviewer must still ask:
+- did this break readability in the opposite mode if the selector is shared?
+
+If the round is `dual-mode`, the reviewer must check both modes for:
+- hierarchy
+- readability
+- contrast on metrics, pills, charts, gauges, and helper copy
+- shell-to-card consistency
+- absence of stray hardcoded dark-only or light-only colors
+
+Automatic must-fix triggers for theme work:
+- dark-mode text styles left on light surfaces
+- light-mode text styles left on dark surfaces
+- gauges, chart labels, pills, or helper copy becoming unreadable
+- shared card families switching mode in one route but not another equivalent route
+- borders reappearing as a substitute for tonal separation
+
+## 8. Implementation Guidance For Shared Tokens
+
+When building shared theme support:
+- prefer shared tokens and shared theme selectors first
+- add route-level overrides only when a page has a dedicated cinematic treatment
+- preserve one design language across routes
+- do not fork each page into unrelated visual dialects
+
+When fixing theme mismatches:
+- trace whether the bug comes from tokens, shared card families, or route-local hardcoded styles
+- fix the narrowest authoritative layer that resolves the mismatch
+- if a page has its own dedicated card family, it still must inherit the current theme language
+
+## 9. Final Do / Don't For Hermes Agents
+
+Do:
+- treat dark and light as equal-quality Hermes experiences
+- preserve structural rhythm across both modes
+- keep contrast intentional on all cards, charts, and gauges
+- use `design.md` as a mode-aware system, not a one-theme inspiration note
+
+Don't:
+- assume dark mode is canonical and light mode is an afterthought
+- ship a "light shell, dark cards" hybrid unless the user explicitly wants that contrast
+- solve theme separation with borders
+- claim a theme redesign is complete until the actual affected surfaces read coherently in the target mode

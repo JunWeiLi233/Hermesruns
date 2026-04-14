@@ -11,6 +11,492 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-04-14-07
+Date: 2026-04-14
+Surface: Today Run light-mode pass and shell title on `/today-run`
+Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Switched the Stitch-based `/today-run` route from its old light-mode dark lock into a real Aerodynamic Gallery variant by retuning the runner shell, hero, metric band, coach cards, weather strip, buttons, and supporting tiles for warm vellum surfaces while preserving the same editorial hierarchy and live coaching logic. The topbar active route label now explicitly reads `Today Run` in English and `今日跑步` in Chinese.
+Why: The route had been intentionally pinned to a dark treatment even under light theme, which made the page feel inconsistent once the rest of Hermes gained a true light mode, and the active shell label also needed a clearer route name.
+Rollback target: `DV-2026-04-14-04`
+Notes: Pending frontend bundle sync and local route verification for `/today-run`.
+
+### Version: DV-2026-04-14-06
+Date: 2026-04-14
+Surface: Heatmap speed legend fidelity on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/i18n/translations.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rewired the heatmap `速度图例` to render directly from the same four `SPEED_BANDS` that color the GPS points, added the missing `peak/峰值` legend copy, and replaced the old blended legend swatches with exact per-band color chips so the visible legend now matches the live map dot palette one-for-one.
+Why: The map dots were already colored from a four-band speed scale, but the legend was still showing only three approximate gradient bars, which made the speed explanation misleading.
+Rollback target: `DV-2026-04-14-05`
+Notes: Pending frontend bundle sync and local route verification for `/heatmap`.
+
+### Version: DV-2026-04-14-05
+Date: 2026-04-14
+Surface: Analysis coach-insight grid spacing on `/analysis/coach-insight`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Loosened the route-local coach-insight desktop composition by easing the main two-column ratio, increasing the gap between the primary and sidebar lanes, and adding a bit more breathing room inside the performance split, session/reason stacks, and three-up metric/focus/phase grids so the planning cards no longer feel stretched together edge-to-edge.
+Why: The page-scoped width expansion solved the earlier wide-screen gutter problem, but the resulting cards started reading too compressed against each other and lost some of the editorial separation the coach surface needs.
+Rollback target: `DV-2026-04-14-03`
+Notes: Pending frontend bundle sync and local route verification for `/analysis/coach-insight`.
+
+### Version: DV-2026-04-14-04
+Date: 2026-04-14
+Surface: Today Run Stitch redesign on `/today-run`
+Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt `/today-run` around the provided Stitch reference by replacing the older marathon-progress hero with a cinematic image-led opening, a three-metric HUD plus readiness widget, a workout-blueprint timeline generated from the live plan, and a sticky automated-coach rail that keeps the recommendation, reasons, support metrics, weather, and shoe guidance in one stronger editorial structure. The route now also keeps its dark Stitch treatment even when Hermes is in light mode, and the sidebar active state is restored from the real current route.
+Why: The old today-run page still carried a premium shell, but it did not match the sharper reference hierarchy the user asked for and buried the execution story under older card groupings. The redesign makes the daily run decision easier to read while preserving the live coach and recommendation system.
+Rollback target: `working tree before this change`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/today-run` returned `200`.
+
+### Version: DV-2026-04-14-03
+Date: 2026-04-14
+Surface: Analysis coach-insight light-mode text contrast on `/analysis/coach-insight`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the light-mode text palette inside the route-local `analysis-coach-command-*` system so paragraph copy, chart tooltip copy, session metadata, metric labels, and other secondary text stay visibly readable on the vellum coach-insight cards instead of fading into low-contrast gray.
+Why: The route already had a dedicated light-mode surface pass, but too many of its secondary text roles were still using soft muted grays tuned for darker cards, which made large parts of the planning page look partially invisible in light mode.
+Rollback target: `DV-2026-04-14-02`
+Notes: Frontend bundle synced successfully into the Spring-served static output with `index-CBsC0VWv.css` and `index-DsHm5Tiv.js`. `npm run lint` still fails on pre-existing duplicate translation keys plus existing issues in `Races.jsx`, `Schedule.jsx`, `Shoes.jsx`, and `Vo2MaxDetail.jsx`.
+
+### Version: DV-2026-04-14-02
+Date: 2026-04-14
+Surface: Shoe image-scan import modal on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the shoes `识图导入` flow from the old utility modal into a dedicated cinematic import card with a scan-HUD preview stage, clearer quota/status states, and card-based editable recognition results plus duplicate-resolution actions.
+Why: The old scan flow was visually broken and still used a legacy generic modal form, so it no longer matched the premium shoes dashboard and made the import path feel unreliable.
+Rollback target: `DV-2026-04-14-01`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/shoes` returned `200`.
+
+### Version: DV-2026-04-14-01
+Date: 2026-04-14
+Surface: Marathon prediction light-mode route on `/prediction/marathon`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added dedicated light-mode coverage for the marathon forecast branch so the hero, confidence rail, trend/judgment cards, action CTA, performance tiles, and Chart.js axis palette now switch into the Aerodynamic Gallery vellum treatment instead of leaving the route on dark-only surfaces under the light shell.
+Why: `/prediction/marathon` already had a strong dark-mode editorial structure, but its page-local `prediction-marathon-*` system and chart ticks were still hardcoded for dark backgrounds, which made light mode feel unfinished.
+Rollback target: `DV-2026-04-13-99`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/prediction/marathon` returned `200`.
+
+### Version: DV-2026-04-13-99
+Date: 2026-04-13
+Surface: Signed-in website theme menu simplification
+Files: `frontend/src/contexts/ThemeContext.jsx`, `frontend/src/pages/Settings.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the extra high-contrast dark and high-contrast light theme choices from the real signed-in theme system so Hermes now exposes only `晨光亮面` (`light`) and `午夜脉冲` (`midnight`) in Settings. Existing saved high-contrast preferences now normalize onto the nearest surviving mode instead of leaving users on retired theme values.
+Why: The product now wants a cleaner two-theme website experience rather than four public theme variants, so the runtime picker and persisted preference handling needed to match that narrower surface truth.
+Rollback target: `DV-2026-04-13-98`
+Notes: Frontend bundle synced successfully into the Spring-served static output with `index-Bypbjnyk.css` and `index-gJWgAIpb.js`. `npm run lint` still fails on pre-existing duplicate translation keys plus existing issues in `Races.jsx`, `Schedule.jsx`, and `Vo2MaxDetail.jsx`.
+
+### Version: DV-2026-04-13-98
+Date: 2026-04-13
+Surface: Run detail light-mode translation on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a dedicated Aerodynamic Gallery light/high-contrast-light layer for the standalone run-detail Stitch surface so the topbar glass, loading shell, route-map hero, metric rail, physiology panels, splits table, gear module, warning state, and empty-state now all move from charcoal-only styling into layered vellum cards with readable dark-on-light contrast.
+Why: `/run/:id` still carried its original dark cinematic route-local palette outside a tiny stat-card override, which made the drill-down feel like a split-theme island whenever Hermes switched to light mode.
+Rollback target: `DV-2026-04-13-97`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/run/1` returned `200`.
+
+### Version: DV-2026-04-13-97
+Date: 2026-04-13
+Surface: Analysis injury-risk light-mode translation on `/analysis/injury-risk`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a dedicated Aerodynamic Gallery light/high-contrast-light layer for the injury-risk drill-down so the hero copy, vellum cards, signal strip, coach panel, sample rows, trend chart tooltip/grid, and metric links no longer stay in the old charcoal palette when Hermes switches to light mode. The chart scrubber now also uses theme-aware classes instead of hardcoded dark-only white strokes.
+Why: `/analysis/injury-risk` still carried the dark cinematic treatment after the rest of analysis gained route-level light-mode support, which left the page reading as a split-theme island inside the light runner shell.
+Rollback target: `DV-2026-04-13-96`
+Notes: Frontend bundle synced successfully into the Spring-served static output with `index-E_Ti0OFx.css` and `index-CDFXqHAe.js`. `npm run lint` still fails on pre-existing duplicate translation keys plus existing issues in `Races.jsx`, `Schedule.jsx`, and `Vo2MaxDetail.jsx`.
+
+### Version: DV-2026-04-13-96
+Date: 2026-04-13
+Surface: Settings atlas feature expansion on `/settings`
+Files: `frontend/src/pages/Settings.jsx`, `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Expanded the settings command center with three new atlas-native feature modules: one-tap quick controls for theme/unit/language/weekly brief, a sync-health panel that surfaces Strava/Garmin/manual-import state with direct actions, and a readiness checklist that turns account completion into visible setup steps instead of only a percentage.
+Why: The page already had live settings handlers and sync state, but too much of that capability was buried inside separate controls and modals. The new modules make `/settings` feel more actionable and more coach-like without changing any backend contracts.
+Rollback target: `DV-2026-04-13-95`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/settings` returned `200`. `npm run lint` still fails on the repo's pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus existing issues in `Races.jsx`, `Schedule.jsx`, and `Vo2MaxDetail.jsx`.
+
+### Version: DV-2026-04-13-95
+Date: 2026-04-13
+Surface: Profile dashboard light-mode completion on `/profile`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Extended the profile light-theme layer beyond the shared dashboard cards so the page background, editorial hero copy, sync/status banners, loading card, sidebar collapse toggle, and workout CTA now all follow the Aerodynamic Gallery light palette instead of leaving the route with dark-mode leftovers around the edges.
+Why: `/profile` already had partial light-mode coverage on the main dashboard cards, but the surrounding chrome and status surfaces still used dark-biased text and hover treatments, which made the page feel only half converted in light mode.
+Rollback target: `DV-2026-04-13-94`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/profile` returned `200`.
+
+### Version: DV-2026-04-13-94
+Date: 2026-04-13
+Surface: Runs page light-mode route surfaces on `/runs`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Extended light-mode support across both `/runs` branches, so the populated recent-runs hero, filter chips, status/load-more controls, and the zero-data integration-alert onboarding panels now all use the Aerodynamic Gallery vellum palette instead of leaving dark route-local surfaces under the light shell.
+Why: `/runs` already had partial light support for the list cards, but the rest of the route still read as a split-theme page because the hero and onboarding states were bypassing the shared light-mode system.
+Rollback target: `DV-2026-04-13-93`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/runs` returned `200`.
+
+### Version: DV-2026-04-13-93
+Date: 2026-04-13
+Surface: Add-shoes light-mode route on `/shoes/add`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a dedicated light-mode and high-contrast-light palette pass for the add-shoes route so the hero, status cards, browser panel, selection steps, chips, inputs, CTA rows, and loading state now move from the old charcoal-only treatment into layered vellum surfaces with readable dark-on-light contrast.
+Why: `/shoes/add` uses its own `add-shoes-*` visual system, so the shared shell theme switch left the nested add flow partially dark and visually inconsistent in light mode.
+Rollback target: `DV-2026-04-13-92`
+Notes: Frontend bundle synced successfully into the Spring-served static output. `http://localhost:8080/add-shoes` returned `200`; direct `http://localhost:8080/shoes/add` still depends on the local backend forwarder runtime and currently remains `404` in this running backend process.
+
+### Version: DV-2026-04-13-92
+Date: 2026-04-13
+Surface: Heatmap speed legend clarity on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Bound the heatmap GPS-dot color logic and the legend to one shared speed-band source, and restyled the legend into three explicit slow/mid/fast speed chips with labels stacked directly over the gradient bars so runners can read the dot-speed meaning immediately.
+Why: The heatmap dots were already speed-colored, but the legend still read like a looser decorative scale instead of a clear speed key tied to the actual point rendering.
+Rollback target: `DV-2026-04-13-91`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/heatmap` returned `200`.
+
+### Version: DV-2026-04-13-91
+Date: 2026-04-13
+Surface: Settings atlas header and hero compaction on `/settings`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Reduced the settings atlas title-band and profile hero scale so the oversized display heading, underline spacing, hero padding, avatar, identity type, pills, and stat rail now fit into a denser editorial command center instead of burning too much first-screen vertical space.
+Why: The active settings command-center hierarchy was visually strong but the top title block and profile hero had grown too large, making the page feel wasteful and pushing the real controls too far down.
+Rollback target: `DV-2026-04-13-90`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/settings` returned `200`.
+
+### Version: DV-2026-04-13-90
+Date: 2026-04-13
+Surface: Schedule light-mode planning dashboard on `/schedule`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Extended the Schedule page light-theme layer across the remaining page-local planning surfaces, so the weekly day cards, readiness ring, next-session hero, route panel, coach rail, gear module, and action buttons now all switch into bright vellum surfaces instead of leaving the route half-dark in `theme-light` and `theme-high-contrast-light`.
+Why: `/schedule` already had partial light-mode support, but the core planning widgets still used dark hardcoded colors and looked broken once the shell switched themes.
+Rollback target: `DV-2026-04-13-89`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/schedule` returned `200`.
+
+### Version: DV-2026-04-13-89
+Date: 2026-04-13
+Surface: Shared runner avatar fallback on `/shoes` and `/races`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/pages/Races.jsx`, `frontend/src/utils/profileIdentity.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Normalized the topbar avatar fallback on shoes and races so both routes now resolve the runner letter from the actual Hermes profile identity instead of route-local data like race names or auth-only email fallback. The shared shell avatar now stays anchored to Junwei's profile initial (`J`) when no custom profile image exists.
+Why: The avatar was visually changing between pages because some routes were deriving the fallback from page content instead of the runner identity, which made the shell feel inconsistent and less trustworthy.
+Rollback target: `DV-2026-04-13-88`
+Notes: Frontend bundle synced successfully into the Spring-served static output and both `http://localhost:8080/shoes` and `http://localhost:8080/races` returned `200`.
+
+### Version: DV-2026-04-13-88
+Date: 2026-04-13
+Surface: Intensity detail light-mode dashboard on `/analysis/intensity`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added dedicated `theme-light` and `theme-high-contrast-light` overrides for the intensity command-center route so the hero, distribution card, judgment panel, recovery card, sample tiles, track fills, and CTA now switch from the charcoal-only cinematic palette into layered vellum surfaces with readable dark-on-light contrast.
+Why: `/analysis/intensity` uses its own page-local `analysis-intensity-command-*` visual system, so the shared shell light mode left the route partially dark and visually broken.
+Rollback target: `DV-2026-04-13-87`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/analysis/intensity` returned `200`.
+
+### Version: DV-2026-04-13-87
+Date: 2026-04-13
+Surface: Shoes dashboard light-mode support on `/shoes`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Expanded the Shoes page light-theme layer beyond the inventory cards so the stage panels, sticky topbar, search/filter controls, browser/watch panels, duplicate panel, and the large performance insight module now all switch into coherent light surfaces instead of leaving the page half-dark in light mode.
+Why: The user wanted `/shoes` to actually work in light mode, and the page was only partially theme-aware because most of its custom Shoes surfaces were still hardcoded to dark-only colors.
+Rollback target: `DV-2026-04-13-86`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/shoes` returned `200`. `npm run lint` still fails on the repo’s pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus existing issues in `Races.jsx`, `Schedule.jsx`, and `Vo2MaxDetail.jsx`.
+
+### Version: DV-2026-04-13-86
+Date: 2026-04-13
+Surface: Settings light-mode command center on `/settings`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added dedicated `theme-light` and `theme-high-contrast-light` overrides for the active settings command-center surface so the hero, cards, territory map, pills, action rows, and form controls now switch to bright vellum-style surfaces with readable dark-on-light typography instead of staying in the dark palette.
+Why: `/settings` was still using page-local dark hardcoded values, so the shared shell could enter light mode while the settings content itself still looked broken and low-contrast.
+Rollback target: `DV-2026-04-13-85`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/settings` returned `200`.
+
+### Version: DV-2026-04-13-85
+Date: 2026-04-13
+Surface: Coach insight light-mode dashboard on `/analysis/coach-insight`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a dedicated light-mode palette pass for the coach-insight route so the hero, performance chart stage, recent-session rows, blueprint cards, focus chips, pills, and tooltips now switch from hardcoded charcoal styling into layered vellum surfaces with readable dark-on-light typography and softer grid chrome.
+Why: `/analysis/coach-insight` used its own page-local cinematic card system, so the shared shell light mode left the route partially dark and low-contrast instead of behaving like a finished Hermes light-theme page.
+Rollback target: `DV-2026-04-13-84`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/analysis/coach-insight` returned `200`.
+
+### Version: DV-2026-04-13-84
+Date: 2026-04-13
+Surface: VO2max detail light-mode dashboard on `/analysis/vo2max`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Translated the dedicated VO2max kinetic dashboard into the Aerodynamic Gallery light-mode system, so the hero shell, chart stage, axis labels, threshold marker, tooltip, scrubber contrast, footer insights, and CTA now use layered vellum surfaces and readable dark-on-light typography instead of staying in the old charcoal-only cinematic palette.
+Why: `/analysis/vo2max` uses its own page-local visual system, so the shared light-mode shell and grid overrides were not enough to make the route read coherently in light mode.
+Rollback target: `DV-2026-04-13-83`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/analysis/vo2max` returned `200`.
+
+### Version: DV-2026-04-13-83
+Date: 2026-04-13
+Surface: Race Center light-mode contrast and grid surfaces on `/races`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Extended the Aerodynamic Gallery light-mode system into the Race Center’s page-local `race-center-*` surfaces, so the hero copy, PB cards, discovery cards, country chips, calendar rows, search field, and action buttons now move off the old charcoal treatment into layered vellum cards with readable text contrast and softer ambient depth.
+Why: The shared shell was already in light mode, but `/races` still used its own dark hardcoded card system, which left the words low-contrast and the main race grids visually disconnected from the rest of the light-theme product.
+Rollback target: `DV-2026-04-13-82`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/races` returned `200`.
+
+### Version: DV-2026-04-13-82
+Date: 2026-04-13
+Surface: Global design authority for mode-aware Hermes theming
+Files: `design.md`, `.codex/commands/auto-hermes.md`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the old dark-only `design.md` with a unified Kinetic Editorial spec that now defines shared invariants plus explicit dark-mode (`The Cinematic Athlete`) and light-mode (`The Aerodynamic Gallery`) behavior, and updated `/auto-hermes` so non-trivial frontend rounds must lock a target theme mode (`dark`, `light`, or `dual-mode`) and review for cross-mode regressions when shared selectors change.
+Why: Hermes had a strong dark-mode design authority but light-mode work was being inferred ad hoc from user prompts, which made `/auto-hermes` less deterministic when handling theme-specific or shared theme-system UI rounds.
+Rollback target: `DV-2026-04-13-81`
+Notes: Documentation/workflow change only; no live runtime sync was required for this round.
+
+### Version: DV-2026-04-13-81
+Date: 2026-04-13
+Surface: Analysis overview load-balance contrast on `/analysis`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the light-mode contrast on the analysis overview load-balance card so the gauge value, helper copy, gauge track, and status pill colors now stay readable against the vellum light card instead of fading into the background.
+Why: The user flagged the load-balance grid as visually broken in light mode because its dark-theme text treatments were still being reused on a light surface.
+Rollback target: `DV-2026-04-13-80`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/analysis` returned `200`.
+
+### Version: DV-2026-04-13-80
+Date: 2026-04-13
+Surface: Profile dashboard light-mode grid surfaces on `/profile`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Extended the Aerodynamic Gallery light-mode pass into the profile dashboard’s dedicated editorial grid families, so the readiness card, hero workout card, weekly-load chart, recent-sessions list, feature cards, and metric strips now swap their hardcoded charcoal fills for layered vellum surfaces, softer ambient shadows, lighter overlay treatment, and warmer text hierarchy when `light` theme is active.
+Why: The shared shell and several other page grids had already moved into the new light-mode system, but `/profile` still looked visually broken because its own card classes were bypassing the shared light overrides and staying dark.
+Rollback target: `DV-2026-04-13-79`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/profile` returned `200`.
+
+### Version: DV-2026-04-13-79
+Date: 2026-04-13
+Surface: Shared light-mode grid/card surfaces across runner pages
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Extended the Aerodynamic Gallery light-mode pass from the shell into the main runner-facing grid systems, so analysis overview cards, today-run panels, schedule cards, runs cards, shoe inventory cards, and run-detail metric tiles now swap their hardcoded charcoal fills for layered light surfaces, softer ambient shadows, and warmer typography contrast when `light` theme is active.
+Why: The shell had already moved to the new light-mode language, but many page-local card grids were still using dark hardcoded backgrounds, which made the pages feel visually split between two themes.
+Rollback target: `DV-2026-04-13-78`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/profile`, `/analysis`, `/today-run`, `/schedule`, and `/shoes` all returned `200`.
+
+### Version: DV-2026-04-13-78
+Date: 2026-04-13
+Surface: Shared light-mode foundation across signed-in runner pages
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebased the shared `light` theme onto the new Aerodynamic Gallery light-mode direction by replacing the global light tokens with warmer smoke-toned surfaces, switching the signed-in runner shell to vellum-like glass layers, softening hard border contrast into ghost-border treatment, and upgrading shared light-mode controls and CTAs to the editorial gradient/glass language.
+Why: The user provided a new light-mode design spec and wanted Hermes light-theme pages to follow that warmer no-line editorial system instead of the older brighter SaaS-like light chrome.
+Rollback target: `DV-2026-04-13-77`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/profile`, `/analysis`, and `/settings` all returned `200`.
+
+### Version: DV-2026-04-13-77
+Date: 2026-04-13
+Surface: Settings command-center redesign on `/settings`
+Files: `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/styles/style.css`, `frontend/src/contexts/ThemeContext.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the settings page around the provided reference’s oversized editorial title, profile-led hero, three-up stat rail, and lower three-column `Preferences / Connectivity / Account Actions` structure while preserving the real Hermes save-profile flow, theme/language/unit controls, Strava and Garmin/manual import actions, digest toggle, and logout path. The same round also fixed theme persistence so the settings theme buttons now reliably keep the selected theme across reloads.
+Why: The user wanted `/settings` redesigned to match a stronger command-center reference rather than the previous darker atlas layout, and also needed the theme controls to behave like real global settings instead of looking interactive while resetting on reload.
+Rollback target: `DV-2026-04-13-76`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/settings` returned `200`.
+
+### Version: DV-2026-04-13-76
+Date: 2026-04-13
+Surface: Global theme system and signed-in light mode across Hermes
+Files: `frontend/src/contexts/ThemeContext.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Promoted `light` into a first-class global theme with its own `body.theme-light` and `data-theme="light"` hooks, then added a warmer editorial light palette for the shared Hermes shell so dashboard backgrounds, glass surfaces, cards, top navigation, controls, dropdowns, import cards, and settings modals all restyle coherently when runners switch to light mode.
+Why: The existing design system and theme branches were dark-first, so picking light in settings did not apply a deliberate all-site light language across the shared runner shell.
+Rollback target: `DV-2026-04-13-75`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080`, `/profile`, `/analysis`, `/races`, `/prediction/marathon`, and `/settings` all returned `200`.
+
+### Version: DV-2026-04-13-75
+Date: 2026-04-13
+Surface: Load-balance detail on `/analysis/load-balance`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the load-balance detail route into a dedicated editorial dashboard with a giant load-ratio hero, acute-vs-chronic trend stage, four supporting metric cards, a coach-judgment side rail, and a recent-samples evidence list, all driven from the live Hermes training-load, injury, and recent-run data instead of the old generic insight-detail template.
+Why: The user supplied a stronger KINETIC-style reference and wanted `/analysis/load-balance` redesigned to match that hierarchy without losing the shared Hermes shell, live ACWR/training-load math, or run drill-down behavior.
+Rollback target: `DV-2026-04-13-68`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/analysis/load-balance` returned `200`.
+
+### Version: DV-2026-04-13-74
+Date: 2026-04-13
+Surface: Marathon prediction detail on `/prediction/marathon`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the marathon forecast typography so the hero time, metadata values, card titles, and performance tiles no longer overpower the page, and replaced the last hardcoded short labels (`km`, `PR`) with unit-aware distance formatting and localized badge copy.
+Why: The route still felt visually top-heavy after the redesign, and a few small labels were bypassing the translation/unit system, which made the page read less polished in Chinese.
+Rollback target: `DV-2026-04-13-72`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/prediction/marathon` returned `200`.
+
+### Version: DV-2026-04-13-73
+Date: 2026-04-13
+Surface: Race discovery catalog on `/races`
+Files: `frontend/src/data/worldRaceCatalog.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Expanded the world-race catalog with additional marathon entries across the United States, Japan, China, and South Korea, removed duplicate catalog records that were surfacing the same event more than once, and collapsed Hong Kong/Taiwan out of the country-strip map so those races now live only under the China grouping.
+Why: The user wanted the races page to show more world marathons while treating Hong Kong and Taiwan as part of the China country bucket instead of separate country filters.
+Rollback target: working tree before this change
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/races` returned `200`.
+
+### Version: DV-2026-04-13-72
+Date: 2026-04-13
+Surface: Marathon prediction detail on `/prediction/marathon`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the marathon prediction route into a more cinematic forecast surface with a large hero time read, a trend-led left stage, a coach-judgment rail, secondary performance tiles, and a lower evidence layer for actual-run scatter and normalized race-history proof, while preserving the live VDOT prediction model, unit-aware pace math, chart tooltips, and run drill-down behavior.
+Why: The user supplied a stronger race-prediction reference and wanted `/prediction/marathon` redesigned to match that hierarchy without losing Hermes' real prediction logic or evidence trail.
+Rollback target: working tree before this change
+Notes: Focused ESLint passed for `PredictionDetail.jsx`, the frontend bundle synced into the Spring-served static output, and `http://localhost:8080/prediction/marathon` returned `200`.
+
+### Version: DV-2026-04-13-71
+Date: 2026-04-13
+Surface: Intensity detail on `/analysis/intensity`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the intensity detail route into an authored intensity dashboard with a large editorial hero, a dominant three-bucket distribution stage, a coach-judgment sidebar, a quieter recovery prompt, and a three-card supporting-samples lane, while keeping the page wired to Hermes' live `buildPolarized(...)` data and run drill-downs.
+Why: The user supplied a stronger intensity-dashboard reference and wanted `/analysis/intensity` redesigned to match that hierarchy without losing the real Hermes analysis shell, translations, or underlying three-way intensity truth.
+Rollback target: `DV-2026-04-13-68`
+Notes: Focused ESLint passed for `AnalysisInsightDetail.jsx`, the frontend bundle synced into the Spring-served static output, and `http://localhost:8080/analysis/intensity` returned `200`.
+
+### Version: DV-2026-04-13-70
+Date: 2026-04-13
+Surface: Coach insight detail on `/analysis/coach-insight`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Expanded the coach insight route into a wider desktop canvas and rebalanced the hero, main content, and inner performance grids so the planning dashboard uses more of the available horizontal space instead of leaving large side gutters on wide screens.
+Why: The user wanted the coach-insight page to better fill the left and right blank space without changing the route's structure or coach-data hierarchy.
+Rollback target: `DV-2026-04-13-69`
+Notes: This is a page-scoped layout expansion for `/analysis/coach-insight` only; the shared runner shell cap for other routes stays unchanged.
+
+### Version: DV-2026-04-13-69
+Date: 2026-04-13
+Surface: Coach insight detail on `/analysis/coach-insight`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the coach insight route into a stronger daily-coach dashboard with a cinematic readiness hero, a chart-led kinetic insights stage, a recent-sessions evidence lane, and a tighter blueprint side rail for the next key sessions, while toning the lower support cards so they back up the blueprint instead of competing with it.
+Why: The user supplied a stronger coach-dashboard reference and wanted the coach page redesigned without losing Hermes’ real training-planning data and runner-shell behavior.
+Rollback target: `DV-2026-04-12-47`
+Notes: Focused ESLint passed for `AnalysisInsightDetail.jsx`, the frontend bundle synced into the Spring-served static output, `http://localhost:8080/analysis/coach-insight` returned `200`, and a reviewer pass confirmed the reference structure is now mapped into Hermes while preserving the current shell and live coach data.
+
+### Version: DV-2026-04-13-68
+Date: 2026-04-13
+Surface: Analysis overview intensity card on `/analysis`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Corrected the overview intensity card so it now shows the real three-way training distribution (`easy / moderate / hard`) in both the headline ratio and segmented bar, and added a dedicated moderate-intensity label instead of collapsing the middle bucket into a misleading binary split.
+Why: The old overview card could sit at `100/0` even when recent training contained a substantial moderate bucket, which made the visible summary disagree with the underlying intensity analysis.
+Rollback target: `DV-2026-04-13-66`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/analysis` returned `200`.
+
+### Version: DV-2026-04-13-67
+Date: 2026-04-13
+Surface: VO2max detail chart on `/analysis/vo2max`
+Files: `frontend/src/pages/Vo2MaxDetail.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Simplified the VO2max chart so the main plot now presents a clean trend-line read with the existing scrubber cursor and tooltip, while the extra per-run scatter dots, trend node dots, and latest-point glow were removed from the visible graph.
+Why: The user explicitly wanted the graph to stop feeling cluttered and read as one clear line while keeping the cursor interaction.
+Rollback target: `DV-2026-04-13-53`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/analysis/vo2max` returned `200`.
+
+### Version: DV-2026-04-13-66
+Date: 2026-04-13
+Surface: Analysis overview and injury-risk localization on `/analysis` and `/analysis/injury-risk`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the remaining hardcoded English strings from the restored analysis overview and the cinematic injury-risk detail route, then routed both surfaces through shared `analysis` translation keys so the hero, coach judgment, signals, evidence rail, trend legend, and metric cards now localize cleanly in Chinese and English.
+Why: The user explicitly wanted both analysis surfaces translated instead of showing mixed localized and hardcoded English copy after the route split restore.
+Rollback target: `DV-2026-04-13-65`
+Notes: Focused ESLint passed for `Analysis.jsx` and `AnalysisInsightDetail.jsx`, the frontend bundle synced into the Spring-served static output, and both `http://localhost:8080/analysis` and `http://localhost:8080/analysis/injury-risk` returned `200`.
+
+### Version: DV-2026-04-13-65
+Date: 2026-04-13
+Surface: Analysis route split between `/analysis` and `/analysis/injury-risk`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored the original analysis overview dashboard on `/analysis` with the VO2, load, intensity, injury, and prediction-table hierarchy, and moved the newer cinematic injury-risk experience into the dedicated `/analysis/injury-risk` detail route so the dramatic risk layout now lives on the injury page instead of replacing the overview.
+Why: The user explicitly wanted the old analysis landing page back while keeping the newer injury-analysis screen available on the injury route.
+Rollback target: `DV-2026-04-13-62`
+Notes: Frontend build synced successfully into the Spring-served static output and both `http://localhost:8080/analysis` and `http://localhost:8080/analysis/injury-risk` returned `200`.
+
+### Version: DV-2026-04-13-64
+Date: 2026-04-13
+Surface: Editorial profile feature grid on `/profile`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Normalized the four-card profile feature grid so the readiness, suggested workout, training load, and recent sessions cards now stretch to matched row heights in the desktop 2x2 layout instead of free-sizing to different heights based on their content.
+Why: The user explicitly wanted the four featured profile cards to align as one balanced grid rather than reading as mismatched panels.
+Rollback target: `DV-2026-04-13-57`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080/profile` returned `200`.
+
+### Version: DV-2026-04-13-63
+Date: 2026-04-13
+Surface: Settings page on `/settings`
+Files: `frontend/src/pages/Settings.jsx`, `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the broken mixed-generation settings surface with a single atlas-style settings body rendered through a dedicated component, preserved the real account/preferences/integration handlers, and removed the stale duplicate legacy settings block that had been breaking the page structure.
+Why: The user supplied a stronger settings reference and the previous merge had left `/settings` in a broken hybrid state with overlapping layouts and dead JSX still living under the active shell.
+Rollback target: `DV-2026-04-13-60`
+Notes: Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/settings` returned `200`. `npm run lint` still fails only on the repo's pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus the existing warnings in `Races.jsx` and `Schedule.jsx`.
+
+### Version: DV-2026-04-13-62
+Date: 2026-04-13
+Surface: Analysis landing page on `/analysis`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the older VO2/load dashboard hierarchy on the analysis landing page with a cinematic injury-risk composition: a dominant risk hero driven by live injury/load signals, a coach-judgment follow-up, a supporting-samples evidence rail, a full-width drift/load trend chart, and three closing metric cards for VO2, intensity split, and marathon forecast.
+Why: The user supplied a stronger injury-analysis reference and wanted the main analysis page to read like a premium risk-and-coach surface instead of a generic stack of separate summary widgets.
+Rollback target: `DV-2026-04-13-59`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080/analysis` returned `200`. `npm run lint` still fails on the repo's pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus unrelated warnings in `Races.jsx` and `Schedule.jsx`.
+
+### Version: DV-2026-04-13-61
+Date: 2026-04-13
+Surface: Add-shoes flow under the shoes section
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/Shoes.jsx`, `frontend/src/pages/ShoeCatalog.jsx`, `frontend/src/App.jsx`, `frontend/src/styles/style.css`, `backend/src/main/java/com/hermes/backend/SpaForwardingController.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the right-hand add-shoes rail cards, let the guided brand/model/configure flow use the full main column, and moved the route to `/shoes/add` with a shoes-section breadcrumb/back path so the screen now reads as a child page of the main shoes hub instead of a detached standalone destination.
+Why: The extra side panels were diluting the setup flow, and the user explicitly wanted add-shoes to feel like part of the shoes page hierarchy rather than a separate page family.
+Rollback target: `DV-2026-04-13-60`
+Notes: Frontend bundle and backend runtime route forwarding both need to be synced before claiming the local route changed.
+
+### Version: DV-2026-04-13-60
+Date: 2026-04-13
+Surface: Settings control room on `/settings`
+Files: `frontend/src/pages/Settings.jsx`, `frontend/src/styles/style.css`, `frontend/src/components/FooterNavLinks.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the duplicate legacy settings stack that was still rendering beneath the new control-room layout, eliminated the old giant-image brief card from the live page, restored a complete `settings-command-*` visual system for the active hero/grid/territories structure, and fixed the shared footer link component to use the current I18n context import.
+Why: The settings page had regressed into a broken mixed-generation surface where an older image-backed section leaked back into the live layout and the new shell was missing its owning styles.
+Rollback target: `DV-2026-04-13-59`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080/settings` returned `200`.
+
+### Version: DV-2026-04-13-59
+Date: 2026-04-13
+Surface: Shared footer links across public, auth, legal, and runner pages
+Files: `frontend/src/components/FooterNavLinks.jsx`, `frontend/src/pages/Landing.jsx`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Signup.jsx`, `frontend/src/pages/LegalPage.jsx`, `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/Races.jsx`, `frontend/src/pages/Rewards.jsx`, `frontend/src/pages/Runs.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/Settings.jsx`, `frontend/src/pages/ShoeCatalog.jsx`, `frontend/src/pages/Shoes.jsx`, `frontend/src/pages/TodayRun.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the drifting footer variants with one shared four-link row so Hermes now shows `条款 / 隐私 / 支持 / 设置` consistently across the public landing flow, auth/legal pages, and signed-in runner surfaces instead of mixing `联系`, `Logout`, placeholder anchors, or page-specific link sets.
+Why: The old footer language had split into several inconsistent patterns, which made the product feel uneven and caused the user-visible alignment/content issue to resurface on some pages but not others.
+Rollback target: `DV-2026-04-13-58`
+Notes: Frontend build should be re-synced before claiming the live site changed.
+
+### Version: DV-2026-04-13-58
+Date: 2026-04-13
+Surface: Shared runner topbar notifications on signed-in shell pages
+Files: `frontend/src/components/TopbarNotifications.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the notification tray into a more self-contained glass panel with cleaner active-button feedback, stronger card surfaces, and a persistent seen-state so opening the tray clears the unread dot and leaves the bell as a normal utility button afterward.
+Why: The first notification rollout exposed a broken-feeling open state, and the user explicitly wanted the unread indicator removed once notifications had been checked.
+Rollback target: `DV-2026-04-13-56`
+Notes: Frontend build should be re-synced before claiming the live site changed.
+
+### Version: DV-2026-04-13-57
+Date: 2026-04-13
+Surface: Editorial profile feature grid on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a second-layer editorial feature grid beneath the core profile dashboard that turns the live readiness state, suggested workout, weekly load, and recent sessions into a more reference-driven dark bento composition with stronger hierarchy, glass depth, and direct drill-down actions.
+Why: The user wanted the profile page to pick up the stronger grid language from the supplied mock while still staying wired to real Hermes coach and activity data instead of becoming a static redesign.
+Rollback target: `DV-2026-04-13-56`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080/profile` returned `200`. `npm run lint` still fails on the pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus unrelated warnings in `Races.jsx`, `Schedule.jsx`, and `Settings.jsx`.
+
+### Version: DV-2026-04-13-56
+Date: 2026-04-13
+Surface: Shared runner topbar notifications on signed-in shell pages
+Files: `frontend/src/components/TopbarNotifications.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/Races.jsx`, `frontend/src/pages/Rewards.jsx`, `frontend/src/pages/Runs.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/Settings.jsx`, `frontend/src/pages/Shoes.jsx`, `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/TodayRun.jsx`, `frontend/src/pages/Vo2MaxDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the old bell icon that only jumped to `/runs` with a reusable glass notification popover that opens a compact Hermes message panel directly from the signed-in topbar across the main runner surfaces.
+Why: The user wanted the notification button to feel like a real in-app utility control, so the shared shell now gives runners a lightweight message tray instead of a dead-looking redirect icon.
+Rollback target: `DV-2026-04-13-55`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080` returned `200`. `npm run lint` still fails only on the pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus unrelated warnings in `Races.jsx` and `Schedule.jsx`.
+
+### Version: DV-2026-04-13-55
+Date: 2026-04-13
+Surface: Foldable shoe performance correlation module on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a header-side collapse toggle to the redesigned `跑鞋表现相关性` block so runners can fold the full editorial insight grid down to its summary header and expand it again without losing the featured shoe state, pills, or live data-driven recommendation logic.
+Why: The redesigned card is intentionally high-signal, but the user wanted control over page density so the whole module can step out of the way when they are focusing on the inventory grid below it.
+Rollback target: `DV-2026-04-13-54`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080/shoes` returned `200`.
+
+### Version: DV-2026-04-13-54
+Date: 2026-04-13
+Surface: Shoe performance correlation redesign on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the `跑鞋表现相关性` grid into a cinematic editorial insight card with a featured shoe highlight, a glass metric rail, compact mileage/run-count meta tiles, and a source footer that can pivot between Hermes rotation analysis and the live `r/RunningShoeGeeks` recommendation fallback while preserving the real insight, recommendation, and empty-state logic.
+Why: The previous grid read like a dense utility block, but the user supplied a much stronger reference that should make the shoe signal feel premium, coach-like, and immediately readable without changing the underlying Hermes data contract.
+Rollback target: `working tree before this change`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080/shoes` returned `200`. `npm run lint` still fails only on the pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus unrelated warnings in `Races.jsx` and `Schedule.jsx`.
+
+### Version: DV-2026-04-13-53
+Date: 2026-04-13
+Surface: VO2max detail refinement on `/analysis/vo2max`
+Files: `frontend/src/pages/Vo2MaxDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the reference-driven VO2 detail redesign with stronger editorial metadata above the hero, a cleaner chart legend/read strip, richer ambient depth around the glass dashboard, a stable range-floor threshold instead of a scale-dependent pseudo-threshold, a peak metric tied back to the real sample max, and an explicit accessible chart summary for screen readers.
+Why: The first redesign already matched the supplied kinetic reference structurally, but the follow-up pass needed to make the page more truthful, more readable, and more durable without backing away from the chart-first premium composition.
+Rollback target: `DV-2026-04-13-52`
+Notes: Frontend build synced successfully into the Spring-served static output and `http://localhost:8080/analysis/vo2max` returned `200`. `npm run lint` still fails only on the pre-existing duplicate-key errors in `frontend/src/i18n/translations.js` plus unrelated warnings in `Races.jsx` and `Schedule.jsx`.
+
 ### Version: DV-2026-04-13-52
 Date: 2026-04-13
 Surface: VO2max detail redesign on `/analysis/vo2max`

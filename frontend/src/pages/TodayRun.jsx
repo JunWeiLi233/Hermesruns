@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
@@ -136,6 +138,46 @@ function formatPlannedDuration(minutes) {
   return `${mins}:00`;
 }
 
+function formatSegmentDuration(minutes, t) {
+  if (!Number.isFinite(minutes) || minutes <= 0) return t('today_run.stitch_duration_unknown');
+  return t('today_run.stitch_minutes_short', { minutes: Math.max(1, Math.round(minutes)) });
+}
+
+function buildWorkoutBlueprint(plan, plannedDurationMinutes, t) {
+  if (!Array.isArray(plan) || plan.length === 0) return [];
+
+  const ratiosByLength = {
+    3: [0.22, 0.58, 0.2],
+    4: [0.18, 0.42, 0.22, 0.18],
+  };
+  const labelsByLength = {
+    3: [
+      t('today_run.stitch_blueprint_warmup'),
+      t('today_run.stitch_blueprint_main'),
+      t('today_run.stitch_blueprint_finish'),
+    ],
+    4: [
+      t('today_run.stitch_blueprint_warmup'),
+      t('today_run.stitch_blueprint_main'),
+      t('today_run.stitch_blueprint_extension'),
+      t('today_run.stitch_blueprint_cooldown'),
+    ],
+  };
+
+  const totalMinutes = Number.isFinite(plannedDurationMinutes) && plannedDurationMinutes > 0
+    ? plannedDurationMinutes
+    : plan.length === 4 ? 40 : 32;
+  const ratios = ratiosByLength[plan.length] || Array.from({ length: plan.length }, () => 1 / plan.length);
+  const labels = labelsByLength[plan.length] || plan.map((_, index) => t('today_run.plan_step_generic', { index: index + 1 }));
+
+  return plan.map((step, index) => ({
+    ...step,
+    phase: labels[index] || t('today_run.plan_step_generic', { index: index + 1 }),
+    duration: formatSegmentDuration(totalMinutes * (ratios[index] || 1 / plan.length), t),
+    isAccent: index === 1 || (plan.length === 4 && index === 2),
+  }));
+}
+
 function getDisplayName(profile, fallback) {
   const raw = profile?.displayName?.trim()
     || profile?.email?.split('@')[0]
@@ -195,9 +237,10 @@ function buildConfidenceModel(metrics, toneKey, hasCoachSession) {
 }
 
 export default function TodayRun() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -307,38 +350,53 @@ export default function TodayRun() {
       Number(shoeRecommendation.shoe.maxDistanceKm || 0) - Number(shoeRecommendation.shoe.currentDistanceKm || 0),
     )
     : 0;
+  const heroLocation = marathonPlan.race?.location || marathonPlan.race?.city || t('today_run.stitch_route_fallback');
+  const readinessBattery = Math.max(
+    48,
+    Math.min(
+      98,
+      Math.round(confidence.score + (metrics.recoveryHours > 0 ? Math.max(-16, -metrics.recoveryHours / 2) : 6)),
+    ),
+  );
+  const blueprintSteps = useMemo(
+    () => buildWorkoutBlueprint(plan, coachPayload?.today?.plannedDurationMinutes, t),
+    [plan, coachPayload, t],
+  );
+  const heroImageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuALWfYinsgU1vEz5BwYWn1TDBuWXpQ7Fyt4jEXI-PHej1hQINxAVphQAFEullM64fz8BRJ0vzC9L7_nWCQNAKMaCRaDvBu9MgbTyqyWIp76Die0LEA3bDryIjtV6KfvDTTuY8SKnTS7ffXWD0WCbHGqBiiAeOU7rifxUpYgvms42ChKsIwo3UHjsYLD5-uFxp0xZZzXYsl1CmkEwQFXiqpluTdE5W2ZUgNMBC20DvRxlDX-SnipIE1pE0J3DKs5P3nB2gOBrcQd0hq-';
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-    { key: 'today-run', label: t('profile.dashboard_nav_today_run'), route: '/today-run', icon: 'directions_run', active: true },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-  ];
+  ].map((item) => ({
+    ...item,
+    active: location.pathname === item.route || location.pathname.startsWith(`${item.route}/`),
+  }));
 
   if (loadState === 'loading') {
     return (
-      <div className="analysis-stitch-page analysis-stitch-page--loading">
-        <div className="analysis-stitch-loading">{t('runs.loading')}</div>
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">{t('runs.loading')}</div>
       </div>
     );
   }
 
   if (loadState === 'error') {
     return (
-      <div className="analysis-stitch-page analysis-stitch-page--loading">
-        <div className="analysis-stitch-loading">{t('runs.load_error')}</div>
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">{t('runs.load_error')}</div>
       </div>
     );
   }
 
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page today-run-stitch-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+    <div className={`runner-shell-page runner-dashboard-page today-run-plan-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('today_run.stitch_sidebar_tagline')}</span>
@@ -354,12 +412,12 @@ export default function TodayRun() {
           </button>
         </div>
 
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
-              className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -368,223 +426,161 @@ export default function TodayRun() {
           ))}
         </nav>
 
-        <div className="analysis-stitch-sidebar-footer">
-          <button type="button" className="analysis-stitch-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/schedule')}>
-            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+        <div className="runner-shell-sidebar-footer">
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/schedule')}>
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&lt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('today_run.stitch_action_schedule')}</span>
           </button>
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_today_run')}</span>
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('today_run.stitch_shell_title')}</span>
             </div>
           </div>
 
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="analysis-stitch-avatar" aria-label={displayName} onClick={() => navigate('/profile')}>
+              <button type="button" className="runner-shell-avatar" aria-label={displayName} onClick={() => navigate('/profile')}>
                 {initials}
               </button>
             </div>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas today-run-stitch-canvas">
+        <div className="runner-shell-canvas today-run-stitch-canvas">
           <section className="today-run-stitch-hero">
+            <div
+              className="today-run-stitch-hero-media"
+              style={{ backgroundImage: `url(${heroImageUrl})` }}
+              aria-hidden="true"
+            />
+
             <div className="today-run-stitch-hero-copy">
-              <span className="today-run-stitch-kicker">{marathonPlan.phaseLabel}</span>
-              <h1>{marathonPlan.race?.name || t('today_run.marathon_default_title')}</h1>
+              <span className="today-run-stitch-focus-tag">{t('today_run.stitch_focus_label')}</span>
+              <h1>
+                {marathonPlan.focusTitle}
+                <span>{coachSessionTitle}</span>
+              </h1>
               <p>{marathonPlan.focusCopy}</p>
 
-              <div className="today-run-stitch-badges">
-                <span className={`analysis-recommend-pill tone-${tone.key}`}>{recommendation.type}</span>
-                <span className="today-run-marathon-pill">{marathonPlan.countdown}</span>
-                <span className={`today-run-confidence-badge today-run-confidence-badge--${confidence.tone}`}>
-                  {t('today_run.stitch_confidence')} {confidence.score}%
-                </span>
-              </div>
-
-              <div className="today-run-stitch-hero-metrics">
+              <div className="today-run-stitch-meta-row">
                 <article>
-                  <span>{t('today_run.marathon_countdown_label')}</span>
-                  <strong>{marathonPlan.countdown}</strong>
+                  <span>{t('today_run.stitch_route_label')}</span>
+                  <strong>{heroLocation}</strong>
                 </article>
                 <article>
-                  <span>{t('today_run.marathon_long_run_progress')}</span>
-                  <strong>{`${marathonPlan.longRunProgress}%`}</strong>
-                </article>
-                <article>
-                  <span>{t('today_run.marathon_long_run_target')}</span>
-                  <strong>{formatDistance(marathonPlan.longRunTargetKm, 0, lang, unit)}</strong>
-                </article>
-                <article>
-                  <span>{t('today_run.coach_session')}</span>
-                  <strong>{coachSessionTitle}</strong>
+                  <span>{t('today_run.stitch_intensity_label')}</span>
+                  <strong>{recommendation.type}</strong>
                 </article>
               </div>
+            </div>
+          </section>
 
-              {showWeatherStrip && (
-                <div className={`today-run-stitch-weather${hasHeatPenalty ? ' is-penalty' : ''}`}>
-                  <div className="today-run-stitch-weather-copy">
-                    <span>{t('today_run.acclimatization_title')}</span>
-                    <strong>
-                      {hasHeatPenalty
-                        ? t('today_run.acclimatization_penalty', { n: weatherContext.pacePenaltySecPerKm })
-                        : t('today_run.acclimatization_clear')}
-                    </strong>
-                    <p>
-                      {hasHeatPenalty
-                        ? t('today_run.acclimatization_reason', { n: weatherContext.pacePenaltySecPerKm })
-                        : t('today_run.stitch_weather_none')}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="today-run-stitch-weather-dismiss"
-                    aria-label={t('profile.close')}
-                    onClick={() => {
-                      const today = new Date().toISOString().slice(0, 10);
-                      window.localStorage.setItem(`hermes_heat_strip_dismissed_${today}`, '1');
-                      setHeatDismissed(true);
-                    }}
-                  >
-                    <AppIcon name="close" className="runner-dashboard-side-link-icon" />
-                  </button>
-                </div>
-              )}
+          <section className="today-run-stitch-band">
+            <div className="today-run-stitch-metrics">
+              <article className="today-run-stitch-metric-card">
+                <span>{t('profile.today_run_distance')}</span>
+                <strong>{coachDistance}</strong>
+              </article>
+              <article className="today-run-stitch-metric-card">
+                <span>{t('today_run.stitch_target_pace')}</span>
+                <strong>{recommendation.pace}</strong>
+              </article>
+              <article className="today-run-stitch-metric-card">
+                <span>{t('today_run.stitch_est_time')}</span>
+                <strong>{coachDuration}</strong>
+              </article>
             </div>
 
-            <aside className="today-run-stitch-hero-panel">
-              <div className="today-run-stitch-panel-copy">
-                <span>{t('today_run.marathon_focus_title')}</span>
-                <h2>{marathonPlan.focusTitle}</h2>
-                <p>{marathonPlan.coachNote}</p>
-              </div>
-
-              <div className="today-run-stitch-panel-grid">
-                <article>
-                  <span>{t('profile.today_run_distance')}</span>
-                  <strong>{coachDistance}</strong>
-                </article>
-                <article>
-                  <span>{t('profile.dashboard_total_duration')}</span>
-                  <strong>{coachDuration}</strong>
-                </article>
-                <article>
-                  <span>{t('today_run.marathon_longest_run')}</span>
-                  <strong>{formatDistance(marathonPlan.longestRunKm, 0, lang, unit)}</strong>
-                </article>
-                <article>
-                  <span>{t('today_run.stitch_recovery_window')}</span>
+            <aside className="today-run-stitch-readiness-card">
+              <span className="today-run-stitch-card-kicker">{t('today_run.stitch_readiness_status')}</span>
+              <div className="today-run-stitch-readiness-grid">
+                <div>
                   <strong>
                     {metrics.recoveryHours > 0
                       ? t('today_run.metric_recovery_hours', { hours: metrics.recoveryHours })
                       : t('analysis.fully_recovered')}
                   </strong>
-                </article>
+                  <span>{t('today_run.stitch_recovery_hour')}</span>
+                </div>
+                <div>
+                  <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
+                  <span>{t('today_run.metric_vo2max')}</span>
+                </div>
               </div>
-
-              {coachPayload?.today?.readinessAdjusted && (
-                <div className="today-run-signal-explainer today-run-signal-explainer--warning">
-                  <span className="today-run-signal-explainer__label">{t('today_run.coach_readiness')}</span>
-                  <p>{t('today_run.coach_recovery_hint')}</p>
-                </div>
-              )}
-
-              {shoeRecommendation ? (
-                <div className={`today-run-shoe-brief${shoeRecommendation.type === 'insight' ? ' is-positive' : ''}`}>
-                  <div className="today-run-shoe-brief-copy">
-                    <span>{t('today_run.shoe_title')}</span>
-                    <h3>{recommendedShoeName}</h3>
-                    <p>
-                      {shoeRecommendation.type === 'insight'
-                        ? t('today_run.shoe_insight_summary', {
-                          bpm: Math.abs(shoeRecommendation.insight.deltaHr).toFixed(1),
-                          runCount: shoeRecommendation.runCount,
-                        })
-                        : shoeRecommendation.type === 'rotation'
-                          ? t('today_run.shoe_rotation_summary', { count: shoeRecommendation.runCount })
-                          : t('today_run.shoe_primary_summary')}
-                    </p>
-                  </div>
-                  <div className="today-run-shoe-brief-meta">
-                    <span>{t('today_run.shoe_current_mileage', { distance: formatDistance(Number(shoeRecommendation.shoe.currentDistanceKm || 0), 0, lang, unit) })}</span>
-                    <span>{t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })}</span>
-                    <button
-                      type="button"
-                      className="today-run-shoe-brief-action"
-                      onClick={() => navigate('/shoes')}
-                    >
-                      {t('today_run.shoe_open_locker')}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="today-run-shoe-brief is-empty">
-                  <div className="today-run-shoe-brief-copy">
-                    <span>{t('today_run.shoe_title')}</span>
-                    <h3>{t('today_run.shoe_empty_title')}</h3>
-                    <p>{t('today_run.shoe_empty_copy')}</p>
-                  </div>
-                  <div className="today-run-shoe-brief-meta">
-                    <button
-                      type="button"
-                      className="today-run-shoe-brief-action"
-                      onClick={() => navigate('/shoes')}
-                    >
-                      {t('today_run.shoe_empty_cta')}
-                    </button>
-                  </div>
-                </div>
-              )}
+              <div className="today-run-stitch-readiness-pill">
+                <span>{t('today_run.stitch_body_battery')}</span>
+                <strong>{`${readinessBattery}%`}</strong>
+              </div>
             </aside>
           </section>
 
+          {showWeatherStrip && (
+            <section className={`today-run-stitch-weather${hasHeatPenalty ? ' is-penalty' : ''}`}>
+              <div className="today-run-stitch-weather-copy">
+                <span>{t('today_run.acclimatization_title')}</span>
+                <strong>
+                  {hasHeatPenalty
+                    ? t('today_run.acclimatization_penalty', { n: weatherContext.pacePenaltySecPerKm })
+                    : t('today_run.acclimatization_clear')}
+                </strong>
+                <p>
+                  {hasHeatPenalty
+                    ? t('today_run.acclimatization_reason', { n: weatherContext.pacePenaltySecPerKm })
+                    : t('today_run.stitch_weather_none')}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="today-run-stitch-weather-dismiss"
+                aria-label={t('profile.close')}
+                onClick={() => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  window.localStorage.setItem(`hermes_heat_strip_dismissed_${today}`, '1');
+                  setHeatDismissed(true);
+                }}
+              >
+                <AppIcon name="close" className="runner-dashboard-side-link-icon" />
+              </button>
+            </section>
+          )}
+
           <section className="today-run-stitch-grid">
             <div className="today-run-stitch-left">
-              <article className="today-run-stitch-card">
+              <article className="today-run-stitch-card today-run-stitch-card--blueprint">
                 <div className="today-run-stitch-card-head">
                   <div>
                     <span>{t('today_run.plan_title')}</span>
-                    <h2>{t('today_run.marathon_plan_title')}</h2>
+                    <h2>{t('today_run.stitch_workout_blueprint')}</h2>
                   </div>
                   <p>{t('today_run.marathon_plan_copy', { race: marathonPlan.race?.name || t('today_run.marathon_goal_generic') })}</p>
                 </div>
 
-                <div className="today-run-stitch-step-list">
-                  {plan.map((step) => (
-                    <article key={step.label} className="today-run-stitch-step-card">
-                      <span>{step.label}</span>
-                      <p>{step.value}</p>
-                    </article>
-                  ))}
-                </div>
-              </article>
-
-              <article className="today-run-stitch-card">
-                <div className="today-run-stitch-card-head">
-                  <div>
-                    <span>{t('today_run.reasons_title')}</span>
-                    <h2>{marathonPlan.focusTitle}</h2>
-                  </div>
-                  <p>{recommendation.purpose}</p>
-                </div>
-
-                <div className="today-run-stitch-reason-list">
-                  {reasons.map((reason, index) => (
-                    <article key={`${reason}-${index}`} className="today-run-stitch-reason-card">
-                      <strong>{String(index + 1).padStart(2, '0')}</strong>
-                      <p>{reason}</p>
+                <div className="today-run-stitch-timeline">
+                  {blueprintSteps.map((step, index) => (
+                    <article
+                      key={`${step.phase}-${index}`}
+                      className={`today-run-stitch-step${step.isAccent ? ' is-accent' : ''}`}
+                    >
+                      <div className="today-run-stitch-step-rail" aria-hidden="true">
+                        <span className="today-run-stitch-step-dot" />
+                      </div>
+                      <div className="today-run-stitch-step-body">
+                        <div className="today-run-stitch-step-head">
+                          <span>{step.phase}</span>
+                          <strong>{step.duration}</strong>
+                        </div>
+                        <h3>{step.label}</h3>
+                        <p>{step.value}</p>
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -592,19 +588,46 @@ export default function TodayRun() {
             </div>
 
             <aside className="today-run-stitch-right">
-              <article className="today-run-stitch-card">
+              <article className="today-run-stitch-card today-run-stitch-card--coach">
                 <div className="today-run-stitch-card-head">
                   <div>
-                    <span>{t('today_run.marathon_progress_title')}</span>
-                    <h2>{marathonPlan.race?.name || t('today_run.marathon_goal_generic')}</h2>
+                    <span>{t('today_run.coach_title')}</span>
+                    <h2>{t('today_run.stitch_automated_coach')}</h2>
                   </div>
-                  <p>{t('today_run.marathon_progress_copy')}</p>
+                  <p>{t('today_run.stitch_logic_engine')}</p>
                 </div>
 
-                <div className="today-run-stitch-signal-grid">
+                <div className="today-run-stitch-why">
+                  <span>{t('today_run.stitch_why_label')}</span>
+                  <p>{recommendation.purpose}</p>
+                </div>
+
+                <div className="today-run-stitch-note">
+                  <span>{t('today_run.stitch_coach_note_label')}</span>
+                  <p>{marathonPlan.coachNote}</p>
+                </div>
+
+                <div className="today-run-stitch-reason-list">
+                  {reasons.slice(0, 3).map((reason, index) => (
+                    <article key={`${reason}-${index}`} className="today-run-stitch-reason">
+                      <strong>{String(index + 1).padStart(2, '0')}</strong>
+                      <p>{reason}</p>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="today-run-stitch-support-grid">
                   <article>
-                    <span>{t('today_run.metric_vo2max')}</span>
-                    <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
+                    <span>{t('today_run.coach_polarization')}</span>
+                    <strong>
+                      {coachPayload?.state?.highIntensityRatioLast7d != null
+                        ? `${(coachPayload.state.highIntensityRatioLast7d * 100).toFixed(0)}%`
+                        : '--'}
+                    </strong>
+                  </article>
+                  <article>
+                    <span>{t('today_run.coach_grey_zone')}</span>
+                    <strong>{coachPayload?.state?.minutesGreyZ3Last7d ?? '--'}</strong>
                   </article>
                   <article>
                     <span>{t('today_run.metric_acwr')}</span>
@@ -614,74 +637,84 @@ export default function TodayRun() {
                     <span>{t('today_run.stitch_load_7d')}</span>
                     <strong>{formatDistance(metrics.recent7Km || 0, 1, lang, unit)}</strong>
                   </article>
-                  <article>
-                    <span>{t('today_run.marathon_countdown_label')}</span>
-                    <strong>{marathonPlan.countdown}</strong>
-                  </article>
                 </div>
 
-                {marathonPlan.race ? (
-                  <div className="today-run-signal-explainer today-run-signal-explainer--ready">
-                    <span className="today-run-signal-explainer__label">{t('today_run.marathon_target_locked')}</span>
-                    <p>{t('today_run.marathon_target_locked_copy', { race: marathonPlan.race.name })}</p>
+                {coachPayload?.today?.readinessAdjusted && (
+                  <div className="today-run-stitch-alert">
+                    <span>{t('today_run.coach_readiness')}</span>
+                    <p>{t('today_run.coach_recovery_hint')}</p>
                   </div>
-                ) : (
-                  <div className="today-run-signal-explainer today-run-signal-explainer--warning">
-                    <span className="today-run-signal-explainer__label">{t('today_run.marathon_pick_race_title')}</span>
-                    <p>{t('today_run.marathon_pick_race_copy')}</p>
-                    <div className="today-run-marathon-cta-row">
+                )}
+
+                {shoeRecommendation ? (
+                  <div className={`today-run-shoe-brief${shoeRecommendation.type === 'insight' ? ' is-positive' : ''}`}>
+                    <div className="today-run-shoe-brief-copy">
+                      <span>{t('today_run.shoe_title')}</span>
+                      <h3>{recommendedShoeName}</h3>
+                      <p>
+                        {shoeRecommendation.type === 'insight'
+                          ? t('today_run.shoe_insight_summary', {
+                            bpm: Math.abs(shoeRecommendation.insight.deltaHr).toFixed(1),
+                            runCount: shoeRecommendation.runCount,
+                          })
+                          : shoeRecommendation.type === 'rotation'
+                            ? t('today_run.shoe_rotation_summary', { count: shoeRecommendation.runCount })
+                            : t('today_run.shoe_primary_summary')}
+                      </p>
+                    </div>
+                    <div className="today-run-shoe-brief-meta">
+                      <span>{t('today_run.shoe_current_mileage', { distance: formatDistance(Number(shoeRecommendation.shoe.currentDistanceKm || 0), 0, lang, unit) })}</span>
+                      <span>{t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })}</span>
                       <button
                         type="button"
-                        className="race-center-primary-btn today-run-marathon-cta-btn"
-                        onClick={() => navigate('/races')}
+                        className="today-run-shoe-brief-action"
+                        onClick={() => navigate('/shoes')}
                       >
-                        {t('today_run.marathon_pick_race_cta')}
+                        {t('today_run.shoe_open_locker')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="today-run-shoe-brief is-empty">
+                    <div className="today-run-shoe-brief-copy">
+                      <span>{t('today_run.shoe_title')}</span>
+                      <h3>{t('today_run.shoe_empty_title')}</h3>
+                      <p>{t('today_run.shoe_empty_copy')}</p>
+                    </div>
+                    <div className="today-run-shoe-brief-meta">
+                      <button
+                        type="button"
+                        className="today-run-shoe-brief-action"
+                        onClick={() => navigate('/shoes')}
+                      >
+                        {t('today_run.shoe_empty_cta')}
                       </button>
                     </div>
                   </div>
                 )}
-              </article>
 
-              <article className="today-run-stitch-card today-run-stitch-card--coach">
-                <div className="today-run-stitch-card-head">
-                  <div>
-                    <span>{t('today_run.coach_title')}</span>
-                    <h2>{t('today_run.marathon_focus_title')}</h2>
-                  </div>
-                  <p>{marathonPlan.coachNote}</p>
-                </div>
-
-                <div className="today-run-stitch-coach-lines">
-                  <div className="today-run-stitch-coach-line">
-                    <span>{t('today_run.coach_polarization')}</span>
-                    <strong>
-                      {coachPayload?.state?.highIntensityRatioLast7d != null
-                        ? `${(coachPayload.state.highIntensityRatioLast7d * 100).toFixed(0)}%`
-                        : '--'}
-                    </strong>
-                  </div>
-                  <div className="today-run-stitch-coach-line">
-                    <span>{t('today_run.coach_grey_zone')}</span>
-                    <strong>{coachPayload?.state?.minutesGreyZ3Last7d ?? '--'}</strong>
-                  </div>
-                  <div className="today-run-stitch-coach-line">
-                    <span>{t('today_run.stitch_recovery_window')}</span>
-                    <strong>
-                      {metrics.recoveryHours > 0
-                        ? t('today_run.metric_recovery_hours', { hours: metrics.recoveryHours })
-                        : t('analysis.fully_recovered')}
-                    </strong>
-                  </div>
+                <div className="today-run-stitch-action-row">
+                  <button
+                    type="button"
+                    className="today-run-stitch-primary-btn"
+                    onClick={() => navigate('/schedule')}
+                  >
+                    {t('today_run.stitch_sync_watch')}
+                  </button>
+                  <button
+                    type="button"
+                    className="today-run-stitch-secondary-btn"
+                    onClick={() => navigate(marathonPlan.race ? '/races' : '/schedule')}
+                  >
+                    {marathonPlan.race ? t('today_run.stitch_manage_block') : t('today_run.stitch_action_schedule')}
+                  </button>
                 </div>
               </article>
             </aside>
           </section>
 
-          <footer className="analysis-stitch-footer runner-dashboard-footer">
-            <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-            <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-            <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-            <button type="button" onClick={logout}>{t('profile.logout')}</button>
+          <footer className="runner-shell-footer runner-dashboard-footer">
+            <FooterNavLinks />
           </footer>
         </div>
       </main>

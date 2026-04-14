@@ -5,6 +5,8 @@ import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
+import SettingsAtlasLayout from '../components/SettingsAtlasLayout';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -96,9 +98,6 @@ export default function Settings() {
 
   const displayNameResolved = resolveDisplayName(profile, t('profile.default_name'));
   const initials = displayNameResolved.slice(0, 1).toUpperCase();
-  const accountIdentityCopy = profile?.email
-    ? `${profile.email}${stravaStatus?.linked ? ` • ${t('settings.stitch_strava_active')}` : ` • ${t('settings.strava_not_connected')}`}`
-    : t('settings.stitch_identity_fallback');
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
@@ -113,14 +112,20 @@ export default function Settings() {
   const themeCards = useMemo(() => ([
     { value: 'midnight', label: t('settings.stitch_theme_pulse'), icon: 'dark_mode' },
     { value: 'light', label: t('settings.stitch_theme_glitter'), icon: 'light_mode' },
-    { value: 'high-contrast', label: t('settings.stitch_theme_stealth'), icon: 'contrast' },
-    { value: 'high-contrast-light', label: t('settings.stitch_theme_clear'), icon: 'brightness_7' },
   ]), [t]);
   const activeThemeLabel = themeCards.find((card) => card.value === theme)?.label || '';
-  const languageLabel = lang === 'zh-CN' ? '中文' : 'English (US)';
-  const unitLabel = unit === 'km' ? 'METRIC' : 'IMP';
+  const languageLabel = lang === 'zh-CN' ? '\u4e2d\u6587' : 'English (US)';
   const stravaLabel = stravaStatus?.linked ? t('settings.stitch_strava_active') : t('settings.strava_not_connected');
   const digestLabel = digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest');
+  const resolvedLanguageLabel = languageLabel;
+  const completionScore = Math.round(([
+    displayName.trim(),
+    mantra.trim(),
+    stravaStatus?.linked,
+    digestEnabled,
+  ].filter(Boolean).length / 4) * 100);
+  const ecosystemCount = [stravaStatus?.linked, true, true].filter(Boolean).length;
+  const heroBadge = stravaStatus?.linked ? t('settings.stitch_live_sync_badge') : t('settings.stitch_local_mode_badge');
 
   async function saveProfile(event) {
     event.preventDefault();
@@ -307,18 +312,91 @@ export default function Settings() {
     }
   }
 
+  function cycleTheme() {
+    const currentIndex = themeCards.findIndex((card) => card.value === theme);
+    const nextCard = themeCards[(currentIndex + 1 + themeCards.length) % themeCards.length];
+    setTheme(nextCard?.value || themeCards[0]?.value || theme);
+  }
+
+  function toggleUnitPreference() {
+    setUnit(unit === 'km' ? 'mile' : 'km');
+  }
+
+  function toggleLanguagePreference() {
+    setLang(lang === 'zh-CN' ? 'en' : 'zh-CN');
+  }
+
+  const quickControls = [
+    {
+      key: 'theme',
+      icon: 'dark_mode',
+      label: t('settings.stitch_quick_cycle_theme'),
+      value: activeThemeLabel,
+      action: cycleTheme,
+    },
+    {
+      key: 'unit',
+      icon: 'straighten',
+      label: t('settings.stitch_quick_toggle_units'),
+      value: unit === 'km' ? t('settings.stitch_metric_label') : t('settings.stitch_imperial_label'),
+      action: toggleUnitPreference,
+    },
+    {
+      key: 'language',
+      icon: 'translate',
+      label: t('settings.stitch_quick_toggle_language'),
+      value: resolvedLanguageLabel,
+      action: toggleLanguagePreference,
+    },
+    {
+      key: 'digest',
+      icon: 'newsmode',
+      label: t('settings.stitch_quick_toggle_digest'),
+      value: digestEnabled ? t('settings.stitch_enabled') : t('settings.stitch_review'),
+      action: toggleDigest,
+    },
+  ];
+
+  const syncHealthItems = [
+    {
+      key: 'strava',
+      label: 'Strava',
+      value: stravaLinking ? t('profile.strava_link_connecting') : stravaLabel,
+      tone: stravaStatus?.linked ? 'live' : 'review',
+    },
+    {
+      key: 'garmin',
+      label: 'Garmin Connect',
+      value: garminImporting ? t('profile.garmin_connect_importing') : (garminStatus || t('settings.stitch_garmin_ready')),
+      tone: garminImporting ? 'active' : (garminStatus ? garminStatusType || 'info' : 'ready'),
+    },
+    {
+      key: 'manual',
+      label: t('profile.watch_import_files'),
+      value: importStatus || t('settings.stitch_manual_import_ready'),
+      tone: importStatus ? 'active' : 'ready',
+    },
+  ];
+
+  const setupChecklist = [
+    { key: 'name', label: t('settings.stitch_check_display_name'), done: Boolean(displayName.trim()) },
+    { key: 'identity', label: t('settings.stitch_check_identity_note'), done: Boolean(mantra.trim()) },
+    { key: 'strava', label: t('settings.stitch_check_strava'), done: Boolean(stravaStatus?.linked) },
+    { key: 'digest', label: t('settings.stitch_check_digest'), done: Boolean(digestEnabled) },
+  ];
+
   if (loadState === 'loading') {
-    return <div className="analysis-stitch-page analysis-stitch-page--loading"><div className="analysis-stitch-loading">{t('settings.stitch_loading')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('settings.stitch_loading')}</div></div>;
   }
 
   if (loadState === 'error') {
-    return <div className="analysis-stitch-page analysis-stitch-page--loading"><div className="analysis-stitch-loading">{t('settings.stitch_load_error')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('settings.stitch_load_error')}</div></div>;
   }
 
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page settings-stitch-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+    <div className={`runner-shell-page runner-dashboard-page settings-control-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('analysis.stitch_brand_subtitle')}</span>
@@ -336,12 +414,12 @@ export default function Settings() {
           </button>
         </div>
 
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
-              className="analysis-stitch-side-link"
+              className="runner-shell-side-link"
               onClick={() => navigate(item.route)}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -350,10 +428,10 @@ export default function Settings() {
           ))}
         </nav>
 
-        <div className="analysis-stitch-sidebar-footer">
+        <div className="runner-shell-sidebar-footer">
           <button
             type="button"
-            className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
@@ -363,240 +441,66 @@ export default function Settings() {
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar settings-stitch-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('settings.heading')}</span>
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar settings-control-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('settings.heading')}</span>
             </div>
           </div>
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn is-active" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn is-active" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={displayNameResolved}>
+              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayNameResolved}>
                 {initials}
               </button>
             </div>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas settings-stitch-canvas">
-          <section className="settings-stitch-hero">
-            <div className="settings-stitch-hero-copy">
-              <span className="analysis-stitch-card-kicker">{t('settings.heading')}</span>
-              <h1>{displayNameResolved}</h1>
-              <p>{accountIdentityCopy}</p>
-              <div className="settings-stitch-hero-pills">
-                <span className="settings-stitch-hero-pill">{activeThemeLabel}</span>
-                <span className="settings-stitch-hero-pill">{languageLabel}</span>
-                <span className="settings-stitch-hero-pill">{unitLabel}</span>
-              </div>
-            </div>
-            <div className="settings-stitch-hero-status">
-              <article className="settings-stitch-status-card">
-                <span className="analysis-stitch-card-kicker">{t('settings.stitch_data_ecosystem')}</span>
-                <strong>{stravaLabel}</strong>
-                <p>{profile?.email || t('settings.stitch_identity_fallback')}</p>
-              </article>
-              <article className="settings-stitch-status-card">
-                <span className="analysis-stitch-card-kicker">{t('settings.stitch_weekly_brief')}</span>
-                <strong>{digestLabel}</strong>
-                <p>{t('settings.stitch_weekly_brief_copy')}</p>
-              </article>
-            </div>
-          </section>
+        <SettingsAtlasLayout
+          t={t}
+          navigate={navigate}
+          initials={initials}
+          displayNameResolved={displayNameResolved}
+          mantra={mantra}
+          activeThemeLabel={activeThemeLabel}
+          resolvedLanguageLabel={resolvedLanguageLabel}
+          resolvedUnitLabel={unit === 'km' ? t('settings.stitch_metric_label') : t('settings.stitch_imperial_label')}
+          heroBadge={heroBadge}
+          completionScore={completionScore}
+          ecosystemCount={ecosystemCount}
+          digestLabel={digestLabel}
+          digestEnabled={digestEnabled}
+          stravaStatus={stravaStatus}
+          stravaLabel={stravaLabel}
+          stravaLinking={stravaLinking}
+          connectStrava={connectStrava}
+          disconnectStrava={disconnectStrava}
+          setActiveModal={setActiveModal}
+          toggleDigest={toggleDigest}
+          logout={logout}
+          saveProfile={saveProfile}
+          nameSaving={nameSaving}
+          nameMsg={nameMsg}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          setMantra={setMantra}
+          themeCards={themeCards}
+          theme={theme}
+          setTheme={setTheme}
+          unit={unit}
+          setUnit={setUnit}
+          lang={lang}
+          setLang={setLang}
+          quickControls={quickControls}
+          syncHealthItems={syncHealthItems}
+          setupChecklist={setupChecklist}
+        />
 
-          <div className="settings-stitch-grid">
-            <section className="settings-stitch-maincol">
-              <article className="settings-stitch-card settings-stitch-card--account">
-                <h2>{t('settings.stitch_account_info')}</h2>
-                <form className="settings-stitch-account-grid" onSubmit={saveProfile}>
-                  <div className="settings-stitch-avatar-shell">
-                    <div className="settings-stitch-profile-avatar">{initials}</div>
-                    <button type="submit" className="settings-stitch-avatar-edit" aria-label={t('settings.save')} disabled={nameSaving}>
-                      <AppIcon name="edit" className="runner-dashboard-side-link-icon" />
-                    </button>
-                  </div>
-
-                  <div className="settings-stitch-account-fields">
-                    <label className="settings-stitch-label" htmlFor="settings-display-name">{t('settings.display_name_title')}</label>
-                    <input
-                      id="settings-display-name"
-                      className="settings-stitch-input"
-                      type="text"
-                      value={displayName}
-                      onChange={(event) => setDisplayName(event.target.value)}
-                      placeholder={t('settings.display_name_placeholder')}
-                      maxLength={60}
-                    />
-
-                    <label className="settings-stitch-label" htmlFor="settings-account-identity">{t('settings.stitch_account_identity')}</label>
-                    <textarea
-                      id="settings-account-identity"
-                      className="settings-stitch-textarea"
-                      value={mantra || accountIdentityCopy}
-                      onChange={(event) => setMantra(event.target.value)}
-                      placeholder={accountIdentityCopy}
-                      rows={4}
-                    />
-
-                    <div className="settings-stitch-account-actions">
-                      <button type="submit" className="analysis-stitch-workout-btn settings-stitch-save-btn" disabled={nameSaving || !displayName.trim()}>
-                        {nameSaving ? t('settings.saving') : t('settings.save')}
-                      </button>
-                      {nameMsg ? <p className="settings-stitch-message">{nameMsg}</p> : null}
-                    </div>
-                  </div>
-                </form>
-              </article>
-
-              <div className="settings-stitch-lower-grid">
-                <article className="settings-stitch-card settings-stitch-card--preferences">
-                  <h2>{t('settings.stitch_preferences')}</h2>
-
-                  <div className="settings-stitch-field-block">
-                    <div className="settings-stitch-row">
-                      <div className="settings-stitch-copy">
-                        <strong>{t('settings.distance_unit_title')}</strong>
-                        <p>{t('settings.distance_unit_hint')}</p>
-                      </div>
-                      <div className="settings-stitch-segmented">
-                        <button type="button" className={unit === 'km' ? 'is-active' : ''} onClick={() => setUnit('km')}>METRIC</button>
-                        <button type="button" className={unit === 'mile' ? 'is-active' : ''} onClick={() => setUnit('mile')}>IMP</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="settings-stitch-field-block">
-                    <label className="settings-stitch-label" htmlFor="settings-language">{t('settings.language_title')}</label>
-                    <div className="settings-stitch-select-shell">
-                      <select
-                        id="settings-language"
-                        className="settings-stitch-select"
-                        value={lang}
-                        onChange={(event) => setLang(event.target.value)}
-                      >
-                        <option value="en">English (US)</option>
-                        <option value="zh-CN">中文</option>
-                      </select>
-                      <AppIcon name="expand_more" className="runner-dashboard-side-link-icon" />
-                    </div>
-                  </div>
-
-                  <div className="settings-stitch-field-block">
-                    <label className="settings-stitch-label">{t('profile.theme_title')}</label>
-                    <div className="settings-stitch-theme-grid">
-                      {themeCards.map((card) => (
-                        <button
-                          key={card.value}
-                          type="button"
-                          className={`settings-stitch-theme-card${theme === card.value ? ' is-active' : ''}`}
-                          onClick={() => setTheme(card.value)}
-                        >
-                          <AppIcon name={card.icon} className="runner-dashboard-side-link-icon" />
-                          <span>{card.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </article>
-
-                <article className="settings-stitch-card settings-stitch-card--security">
-                  <h2>{t('settings.stitch_security')}</h2>
-                  <p className="settings-stitch-security-copy">{t('settings.stitch_security_copy')}</p>
-                  <div className="settings-stitch-security-actions">
-                    <button type="button" className="settings-stitch-pill-btn" onClick={() => { logout(); navigate('/login'); }}>
-                      <span>{t('settings.logout_title')}</span>
-                      <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
-                    </button>
-                    <button type="button" className="settings-stitch-pill-btn is-muted" disabled>
-                      <span>{t('settings.stitch_two_factor')}</span>
-                      <span className="settings-stitch-inline-status">
-                        {stravaStatus?.linked ? t('settings.stitch_enabled') : t('settings.stitch_review')}
-                      </span>
-                    </button>
-                  </div>
-                </article>
-              </div>
-            </section>
-
-            <aside className="settings-stitch-sidebarcol">
-              <article className="settings-stitch-card settings-stitch-card--ecosystem">
-                <h2>{t('settings.stitch_data_ecosystem')}</h2>
-
-                <div className="settings-stitch-service">
-                  <div className="settings-stitch-service-main">
-                    <div className="settings-stitch-service-icon is-strava">
-                      <AppIcon name="altitude" className="runner-dashboard-side-link-icon" />
-                    </div>
-                    <div>
-                      <strong>STRAVA</strong>
-                      <p>{stravaStatus?.linked ? t('settings.stitch_strava_active') : t('settings.strava_not_connected')}</p>
-                    </div>
-                  </div>
-                  {stravaStatus?.linked ? (
-                    <button type="button" className="settings-stitch-service-action" onClick={disconnectStrava}>
-                      {t('settings.stitch_manage')}
-                    </button>
-                  ) : (
-                    <button type="button" className="settings-stitch-service-action is-connect" onClick={connectStrava} disabled={stravaLinking}>
-                      {stravaLinking ? t('profile.strava_link_connecting') : t('settings.stitch_connect')}
-                    </button>
-                  )}
-                </div>
-
-                <div className="settings-stitch-service is-muted">
-                  <div className="settings-stitch-service-main">
-                    <div className="settings-stitch-service-icon">
-                      <AppIcon name="watch" className="runner-dashboard-side-link-icon" />
-                    </div>
-                    <div>
-                      <strong>GARMIN CONNECT</strong>
-                      <p>{t('profile.garmin_connect_status')}</p>
-                    </div>
-                  </div>
-                  <button type="button" className="settings-stitch-service-action is-connect" onClick={() => setActiveModal('garmin')}>
-                    {t('settings.stitch_connect')}
-                  </button>
-                </div>
-
-                <button type="button" className="settings-stitch-import-btn" onClick={() => setActiveModal('manual')}>
-                  <AppIcon name="upload_file" className="runner-dashboard-side-link-icon" />
-                  <span>{t('profile.watch_import_files')}</span>
-                </button>
-              </article>
-
-              <article className="settings-stitch-card settings-stitch-card--brief">
-                <h2>{t('settings.stitch_weekly_brief')}</h2>
-                <p>{t('settings.stitch_weekly_brief_copy')}</p>
-                <button type="button" className="analysis-stitch-workout-btn settings-stitch-digest-btn" onClick={toggleDigest}>
-                  {digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest')}
-                </button>
-              </article>
-
-              <article className="settings-stitch-card settings-stitch-card--danger">
-                <h2>{t('settings.danger_title')}</h2>
-                <p>{t('settings.stitch_danger_copy')}</p>
-                <button type="button" className="settings-stitch-danger-btn" onClick={() => { logout(); navigate('/login'); }}>
-                  {t('settings.logout_btn')}
-                </button>
-              </article>
-            </aside>
-          </div>
-
-          <footer className="analysis-stitch-footer">
-            <a href="/terms">{t('landing.stitch_footer_terms')}</a>
-            <a href="/privacy">{t('landing.stitch_footer_privacy')}</a>
-            <a href="#support">{t('landing.stitch_footer_support')}</a>
-            <a href="#contact">{t('landing.stitch_footer_contact')}</a>
-            <p>{t('landing.stitch_footer_copy')}</p>
-          </footer>
-        </div>
       </main>
 
       <Modal isOpen={activeModal === 'manual'} onClose={() => setActiveModal(null)} title={t('profile.import_modal_title')}>
@@ -759,3 +663,8 @@ export default function Settings() {
     </div>
   );
 }
+
+
+
+
+

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import TopbarNotifications from '../components/TopbarNotifications';
 import shoeCatalog from '../data/shoeCatalog';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
@@ -57,25 +59,25 @@ function shoeHealth(current, max) {
 }
 
 const CATALOG_CATEGORY_META = {
-  all: { zh: 'All', en: 'All' },
-  trainer: { zh: 'Trainer', en: 'Trainer' },
-  cushion: { zh: 'Cushion', en: 'Cushion' },
-  race: { zh: 'Race', en: 'Race' },
-  test: { zh: 'Test', en: 'Test' },
-  stability: { zh: 'Stability', en: 'Stability' },
-  support: { zh: 'Support', en: 'Support' },
-  lowstack: { zh: 'Low Stack', en: 'Low Stack' },
-  lowstackcommute: { zh: 'Low Stack Commute', en: 'Low Stack Commute' },
-  lowstackrace: { zh: 'Low Stack Race', en: 'Low Stack Race' },
-  lowstacktrainer: { zh: 'Low Stack Trainer', en: 'Low Stack Trainer' },
-  supershoe: { zh: 'Super Shoe', en: 'Super Shoe' },
-  trainerrace: { zh: 'Trainer/Race', en: 'Trainer/Race' },
-  trail: { zh: 'Trail', en: 'Trail' },
+  all: { zh: '全部', en: 'All' },
+  trainer: { zh: '训练鞋', en: 'Trainer' },
+  cushion: { zh: '缓震', en: 'Cushion' },
+  race: { zh: '竞速', en: 'Race' },
+  test: { zh: '测试', en: 'Test' },
+  stability: { zh: '稳定', en: 'Stability' },
+  support: { zh: '支撑', en: 'Support' },
+  lowstack: { zh: '低堆叠', en: 'Low Stack' },
+  lowstackcommute: { zh: '低堆叠通勤', en: 'Low Stack Commute' },
+  lowstackrace: { zh: '低堆叠竞速', en: 'Low Stack Race' },
+  lowstacktrainer: { zh: '低堆叠训练', en: 'Low Stack Trainer' },
+  supershoe: { zh: '超级跑鞋', en: 'Super Shoe' },
+  trainerrace: { zh: '训练/竞速', en: 'Trainer/Race' },
+  trail: { zh: '越野', en: 'Trail' },
 };
 
 function getCatalogCategoryLabel(category, lang) {
   const raw = (category || '').toString();
-  if (!raw) return 'Other';
+  if (!raw) return lang === 'zh-CN' ? '其他' : 'Other';
   const normalized = normalizeBrandKey(raw);
   if (normalized === 'all') return lang === 'zh-CN' ? CATALOG_CATEGORY_META.all.zh : CATALOG_CATEGORY_META.all.en;
   if (normalized.includes('trail')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trail.zh : CATALOG_CATEGORY_META.trail.en;
@@ -155,7 +157,7 @@ function mergeCatalog(dynamicCatalog) {
 const TYPE_LABELS = { daily: 'type_daily', speed: 'type_speed', race: 'type_race', trail: 'type_trail', stability: 'type_stability' };
 
 export default function AddShoes() {
-  const { isAuthenticated, email, logout } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -268,13 +270,13 @@ export default function AddShoes() {
   })();
   const initials = (email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const profileLabel = (email?.split('@')[0] || 'Hermes').trim();
-  const activeRotation = activeShoes.slice(0, 3);
-  const rotationTarget = activeShoes.length + 1;
   const selectedBrandName = localizeShoeBrand(formBrand || browserBrand?.brand || '', lang);
   const selectedModelName = getCatalogModelLabel(selectedCatalogModel || { model: formModel }, lang) || formModel;
   const browserTitle = browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : t('shoes.browser_brand');
-  const browserSubcopy = loadState === 'error' ? 'Catalog cache is offline, so Hermes is using the local shoe archive.' : 'Select the brand, lock in the model, and finish the setup in one pass.';
-  const browserModelPlaceholder = browserBrand ? `Search ${localizeShoeBrand(browserBrand.brand, lang)} models` : 'Search models';
+  const browserSubcopy = loadState === 'error' ? t('shoes.add_page_browser_offline') : t('shoes.add_page_browser_setup_copy');
+  const browserModelPlaceholder = browserBrand
+    ? t('shoes.add_page_search_models', { brand: localizeShoeBrand(browserBrand.brand, lang) })
+    : t('shoes.add_page_search_models_empty');
   const selectedCategoryLabel = selectedCatalogModel ? getCatalogCategoryLabel(selectedCatalogModel.category || selectedCatalogModel.type, lang) : '';
   const browserModelCount = browserBrand?.models?.length || 0;
 
@@ -315,83 +317,85 @@ export default function AddShoes() {
   }
 
   if (loadState !== 'ready' && loadState !== 'error') {
-    return <div className="add-shoes-loading-shell"><div className="add-shoes-loading-card"><HermesLogo dark /><strong>{t('shoes.loading')}</strong><span>Preparing the gear studio.</span></div></div>;
+    return <div className="add-shoes-loading-shell"><div className="add-shoes-loading-card"><HermesLogo dark /><strong>{t('shoes.loading')}</strong><span>{t('shoes.add_page_loading_copy')}</span></div></div>;
   }
 
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page add-shoes-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar add-shoes-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand add-shoes-sidebar-brand">
-          <div className="runner-dashboard-brand-copy"><HermesLogo dark /><span>PULSE gear garage</span></div>
+    <div className={`runner-shell-page runner-dashboard-page add-shoes-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar add-shoes-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand add-shoes-sidebar-brand">
+          <div className="runner-dashboard-brand-copy"><HermesLogo dark /><span>{t('shoes.add_page_sidebar_brand')}</span></div>
           <button type="button" className="runner-dashboard-sidebar-toggle" onClick={() => setIsSidebarCollapsed((current) => !current)} aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')} aria-pressed={isSidebarCollapsed}>
             <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
           </button>
         </div>
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('analysis-stitch-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
           ))}
         </nav>
-        <div className="analysis-stitch-sidebar-footer">
-          <button type="button" className="analysis-stitch-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+        <div className="runner-shell-sidebar-footer">
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>
         </div>
       </aside>
 
-      <main className="analysis-stitch-main add-shoes-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_shoes')}</span>
+      <main className="runner-shell-main add-shoes-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/shoes')}>
+                {t('profile.dashboard_nav_shoes')}
+              </button>
+              <span className="runner-shell-topnav-link add-shoes-topnav-divider" aria-hidden="true">/</span>
+              <span className="runner-shell-topnav-link is-active">{t('shoes.add_page_title')}</span>
             </div>
           </div>
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={profileLabel}>
+              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={profileLabel}>
                 {initials}
               </button>
             </div>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas add-shoes-canvas">
+        <div className="runner-shell-canvas add-shoes-canvas">
           <section className="add-shoes-hero">
             <div className="add-shoes-hero-copy">
-              <span className="analysis-stitch-card-kicker">{t('shoes.stitch_surface_label')}</span>
+              <span className="analysis-overview-card-kicker">{t('shoes.stitch_surface_label')}</span>
               <h1>{t('shoes.add_page_title')}</h1>
               <p>{browserSubcopy}</p>
               <div className="add-shoes-hero-pills">
                 <span className="add-shoes-hero-pill">{selectedBrandName || browserTitle}</span>
-                <span className="add-shoes-hero-pill">{`${browserModelCount} models`}</span>
-                <span className="add-shoes-hero-pill">{`${activeShoes.length} active pairs`}</span>
+                <span className="add-shoes-hero-pill">{t('shoes.add_page_models_count', { count: browserModelCount })}</span>
+                <span className="add-shoes-hero-pill">{t('shoes.add_page_active_pairs_count', { count: activeShoes.length })}</span>
               </div>
             </div>
             <div className="add-shoes-hero-status">
               <article className="add-shoes-status-card">
-                <span className="analysis-stitch-card-kicker">Active pairs</span>
+                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_active_pairs')}</span>
                 <strong>{activeShoes.length}</strong>
-                <p>Keep the rotation balanced while you add the next pair.</p>
+                <p>{t('shoes.add_page_status_active_pairs_copy')}</p>
               </article>
               <article className="add-shoes-status-card">
-                <span className="analysis-stitch-card-kicker">Fleet distance</span>
+                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_fleet_distance')}</span>
                 <strong>{formatDistanceValue(totalMileage, unit, 1)} {distanceUnitLabel}</strong>
-                <p>Current live mileage across the shoes Hermes is tracking.</p>
+                <p>{t('shoes.add_page_status_fleet_distance_copy')}</p>
               </article>
               <article className="add-shoes-status-card">
-                <span className="analysis-stitch-card-kicker">Rotation health</span>
+                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_rotation_health')}</span>
                 <strong>{avgHealthLabel}</strong>
-                <p>Use the new pair to spread load before your current set gets stale.</p>
+                <p>{t('shoes.add_page_status_rotation_health_copy')}</p>
               </article>
             </div>
           </section>
@@ -411,8 +415,17 @@ export default function AddShoes() {
                   </button>
                 </div>
 
+                <div className="add-shoes-parent-rail">
+                  <span className="add-shoes-panel-kicker">{t('profile.dashboard_nav_shoes')}</span>
+                  <p>{t('shoes.add_page_browser_setup_copy')}</p>
+                  <Link to="/shoes" className="add-shoes-parent-link">
+                    <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
+                    <span>{t('shoes.add_page_back')}</span>
+                  </Link>
+                </div>
+
                 <section className="add-shoes-step add-shoes-step-card">
-                  <div className="add-shoes-step-head"><span className="add-shoes-step-number">1</span><div><h2>Select Brand</h2><p>Choose the maker that matches the pair you are adding.</p></div></div>
+                  <div className="add-shoes-step-head"><span className="add-shoes-step-number">1</span><div><h2>{t('shoes.add_page_step_brand_title')}</h2><p>{t('shoes.add_page_step_brand_copy')}</p></div></div>
                   <div className="add-shoes-brand-grid">
                     {browserBrandsToShow.map((brand) => {
                       const isActive = browserBrand?.brand === brand.brand;
@@ -427,7 +440,7 @@ export default function AddShoes() {
                 </section>
 
                 <section className="add-shoes-step add-shoes-step-card">
-                  <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>Identify Model</h2><p>Filter the archive, then pick the exact model you are adding.</p></div></div>
+                  <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>{t('shoes.add_page_step_model_title')}</h2><p>{t('shoes.add_page_step_model_copy')}</p></div></div>
                   <div className="add-shoes-filter-row">
                     {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => setBrowserCategory(categoryKey)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
                     {browserTypeOptions.slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => setBrowserType(typeKey)}>{typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
@@ -456,7 +469,7 @@ export default function AddShoes() {
                 </section>
 
                 <section className="add-shoes-step add-shoes-step--form add-shoes-step-card">
-                  <div className="add-shoes-step-head"><span className="add-shoes-step-number">3</span><div><h2>Configure Pair</h2><p>Set the nickname, mileage cap, and whether this becomes the primary shoe.</p></div></div>
+                  <div className="add-shoes-step-head"><span className="add-shoes-step-number">3</span><div><h2>{t('shoes.add_page_step_configure_title')}</h2><p>{t('shoes.add_page_step_configure_copy')}</p></div></div>
                   <div className="add-shoes-selected-summary">
                     <span className="add-shoes-panel-kicker">{t('shoes.add_page_selected_kicker')}</span>
                     <strong>{selectedModelName || t('shoes.add_page_selected_empty')}</strong>
@@ -471,51 +484,16 @@ export default function AddShoes() {
                     {submitState === 'error' ? <p className="add-shoes-form-error">{t('shoes.add_page_error')}</p> : null}
                     <div className="add-shoes-form-actions">
                       <button type="button" className="add-shoes-secondary-btn" onClick={() => navigate('/shoes')}>{t('shoes.cancel')}</button>
-                      <button type="submit" className="add-shoes-primary-btn" disabled={!formBrand.trim() || !formModel.trim() || submitState === 'saving'}><AppIcon name="add" className="runner-dashboard-side-link-icon" /><span>{submitState === 'saving' ? t('shoes.add_page_saving') : 'Complete Setup'}</span></button>
+                      <button type="submit" className="add-shoes-primary-btn" disabled={!formBrand.trim() || !formModel.trim() || submitState === 'saving'}><AppIcon name="add" className="runner-dashboard-side-link-icon" /><span>{submitState === 'saving' ? t('shoes.add_page_saving') : t('shoes.add_page_complete_setup')}</span></button>
                     </div>
                   </form>
                 </section>
               </section>
             </div>
-
-            <aside className="add-shoes-side-rail">
-              <section className="add-shoes-side-card add-shoes-side-card--snapshot">
-                <span className="add-shoes-panel-kicker">Inventory Snapshot</span>
-                <div className="add-shoes-snapshot-total"><strong>{formatDistanceValue(totalMileage, unit, 1)}</strong><span>{distanceUnitLabel} total fleet</span></div>
-                <div className="add-shoes-snapshot-metrics"><div><span>Active rotation</span><strong>{activeShoes.length}</strong></div><div><span>Health</span><strong>{avgHealthLabel}</strong></div></div>
-              </section>
-
-              <section className="add-shoes-side-card">
-                <span className="add-shoes-panel-kicker">Active Rotation ({activeShoes.length})</span>
-                <div className="add-shoes-rotation-list">
-                  {activeRotation.map((shoe) => {
-                    const progress = Math.min(100, ((Number(shoe.currentDistanceKm || 0) / Math.max(Number(shoe.maxDistanceKm || 650), 1)) * 100));
-                    return (
-                      <div key={shoe.id} className="add-shoes-rotation-item">
-                        <span className="add-shoes-rotation-mark"><BrandLogo brand={shoe.brand} fallbackEmoji={shoe.brand?.[0]} /></span>
-                        <div className="add-shoes-rotation-copy">
-                          <div className="add-shoes-rotation-row"><strong>{localizeShoeModel(shoe.model, lang)}</strong><span>{Math.round(Number(shoe.currentDistanceKm || 0))}/{Math.round(Number(shoe.maxDistanceKm || 650))}{distanceUnitLabel}</span></div>
-                          <div className="add-shoes-rotation-bar"><span style={{ width: `${progress}%` }} /></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {activeRotation.length === 0 ? <div className="add-shoes-rotation-empty">No active pairs yet. Add the first pair to start the rotation.</div> : null}
-                </div>
-              </section>
-
-              <section className="add-shoes-side-card add-shoes-side-card--note">
-                <span className="add-shoes-panel-kicker">Coach note</span>
-                <p>{`Adding ${selectedModelName || 'this pair'} will bring your rotation to ${rotationTarget} active pairs.`}</p>
-              </section>
-            </aside>
           </div>
 
-          <footer className="analysis-stitch-footer runner-dashboard-footer add-shoes-footer">
-            <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-            <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-            <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-            <button type="button" onClick={logout}>{t('profile.logout')}</button>
+          <footer className="runner-shell-footer runner-dashboard-footer add-shoes-footer">
+            <FooterNavLinks />
           </footer>
         </div>
       </main>

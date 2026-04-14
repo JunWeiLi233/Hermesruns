@@ -14,6 +14,22 @@ Import runs from Strava, Garmin Connect, and COROS. Visualize routes on a heatma
 
 ---
 
+### Codex Token Saver
+
+This repo now supports an optional RTK workflow for Codex sessions to reduce shell-output token usage.
+
+- Global Codex install on this machine uses `C:\Users\Junwei\.codex\RTK.md`
+- Repo-local health check: `powershell -ExecutionPolicy Bypass -File .tools/rtk-codex-health.ps1`
+- When RTK is available, prefer:
+  - `rtk read <file>`
+  - `rtk grep "<pattern>" <path>`
+  - `rtk git status`
+  - `rtk git diff`
+  - `rtk test <command>`
+  - `rtk err <command>`
+
+RTK compacts shell output; it does not replace normal verification or change the underlying command result.
+
 ### Architecture
 
 ```

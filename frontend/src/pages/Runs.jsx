@@ -5,10 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import { formatDate, formatDistance, formatDuration, formatPace } from '../utils/format';
 import HermesLogo from '../components/HermesLogo';
 import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
+import TopbarNotifications from '../components/TopbarNotifications';
 
 const BATCH_SIZE = 10;
 const ROUTE_PREVIEW_CONCURRENCY = 2;
@@ -431,9 +433,9 @@ export default function Runs() {
 
   if (isAwaitingData) {
     return (
-      <div className={`analysis-stitch-page runner-dashboard-page runs-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-        <aside className="analysis-stitch-sidebar">
-          <div className="analysis-stitch-brand runner-dashboard-brand">
+      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+        <aside className="runner-shell-sidebar">
+          <div className="runner-shell-brand runner-dashboard-brand">
             <div className="runner-dashboard-brand-copy">
               <HermesLogo dark />
               <span>{t('analysis.stitch_brand_subtitle')}</span>
@@ -448,12 +450,12 @@ export default function Runs() {
               <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
             </button>
           </div>
-          <nav className="analysis-stitch-side-nav">
+          <nav className="runner-shell-side-nav">
             {navItems.map((item) => (
               <button
                 key={item.key}
                 type="button"
-                className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+                className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
                 onClick={() => navigate(item.route)}
                 aria-label={item.label}
               >
@@ -462,10 +464,10 @@ export default function Runs() {
               </button>
             ))}
           </nav>
-          <div className="analysis-stitch-sidebar-footer">
+          <div className="runner-shell-sidebar-footer">
             <button
               type="button"
-              className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+              className="runner-shell-workout-btn runner-dashboard-workout-btn"
               onClick={() => navigate('/today-run')}
               aria-label={t('profile.dashboard_start_workout')}
             >
@@ -475,29 +477,27 @@ export default function Runs() {
           </div>
         </aside>
 
-        <main className="analysis-stitch-main">
-          <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-            <div className="analysis-stitch-topbar-left">
-              <div className="schedule-stitch-topnav">
-                <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
+        <main className="runner-shell-main">
+          <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+            <div className="runner-shell-topbar-left">
+              <div className="runner-shell-topnav">
+                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
               </div>
             </div>
-            <div className="analysis-stitch-topbar-actions">
-              <div className="analysis-stitch-topbar-profile-actions">
-                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                  <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-                </button>
-                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+            <div className="runner-shell-topbar-actions">
+              <div className="runner-shell-topbar-profile-actions">
+                <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+                <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
-                <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
+                <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
                   {initials}
                 </button>
               </div>
             </div>
           </header>
 
-          <div className="analysis-stitch-canvas">
+          <div className="runner-shell-canvas">
             <main className="integration-alert-shell runs-dashboard-shell">
               <div className="runner-dashboard-hero-copy runs-dashboard-hero-copy">
                 <h1>{t('runs.heading')}</h1>
@@ -579,11 +579,8 @@ export default function Runs() {
                   </section>
                 </aside>
               </div>
-              <footer className="analysis-stitch-footer runner-dashboard-footer">
-                <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-                <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-                <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-                <button type="button" onClick={() => navigate('/settings')}>{t('profile.settings')}</button>
+              <footer className="runner-shell-footer runner-dashboard-footer">
+                <FooterNavLinks />
               </footer>
             </main>
           </div>
@@ -594,9 +591,9 @@ export default function Runs() {
   }
 
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page runs-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+    <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('analysis.stitch_brand_subtitle')}</span>
@@ -611,12 +608,12 @@ export default function Runs() {
             <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
           </button>
         </div>
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
-              className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
               aria-label={item.label}
             >
@@ -625,10 +622,10 @@ export default function Runs() {
             </button>
           ))}
         </nav>
-        <div className="analysis-stitch-sidebar-footer">
+        <div className="runner-shell-sidebar-footer">
           <button
             type="button"
-            className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
@@ -638,29 +635,27 @@ export default function Runs() {
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
             </div>
           </div>
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
+              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
                 {initials}
               </button>
             </div>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas">
+        <div className="runner-shell-canvas">
           <main className="recent-runs-shell runs-dashboard-shell">
             <section className="runner-dashboard-hero-copy runs-dashboard-hero-copy">
               <span className="recent-runs-hero-kicker">{countText}</span>
@@ -750,11 +745,8 @@ export default function Runs() {
             </button>
               </div>
             ) : null}
-            <footer className="analysis-stitch-footer runner-dashboard-footer">
-              <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-              <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-              <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-              <button type="button" onClick={() => navigate('/settings')}>{t('profile.settings')}</button>
+            <footer className="runner-shell-footer runner-dashboard-footer">
+              <FooterNavLinks />
             </footer>
           </main>
         </div>
@@ -763,4 +755,3 @@ export default function Runs() {
     </div>
   );
 }
-

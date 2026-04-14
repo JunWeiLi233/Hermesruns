@@ -7,6 +7,8 @@ import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import Modal from '../components/Modal';
+import FooterNavLinks from '../components/FooterNavLinks';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDate, formatDistance, formatDuration, formatPaceSeconds } from '../utils/format';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
@@ -381,7 +383,7 @@ function getCelebrationLabel(entry, t) {
 }
 
 export default function ProfileDashboard() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -539,6 +541,14 @@ export default function ProfileDashboard() {
   const heroLoad = coachState?.volumeKm7d
     ? formatDistance(coachState.volumeKm7d, 1, lang, unit)
     : '--';
+  const recentSessions = runs.slice(0, 3);
+  const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
+  const weeklyProjectedTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.projected || 0), 0);
+  const weeklyCompletion = weeklyProjectedTotal > 0
+    ? Math.max(0, Math.min(100, Math.round((weeklyActualTotal / weeklyProjectedTotal) * 100)))
+    : 0;
+  const featuredSession = recentSessions[0] || null;
+  const featuredSessionMetric = featuredSession ? buildSessionMetric(featuredSession, lang, unit, t) : null;
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard', active: true },
@@ -550,10 +560,8 @@ export default function ProfileDashboard() {
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
   ];
 
-  const recentSessions = runs.slice(0, 3);
-
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <Modal
         isOpen={Boolean(prCelebration)}
         onClose={() => setPrCelebration(null)}
@@ -593,8 +601,8 @@ export default function ProfileDashboard() {
         )}
       </Modal>
 
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('analysis.stitch_brand_subtitle')}</span>
@@ -611,12 +619,12 @@ export default function ProfileDashboard() {
             </span>
           </button>
         </div>
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
-              className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
               aria-label={item.label}
             >
@@ -625,10 +633,10 @@ export default function ProfileDashboard() {
             </button>
           ))}
         </nav>
-        <div className="analysis-stitch-sidebar-footer">
+        <div className="runner-shell-sidebar-footer">
           <button
             type="button"
-            className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
@@ -638,29 +646,27 @@ export default function ProfileDashboard() {
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_dashboard')}</span>
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_dashboard')}</span>
             </div>
           </div>
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
+              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
                 {displayName.slice(0, 1).toUpperCase()}
               </button>
             </div>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas">
+        <div className="runner-shell-canvas">
       <div className="runner-dashboard-main">
         <section className="runner-dashboard-hero-copy">
           <h1>{`${t('profile.dashboard_greeting')}, ${displayName}.`}</h1>
@@ -790,6 +796,125 @@ export default function ProfileDashboard() {
               </article>
             </section>
 
+            <section className="runner-dashboard-feature-grid" aria-label={t('profile.dashboard_nav_dashboard')}>
+              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--readiness">
+                <div className="runner-dashboard-feature-head">
+                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_readiness_status')}</span>
+                  <span className="runner-dashboard-feature-eyebrow">{currentDateLine}</span>
+                </div>
+                <div className="runner-dashboard-feature-copy">
+                  <h3>{readiness.label}</h3>
+                  <p>{readiness.copy}</p>
+                </div>
+                <div className="runner-dashboard-feature-scoreband">
+                  <strong>{readiness.score}%</strong>
+                  <span>{t('profile.dashboard_window_active')}</span>
+                </div>
+                <div className="runner-dashboard-feature-meter" aria-hidden="true">
+                  <div className="runner-dashboard-feature-meter-fill" style={{ width: `${readiness.score}%` }} />
+                </div>
+              </article>
+
+              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--workout">
+                <div className="runner-dashboard-feature-head">
+                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_suggested_workout')}</span>
+                  <span className="runner-dashboard-feature-eyebrow">{displayName}</span>
+                </div>
+                <div className="runner-dashboard-feature-copy">
+                  <h3>{heroWorkoutTitle}</h3>
+                  <p>{todayBundle.recommendation?.purpose || readiness.copy}</p>
+                </div>
+                <div className="runner-dashboard-feature-stat-row">
+                  <div>
+                    <span>{t('profile.dashboard_total_duration')}</span>
+                    <strong>{heroDuration}</strong>
+                  </div>
+                  <div>
+                    <span>{t('profile.dashboard_target_pace')}</span>
+                    <strong>{heroPace}</strong>
+                  </div>
+                  <div>
+                    <span>{t('profile.dashboard_focus_load')}</span>
+                    <strong>{heroLoad}</strong>
+                  </div>
+                </div>
+                <div className="runner-dashboard-feature-actions">
+                  <button type="button" className="runner-dashboard-feature-primary" onClick={() => navigate('/today-run')}>
+                    {t('profile.dashboard_start_workout')}
+                  </button>
+                  <button type="button" className="runner-dashboard-feature-secondary" onClick={() => navigate('/analysis')}>
+                    {t('profile.dashboard_nav_analysis')}
+                  </button>
+                </div>
+              </article>
+
+              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--load">
+                <div className="runner-dashboard-feature-head">
+                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_training_load')}</span>
+                  <span className="runner-dashboard-feature-eyebrow">{t('profile.dashboard_weekly_progress')}</span>
+                </div>
+                <div className="runner-dashboard-feature-copy">
+                  <h3>{formatDistance(weeklyActualTotal, 1, lang, unit)}</h3>
+                  <p>
+                    {t('profile.dashboard_actual')} {weeklyCompletion}% · {t('profile.dashboard_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
+                  </p>
+                </div>
+                <div className="runner-dashboard-feature-mini-bars" aria-hidden="true">
+                  {weeklyBars.map((bar) => (
+                    <span key={bar.key} className={`runner-dashboard-feature-mini-bar${bar.isToday ? ' is-today' : ''}`}>
+                      <i className="projected" style={{ height: `${bar.projectedPct}%` }} />
+                      <i className="actual" style={{ height: `${bar.actualPct}%` }} />
+                    </span>
+                  ))}
+                </div>
+                <div className="runner-dashboard-feature-chip-row">
+                  <span>{t('profile.dashboard_vo2_est')}: {profileVdot > 0 ? profileVdot.toFixed(1) : '--'}</span>
+                  <span>{t('profile.dashboard_lactate_threshold')}: {thresholdEstimate ?? '--'} bpm</span>
+                </div>
+              </article>
+
+              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--sessions">
+                <div className="runner-dashboard-feature-head">
+                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_recent_sessions')}</span>
+                  <span className="runner-dashboard-feature-eyebrow">{featuredSession ? formatRunDate(featuredSession, lang) : '--'}</span>
+                </div>
+                <div className="runner-dashboard-feature-copy">
+                  <h3>{featuredSession?.name || t('profile.dashboard_session_fallback')}</h3>
+                  <p>
+                    {featuredSessionMetric
+                      ? `${featuredSessionMetric.label} · ${featuredSessionMetric.value}`
+                      : t('profile.dashboard_no_sessions')}
+                  </p>
+                </div>
+                {recentSessions.length === 0 ? (
+                  <div className="runner-dashboard-empty">{t('profile.dashboard_no_sessions')}</div>
+                ) : (
+                  <div className="runner-dashboard-feature-session-stack">
+                    {recentSessions.map((run) => {
+                      const metric = buildSessionMetric(run, lang, unit, t);
+                      return (
+                        <button
+                          key={run.id}
+                          type="button"
+                          className="runner-dashboard-feature-session-pill"
+                          onClick={() => navigate(`/run/${run.id}`)}
+                        >
+                          <div>
+                            <strong>{run.name || t('profile.dashboard_session_fallback')}</strong>
+                            <span>{formatRunDate(run, lang)}</span>
+                          </div>
+                          <em>{metric.value}</em>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <button type="button" className="runner-dashboard-feature-link" onClick={() => navigate('/runs')}>
+                  {t('profile.dashboard_view_full_history')}
+                </button>
+              </article>
+            </section>
+
             <section className="runner-dashboard-metric-strip">
               <article className="runner-dashboard-mini-metric">
                 <span>01</span>
@@ -823,11 +948,8 @@ export default function ProfileDashboard() {
           </>
         )}
 
-        <footer className="analysis-stitch-footer runner-dashboard-footer">
-          <button type="button" onClick={() => navigate('/terms')}>Terms of Service</button>
-          <button type="button" onClick={() => navigate('/privacy')}>Privacy Policy</button>
-          <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>Support</button>
-          <button type="button" onClick={logout}>{t('profile.logout')}</button>
+        <footer className="runner-shell-footer runner-dashboard-footer">
+          <FooterNavLinks />
         </footer>
       </div>
         </div>

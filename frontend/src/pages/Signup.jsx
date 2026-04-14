@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
 
 const SIGNUP_STITCH_COPY = {
@@ -201,21 +202,21 @@ export default function Signup() {
 
   if (doneInfo) {
     return (
-      <div className="auth-page auth-page--stitch-signup">
-        <div className="signup-stitch-bg" />
-        <main className="signup-stitch-shell signup-stitch-shell--done">
-          <section className="signup-stitch-copy signup-stitch-copy--done">
-            <div className="signup-stitch-copy-stack">
-              <Link to="/" className="signup-stitch-wordmark">HERMES</Link>
-              <h1 className="signup-stitch-hero">
+      <div className="auth-page auth-page--signup">
+        <div className="signup-flow-bg" />
+        <main className="signup-flow-shell signup-flow-shell--done">
+          <section className="signup-flow-copy signup-flow-copy--done">
+            <div className="signup-flow-copy-stack">
+              <Link to="/" className="signup-flow-wordmark">HERMES</Link>
+              <h1 className="signup-flow-hero">
                 <span>{s('done_line_one')}</span>
                 <span className="is-accent">{s('done_line_two')}</span>
               </h1>
-              <p className="signup-stitch-text">{doneInfo.message || t('signup.check_email_body')}</p>
+              <p className="signup-flow-text">{doneInfo.message || t('signup.check_email_body')}</p>
               {!doneInfo.verificationRequired && (
-                <p className="signup-stitch-subtle">{t('signup.no_mail_server_note')}</p>
+                <p className="signup-flow-subtle">{t('signup.no_mail_server_note')}</p>
               )}
-              <button type="button" className="signup-stitch-primary" onClick={() => navigate('/login')}>
+              <button type="button" className="signup-flow-primary" onClick={() => navigate('/login')}>
                 {t('signup.signin_link')}
               </button>
             </div>
@@ -226,28 +227,28 @@ export default function Signup() {
   }
 
   return (
-    <div className="auth-page auth-page--stitch-signup">
-      <div className="signup-stitch-bg" />
+    <div className="auth-page auth-page--signup">
+      <div className="signup-flow-bg" />
 
-      <nav className="signup-stitch-nav">
-        <Link to="/" className="signup-stitch-wordmark">HERMES</Link>
-        <Link to="/login" className="signup-stitch-login-link">{s('login_nav')}</Link>
+      <nav className="signup-flow-nav">
+        <Link to="/" className="signup-flow-wordmark">HERMES</Link>
+        <Link to="/login" className="signup-flow-login-link">{s('login_nav')}</Link>
       </nav>
 
-      <main className="signup-stitch-shell">
-        <section className="signup-stitch-copy">
-          <div className="signup-stitch-copy-stack">
-            <h1 className="signup-stitch-hero">
+      <main className="signup-flow-shell">
+        <section className="signup-flow-copy">
+          <div className="signup-flow-copy-stack">
+            <h1 className="signup-flow-hero">
               <span>{s('hero_line_one')}</span>
               <span>{s('hero_line_two')}</span>
               <span className="is-accent">{s('hero_line_three')}</span>
             </h1>
-            <p className="signup-stitch-text">{s('hero_copy')}</p>
-            <div className="signup-stitch-standard">
-              <span className="signup-stitch-standard-line" />
+            <p className="signup-flow-text">{s('hero_copy')}</p>
+            <div className="signup-flow-standard">
+              <span className="signup-flow-standard-line" />
               <span>{s('standard')}</span>
             </div>
-            <div className="signup-stitch-rail" aria-hidden="true">
+            <div className="signup-flow-rail" aria-hidden="true">
               <span className="is-active" />
               <span />
               <span />
@@ -255,20 +256,20 @@ export default function Signup() {
           </div>
         </section>
 
-        <section className="signup-stitch-panel-wrap">
-          <div className="signup-stitch-panel">
-            <button type="button" className="signup-stitch-strava" onClick={() => startOAuth('strava')}>
-              <AppIcon name="directions_run" className="signup-stitch-strava-icon" />
+        <section className="signup-flow-panel-wrap">
+          <div className="signup-flow-panel">
+            <button type="button" className="signup-flow-strava" onClick={() => startOAuth('strava')}>
+              <AppIcon name="directions_run" className="signup-flow-strava-icon" />
               <span>{s('strava_cta')}</span>
             </button>
 
-            <div className="signup-stitch-divider">
+            <div className="signup-flow-divider">
               <span />
               <strong>{s('email_divider')}</strong>
               <span />
             </div>
 
-            <form className="signup-stitch-form" onSubmit={handleSubmit}>
+            <form className="signup-flow-form" onSubmit={handleSubmit}>
               {banner === 'strava_link_confirmation_required' && (
                 <div className="error-alert is-visible">{t('profile.strava_link_confirmation_required')}</div>
               )}
@@ -280,7 +281,7 @@ export default function Signup() {
               )}
               {error && <div className="error-alert is-visible">{error}</div>}
 
-              <div className="signup-stitch-field">
+              <div className="signup-flow-field">
                 <label htmlFor="email">{s('email_label')}</label>
                 <input
                   type="email"
@@ -293,7 +294,7 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="signup-stitch-field">
+              <div className="signup-flow-field">
                 <label htmlFor="password">{s('password_label')}</label>
                 <input
                   type="password"
@@ -309,7 +310,7 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="signup-stitch-field">
+              <div className="signup-flow-field">
                 <label htmlFor="confirm-password">{s('confirm_password_label')}</label>
                 <input
                   type="password"
@@ -322,7 +323,7 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="signup-stitch-rules">
+              <div className="signup-flow-rules">
                 <h3>{s('security_title')}</h3>
                 <ul>
                   {['MIN_LENGTH', 'DIGIT', 'SPECIAL'].map((id) => (
@@ -334,20 +335,20 @@ export default function Signup() {
                 </ul>
               </div>
 
-              <button type="submit" className="signup-stitch-primary" disabled={loading}>
+              <button type="submit" className="signup-flow-primary" disabled={loading}>
                 {loading ? t('signup.submit_loading') : s('submit')}
               </button>
 
               <button
                 type="button"
-                className="signup-stitch-google"
+                className="signup-flow-google"
                 onClick={() => startOAuth('google')}
               >
                 {t('signup.google')}
               </button>
             </form>
 
-            <p className="signup-stitch-legal">
+            <p className="signup-flow-legal">
               {s('legal_prefix')}{' '}
               <a href="/terms">{s('footer_terms')}</a>{' '}
               {s('legal_joiner')}{' '}
@@ -357,13 +358,8 @@ export default function Signup() {
         </section>
       </main>
 
-      <footer className="signup-stitch-footer">
-        <div className="signup-stitch-footer-links">
-          <a href="mailto:support@hermes.run">{s('footer_support')}</a>
-          <a href="/terms">{s('footer_terms')}</a>
-          <a href="/privacy">{s('footer_privacy')}</a>
-          <a href="mailto:support@hermes.run">{s('footer_contact')}</a>
-        </div>
+      <footer className="signup-flow-footer">
+        <FooterNavLinks className="signup-flow-footer-links" />
         <p>{s('footer_copy')}</p>
       </footer>
     </div>

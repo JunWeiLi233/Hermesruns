@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -186,7 +187,7 @@ export default function LegalPage({ variant = 'terms' }) {
 
         <footer className="legal-page-footer">
           <span>{page.updated}</span>
-          <a href="mailto:support@hermes.run">support@hermes.run</a>
+          <FooterNavLinks />
         </footer>
       </div>
     </div>

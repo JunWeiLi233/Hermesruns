@@ -100,7 +100,7 @@ public class ProfileController {
 
         long activityCount = activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN);
         if (activityCount <= 0) {
-            return ResponseEntity.ok(new HeatmapResponse(List.of(), 0, 0, null));
+            return ResponseEntity.ok(new HeatmapResponse(List.of(), 0, 0, 0, null));
         }
 
         long sourcePointCount = activityPointRepository.countHeatmapPointsByRunnerAndType(
@@ -108,7 +108,7 @@ public class ProfileController {
                 ActivityType.RUN.name()
         );
         if (sourcePointCount <= 0) {
-            return ResponseEntity.ok(new HeatmapResponse(List.of(), 0, activityCount, null));
+            return ResponseEntity.ok(new HeatmapResponse(List.of(), 0, 0, activityCount, null));
         }
 
         List<Long> recentActivityIds = activityRepository.findRecentIdsByRunnerAndActivityType(
@@ -132,12 +132,15 @@ public class ProfileController {
                     );
 
             if (olderPointCount > 0 && remainingBudget > 0) {
-                int stride = (int) Math.max(1L, (olderPointCount + remainingBudget - 1) / remainingBudget);
+                long olderActivityCount = Math.max(0L, activityCount - recentActivityIds.size());
+                int targetPointsPerActivity = olderActivityCount > 0
+                        ? (int) Math.max(6L, Math.min(40L, remainingBudget / olderActivityCount))
+                        : remainingBudget;
                 activityPoints.addAll(activityPointRepository.findHeatmapSamplesByRunnerAndType(
                         runner.getId(),
                         ActivityType.RUN.name(),
                         recentActivityIds,
-                        stride,
+                        targetPointsPerActivity,
                         remainingBudget
                 ));
             }
@@ -150,6 +153,7 @@ public class ProfileController {
 
         return ResponseEntity.ok(new HeatmapResponse(
                 points,
+                sourcePointCount,
                 points.size(),
                 activityCount,
                 bounds
@@ -316,7 +320,8 @@ public class ProfileController {
 
     public record HeatmapResponse(
             List<HeatPoint> points,
-            int pointCount,
+            long pointCount,
+            int sampledPointCount,
             long activityCount,
             HeatmapBounds bounds
     ) {

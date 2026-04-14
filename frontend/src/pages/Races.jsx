@@ -4,9 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import Modal from '../components/Modal';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration, formatPace } from '../utils/format';
+import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
 import worldRaceCatalog, { worldRaceCountries } from '../data/worldRaceCatalog';
 
 const STATUS_OPTIONS = ['INTERESTED', 'APPLIED', 'REGISTERED', 'WAITLIST', 'COMPLETED', 'CANCELED'];
@@ -254,11 +257,12 @@ function getCountryLabel(country, lang) {
 }
 
 export default function Races() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
   const [races, setRaces] = useState([]);
   const [loadState, setLoadState] = useState('loading');
@@ -317,7 +321,8 @@ export default function Races() {
 
   async function loadData() {
     try {
-      const [activities, raceData] = await Promise.all([
+      const [profileData, activities, raceData] = await Promise.all([
+        apiJson('/api/profile/me').catch(() => null),
         apiJson('/api/activities'),
         apiJson('/api/races'),
       ]);
@@ -325,6 +330,7 @@ export default function Races() {
       runList.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
       const raceList = Array.isArray(raceData) ? raceData : [];
       raceList.sort((a, b) => new Date(a.eventDate || 0) - new Date(b.eventDate || 0));
+      setProfile(profileData || null);
       setRuns(runList);
       setRaces(raceList);
       setLoadState('ready');
@@ -550,7 +556,8 @@ export default function Races() {
     : t('races.stitch_hero_empty_days');
   const heroFocus = nextRace ? extractRaceFocusLabelSafe(nextRace, lang) : t('races.stitch_hero_empty_focus');
   const heroSummary = buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang);
-  const initials = (nextRace?.name || 'Hermes').slice(0, 1).toUpperCase();
+  const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
+  const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
   const navItems = [
     { key: 'dashboard', icon: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile' },
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
@@ -562,18 +569,18 @@ export default function Races() {
   ];
 
   if (loadState === 'loading') {
-    return <div className="analysis-stitch-page analysis-stitch-page--loading"><div className="analysis-stitch-loading">{t('runs.loading')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.loading')}</div></div>;
   }
 
   if (loadState === 'error') {
-    return <div className="analysis-stitch-page analysis-stitch-page--loading"><div className="analysis-stitch-loading">{t('runs.load_error')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.load_error')}</div></div>;
   }
 
   return (
     <>
-      <div className={`analysis-stitch-page runner-dashboard-page races-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-        <aside className="analysis-stitch-sidebar">
-          <div className="analysis-stitch-brand runner-dashboard-brand">
+      <div className={`runner-shell-page runner-dashboard-page races-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+        <aside className="runner-shell-sidebar">
+          <div className="runner-shell-brand runner-dashboard-brand">
             <div className="runner-dashboard-brand-copy">
               <HermesLogo dark />
               <span>{t('races.stitch_sidebar_tagline')}</span>
@@ -589,12 +596,12 @@ export default function Races() {
             </button>
           </div>
 
-          <nav className="analysis-stitch-side-nav">
+          <nav className="runner-shell-side-nav">
             {navItems.map((item) => (
               <button
                 key={item.key}
                 type="button"
-                className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+                className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
                 onClick={() => navigate(item.route)}
                 aria-label={item.label}
               >
@@ -604,10 +611,10 @@ export default function Races() {
             ))}
           </nav>
 
-          <div className="analysis-stitch-sidebar-footer">
+          <div className="runner-shell-sidebar-footer">
             <button
               type="button"
-              className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+              className="runner-shell-workout-btn runner-dashboard-workout-btn"
               onClick={() => navigate('/today-run')}
               aria-label={t('profile.dashboard_start_workout')}
             >
@@ -617,30 +624,28 @@ export default function Races() {
           </div>
         </aside>
 
-        <main className="analysis-stitch-main">
-          <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-            <div className="analysis-stitch-topbar-left">
-              <div className="schedule-stitch-topnav">
-                <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_races')}</span>
+        <main className="runner-shell-main">
+          <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+            <div className="runner-shell-topbar-left">
+              <div className="runner-shell-topnav">
+                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_races')}</span>
               </div>
             </div>
 
-            <div className="analysis-stitch-topbar-actions">
-              <div className="analysis-stitch-topbar-profile-actions">
-                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                  <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-                </button>
-                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+            <div className="runner-shell-topbar-actions">
+              <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+                <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
-                <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={t('settings.heading')}>
+                <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
                   {initials}
                 </button>
               </div>
             </div>
           </header>
 
-          <div className="analysis-stitch-canvas">
+          <div className="runner-shell-canvas">
             <div className="race-center-content">
             <section className="race-center-hero">
               <img
@@ -836,11 +841,8 @@ export default function Races() {
                 )}
               </div>
             </section>
-            <footer className="analysis-stitch-footer runner-dashboard-footer">
-              <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-              <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-              <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-              <button type="button" onClick={logout}>{t('profile.logout')}</button>
+            <footer className="runner-shell-footer runner-dashboard-footer">
+              <FooterNavLinks />
             </footer>
             </div>
           </div>

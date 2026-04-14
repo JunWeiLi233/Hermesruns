@@ -36,6 +36,7 @@ public class SpaForwardingController {
         "/rewards",
         "/settings",
         "/shoes",
+        "/shoes/add",
         "/add-shoes",
         "/shoe-catalog",
         "/races",

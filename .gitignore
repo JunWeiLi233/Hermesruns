@@ -27,6 +27,8 @@ backend_log.txt
 *.pid
 *.seed
 tmp_*
+.tmp-*
+.tmp_*
 .tmp/
 .tmp-*
 
@@ -163,6 +165,7 @@ HERMES_SELF_EVOLVING_ENGINE.md
 .tools/auto-hermes-round-close.mjs
 .tools/auto-hermes-self-check.mjs
 .tools/mempalace/
+.tools/rtk-codex-health.ps1
 .tools/token_tester/
 .tools/verify-backend-runtime-sync.mjs
 .tools/verify-frontend-runtime-sync.mjs

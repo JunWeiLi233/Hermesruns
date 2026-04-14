@@ -9,6 +9,12 @@ import 'leaflet/dist/leaflet.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const SPEED_BANDS = [
+  { key: 'slow', min: 0, color: '#ff375f' },
+  { key: 'mid', min: 0.34, color: '#ff5a47' },
+  { key: 'fast', min: 0.62, color: '#ff9f1c' },
+  { key: 'peak', min: 0.84, color: '#ffd34f' },
+];
 let leafletModulesPromise = null;
 
 async function loadLeafletModules() {
@@ -31,10 +37,10 @@ function getHeatLayerOptions(zoom) {
   const zoomProgress = (normalizedZoom - 8) / 10;
 
   return {
-    radius: Math.round(clamp(2 + zoomProgress * 4, 2, 6)),
-    blur: Math.round(clamp(1 + zoomProgress * 2, 1, 3)),
+    radius: Math.round(clamp(2 + zoomProgress * 3, 2, 5)),
+    blur: Math.round(clamp(1 + zoomProgress * 1, 1, 2)),
     maxZoom: 18,
-    minOpacity: clamp(0.03 + zoomProgress * 0.05, 0.03, 0.08),
+    minOpacity: clamp(0.015 + zoomProgress * 0.03, 0.015, 0.045),
     gradient: {
       0.08: '#3a0e16',
       0.36: '#ff375f',
@@ -47,7 +53,7 @@ function getHeatLayerOptions(zoom) {
 function buildHeatLayerPoints(points, zoom) {
   const safeZoom = Number.isFinite(zoom) ? zoom : 12;
   const normalizedZoom = clamp(safeZoom, 8, 18);
-  const zoomBoost = clamp(0.18 + ((normalizedZoom - 8) / 10) * 0.1, 0.18, 0.28);
+  const zoomBoost = clamp(0.11 + ((normalizedZoom - 8) / 10) * 0.07, 0.11, 0.18);
 
   return points.map((point) => {
     const baseIntensity = clamp(
@@ -58,30 +64,32 @@ function buildHeatLayerPoints(points, zoom) {
     return [
       point.latitude,
       point.longitude,
-      clamp(baseIntensity * zoomBoost, 0.04, 0.6),
+      clamp(baseIntensity * zoomBoost, 0.025, 0.36),
     ];
   });
 }
 
 function getRouteSegmentColor(speedRatio) {
   const safeRatio = clamp(Number.isFinite(speedRatio) ? speedRatio : 0.5, 0, 1);
-  if (safeRatio >= 0.84) return '#ffd34f';
-  if (safeRatio >= 0.62) return '#ff9f1c';
-  if (safeRatio >= 0.34) return '#ff5a47';
-  return '#ff375f';
+  for (let index = SPEED_BANDS.length - 1; index >= 0; index -= 1) {
+    if (safeRatio >= SPEED_BANDS[index].min) {
+      return SPEED_BANDS[index].color;
+    }
+  }
+  return SPEED_BANDS[0].color;
 }
 
 function getGpsDotStyle(speedRatio, zoom) {
   const safeZoom = Number.isFinite(zoom) ? zoom : 12;
   const normalizedZoom = clamp(safeZoom, 8, 18);
-  const radius = clamp(1.2 + ((normalizedZoom - 8) / 10) * 2.3, 1.2, 3.5);
+  const radius = clamp(1.5 + ((normalizedZoom - 8) / 10) * 2.7, 1.5, 4.2);
   return {
     color: getRouteSegmentColor(speedRatio),
     radius,
     fillColor: getRouteSegmentColor(speedRatio),
-    fillOpacity: clamp(0.76 + ((normalizedZoom - 8) / 10) * 0.14, 0.76, 0.9),
-    opacity: clamp(0.2 + ((normalizedZoom - 8) / 10) * 0.08, 0.2, 0.28),
-    weight: clamp(radius * 0.28, 0.4, 1),
+    fillOpacity: clamp(0.86 + ((normalizedZoom - 8) / 10) * 0.1, 0.86, 0.96),
+    opacity: clamp(0.34 + ((normalizedZoom - 8) / 10) * 0.1, 0.34, 0.44),
+    weight: clamp(radius * 0.34, 0.6, 1.5),
     interactive: false,
     bubblingMouseEvents: false,
   };
@@ -89,40 +97,40 @@ function getGpsDotStyle(speedRatio, zoom) {
 
 function getGpsDotStride(pointCount, zoom) {
   const safeZoom = Number.isFinite(zoom) ? zoom : 12;
-  if (safeZoom >= 15 || pointCount <= 220) return 1;
-  if (safeZoom >= 14 || pointCount <= 420) return 2;
-  if (safeZoom >= 13) return 2;
-  if (safeZoom >= 11) return pointCount <= 900 ? 2 : 3;
-  if (safeZoom >= 9) return pointCount <= 1200 ? 3 : 4;
-  return pointCount <= 1600 ? 4 : 5;
+  if (safeZoom >= 15 || pointCount <= 360) return 1;
+  if (safeZoom >= 13 || pointCount <= 720) return 2;
+  if (safeZoom >= 11 || pointCount <= 1400) return 3;
+  return pointCount <= 2200 ? 4 : 5;
 }
 
 function buildVisibleGpsDots(points, zoom) {
   if (!Array.isArray(points) || points.length === 0) return [];
 
-  const stride = getGpsDotStride(points.length, zoom);
   const visibleDots = [];
-  let lastActivityId = null;
-  let activityPointIndex = 0;
+  let activityStart = 0;
 
-  for (let index = 0; index < points.length; index += 1) {
-    const point = points[index];
-    const nextPoint = points[index + 1] || null;
-    const activityChanged = point.activityId !== lastActivityId;
-    if (activityChanged) {
-      activityPointIndex = 0;
+  while (activityStart < points.length) {
+    const activityId = points[activityStart]?.activityId;
+    let activityEnd = activityStart + 1;
+    while (activityEnd < points.length && points[activityEnd]?.activityId === activityId) {
+      activityEnd += 1;
     }
 
-    const isActivityHead = activityChanged;
-    const isActivityTail = !nextPoint || nextPoint.activityId !== point.activityId;
-    const shouldKeep = isActivityHead || isActivityTail || activityPointIndex % stride === 0;
+    const activityPoints = points.slice(activityStart, activityEnd);
+    const stride = getGpsDotStride(activityPoints.length, zoom);
 
-    if (shouldKeep) {
-      visibleDots.push(point);
+    for (let activityIndex = 0; activityIndex < activityPoints.length; activityIndex += 1) {
+      const point = activityPoints[activityIndex];
+      const isActivityHead = activityIndex === 0;
+      const isActivityTail = activityIndex === activityPoints.length - 1;
+      const shouldKeep = isActivityHead || isActivityTail || activityIndex % stride === 0;
+
+      if (shouldKeep) {
+        visibleDots.push(point);
+      }
     }
 
-    lastActivityId = point.activityId;
-    activityPointIndex += 1;
+    activityStart = activityEnd;
   }
 
   return visibleDots;
@@ -326,8 +334,19 @@ export default function Heatmap() {
   const focusCards = [
     { label: t('heatmap.page_runs_label'), value: activityCount },
     { label: t('heatmap.page_points_label'), value: pointCount },
-    { label: t('heatmap.page_density_label'), value: densityPerRun },
+    { label: t('heatmap.page_density_label'), value: densityPerRun, emphasis: 'density' },
   ];
+  const speedLegendLabels = {
+    slow: t('heatmap.page_legend_slow'),
+    mid: t('heatmap.page_legend_mid'),
+    fast: t('heatmap.page_legend_fast'),
+    peak: t('heatmap.page_legend_peak'),
+  };
+  const speedLegendBands = SPEED_BANDS.map((band) => ({
+    key: band.key,
+    label: speedLegendLabels[band.key] || band.key,
+    color: band.color,
+  }));
 
   const quickLinks = [
     { key: 'profile', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
@@ -409,7 +428,7 @@ export default function Heatmap() {
             </button>
             <button
               type="button"
-              className="analysis-stitch-avatar heatmap-page-avatar"
+              className="runner-shell-avatar heatmap-page-avatar"
               aria-label={profile?.displayName || 'Hermes'}
               onClick={() => navigate('/profile')}
             >
@@ -497,7 +516,10 @@ export default function Heatmap() {
 
                   <div className="heatmap-page-focus-grid">
                     {focusCards.map((card) => (
-                      <div key={card.label} className="heatmap-page-focus-card">
+                      <div
+                        key={card.label}
+                        className={cx('heatmap-page-focus-card', card.emphasis === 'density' && 'is-density')}
+                      >
                         <span>{card.label}</span>
                         <strong>{card.value}</strong>
                       </div>
@@ -509,15 +531,17 @@ export default function Heatmap() {
 
             <aside className="heatmap-page-legend-card">
               <span className="heatmap-page-card-kicker">{t('heatmap.page_legend_title')}</span>
-              <div className="heatmap-page-legend-scale" aria-hidden="true">
-                <span className="is-slow" />
-                <span className="is-mid" />
-                <span className="is-fast" />
-              </div>
-              <div className="heatmap-page-legend-labels">
-                <span>{t('heatmap.page_legend_slow')}</span>
-                <span>{t('heatmap.page_legend_mid')}</span>
-                <span>{t('heatmap.page_legend_fast')}</span>
+              <div className="heatmap-page-legend-scale" role="list" aria-label={t('heatmap.page_legend_title')}>
+                {speedLegendBands.map((band) => (
+                  <div key={band.key} className="heatmap-page-legend-band" role="listitem">
+                    <span className="heatmap-page-legend-band-label">{band.label}</span>
+                    <span
+                      className="heatmap-page-legend-band-swatch"
+                      style={{ background: band.color }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                ))}
               </div>
 
               <div className="heatmap-page-legend-meta">
@@ -525,7 +549,7 @@ export default function Heatmap() {
                   <span>{t('heatmap.page_center_label')}</span>
                   <strong>{centerLabel}</strong>
                 </div>
-                <div>
+                <div className="is-density">
                   <span>{t('heatmap.page_density_label')}</span>
                   <strong>{densityPerRun}</strong>
                 </div>

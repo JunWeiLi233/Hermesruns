@@ -5,9 +5,11 @@ import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import { formatDistance } from '../utils/format';
 import { getTodayRunRecommendation } from '../utils/todayRun';
+import TopbarNotifications from '../components/TopbarNotifications';
 
 const SCHEDULE_COPY = {
   'zh-CN': {
@@ -412,17 +414,17 @@ export default function Schedule() {
     : s('sleep_moderate');
 
   if (loadState === 'loading') {
-    return <div className="analysis-stitch-page analysis-stitch-page--loading"><div className="analysis-stitch-loading">{s('loading')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('loading')}</div></div>;
   }
 
   if (loadState === 'error') {
-    return <div className="analysis-stitch-page analysis-stitch-page--loading"><div className="analysis-stitch-loading">{s('load_error')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('load_error')}</div></div>;
   }
 
   return (
-    <div className={`analysis-stitch-page schedule-stitch-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+    <div className={`runner-shell-page schedule-plan-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('analysis.stitch_brand_subtitle')}</span>
@@ -438,7 +440,7 @@ export default function Schedule() {
           </button>
         </div>
 
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {[
             { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
             { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
@@ -451,7 +453,7 @@ export default function Schedule() {
             <button
               key={item.key}
               type="button"
-              className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -460,10 +462,10 @@ export default function Schedule() {
           ))}
         </nav>
 
-        <div className="analysis-stitch-sidebar-footer">
+        <div className="runner-shell-sidebar-footer">
           <button
             type="button"
-            className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
@@ -473,37 +475,35 @@ export default function Schedule() {
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
-            <div className="schedule-stitch-topnav">
-              <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_schedule')}</span>
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_schedule')}</span>
             </div>
           </div>
 
-          <div className="analysis-stitch-topbar-actions">
-            <div className="analysis-stitch-topbar-profile-actions">
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="analysis-stitch-avatar" aria-label={displayName} onClick={() => navigate('/profile')}>
+              <button type="button" className="runner-shell-avatar" aria-label={displayName} onClick={() => navigate('/profile')}>
                 {initials}
               </button>
             </div>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas schedule-stitch-canvas">
-          <section className="schedule-stitch-hero">
-            <div className="schedule-stitch-hero-copy">
-              <span className="schedule-stitch-kicker">{heroKicker}</span>
+        <div className="runner-shell-canvas schedule-plan-canvas">
+          <section className="schedule-plan-hero">
+            <div className="schedule-plan-hero-copy">
+              <span className="schedule-plan-kicker">{heroKicker}</span>
               <h1>{s('hero_title')}</h1>
             </div>
 
-            <div className="schedule-stitch-hero-metrics">
+            <div className="schedule-plan-hero-metrics">
               <div>
                 <span>{s('target_volume')}</span>
                 <strong>{formatDistance(targetVolumeKm, 1, lang, unit)}</strong>
@@ -514,7 +514,7 @@ export default function Schedule() {
               </div>
             </div>
 
-            <div className="schedule-stitch-hero-pulse" aria-hidden="true">
+            <div className="schedule-plan-hero-pulse" aria-hidden="true">
               <svg viewBox="0 0 100 100">
                 <path d="M0 50 Q 25 20 50 50 T 100 50" />
                 <path d="M0 60 Q 25 30 50 60 T 100 60" />
@@ -523,15 +523,15 @@ export default function Schedule() {
             </div>
           </section>
 
-          <section className="schedule-stitch-week-grid">
+          <section className="schedule-plan-week-grid">
             {weekSchedule.map((day) => (
               <article
                 key={day.key}
-                className={`schedule-stitch-day schedule-stitch-day--${day.tone}${day.isToday ? ' is-today' : ''}`}
+                className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}`}
               >
                 <div>
-                  <p className="schedule-stitch-day-label">{day.dayLabel}</p>
-                  <p className="schedule-stitch-day-tag">{day.tag}</p>
+                  <p className="schedule-plan-day-label">{day.dayLabel}</p>
+                  <p className="schedule-plan-day-tag">{day.tag}</p>
                 </div>
                 <div>
                   <h2>{day.title}</h2>
@@ -541,23 +541,23 @@ export default function Schedule() {
             ))}
           </section>
 
-          <section className="schedule-stitch-bottom-grid">
-            <div className="schedule-stitch-left-rail">
-              <div className="schedule-stitch-dual-grid">
-                <article className="schedule-stitch-readiness-card">
+          <section className="schedule-plan-bottom-grid">
+            <div className="schedule-plan-left-rail">
+              <div className="schedule-plan-dual-grid">
+                <article className="schedule-plan-readiness-card">
                   <h3>{s('readiness_title')}</h3>
-                  <div className="schedule-stitch-readiness-ring">
+                  <div className="schedule-plan-readiness-ring">
                     <svg viewBox="0 0 220 220" aria-hidden="true">
-                      <circle cx="110" cy="110" r="92" className="schedule-stitch-readiness-track" />
+                      <circle cx="110" cy="110" r="92" className="schedule-plan-readiness-track" />
                       <circle
                         cx="110"
                         cy="110"
                         r="92"
-                        className="schedule-stitch-readiness-progress"
+                        className="schedule-plan-readiness-progress"
                         style={{ strokeDasharray: 578, strokeDashoffset: 578 - ((578 * readiness.score) / 100) }}
                       />
                     </svg>
-                    <div className="schedule-stitch-readiness-center">
+                    <div className="schedule-plan-readiness-center">
                       <strong>{readiness.score}</strong>
                       <span>{readiness.label}</span>
                     </div>
@@ -565,10 +565,10 @@ export default function Schedule() {
                   <p>{readiness.copy}</p>
                 </article>
 
-                <article className="schedule-stitch-next-card">
-                  <div className="schedule-stitch-next-bg" />
-                  <div className="schedule-stitch-next-overlay" />
-                  <div className="schedule-stitch-next-content">
+                <article className="schedule-plan-next-card">
+                  <div className="schedule-plan-next-bg" />
+                  <div className="schedule-plan-next-overlay" />
+                  <div className="schedule-plan-next-content">
                     <span>{t('schedule.next_up')}</span>
                     
                     <h3>{nextSessionTitle}</h3>
@@ -581,35 +581,35 @@ export default function Schedule() {
                 </article>
               </div>
 
-              <article className="schedule-stitch-route-card">
-                <div className="schedule-stitch-route-map" />
-                <div className="schedule-stitch-route-content">
+              <article className="schedule-plan-route-card">
+                <div className="schedule-plan-route-map" />
+                <div className="schedule-plan-route-content">
                   <div>
                     <span>{s('planned_route')}</span>
                     <h3>{activeBlock?.name || s('default_route_name')}</h3>
-                    <div className="schedule-stitch-route-meta">
+                    <div className="schedule-plan-route-meta">
                       <span>{s('route_gain', { value: Math.round((coachState?.volumeKm7d || 0) * 3) })}</span>
                       <span>{s('route_speed')}</span>
                     </div>
                   </div>
-                  <button type="button" className="schedule-stitch-watch-btn" onClick={() => navigate('/today-run')}>
+                  <button type="button" className="schedule-plan-watch-btn" onClick={() => navigate('/today-run')}>
                     {s('sync_to_watch')}
                   </button>
                 </div>
               </article>
             </div>
 
-            <aside className="schedule-stitch-right-rail">
-              <article className="schedule-stitch-coach-card">
-                <div className="schedule-stitch-coach-head">
-                  <div className="schedule-stitch-coach-avatar">{initials}</div>
+            <aside className="schedule-plan-right-rail">
+              <article className="schedule-plan-coach-card">
+                <div className="schedule-plan-coach-head">
+                  <div className="schedule-plan-coach-avatar">{initials}</div>
                   <div>
                     <h3>{s('coach_title')}</h3>
                     <p>{s('coach_subtitle')}</p>
                   </div>
                 </div>
 
-                <div className="schedule-stitch-coach-copy">
+                <div className="schedule-plan-coach-copy">
                   <h4>{s('coach_quote')}</h4>
                   <p>
                     {activeBlock
@@ -621,28 +621,28 @@ export default function Schedule() {
                   </p>
                 </div>
 
-                <div className="schedule-stitch-signal-group">
-                  <div className="schedule-stitch-signal-row">
+                <div className="schedule-plan-signal-group">
+                  <div className="schedule-plan-signal-row">
                     <span>{s('fatigue_level')}</span>
                     <strong>{fatigueLevel}</strong>
                   </div>
-                  <div className="schedule-stitch-signal-bar"><span style={{ width: `${fatiguePct}%` }} /></div>
-                  <div className="schedule-stitch-signal-row">
+                  <div className="schedule-plan-signal-bar"><span style={{ width: `${fatiguePct}%` }} /></div>
+                  <div className="schedule-plan-signal-row">
                     <span>{s('sleep_quality')}</span>
                     <strong>{sleepLabel}</strong>
                   </div>
-                  <div className="schedule-stitch-signal-bar"><span className="is-sleep" style={{ width: `${sleepPct}%` }} /></div>
+                  <div className="schedule-plan-signal-bar"><span className="is-sleep" style={{ width: `${sleepPct}%` }} /></div>
                 </div>
 
-                <button type="button" className="schedule-stitch-secondary-btn" onClick={() => navigate('/analysis')}>
+                <button type="button" className="schedule-plan-secondary-btn" onClick={() => navigate('/analysis')}>
                   {s('detailed_biometrics')}
                 </button>
               </article>
 
-              <article className="schedule-stitch-gear-card">
+              <article className="schedule-plan-gear-card">
                 <h3>{s('current_gear')}</h3>
-                <div className="schedule-stitch-gear-row">
-                  <div className="schedule-stitch-gear-thumb" />
+                <div className="schedule-plan-gear-row">
+                  <div className="schedule-plan-gear-thumb" />
                   <div>
                     <strong>{currentGear ? `${currentGear.brand || ''} ${currentGear.model || ''}`.trim() : s('gear_fallback')}</strong>
                     <p>
@@ -652,7 +652,7 @@ export default function Schedule() {
                     </p>
                   </div>
                 </div>
-                <div className="schedule-stitch-gear-bar">
+                <div className="schedule-plan-gear-bar">
                   <span
                     style={{
                       width: currentGear
@@ -665,11 +665,8 @@ export default function Schedule() {
             </aside>
           </section>
 
-          <footer className="analysis-stitch-footer runner-dashboard-footer">
-            <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-            <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-            <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-            <button type="button" onClick={() => navigate('/settings')}>{t('profile.settings')}</button>
+          <footer className="runner-shell-footer runner-dashboard-footer">
+            <FooterNavLinks />
           </footer>
         </div>
       </main>

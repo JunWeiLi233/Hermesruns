@@ -5,13 +5,17 @@ import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import Modal from '../components/Modal';
 import HermesLogo from '../components/HermesLogo';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
+import TopbarNotifications from '../components/TopbarNotifications';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
+import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
+import { kmOf } from '../utils/analysisInsights';
 import {
   buildRecentShoeSignal,
   getRunTimestamp,
@@ -221,11 +225,6 @@ const CATALOG_CATEGORY_META = {
 /** Maximum number of images processed per scan request. */
 const SHOE_SCAN_MAX_FILES = 5;
 
-function getRunnerDisplayName(email, fallback) {
-  const raw = (email || '').split('@')[0]?.trim() || fallback;
-  return raw.replace(/^./, (char) => char.toUpperCase());
-}
-
 function formatPaceForDisplay(paceSecPerKm, unit, t) {
   if (!paceSecPerKm || paceSecPerKm <= 0) return '--';
   const converted = unit === 'mile' ? paceSecPerKm * 1.60934 : paceSecPerKm;
@@ -298,6 +297,7 @@ export default function Shoes() {
   const [imgPendingUploadUrl, setImgPendingUploadUrl] = useState('');
   const [imgPendingUploadName, setImgPendingUploadName] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   // Scan modal
   const [scanOpen, setScanOpen] = useState(false);
@@ -305,10 +305,12 @@ export default function Shoes() {
   const [scanFiles, setScanFiles] = useState([]);
   const [scanStatus, setScanStatus] = useState('');
   const [scannedShoes, setScannedShoes] = useState([]);
+  const [scanPreviewUrl, setScanPreviewUrl] = useState('');
   const [aiQuota, setAiQuota] = useState(null);
+  const [isRotationSignalCollapsed, setIsRotationSignalCollapsed] = useState(false);
   const [isInventoryCollapsed, setIsInventoryCollapsed] = useState(false);
-  const displayName = getRunnerDisplayName(email, t('profile.default_name'));
-  const initials = displayName.slice(0, 1).toUpperCase();
+  const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
+  const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
 
   function applyPendingUploadState(nextState) {
     setImgPendingUploadUrl(nextState.imgPendingUploadUrl);
@@ -322,6 +324,15 @@ export default function Shoes() {
       setRuns(Array.isArray(activities) ? activities : []);
     } catch {
       setRuns([]);
+    }
+  }, []);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const data = await apiJson('/api/profile/me');
+      setProfile(data || null);
+    } catch {
+      setProfile(null);
     }
   }, []);
 
@@ -385,10 +396,23 @@ export default function Shoes() {
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
+    loadProfile();
     loadShoes();
     loadRuns();
     checkScanAvailable();
-  }, [checkScanAvailable, isAuthenticated, loadRuns, loadShoes, navigate]);
+  }, [checkScanAvailable, isAuthenticated, loadProfile, loadRuns, loadShoes, navigate]);
+
+  useEffect(() => {
+    if (!scanFiles.length) {
+      setScanPreviewUrl('');
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(scanFiles[0]);
+    setScanPreviewUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [scanFiles]);
 
   const findShoeImage = useCallback(async (shoeId) => {
     try {
@@ -534,9 +558,18 @@ export default function Shoes() {
       : performanceFallback
         ? t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })
         : recentRotationEmpty;
+  const rotationSignalAvgPace = shoePerformanceInsights.topInsight?.paceSecPerKm ?? performanceFallback?.avgPace ?? null;
+  const rotationSignalTotalDistance = recentPerformanceRuns.reduce((sum, run) => sum + kmOf(run), 0);
+  const rotationSignalHighlightLabel = lang === 'zh-CN' ? '表现洞察 / Performance Insights' : 'Performance Insights';
+  const rotationSignalSourceLabel = performanceFallback?.type === 'recommend'
+    ? 'r/RunningShoeGeeks'
+    : 'Hermes rotation read';
+  const rotationSignalSourceHref = performanceFallback?.type === 'recommend'
+    ? 'https://www.reddit.com/r/RunningShoeGeeks/'
+    : null;
 
   const renderRotationSignal = (inside = false) => (
-    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && performanceFallback?.type === 'recommend' ? ' is-recommend' : ''}`}>
+    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && performanceFallback?.type === 'recommend' ? ' is-recommend' : ''}${isRotationSignalCollapsed ? ' is-collapsed' : ''}`}>
       <div className="shoe-rotation-signal-head">
         <div className="shoe-rotation-signal-copy">
           <span className="shoe-inventory-panel-kicker">{t('shoes.performance_inline_title')}</span>
@@ -553,38 +586,87 @@ export default function Shoes() {
                 : t('shoes.performance_badge_watch')}
             </span>
           )}
+          <button
+            type="button"
+            className="shoe-rotation-signal-toggle"
+            onClick={() => setIsRotationSignalCollapsed((current) => !current)}
+            aria-expanded={!isRotationSignalCollapsed}
+            aria-controls="shoe-rotation-signal-panel"
+            aria-label={lang === 'zh-CN'
+              ? (isRotationSignalCollapsed ? '展开跑鞋表现相关性模块' : '折叠跑鞋表现相关性模块')
+              : (isRotationSignalCollapsed ? 'Expand shoe performance correlation section' : 'Collapse shoe performance correlation section')}
+          >
+            <AppIcon
+              name={isRotationSignalCollapsed ? 'chevron_right' : 'expand_more'}
+              className="runner-dashboard-side-link-icon"
+            />
+          </button>
         </div>
       </div>
 
-      <div className="shoe-rotation-signal-body">
+      {!isRotationSignalCollapsed && (
+        <div className="shoe-rotation-signal-body" id="shoe-rotation-signal-panel">
         {(shoePerformanceInsights.topInsight || performanceFallback) ? (
           <>
             <div className="shoe-rotation-signal-highlight">
-              <span className="shoe-rotation-signal-highlight-kicker">{t('shoes.performance_inline_title')}</span>
-              <strong>{rotationSignalFeatureTitle}</strong>
-              <p>{rotationSignalFeatureSummary}</p>
+              <div className="shoe-rotation-signal-highlight-copy">
+                <span className="shoe-rotation-signal-highlight-kicker">{rotationSignalHighlightLabel}</span>
+                <strong>{rotationSignalFeatureTitle}</strong>
+                <div className="shoe-rotation-signal-highlight-summary">
+                  <p>{rotationSignalFeatureSummary}</p>
+                  {performanceFallback?.type === 'recommend' && (
+                    <div className="shoe-rotation-signal-community">
+                      <span className="shoe-rotation-signal-community-name">r/RunningShoeGeeks</span>
+                      <span className="shoe-rotation-signal-community-pill">max cushion pick</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="shoe-rotation-signal-highlight-rail" aria-hidden="true" />
             </div>
             <div className="shoe-rotation-signal-sidecar">
               <div className="shoe-rotation-signal-glass">
                 <span className="shoe-inventory-panel-kicker">{recentWindowLabel}</span>
                 <strong>{rotationSignalSideTitle}</strong>
                 <p>{rotationSignalSideCopy}</p>
-              </div>
-              <div className="shoe-rotation-signal-meta">
-                {rotationSignalMetaItems.map((item) => (
-                  <span key={item} className="shoe-rotation-signal-stat">{item}</span>
-                ))}
-                {performanceFallback?.type === 'recommend' && (
-                  <a
-                    className="shoe-rotation-signal-source"
-                    href="https://www.reddit.com/r/RunningShoeGeeks/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    r/RunningShoeGeeks
-                  </a>
+                {rotationSignalAvgPace != null && (
+                  <div className="shoe-rotation-signal-glass-metric">
+                    <strong>{formatPaceForDisplay(rotationSignalAvgPace, unit, t)}</strong>
+                    <span>{unit === 'mile' ? (lang === 'zh-CN' ? '/英里平均配速' : '/mile avg pace') : (lang === 'zh-CN' ? '/公里平均配速' : '/km avg pace')}</span>
+                  </div>
                 )}
               </div>
+              <div className="shoe-rotation-signal-meta">
+                <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
+                  <small>{lang === 'zh-CN' ? '总公里数' : 'Total distance'}</small>
+                  <strong>{formatDistanceValue(rotationSignalTotalDistance, unit)} {getDistanceUnitLabel(unit)}</strong>
+                </span>
+                <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
+                  <small>{lang === 'zh-CN' ? '跑步频次' : 'Run count'}</small>
+                  <strong>{lang === 'zh-CN' ? `${recentPerformanceRuns.length} 次` : `${recentPerformanceRuns.length} runs`}</strong>
+                </span>
+              </div>
+              <div className="shoe-rotation-signal-detail-list">
+                {rotationSignalMetaItems.map((item) => (
+                  <span key={item} className="shoe-rotation-signal-detail-item">{item}</span>
+                ))}
+              </div>
+              {rotationSignalSourceHref ? (
+                <a
+                  className="shoe-rotation-signal-source"
+                  href={rotationSignalSourceHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>{rotationSignalSourceLabel}</span>
+                  <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
+                </a>
+              ) : (
+                <div className="shoe-rotation-signal-source is-static">
+                  <span>{rotationSignalSourceLabel}</span>
+                  <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -594,7 +676,8 @@ export default function Shoes() {
             <p>{recentRotationEmpty}</p>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </section>
   );
 
@@ -609,7 +692,7 @@ export default function Shoes() {
   ];
 
   function openManualAdd() {
-    navigate('/add-shoes');
+    navigate('/shoes/add');
   }
   const lockerBrands = useMemo(() => {
     const brands = new Set();
@@ -1035,9 +1118,9 @@ export default function Shoes() {
 
   return (
     <>
-      <div className={`analysis-stitch-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-        <aside className="analysis-stitch-sidebar">
-          <div className="analysis-stitch-brand runner-dashboard-brand">
+      <div className={`runner-shell-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+        <aside className="runner-shell-sidebar">
+          <div className="runner-shell-brand runner-dashboard-brand">
             <div className="runner-dashboard-brand-copy">
               <HermesLogo dark />
               <span>{t('profile.dashboard_tagline')}</span>
@@ -1053,12 +1136,12 @@ export default function Shoes() {
             </button>
           </div>
 
-          <nav className="analysis-stitch-side-nav">
+          <nav className="runner-shell-side-nav">
             {navItems.map((item) => (
               <button
                 key={item.key}
                 type="button"
-                className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+                className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
                 onClick={() => navigate(item.route)}
                 aria-label={item.label}
               >
@@ -1068,10 +1151,10 @@ export default function Shoes() {
             ))}
           </nav>
 
-          <div className="analysis-stitch-sidebar-footer">
+          <div className="runner-shell-sidebar-footer">
             <button
               type="button"
-              className="analysis-stitch-workout-btn runner-dashboard-workout-btn"
+              className="runner-shell-workout-btn runner-dashboard-workout-btn"
               onClick={() => navigate('/today-run')}
               aria-label={t('profile.dashboard_start_workout')}
             >
@@ -1081,30 +1164,28 @@ export default function Shoes() {
           </div>
         </aside>
 
-        <main className="analysis-stitch-main">
-          <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-            <div className="analysis-stitch-topbar-left">
-              <div className="schedule-stitch-topnav">
-                <span className="schedule-stitch-topnav-link is-active">{t('profile.dashboard_nav_shoes')}</span>
+        <main className="runner-shell-main">
+          <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+            <div className="runner-shell-topbar-left">
+              <div className="runner-shell-topnav">
+                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_shoes')}</span>
               </div>
             </div>
 
-            <div className="analysis-stitch-topbar-actions">
-              <div className="analysis-stitch-topbar-profile-actions">
-                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/runs')} aria-label={t('analysis.stitch_open_runs')}>
-                  <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-                </button>
-                <button type="button" className="analysis-stitch-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+            <div className="runner-shell-topbar-actions">
+              <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+                <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
-                <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
+                <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
                   {initials}
                 </button>
               </div>
             </div>
           </header>
 
-          <div className="analysis-stitch-canvas">
+          <div className="runner-shell-canvas">
             <div className="shoe-inventory-screen shoes-dashboard-shell">
         {renderRotationSignal()}
 
@@ -1254,11 +1335,8 @@ export default function Shoes() {
           </section>
         )}
 
-            <footer className="analysis-stitch-footer runner-dashboard-footer">
-              <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-              <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-              <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-              <button type="button" onClick={() => navigate('/settings')}>{t('profile.settings')}</button>
+            <footer className="runner-shell-footer runner-dashboard-footer">
+              <FooterNavLinks />
             </footer>
             </div>
           </div>
@@ -1468,143 +1546,183 @@ export default function Shoes() {
       </Modal>
 
       {/* Scan Modal */}
-      <Modal isOpen={scanOpen} onClose={() => setScanOpen(false)} title={t('shoes.scan_title')}>
-        {!scanAvailable ? (
-          <div>
-            <p className="modal-help" style={{ color: '#ef4444' }}>{t('shoes.scan_not_available')}</p>
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary modal-button" onClick={() => setScanOpen(false)}>{t('shoes.cancel')}</button>
+      <Modal
+        isOpen={scanOpen}
+        onClose={() => setScanOpen(false)}
+        title={t('shoes.scan_title')}
+        shellClassName="shoe-scan-modal-shell"
+        cardClassName="shoe-scan-modal-card"
+      >
+        <div className="shoe-scan-modal-layout">
+          <section className="shoe-scan-modal-visual">
+            <div className="shoe-scan-modal-kicker-row">
+              <div className="shoe-scan-modal-kicker-line" />
+              <span>{t('shoes.scan_image')}</span>
             </div>
-          </div>
-        ) : scanStatus !== 'done' ? (
-          <form onSubmit={handleScan}>
-            <p className="modal-help">{t('shoes.scan_hint')}</p>
-            {aiQuota && !aiQuota.admin && !aiQuota.unlimited && (
-              <div className="ai-quota-bar">
-                {aiQuota.tier === 'PRO' ? (
-                  <span className="ai-quota-badge ai-quota-pro">PRO</span>
-                ) : (
-                  <span className="ai-quota-badge ai-quota-free">FREE</span>
-                )}
-                <span className="ai-quota-text">
-                  {aiQuota.scansRemaining > 0
-                    ? t('shoes.ai_scans_remaining', { count: aiQuota.scansRemaining })
-                    : t('shoes.ai_scans_exhausted')}
-                  {aiQuota.quotaType === 'new_user' && ` (${t('shoes.ai_quota_new_user')})`}
-                  {aiQuota.quotaType === 'user_free' && ` (${t('shoes.ai_quota_user_free', { remaining: aiQuota.scansRemaining, total: aiQuota.userFreeTotal ?? 3 })})`}
+            <div className="shoe-scan-modal-preview">
+              {scanPreviewUrl ? (
+                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" />
+              ) : (
+                <div className="shoe-scan-modal-preview-empty">
+                  <AppIcon name="image_search" className="runner-dashboard-side-link-icon" />
+                  <strong>{t('shoes.scan_title')}</strong>
+                  <p>{t('shoes.scan_hint')}</p>
+                </div>
+              )}
+              <div className="shoe-scan-modal-preview-overlay" aria-hidden="true">
+                <div className="shoe-scan-modal-scan-line" />
+                <span className="shoe-scan-modal-chip is-live">
+                  {scanStatus === 'processing' ? t('shoes.scan_processing') : t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}
+                </span>
+                <span className="shoe-scan-modal-chip">
+                  {scanFiles.length > 0 ? `${scanFiles.length}/${SHOE_SCAN_MAX_FILES}` : t('shoes.scan_image')}
                 </span>
               </div>
-            )}
-            <input type="file" accept="image/*" multiple onChange={onScanFilesSelected} />
-            <p className="modal-help scan-file-limit-hint" style={{ marginTop: 8, fontSize: '0.85rem' }}>
-              {t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}
-            </p>
-            {scanStatus === 'processing' && <div className="modal-status">{t('shoes.scan_processing')}</div>}
-            {scanStatus === 'quota_exceeded' && (
-              <div className="modal-status ai-quota-exceeded">
-                <p style={{ color: '#f59e0b', margin: '0 0 8px 0' }}>{t('shoes.ai_quota_exceeded')}</p>
-                {aiQuota?.tier !== 'PRO' && <p style={{ margin: 0 }}>{t('shoes.ai_upgrade_hint')}</p>}
+            </div>
+            <div className="shoe-scan-modal-metrics">
+              <div>
+                <span>{t('shoes.total_mileage')}</span>
+                <strong>
+                  {scannedShoes.length
+                    ? `${scannedShoes.reduce((sum, shoe) => sum + Number(shoe.distanceKm || 0), 0).toFixed(1)} km`
+                    : '--'}
+                </strong>
+              </div>
+              <div>
+                <span>{t('shoes.scan_image')}</span>
+                <strong>{scannedShoes.length || scanFiles.length || '--'}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="shoe-scan-modal-panel">
+            {!scanAvailable ? (
+              <div className="shoe-scan-modal-stack">
+                <div className="shoe-scan-modal-copy">
+                  <h4>{t('shoes.scan_title')}</h4>
+                  <p>{t('shoes.scan_not_available')}</p>
+                </div>
+                <div className="shoe-scan-modal-actions">
+                  <button type="button" className="shoe-scan-modal-secondary" onClick={() => setScanOpen(false)}>{t('shoes.cancel')}</button>
+                </div>
+              </div>
+            ) : scanStatus !== 'done' ? (
+              <form onSubmit={handleScan} className="shoe-scan-modal-stack">
+                <div className="shoe-scan-modal-copy">
+                  <h4>{t('shoes.scan_title')}</h4>
+                  <p>{t('shoes.scan_hint')}</p>
+                </div>
+                {aiQuota && !aiQuota.admin && !aiQuota.unlimited && (
+                  <div className="shoe-scan-modal-note">
+                    <strong>{aiQuota.tier === 'PRO' ? 'PRO' : 'FREE'}</strong>
+                    <span>
+                      {aiQuota.scansRemaining > 0
+                        ? t('shoes.ai_scans_remaining', { count: aiQuota.scansRemaining })
+                        : t('shoes.ai_scans_exhausted')}
+                      {aiQuota.quotaType === 'new_user' && ` (${t('shoes.ai_quota_new_user')})`}
+                      {aiQuota.quotaType === 'user_free' && ` (${t('shoes.ai_quota_user_free', { remaining: aiQuota.scansRemaining, total: aiQuota.userFreeTotal ?? 3 })})`}
+                    </span>
+                  </div>
+                )}
+                <label className="shoe-scan-modal-upload">
+                  <span>{t('shoes.scan_image')}</span>
+                  <input type="file" accept="image/*" multiple onChange={onScanFilesSelected} />
+                  <small>{t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}</small>
+                </label>
+                {scanStatus === 'processing' && <div className="shoe-scan-modal-status">{t('shoes.scan_processing')}</div>}
+                {scanStatus === 'quota_exceeded' && (
+                  <div className="shoe-scan-modal-status is-warn">
+                    <strong>{t('shoes.ai_quota_exceeded')}</strong>
+                    {aiQuota?.tier !== 'PRO' && <span>{t('shoes.ai_upgrade_hint')}</span>}
+                  </div>
+                )}
+                {scanStatus === 'rate_limited' && <div className="shoe-scan-modal-status is-warn">{t('shoes.scan_rate_limited')}</div>}
+                {scanStatus === 'failed' && <div className="shoe-scan-modal-status is-error">{t('shoes.scan_failed')}</div>}
+                <div className="shoe-scan-modal-actions">
+                  <button type="button" className="shoe-scan-modal-secondary" onClick={() => setScanOpen(false)}>{t('shoes.cancel')}</button>
+                  <button
+                    type="submit"
+                    className="shoe-scan-modal-primary"
+                    disabled={scanFiles.length === 0 || scanStatus === 'processing' || (aiQuota && !aiQuota.admin && aiQuota.scansRemaining <= 0)}
+                  >
+                    {t('shoes.scan_image')}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="shoe-scan-modal-stack">
+                <div className="shoe-scan-modal-copy">
+                  <h4>{t('shoes.scan_confirm')}</h4>
+                  <p>{scannedShoes.some((shoe) => shoe._existing) ? t('shoes.scan_conflict_hint') : t('shoes.scan_hint')}</p>
+                </div>
+                <div className="shoe-scan-results-cards">
+                  {scannedShoes.map((s, i) => (
+                    <div key={i} className={`shoe-scan-result-card${s._existing ? ' is-duplicate' : ''}`}>
+                      <button type="button" className="shoe-scan-result-remove" onClick={() => removeScannedShoe(i)} aria-label={t('shoes.delete_shoe')}>&times;</button>
+                      <span className={`shoe-scan-result-badge${s._existing ? ' is-duplicate' : ' is-new'}`}>
+                        {s._existing ? t('shoes.scan_duplicate_found') : t('shoes.scan_new_shoe')}
+                      </span>
+                      <div className="shoe-scan-result-fields">
+                        <label>
+                          <span>{t('shoes.brand')}</span>
+                          <input type="text" value={s.brand || ''} onChange={(e) => updateScannedShoe(i, 'brand', e.target.value)} />
+                        </label>
+                        <label>
+                          <span>{t('shoes.model')}</span>
+                          <input type="text" value={s.model || ''} onChange={(e) => updateScannedShoe(i, 'model', e.target.value)} />
+                        </label>
+                        <label className="is-wide">
+                          <span>{t('shoes.total_mileage')}</span>
+                          <div className="shoe-scan-result-km">
+                            <input
+                              type="number"
+                              value={s.distanceKm || 0}
+                              step="0.1"
+                              min="0"
+                              onChange={(e) => updateScannedShoe(i, 'distanceKm', Number(e.target.value))}
+                            />
+                            <em>km</em>
+                          </div>
+                        </label>
+                      </div>
+                      {s._existing && (
+                        <div className="shoe-scan-result-conflict">
+                          <div className="shoe-scan-result-compare">
+                            <div>
+                              <span>{t('shoes.scan_existing_mileage')}</span>
+                              <strong>{(s._existing.currentDistanceKm || 0).toFixed(1)} km</strong>
+                            </div>
+                            <div>
+                              <span>{t('shoes.scan_scanned_mileage')}</span>
+                              <strong>{(Number(s.distanceKm) || 0).toFixed(1)} km</strong>
+                            </div>
+                          </div>
+                          <div className="shoe-scan-result-actions">
+                            <button type="button" className={cx('shoe-scan-choice', s._action === 'keep_existing' && 'is-active')} onClick={() => setScannedAction(i, 'keep_existing')}>
+                              {t('shoes.scan_keep_existing')}
+                            </button>
+                            <button type="button" className={cx('shoe-scan-choice', s._action === 'use_scanned' && 'is-active')} onClick={() => setScannedAction(i, 'use_scanned')}>
+                              {t('shoes.scan_use_scanned')}
+                            </button>
+                            <button type="button" className={cx('shoe-scan-choice', s._action === 'add_new' && 'is-active')} onClick={() => setScannedAction(i, 'add_new')}>
+                              {t('shoes.scan_add_new_anyway')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {scannedShoes.length === 0 && <p className="shoe-scan-empty">{t('shoes.empty')}</p>}
+                </div>
+                <div className="shoe-scan-modal-actions">
+                  <button type="button" className="shoe-scan-modal-secondary" onClick={() => { setScanStatus(''); setScannedShoes([]); }}>{t('shoes.back')}</button>
+                  <button type="button" className="shoe-scan-modal-primary" onClick={handleAddScanned} disabled={scannedShoes.length === 0}>{t('shoes.confirm_add_all')}</button>
+                </div>
               </div>
             )}
-            {scanStatus === 'rate_limited' && <div className="modal-status" style={{ color: '#f59e0b' }}>{t('shoes.scan_rate_limited')}</div>}
-            {scanStatus === 'failed' && <div className="modal-status" style={{ color: '#ef4444' }}>{t('shoes.scan_failed')}</div>}
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary modal-button" onClick={() => setScanOpen(false)}>{t('shoes.cancel')}</button>
-              <button type="submit" className="btn-primary modal-button" disabled={scanFiles.length === 0 || scanStatus === 'processing' || (aiQuota && !aiQuota.admin && aiQuota.scansRemaining <= 0)}>{t('shoes.scan_image')}</button>
-            </div>
-          </form>
-        ) : (
-          <div>
-            {scannedShoes.some(s => s._existing) && (
-              <p className="scan-conflict-hint">{t('shoes.scan_conflict_hint')}</p>
-            )}
-            {!scannedShoes.some(s => s._existing) && (
-              <p>{t('shoes.scan_confirm')}</p>
-            )}
-            <div className="scan-results-editable">
-              {scannedShoes.map((s, i) => (
-                <div key={i} className={`scan-result-card${s._existing ? ' scan-result-duplicate' : ''}`}>
-                  <button type="button" className="scan-result-remove" onClick={() => removeScannedShoe(i)}>&times;</button>
-
-                  {/* Duplicate badge */}
-                  {s._existing ? (
-                    <span className="scan-badge scan-badge-duplicate">{t('shoes.scan_duplicate_found')}</span>
-                  ) : (
-                    <span className="scan-badge scan-badge-new">{t('shoes.scan_new_shoe')}</span>
-                  )}
-
-                  <div className="scan-result-fields">
-                    <div className="scan-result-field">
-                      <label>{t('shoes.brand')}</label>
-                      <input type="text" value={s.brand || ''} onChange={e => updateScannedShoe(i, 'brand', e.target.value)} />
-                    </div>
-                    <div className="scan-result-field">
-                      <label>{t('shoes.model')}</label>
-                      <input type="text" value={s.model || ''} onChange={e => updateScannedShoe(i, 'model', e.target.value)} />
-                    </div>
-                    <div className="scan-result-field scan-result-field-km">
-                      <label>{t('shoes.total_mileage')}</label>
-                      <div className="scan-km-input">
-                        <input type="number" value={s.distanceKm || 0} step="0.1" min="0"
-                          onChange={e => updateScannedShoe(i, 'distanceKm', Number(e.target.value))} />
-                        <span>km</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Conflict resolution for duplicates */}
-                  {s._existing && (
-                    <div className="scan-conflict-section">
-                      <div className="scan-conflict-compare">
-                        <div className="scan-conflict-col">
-                          <span className="scan-conflict-label">{t('shoes.scan_existing_mileage')}</span>
-                          <span className="scan-conflict-value">{(s._existing.currentDistanceKm || 0).toFixed(1)} km</span>
-                        </div>
-                        <span className="scan-conflict-vs">vs</span>
-                        <div className="scan-conflict-col">
-                          <span className="scan-conflict-label">{t('shoes.scan_scanned_mileage')}</span>
-                          <span className="scan-conflict-value">{(Number(s.distanceKm) || 0).toFixed(1)} km</span>
-                        </div>
-                      </div>
-                      <div className="scan-conflict-actions">
-                        <button type="button"
-                          className={`scan-action-btn${s._action === 'keep_existing' ? ' scan-action-active' : ''}`}
-                          onClick={() => setScannedAction(i, 'keep_existing')}>
-                          {t('shoes.scan_keep_existing')}
-                        </button>
-                        <button type="button"
-                          className={`scan-action-btn${s._action === 'use_scanned' ? ' scan-action-active' : ''}`}
-                          onClick={() => setScannedAction(i, 'use_scanned')}>
-                          {t('shoes.scan_use_scanned')}
-                        </button>
-                        <button type="button"
-                          className={`scan-action-btn${s._action === 'add_new' ? ' scan-action-active' : ''}`}
-                          onClick={() => setScannedAction(i, 'add_new')}>
-                          {t('shoes.scan_add_new_anyway')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {scannedShoes.length === 0 && <p style={{ textAlign: 'center', color: 'var(--classic-muted)' }}>{t('shoes.empty')}</p>}
-            </div>
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary modal-button" onClick={() => { setScanStatus(''); setScannedShoes([]); }}>{t('shoes.back')}</button>
-              <button type="button" className="btn-primary modal-button" onClick={handleAddScanned} disabled={scannedShoes.length === 0}>{t('shoes.confirm_add_all')}</button>
-            </div>
-          </div>
-        )}
+          </section>
+        </div>
       </Modal>
     </>
   );
 }
-
-
-
-
-
-
-
-
-

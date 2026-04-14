@@ -1531,30 +1531,30 @@ export default function MuscleTraining() {
   }
 
   return (
-    <div className="dashboard-body muscle-stitch-shell">
+    <div className="dashboard-body strength-plan-shell">
       <LanguageSwitcher />
 
-      <div className="muscle-stitch-topbar">
-        <button type="button" className="muscle-stitch-brand" onClick={() => navigate('/profile')}>HERMES</button>
-        <nav className="muscle-stitch-toplinks">
+      <div className="strength-plan-topbar">
+        <button type="button" className="strength-plan-brand" onClick={() => navigate('/profile')}>HERMES</button>
+        <nav className="strength-plan-toplinks">
           <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
           <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
           <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
           <button type="button" onClick={() => navigate('/schedule')}>{stitchCopy.schedule}</button>
         </nav>
-        <div className="muscle-stitch-topicons">
+        <div className="strength-plan-topicons">
           <button type="button" aria-label="Notifications">N</button>
           <button type="button" aria-label="Settings" onClick={() => navigate('/settings')}>S</button>
-          <button type="button" className="muscle-stitch-avatar" onClick={() => navigate('/settings')}>H</button>
+          <button type="button" className="strength-plan-avatar" onClick={() => navigate('/settings')}>H</button>
         </div>
       </div>
 
-      <aside className="muscle-stitch-sidebar">
-        <div className="muscle-stitch-sidebrand">
+      <aside className="strength-plan-sidebar">
+        <div className="strength-plan-sidebrand">
           <strong>HERMES</strong>
           <span>Elite Performance</span>
         </div>
-        <div className="muscle-stitch-sidenav">
+        <div className="strength-plan-sidenav">
           <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
           <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
           <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
@@ -1562,14 +1562,14 @@ export default function MuscleTraining() {
           <button type="button" onClick={() => navigate('/races')}>Race Center</button>
           <button type="button" onClick={() => navigate('/schedule')}>{stitchCopy.schedule}</button>
         </div>
-        <button type="button" className="muscle-stitch-sidebar-cta" onClick={scrollToControls}>{stitchCopy.startWorkout}</button>
-        <div className="muscle-stitch-sidefooter">
+        <button type="button" className="strength-plan-sidebar-cta" onClick={scrollToControls}>{stitchCopy.startWorkout}</button>
+        <div className="strength-plan-sidefooter">
           <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.support}</button>
           <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.settings}</button>
         </div>
       </aside>
 
-      <main className="muscle-stitch-main">
+      <main className="strength-plan-main">
 
       <div className="dashboard-container page-body muscle-training-page">
         <div className="muscle-training-hero">
@@ -1588,15 +1588,15 @@ export default function MuscleTraining() {
         </div>
 
         {!loading && !error && plan && (
-          <section className="muscle-stitch-hero-shell">
-            <section className="muscle-stitch-hero">
-              <div className="muscle-stitch-hero-copy">
-                <span className="muscle-stitch-kicker">{stitchCopy.seriesLabel}</span>
+          <section className="strength-plan-hero-shell">
+            <section className="strength-plan-hero">
+              <div className="strength-plan-hero-copy">
+                <span className="strength-plan-kicker">{stitchCopy.seriesLabel}</span>
                 <h1>
                   {heroTheme.lineOne}
                   <span>{heroTheme.lineTwo}</span>
                 </h1>
-                <div className="muscle-stitch-metrics">
+                <div className="strength-plan-metrics">
                   <div>
                     <span>{stitchCopy.durationLabel}</span>
                     <strong>{featuredDay?.strength?.durationMinutes ? formatMinutes(featuredDay.strength.durationMinutes, isZh) : '-'}</strong>
@@ -1612,36 +1612,36 @@ export default function MuscleTraining() {
                 </div>
               </div>
 
-              <div className="muscle-stitch-hero-actions">
-                <button type="button" className="muscle-stitch-primary-btn" onClick={scrollToControls}>
+              <div className="strength-plan-hero-actions">
+                <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
                   {stitchCopy.startWorkout}
                 </button>
-                <div className="muscle-stitch-hero-tags">
+                <div className="strength-plan-hero-tags">
                   {heroTags.map((tag) => <span key={tag}>{tag}</span>)}
                 </div>
               </div>
             </section>
 
-            <section className="muscle-stitch-content-grid">
-              <div className="muscle-stitch-protocol">
-                <span className="muscle-stitch-section-label">{stitchCopy.protocolTitle}</span>
+            <section className="strength-plan-content-grid">
+              <div className="strength-plan-protocol">
+                <span className="strength-plan-section-label">{stitchCopy.protocolTitle}</span>
                 {protocolItems.length > 0 ? (
-                  <div className="muscle-stitch-protocol-list">
+                  <div className="strength-plan-protocol-list">
                     {protocolItems.map(({ block, blockIndex, exercise, exerciseIndex }) => {
                       const exerciseCopy = getExerciseCardContent(exercise, isZh);
                       return (
-                        <article key={`${block.title}-${exercise.name}-${exerciseIndex}`} className="muscle-stitch-exercise-row">
-                          <div className="muscle-stitch-exercise-media">
+                        <article key={`${block.title}-${exercise.name}-${exerciseIndex}`} className="strength-plan-exercise-row">
+                          <div className="strength-plan-exercise-media">
                             <ExerciseIllustration exerciseName={exercise.name} />
                           </div>
-                          <div className="muscle-stitch-exercise-copy">
-                            <span className="muscle-stitch-exercise-kicker">
+                          <div className="strength-plan-exercise-copy">
+                            <span className="strength-plan-exercise-kicker">
                               {String(blockIndex + 1).padStart(2, '0')} / {pickLabel(copy.blockTitles, block.title, block.title)}
                             </span>
                             <h3>{exerciseCopy.name}</h3>
                             <p>{exerciseCopy.steps.slice(0, 2).join(' ')}</p>
                           </div>
-                          <div className="muscle-stitch-exercise-meta">
+                          <div className="strength-plan-exercise-meta">
                             <div>
                               <span>{isZh ? '组数 x 次数/时长' : 'Sets x reps/duration'}</span>
                               <strong>{exercise.sets} x {exercise.repsOrDuration}</strong>
@@ -1653,37 +1653,37 @@ export default function MuscleTraining() {
                     })}
                   </div>
                 ) : (
-                  <div className="muscle-stitch-empty-panel">
+                  <div className="strength-plan-empty-panel">
                     <h3>{stitchCopy.noStrengthTitle}</h3>
                     <p>{pickLabel(copy.noStrengthReasons, featuredDay?.noStrengthReasonCode, stitchCopy.noStrengthHint)}</p>
                   </div>
                 )}
 
-                <div className="muscle-stitch-cta-panel">
+                <div className="strength-plan-cta-panel">
                   <h3>{stitchCopy.readyTitle}</h3>
                   <p>{stitchCopy.readyHint}</p>
-                  <button type="button" className="muscle-stitch-primary-btn" onClick={scrollToControls}>
+                  <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
                     {stitchCopy.enterWorkout}
                   </button>
                 </div>
               </div>
 
-              <aside className="muscle-stitch-rail">
-                <section className="muscle-stitch-rail-card">
-                  <span className="muscle-stitch-section-label">{stitchCopy.muscleFocusTitle}</span>
-                  <div className="muscle-stitch-map-wrap">
+              <aside className="strength-plan-rail">
+                <section className="strength-plan-rail-card">
+                  <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
+                  <div className="strength-plan-map-wrap">
                     <MuscleMap isZh={isZh} />
                   </div>
-                  <div className="muscle-stitch-focus-pills">
+                  <div className="strength-plan-focus-pills">
                     {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
                   </div>
                 </section>
 
-                <section className="muscle-stitch-rail-card">
-                  <span className="muscle-stitch-section-label">{stitchCopy.coachingCuesTitle}</span>
-                  <div className="muscle-stitch-cues">
+                <section className="strength-plan-rail-card">
+                  <span className="strength-plan-section-label">{stitchCopy.coachingCuesTitle}</span>
+                  <div className="strength-plan-cues">
                     {coachingCues.map((cue, index) => (
-                      <article key={cue.key} className="muscle-stitch-cue">
+                      <article key={cue.key} className="strength-plan-cue">
                         <span>{String(index + 1).padStart(2, '0')}</span>
                         <div>
                           <h4>{cue.title}</h4>
@@ -1694,8 +1694,8 @@ export default function MuscleTraining() {
                   </div>
                 </section>
 
-                <section className="muscle-stitch-impact-card">
-                  <span className="muscle-stitch-section-label">{stitchCopy.recoveryImpactTitle}</span>
+                <section className="strength-plan-impact-card">
+                  <span className="strength-plan-section-label">{stitchCopy.recoveryImpactTitle}</span>
                   <strong>{plan.weekContext?.acwr != null ? trimNumber(plan.weekContext.acwr, 2) : '0.00'}</strong>
                   <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} · {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
                 </section>
@@ -1709,10 +1709,10 @@ export default function MuscleTraining() {
 
         {!loading && !error && plan && (
           <>
-            <section id="muscle-controls" className="muscle-stitch-control-deck">
-              <div className="muscle-stitch-control-head">
+            <section id="muscle-controls" className="strength-plan-control-deck">
+              <div className="strength-plan-control-head">
                 <div>
-                  <span className="muscle-stitch-section-label">{stitchCopy.coachDeckTitle}</span>
+                  <span className="strength-plan-section-label">{stitchCopy.coachDeckTitle}</span>
                   <p>{stitchCopy.coachDeckHint}</p>
                 </div>
               </div>
@@ -2130,7 +2130,7 @@ export default function MuscleTraining() {
       </div>
       </main>
 
-      <nav className="muscle-stitch-mobile-dock">
+      <nav className="strength-plan-mobile-dock">
         <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
         <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
         <button type="button" onClick={scrollToControls}>{stitchCopy.startWorkout}</button>

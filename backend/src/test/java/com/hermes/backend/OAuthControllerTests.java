@@ -267,7 +267,7 @@ class OAuthControllerTests {
     }
 
     @Test
-    void handleStravaCallbackRedirectsToManualConfirmationInsteadOfCreatingShadowRunner() {
+    void handleStravaCallbackAutoProvisionsRunnerForLoginState() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
@@ -315,15 +315,24 @@ class OAuthControllerTests {
         )));
         when(runnerRepository.findByStravaAthleteId(424242L)).thenReturn(Optional.empty());
         when(runnerRepository.findByEmailIgnoreCase("strava+424242@hermes.local")).thenReturn(Optional.empty());
+        when(secretEncryptionService.encrypt("fresh-token")).thenReturn("enc-access");
+        when(secretEncryptionService.encrypt("refresh-token")).thenReturn("enc-refresh");
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> {
+            Runner saved = invocation.getArgument(0);
+            saved.setId(101L);
+            return saved;
+        });
+        when(authService.issueSessionToken(any(Runner.class))).thenReturn("session-token");
 
         RedirectView redirectView = controller.handleStravaCallback("oauth-code", null, "login");
 
         assertNotNull(redirectView.getUrl());
-        assertTrue(redirectView.getUrl().contains("/login?error=STRAVA_LINK_CONFIRMATION_REQUIRED"));
+        assertTrue(redirectView.getUrl().contains("/profile#source=strava"));
+        assertTrue(redirectView.getUrl().contains("token=session-token"));
+        assertTrue(redirectView.getUrl().contains("email=strava%2B424242%40hermes.local"));
         assertTrue(redirectView.getUrl().contains("source=strava"));
-        assertTrue(redirectView.getUrl().contains("linking=confirmation_required"));
-        verify(runnerRepository, never()).save(any(Runner.class));
-        verify(authService, never()).issueSessionToken(any(Runner.class));
+        verify(runnerRepository).save(any(Runner.class));
+        verify(authService).issueSessionToken(any(Runner.class));
     }
 
     @Test

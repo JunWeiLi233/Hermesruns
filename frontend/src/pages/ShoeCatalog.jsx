@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import shoeCatalog from '../data/shoeCatalog';
 import { useAuth } from '../contexts/AuthContext';
@@ -97,7 +98,7 @@ function getCatalogModelLabel(item, lang) {
 }
 
 export default function ShoeCatalog() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -206,9 +207,9 @@ export default function ShoeCatalog() {
   }
 
   return (
-    <div className={`analysis-stitch-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="analysis-stitch-sidebar">
-        <div className="analysis-stitch-brand runner-dashboard-brand">
+    <div className={`runner-shell-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
             <span>{t('shoes.stitch_surface_label')}</span>
@@ -224,12 +225,12 @@ export default function ShoeCatalog() {
           </button>
         </div>
 
-        <nav className="analysis-stitch-side-nav">
+        <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
-              className={`analysis-stitch-side-link${item.active ? ' is-active' : ''}`}
+              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -238,34 +239,34 @@ export default function ShoeCatalog() {
           ))}
         </nav>
 
-        <div className="analysis-stitch-sidebar-footer">
-          <button type="button" className="analysis-stitch-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+        <div className="runner-shell-sidebar-footer">
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>
         </div>
       </aside>
 
-      <main className="analysis-stitch-main">
-        <header className="analysis-stitch-topbar runner-dashboard-shell-topbar">
-          <div className="analysis-stitch-topbar-left">
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
             <button type="button" className="add-shoes-topbar-back" onClick={() => navigate('/shoes')}>
               <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
               <span>{lang === 'zh-CN' ? '返回跑鞋库' : 'Back to shoes'}</span>
             </button>
           </div>
 
-          <div className="analysis-stitch-topbar-actions">
-            <button type="button" className="analysis-stitch-topbar-link" onClick={() => navigate('/add-shoes')}>
+          <div className="runner-shell-topbar-actions">
+            <button type="button" className="runner-shell-topbar-link" onClick={() => navigate('/shoes/add')}>
               {t('shoes.add_page_title')}
             </button>
-            <button type="button" className="analysis-stitch-avatar" onClick={() => navigate('/profile')} aria-label="Profile">
+            <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label="Profile">
               H
             </button>
           </div>
         </header>
 
-        <div className="analysis-stitch-canvas">
+        <div className="runner-shell-canvas">
           <div className="add-shoes-shell">
             <section className="add-shoes-browser-panel shoe-catalog-browser-panel">
               <div className="add-shoes-browser-head">
@@ -278,7 +279,7 @@ export default function ShoeCatalog() {
                       : 'Browse brands, series, and use-cases in one editorial layer before deciding which pair to add.'}
                   </p>
                 </div>
-                <button type="button" className="analysis-stitch-inline-btn" onClick={handleCustom}>
+                <button type="button" className="runner-shell-inline-btn" onClick={handleCustom}>
                   {lang === 'zh-CN' ? '清空' : 'Clear'}
                 </button>
               </div>
@@ -374,7 +375,7 @@ export default function ShoeCatalog() {
                   <button
                     type="button"
                     className="shoe-inventory-cta"
-                    onClick={() => navigate('/add-shoes', {
+                    onClick={() => navigate('/shoes/add', {
                       state: selectedBrand && selectedModel ? { brand: selectedBrand.brand, model: selectedModel } : undefined,
                     })}
                   >
@@ -395,11 +396,8 @@ export default function ShoeCatalog() {
             </aside>
           </div>
 
-          <footer className="analysis-stitch-footer runner-dashboard-footer">
-            <button type="button" onClick={() => navigate('/terms')}>{t('landing.stitch_footer_terms')}</button>
-            <button type="button" onClick={() => navigate('/privacy')}>{t('landing.stitch_footer_privacy')}</button>
-            <button type="button" onClick={() => { window.location.href = 'mailto:support@hermes.run'; }}>{t('landing.stitch_footer_support')}</button>
-            <button type="button" onClick={logout}>{t('profile.logout')}</button>
+          <footer className="runner-shell-footer runner-dashboard-footer">
+            <FooterNavLinks />
           </footer>
         </div>
       </main>
