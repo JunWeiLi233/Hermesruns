@@ -66,6 +66,18 @@ public final class SafeUrlValidator {
         return s;
     }
 
+    public static String validateHttpsUrlOrNull(String url, int maxLen, String fieldName) {
+        String validated = validateHttpUrlOrNull(url, maxLen, fieldName);
+        if (validated == null) {
+            return null;
+        }
+        URI uri = URI.create(validated);
+        if (!"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException(fieldName + " must use https.");
+        }
+        return validated;
+    }
+
     /**
      * Allows the standard remote http(s) URLs plus small inline {@code data:image/...;base64,...}
      * payloads for user-selected local shoe photos.

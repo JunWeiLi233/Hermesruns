@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -419,7 +420,17 @@ public class AutomatedCoachService {
             toCreate.add(w);
         }
         if (!toCreate.isEmpty()) {
-            coachScheduledWorkoutRepository.saveAll(toCreate);
+            try {
+                coachScheduledWorkoutRepository.saveAll(toCreate);
+            } catch (DataIntegrityViolationException ex) {
+                List<CoachScheduledWorkout> refreshed = coachScheduledWorkoutRepository
+                        .findByRunnerAndScheduledDateBetween(runner, today, end);
+                if (coversFullHorizon(refreshed, today, horizon)) {
+                    log.debug("Coach: recovered from concurrent schedule creation for runner {}", runner.getId());
+                    return;
+                }
+                throw ex;
+            }
         }
     }
 
@@ -521,11 +532,33 @@ public class AutomatedCoachService {
     }
 
     private CoachRunnerState getOrCreateState(Runner runner) {
-        return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
-            CoachRunnerState s = new CoachRunnerState();
-            s.setRunner(runner);
+        Optional<CoachRunnerState> existing = coachRunnerStateRepository.findByRunner(runner);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        CoachRunnerState s = new CoachRunnerState();
+        s.setRunner(runner);
+        try {
             return coachRunnerStateRepository.save(s);
-        });
+        } catch (DataIntegrityViolationException ex) {
+            return coachRunnerStateRepository.findByRunner(runner).orElseThrow(() -> ex);
+        }
+    }
+
+    private boolean coversFullHorizon(List<CoachScheduledWorkout> rows, LocalDate start, int horizon) {
+        if (rows.size() < horizon) {
+            return false;
+        }
+        Set<LocalDate> dates = new HashSet<>(rows.size());
+        for (CoachScheduledWorkout row : rows) {
+            dates.add(row.getScheduledDate());
+        }
+        for (int i = 0; i < horizon; i++) {
+            if (!dates.contains(start.plusDays(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private double resolveHrMax(Runner runner, List<RunMetricsProjection> pool) {

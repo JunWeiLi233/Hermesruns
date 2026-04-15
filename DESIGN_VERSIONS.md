@@ -11,6 +11,204 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-04-14-29
+Date: 2026-04-14
+Surface: Official elevation-chart interpretation on `/races/details/:raceId`
+Files: `backend/src/main/java/com/hermes/backend/RaceElevationProfileService.java`, `backend/src/main/java/com/hermes/backend/RaceController.java`, `frontend/src/pages/RacesDetail.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the temporary “embed the sourced course image directly” behavior with a real backend interpretation flow. When Hermes finds an official elevation image, the backend now downloads it, extracts a smoothed set of profile samples from the chart silhouette, returns those samples through `/api/races/elevation-profile`, and the race detail page uses them to render the native Hermes `赛道画像` design. If Hermes cannot extract an official profile, the panel now stays in the explicit “no official elevation map yet” state instead of falling back to the older synthetic SVG estimate.
+Why: The user wanted the official chart to drive the Hermes-native course-profile design, not to replace it with a raw embedded image or a guessed fallback profile.
+Rollback target: `DV-2026-04-14-28`
+Notes: Backend compile passed, backend runtime sync proof returned `PASS`, frontend bundle synced into the Spring-served static output, and `http://localhost:8080` plus `/races` returned `200`.
+
+### Version: DV-2026-04-14-28
+Date: 2026-04-14
+Surface: Embedded sourced course profile on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Updated the `赛道画像` stage so when Hermes finds a sourced course-profile image for a race, that image is embedded directly into the elevation-chart panel instead of being left as a footer link while the page keeps showing the synthetic SVG profile. The synthetic interactive chart now remains the fallback only for races without a sourced course image.
+Why: Once a real course profile is available, continuing to show the estimated SVG as the primary visual weakens trust and hides the more authoritative course artifact the system already found.
+Rollback target: `DV-2026-04-14-27`
+Notes: Frontend bundle synced into the Spring-served static output and `http://localhost:8080/races` returned `200`.
+
+### Version: DV-2026-04-14-27
+Date: 2026-04-14
+Surface: Real route-map stage on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the `赛道路线` card into a true map stage backed by live Leaflet tiles instead of the old hero-image backdrop. Every city-marathon detail page now renders a real map centered on the race city, and races with known route points such as Tokyo also draw an overlaid course polyline with start and finish markers rather than decorative placeholder strokes.
+Why: The previous card looked premium but was fundamentally misleading because it presented a poster image and fake route lines as if they were a real course map.
+Rollback target: `DV-2026-04-14-26`
+Notes: Frontend bundle synced into the Spring-served static output and `http://localhost:8080/races` returned `200`. `npm run lint` remains blocked by the same pre-existing `translations.js`, `Shoes.jsx`, `Vo2MaxDetail.jsx`, and `Heatmap.jsx` issues.
+
+### Version: DV-2026-04-14-26
+Date: 2026-04-14
+Surface: Tokyo Marathon route trace on `/races/details/tokyo-marathon`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the `赛道路线` card's decorative `race-detail-map-line` placeholder bars with a real SVG route trace for Tokyo Marathon. The card now draws a continuous course path with start, finish, and key turning markers from route points derived from the official Tokyo Marathon course map instead of showing generic diagonal motion lines.
+Why: The route card was visually polished but untrustworthy because the line work was fake on a page meant to help runners understand a real race course.
+Rollback target: `DV-2026-04-14-25`
+Notes: Source direction came from the official Tokyo Marathon course page and downloadable course map. Frontend bundle synced successfully into the Spring-served static output and `http://localhost:8080/races` returned `200`.
+
+### Version: DV-2026-04-14-25
+Date: 2026-04-14
+Surface: Admin dashboard control-center refresh on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Refreshed the admin dashboard into a more coherent control-center surface by tightening the topbar and hero framing, strengthening the status strip and tab rail, upgrading the overview KPI and queue cards, and giving the quick-action lane a cleaner glass-card treatment. The same pass also neutralized the broken emoji action icons by styling the quick-action icon slots as proper dashboard glyphs instead of leaving mojibake text in the interface.
+Why: The admin page still had the right operational tooling, but it read like mixed-generation utility panels and visibly broken icon text instead of a trustworthy Hermes operator surface.
+Rollback target: `DV-2026-04-14-24`
+Notes: Frontend bundle synced into the Spring-served static output and `http://localhost:8080/dashboard` returned `200`.
+
+### Version: DV-2026-04-14-24
+Date: 2026-04-14
+Surface: Today Run editorial redesign on `/today-run`
+Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the page around the stronger editorial `today-run-plan` layout already present in the design system: the route now opens with one action-first hero, compact status pills, a four-metric command strip, an integrated readiness panel, and the weather alert inside the hero stage instead of splitting those signals across multiple disconnected bands. The lower half now reads as two clear lanes: a workout blueprint card on the left and a coach-command rail on the right for reasoning, support metrics, readiness adjustment, shoe guidance, and next actions.
+Why: The previous Today Run surface had the right live data, but the visual hierarchy was fragmented and read more like stacked utility panels than one decisive daily coach page.
+Rollback target: `DV-2026-04-14-22`
+Notes: Frontend bundle synced into the Spring-served static output. `npm run lint` remains blocked by the same pre-existing `translations.js`, `Shoes.jsx`, `Vo2MaxDetail.jsx`, and `Heatmap.jsx` issues.
+
+### Version: DV-2026-04-14-23
+Date: 2026-04-14
+Surface: Coach-insight hero metric visibility on `/analysis/coach-insight`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Strengthened the light-mode surface treatment for the three-card metric stack in the coach-insight hero so the non-accent cards now render as readable vellum tiles with ambient lift instead of fading into the white hero stage. The active accent card stays coral-led, but the full grid now reads as one intentional command strip rather than one visible card plus two ghost panels.
+Why: In light mode the right-side coach-insight metric grid was still using dark-theme translucency on two of the three tiles, which made the grid look missing even though the data was present.
+Rollback target: `DV-2026-04-14-22`
+Notes: Pending frontend bundle sync and local route verification for `/analysis/coach-insight`.
+
+### Version: DV-2026-04-14-22
+Date: 2026-04-14
+Surface: Shared assigned-coach persona across runner coach cards
+Files: `frontend/src/components/CoachIdentityBadge.jsx`, `frontend/src/utils/coachIdentity.js`, `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/TodayRun.jsx`, `frontend/src/styles/style.css`, `.ai-sync/CONTEXT_LEDGER.md`, `DESIGN_VERSIONS.md`
+What changed: Added a shared fake-person coach roster plus stable per-runner coach assignment, then threaded that avatar/name/role badge into the main Hermes coach surfaces so coach cards no longer feel anonymous or reuse the runner's own initials. The assigned coach now stays consistent for the same runner key across today-run, schedule, analysis coach cards, prediction, and race detail views.
+Why: Hermes already had strong coach logic, but many of its coach panels still felt faceless. Giving each runner a consistent named coach persona makes the product read more like a real coaching relationship without changing any backend training logic.
+Rollback target: `working tree before this change`
+Notes: Frontend bundle synced successfully into the Spring-served static output. `http://localhost:8080/today-run`, `/schedule`, `/analysis`, and `/prediction/marathon` returned `200`; direct server hits to `/races/details/:raceId` still return `404` as an existing deep-link routing gap.
+
+### Version: DV-2026-04-14-21
+Date: 2026-04-14
+Surface: Dark editorial marathon detail redesign on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the marathon detail route to follow the supplied Tokyo Marathon reference more closely: the hero is now a lower, full-bleed city stage with tighter countdown glass chips, the metrics and coach insight sit in one floating command strip, the course profile reads as a single dark stage, and the route-preview plus readiness modules now form a cleaner lower two-panel board with darker map treatment and a stronger readiness header.
+Why: The previous marathon detail page had the right data blocks, but it still read like a wide desktop dashboard instead of the tighter cinematic race-board composition from the provided reference.
+Rollback target: `DV-2026-04-14-20`
+Notes: Frontend bundle synced locally; `npm run lint` remains blocked by the same pre-existing `translations.js`, `Shoes.jsx`, and `Vo2MaxDetail.jsx` issues. Direct deep-link verification at `/races/details/tokyo-marathon` still returns `404` in the local Spring runtime, so this round is verified at the synced bundle level rather than route-level direct refresh.
+
+### Version: DV-2026-04-14-20
+Date: 2026-04-14
+Surface: Admin dashboard shoe management on `/dashboard`
+Files: `backend/src/main/java/com/hermes/backend/AdminPortalController.java`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/i18n/translations.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added real admin-side shoe lifecycle support to the dashboard shoes tab by introducing `POST /api/admin/shoes` and `DELETE /api/admin/shoes/{id}` on the backend, then wiring a new runner-targeted add-shoe modal into the dashboard UI. Admins can now create a shoe for a specific runner with brand/model metadata, optional mileage fields, primary flag, and either a pasted image URL or uploaded image file preview, while the existing permanent-delete action now points at a real admin delete endpoint.
+Why: The admin dashboard already exposed shoe cards, image review, and a delete button, but shoe creation was missing entirely and deletion was only a frontend affordance without a matching backend contract, which made the operator surface incomplete and misleading.
+Rollback target: `DV-2026-04-14-19`
+Notes: Backend compile plus runtime sync proof passed, frontend bundle synced locally, and `http://localhost:8080/admin` returned `200`; `npm run lint` is still blocked by the same pre-existing `translations.js`, `Shoes.jsx`, and `Vo2MaxDetail.jsx` issues.
+
+### Version: DV-2026-04-14-19
+Date: 2026-04-14
+Surface: Light-mode marathon drill-down on `/races/details/:raceId`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a dedicated Aerodynamic Gallery light/high-contrast-light layer for the cinematic marathon detail route so the hero, countdown glass, stat strip, coach card, course profile, route preview, and readiness checklist now translate into vellum-style light surfaces instead of staying as a dark-only island inside the shared light shell.
+Why: The new race detail page already had the right event-story structure, but in light mode it still read as a split-theme mismatch where the shell changed and the page-local cards stayed charcoal.
+Rollback target: `DV-2026-04-14-17`
+Notes: Frontend bundle synced locally; `npm run lint` remains blocked by the same pre-existing duplicate-key issues in `translations.js`, plus existing `Shoes.jsx` and `Vo2MaxDetail.jsx` errors.
+
+### Version: DV-2026-04-14-18
+Date: 2026-04-14
+Surface: Injury-risk intensity split alignment on `/analysis/injury-risk`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the injury-risk route's intensity metric card so it now uses the same three-way `easy / moderate / hard` summary as the analysis overview, including the green/yellow/red distribution bar and matching share labels, instead of the older easy-vs-hard binary ratio.
+Why: The main analysis page and dedicated intensity route already expose the true three-bucket polarized split, so leaving the injury-risk metric on a two-part ratio made that page inconsistent and misleading.
+Rollback target: `DV-2026-04-14-17`
+Notes: Pending frontend bundle sync and local route verification for `/analysis/injury-risk`.
+
+### Version: DV-2026-04-14-17
+Date: 2026-04-14
+Surface: Marathon editorial drill-down on `/races/details/:raceId`
+Files: `frontend/src/pages/Races.jsx`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/utils/raceIntel.js`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/App.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the old race-intel modal with a dedicated marathon detail route opened by clicking the discovery image, then redesigned that route around a cinematic dark editorial layout: oversized hero with countdown blocks, bento stat strip, coach-insight panel, course-profile stage, route-preview card, and race-readiness checklist. The page still uses live Hermes prediction math and race catalog data, but now presents it as a reusable major-event detail surface instead of a plain text drill-down.
+Why: The earlier race detail implementation exposed the right facts but not the premium event-story hierarchy the user wanted, and it did not match the supplied reference’s “hero + bento + course stage + readiness” structure.
+Rollback target: `working tree before this change`
+Notes: Frontend bundle synced locally; `npm run lint` remains blocked by pre-existing duplicate-key issues in `translations.js` plus existing `Shoes.jsx` and `Vo2MaxDetail.jsx` errors.
+
+### Version: DV-2026-04-14-16
+Date: 2026-04-14
+Surface: Injury-risk trend tooltip tracking on `/analysis/injury-risk`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rewired the injury-risk cinematic chart tooltip so it now reads the active scrubber point's `x/y` coordinates and moves with the highlighted circle across the SVG graph, instead of staying pinned in one static position above the chart. The tooltip now also carries a small motion state and mobile fallback so the desktop graph tracks the point while narrow screens still keep the card readable.
+Why: The previous tooltip updated its content during scrubbing but not its position, which made the chart feel disconnected and reduced trust in the hover state.
+Rollback target: `DV-2026-04-14-15`
+Notes: Pending frontend bundle sync and local route verification for `/analysis/injury-risk`.
+
+### Version: DV-2026-04-14-15
+Date: 2026-04-14
+Surface: Heatmap frontend payload speed normalization on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a route-local speed normalization pass in the heatmap client so incoming point ratios are converted into percentile-ranked `visualSpeedRatio` values before coloring both the GPS dots and the heat layer. The map therefore still spreads visible points across the existing `slow / mid / fast / peak` legend even when the live payload arrives compressed toward the low end.
+Why: The backend speed pipeline was improved, but the live route could still render almost entirely red when the current datasource returned tightly bunched low ratios, making the legend technically present but visually untrue.
+Rollback target: `DV-2026-04-14-14`
+Notes: Pending frontend bundle sync and local route verification for `/heatmap`.
+
+### Version: DV-2026-04-14-14
+Date: 2026-04-14
+Surface: Marathon prediction tile-grid removal on `/prediction/marathon`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the marathon-only projection tile grid that surfaced 5K, 10K, and half-marathon cross-distance forecast cards from the `/prediction/marathon` branch, leaving the page focused on the marathon hero, judgment, trend, and evidence sections.
+Why: The extra distance tiles diluted the single-distance marathon story and made the page feel busier than the user wanted.
+Rollback target: `DV-2026-04-14-13`
+Notes: Pending frontend bundle sync and local route verification for `/prediction/marathon`.
+
+### Version: DV-2026-04-14-13
+Date: 2026-04-14
+Surface: Shared prediction-detail empty-record state on `/prediction/:distKey`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Extended the marathon-style no-record treatment across the shared prediction-detail branch so `/prediction/5k`, `/prediction/10k`, and `/prediction/half` now show `目前还没相关的跑步记录` in the actual-results and comparable-record empty states instead of generic helper copy, and added light-mode styling for the shared `prediction-detail-*` cards so those empty states and side-copy stay readable on the Aerodynamic Gallery vellum palette.
+Why: The non-marathon prediction pages were still using the older shared detail surface, which left their empty record messaging less clear than marathon and too faint in light mode.
+Rollback target: `DV-2026-04-14-12`
+Notes: Pending frontend bundle sync and local route verification for `/prediction/5k`, `/prediction/10k`, and `/prediction/half`.
+
+### Version: DV-2026-04-14-12
+Date: 2026-04-14
+Surface: Heatmap percentile speed-band normalization on `/heatmap`
+Files: `backend/src/main/java/com/hermes/backend/ProfileController.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Kept the new same-run segment-speed calculation, but replaced the backend heatmap color normalization from fragile global `min/max` scaling to percentile-rank scaling before sending `speedRatio` to the client. This preserves the existing four-band legend while ensuring outlier spikes no longer force most GPS dots to remain in the lowest red band.
+Why: After the initial segment-speed fix, live heatmap dots could still read almost entirely red when a few unusually fast samples stretched the range and collapsed the rest of the dataset into the low-speed bucket.
+Rollback target: `DV-2026-04-14-11`
+Notes: Pending backend compile, runtime sync proof, and local route verification for `/heatmap`.
+
+### Version: DV-2026-04-14-11
+Date: 2026-04-14
+Surface: Heatmap segment-speed color correction on `/heatmap`
+Files: `backend/src/main/java/com/hermes/backend/ProfileController.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the backend heatmap speed calculation so each GPS point now inherits color from the local segment speed between adjacent points in the same run, with activity resets between runs, instead of using cumulative distance divided by cumulative elapsed time. This preserves the existing four-band legend contract while finally giving the map real per-route speed variation.
+Why: The frontend legend and color bands were already aligned, but the backend was feeding them cumulative average pace values that compressed most points into the same low-speed bucket, so the heatmap stayed almost entirely pink even after the legend cleanup.
+Rollback target: `DV-2026-04-14-10`
+Notes: Pending backend compile, runtime sync proof, and local route verification for `/heatmap`.
+
+### Version: DV-2026-04-14-10
+Date: 2026-04-14
+Surface: Heatmap GPS-dot speed band lock on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the heatmap speed-color contract so GPS dots now resolve through an explicit shared `speed band` helper before choosing a color, instead of letting the legend and point styling each infer the band independently. The right-hand speed legend and the visible route dots therefore read from the same band resolution path.
+Why: The page already used the same source palette, but this pass removes the last ambiguity between legend rendering and point coloring so the speed chart on the right directly matches the GPS-dot colors on the map.
+Rollback target: `DV-2026-04-14-09`
+Notes: Pending frontend bundle sync and local route verification for `/heatmap`.
+
+### Version: DV-2026-04-14-09
+Date: 2026-04-14
+Surface: Shoes scan-import modal light mode on `/shoes`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a dedicated light/high-contrast-light palette pass for the `shoe-scan-modal-*` family so the cinematic scan-import modal now flips into a warm gallery treatment in light mode instead of keeping the old dark-only studio. The modal backdrop, shell, HUD preview, chips, metrics, note/status cards, upload surface, editable result cards, duplicate-resolution state, and action pills now all keep readable dark text and lighter vellum surfaces.
+Why: The redesigned scan-import modal was structurally correct, but under a light shell it still stayed in the previous dark treatment, which made the shoes flow feel inconsistent with the rest of the Aerodynamic Gallery pages.
+Rollback target: `DV-2026-04-14-08`
+Notes: Pending frontend bundle sync and local route verification for `/shoes`.
+
+### Version: DV-2026-04-14-08
+Date: 2026-04-14
+Surface: Prediction marathon evidence labels and light-mode readability on `/prediction/marathon`
+Files: `frontend/src/i18n/translations.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Refined the marathon evidence-stage copy so the two supporting grids now read as clearer matched-run sections (`匹配跑步表现 / 匹配跑步记录` in Chinese and `Comparable Run Results / Comparable Run Records` in English), and tightened the light-mode typography layer inside the evidence cards so the chart empty state, table headers, table cells, kicker text, and badges all stay visibly readable on the warm vellum surfaces.
+Why: The page already had the correct forecast structure, but the evidence-stage labels still read awkwardly and the light-mode card internals could wash out into low-contrast text, which made the supporting proof harder to trust.
+Rollback target: `DV-2026-04-14-07`
+Notes: Pending frontend bundle sync and local route verification for `/prediction/marathon`.
+
 ### Version: DV-2026-04-14-07
 Date: 2026-04-14
 Surface: Today Run light-mode pass and shell title on `/today-run`

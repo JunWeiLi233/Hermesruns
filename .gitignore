@@ -90,7 +90,6 @@ frontend/dist/
 
 # Local AI workflow files
 .claude/
-.codex/
 .agents/
 .ai/
 AGENTS.md
@@ -109,6 +108,7 @@ CLAUDE_LOOP_GUIDE.txt
 *_LOOP_GUIDE.txt
 
 # Local personal/reference artifacts
+.share/
 *.code-workspace
 Desktop.ini
 *.url
@@ -166,7 +166,9 @@ HERMES_SELF_EVOLVING_ENGINE.md
 .tools/auto-hermes-self-check.mjs
 .tools/mempalace/
 .tools/rtk-codex-health.ps1
+.tools/codex-local.exe
 .tools/token_tester/
+.tools/package-auto-hermes-share.ps1
 .tools/verify-backend-runtime-sync.mjs
 .tools/verify-frontend-runtime-sync.mjs
 .tools/write-agent-checkpoint.mjs
@@ -175,3 +177,12 @@ HERMES_SELF_EVOLVING_ENGINE.md
 ALLOW_LIST_TERMINAL_COMMANDS.txt
 TRANSLATION_WORKFLOW.md
 frontend/VISUAL_QA_LIGHT_SYSTEM.md
+.omx/
+.codex/*
+!.codex/agents/
+!.codex/agents/**
+!.codex/skills/
+!.codex/skills/**
+.codex/skills/.system/**
+!.codex/prompts/
+!.codex/prompts/**

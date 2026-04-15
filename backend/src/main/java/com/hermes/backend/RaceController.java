@@ -20,17 +20,20 @@ public class RaceController {
     private final RaceEventRepository raceEventRepository;
     private final ActivityRepository activityRepository;
     private final RaceOfficialImageService raceOfficialImageService;
+    private final RaceElevationProfileService raceElevationProfileService;
 
     public RaceController(
             AuthService authService,
             RaceEventRepository raceEventRepository,
             ActivityRepository activityRepository,
-            RaceOfficialImageService raceOfficialImageService
+            RaceOfficialImageService raceOfficialImageService,
+            RaceElevationProfileService raceElevationProfileService
     ) {
         this.authService = authService;
         this.raceEventRepository = raceEventRepository;
         this.activityRepository = activityRepository;
         this.raceOfficialImageService = raceOfficialImageService;
+        this.raceElevationProfileService = raceElevationProfileService;
     }
 
     @GetMapping
@@ -137,6 +140,40 @@ public class RaceController {
             return error(HttpStatus.BAD_REQUEST, error.getMessage());
         } catch (Exception error) {
             return ResponseEntity.ok(Map.of("imageUrl", ""));
+        }
+    }
+
+    @GetMapping("/elevation-profile")
+    public ResponseEntity<?> elevationProfile(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("name") String name,
+            @RequestParam(value = "city", required = false) String city,
+            @RequestParam(value = "country", required = false) String country,
+            @RequestParam(value = "website", required = false) String website
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        try {
+            if (name == null || name.trim().isBlank()) {
+                return error(HttpStatus.BAD_REQUEST, "Race name is required.");
+            }
+            InputSanitizer.rejectControlAndHtmlChars(name, "name");
+            InputSanitizer.rejectControlAndHtmlChars(city, "city");
+            InputSanitizer.rejectControlAndHtmlChars(country, "country");
+            RaceElevationProfileService.RaceElevationProfileResult result =
+                    raceElevationProfileService.resolveProfile(name, city, country, website);
+            return ResponseEntity.ok(Map.of(
+                    "imageUrl", result.imageUrl() == null ? "" : result.imageUrl(),
+                    "source", result.source() == null ? "" : result.source(),
+                    "localizedFallbackUsed", result.localizedFallbackUsed(),
+                    "profileSamples", result.profileSamples() == null ? List.of() : result.profileSamples()
+            ));
+        } catch (IllegalArgumentException error) {
+            return error(HttpStatus.BAD_REQUEST, error.getMessage());
+        } catch (Exception error) {
+            return ResponseEntity.ok(Map.of("imageUrl", "", "source", "", "localizedFallbackUsed", false));
         }
     }
 

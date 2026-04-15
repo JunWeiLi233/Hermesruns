@@ -11,6 +11,7 @@ import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration, formatPace } from '../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
 import worldRaceCatalog, { worldRaceCountries } from '../data/worldRaceCatalog';
+import { getCachedRaceImage, resolveRaceImage } from '../utils/raceImage';
 
 const STATUS_OPTIONS = ['INTERESTED', 'APPLIED', 'REGISTERED', 'WAITLIST', 'COMPLETED', 'CANCELED'];
 
@@ -46,6 +47,20 @@ const DISCOVERY_VISUALS = [
   },
 ];
 
+const OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST = new Set(['boston-marathon']);
+
+function getRaceCardImage(race, officialDiscoveryImages) {
+  if (!race) return DISCOVERY_VISUALS[0].image;
+  if (!OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST.has(race.id) && officialDiscoveryImages?.[race.id]) {
+    return officialDiscoveryImages[race.id];
+  }
+  const cached = getCachedRaceImage(race);
+  if (!OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST.has(race.id) && cached?.imageUrl) {
+    return cached.imageUrl;
+  }
+  return race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image;
+}
+
 const SAFE_RACE_TARGET_LABELS = {
   '5k': { zh: '5 公里', en: '5K' },
   '10k': { zh: '10 公里', en: '10K' },
@@ -61,15 +76,19 @@ const SAFE_COUNTRY_LABELS = {
   Germany: { zh: '德国', en: 'Germany' },
   France: { zh: '法国', en: 'France' },
   Netherlands: { zh: '荷兰', en: 'Netherlands' },
+  Belgium: { zh: '比利时', en: 'Belgium' },
   Italy: { zh: '意大利', en: 'Italy' },
   Spain: { zh: '西班牙', en: 'Spain' },
   Portugal: { zh: '葡萄牙', en: 'Portugal' },
+  Finland: { zh: '芬兰', en: 'Finland' },
+  Norway: { zh: '挪威', en: 'Norway' },
   Australia: { zh: '澳大利亚', en: 'Australia' },
   'New Zealand': { zh: '新西兰', en: 'New Zealand' },
   Singapore: { zh: '新加坡', en: 'Singapore' },
   'South Korea': { zh: '韩国', en: 'South Korea' },
   Malaysia: { zh: '马来西亚', en: 'Malaysia' },
   India: { zh: '印度', en: 'India' },
+  Poland: { zh: '波兰', en: 'Poland' },
   Thailand: { zh: '泰国', en: 'Thailand' },
   Canada: { zh: '加拿大', en: 'Canada' },
   Mexico: { zh: '墨西哥', en: 'Mexico' },
@@ -102,28 +121,275 @@ function getSafeCountryLabel(country, lang) {
   return lang === 'en' ? entry.en : entry.zh;
 }
 
-function extractRaceFocusLabelSafe(race, lang) {
+const LOCALIZED_COUNTRY_LABELS = {
+  China: { zh: '中国', en: 'China' },
+  Japan: { zh: '日本', en: 'Japan' },
+  'United States': { zh: '美国', en: 'United States' },
+  'United Kingdom': { zh: '英国', en: 'United Kingdom' },
+  Germany: { zh: '德国', en: 'Germany' },
+  France: { zh: '法国', en: 'France' },
+  Netherlands: { zh: '荷兰', en: 'Netherlands' },
+  Belgium: { zh: '比利时', en: 'Belgium' },
+  Italy: { zh: '意大利', en: 'Italy' },
+  Spain: { zh: '西班牙', en: 'Spain' },
+  Portugal: { zh: '葡萄牙', en: 'Portugal' },
+  Finland: { zh: '芬兰', en: 'Finland' },
+  Norway: { zh: '挪威', en: 'Norway' },
+  Australia: { zh: '澳大利亚', en: 'Australia' },
+  'New Zealand': { zh: '新西兰', en: 'New Zealand' },
+  Singapore: { zh: '新加坡', en: 'Singapore' },
+  'South Korea': { zh: '韩国', en: 'South Korea' },
+  Malaysia: { zh: '马来西亚', en: 'Malaysia' },
+  India: { zh: '印度', en: 'India' },
+  Poland: { zh: '波兰', en: 'Poland' },
+  Thailand: { zh: '泰国', en: 'Thailand' },
+  Canada: { zh: '加拿大', en: 'Canada' },
+  Mexico: { zh: '墨西哥', en: 'Mexico' },
+  Argentina: { zh: '阿根廷', en: 'Argentina' },
+  Brazil: { zh: '巴西', en: 'Brazil' },
+  Chile: { zh: '智利', en: 'Chile' },
+  Sweden: { zh: '瑞典', en: 'Sweden' },
+  Denmark: { zh: '丹麦', en: 'Denmark' },
+  Austria: { zh: '奥地利', en: 'Austria' },
+  'Czech Republic': { zh: '捷克', en: 'Czech Republic' },
+  Greece: { zh: '希腊', en: 'Greece' },
+  Ireland: { zh: '爱尔兰', en: 'Ireland' },
+  Switzerland: { zh: '瑞士', en: 'Switzerland' },
+  Israel: { zh: '以色列', en: 'Israel' },
+  Turkey: { zh: '土耳其', en: 'Turkey' },
+  'United Arab Emirates': { zh: '阿联酋', en: 'United Arab Emirates' },
+  Qatar: { zh: '卡塔尔', en: 'Qatar' },
+  'South Africa': { zh: '南非', en: 'South Africa' },
+  Kenya: { zh: '肯尼亚', en: 'Kenya' },
+  Morocco: { zh: '摩洛哥', en: 'Morocco' },
+  Vietnam: { zh: '越南', en: 'Vietnam' },
+  Indonesia: { zh: '印度尼西亚', en: 'Indonesia' },
+};
+
+const LOCALIZED_CITY_LABELS = {
+  Tokyo: '东京',
+  Osaka: '大阪',
+  Boston: '波士顿',
+  Chicago: '芝加哥',
+  'New York City': '纽约',
+  'Big Sur': '大瑟尔',
+  Honolulu: '檀香山',
+  London: '伦敦',
+  Manchester: '曼彻斯特',
+  Berlin: '柏林',
+  Munich: '慕尼黑',
+  Paris: '巴黎',
+  'Nice-Cannes': '尼斯-戛纳',
+  Amsterdam: '阿姆斯特丹',
+  Rotterdam: '鹿特丹',
+  Rome: '罗马',
+  Milan: '米兰',
+  Barcelona: '巴塞罗那',
+  Valencia: '瓦伦西亚',
+  Lisbon: '里斯本',
+  Porto: '波尔图',
+  Melbourne: '墨尔本',
+  'Gold Coast': '黄金海岸',
+  Queenstown: '皇后镇',
+  Shanghai: '上海',
+  Xiamen: '厦门',
+  Wuxi: '无锡',
+  Gyeongju: '庆州',
+  Bangkok: '曼谷',
+  'New Delhi': '新德里',
+  'Durban-Pietermaritzburg': '德班-彼得马里茨堡',
+  Nairobi: '内罗毕',
+  Marrakech: '马拉喀什',
+  Vancouver: '温哥华',
+  'Buenos Aires': '布宜诺斯艾利斯',
+  Santiago: '圣地亚哥',
+  Stockholm: '斯德哥尔摩',
+  Copenhagen: '哥本哈根',
+  Helsinki: '赫尔辛基',
+  Bergen: '卑尔根',
+  Brussels: '布鲁塞尔',
+  Vienna: '维也纳',
+  Warsaw: '华沙',
+  Prague: '布拉格',
+  Athens: '雅典',
+  Jerusalem: '耶路撒冷',
+  Istanbul: '伊斯坦布尔',
+  Dubai: '迪拜',
+  Doha: '多哈',
+  Toronto: '多伦多',
+  'Mexico City': '墨西哥城',
+  'Rio de Janeiro': '里约热内卢',
+  Beijing: '北京',
+  'Hong Kong': '香港',
+  Taipei: '台北',
+  Seoul: '首尔',
+  Singapore: '新加坡',
+  'Kuala Lumpur': '吉隆坡',
+  Mumbai: '孟买',
+  Sydney: '悉尼',
+  Auckland: '奥克兰',
+  'Cape Town': '开普敦',
+  'Los Angeles': '洛杉矶',
+  'Washington, D.C.': '华盛顿',
+  Fukuoka: '福冈',
+  Guangzhou: '广州',
+  Chengdu: '成都',
+  Wuhan: '武汉',
+  Qingdao: '青岛',
+  Shenzhen: '深圳',
+  Chongqing: '重庆',
+  Hangzhou: '杭州',
+  Dalian: '大连',
+  Busan: '釜山',
+  Dublin: '都柏林',
+  Zurich: '苏黎世',
+  Jakarta: '雅加达',
+  'Ho Chi Minh City': '胡志明市',
+};
+
+const LOCALIZED_RACE_LABELS = {
+  'tokyo-marathon': '东京马拉松',
+  'osaka-marathon': '大阪马拉松',
+  'boston-marathon': '波士顿马拉松',
+  'chicago-marathon': '芝加哥马拉松',
+  'new-york-city-marathon': '纽约马拉松',
+  'big-sur-marathon': '大瑟尔国际马拉松',
+  'honolulu-marathon': '檀香山马拉松',
+  'london-marathon': '伦敦马拉松',
+  'manchester-marathon': '曼彻斯特马拉松',
+  'berlin-marathon': '柏林马拉松',
+  'munich-marathon': '慕尼黑马拉松',
+  'paris-marathon': '巴黎马拉松',
+  'nice-cannes-marathon': '滨海阿尔卑斯马拉松',
+  'amsterdam-marathon': '阿姆斯特丹马拉松',
+  'rotterdam-marathon': '鹿特丹马拉松',
+  'rome-marathon': '罗马马拉松',
+  'milan-marathon': '米兰马拉松',
+  'barcelona-marathon': '巴塞罗那马拉松',
+  'valencia-marathon': '瓦伦西亚马拉松',
+  'lisbon-marathon': '里斯本马拉松',
+  'porto-marathon': '波尔图马拉松',
+  'melbourne-marathon': '墨尔本马拉松',
+  'gold-coast-marathon': '黄金海岸马拉松',
+  'queenstown-marathon': '皇后镇马拉松',
+  'shanghai-marathon': '上海马拉松',
+  'xiamen-marathon': '厦门马拉松',
+  'wuxi-marathon': '无锡马拉松',
+  'gyeongju-marathon': '庆州樱花马拉松',
+  'bangkok-marathon': '曼谷马拉松',
+  'delhi-half-marathon': '德里半程马拉松',
+  'comrades-marathon': '同志马拉松',
+  'nairobi-city-marathon': '内罗毕城市马拉松',
+  'marrakech-marathon': '马拉喀什马拉松',
+  'vancouver-marathon': '温哥华马拉松',
+  'buenos-aires-marathon': '布宜诺斯艾利斯马拉松',
+  'santiago-marathon': '圣地亚哥马拉松',
+  'stockholm-marathon': '斯德哥尔摩马拉松',
+  'copenhagen-marathon': '哥本哈根马拉松',
+  'helsinki-marathon': '赫尔辛基马拉松',
+  'bergen-marathon': '卑尔根城市马拉松',
+  'brussels-marathon': '布鲁塞尔机场马拉松',
+  'vienna-marathon': '维也纳城市马拉松',
+  'warsaw-marathon': '华沙马拉松',
+  'prague-marathon': '布拉格马拉松',
+  'athens-marathon': '雅典马拉松',
+  'jerusalem-marathon': '耶路撒冷马拉松',
+  'istanbul-marathon': '伊斯坦布尔马拉松',
+  'dubai-marathon': '迪拜马拉松',
+  'doha-marathon': '多哈马拉松',
+  'toronto-waterfront-marathon': '多伦多湖滨马拉松',
+  'mexico-city-marathon': '墨西哥城马拉松',
+  'rio-marathon': '里约马拉松',
+  'beijing-marathon': '北京马拉松',
+  'hong-kong-marathon': '香港马拉松',
+  'taipei-marathon': '台北马拉松',
+  'seoul-marathon': '首尔马拉松',
+  'singapore-marathon': '新加坡渣打马拉松',
+  'kuala-lumpur-marathon': '吉隆坡渣打马拉松',
+  'mumbai-marathon': '塔塔孟买马拉松',
+  'sydney-marathon': '悉尼马拉松',
+  'auckland-marathon': '奥克兰马拉松',
+  'cape-town-marathon': '开普敦马拉松',
+  'nairobi-marathon': '内罗毕马拉松',
+  'los-angeles-marathon': '洛杉矶马拉松',
+  'marine-corps-marathon': '海军陆战队马拉松',
+  'fukuoka-marathon': '福冈马拉松',
+  'guangzhou-marathon': '广州马拉松',
+  'chengdu-marathon': '成都马拉松',
+  'wuhan-marathon': '武汉马拉松',
+  'qingdao-marathon': '青岛马拉松',
+  'shenzhen-marathon': '深圳马拉松',
+  'chongqing-marathon': '重庆马拉松',
+  'hangzhou-marathon': '杭州马拉松',
+  'dalian-marathon': '大连马拉松',
+  'busan-marathon': '釜山马拉松',
+  'dublin-marathon': '都柏林马拉松',
+  'zurich-marathon': '苏黎世马拉松',
+  'jakarta-marathon': '雅加达马拉松',
+  'ho-chi-minh-city-marathon': '胡志明市马拉松',
+  'nyrr-brooklyn-half': 'NYRR 布鲁克林半马',
+  'nyrr-united-half': '联合航空纽约半马',
+};
+
+function getLocalizedCountryLabel(country, lang) {
+  const entry = LOCALIZED_COUNTRY_LABELS[country];
+  if (!entry) return getSafeCountryLabel(country, lang);
+  return lang === 'en' ? entry.en : entry.zh;
+}
+
+function getLocalizedCityLabel(city, lang) {
+  if (lang === 'en') return city;
+  return LOCALIZED_CITY_LABELS[city] || city;
+}
+
+function getLocalizedCatalogMatch(race) {
+  if (race?.id && LOCALIZED_RACE_LABELS[race.id]) {
+    return worldRaceCatalog.find((entry) => entry.id === race.id) || race;
+  }
+  return worldRaceCatalog.find((entry) => entry.name === race?.name) || null;
+}
+
+function getLocalizedRaceLabel(race, lang) {
+  if (lang === 'en') return race?.name || '';
+  if (race?.id && LOCALIZED_RACE_LABELS[race.id]) return LOCALIZED_RACE_LABELS[race.id];
+  const catalogMatch = getLocalizedCatalogMatch(race);
+  if (catalogMatch && LOCALIZED_RACE_LABELS[catalogMatch.id]) return LOCALIZED_RACE_LABELS[catalogMatch.id];
+  return race?.name || '';
+}
+
+function getLocalizedRaceLocation(race, lang) {
+  if (lang === 'en') return race?.location || '';
+  const catalogMatch = getLocalizedCatalogMatch(race);
+  const city = race?.city || catalogMatch?.city || '';
+  const country = race?.country || catalogMatch?.country || '';
+  const cityLabel = city ? getLocalizedCityLabel(city, lang) : '';
+  const countryLabel = country ? getLocalizedCountryLabel(country, lang) : '';
+  if (cityLabel && countryLabel) return `${cityLabel} · ${countryLabel}`;
+  return cityLabel || countryLabel || race?.location || '';
+}
+
+function extractRaceFocusLabelSafe(race, t) {
   const raw = String(race?.location || race?.name || '').trim();
-  if (!raw) return lang === 'en' ? 'NEXT TARGET' : '下一目标';
-  const pieces = raw.split(',').map((part) => part.trim()).filter(Boolean);
+  if (!raw) return t('races.focus_fallback');
+  const pieces = raw.split(/[,.·]/).map((part) => part.trim()).filter(Boolean);
   return (pieces[0] || raw).toUpperCase();
 }
 
-function formatDistanceLabelSafe(distanceKm, lang) {
-  if (!Number.isFinite(distanceKm) || distanceKm <= 0) return lang === 'en' ? 'Race target' : '目标赛事';
-  if (Math.abs(distanceKm - 42.195) < 0.5) return lang === 'en' ? 'Marathon' : '马拉松';
-  if (Math.abs(distanceKm - 21.0975) < 0.5) return lang === 'en' ? 'Half Marathon' : '半程马拉松';
+function formatDistanceLabelSafe(distanceKm, t, lang) {
+  if (!Number.isFinite(distanceKm) || distanceKm <= 0) return t('races.race_target_fallback');
+  if (Math.abs(distanceKm - 42.195) < 0.5) return getSafeRaceTargetLabel('marathon', lang);
+  if (Math.abs(distanceKm - 21.0975) < 0.5) return getSafeRaceTargetLabel('half', lang);
   if (Math.abs(distanceKm - 10) < 0.3) return '10K';
   if (Math.abs(distanceKm - 5) < 0.3) return '5K';
   return `${distanceKm.toFixed(1)} km`;
 }
 
-function getCourseDescriptorSafe(race, t, lang) {
+function getCourseDescriptorSafe(race, t) {
   const notes = String(race?.notes || '').trim();
   if (notes) return notes;
   if (race?.organization) return race.organization;
   if (race?.registrationStatus) return t(`races.status_${race.registrationStatus.toLowerCase()}`);
-  return lang === 'en' ? 'Target race' : '目标赛事';
+  return t('races.target_race');
 }
 
 function buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang) {
@@ -139,22 +405,21 @@ function buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang) {
 
   const goalLine = nextRace.goalTimeSeconds
     ? t('races.stitch_hero_goal', { time: formatDuration(nextRace.goalTimeSeconds) })
-    : t('races.stitch_hero_goal_distance', { distance: formatDistanceLabelSafe(Number(nextRace.distanceKm || 0), lang) });
+    : t('races.stitch_hero_goal_distance', { distance: formatDistanceLabelSafe(Number(nextRace.distanceKm || 0), t, lang) });
 
   return `${changeLine} ${goalLine}`;
 }
 
-function getDefaultRunName(lang) {
-  return lang === 'en' ? 'Run' : '跑步';
+function getDefaultRunName(t) {
+  return t('races.default_run_name');
 }
 
-function getDefaultProviderLabel(lang) {
-  return lang === 'en' ? 'Imported' : '已导入';
+function getDefaultProviderLabel(t) {
+  return t('races.default_provider_label');
 }
 
-function getCountryToggleLabel(isExpanded, lang) {
-  if (lang === 'en') return isExpanded ? 'Show fewer countries' : 'Show more countries';
-  return isExpanded ? '收起更多国家' : '展开更多国家';
+function getCountryToggleLabel(isExpanded, t) {
+  return isExpanded ? t('races.country_toggle_less') : t('races.country_toggle_more');
 }
 
 function formatRaceDate(value, lang, options = { month: 'short', day: 'numeric', year: 'numeric' }) {
@@ -164,96 +429,11 @@ function formatRaceDate(value, lang, options = { month: 'short', day: 'numeric',
   return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-CN', options);
 }
 
-function extractRaceFocusLabel(race, lang) {
-  const raw = String(race?.location || race?.name || '').trim();
-  if (!raw) return lang === 'en' ? 'NEXT TARGET' : '下一目标';
-  const pieces = raw.split(',').map((part) => part.trim()).filter(Boolean);
-  return (pieces[0] || raw).toUpperCase();
-}
-
-function formatDistanceLabel(distanceKm, lang) {
-  if (!Number.isFinite(distanceKm) || distanceKm <= 0) return lang === 'en' ? 'Race target' : '目标赛事';
-  if (Math.abs(distanceKm - 42.195) < 0.5) return lang === 'en' ? 'Marathon' : '马拉松';
-  if (Math.abs(distanceKm - 21.0975) < 0.5) return lang === 'en' ? 'Half Marathon' : '半程马拉松';
-  if (Math.abs(distanceKm - 10) < 0.3) return '10K';
-  if (Math.abs(distanceKm - 5) < 0.3) return '5K';
-  return `${distanceKm.toFixed(1)} km`;
-}
-
-function getCourseDescriptor(race, t, lang) {
-  const notes = String(race?.notes || '').trim();
-  if (notes) return notes;
-  if (race?.organization) return race.organization;
-  if (race?.registrationStatus) return t(`races.status_${race.registrationStatus.toLowerCase()}`);
-  return lang === 'en' ? 'Target race' : '目标赛事';
-}
-
-function buildHeroSummary(nextRace, monthlyVolumeChange, t, lang) {
-  if (!nextRace) {
-    return t('races.stitch_hero_empty_copy');
-  }
-
-  const changeLine = monthlyVolumeChange == null
-    ? t('races.stitch_hero_change_fallback')
-    : t(monthlyVolumeChange >= 0 ? 'races.stitch_hero_change_up' : 'races.stitch_hero_change_down', {
-      percent: Math.abs(monthlyVolumeChange),
-    });
-
-  const goalLine = nextRace.goalTimeSeconds
-    ? t('races.stitch_hero_goal', { time: formatDuration(nextRace.goalTimeSeconds) })
-    : t('races.stitch_hero_goal_distance', { distance: formatDistanceLabel(Number(nextRace.distanceKm || 0), lang) });
-
-  return `${changeLine} ${goalLine}`;
-}
-
 function getDiscoveryTag(race, fallbackTag) {
   if (race?.program) return race.program;
-  if (race?.distanceKm >= 42) return 'Majors';
+  if (race?.distanceKm >= 42) return fallbackTag;
   if (race?.distanceKm >= 21) return 'Road';
   return fallbackTag;
-}
-
-const COUNTRY_LABELS = {
-  China: { zh: '中国', en: 'China' },
-  Japan: { zh: '日本', en: 'Japan' },
-  'United States': { zh: '美国', en: 'United States' },
-  'United Kingdom': { zh: '英国', en: 'United Kingdom' },
-  Germany: { zh: '德国', en: 'Germany' },
-  France: { zh: '法国', en: 'France' },
-  Netherlands: { zh: '荷兰', en: 'Netherlands' },
-  Italy: { zh: '意大利', en: 'Italy' },
-  Spain: { zh: '西班牙', en: 'Spain' },
-  Portugal: { zh: '葡萄牙', en: 'Portugal' },
-  Australia: { zh: '澳大利亚', en: 'Australia' },
-  'New Zealand': { zh: '新西兰', en: 'New Zealand' },
-  Singapore: { zh: '新加坡', en: 'Singapore' },
-  'South Korea': { zh: '韩国', en: 'South Korea' },
-  Malaysia: { zh: '马来西亚', en: 'Malaysia' },
-  India: { zh: '印度', en: 'India' },
-  Thailand: { zh: '泰国', en: 'Thailand' },
-  Canada: { zh: '加拿大', en: 'Canada' },
-  Mexico: { zh: '墨西哥', en: 'Mexico' },
-  Argentina: { zh: '阿根廷', en: 'Argentina' },
-  Brazil: { zh: '巴西', en: 'Brazil' },
-  Chile: { zh: '智利', en: 'Chile' },
-  Sweden: { zh: '瑞典', en: 'Sweden' },
-  Denmark: { zh: '丹麦', en: 'Denmark' },
-  Austria: { zh: '奥地利', en: 'Austria' },
-  'Czech Republic': { zh: '捷克', en: 'Czech Republic' },
-  Greece: { zh: '希腊', en: 'Greece' },
-  Israel: { zh: '以色列', en: 'Israel' },
-  Turkey: { zh: '土耳其', en: 'Turkey' },
-  'United Arab Emirates': { zh: '阿联酋', en: 'United Arab Emirates' },
-  Qatar: { zh: '卡塔尔', en: 'Qatar' },
-  'South Africa': { zh: '南非', en: 'South Africa' },
-  Kenya: { zh: '肯尼亚', en: 'Kenya' },
-  Morocco: { zh: '摩洛哥', en: 'Morocco' },
-};
-
-function getCountryLabel(country, lang) {
-  const entry = COUNTRY_LABELS[country];
-  if (!entry) return country;
-  return lang === 'en' ? entry.en : entry.zh;
 }
 
 export default function Races() {
@@ -405,7 +585,7 @@ export default function Races() {
       setForm(DEFAULT_FORM);
       loadData();
     } catch (error) {
-      setFormStatus(error.message || 'Save failed');
+      setFormStatus(error.message || t('races.save_failed'));
     }
   }
 
@@ -433,29 +613,42 @@ export default function Races() {
       const matchesCountry = selectedCountry === 'All' || race.country === selectedCountry;
       if (!matchesCountry) return false;
       if (!query) return true;
+      const localizedName = getLocalizedRaceLabel(race, lang).toLowerCase();
+      const localizedCity = getLocalizedCityLabel(race.city, lang).toLowerCase();
+      const localizedCountry = getLocalizedCountryLabel(race.country, lang).toLowerCase();
+      const localizedLocation = getLocalizedRaceLocation(race, lang).toLowerCase();
       return race.name.toLowerCase().includes(query)
+        || localizedName.includes(query)
         || race.city.toLowerCase().includes(query)
+        || localizedCity.includes(query)
         || race.country.toLowerCase().includes(query)
+        || localizedCountry.includes(query)
         || race.location.toLowerCase().includes(query)
+        || localizedLocation.includes(query)
         || (race.organization || '').toLowerCase().includes(query)
         || (race.program || '').toLowerCase().includes(query);
     });
-  }, [catalogQuery, selectedCountry]);
+  }, [catalogQuery, lang, selectedCountry]);
 
-  const featuredDiscovery = useMemo(() => {
-    const base = filteredCatalog.length >= 2 ? filteredCatalog : worldRaceCatalog;
-    return base.slice(0, 2).map((race, index) => ({
+  const discoveryCards = useMemo(() => {
+    return filteredCatalog.map((race, index) => ({
       ...race,
       visual: DISCOVERY_VISUALS[index % DISCOVERY_VISUALS.length],
     }));
   }, [filteredCatalog]);
+
+  const discoverySummary = useMemo(() => {
+    const countLabel = t('races.catalog_results_count', { count: discoveryCards.length });
+    if (selectedCountry === 'All') return countLabel;
+    return `${t('races.catalog_results_country', { country: getLocalizedCountryLabel(selectedCountry, lang) })} · ${countLabel}`;
+  }, [discoveryCards.length, lang, selectedCountry, t]);
 
   const countryFilterOptions = useMemo(() => (
     [
       { key: 'All', label: t('races.all_countries') },
       ...worldRaceCountries.map((country) => ({
         key: country.key,
-        label: getSafeCountryLabel(country.key, lang),
+        label: getLocalizedCountryLabel(country.key, lang),
       })),
     ]
   ), [lang, t]);
@@ -469,20 +662,14 @@ export default function Races() {
 
   useEffect(() => {
     let cancelled = false;
-    const candidates = featuredDiscovery.filter((race) => race?.officialWebsite && !(race.id in officialDiscoveryImages));
+    const candidates = discoveryCards.filter((race) => !(race.id in officialDiscoveryImages));
     if (candidates.length === 0) return undefined;
 
     async function loadOfficialImages() {
       await Promise.all(candidates.map(async (race) => {
-        try {
-          const response = await apiJson(`/api/races/official-image?website=${encodeURIComponent(race.officialWebsite)}`);
-          if (!cancelled && response?.imageUrl) {
-            setOfficialDiscoveryImages((current) => ({ ...current, [race.id]: response.imageUrl }));
-          }
-        } catch {
-          if (!cancelled) {
-            setOfficialDiscoveryImages((current) => ({ ...current, [race.id]: '' }));
-          }
+        const resolved = await resolveRaceImage(race);
+        if (!cancelled) {
+          setOfficialDiscoveryImages((current) => ({ ...current, [race.id]: resolved.imageUrl || '' }));
         }
       }));
     }
@@ -491,7 +678,7 @@ export default function Races() {
     return () => {
       cancelled = true;
     };
-  }, [featuredDiscovery, officialDiscoveryImages]);
+  }, [discoveryCards, officialDiscoveryImages]);
 
   const selectedCalendar = useMemo(() => {
     return races.slice(0, 3);
@@ -514,8 +701,8 @@ export default function Races() {
             timeSeconds: normalizedSeconds,
             paceDisplay: formatPace(target.km, normalizedSeconds, lang),
             date: run.startTime || run.startDate,
-            runName: run.name || (lang === 'en' ? 'Run' : '跑步'),
-            provider: run.provider || (lang === 'en' ? 'Imported' : '已导入'),
+            runName: run.name || getDefaultRunName(t),
+            provider: run.provider || getDefaultProviderLabel(t),
           };
         }
       }
@@ -526,7 +713,7 @@ export default function Races() {
         best,
       };
     });
-  }, [lang, runs]);
+  }, [lang, runs, t]);
 
   const monthlyVolumeChange = useMemo(() => {
     const now = new Date();
@@ -554,7 +741,9 @@ export default function Races() {
   const heroLabel = nextRace
     ? `${Math.max(0, Number(nextRace.countdownDays || 0))}`
     : t('races.stitch_hero_empty_days');
-  const heroFocus = nextRace ? extractRaceFocusLabelSafe(nextRace, lang) : t('races.stitch_hero_empty_focus');
+  const heroFocus = nextRace
+    ? extractRaceFocusLabelSafe({ ...nextRace, location: getLocalizedRaceLocation(nextRace, lang) }, t)
+    : t('races.stitch_hero_empty_focus');
   const heroSummary = buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang);
   const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
@@ -750,10 +939,7 @@ export default function Races() {
                       onClick={() => setIsCountryStripExpanded((current) => !current)}
                       aria-expanded={isCountryStripExpanded}
                     >
-                      <span>{isCountryStripExpanded
-                        ? (lang === 'en' ? 'Show fewer countries' : '收起更多国家')
-                        : (lang === 'en' ? 'Show more countries' : '展开更多国家')}
-                      </span>
+                      <span>{getCountryToggleLabel(isCountryStripExpanded, t)}</span>
                       <AppIcon
                         name={isCountryStripExpanded ? 'expand_less' : 'expand_more'}
                         className="runner-dashboard-side-link-icon"
@@ -763,26 +949,44 @@ export default function Races() {
                 </div>
               </div>
 
+              <div className="race-center-section-head">
+                <span>{discoverySummary}</span>
+              </div>
+
               <div className="race-center-discovery-grid">
-                {featuredDiscovery.map((race) => (
-                  <article key={race.id} className="race-center-discovery-card">
-                    <div className="race-center-discovery-image-wrap">
-                      <img className="race-center-discovery-image" src={officialDiscoveryImages[race.id] || race.visual.image} alt={race.name} />
-                      <span className="race-center-discovery-tag">{getDiscoveryTag(race, race.visual.tag)}</span>
-                    </div>
-                    <div className="race-center-discovery-copy">
-                      <h3>{race.name}</h3>
-                      <p>{t('races.stitch_discovery_copy', { location: race.location, distance: race.distanceKm.toFixed(1) })}</p>
-                      <div className="race-center-discovery-meta">
-                        <span>{t('races.typical_month', { month: race.month })}</span>
-                        <span>{race.visual.meta}</span>
-                      </div>
-                      <button type="button" className="race-center-inline-action" onClick={() => addCatalogRace(race)}>
-                        {t('races.add_from_catalog')}
+                {discoveryCards.length === 0 ? (
+                  <div className="race-center-calendar-empty">
+                    <strong>{t('races.catalog_empty')}</strong>
+                    <p>{discoverySummary}</p>
+                  </div>
+                ) : (
+                  discoveryCards.map((race) => (
+                    <article key={race.id} className="race-center-discovery-card">
+                      <button
+                        type="button"
+                        className="race-center-discovery-image-wrap"
+                        onClick={() => navigate(`/races/details/${race.id}`, {
+                          state: { race, image: getRaceCardImage(race, officialDiscoveryImages) },
+                        })}
+                        aria-label={t('races.detail_open_card', { name: getLocalizedRaceLabel(race, lang) })}
+                      >
+                        <img className="race-center-discovery-image" src={getRaceCardImage(race, officialDiscoveryImages)} alt={getLocalizedRaceLabel(race, lang)} />
+                        <span className="race-center-discovery-tag">{t(`races.discovery_tag_${getDiscoveryTag(race, race.visual.tag).toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}</span>
                       </button>
-                    </div>
-                  </article>
-                ))}
+                      <div className="race-center-discovery-copy">
+                        <h3>{getLocalizedRaceLabel(race, lang)}</h3>
+                        <p>{t('races.stitch_discovery_copy', { location: getLocalizedRaceLocation(race, lang), distance: race.distanceKm.toFixed(1) })}</p>
+                        <div className="race-center-discovery-meta">
+                          <span>{t('races.typical_month', { month: race.month })}</span>
+                          <span>{t(`races.discovery_meta_${race.visual.meta.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}</span>
+                        </div>
+                        <button type="button" className="race-center-inline-action" onClick={() => addCatalogRace(race)}>
+                          {t('races.add_from_catalog')}
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </section>
 
@@ -815,14 +1019,14 @@ export default function Races() {
                               <AppIcon name="map" className="runner-dashboard-side-link-icon" />
                             </div>
                             <div>
-                              <strong>{race.name}</strong>
-                              <p>{`${dateLabel} · ${race.location}`}</p>
+                              <strong>{getLocalizedRaceLabel(race, lang)}</strong>
+                              <p>{`${dateLabel} · ${getLocalizedRaceLocation(race, lang)}`}</p>
                             </div>
                           </div>
 
                           <div className="race-center-calendar-row-side">
                             <div className="race-center-calendar-course">
-                              <strong>{getCourseDescriptor(race, t, lang)}</strong>
+                              <strong>{getCourseDescriptorSafe(race, t)}</strong>
                               <span>{t('races.stitch_course_type')}</span>
                             </div>
                             <button

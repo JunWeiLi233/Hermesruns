@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -199,37 +200,44 @@ public class ProfileController {
         }
 
         List<Double> rawSpeeds = new ArrayList<>();
+        Long previousActivityId = null;
+        Double previousDistance = null;
+        Integer previousElapsed = null;
         Double previousSpeed = null;
 
         for (Object[] point : activityPoints) {
-            Double speedMetersPerSecond = extractPointSpeed(point);
+            Long activityId = toLong(point[0]);
+            boolean sameActivity = previousActivityId != null && previousActivityId.equals(activityId);
+            if (!sameActivity) {
+                previousSpeed = null;
+            }
+            Double speedMetersPerSecond = extractSegmentSpeed(point, sameActivity, previousDistance, previousElapsed);
             if (speedMetersPerSecond == null) {
                 speedMetersPerSecond = previousSpeed;
             } else {
                 previousSpeed = speedMetersPerSecond;
             }
             rawSpeeds.add(speedMetersPerSecond);
+            previousActivityId = activityId;
+            previousDistance = extractPointDistance(point);
+            previousElapsed = extractPointElapsed(point);
         }
 
-        double minSpeed = Double.MAX_VALUE;
-        double maxSpeed = -Double.MAX_VALUE;
-
+        List<Double> normalizedSpeeds = new ArrayList<>(rawSpeeds.size());
         for (Double rawSpeed : rawSpeeds) {
-            if (rawSpeed == null) {
-                continue;
+            if (rawSpeed != null && rawSpeed > 0) {
+                normalizedSpeeds.add(rawSpeed);
             }
-            minSpeed = Math.min(minSpeed, rawSpeed);
-            maxSpeed = Math.max(maxSpeed, rawSpeed);
         }
-
-        boolean hasSpeedRange = minSpeed != Double.MAX_VALUE && maxSpeed > minSpeed;
+        Collections.sort(normalizedSpeeds);
+        boolean hasSpeedRange = normalizedSpeeds.size() > 1;
         List<HeatPoint> points = new ArrayList<>(activityPoints.size());
 
         for (int i = 0; i < activityPoints.size(); i++) {
             Object[] point = activityPoints.get(i);
             Double rawSpeed = rawSpeeds.get(i);
             double speedRatio = hasSpeedRange && rawSpeed != null
-                    ? clamp((rawSpeed - minSpeed) / (maxSpeed - minSpeed), 0.0, 1.0)
+                    ? toPercentileRatio(normalizedSpeeds, rawSpeed)
                     : 0.5;
             points.add(new HeatPoint(
                     toLong(point[0]),
@@ -243,21 +251,60 @@ public class ProfileController {
         return points;
     }
 
-    private Double extractPointSpeed(Object[] point) {
+    private Double extractSegmentSpeed(Object[] point, boolean sameActivity, Double previousDistance, Integer previousElapsed) {
         if (point == null || point.length < 5) {
             return null;
         }
-        Double pointDistance = point[3] instanceof Number number ? number.doubleValue() : null;
-        Integer pointElapsed = point[4] instanceof Number number ? number.intValue() : null;
+        Double pointDistance = extractPointDistance(point);
+        Integer pointElapsed = extractPointElapsed(point);
 
         if (pointDistance == null || pointElapsed == null || pointElapsed <= 0) {
             return null;
         }
-        if (pointDistance <= 0) {
+        if (!sameActivity || previousDistance == null || previousElapsed == null) {
             return null;
         }
 
-        return pointDistance / pointElapsed;
+        double distanceDelta = pointDistance - previousDistance;
+        int elapsedDelta = pointElapsed - previousElapsed;
+
+        if (distanceDelta <= 0 || elapsedDelta <= 0) {
+            return null;
+        }
+
+        return distanceDelta / elapsedDelta;
+    }
+
+    private Double extractPointDistance(Object[] point) {
+        if (point == null || point.length < 4) {
+            return null;
+        }
+        return point[3] instanceof Number number ? number.doubleValue() : null;
+    }
+
+    private Integer extractPointElapsed(Object[] point) {
+        if (point == null || point.length < 5) {
+            return null;
+        }
+        return point[4] instanceof Number number ? number.intValue() : null;
+    }
+
+    private double toPercentileRatio(List<Double> sortedSpeeds, double rawSpeed) {
+        if (sortedSpeeds == null || sortedSpeeds.size() <= 1) {
+            return 0.5;
+        }
+
+        int insertionIndex = Collections.binarySearch(sortedSpeeds, rawSpeed);
+        if (insertionIndex < 0) {
+            insertionIndex = -insertionIndex - 1;
+        } else {
+            while (insertionIndex < sortedSpeeds.size() - 1
+                    && Double.compare(sortedSpeeds.get(insertionIndex + 1), rawSpeed) == 0) {
+                insertionIndex += 1;
+            }
+        }
+
+        return clamp((double) insertionIndex / (sortedSpeeds.size() - 1), 0.0, 1.0);
     }
 
     private double toDouble(Object value) {

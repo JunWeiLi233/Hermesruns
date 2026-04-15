@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import { formatDistance } from '../utils/format';
+import { resolveAssignedCoach } from '../utils/coachIdentity';
+import { buildScheduleRouteModel } from '../utils/scheduleRoute';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import TopbarNotifications from '../components/TopbarNotifications';
 
@@ -286,13 +289,60 @@ function pickCurrentGear(shoes) {
     || null;
 }
 
+function getRouteZoneLabel(zoneKey, lang) {
+  const labels = lang === 'zh-CN'
+    ? {
+      core: '核心路线',
+      north: '北向路线',
+      south: '南向路线',
+      east: '东向路线',
+      west: '西向路线',
+      'north-east': '东北路线',
+      'north-west': '西北路线',
+      'south-east': '东南路线',
+      'south-west': '西南路线',
+    }
+    : {
+      core: 'Core route',
+      north: 'North route',
+      south: 'South route',
+      east: 'East route',
+      west: 'West route',
+      'north-east': 'Northeast route',
+      'north-west': 'Northwest route',
+      'south-east': 'Southeast route',
+      'south-west': 'Southwest route',
+    };
+
+  return labels[zoneKey] || labels.core;
+}
+
+function getRouteSourceLabel(routeModel, lang) {
+  if (!routeModel) {
+    return lang === 'zh-CN' ? '等待路线记录' : 'Waiting for route history';
+  }
+  if (routeModel.source === 'most-used') {
+    return lang === 'zh-CN' ? '常跑区域' : 'Most-used zone';
+  }
+  return lang === 'zh-CN' ? '最近跑过的区域' : 'Most recent zone';
+}
+
+function getRouteAnchoredRunsLabel(routeModel, lang) {
+  if (!routeModel) {
+    return lang === 'zh-CN' ? '等待教练安排' : 'Waiting for coach guidance';
+  }
+  return lang === 'zh-CN'
+    ? `在这片区域跑过 ${routeModel.activityCount} 次`
+    : `${routeModel.activityCount} runs anchored here`;
+}
+
 export default function Schedule() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
   const scheduleCopy = useMemo(() => SCHEDULE_COPY[lang] || SCHEDULE_COPY.en, [lang]);
-  const s = (key, vars) => formatCopy(scheduleCopy[key] || key, vars);
+  const s = useCallback((key, vars) => formatCopy(scheduleCopy[key] || key, vars), [scheduleCopy]);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -300,6 +350,7 @@ export default function Schedule() {
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [coachSchedule, setCoachSchedule] = useState([]);
+  const [heatmap, setHeatmap] = useState(null);
   const [shoes, setShoes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
 
@@ -314,12 +365,13 @@ export default function Schedule() {
     async function loadSchedule() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData] = await Promise.all([
+        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, heatmapData, shoeData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
           apiJson('/api/coach/state').catch(() => null),
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/coach/schedule?days=14').catch(() => []),
+          apiJson('/api/profile/heatmap').catch(() => null),
           apiJson('/api/shoes').catch(() => []),
         ]);
 
@@ -333,6 +385,7 @@ export default function Schedule() {
         setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
         setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
         setCoachSchedule(Array.isArray(coachScheduleData) ? coachScheduleData : []);
+        setHeatmap(heatmapData && typeof heatmapData === 'object' ? heatmapData : null);
         setShoes(Array.isArray(shoeData) ? shoeData : []);
         setLoadState('ready');
       } catch {
@@ -386,9 +439,15 @@ export default function Schedule() {
     [shoes],
   );
 
+  const routeModel = useMemo(
+    () => buildScheduleRouteModel(heatmap, runs),
+    [heatmap, runs],
+  );
+
   const activeBlock = coachState?.activeBlock || null;
   const displayName = getDisplayName(profile, t('profile.default_name'));
   const initials = displayName.slice(0, 1).toUpperCase();
+  const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
   const heroKicker = activeBlock?.name
     ? `${activeBlock.name}: ${s('phase_label', { week: activeBlock.weekIndex || 1 })}`
@@ -412,6 +471,11 @@ export default function Schedule() {
   const sleepLabel = coachState?.lastSleepScore != null && coachState.lastSleepScore >= 80
     ? s('sleep_high')
     : s('sleep_moderate');
+  const routeTitle = routeModel
+    ? getRouteZoneLabel(routeModel.zoneKey, lang)
+    : activeBlock?.name || s('default_route_name');
+  const routeAnchoredRuns = getRouteAnchoredRunsLabel(routeModel, lang);
+  const routeSourceLabel = getRouteSourceLabel(routeModel, lang);
 
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('loading')}</div></div>;
@@ -582,14 +646,23 @@ export default function Schedule() {
               </div>
 
               <article className="schedule-plan-route-card">
-                <div className="schedule-plan-route-map" />
+                <div className="schedule-plan-route-map" aria-hidden="true">
+                  {routeModel?.preview ? (
+                    <svg className="schedule-plan-route-map-svg" viewBox="0 0 100 100">
+                      <path className="schedule-plan-route-map-shadow" d={routeModel.preview.path} />
+                      <path className="schedule-plan-route-map-line" d={routeModel.preview.path} />
+                      <circle className="schedule-plan-route-map-start" cx={routeModel.preview.start[0]} cy={routeModel.preview.start[1]} r="3.2" />
+                      <circle className="schedule-plan-route-map-finish" cx={routeModel.preview.finish[0]} cy={routeModel.preview.finish[1]} r="3.6" />
+                    </svg>
+                  ) : null}
+                </div>
                 <div className="schedule-plan-route-content">
                   <div>
                     <span>{s('planned_route')}</span>
-                    <h3>{activeBlock?.name || s('default_route_name')}</h3>
+                    <h3>{routeTitle}</h3>
                     <div className="schedule-plan-route-meta">
-                      <span>{s('route_gain', { value: Math.round((coachState?.volumeKm7d || 0) * 3) })}</span>
-                      <span>{s('route_speed')}</span>
+                      <span>{routeAnchoredRuns}</span>
+                      <span>{routeSourceLabel}</span>
                     </div>
                   </div>
                   <button type="button" className="schedule-plan-watch-btn" onClick={() => navigate('/today-run')}>
@@ -602,11 +675,11 @@ export default function Schedule() {
             <aside className="schedule-plan-right-rail">
               <article className="schedule-plan-coach-card">
                 <div className="schedule-plan-coach-head">
-                  <div className="schedule-plan-coach-avatar">{initials}</div>
                   <div>
                     <h3>{s('coach_title')}</h3>
                     <p>{s('coach_subtitle')}</p>
                   </div>
+                  <CoachIdentityBadge coach={assignedCoach} lang={lang} className="schedule-plan-coach-badge" />
                 </div>
 
                 <div className="schedule-plan-coach-copy">

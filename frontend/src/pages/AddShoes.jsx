@@ -348,12 +348,12 @@ export default function AddShoes() {
       <main className="runner-shell-main add-shoes-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
+            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
+              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>HERMES</button>
               <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/shoes')}>
                 {t('profile.dashboard_nav_shoes')}
               </button>
-              <span className="runner-shell-topnav-link add-shoes-topnav-divider" aria-hidden="true">/</span>
-              <span className="runner-shell-topnav-link is-active">{t('shoes.add_page_title')}</span>
+              <span className="runner-shell-topnav-link is-section is-active">{t('shoes.add_page_title')}</span>
             </div>
           </div>
           <div className="runner-shell-topbar-actions">

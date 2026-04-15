@@ -7,9 +7,11 @@ import { apiFetch, apiJson } from '../api';
 import Modal from '../components/Modal';
 import ImportDataGuide from '../components/ImportDataGuide';
 import AppIcon from '../components/AppIcon';
+import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
 import { buildAnalysisSnapshot } from '../utils/analysisInsights';
 
@@ -33,7 +35,7 @@ function Gauge({ value, color }) {
 }
 
 export default function Analysis() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -44,10 +46,12 @@ export default function Analysis() {
   const [runsState, setRunsState] = useState('loading');
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [hoveredVo2BarKey, setHoveredVo2BarKey] = useState(null);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
+  const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -106,6 +110,7 @@ export default function Analysis() {
   const injuryTitle = t('analysis.stitch_injury_title');
   const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
   const injuryCopy = t('analysis.stitch_injury_copy');
+  const hoveredVo2Bar = vo2Bars.find((bar) => bar.key === hoveredVo2BarKey) || null;
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const navItems = [
@@ -287,9 +292,24 @@ export default function Analysis() {
                     </div>
                   </div>
                   <div className="analysis-overview-vo2-bars">
+                    {hoveredVo2Bar ? (
+                      <div className="analysis-overview-vo2-tooltip" aria-hidden="true">
+                        <span>{hoveredVo2Bar.label}</span>
+                        <strong>{hoveredVo2Bar.value != null ? hoveredVo2Bar.value.toFixed(1) : '--'}</strong>
+                        <small>VO2max</small>
+                      </div>
+                    ) : null}
                     {vo2Bars.map((bar) => (
-                      <div key={bar.key} className="analysis-overview-vo2-bar-col">
-                        <div className={cx('analysis-overview-vo2-bar', bar.current && 'is-current')} style={{ height: `${bar.height}%` }}>
+                      <div
+                        key={bar.key}
+                        className="analysis-overview-vo2-bar-col"
+                        onPointerEnter={() => setHoveredVo2BarKey(bar.key)}
+                        onPointerLeave={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
+                      >
+                        <div
+                          className={cx('analysis-overview-vo2-bar', bar.current && 'is-current', hoveredVo2BarKey === bar.key && 'is-hovered')}
+                          style={{ height: `${bar.height}%` }}
+                        >
                           {bar.current && bar.value != null ? <span className="analysis-overview-vo2-tag">{bar.value.toFixed(1)}</span> : null}
                         </div>
                         <span className={cx('analysis-overview-vo2-label', bar.current && 'is-current')}>{bar.label}</span>
@@ -322,8 +342,13 @@ export default function Analysis() {
                     className="analysis-overview-card analysis-overview-card--coach analysis-overview-card--interactive"
                     onClick={() => navigate('/analysis/coach-insight')}
                   >
-                    <span className="analysis-overview-card-kicker">{t('analysis.stitch_coach_title')}</span>
-                    <h3>{t('analysis.stitch_coach_quote')}</h3>
+                    <div className="analysis-overview-coach-head">
+                      <div className="analysis-overview-coach-copy">
+                        <span className="analysis-overview-card-kicker">{t('analysis.stitch_coach_title')}</span>
+                        <h3>{t('analysis.stitch_coach_quote')}</h3>
+                      </div>
+                      <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-overview-coach-badge" />
+                    </div>
                   </button>
                 </div>
               </section>

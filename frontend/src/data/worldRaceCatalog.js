@@ -30,6 +30,7 @@
     name: 'Boston Marathon',
     organization: 'B.A.A.',
     officialWebsite: 'https://www.baa.org/races/boston-marathon',
+    heroImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDPz5Wym-f8cRaKgtcHcTIATFRIko6Wi27wga5EAWnaDSLvt8HxCs15fuVB-3XPHhKtAjt-pgWfgP8CfMJzb1_hl996moJ-5HhY5o4pBj2Zs4tL6YmqksnMG-zyLP5j7TdKNZY6BU0Acs25jjnjahTPZnEhoAZWZepDhKCsKJfFXtIBxlYDt6j99V2RaHgj0c2fjshJ5F4dA62bOecgw75rIbPMuwwVl5N2nEyxf_gu0vw9KQUeTIWt4iBzrQ1zZDsjsWEabyTAsYnt',
     city: 'Boston',
     country: 'United States',
     location: 'Boston, United States',
@@ -463,6 +464,45 @@
     lat: 55.6761, lng: 12.5683,
   },
   {
+    id: 'helsinki-marathon',
+    name: 'Helsinki Marathon',
+    organization: "Runner's High",
+    officialWebsite: 'https://www.helsinkimarathon.fi/en/',
+    city: 'Helsinki',
+    country: 'Finland',
+    location: 'Helsinki, Finland',
+    distanceKm: 42.195,
+    month: 8,
+    program: '',
+    lat: 60.1699, lng: 24.9384,
+  },
+  {
+    id: 'bergen-city-marathon',
+    name: 'Bergen City Marathon',
+    organization: 'TIF Viking',
+    officialWebsite: 'https://www.bergencitymarathon.no/en/',
+    city: 'Bergen',
+    country: 'Norway',
+    location: 'Bergen, Norway',
+    distanceKm: 42.195,
+    month: 4,
+    program: '',
+    lat: 60.3913, lng: 5.3221,
+  },
+  {
+    id: 'brussels-airport-marathon',
+    name: 'Brussels Airport Marathon',
+    organization: 'Golazo',
+    officialWebsite: 'https://www.brusselsairportmarathon.be/',
+    city: 'Brussels',
+    country: 'Belgium',
+    location: 'Brussels, Belgium',
+    distanceKm: 42.195,
+    month: 11,
+    program: '',
+    lat: 50.8503, lng: 4.3517,
+  },
+  {
     id: 'vienna-marathon',
     name: 'Vienna City Marathon',
     organization: 'Vienna City Marathon',
@@ -473,6 +513,19 @@
     month: 4,
     program: '',
     lat: 48.2082, lng: 16.3738,
+  },
+  {
+    id: 'warsaw-marathon',
+    name: 'Warsaw Marathon',
+    organization: 'Maraton Warszawski',
+    officialWebsite: 'https://maratonwarszawski.com/en/',
+    city: 'Warsaw',
+    country: 'Poland',
+    location: 'Warsaw, Poland',
+    distanceKm: 42.195,
+    month: 9,
+    program: '',
+    lat: 52.2297, lng: 21.0122,
   },
   {
     id: 'prague-marathon',
@@ -968,6 +1021,33 @@
   },
 ];
 
+const CITY_PAGE_WEBSITE_OVERRIDES = {
+  'Big Sur': 'https://en.wikipedia.org/wiki/Big_Sur',
+  'Gold Coast': 'https://en.wikipedia.org/wiki/Gold_Coast,_Queensland',
+  'Ho Chi Minh City': 'https://en.wikipedia.org/wiki/Ho_Chi_Minh_City',
+  'Hong Kong': 'https://en.wikipedia.org/wiki/Hong_Kong',
+  'Mexico City': 'https://en.wikipedia.org/wiki/Mexico_City',
+  'New Delhi': 'https://en.wikipedia.org/wiki/New_Delhi',
+  'New York City': 'https://en.wikipedia.org/wiki/New_York_City',
+  'Nice-Cannes': 'https://en.wikipedia.org/wiki/French_Riviera',
+  Queenstown: 'https://en.wikipedia.org/wiki/Queenstown,_New_Zealand',
+  'Rio de Janeiro': 'https://en.wikipedia.org/wiki/Rio_de_Janeiro',
+  'Washington, D.C.': 'https://en.wikipedia.org/wiki/Washington,_D.C.',
+  "Xi'an": 'https://en.wikipedia.org/wiki/Xi%27an',
+};
+
+export function getCityPageWebsite(city) {
+  if (!city) return '';
+  if (CITY_PAGE_WEBSITE_OVERRIDES[city]) return CITY_PAGE_WEBSITE_OVERRIDES[city];
+  return `https://en.wikipedia.org/wiki/${encodeURIComponent(city.replace(/\s+/g, '_'))}`;
+}
+
+export function getRaceImageSourceCandidates(race) {
+  if (!race) return [];
+  const candidates = [race.officialWebsite, getCityPageWebsite(race.city)];
+  return [...new Set(candidates.filter(Boolean))];
+}
+
 export const worldRaceCountries = [
   { key: 'United States', x: 17, y: 36, region: 'North America' },
   { key: 'Canada', x: 16, y: 20, region: 'North America' },
@@ -980,14 +1060,18 @@ export const worldRaceCountries = [
   { key: 'France', x: 48, y: 33, region: 'Europe' },
   { key: 'Germany', x: 51, y: 28, region: 'Europe' },
   { key: 'Netherlands', x: 49, y: 29, region: 'Europe' },
+  { key: 'Belgium', x: 49, y: 30, region: 'Europe' },
   { key: 'Spain', x: 46, y: 39, region: 'Europe' },
   { key: 'Portugal', x: 44, y: 40, region: 'Europe' },
   { key: 'Italy', x: 52, y: 38, region: 'Europe' },
   { key: 'Switzerland', x: 50, y: 32, region: 'Europe' },
   { key: 'Sweden', x: 54, y: 17, region: 'Europe' },
   { key: 'Denmark', x: 51, y: 21, region: 'Europe' },
+  { key: 'Norway', x: 49, y: 14, region: 'Europe' },
+  { key: 'Finland', x: 58, y: 15, region: 'Europe' },
   { key: 'Austria', x: 54, y: 31, region: 'Europe' },
   { key: 'Czech Republic', x: 53, y: 29, region: 'Europe' },
+  { key: 'Poland', x: 55, y: 26, region: 'Europe' },
   { key: 'Greece', x: 56, y: 40, region: 'Europe' },
   { key: 'Turkey', x: 59, y: 37, region: 'Europe / Asia' },
   { key: 'Morocco', x: 45, y: 46, region: 'Africa' },

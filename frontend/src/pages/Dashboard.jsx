@@ -96,6 +96,19 @@ export default function Dashboard() {
   const [imgCustomQuery, setImgCustomQuery] = useState('');
   const [imgCustomUrl, setImgCustomUrl] = useState('');
   const [verifyingShoeId, setVerifyingShoeId] = useState(null);
+  const [adminShoeFormOpen, setAdminShoeFormOpen] = useState(false);
+  const [adminShoeSaving, setAdminShoeSaving] = useState(false);
+  const [adminShoePhotoUploading, setAdminShoePhotoUploading] = useState(false);
+  const [adminShoeForm, setAdminShoeForm] = useState({
+    runnerEmail: '',
+    brand: '',
+    model: '',
+    nickname: '',
+    maxDistanceKm: '',
+    initialDistanceKm: '',
+    isPrimary: false,
+    photoUrl: '',
+  });
 
   const loadOverview = useCallback(async () => {
     const data = await apiJson('/api/admin/overview');
@@ -305,6 +318,84 @@ export default function Dashboard() {
       await apiFetch(`/api/admin/shoes/${shoe.id}`, { method: 'DELETE' });
       await Promise.all([loadShoes(), loadQueues(), loadAudit()]);
     } catch { /* ignored */ }
+  }
+
+  function resetAdminShoeForm() {
+    setAdminShoeForm({
+      runnerEmail: '',
+      brand: '',
+      model: '',
+      nickname: '',
+      maxDistanceKm: '',
+      initialDistanceKm: '',
+      isPrimary: false,
+      photoUrl: '',
+    });
+    setAdminShoePhotoUploading(false);
+    setAdminShoeSaving(false);
+  }
+
+  function openAdminShoeForm() {
+    resetAdminShoeForm();
+    setAdminShoeFormOpen(true);
+  }
+
+  function closeAdminShoeForm() {
+    setAdminShoeFormOpen(false);
+    resetAdminShoeForm();
+  }
+
+  function setAdminShoeField(field, value) {
+    setAdminShoeForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  async function handleAdminShoePhotoUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAdminShoePhotoUploading(true);
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+        reader.onerror = () => reject(new Error('file_read_failed'));
+        reader.readAsDataURL(file);
+      });
+      setAdminShoeField('photoUrl', dataUrl);
+    } catch {
+      setMessage(t('dashboard.admin_shoe_photo_upload_failed'));
+    } finally {
+      setAdminShoePhotoUploading(false);
+      event.target.value = '';
+    }
+  }
+
+  async function createAdminShoe(event) {
+    event.preventDefault();
+    if (adminShoeSaving) return;
+    setAdminShoeSaving(true);
+    try {
+      const payload = {
+        runnerEmail: adminShoeForm.runnerEmail.trim(),
+        brand: adminShoeForm.brand.trim(),
+        model: adminShoeForm.model.trim(),
+        nickname: adminShoeForm.nickname.trim() || undefined,
+        isPrimary: Boolean(adminShoeForm.isPrimary),
+        photoUrl: adminShoeForm.photoUrl.trim() || undefined,
+      };
+      if (adminShoeForm.maxDistanceKm !== '') payload.maxDistanceKm = Number(adminShoeForm.maxDistanceKm);
+      if (adminShoeForm.initialDistanceKm !== '') payload.initialDistanceKm = Number(adminShoeForm.initialDistanceKm);
+      await apiJson('/api/admin/shoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      setMessage(t('dashboard.admin_shoe_created', { brand: payload.brand, model: payload.model, email: payload.runnerEmail }));
+      closeAdminShoeForm();
+      await Promise.all([loadShoes(), loadQueues(), loadAudit()]);
+    } catch {
+      setMessage(t('dashboard.admin_shoe_create_failed'));
+      setAdminShoeSaving(false);
+    }
   }
 
   const [catalogFormOpen, setCatalogFormOpen] = useState(false);
@@ -525,19 +616,19 @@ export default function Dashboard() {
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
 
   return (
-    <div className="dashboard-body">
+    <div className="dashboard-body admin-command-page">
       <LanguageSwitcher />
-      <nav className="top-nav">
+      <nav className="top-nav admin-command-topbar">
         <div className="nav-brand"><HermesLogo mark="ADMIN OPS" tone="light" /></div>
-        <div className="dashboard-nav-actions">
+        <div className="dashboard-nav-actions admin-command-topbar-actions">
           <button type="button" className="btn-secondary btn-inline-lg" onClick={triggerSync}>{t('dashboard.nav_sync_strava')}</button>
           <button type="button" className="btn-primary btn-inline-lg" onClick={logout}>{t('dashboard.nav_logout')}</button>
         </div>
       </nav>
 
-      <div className="dashboard-container admin-portal-container">
+      <div className="dashboard-container admin-portal-container admin-command-shell">
         {message && <div className="admin-shoe-status dashboard-message">{message}</div>}
-        <section className="admin-portal-header">
+        <section className="admin-portal-header admin-command-hero">
           <div className="admin-portal-header__stack">
             <span className="admin-portal-header__eyebrow">{t('dashboard.portal_eyebrow')}</span>
             <h1 className="admin-portal-header__title">{t('dashboard.portal_title')}</h1>
@@ -545,7 +636,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="card section-intro-card admin-status-strip">
+        <section className="card section-intro-card admin-status-strip admin-command-status-strip">
           <div className="section-intro-row">
             <div>
               <span className="section-intro-kicker">{t('dashboard.ops_overview_kicker')}</span>
@@ -563,7 +654,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <div className="admin-portal-tabbar">
+        <div className="admin-portal-tabbar admin-command-tabbar">
           {TAB_KEYS.map(key => (
             <button key={key} type="button" className={`admin-portal-tab${activeTab === key ? ' active' : ''}`} onClick={() => setActiveTab(key)}>
               {t(`dashboard.tab_${key}`)}
@@ -674,6 +765,7 @@ export default function Dashboard() {
                 <select className="admin-shoe-filter" value={shoeQuery.queue} onChange={e => setShoeQuery(prev => ({ ...prev, queue: e.target.value, page: 0 }))}><option value="">{t('dashboard.filter_all_shoes')}</option><option value="missing_photo">{t('dashboard.filter_missing_image')}</option><option value="unverified_photo">{t('dashboard.filter_unverified_image')}</option><option value="verified_photo">{t('dashboard.filter_verified_image')}</option></select>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => saveCurrentFilter('shoes')}>{t('dashboard.btn_save_filter')}</button>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => downloadExport(`/api/admin/shoes/export?search=${encodeURIComponent(shoeQuery.search)}&queue=${encodeURIComponent(shoeQuery.queue)}`, 'admin-shoes.csv')}>{t('dashboard.btn_export_csv')}</button>
+                <button type="button" className="btn-primary btn-inline-md" onClick={openAdminShoeForm}>{t('dashboard.btn_add_shoe')}</button>
                 <button type="button" className="btn-primary btn-inline-md" onClick={() => setCatalogFormOpen(true)}>{t('dashboard.btn_add_catalog')}</button>
               </ActionBar>
             </SectionCard>
@@ -891,6 +983,99 @@ export default function Dashboard() {
           <div className="modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogFormOpen(false)}>{t('dashboard.btn_cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('dashboard.btn_add_to_catalog')}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={adminShoeFormOpen} onClose={closeAdminShoeForm} title={t('dashboard.admin_shoe_modal_title')}>
+        <form onSubmit={createAdminShoe}>
+          <p className="modal-help">{t('dashboard.admin_shoe_help')}</p>
+
+          <label className="modal-label">{t('dashboard.admin_shoe_runner_email')}</label>
+          <input
+            type="email"
+            value={adminShoeForm.runnerEmail}
+            onChange={e => setAdminShoeField('runnerEmail', e.target.value)}
+            placeholder="runner@example.com"
+            required
+          />
+
+          <label className="modal-label">{t('dashboard.catalog_brand')}</label>
+          <input
+            type="text"
+            value={adminShoeForm.brand}
+            onChange={e => setAdminShoeField('brand', e.target.value)}
+            placeholder="Nike, ASICS, HOKA..."
+            required
+          />
+
+          <label className="modal-label">{t('dashboard.catalog_model')}</label>
+          <input
+            type="text"
+            value={adminShoeForm.model}
+            onChange={e => setAdminShoeField('model', e.target.value)}
+            placeholder="Vaporfly 3, Metaspeed Sky..."
+            required
+          />
+
+          <label className="modal-label">{t('dashboard.admin_shoe_nickname')}</label>
+          <input
+            type="text"
+            value={adminShoeForm.nickname}
+            onChange={e => setAdminShoeField('nickname', e.target.value)}
+            placeholder={t('dashboard.admin_shoe_nickname_placeholder')}
+          />
+
+          <label className="modal-label">{t('dashboard.admin_shoe_max_distance')}</label>
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={adminShoeForm.maxDistanceKm}
+            onChange={e => setAdminShoeField('maxDistanceKm', e.target.value)}
+            placeholder="650"
+          />
+
+          <label className="modal-label">{t('dashboard.admin_shoe_initial_distance')}</label>
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={adminShoeForm.initialDistanceKm}
+            onChange={e => setAdminShoeField('initialDistanceKm', e.target.value)}
+            placeholder="0"
+          />
+
+          <label className="modal-label">{t('dashboard.admin_shoe_photo')}</label>
+          <input
+            type="text"
+            value={adminShoeForm.photoUrl}
+            onChange={e => setAdminShoeField('photoUrl', e.target.value)}
+            placeholder={t('dashboard.admin_shoe_photo_placeholder')}
+          />
+          <label className="modal-label">{t('dashboard.admin_shoe_photo_upload')}</label>
+          <input type="file" accept="image/*" onChange={handleAdminShoePhotoUpload} />
+          {adminShoePhotoUploading && <p className="modal-help">{t('dashboard.admin_shoe_photo_uploading')}</p>}
+          {adminShoeForm.photoUrl && (
+            <div className="img-picker-preview">
+              <ShoeImage src={adminShoeForm.photoUrl} alt={t('dashboard.admin_shoe_photo_preview')} className="img-picker-current-img" noImageLabel={t('dashboard.img_no_image')} />
+            </div>
+          )}
+
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={adminShoeForm.isPrimary}
+              onChange={e => setAdminShoeField('isPrimary', e.target.checked)}
+            />
+            <span>{t('dashboard.admin_shoe_primary')}</span>
+          </label>
+
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary modal-button" onClick={closeAdminShoeForm}>{t('dashboard.btn_cancel')}</button>
+            <button type="submit" className="btn-primary modal-button" disabled={adminShoeSaving}>
+              {adminShoeSaving ? t('dashboard.admin_shoe_creating') : t('dashboard.btn_add_shoe')}
+            </button>
           </div>
         </form>
       </Modal>

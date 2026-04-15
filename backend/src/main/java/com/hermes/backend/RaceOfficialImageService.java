@@ -46,7 +46,11 @@ public class RaceOfficialImageService {
 
         CachedImage cached = cache.get(safeWebsite);
         if (cached != null && !cached.isExpired()) {
-          return cached.imageUrl();
+            String cachedImage = sanitizeResolvedImage(cached.imageUrl());
+            if (cachedImage != null || cached.imageUrl() == null) {
+                return cachedImage;
+            }
+            cache.remove(safeWebsite);
         }
 
         String resolved = fetchPrimaryImage(safeWebsite);
@@ -107,7 +111,15 @@ public class RaceOfficialImageService {
 
         try {
             String resolved = baseUri.resolve(normalized).toString();
-            return SafeUrlValidator.validateHttpUrlOrNull(resolved, MAX_URL_LENGTH, "officialImageUrl");
+            return sanitizeResolvedImage(resolved);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private String sanitizeResolvedImage(String resolved) {
+        try {
+            return SafeUrlValidator.validateHttpsUrlOrNull(resolved, MAX_URL_LENGTH, "officialImageUrl");
         } catch (IllegalArgumentException ignored) {
             return null;
         }

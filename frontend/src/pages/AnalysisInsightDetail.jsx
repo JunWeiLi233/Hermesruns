@@ -5,15 +5,19 @@ import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import { formatDuration } from '../utils/format';
+import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } from '../utils/analysisInsights';
 import TopbarNotifications from '../components/TopbarNotifications';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
 const VALID_INSIGHT_KEYS = ['load-balance', 'intensity', 'injury-risk', 'coach-insight'];
+const INJURY_TREND_CHART_WIDTH = 1000;
+const INJURY_TREND_CHART_HEIGHT = 220;
 
 const RUN_ZONE_LABELS = {
   'zh-CN': {
@@ -90,6 +94,21 @@ function formatRelativeDuration(seconds, lang) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function getInjuryTooltipPosition(point) {
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    return { left: 'min(42%, 320px)', top: '18px', right: 'auto' };
+  }
+
+  const leftPct = Math.min(84, Math.max(10, (point.x / INJURY_TREND_CHART_WIDTH) * 100));
+  const topPct = Math.min(74, Math.max(10, ((point.y / INJURY_TREND_CHART_HEIGHT) * 100) - 18));
+
+  return {
+    left: `${leftPct}%`,
+    top: `${topPct}%`,
+    right: 'auto',
+  };
 }
 
 function buildTrendGeometry(rows) {
@@ -1159,7 +1178,7 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang) 
 }
 
 export default function AnalysisInsightDetail() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -1212,6 +1231,7 @@ export default function AnalysisInsightDetail() {
     () => (insightKey === 'load-balance' ? buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang) : null),
     [insightKey, snapshot, recentRows, profile, t, lang],
   );
+  const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
   const detail = useMemo(
     () => (VALID_INSIGHT_KEYS.includes(insightKey) ? buildDetailModel(insightKey, snapshot, recentRows, t, lang) : null),
     [insightKey, snapshot, recentRows, t, lang],
@@ -1225,7 +1245,7 @@ export default function AnalysisInsightDetail() {
     const width = 920;
     const height = 280;
     const padL = 56;
-    const padR = 24;
+    const padR = 48;
     const padT = 28;
     const padB = 52;
     const plotW = width - padL - padR;
@@ -1284,6 +1304,9 @@ export default function AnalysisInsightDetail() {
   const injuryCoachHeading = t(`analysis.injury_cinematic_coach_title_${snapshot.injury.level}`);
   const injuryCoachCopy = t(`analysis.injury_cinematic_coach_copy_${snapshot.injury.level}`);
   const injuryTrendTooltip = injuryTrend.points[injuryTrend.points.length - 1] || null;
+  const polarizedSummary = snapshot.polarized
+    ? `${snapshot.polarized.easySharePct}/${snapshot.polarized.moderateSharePct}/${snapshot.polarized.hardSharePct}`
+    : '--/--/--';
   const coachPerformanceIndex = recentRows.length
     ? Math.round(recentRows.slice(0, 4).reduce((sum, row) => sum + Number(row.loadScore || 0), 0) / Math.min(4, recentRows.length))
     : null;
@@ -1302,6 +1325,8 @@ export default function AnalysisInsightDetail() {
   const coachTrendTooltip = injuryTrend.points[injuryTrend.points.length - 1] || null;
 
   const [injuryScrubber, setInjuryScrubber] = useState(null);
+  const activeInjuryTooltip = injuryScrubber || injuryTrendTooltip;
+  const injuryTooltipPosition = getInjuryTooltipPosition(activeInjuryTooltip);
 
   const handleInjuryPointerMove = useCallback((event) => {
     const svg = event.currentTarget;
@@ -1339,6 +1364,7 @@ export default function AnalysisInsightDetail() {
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
   ];
+  const topnavTitle = detail.title;
 
   if (!VALID_INSIGHT_KEYS.includes(insightKey)) {
     return null;
@@ -1401,8 +1427,12 @@ export default function AnalysisInsightDetail() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_analysis')}</span>
+            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
+              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>HERMES</button>
+              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/analysis')}>
+                {t('profile.dashboard_nav_analysis')}
+              </button>
+              <span className="runner-shell-topnav-link is-section is-active">{topnavTitle}</span>
             </div>
           </div>
           <div className="runner-shell-topbar-actions">
@@ -1432,6 +1462,7 @@ export default function AnalysisInsightDetail() {
                     <span className="analysis-coach-command-live-pill">{t('analysis.coach_dashboard_live')}</span>
                     <span className="analysis-coach-command-cycle-pill">{`${t('analysis.coach_dashboard_macrocycle')}: ${coachToneLabel}`}</span>
                   </div>
+                  <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-coach-command-coach-badge" />
                   <h1>
                     <span>{t('analysis.coach_dashboard_ready_title')}</span>
                     <strong>{t('analysis.coach_dashboard_ready_accent')}</strong>
@@ -1704,9 +1735,7 @@ export default function AnalysisInsightDetail() {
                   </article>
 
                   <article className="analysis-cinematic-card analysis-cinematic-card--coach">
-                    <div className="analysis-cinematic-coach-icon" aria-hidden="true">
-                      <AppIcon name="psychology" className="runner-dashboard-side-link-icon" />
-                    </div>
+                    <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-cinematic-coach-badge" />
                     <div className="analysis-cinematic-coach-copy">
                       <span className="analysis-cinematic-kicker">{t('analysis.injury_cinematic_coach_kicker')}</span>
                       <h2>{injuryCoachHeading}</h2>
@@ -1814,11 +1843,14 @@ export default function AnalysisInsightDetail() {
                         </>
                       )}
                     </svg>
-                    {(injuryScrubber || injuryTrendTooltip) ? (
-                      <div className="analysis-cinematic-chart-tooltip" style={{ pointerEvents: 'none' }}>
-                        <span>{(injuryScrubber || injuryTrendTooltip).title}</span>
-                        <strong>{(injuryScrubber || injuryTrendTooltip).loadScore}</strong>
-                        <small>{(injuryScrubber || injuryTrendTooltip).paceLabel}</small>
+                    {activeInjuryTooltip ? (
+                      <div
+                        className={cx('analysis-cinematic-chart-tooltip', injuryScrubber && 'is-scrubbing')}
+                        style={{ pointerEvents: 'none', ...injuryTooltipPosition }}
+                      >
+                        <span>{activeInjuryTooltip.title}</span>
+                        <strong>{activeInjuryTooltip.loadScore}</strong>
+                        <small>{activeInjuryTooltip.paceLabel}</small>
                       </div>
                     ) : null}
                   </div>
@@ -1844,9 +1876,19 @@ export default function AnalysisInsightDetail() {
                     <div className="analysis-cinematic-metric-icon" aria-hidden="true">
                       <AppIcon name="architecture" className="runner-dashboard-side-link-icon" />
                     </div>
-                    <div>
+                    <div className="analysis-cinematic-intensity-card-copy">
                       <span className="analysis-cinematic-kicker">{t('analysis.injury_cinematic_metric_intensity')}</span>
-                      <strong>{snapshot.polarized ? `${snapshot.polarized.easyPct}/${snapshot.polarized.hardPct}` : '--/--'}</strong>
+                      <strong>{polarizedSummary}</strong>
+                      <div className="analysis-cinematic-intensity-bar" aria-hidden="true">
+                        <span style={{ width: `${snapshot.polarized?.easySharePct || 0}%` }} />
+                        <span className="is-moderate" style={{ width: `${snapshot.polarized?.moderateSharePct || 0}%` }} />
+                        <span className="is-hard" style={{ width: `${snapshot.polarized?.hardSharePct || 0}%` }} />
+                      </div>
+                      <div className="analysis-cinematic-intensity-labels">
+                        <span>{t('analysis.stitch_low_intensity', { value: snapshot.polarized?.easySharePct ?? 0 })}</span>
+                        <span>{t('analysis.stitch_moderate_intensity', { value: snapshot.polarized?.moderateSharePct ?? 0 })}</span>
+                        <span>{t('analysis.stitch_high_intensity', { value: snapshot.polarized?.hardSharePct ?? 0 })}</span>
+                      </div>
                       <p>{t('analysis.injury_cinematic_metric_intensity_copy')}</p>
                     </div>
                   </button>
@@ -2015,9 +2057,7 @@ export default function AnalysisInsightDetail() {
               <section className="analysis-load-command-bottom-grid">
                 <div className="analysis-load-command-side-column">
                   <article className="analysis-load-command-judgment-card">
-                    <div className="analysis-load-command-judgment-mark" aria-hidden="true">
-                      <AppIcon name="analytics" className="runner-dashboard-side-link-icon" />
-                    </div>
+                    <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-load-coach-badge" />
                     <span>{loadDashboard.judgmentKicker}</span>
                     <h3>{loadDashboard.judgmentTitle}</h3>
                     <p>{loadDashboard.judgmentBody}</p>
@@ -2151,9 +2191,7 @@ export default function AnalysisInsightDetail() {
 
                 <div className="analysis-intensity-command-sidebar">
                   <article className="analysis-intensity-command-judgment">
-                    <div className="analysis-intensity-command-judgment-icon" aria-hidden="true">
-                      <AppIcon name="analytics" className="runner-dashboard-side-link-icon" />
-                    </div>
+                    <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-intensity-coach-badge" />
                     <h3>{intensityDashboard.judgmentTitle}</h3>
                     <p>{intensityDashboard.judgmentBody}</p>
                     <p>{intensityDashboard.judgmentFollowup}</p>

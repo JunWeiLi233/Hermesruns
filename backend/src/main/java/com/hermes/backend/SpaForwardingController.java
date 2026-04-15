@@ -40,6 +40,7 @@ public class SpaForwardingController {
         "/add-shoes",
         "/shoe-catalog",
         "/races",
+        "/races/details/{raceId}",
         "/schedule",
         "/muscle-training"
     }, produces = MediaType.TEXT_HTML_VALUE)

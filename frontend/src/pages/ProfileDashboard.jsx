@@ -135,11 +135,13 @@ function buildWeekBars(runs, lang) {
 
   return dayNames.map((label, index) => ({
     key: `${label}-${index}`,
+    index,
     label,
     actual: actual[index],
     projected: projected[index],
     actualPct: Math.max(8, Math.round((actual[index] / maxValue) * 100)),
     projectedPct: Math.max(8, Math.round((projected[index] / maxValue) * 100)),
+    actualAnchorTopPct: 100 - Math.max(8, Math.round((actual[index] / maxValue) * 100)),
     isToday: index === todayIndex,
   }));
 }
@@ -396,6 +398,7 @@ export default function ProfileDashboard() {
   const [loadState, setLoadState] = useState('loading');
   const [banner, setBanner] = useState(null);
   const [prCelebration, setPrCelebration] = useState(null);
+  const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -654,7 +657,7 @@ export default function ProfileDashboard() {
             </div>
           </div>
           <div className="runner-shell-topbar-actions">
-            <div className="runner-shell-topbar-profile-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
@@ -742,11 +745,39 @@ export default function ProfileDashboard() {
                   </div>
                 </div>
                 <div className="runner-dashboard-bar-chart">
+                  {activeWeeklyBar ? (
+                    <div
+                      className={`runner-dashboard-bar-tooltip${activeWeeklyBar.index <= 1 ? ' is-left' : activeWeeklyBar.index >= 5 ? ' is-right' : ''}`}
+                      role="status"
+                      aria-live="polite"
+                      style={{
+                        ...(activeWeeklyBar.index > 1 && activeWeeklyBar.index < 5
+                          ? { left: `${((activeWeeklyBar.index + 0.5) / weeklyBars.length) * 100}%` }
+                          : {}),
+                        top: `clamp(6px, calc(${activeWeeklyBar.actualAnchorTopPct}% - 86px), 112px)`,
+                      }}
+                    >
+                      <strong>{activeWeeklyBar.label}</strong>
+                      <span>{t('profile.dashboard_actual')}: {formatDistance(activeWeeklyBar.actual, 1, lang, unit)}</span>
+                      <span>{t('profile.dashboard_projected')}: {formatDistance(activeWeeklyBar.projected, 1, lang, unit)}</span>
+                    </div>
+                  ) : null}
                   {weeklyBars.map((bar) => (
-                    <div key={bar.key} className={`runner-dashboard-bar-col${bar.isToday ? ' is-today' : ''}`}>
+                    <div
+                      key={bar.key}
+                      className={`runner-dashboard-bar-col${bar.isToday ? ' is-today' : ''}${activeWeeklyBar?.key === bar.key ? ' is-active' : ''}`}
+                    >
                       <div className="runner-dashboard-bar-track">
                         <div className="runner-dashboard-bar projected" style={{ height: `${bar.projectedPct}%` }} />
-                        <div className="runner-dashboard-bar actual" style={{ height: `${bar.actualPct}%` }} />
+                        <div
+                          className="runner-dashboard-bar actual"
+                          style={{ height: `${bar.actualPct}%` }}
+                          onMouseEnter={() => setActiveWeeklyBar(bar)}
+                          onMouseLeave={() => setActiveWeeklyBar(null)}
+                          onFocus={() => setActiveWeeklyBar(bar)}
+                          onBlur={() => setActiveWeeklyBar(null)}
+                          tabIndex={0}
+                        />
                       </div>
                       <span>{bar.label}</span>
                     </div>

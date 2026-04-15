@@ -203,6 +203,71 @@ export default function SettingsAtlasLayout({
 
         <section className="settings-atlas-column">
           <div className="settings-atlas-column-head">
+            <h3>{t('settings.danger_title')}</h3>
+          </div>
+
+          <article className="settings-atlas-panel">
+            <div className="settings-atlas-panel-head">
+              <strong>{t('settings.stitch_setup_checklist_title')}</strong>
+              <span>{t('settings.stitch_setup_checklist_copy')}</span>
+            </div>
+            <div className="settings-atlas-checklist">
+              {setupChecklist.map((item) => (
+                <div key={item.key} className={`settings-atlas-checklist-item${item.done ? ' is-done' : ''}`}>
+                  <span className="settings-atlas-checklist-icon">
+                    <AppIcon name={item.done ? 'check_circle' : 'radio_button_unchecked'} className="runner-dashboard-side-link-icon" />
+                  </span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="settings-atlas-panel">
+            <div className="settings-atlas-panel-head">
+              <strong>{t('settings.stitch_weekly_brief')}</strong>
+              <span>{t('settings.stitch_weekly_brief_copy')}</span>
+            </div>
+            <div className="settings-atlas-brief-meta">
+              <span>{t('settings.stitch_control_matrix')}</span>
+              <strong>{digestStateLabel}</strong>
+            </div>
+            <button type="button" className="settings-atlas-digest-btn" onClick={toggleDigest}>
+              {digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest')}
+            </button>
+          </article>
+
+          <article className="settings-atlas-panel settings-atlas-panel--session">
+            <div className="settings-atlas-panel-head">
+              <strong>{t('settings.logout_btn')}</strong>
+              <span>{t('settings.stitch_danger_copy')}</span>
+            </div>
+            <button type="button" className="settings-atlas-action-btn" onClick={() => { logout(); navigate('/login'); }}>
+              <AppIcon name="logout" className="runner-dashboard-side-link-icon" />
+              <span>{t('settings.logout_btn')}</span>
+            </button>
+          </article>
+
+          <article className="settings-atlas-panel settings-atlas-panel--build">
+            <div className="settings-atlas-build-meta">
+              <div>
+                <span>{t('settings.stitch_control_matrix')}</span>
+                <strong>{resolvedLanguageLabel}</strong>
+              </div>
+              <div>
+                <span>{t('profile.theme_title')}</span>
+                <strong>{activeThemeLabel}</strong>
+              </div>
+              <div>
+                <span>{t('settings.distance_unit_title')}</span>
+                <strong>{resolvedUnitLabel}</strong>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section className="settings-atlas-column">
+          <div className="settings-atlas-column-head">
             <h3>{t('settings.stitch_data_ecosystem')}</h3>
           </div>
 
@@ -269,71 +334,6 @@ export default function SettingsAtlasLayout({
               <button type="button" className="settings-atlas-service-action" onClick={() => setActiveModal('manual')}>
                 {t('profile.watch_import_files')}
               </button>
-            </div>
-          </article>
-        </section>
-
-        <section className="settings-atlas-column">
-          <div className="settings-atlas-column-head">
-            <h3>{t('settings.danger_title')}</h3>
-          </div>
-
-          <article className="settings-atlas-panel">
-            <div className="settings-atlas-panel-head">
-              <strong>{t('settings.stitch_setup_checklist_title')}</strong>
-              <span>{t('settings.stitch_setup_checklist_copy')}</span>
-            </div>
-            <div className="settings-atlas-checklist">
-              {setupChecklist.map((item) => (
-                <div key={item.key} className={`settings-atlas-checklist-item${item.done ? ' is-done' : ''}`}>
-                  <span className="settings-atlas-checklist-icon">
-                    <AppIcon name={item.done ? 'check_circle' : 'radio_button_unchecked'} className="runner-dashboard-side-link-icon" />
-                  </span>
-                  <span>{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="settings-atlas-panel">
-            <div className="settings-atlas-panel-head">
-              <strong>{t('settings.stitch_weekly_brief')}</strong>
-              <span>{t('settings.stitch_weekly_brief_copy')}</span>
-            </div>
-            <div className="settings-atlas-brief-meta">
-              <span>{t('settings.stitch_control_matrix')}</span>
-              <strong>{digestStateLabel}</strong>
-            </div>
-            <button type="button" className="settings-atlas-digest-btn" onClick={toggleDigest}>
-              {digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest')}
-            </button>
-          </article>
-
-          <article className="settings-atlas-panel settings-atlas-panel--session">
-            <div className="settings-atlas-panel-head">
-              <strong>{t('settings.logout_btn')}</strong>
-              <span>{t('settings.stitch_danger_copy')}</span>
-            </div>
-            <button type="button" className="settings-atlas-action-btn" onClick={() => { logout(); navigate('/login'); }}>
-              <AppIcon name="logout" className="runner-dashboard-side-link-icon" />
-              <span>{t('settings.logout_btn')}</span>
-            </button>
-          </article>
-
-          <article className="settings-atlas-panel settings-atlas-panel--build">
-            <div className="settings-atlas-build-meta">
-              <div>
-                <span>{t('settings.stitch_control_matrix')}</span>
-                <strong>{resolvedLanguageLabel}</strong>
-              </div>
-              <div>
-                <span>{t('profile.theme_title')}</span>
-                <strong>{activeThemeLabel}</strong>
-              </div>
-              <div>
-                <span>{t('settings.distance_unit_title')}</span>
-                <strong>{resolvedUnitLabel}</strong>
-              </div>
             </div>
           </article>
         </section>

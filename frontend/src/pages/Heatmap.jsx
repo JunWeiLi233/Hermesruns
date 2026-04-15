@@ -57,7 +57,9 @@ function buildHeatLayerPoints(points, zoom) {
 
   return points.map((point) => {
     const baseIntensity = clamp(
-      Number.isFinite(point.speedRatio) ? point.speedRatio : point.intensity || 0.5,
+      Number.isFinite(point.visualSpeedRatio)
+        ? point.visualSpeedRatio
+        : (Number.isFinite(point.speedRatio) ? point.speedRatio : point.intensity || 0.5),
       0.06,
       1,
     );
@@ -69,30 +71,74 @@ function buildHeatLayerPoints(points, zoom) {
   });
 }
 
-function getRouteSegmentColor(speedRatio) {
+function getSpeedBand(speedRatio) {
   const safeRatio = clamp(Number.isFinite(speedRatio) ? speedRatio : 0.5, 0, 1);
   for (let index = SPEED_BANDS.length - 1; index >= 0; index -= 1) {
     if (safeRatio >= SPEED_BANDS[index].min) {
-      return SPEED_BANDS[index].color;
+      return SPEED_BANDS[index];
     }
   }
-  return SPEED_BANDS[0].color;
+  return SPEED_BANDS[0];
+}
+
+function getRouteSegmentColor(speedRatio) {
+  return getSpeedBand(speedRatio).color;
 }
 
 function getGpsDotStyle(speedRatio, zoom) {
   const safeZoom = Number.isFinite(zoom) ? zoom : 12;
   const normalizedZoom = clamp(safeZoom, 8, 18);
   const radius = clamp(1.5 + ((normalizedZoom - 8) / 10) * 2.7, 1.5, 4.2);
+  const speedBand = getSpeedBand(speedRatio);
   return {
-    color: getRouteSegmentColor(speedRatio),
+    color: speedBand.color,
     radius,
-    fillColor: getRouteSegmentColor(speedRatio),
+    fillColor: speedBand.color,
     fillOpacity: clamp(0.86 + ((normalizedZoom - 8) / 10) * 0.1, 0.86, 0.96),
     opacity: clamp(0.34 + ((normalizedZoom - 8) / 10) * 0.1, 0.34, 0.44),
     weight: clamp(radius * 0.34, 0.6, 1.5),
     interactive: false,
     bubblingMouseEvents: false,
   };
+}
+
+function normalizePointSpeedRatios(points) {
+  if (!Array.isArray(points) || points.length === 0) return [];
+
+  const sortableSpeeds = points
+    .map((point) => Number(point?.speedRatio))
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right);
+
+  if (sortableSpeeds.length <= 1) {
+    return points.map((point) => ({
+      ...point,
+      visualSpeedRatio: Number.isFinite(Number(point?.speedRatio)) ? Number(point.speedRatio) : 0.5,
+    }));
+  }
+
+  const resolvePercentile = (rawSpeedRatio) => {
+    const safeRatio = Number(rawSpeedRatio);
+    if (!Number.isFinite(safeRatio)) return 0.5;
+
+    let low = 0;
+    let high = sortableSpeeds.length;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (sortableSpeeds[mid] <= safeRatio) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+
+    return clamp((low - 1) / (sortableSpeeds.length - 1), 0, 1);
+  };
+
+  return points.map((point) => ({
+    ...point,
+    visualSpeedRatio: resolvePercentile(point?.speedRatio),
+  }));
 }
 
 function getGpsDotStride(pointCount, zoom) {
@@ -226,9 +272,10 @@ export default function Heatmap() {
     });
   }, []);
 
+  const points = normalizePointSpeedRatios(Array.isArray(heatmap?.points) ? heatmap.points : []);
+  const bounds = heatmap?.bounds || null;
+
   useEffect(() => {
-    const points = Array.isArray(heatmap?.points) ? heatmap.points : [];
-    const bounds = heatmap?.bounds || null;
     if (!mapRef.current || !points.length || !bounds || heatmapState !== 'ready') return undefined;
 
     let disposed = false;
@@ -291,7 +338,7 @@ export default function Heatmap() {
           const visibleDots = buildVisibleGpsDots(points, zoom);
           visibleDots.forEach((point) => {
             L.circleMarker([point.latitude, point.longitude], {
-              ...getGpsDotStyle(point.speedRatio, zoom),
+              ...getGpsDotStyle(point.visualSpeedRatio, zoom),
               renderer: canvasRenderer,
             }).addTo(routeDotsLayer);
           });
@@ -318,13 +365,12 @@ export default function Heatmap() {
         mapInstanceRef.current = null;
       }
     };
-  }, [heatmap, heatmapState]);
+  }, [bounds, heatmapState, points]);
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const pointCount = Number(heatmap?.pointCount || 0);
   const activityCount = Number(heatmap?.activityCount || 0);
   const densityPerRun = activityCount > 0 ? Math.round(pointCount / activityCount) : 0;
-  const bounds = heatmap?.bounds || null;
   const centerLatitude = bounds ? (bounds.minLatitude + bounds.maxLatitude) / 2 : null;
   const centerLongitude = bounds ? (bounds.minLongitude + bounds.maxLongitude) / 2 : null;
   const centerLabel = bounds
@@ -412,12 +458,6 @@ export default function Heatmap() {
               <span>{showMapOverlays ? centerLabel : t('heatmap_loading')}</span>
             </div>
           </button>
-
-          <div className="heatmap-page-filter-strip" aria-label={t('heatmap.page_map_title')}>
-            <span className="heatmap-page-filter-pill is-active">{t('heatmap.page_filter_speed')}</span>
-            <span className="heatmap-page-filter-pill">{t('heatmap.page_filter_runs')}</span>
-            <span className="heatmap-page-filter-pill">{t('heatmap.page_filter_all_time')}</span>
-          </div>
 
           <div className="heatmap-page-action-strip">
             <button type="button" className="heatmap-page-secondary-btn is-overlay" onClick={() => navigate('/runs')}>

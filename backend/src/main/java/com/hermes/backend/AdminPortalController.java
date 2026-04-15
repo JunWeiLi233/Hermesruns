@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,6 +37,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/admin")
 public class AdminPortalController {
+    private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> USER_SORT_FIELDS = Set.of("id", "email", "role", "status", "subscriptionTier", "createdAt");
     private static final Set<String> SHOE_SORT_FIELDS = Set.of("id", "brand", "model", "createdAt");
     private static final Set<String> JOB_SORT_FIELDS = Set.of("id", "createdAt", "status", "jobType");
@@ -43,40 +45,49 @@ public class AdminPortalController {
     private static final Set<String> NOTE_FIELDS = Set.of("noteText");
     private static final Set<String> BULK_USER_FIELDS = Set.of("ids", "action", "dryRun", "months");
     private static final Set<String> BULK_SHOE_FIELDS = Set.of("ids", "action", "dryRun");
+    private static final Set<String> CREATE_SHOE_FIELDS = Set.of(
+            "runnerId", "runnerEmail", "brand", "model", "nickname", "maxDistanceKm", "isPrimary", "initialDistanceKm", "photoUrl"
+    );
     private static final Set<String> FILTER_FIELDS = Set.of("scope", "name", "queryJson");
 
     private final AuthService authService;
     private final RunnerRepository runnerRepository;
     private final ShoeRepository shoeRepository;
+    private final ActivityRepository activityRepository;
     private final RunnerAdminNoteRepository runnerAdminNoteRepository;
     private final AdminSavedFilterRepository adminSavedFilterRepository;
     private final AdminAuditLogRepository adminAuditLogRepository;
     private final AdminBackgroundJobRepository adminBackgroundJobRepository;
     private final AdminAuditService adminAuditService;
     private final AiUsageService aiUsageService;
+    private final ShoeIdentityService shoeIdentityService;
     private final StravaAutoSyncScheduler stravaAutoSyncScheduler;
 
     public AdminPortalController(
             AuthService authService,
             RunnerRepository runnerRepository,
             ShoeRepository shoeRepository,
+            ActivityRepository activityRepository,
             RunnerAdminNoteRepository runnerAdminNoteRepository,
             AdminSavedFilterRepository adminSavedFilterRepository,
             AdminAuditLogRepository adminAuditLogRepository,
             AdminBackgroundJobRepository adminBackgroundJobRepository,
             AdminAuditService adminAuditService,
             AiUsageService aiUsageService,
+            ShoeIdentityService shoeIdentityService,
             StravaAutoSyncScheduler stravaAutoSyncScheduler
     ) {
         this.authService = authService;
         this.runnerRepository = runnerRepository;
         this.shoeRepository = shoeRepository;
+        this.activityRepository = activityRepository;
         this.runnerAdminNoteRepository = runnerAdminNoteRepository;
         this.adminSavedFilterRepository = adminSavedFilterRepository;
         this.adminAuditLogRepository = adminAuditLogRepository;
         this.adminBackgroundJobRepository = adminBackgroundJobRepository;
         this.adminAuditService = adminAuditService;
         this.aiUsageService = aiUsageService;
+        this.shoeIdentityService = shoeIdentityService;
         this.stravaAutoSyncScheduler = stravaAutoSyncScheduler;
     }
 
@@ -312,6 +323,85 @@ public class AdminPortalController {
                 .body(csv.toString());
     }
 
+    @PostMapping("/shoes")
+    public ResponseEntity<?> createShoe(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                        @RequestBody(required = false) Map<String, Object> body) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+
+        final Runner runner;
+        final String brand;
+        final String model;
+        final String nickname;
+        final boolean isPrimary;
+        final String photoUrlRaw;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, CREATE_SHOE_FIELDS);
+            runner = resolveRunnerForShoe(body).orElse(null);
+            if (runner == null || runner.isDeleted()) {
+                return notFound("Runner not found.", "runner_not_found");
+            }
+            brand = RequestBodyValidator.requiredSafeText(body, "brand", 100);
+            model = RequestBodyValidator.requiredSafeText(body, "model", 100);
+            nickname = RequestBodyValidator.optionalSafeText(body, "nickname", 80);
+            isPrimary = RequestBodyValidator.booleanOrDefault(body, "isPrimary", false);
+            photoUrlRaw = RequestBodyValidator.optionalString(body, "photoUrl", MAX_PHOTO_REFERENCE_LENGTH);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_shoe");
+        }
+
+        try {
+            InputSanitizer.rejectControlAndHtmlChars(brand, "brand");
+            InputSanitizer.rejectControlAndHtmlChars(model, "model");
+            if (nickname != null) InputSanitizer.rejectControlAndHtmlChars(nickname, "nickname");
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_shoe");
+        }
+
+        final String finalPhotoUrl;
+        try {
+            finalPhotoUrl = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(photoUrlRaw, MAX_PHOTO_REFERENCE_LENGTH, "photoUrl");
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_shoe");
+        }
+
+        Shoe shoe = new Shoe();
+        shoe.setRunner(runner);
+        shoe.setBrand(brand);
+        shoe.setModel(model);
+        shoe.setNickname(nickname);
+        shoe.setPhotoUrl(finalPhotoUrl);
+        shoe.setPhotoVerified(false);
+        shoe.setIsPrimary(isPrimary);
+
+        if (body != null && body.containsKey("maxDistanceKm")) {
+            try {
+                shoe.setMaxDistanceKm(RequestBodyValidator.optionalDouble(body, "maxDistanceKm", 0, 99999, null));
+            } catch (IllegalArgumentException ex) {
+                return badRequest("Invalid max distance.", "invalid_shoe");
+            }
+        }
+        if (body != null && body.containsKey("initialDistanceKm")) {
+            try {
+                shoe.setInitialDistanceKm(RequestBodyValidator.optionalDouble(body, "initialDistanceKm", 0, 99999, null));
+            } catch (IllegalArgumentException ex) {
+                return badRequest("Invalid initial distance.", "invalid_shoe");
+            }
+        }
+
+        shoeIdentityService.applyIdentityKey(shoe);
+        Shoe saved = shoeRepository.save(shoe);
+        adminAuditService.log(adminOptional.get(), "shoe.created", "shoe", String.valueOf(saved.getId()),
+                "Admin created shoe",
+                Map.of(
+                        "runnerId", runner.getId(),
+                        "runnerEmail", runner.getEmail(),
+                        "brand", saved.getBrand(),
+                        "model", saved.getModel()
+                ));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toShoeDto(saved));
+    }
+
     @PostMapping("/shoes/bulk")
     public ResponseEntity<?> bulkShoes(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
                                        @RequestBody(required = false) Map<String, Object> body) {
@@ -355,6 +445,29 @@ public class AdminPortalController {
                     "Applied bulk action to shoe", Map.of("brand", shoe.getBrand(), "model", shoe.getModel()));
         }
         return ResponseEntity.ok(Map.of("dryRun", false, "action", action, "selected", selection.ids().size(), "affected", affected));
+    }
+
+    @DeleteMapping("/shoes/{id}")
+    @Transactional
+    public ResponseEntity<?> deleteShoe(@PathVariable Long id,
+                                        @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        Optional<Shoe> shoeOptional = shoeRepository.findById(id);
+        if (shoeOptional.isEmpty()) return notFound("Shoe not found.", "shoe_not_found");
+
+        Shoe shoe = shoeOptional.get();
+        activityRepository.unlinkShoeFromActivities(id);
+        shoeRepository.delete(shoe);
+        adminAuditService.log(adminOptional.get(), "shoe.deleted", "shoe", String.valueOf(id),
+                "Admin permanently deleted shoe",
+                Map.of(
+                        "runnerId", shoe.getRunner() == null ? null : shoe.getRunner().getId(),
+                        "runnerEmail", shoe.getRunner() == null ? null : shoe.getRunner().getEmail(),
+                        "brand", shoe.getBrand(),
+                        "model", shoe.getModel()
+                ));
+        return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 
     @GetMapping("/queues")
@@ -654,6 +767,17 @@ public class AdminPortalController {
 
     private Optional<Runner> requireAdmin(String authorizationHeader) {
         return authService.findByAuthorizationHeader(authorizationHeader).filter(authService::isAdmin);
+    }
+
+    private Optional<Runner> resolveRunnerForShoe(Map<String, Object> body) {
+        if (body == null) return Optional.empty();
+        if (body.get("runnerId") instanceof Number number) {
+            return runnerRepository.findById(number.longValue());
+        }
+        if (body.get("runnerEmail") instanceof String email && !email.isBlank()) {
+            return runnerRepository.findByEmailIgnoreCase(email.trim());
+        }
+        return Optional.empty();
     }
 
     private ResponseEntity<AdminApiError> forbidden() {

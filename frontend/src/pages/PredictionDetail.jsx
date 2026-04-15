@@ -6,9 +6,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration, formatPaceSeconds, formatDistance, formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import {
   collectAllVdotEntries,
@@ -42,15 +44,9 @@ function detailColor(distKey) {
   return DIST_COLORS[distKey] || '#f07561';
 }
 
-function formatSignedDuration(deltaSeconds) {
-  if (deltaSeconds == null || Number.isNaN(deltaSeconds)) return '--';
-  const sign = deltaSeconds > 0 ? '+' : deltaSeconds < 0 ? '-' : '';
-  return `${sign}${formatDuration(Math.abs(deltaSeconds))}`;
-}
-
 export default function PredictionDetail() {
   const { distKey } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { theme } = useTheme();
   const { unit } = useUnit();
@@ -200,54 +196,6 @@ export default function PredictionDetail() {
     };
   }, [accentColor, nearRuns, t]);
 
-  const currentRepresentativeVdot = useMemo(() => {
-    if (historyData.length) return historyData.at(-1)?.vdot || null;
-    return allVdots.length ? allVdots.at(-1)?.vdot || null : null;
-  }, [allVdots, historyData]);
-
-  const performanceTiles = useMemo(() => {
-    if (!currentRepresentativeVdot) return [];
-    const sourceRuns = nearRuns.length ? nearRuns : runs;
-    const projected = (key) => {
-      const race = RACE_DISTANCES.find((distance) => distance.key === key);
-      if (!race) return null;
-      const current = predictRaceTimeCalibrated(currentRepresentativeVdot, race.meters, sourceRuns);
-      const previous = predictRaceTimeCalibrated(Math.max(20, currentRepresentativeVdot - 1.1), race.meters, sourceRuns);
-      if (!current) return null;
-      return {
-        key,
-        label: lang === 'zh-CN' ? race.labelZh : race.labelEn,
-        value: formatDuration(Math.round(current * 60)),
-        deltaSeconds: previous ? Math.round((current - previous) * 60) : null,
-      };
-    };
-
-    const paceValues = nearRuns.map((run) => Number(run.paceSecPerKm || 0)).filter((value) => value > 0);
-    const avgPace = paceValues.length ? paceValues.reduce((sum, value) => sum + value, 0) / paceValues.length : 0;
-    const paceVariance = paceValues.length
-      ? paceValues.reduce((sum, value) => sum + ((value - avgPace) ** 2), 0) / paceValues.length
-      : 0;
-    const paceStd = Math.sqrt(paceVariance);
-    const pacingStability = paceValues.length && avgPace > 0
-      ? Math.max(60, Math.min(99, Math.round(100 - ((paceStd / avgPace) * 100 * 2.6))))
-      : null;
-
-    return [
-      { ...projected('5k'), tone: 'muted' },
-      { ...projected('10k'), tone: 'muted' },
-      { ...projected('half'), tone: 'accent' },
-      {
-        key: 'stability',
-        label: t('analysis.pred_marathon_tile_stability'),
-        value: pacingStability != null ? `${pacingStability}%` : '--',
-        deltaLabel: pacingStability != null
-          ? (pacingStability >= 90 ? t('analysis.pred_marathon_tile_stability_high') : t('analysis.pred_marathon_tile_stability_mid'))
-          : '--',
-        tone: 'muted',
-      },
-    ].filter(Boolean);
-  }, [currentRepresentativeVdot, lang, nearRuns, runs, t]);
-
   const coachJudgment = useMemo(() => {
     if (!stats) {
       return {
@@ -279,8 +227,11 @@ export default function PredictionDetail() {
   }, [historyData.length, nearRuns.length, stats, t]);
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
+  const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
   const distLabel = raceDist ? (lang === 'en' ? raceDist.labelEn : raceDist.labelZh) : '--';
+  const topnavTitle = distLabel;
   const isMarathonDetail = distKey === 'marathon';
+  const noRelatedRunsCopy = t('analysis.pred_detail_no_related_runs');
   const paceUnitLabel = t(unit === 'mile' ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km');
   const fmtPace = (secPerKm) => formatPaceSeconds(unit === 'mile' ? secPerKm * KM_TO_MILE : secPerKm);
   const rangeLabel = useMemo(() => {
@@ -381,8 +332,12 @@ export default function PredictionDetail() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{distLabel}</span>
+            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
+              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>HERMES</button>
+              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/analysis')}>
+                {t('profile.dashboard_nav_analysis')}
+              </button>
+              <span className="runner-shell-topnav-link is-section is-active">{topnavTitle}</span>
             </div>
           </div>
           <div className="runner-shell-topbar-actions">
@@ -467,6 +422,7 @@ export default function PredictionDetail() {
 
                 <div className="prediction-marathon-side-stack">
                   <article className="prediction-marathon-judgment-card">
+                    <CoachIdentityBadge coach={assignedCoach} lang={lang} className="prediction-marathon-coach-badge" />
                     <h2>{coachJudgment.title}</h2>
                     <p>{coachJudgment.body}</p>
                     <div className="prediction-marathon-insight-list">
@@ -487,19 +443,6 @@ export default function PredictionDetail() {
                     <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
                   </button>
                 </div>
-              </section>
-
-              <section className="prediction-marathon-tile-grid">
-                {performanceTiles.map((tile) => (
-                  <article key={tile.key} className={cx('prediction-marathon-tile', tile.tone === 'accent' && 'is-accent')}>
-                    <span>{tile.label}</span>
-                    <strong>{tile.value}</strong>
-                    <p>{tile.key === 'stability' ? tile.deltaLabel : formatSignedDuration(tile.deltaSeconds)}</p>
-                    <div className="prediction-marathon-tile-bar" aria-hidden="true">
-                      <div style={{ width: tile.key === 'stability' ? tile.value : `${tile.tone === 'accent' ? 100 : tile.key === '5k' ? 76 : 58}%` }} />
-                    </div>
-                  </article>
-                ))}
               </section>
 
               <section className="prediction-marathon-evidence-grid">
@@ -544,9 +487,8 @@ export default function PredictionDetail() {
                       />
                     </div>
                   ) : (
-                    <div className="prediction-detail-empty">
-                      <strong>{t('analysis.pred_detail_empty_title')}</strong>
-                      <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+                    <div className="prediction-detail-empty is-record-empty">
+                      <p>{noRelatedRunsCopy}</p>
                     </div>
                   )}
                 </section>
@@ -601,9 +543,8 @@ export default function PredictionDetail() {
                       </div>
                     </>
                   ) : (
-                    <div className="prediction-detail-empty">
-                      <strong>{t('analysis.pred_detail_empty_title')}</strong>
-                      <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+                    <div className="prediction-detail-empty is-record-empty">
+                      <p>{noRelatedRunsCopy}</p>
                     </div>
                   )}
                 </section>
@@ -656,7 +597,7 @@ export default function PredictionDetail() {
               <article className="analysis-overview-card prediction-detail-sidecard">
                 <span className="analysis-overview-card-kicker">{t('analysis.pred_detail_actual_title')}</span>
                 <strong className="prediction-detail-sidecard-value">{nearRuns.length ? formatDuration(Math.min(...nearRuns.map((run) => run.normalizedSec))) : '--'}</strong>
-                <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+                <p>{nearRuns.length ? t('analysis.pred_detail_actual_copy', { dist: distLabel }) : noRelatedRunsCopy}</p>
               </article>
             </div>
           </section>
@@ -756,9 +697,8 @@ export default function PredictionDetail() {
                 />
               </div>
             ) : (
-              <div className="prediction-detail-empty">
-                <strong>{t('analysis.pred_detail_empty_title')}</strong>
-                <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+              <div className="prediction-detail-empty is-record-empty">
+                <p>{noRelatedRunsCopy}</p>
               </div>
             )}
           </section>
@@ -813,9 +753,8 @@ export default function PredictionDetail() {
                 </div>
               </>
             ) : (
-              <div className="prediction-detail-empty">
-                <strong>{t('analysis.pred_detail_empty_title')}</strong>
-                <p>{t('analysis.pred_detail_actual_copy', { dist: distLabel })}</p>
+              <div className="prediction-detail-empty is-record-empty">
+                <p>{noRelatedRunsCopy}</p>
               </div>
             )}
           </section>

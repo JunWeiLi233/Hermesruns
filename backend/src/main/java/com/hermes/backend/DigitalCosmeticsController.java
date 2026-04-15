@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,7 +26,7 @@ public class DigitalCosmeticsController {
     public ResponseEntity<?> inventory(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return invalidSession();
         }
         return ResponseEntity.ok(Map.of(
                 "items", digitalCosmeticsService.listInventory(user.get())
@@ -36,11 +37,15 @@ public class DigitalCosmeticsController {
     public ResponseEntity<?> activeTheme(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return invalidSession();
         }
         DigitalCosmeticsService.ActiveThemePayload payload = digitalCosmeticsService.getActiveTheme(user.get());
-        return ResponseEntity.ok(Map.of(
-                "activeTheme", payload
-        ));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("activeTheme", payload);
+        return ResponseEntity.ok(body);
+    }
+
+    private ResponseEntity<Map<String, String>> invalidSession() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid Session"));
     }
 }

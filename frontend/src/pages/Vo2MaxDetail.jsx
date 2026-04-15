@@ -311,6 +311,7 @@ export default function Vo2MaxDetail() {
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
   ];
+  const topnavTitle = 'VO2max';
 
   if (loadState !== 'ready') {
     return (
@@ -369,8 +370,12 @@ export default function Vo2MaxDetail() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_analysis')}</span>
+            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
+              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>HERMES</button>
+              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/analysis')}>
+                {t('profile.dashboard_nav_analysis')}
+              </button>
+              <span className="runner-shell-topnav-link is-section is-active">{topnavTitle}</span>
             </div>
           </div>
           <div className="runner-shell-topbar-actions">

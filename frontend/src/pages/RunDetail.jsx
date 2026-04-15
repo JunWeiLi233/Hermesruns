@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
-import { formatDuration, formatLongDate, formatPace } from '../utils/format';
+import { formatDuration, formatLongDate, formatPace, formatPaceSeconds } from '../utils/format';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import 'leaflet/dist/leaflet.css';
 
@@ -409,51 +409,42 @@ export default function RunDetail() {
 
   const dateText = formatLongDate(run.startTime || run.startDate, lang);
   const startDate = new Date(run.startTime || run.startDate || 0);
+  const metaSeparator = lang === 'zh-CN' ? ' · ' : ' • ';
+  const distanceUnitLabel = t('run_detail.unit_km');
+  const paceUnitLabel = t('run_detail.unit_pace');
+  const speedUnitLabel = t('run_detail.unit_kmh');
+  const heartRateUnitLabel = t('run_detail.unit_bpm');
+  const cadenceUnitLabel = t('run_detail.unit_spm');
+  const powerUnitLabel = t('run_detail.unit_watt');
+  const caloriesUnitLabel = t('run_detail.unit_kcal');
+  const elevationUnitLabel = t('run_detail.unit_meter');
   const timeText = Number.isNaN(startDate.getTime())
     ? null
     : startDate.toLocaleTimeString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { hour: 'numeric', minute: '2-digit' });
-  const heroMeta = [
-    dateText,
-    timeText,
-    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
-  ].filter(Boolean).join(' • ') || t('run_detail.imported_activity');
-
-  const localizedHeroMeta = [
-    dateText,
-    timeText,
-    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
-  ].filter(Boolean).join(' · ') || t('run_detail.imported_activity');
-
-  const heroMetaDisplay = [
-    dateText,
-    timeText,
-    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
-  ].filter(Boolean).join(' · ') || t('run_detail.imported_activity');
-
   const heroMetaText = [
     dateText,
     timeText,
     run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
-  ].filter(Boolean).join(' - ') || heroMeta || localizedHeroMeta || heroMetaDisplay || t('run_detail.imported_activity');
+  ].filter(Boolean).join(metaSeparator) || t('run_detail.imported_activity');
 
   const performanceRows = [
-    [t('run_detail.perf_distance'), distKm != null ? `${distKm.toFixed(2)} km` : t('run_detail.not_available')],
+    [t('run_detail.perf_distance'), distKm != null ? `${distKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
     [t('run_detail.perf_moving_time'), movingSec ? formatDuration(movingSec) : t('run_detail.not_available')],
     [t('run_detail.perf_average_pace'), distKm && movingSec ? formatPace(distKm, movingSec, lang) : t('run_detail.not_available')],
-    [t('run_detail.perf_max_speed'), run.maxSpeedMps != null ? `${(run.maxSpeedMps * 3.6).toFixed(1)} km/h` : t('run_detail.not_available')],
-    [t('run_detail.perf_average_heart_rate'), run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} bpm` : t('run_detail.not_available')],
-    [t('run_detail.perf_max_heart_rate'), run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} bpm` : t('run_detail.not_available')],
-    [t('run_detail.perf_average_cadence'), run.averageCadence != null ? `${Math.round(run.averageCadence)} spm` : t('run_detail.not_available')],
-    [t('run_detail.perf_average_power'), run.averageWatts != null ? `${Math.round(run.averageWatts)} W` : t('run_detail.not_available')],
-    [t('run_detail.perf_calories'), run.calories != null ? `${run.calories} kcal` : t('run_detail.not_available')],
-    [t('run_detail.perf_elevation_gain'), run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} m` : t('run_detail.not_available')],
+    [t('run_detail.perf_max_speed'), run.maxSpeedMps != null ? `${(run.maxSpeedMps * 3.6).toFixed(1)} ${speedUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.perf_average_heart_rate'), run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.perf_max_heart_rate'), run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} ${heartRateUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.perf_average_cadence'), run.averageCadence != null ? `${Math.round(run.averageCadence)} ${cadenceUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.perf_average_power'), run.averageWatts != null ? `${Math.round(run.averageWatts)} ${powerUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.perf_calories'), run.calories != null ? `${run.calories} ${caloriesUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.perf_elevation_gain'), run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : t('run_detail.not_available')],
   ];
 
   const routeRows = insights ? [
     [t('run_detail.route_gps_samples'), insights.pointCount ? insights.pointCount.toLocaleString() : t('run_detail.no_route_data')],
-    [t('run_detail.route_gps_distance'), insights.computedDistanceKm != null ? `${insights.computedDistanceKm.toFixed(2)} km` : t('run_detail.not_available')],
-    [t('run_detail.route_start_finish_gap'), insights.startFinishGapMeters != null ? `${Math.round(insights.startFinishGapMeters)} m` : t('run_detail.not_available')],
-    [t('run_detail.route_bounding_span'), insights.boundingSpanKm != null ? `${insights.boundingSpanKm.toFixed(2)} km` : t('run_detail.not_available')],
+    [t('run_detail.route_gps_distance'), insights.computedDistanceKm != null ? `${insights.computedDistanceKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.route_start_finish_gap'), insights.startFinishGapMeters != null ? `${Math.round(insights.startFinishGapMeters)} ${elevationUnitLabel}` : t('run_detail.not_available')],
+    [t('run_detail.route_bounding_span'), insights.boundingSpanKm != null ? `${insights.boundingSpanKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
     [t('run_detail.route_shape'), getRouteShapeLabel(insights.routeShapeKey)],
     [t('run_detail.route_efficiency'), insights.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : t('run_detail.not_available')],
     [t('run_detail.route_center'), insights.centerLabel || t('run_detail.not_available')],
@@ -466,7 +457,7 @@ export default function RunDetail() {
       ? formatShoeDisplayName({ brand: linkedShoe.brand, model: linkedShoe.model, nickname: linkedShoe.nickname, lang })
       : null);
   const linkedShoeMileage = linkedShoe?.currentDistanceKm != null
-    ? `${linkedShoe.currentDistanceKm.toFixed(0)} km`
+    ? `${linkedShoe.currentDistanceKm.toFixed(0)} ${distanceUnitLabel}`
     : null;
   const linkedShoeUsage = linkedShoe?.maxDistanceKm > 0 && linkedShoe?.currentDistanceKm >= 0
     ? Math.min(100, (linkedShoe.currentDistanceKm / linkedShoe.maxDistanceKm) * 100)
@@ -481,6 +472,7 @@ export default function RunDetail() {
 
   const distanceValue = distKm != null ? distKm.toFixed(2) : '--';
   const paceValue = distKm && movingSec ? formatPace(distKm, movingSec, lang) : '--';
+  const paceMetricValue = distKm && movingSec ? formatPaceSeconds(movingSec / distKm) : '--';
   const timeValue = movingSec ? formatDuration(movingSec) : '--';
   const cadenceValue = analytics?.averageCadence || run.averageCadence;
   const strideLengthValue = analytics?.averageStrideLengthMeters;
@@ -521,17 +513,17 @@ export default function RunDetail() {
             )}
             <div className="run-detail-map-overlay">
               <span>{t('run_detail.metric_distance')}</span>
-              <strong>{distanceValue} km</strong>
+              <strong>{distanceValue} {distanceUnitLabel}</strong>
             </div>
           </div>
           <div className="run-detail-stat-rail">
             <article className="run-detail-stat-card is-accent">
               <span>{t('run_detail.metric_distance')}</span>
-              <strong>{distanceValue}<em>km</em></strong>
+              <strong>{distanceValue}<em>{distanceUnitLabel}</em></strong>
             </article>
             <article className="run-detail-stat-card">
               <span>{t('run_detail.metric_average_pace')}</span>
-              <strong>{paceValue}<em>/km</em></strong>
+              <strong>{paceMetricValue}{paceMetricValue !== '--' ? <em>{paceUnitLabel}</em> : null}</strong>
             </article>
             <article className="run-detail-stat-card">
               <span>{t('run_detail.metric_moving_time')}</span>
@@ -548,11 +540,11 @@ export default function RunDetail() {
                 <div className="run-detail-panel-head">
                   <div>
                     <span>{t('run_detail.average_hr')}</span>
-                    <strong>{run.averageHeartRate != null ? Math.round(run.averageHeartRate) : '--'} <em>bpm</em></strong>
+                    <strong>{run.averageHeartRate != null ? Math.round(run.averageHeartRate) : '--'} <em>{heartRateUnitLabel}</em></strong>
                   </div>
                   <div className="is-right">
                     <span>{t('run_detail.max_hr')}</span>
-                    <strong>{run.maxHeartRate != null ? Math.round(run.maxHeartRate) : '--'} <em>bpm</em></strong>
+                    <strong>{run.maxHeartRate != null ? Math.round(run.maxHeartRate) : '--'} <em>{heartRateUnitLabel}</em></strong>
                   </div>
                 </div>
                 <div className="run-detail-hr-chart">
@@ -614,7 +606,7 @@ export default function RunDetail() {
                   <tbody>
                     {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => (
                       <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
-                        <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} km` : `#${lap.lapIndex || index + 1}`}</td>
+                        <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
                         <td>{lap.pace || '--'}</td>
                         <td>{formatLapElevation(lap)}</td>
                         <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
@@ -635,17 +627,17 @@ export default function RunDetail() {
               <h3>{t('run_detail.efficiency')}</h3>
               <div className="run-detail-side-metric">
                 <span>{t('run_detail.cadence')}</span>
-                <strong>{cadenceValue ? Math.round(cadenceValue) : '--'} <em>spm</em></strong>
+                <strong>{cadenceValue ? Math.round(cadenceValue) : '--'} <em>{cadenceUnitLabel}</em></strong>
               </div>
               <div className="run-detail-divider" />
               <div className="run-detail-side-metric">
                 <span>{t('run_detail.stride_length')}</span>
-                <strong>{strideLengthValue ? strideLengthValue.toFixed(2) : '--'} <em>m</em></strong>
+                <strong>{strideLengthValue ? strideLengthValue.toFixed(2) : '--'} <em>{elevationUnitLabel}</em></strong>
               </div>
               <div className="run-detail-divider" />
               <div className="run-detail-side-metric">
                 <span>{t('run_detail.running_power')}</span>
-                <strong>{powerValue ? Math.round(powerValue) : '--'} <em>W</em></strong>
+                <strong>{powerValue ? Math.round(powerValue) : '--'} <em>{powerUnitLabel}</em></strong>
               </div>
             </section>
 
@@ -700,7 +692,7 @@ export default function RunDetail() {
               <div className="run-detail-info-list">
                 <div><span>{t('run_detail.metric_route_shape')}</span><strong>{insights ? getRouteShapeLabel(insights.routeShapeKey) : '--'}</strong></div>
                 <div><span>{t('run_detail.route_gps_samples')}</span><strong>{insights?.pointCount ? insights.pointCount.toLocaleString() : '--'}</strong></div>
-                <div><span>{t('run_detail.perf_elevation_gain')}</span><strong>{run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} m` : '--'}</strong></div>
+                <div><span>{t('run_detail.perf_elevation_gain')}</span><strong>{run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : '--'}</strong></div>
               </div>
               {elevationStatus?.flagged && (
                 <div className="run-detail-warning">
@@ -733,7 +725,7 @@ export default function RunDetail() {
                 <div className="run-detail-info-list">
                   <div>
                     <span>{t('run_detail.min_max_elevation')}</span>
-                    <strong>{elevationPoints.minY.toFixed(1)} m / {elevationPoints.maxY.toFixed(1)} m</strong>
+                    <strong>{elevationPoints.minY.toFixed(1)} {elevationUnitLabel} / {elevationPoints.maxY.toFixed(1)} {elevationUnitLabel}</strong>
                   </div>
                   <div>
                     <span>{t('run_detail.route_efficiency')}</span>
