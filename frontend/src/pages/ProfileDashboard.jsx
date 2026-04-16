@@ -1268,7 +1268,16 @@ export default function ProfileDashboard() {
                   ))}
                 </div>
                 <div className="runner-dashboard-feature-chip-row">
-                  <span>{t('profile.dashboard_vo2_est')}: {profileVdot > 0 ? profileVdot.toFixed(1) : '--'}</span>
+                  <span>
+                    {t('profile.dashboard_vo2_est')}: {profileVdot > 0 ? profileVdot.toFixed(1) : '--'}
+                    {profileVdot > 0 && profileVdotTrend.hasData && (
+                      <span className={`runner-dashboard-vdot-trend runner-dashboard-vdot-trend--${profileVdotTrend.direction}`}>
+                        {profileVdotTrend.direction === 'improving' && <>&#x2191; {profileVdotTrend.delta > 0 ? `+${profileVdotTrend.delta.toFixed(1)}` : profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_improving')}</>}
+                        {profileVdotTrend.direction === 'declining' && <>&#x2193; {profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_declining')}</>}
+                        {profileVdotTrend.direction === 'maintaining' && <>{t('profile.vdot_trend_maintaining')}</>}
+                      </span>
+                    )}
+                  </span>
                   <span>{t('profile.dashboard_lactate_threshold')}: {thresholdEstimate ?? '--'} bpm</span>
                 </div>
               </article>
