@@ -6,6 +6,7 @@ import {
   predictRaceTimeCalibrated,
   RACE_DISTANCES,
   danielsRunningVo2CostMlKgMin,
+  computeTrainingPaces,
 } from './vdot';
 
 export const KM_TO_MILE = 1.60934;
@@ -528,6 +529,30 @@ export function calculatePredictionConsistency(entries) {
   return { score, level, stdDev };
 }
 
+export function buildTrainingZones(bestVdot, lang, unit) {
+  if (!bestVdot) return [];
+  const paces = computeTrainingPaces(bestVdot);
+  const zones = [
+    { key: 'easy', range: paces.easy },
+    { key: 'marathon', range: paces.marathon },
+    { key: 'threshold', range: paces.threshold },
+    { key: 'interval', range: paces.interval },
+    { key: 'repetition', range: paces.repetition },
+  ];
+
+  return zones.map((zone) => {
+    const range = zone.range.map((s) => {
+      const pace = unit === 'mile' ? s * KM_TO_MILE : s;
+      return formatPaceSeconds(pace);
+    });
+    return {
+      ...zone,
+      label: zone.key.charAt(0).toUpperCase() + zone.key.slice(1),
+      paceLabel: range.length > 1 ? `${range[0]} - ${range[1]}` : range[0],
+    };
+  });
+}
+
 export function buildAnalysisSnapshot(runs, lang, unit) {
   const bestEstimate = estimateCurrentVdot(runs);
   const bestVdot = bestEstimate.representativeVdot;
@@ -538,6 +563,7 @@ export function buildAnalysisSnapshot(runs, lang, unit) {
   const polarized = buildPolarized(runs, bestVdot);
   const injury = buildInjuryInsight(runs, trainingLoad);
   const predictionRows = buildPredictionRows(bestVdot, runs, lang, unit);
+  const trainingZones = buildTrainingZones(bestVdot, lang, unit);
   const marathonRow = predictionRows.find((row) => row.key === 'marathon') || null;
 
   let marathonDeltaSeconds = null;
@@ -566,6 +592,7 @@ export function buildAnalysisSnapshot(runs, lang, unit) {
     polarized,
     injury,
     predictionRows,
+    trainingZones,
     marathonRow,
     marathonDeltaSeconds,
     coachInsight,

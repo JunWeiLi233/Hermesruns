@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -20,6 +20,7 @@ import {
   buildRecentShoeSignal,
   calculateRotationHealth,
   getRunTimestamp,
+  predictRetirement,
   RECENT_SHOE_SIGNAL_WINDOW_DAYS,
 } from '../utils/shoeRotation';
 
@@ -1150,6 +1151,7 @@ export default function Shoes() {
     const usage = preview ? { count: 0, latest: 0 } : (usageByShoe.get(shoe.id) || { count: 0, latest: 0 });
     const typeLabel = t(`shoes.${TYPE_LABELS[shoe.type] || 'type_daily'}`);
     const lifespanPct = Math.max(8, Math.min(100, max > 0 ? (current / max) * 100 : 0));
+    const retirement = preview ? null : predictRetirement(shoe, runs);
 
     return (
       <article key={shoe.id} className={`shoe-inventory-card${shoe.isPrimary ? ' is-primary' : ''}${shoe.retired ? ' is-retired' : ''}${preview ? ' is-preview' : ''}`}>
@@ -1177,12 +1179,40 @@ export default function Shoes() {
                 <span>{distanceUnitLabel}</span>
               </div>
             </div>
-            <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
-              <span className="shoe-inventory-brand-label">{t('shoes.lifespan')}</span>
-              <div className="shoe-inventory-card-progress">
-                <div className={`shoe-inventory-card-progress-fill is-${health}`} style={{ width: `${lifespanPct}%` }} />
+            {!shoe.retired && (
+              <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
+                <span className="shoe-inventory-brand-label">{t('shoes.retirement_health')}</span>
+                <div className="shoe-inventory-card-progress">
+                  <div
+                    className={`shoe-inventory-card-progress-fill is-${health}`}
+                    style={{ width: `${retirement ? retirement.healthPercent : 100 - lifespanPct}%` }}
+                  />
+                </div>
+                <span className="shoe-inventory-card-retirement-text">
+                  {retirement
+                    ? (retirement.remainingKm <= 0
+                      ? t('shoes.retirement_past_due')
+                      : retirement.daysLeft != null
+                        ? (retirement.daysLeft >= 14
+                          ? (retirement.estimatedRetirementDate
+                            ? t('shoes.retirement_expected_date', { date: new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(retirement.estimatedRetirementDate)) })
+                            : t('shoes.retirement_weeks_left', { n: Math.round(retirement.daysLeft / 7) }))
+                          : t('shoes.retirement_days_left', { n: retirement.daysLeft }))
+                        : t('shoes.retirement_km_left', { km: formatDistanceValue(retirement.remainingKm, unit, 0), unit: distanceUnitLabel }))
+                    : (max > 0
+                      ? t('shoes.retirement_km_left', { km: formatDistanceValue(max - current, unit, 0), unit: distanceUnitLabel })
+                      : t('shoes.retirement_limit_not_set'))}
+                </span>
               </div>
-            </div>
+            )}
+            {shoe.retired && (
+              <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
+                <span className="shoe-inventory-brand-label">{t('shoes.lifespan')}</span>
+                <div className="shoe-inventory-card-progress">
+                  <div className={`shoe-inventory-card-progress-fill is-muted`} style={{ width: '100%' }} />
+                </div>
+              </div>
+            )}
           </div>
           <div className="shoe-inventory-card-actions">
             {preview ? (

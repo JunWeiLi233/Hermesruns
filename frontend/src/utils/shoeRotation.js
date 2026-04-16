@@ -322,4 +322,52 @@ export function calculateRotationHealth(shoes, runs) {
   };
 }
 
+const SHOE_TYPE_LIFESPAN_KM = {
+  daily: 800,
+  stability: 800,
+  speed: 600,
+  race: 500,
+  trail: 650,
+};
+
+export function predictRetirement(shoe, runs) {
+  if (!shoe || shoe.retired) return null;
+
+  const typeLifespan = SHOE_TYPE_LIFESPAN_KM[shoe.type] || 800;
+  const lifespanKm = Number(shoe.maxDistanceKm) || typeLifespan;
+  const currentKm = Number(shoe.currentDistanceKm) || 0;
+
+  if (lifespanKm <= 0 && currentKm <= 0) return null;
+
+  const remainingKm = Math.max(0, lifespanKm - currentKm);
+  const healthPercent = lifespanKm > 0 ? Math.round((remainingKm / lifespanKm) * 100) : 0;
+
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recentShoeRuns = (Array.isArray(runs) ? runs : []).filter((run) => {
+    if (run.shoeId !== shoe.id) return false;
+    return getRunTimestamp(run) >= thirtyDaysAgo;
+  });
+
+  if (recentShoeRuns.length < 2) {
+    return { remainingKm, estimatedRetirementDate: null, daysLeft: null, healthPercent };
+  }
+
+  const recentDistance = recentShoeRuns.reduce((sum, run) => {
+    const km = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
+    return sum + km;
+  }, 0);
+
+  const dailyRate = recentDistance / 30;
+  if (dailyRate <= 0) {
+    return { remainingKm, estimatedRetirementDate: null, daysLeft: null, healthPercent };
+  }
+
+  const daysLeft = Math.round(remainingKm / dailyRate);
+  const estimatedRetirementDate = daysLeft > 0
+    ? new Date(Date.now() + daysLeft * 24 * 60 * 60 * 1000)
+    : null;
+
+  return { remainingKm, estimatedRetirementDate, daysLeft, healthPercent };
+}
+
 export { RECENT_SHOE_SIGNAL_WINDOW_DAYS };

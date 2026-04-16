@@ -105,9 +105,9 @@ export default function Analysis() {
   const polarized = snapshot.polarized;
   const injury = snapshot.injury;
   const predictionRows = snapshot.predictionRows;
+  const trainingZones = snapshot.trainingZones;
   const marathonRow = snapshot.marathonRow;
   const marathonDelta = snapshot.marathonDeltaSeconds;
-  const predictionConsistency = snapshot.predictionConsistency;
   const hasRuns = runs.length > 0;
   const injuryKicker = t('analysis.stitch_injury_signal');
   const injuryTitle = t('analysis.stitch_injury_title');
@@ -443,6 +443,32 @@ export default function Analysis() {
                     </span>
                   </div>
                 </button>
+              </section>
+
+              <section className="analysis-overview-card analysis-overview-card--prediction-table analysis-overview-card--training-zones">
+                <div className="analysis-overview-table-head">
+                  <h2>{t('analysis.stitch_training_zones_title')}</h2>
+                </div>
+                <div className="analysis-overview-table-wrap">
+                  <table className="analysis-overview-table">
+                    <thead>
+                      <tr>
+                        <th>{t('analysis.stitch_zone_label')}</th>
+                        <th>{t('analysis.stitch_zone_pace')}</th>
+                        <th>{t('analysis.stitch_zone_purpose')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trainingZones.map((zone) => (
+                        <tr key={zone.key}>
+                          <td><strong>{t(`analysis.stitch_zone_${zone.key}`)}</strong></td>
+                          <td className="is-accent">{zone.paceLabel}</td>
+                          <td>{t(`analysis.stitch_zone_${zone.key}_purpose`)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </section>
 
               <section className="analysis-overview-card analysis-overview-card--prediction-table">

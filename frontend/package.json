@@ -13,14 +13,17 @@
     "codex": "node ../.tools/generate-codex.js"
   },
   "dependencies": {
+    "@xyflow/react": "^12.10.2",
     "chart.js": "^4.5.1",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
+    "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.4",
     "react-leaflet": "^5.0.0",
-    "react-router-dom": "^7.13.1"
+    "react-router-dom": "^7.13.1",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
