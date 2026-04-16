@@ -95,8 +95,7 @@ public class StravaWebhookController {
 
         // Handle deauthorization
         if ("athlete".equals(objectType) && "update".equals(aspectType)) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> updates = (Map<String, Object>) event.get("updates");
+            Map<String, Object> updates = map(event.get("updates"));
             if (updates != null && "true".equals(str(updates.get("authorized"))) == false) {
                 log.info("Strava deauthorization for athlete {}", ownerId);
                 // Don't delete data — just log it. User can re-connect.
@@ -139,6 +138,11 @@ public class StravaWebhookController {
         return v == null ? null : String.valueOf(v);
     }
 
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> map(Object v) {
+        return v instanceof Map<?, ?> ? (Map<String, Object>) v : null;
+    }
+
     private static Long lng(Object v) {
         if (v instanceof Number n) return n.longValue();
         if (v instanceof String s && !s.isBlank()) {
@@ -146,4 +150,5 @@ public class StravaWebhookController {
         }
         return null;
     }
+
 }

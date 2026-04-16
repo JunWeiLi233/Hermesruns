@@ -186,3 +186,20 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 .codex/skills/.system/**
 !.codex/prompts/
 !.codex/prompts/**
+
+# Gemini CLI / Antigravity local config
+.gemini/
+
+# Cursor local rules
+.cursor/
+
+# OpenCode local config
+.opencode/
+.opencode.json
+
+# Auto-hermes tools (task claim state, bridge, etc.)
+.tools/auto-hermes-claim-state.mjs
+.tools/auto-hermes-task-meta.mjs
+.tools/auto-hermes-tools.test.mjs
+.tools/omx-auto-hermes-bridge.mjs
+

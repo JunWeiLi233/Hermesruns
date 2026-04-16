@@ -402,11 +402,6 @@ public class AdminPortalController {
         }
     }
 
-    @PostMapping("/race-course-maps/{raceId}/accept-live")
-    public ResponseEntity<?> acceptRaceCourseMapAlias(@PathVariable String raceId,
-                                                      @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-        return acceptRaceCourseMap(raceId, authorizationHeader);
-    }
 
     @PostMapping("/race-course-maps/{raceId}/accept-live")
     public ResponseEntity<?> acceptRaceCourseMap(@PathVariable String raceId,
