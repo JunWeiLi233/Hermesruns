@@ -13,7 +13,7 @@ import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
 import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../utils/vdot';
-import { resolveRaceElevationProfile, resolveRaceIntel } from '../utils/raceIntel';
+import { resolveRaceIntel } from '../utils/raceIntel';
 import worldRaceCatalog from '../data/worldRaceCatalog';
 import { getCachedRaceImage, resolveRaceImage } from '../utils/raceImage';
 
@@ -26,31 +26,6 @@ const EVENT_DAY_OVERRIDES = {
   'chicago-marathon': 11,
   'new-york-city-marathon': 1,
   'valencia-marathon': 6,
-};
-
-const RACE_ROUTE_POINTS = {
-  'tokyo-marathon': [
-    [35.6896, 139.6918], // Tokyo Metropolitan Government Building
-    [35.6897, 139.7024],
-    [35.6899, 139.7168],
-    [35.6942, 139.7361],
-    [35.7003, 139.7518], // Suidobashi
-    [35.6962, 139.7604], // Jimbocho
-    [35.6978, 139.7711], // Akihabara
-    [35.7072, 139.7745], // Ueno-hirokoji turn
-    [35.6928, 139.7716],
-    [35.6846, 139.7743], // Nihombashi
-    [35.6861, 139.7878], // Hamacho
-    [35.7036, 139.7924], // Kuramae
-    [35.7108, 139.7967], // Asakusa / Kaminarimon
-    [35.6978, 139.7922], // Ryogoku
-    [35.6718, 139.7985], // Monzen-Nakacho / Tomioka turnaround
-    [35.6798, 139.7826], // Kayabacho
-    [35.6714, 139.7653], // Ginza 4-chome
-    [35.6459, 139.7477], // Tamachi turnaround
-    [35.6719, 139.7602], // Hibiya
-    [35.6812, 139.7649], // Finish at Gyoko-dori
-  ],
 };
 
 function projectedRaceDate(race) {
@@ -229,43 +204,74 @@ function buildRaceHeroLabels(race) {
   };
 }
 
-function addRouteMapBackdrop(L, map, bounds) {
-  if (!bounds?.isValid?.()) return;
+const EMPTY_COURSE_MAP = Object.freeze({
+  imageUrl: '',
+  source: '',
+  courseMapDetected: false,
+  confidence: 0,
+  summary: '',
+  overlayBounds: null,
+  routePoints: [],
+  elevationSamples: [],
+  totalClimbMeters: null,
+  aiAssisted: false,
+});
 
-  const south = bounds.getSouth();
-  const north = bounds.getNorth();
-  const west = bounds.getWest();
-  const east = bounds.getEast();
+function asFiniteNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
-  L.rectangle(bounds, {
-    stroke: false,
-    fillColor: '#101416',
-    fillOpacity: 0.94,
-    interactive: false,
-  }).addTo(map);
+function normalizeOverlayBounds(rawBounds) {
+  if (!rawBounds || typeof rawBounds !== 'object') return null;
+  const north = asFiniteNumber(rawBounds.north);
+  const south = asFiniteNumber(rawBounds.south);
+  const east = asFiniteNumber(rawBounds.east);
+  const west = asFiniteNumber(rawBounds.west);
+  if (north == null || south == null || east == null || west == null) return null;
+  if (north <= south || east <= west) return null;
+  return { north, south, east, west };
+}
 
-  const latStep = (north - south) / 4;
-  const lngStep = (east - west) / 4;
+function normalizeRoutePoints(rawPoints) {
+  if (!Array.isArray(rawPoints)) return [];
+  return rawPoints
+    .map((point) => {
+      if (!point || typeof point !== 'object') return null;
+      const lat = asFiniteNumber(point.lat);
+      const lng = asFiniteNumber(point.lng);
+      if (lat == null || lng == null) return null;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+      return {
+        lat,
+        lng,
+        label: typeof point.label === 'string' ? point.label.trim() : '',
+      };
+    })
+    .filter(Boolean);
+}
 
-  for (let i = 1; i < 4; i += 1) {
-    const lat = south + latStep * i;
-    L.polyline([[lat, west], [lat, east]], {
-      color: 'rgba(255,255,255,0.08)',
-      weight: 1,
-      opacity: 0.22,
-      interactive: false,
-    }).addTo(map);
-  }
-
-  for (let i = 1; i < 4; i += 1) {
-    const lng = west + lngStep * i;
-    L.polyline([[south, lng], [north, lng]], {
-      color: 'rgba(255,255,255,0.08)',
-      weight: 1,
-      opacity: 0.22,
-      interactive: false,
-    }).addTo(map);
-  }
+function normalizeCourseMapPayload(payload) {
+  if (!payload || typeof payload !== 'object') return EMPTY_COURSE_MAP;
+  const confidence = Math.max(0, Math.min(100, Math.round(asFiniteNumber(payload.confidence) ?? 0)));
+  const totalClimbMeters = asFiniteNumber(payload.totalClimbMeters);
+  return {
+    imageUrl: typeof payload.imageUrl === 'string' ? payload.imageUrl : '',
+    source: typeof payload.source === 'string' ? payload.source : '',
+    courseMapDetected: payload.courseMapDetected === true,
+    confidence,
+    summary: typeof payload.summary === 'string' ? payload.summary : '',
+    overlayBounds: normalizeOverlayBounds(payload.overlayBounds),
+    routePoints: normalizeRoutePoints(payload.routePoints),
+    elevationSamples: Array.isArray(payload.elevationSamples)
+      ? payload.elevationSamples
+        .map((sample) => asFiniteNumber(sample))
+        .filter((sample) => sample != null)
+        .map((sample) => Math.round(sample))
+      : [],
+    totalClimbMeters: totalClimbMeters == null ? null : Math.round(totalClimbMeters),
+    aiAssisted: payload.aiAssisted === true,
+  };
 }
 
 export default function RacesDetail() {
@@ -281,6 +287,7 @@ export default function RacesDetail() {
   const [savedRaces, setSavedRaces] = useState([]);
   const [loadState, setLoadState] = useState('loading');
   const [resolvedHeroImage, setResolvedHeroImage] = useState(() => getCachedRaceImage(location.state?.race || worldRaceCatalog.find((entry) => entry.id === raceId) || null).imageUrl || '');
+  const [courseMapData, setCourseMapData] = useState(EMPTY_COURSE_MAP);
   const [elevationProfileImage, setElevationProfileImage] = useState('');
   const [elevationProfileSource, setElevationProfileSource] = useState('');
   const [elevationProfileSamples, setElevationProfileSamples] = useState([]);
@@ -295,6 +302,43 @@ export default function RacesDetail() {
     if (fromState?.id === raceId) return fromState;
     return worldRaceCatalog.find((entry) => entry.id === raceId) || null;
   }, [location.state, raceId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isAuthenticated || !race?.name) {
+      setCourseMapData(EMPTY_COURSE_MAP);
+      return undefined;
+    }
+
+    setCourseMapData(EMPTY_COURSE_MAP);
+
+    (async () => {
+      try {
+        const params = new URLSearchParams({
+          raceId: race.id || raceId || '',
+          name: race.name,
+          city: race.city || '',
+          country: race.country || '',
+          website: race.officialWebsite || '',
+        });
+        if (race.lat != null) params.set('lat', String(race.lat));
+        if (race.lng != null) params.set('lng', String(race.lng));
+        if (race.distanceKm != null) params.set('distanceKm', String(race.distanceKm));
+        const data = await apiJson(`/api/races/course-map?${params.toString()}`);
+        if (!cancelled) {
+          setCourseMapData(normalizeCourseMapPayload(data));
+        }
+      } catch {
+        if (!cancelled) {
+          setCourseMapData(EMPTY_COURSE_MAP);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, race, raceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -394,27 +438,27 @@ export default function RacesDetail() {
 
   const heroImage = resolvedHeroImage || race?.heroImage || race?.image || DEFAULT_HERO_IMAGE;
   const raceMeta = useMemo(() => resolveRaceIntel(race), [race]);
-  const officialFallbackElevationProfile = useMemo(() => {
-    if (!race) return null;
-    const knownProfile = resolveRaceElevationProfile(race);
-    if (!knownProfile) return null;
-    if (race.id === 'tokyo-marathon') return knownProfile;
-    if (elevationProfileImage || elevationProfileSource) return knownProfile;
-    return null;
-  }, [elevationProfileImage, elevationProfileSource, race]);
-
-  const interpretedElevationProfile = useMemo(() => {
-    if ((!Array.isArray(elevationProfileSamples) || !elevationProfileSamples.length) && !officialFallbackElevationProfile) return null;
-    if (!Array.isArray(elevationProfileSamples) || !elevationProfileSamples.length) {
-      return officialFallbackElevationProfile;
-    }
+  const fallbackInterpretedElevationProfile = useMemo(() => {
+    if (!Array.isArray(elevationProfileSamples) || !elevationProfileSamples.length) return null;
     const peak = Math.max(24, Math.round(raceMeta?.ascentMeters || 0), ...elevationProfileSamples);
     return elevationProfileSamples.map((sample) => {
       const ratio = Math.max(0, Math.min(100, Number(sample || 0))) / 100;
       return Math.max(8, Math.round(ratio * peak));
     });
-  }, [elevationProfileSamples, officialFallbackElevationProfile, raceMeta]);
-  const routePoints = useMemo(() => (race?.id ? RACE_ROUTE_POINTS[race.id] || null : null), [race]);
+  }, [elevationProfileSamples, raceMeta]);
+  const routePoints = useMemo(() => courseMapData.routePoints, [courseMapData.routePoints]);
+  const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
+  const hasAlignedRoute = routeMapPoints.length > 1;
+  const hasAlignedOverlay = Boolean(courseMapData.imageUrl) && Boolean(courseMapData.overlayBounds) && hasAlignedRoute;
+  const hasCourseMapCandidate = Boolean(courseMapData.imageUrl);
+  const absoluteElevationProfile = useMemo(
+    () => (courseMapData.elevationSamples.length ? courseMapData.elevationSamples : fallbackInterpretedElevationProfile),
+    [courseMapData.elevationSamples, fallbackInterpretedElevationProfile],
+  );
+  const displayedCourseGain = useMemo(
+    () => (courseMapData.totalClimbMeters != null ? courseMapData.totalClimbMeters : Math.round(raceMeta?.ascentMeters || 0)),
+    [courseMapData.totalClimbMeters, raceMeta],
+  );
   const mapCenter = useMemo(() => (race?.lat != null && race?.lng != null ? [race.lat, race.lng] : null), [race]);
   const targetDate = useMemo(() => projectedRaceDate(race), [race]);
   const countdown = useMemo(() => buildCountdownParts(targetDate), [targetDate]);
@@ -441,10 +485,10 @@ export default function RacesDetail() {
   }, [bestVdot, race, raceMeta, runs]);
   const confidence = useMemo(() => confidenceFromRuns(prediction, nearRuns.length), [nearRuns.length, prediction]);
   const elevationBars = useMemo(
-    () => (interpretedElevationProfile
-      ? buildElevationProfile(raceMeta?.ascentMeters || 0, raceMeta?.courseKey || 'flat_city', interpretedElevationProfile)
+    () => (absoluteElevationProfile
+      ? buildElevationProfile(displayedCourseGain || 0, raceMeta?.courseKey || 'flat_city', absoluteElevationProfile)
       : null),
-    [interpretedElevationProfile, raceMeta],
+    [absoluteElevationProfile, displayedCourseGain, raceMeta],
   );
   const elevationGraph = useMemo(
     () => buildElevationGraph(elevationBars),
@@ -455,7 +499,7 @@ export default function RacesDetail() {
     if (activeElevationPointIndex == null) return null;
     return elevationGraph.points[activeElevationPointIndex] || null;
   }, [activeElevationPointIndex, elevationGraph]);
-  const elevationTooltipLabel = lang === 'zh-CN' ? '海拔' : 'Elevation';
+  const elevationTooltipLabel = 'Elevation';
   function handleElevationPointerMove(event) {
     if (!elevationGraph || !elevationSvgRef.current) return;
     const rect = elevationSvgRef.current.getBoundingClientRect();
@@ -499,10 +543,39 @@ export default function RacesDetail() {
   const coachInsight = useMemo(() => buildCoachInsight(t, race, raceMeta, prediction, confidence), [confidence, prediction, race, raceMeta, t]);
   const heroLabels = useMemo(() => buildRaceHeroLabels(race), [race]);
   const topnavTitle = useMemo(() => buildRaceTopnavTitle(heroLabels, race), [heroLabels, race]);
+  const mapCardCopy = useMemo(() => {
+    const city = race?.city || race?.name || '';
+    if (hasAlignedOverlay) {
+      return {
+        badge: t('races.detail_map_overlay_badge'),
+        title: t('races.detail_route_title', { city }),
+        source: t('races.detail_map_overlay_source', { confidence: courseMapData.confidence }),
+      };
+    }
+    if (hasAlignedRoute) {
+      return {
+        badge: t('races.detail_map_route_badge'),
+        title: t('races.detail_route_title', { city }),
+        source: t('races.detail_map_route_source', { confidence: courseMapData.confidence }),
+      };
+    }
+    if (hasCourseMapCandidate) {
+      return {
+        badge: t('races.detail_map_detected_badge'),
+        title: t('races.detail_map_city_title', { city }),
+        source: t('races.detail_map_detected_source'),
+      };
+    }
+    return {
+      badge: t('races.detail_map_city_badge'),
+      title: t('races.detail_map_city_title', { city }),
+      source: t('races.detail_map_city_source'),
+    };
+  }, [courseMapData.confidence, hasAlignedOverlay, hasAlignedRoute, hasCourseMapCandidate, race, t]);
 
   useEffect(() => {
     setRouteMapReady(false);
-  }, [race?.id]);
+  }, [hasAlignedOverlay, hasAlignedRoute, race?.id]);
 
   useEffect(() => {
     if (!routeMapRef.current || !race || routeMapInstanceRef.current) return undefined;
@@ -513,7 +586,7 @@ export default function RacesDetail() {
       const L = leafletModule.default || leafletModule;
       const map = L.map(routeMapRef.current, {
         zoomControl: false,
-        attributionControl: false,
+        attributionControl: true,
         dragging: true,
         scrollWheelZoom: true,
         doubleClickZoom: true,
@@ -521,21 +594,42 @@ export default function RacesDetail() {
         keyboard: false,
         tap: false,
       });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
       const finalizeMapLayout = () => {
         map.invalidateSize({ pan: false });
       };
 
-      if (Array.isArray(routePoints) && routePoints.length > 1) {
-        const polyline = L.polyline(routePoints, {
+      const overlayBounds = courseMapData.overlayBounds
+        ? L.latLngBounds(
+          [courseMapData.overlayBounds.south, courseMapData.overlayBounds.west],
+          [courseMapData.overlayBounds.north, courseMapData.overlayBounds.east],
+        )
+        : null;
+
+      if (hasAlignedOverlay && overlayBounds) {
+        L.imageOverlay(courseMapData.imageUrl, overlayBounds, {
+          opacity: 0.74,
+          interactive: false,
+          className: 'race-detail-map-ai-overlay',
+        }).addTo(map);
+        map.fitBounds(overlayBounds.pad(0.04), { padding: [26, 26] });
+      }
+
+      if (hasAlignedRoute) {
+        const polyline = L.polyline(routeMapPoints, {
           color: '#f07561',
           weight: 5,
           opacity: 0.92,
         }).addTo(map);
-        const bounds = polyline.getBounds().pad(0.24);
-        addRouteMapBackdrop(L, map, bounds);
-        map.fitBounds(bounds, { padding: [26, 26] });
+        if (!hasAlignedOverlay) {
+          const bounds = polyline.getBounds().pad(0.24);
+          map.fitBounds(bounds, { padding: [26, 26] });
+        }
 
-        L.circleMarker(routePoints[0], {
+        L.circleMarker(routeMapPoints[0], {
           radius: 7,
           color: '#101214',
           weight: 2,
@@ -543,7 +637,7 @@ export default function RacesDetail() {
           fillOpacity: 1,
         }).addTo(map);
 
-        L.circleMarker(routePoints[routePoints.length - 1], {
+        L.circleMarker(routeMapPoints[routeMapPoints.length - 1], {
           radius: 8,
           color: '#fff6f2',
           weight: 2,
@@ -555,7 +649,6 @@ export default function RacesDetail() {
           [mapCenter[0] - 0.05, mapCenter[1] - 0.08],
           [mapCenter[0] + 0.05, mapCenter[1] + 0.08],
         );
-        addRouteMapBackdrop(L, map, singleBounds);
         map.fitBounds(singleBounds, { padding: [26, 26] });
         L.circleMarker(mapCenter, {
           radius: 8,
@@ -586,7 +679,7 @@ export default function RacesDetail() {
         routeMapInstanceRef.current = null;
       }
     };
-  }, [mapCenter, race, routePoints]);
+  }, [courseMapData.imageUrl, courseMapData.overlayBounds, hasAlignedOverlay, hasAlignedRoute, mapCenter, race, routeMapPoints]);
 
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.loading')}</div></div>;
@@ -738,7 +831,7 @@ export default function RacesDetail() {
                   <div className="race-detail-course-metrics">
                     <div>
                       <span>{t('races.detail_course_gain')}</span>
-                      <strong>{Math.round(raceMeta?.ascentMeters || 0)}m</strong>
+                      <strong>{Math.round(displayedCourseGain || 0)}m</strong>
                     </div>
                     <div>
                       <span>{t('races.detail_course_peak')}</span>
@@ -759,8 +852,8 @@ export default function RacesDetail() {
                           role="status"
                           aria-live="polite"
                         >
-                          <strong>{`${elevationTooltipLabel}：${activeElevationPoint.meters}m`}</strong>
-                          <span>{`${lang === 'zh-CN' ? '赛道位置' : 'Course point'}：${activeElevationPoint.km.toFixed(1)} km`}</span>
+                          <strong>{`${elevationTooltipLabel}: ${activeElevationPoint.meters}m`}</strong>
+                          <span>{`Course point: ${activeElevationPoint.km.toFixed(1)} km`}</span>
                         </div>
                       ) : null}
                       <svg
@@ -809,16 +902,18 @@ export default function RacesDetail() {
                     </>
                   ) : (
                     <div className="race-detail-elevation-empty">
-                      <strong>{lang === 'zh-CN' ? '暂无官方赛道画像' : 'No official elevation map yet'}</strong>
-                      <span>{elevationProfileSource || (lang === 'zh-CN' ? '当前赛事还没有抓到可用的官方赛道图。' : 'Hermes has not found a usable official course profile for this race yet.')}</span>
+                      <strong>{t('races.detail_course_empty_title')}</strong>
+                      <span>{elevationProfileSource || t('races.detail_course_empty_body')}</span>
                     </div>
                   )}
                 </div>
                 <div className="race-detail-course-footnote">
-                  <span>{lang === 'zh-CN' ? '悬停剖面线查看当前赛道位置与高度变化。' : 'Hover the profile to inspect current course position and elevation.'}</span>
-                  {elevationProfileImage ? (
+                  <span>{t(courseMapData.elevationSamples.length ? 'races.detail_course_hover_hint_aligned' : 'races.detail_course_hover_hint')}</span>
+                  {courseMapData.elevationSamples.length ? (
+                    <span>{t('races.detail_course_route_source')}</span>
+                  ) : elevationProfileImage ? (
                     <a href={elevationProfileImage} target="_blank" rel="noreferrer">
-                      {lang === 'zh-CN' ? '查看找到的赛道图' : 'Open sourced course image'}
+                      {t('races.detail_course_source_link')}
                     </a>
                   ) : elevationProfileSource ? (
                     <span>{elevationProfileSource}</span>
@@ -835,14 +930,18 @@ export default function RacesDetail() {
 
               <section className="race-detail-lower-grid">
                 <article className="race-detail-map-card">
-                  <div ref={routeMapRef} className={`race-detail-map-canvas${routeMapReady ? ' is-ready' : ''}`} aria-label={race?.location || race?.name} />
-                  <div className="race-detail-map-overlay" />
+                  <div
+                    ref={routeMapRef}
+                    className={`race-detail-map-canvas${routeMapReady ? ' is-ready' : ''}${hasAlignedOverlay ? ' has-aligned-overlay' : ''}`}
+                    aria-label={mapCardCopy.title}
+                  />
+                  <div className={`race-detail-map-overlay${hasAlignedOverlay ? ' is-ai-overlay' : ''}`} />
                   <div className="race-detail-map-copy">
-                    <span>{t('races.detail_route_badge')}</span>
-                    <strong>{t('races.detail_route_title', { city: race?.city || race?.name })}</strong>
+                    <span>{mapCardCopy.badge}</span>
+                    <strong>{mapCardCopy.title}</strong>
                   </div>
                   <div className="race-detail-map-actions">
-                    <span className="race-detail-map-source">{routeMapReady ? 'Leaflet route map' : (lang === 'zh-CN' ? 'Leaflet 赛道地图' : 'Leaflet route map')}</span>
+                    <span className="race-detail-map-source">{mapCardCopy.source}</span>
                     {race?.officialWebsite ? (
                       <a className="race-detail-map-btn" href={race.officialWebsite} target="_blank" rel="noreferrer">
                         {t('races.intel_official_site')}

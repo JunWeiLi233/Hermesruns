@@ -81,10 +81,6 @@ function getSpeedBand(speedRatio) {
   return SPEED_BANDS[0];
 }
 
-function getRouteSegmentColor(speedRatio) {
-  return getSpeedBand(speedRatio).color;
-}
-
 function getGpsDotStyle(speedRatio, zoom) {
   const safeZoom = Number.isFinite(zoom) ? zoom : 12;
   const normalizedZoom = clamp(safeZoom, 8, 18);

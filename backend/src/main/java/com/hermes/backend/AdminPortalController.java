@@ -49,6 +49,9 @@ public class AdminPortalController {
             "runnerId", "runnerEmail", "brand", "model", "nickname", "maxDistanceKm", "isPrimary", "initialDistanceKm", "photoUrl"
     );
     private static final Set<String> FILTER_FIELDS = Set.of("scope", "name", "queryJson");
+    private static final Set<String> RACE_COURSE_MAP_SCAN_FIELDS = Set.of("raceName", "city", "country", "website", "lat", "lng", "distanceKm");
+    private static final Set<String> RACE_COURSE_MAP_UPLOAD_FIELDS = Set.of("raceName", "city", "country", "website", "lat", "lng", "distanceKm", "imageUrl", "imageDataUrl", "fileName");
+    private static final Set<String> SHOE_PENDING_IMAGE_FIELDS = Set.of("imageUrl", "source");
 
     private final AuthService authService;
     private final RunnerRepository runnerRepository;
@@ -61,7 +64,9 @@ public class AdminPortalController {
     private final AdminAuditService adminAuditService;
     private final AiUsageService aiUsageService;
     private final ShoeIdentityService shoeIdentityService;
+    private final ShoeImageAssetService shoeImageAssetService;
     private final StravaAutoSyncScheduler stravaAutoSyncScheduler;
+    private final RaceCourseMapService raceCourseMapService;
 
     public AdminPortalController(
             AuthService authService,
@@ -75,7 +80,9 @@ public class AdminPortalController {
             AdminAuditService adminAuditService,
             AiUsageService aiUsageService,
             ShoeIdentityService shoeIdentityService,
-            StravaAutoSyncScheduler stravaAutoSyncScheduler
+            ShoeImageAssetService shoeImageAssetService,
+            StravaAutoSyncScheduler stravaAutoSyncScheduler,
+            RaceCourseMapService raceCourseMapService
     ) {
         this.authService = authService;
         this.runnerRepository = runnerRepository;
@@ -88,7 +95,9 @@ public class AdminPortalController {
         this.adminAuditService = adminAuditService;
         this.aiUsageService = aiUsageService;
         this.shoeIdentityService = shoeIdentityService;
+        this.shoeImageAssetService = shoeImageAssetService;
         this.stravaAutoSyncScheduler = stravaAutoSyncScheduler;
+        this.raceCourseMapService = raceCourseMapService;
     }
 
     @GetMapping("/overview")
@@ -293,7 +302,9 @@ public class AdminPortalController {
         if (adminOptional.isEmpty()) return forbidden();
         Pageable pageable = buildPageable(page, size, sortBy, sortDirection, SHOE_SORT_FIELDS);
         Page<Shoe> result = shoeRepository.findAll(shoeFilterSpec(search, queue, includeRetired), pageable);
-        return ResponseEntity.ok(AdminPagedResponse.from(result.map(this::toShoeDto), pageable.getSort()));
+        Map<String, ShoeImageAsset> assetMap = shoeImageAssetService.loadAssetsForShoes(result.getContent());
+        Page<ShoeAdminDto> dtoPage = result.map(shoe -> toShoeDto(shoe, assetMap.get(shoe.getIdentityKey())));
+        return ResponseEntity.ok(AdminPagedResponse.from(dtoPage, pageable.getSort()));
     }
 
     @GetMapping("/shoes/export")
@@ -321,6 +332,108 @@ public class AdminPortalController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=admin-shoes.csv")
                 .contentType(MediaType.TEXT_PLAIN)
                 .body(csv.toString());
+    }
+
+    @GetMapping("/race-course-maps")
+    public ResponseEntity<?> raceCourseMaps(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        return ResponseEntity.ok(raceCourseMapService.listRaceCourseMaps());
+    }
+
+    @GetMapping("/race-course-maps/{raceId}")
+    public ResponseEntity<?> raceCourseMapDetail(@PathVariable String raceId,
+                                                 @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        try {
+            return ResponseEntity.ok(raceCourseMapService.getAdminDetail(raceId));
+        } catch (IllegalArgumentException ex) {
+            return notFound(ex.getMessage(), "race_course_map_not_found");
+        }
+    }
+
+    @PostMapping("/race-course-maps/{raceId}/pending/scan")
+    public ResponseEntity<?> scanRaceCourseMap(@PathVariable String raceId,
+                                               @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                               @RequestBody(required = false) Map<String, Object> body) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, RACE_COURSE_MAP_SCAN_FIELDS);
+            String raceName = RequestBodyValidator.requiredSafeText(body, "raceName", 160);
+            String city = RequestBodyValidator.optionalSafeText(body, "city", 120);
+            String country = RequestBodyValidator.optionalSafeText(body, "country", 120);
+            String website = RequestBodyValidator.optionalString(body, "website", MAX_PHOTO_REFERENCE_LENGTH);
+            Double lat = readOptionalDouble(body, "lat");
+            Double lng = readOptionalDouble(body, "lng");
+            Double distanceKm = readOptionalDouble(body, "distanceKm");
+            RaceCourseMapService.RaceCourseMapResult result = raceCourseMapService.scanPendingCourseMap(
+                    raceId, raceName, city, country, website, lat, lng, distanceKm, adminOptional.get().getEmail());
+            adminAuditService.log(adminOptional.get(), "race_course_map.pending_scanned", "race_course_map", raceId, "Scanned pending race course map");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_race_course_map");
+        }
+    }
+
+    @PostMapping("/race-course-maps/{raceId}/pending/upload")
+    public ResponseEntity<?> uploadRaceCourseMap(@PathVariable String raceId,
+                                                 @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                                 @RequestBody(required = false) Map<String, Object> body) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, RACE_COURSE_MAP_UPLOAD_FIELDS);
+            String raceName = RequestBodyValidator.requiredSafeText(body, "raceName", 160);
+            String city = RequestBodyValidator.optionalSafeText(body, "city", 120);
+            String country = RequestBodyValidator.optionalSafeText(body, "country", 120);
+            String website = RequestBodyValidator.optionalString(body, "website", MAX_PHOTO_REFERENCE_LENGTH);
+            String imageUrl = body != null && body.get("imageDataUrl") instanceof String data ? data : RequestBodyValidator.requiredString(body, "imageUrl", MAX_PHOTO_REFERENCE_LENGTH);
+            Double lat = readOptionalDouble(body, "lat");
+            Double lng = readOptionalDouble(body, "lng");
+            Double distanceKm = readOptionalDouble(body, "distanceKm");
+            RaceCourseMapService.RaceCourseMapResult result = raceCourseMapService.uploadPendingCourseMap(
+                    raceId, raceName, city, country, website, lat, lng, distanceKm, imageUrl, adminOptional.get().getEmail());
+            adminAuditService.log(adminOptional.get(), "race_course_map.pending_uploaded", "race_course_map", raceId, "Uploaded pending race course map");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_race_course_map");
+        }
+    }
+
+    @PostMapping("/race-course-maps/{raceId}/accept-live")
+    public ResponseEntity<?> acceptRaceCourseMapAlias(@PathVariable String raceId,
+                                                      @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        return acceptRaceCourseMap(raceId, authorizationHeader);
+    }
+
+    @PostMapping("/race-course-maps/{raceId}/accept-live")
+    public ResponseEntity<?> acceptRaceCourseMap(@PathVariable String raceId,
+                                                 @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        try {
+            raceCourseMapService.acceptPendingCourseMap(raceId, adminOptional.get().getEmail());
+            adminAuditService.log(adminOptional.get(), "race_course_map.published", "race_course_map", raceId, "Published live race course map");
+            return ResponseEntity.ok(Map.of("published", true));
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_race_course_map");
+        }
+    }
+
+    @DeleteMapping("/race-course-maps/{raceId}/pending")
+    public ResponseEntity<?> clearPendingRaceCourseMap(@PathVariable String raceId,
+                                                       @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        try {
+            raceCourseMapService.clearPendingCourseMap(raceId);
+            adminAuditService.log(adminOptional.get(), "race_course_map.pending_cleared", "race_course_map", raceId, "Cleared pending race course map");
+            return ResponseEntity.ok(Map.of("cleared", true));
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_race_course_map");
+        }
     }
 
     @PostMapping("/shoes")
@@ -400,6 +513,81 @@ public class AdminPortalController {
                         "model", saved.getModel()
                 ));
         return ResponseEntity.status(HttpStatus.CREATED).body(toShoeDto(saved));
+    }
+
+    @PostMapping("/shoes/{id}/pending-image")
+    public ResponseEntity<?> setPendingShoeImage(@PathVariable Long id,
+                                                 @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                                 @RequestBody(required = false) Map<String, Object> body) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        Optional<Shoe> shoeOptional = shoeRepository.findById(id);
+        if (shoeOptional.isEmpty()) return notFound("Shoe not found.", "shoe_not_found");
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, SHOE_PENDING_IMAGE_FIELDS);
+            String imageUrl = RequestBodyValidator.requiredString(body, "imageUrl", MAX_PHOTO_REFERENCE_LENGTH);
+            String source = RequestBodyValidator.optionalSafeText(body, "source", 240);
+            String finalUrl = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(imageUrl, MAX_PHOTO_REFERENCE_LENGTH, "imageUrl");
+            ShoeImageAsset asset = shoeImageAssetService.upsertPendingForShoe(shoeOptional.get(), finalUrl, source, adminOptional.get().getEmail());
+            adminAuditService.log(adminOptional.get(), "shoe_image.pending_set", "shoe", String.valueOf(id), "Saved pending shoe image", Map.of("identityKey", asset.getIdentityKey()));
+            return ResponseEntity.ok(Map.of(
+                    "pendingImageUrl", asset.getPendingImageUrl(),
+                    "pendingSource", asset.getPendingSource()
+            ));
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_shoe_image");
+        }
+    }
+
+    @PostMapping("/shoes/{id}/pending/upload")
+    public ResponseEntity<?> setPendingShoeImageAlias(@PathVariable Long id,
+                                                      @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                                      @RequestBody(required = false) Map<String, Object> body) {
+        return setPendingShoeImage(id, authorizationHeader, body);
+    }
+
+    @PostMapping("/shoes/{id}/accept-image")
+    public ResponseEntity<?> acceptPendingShoeImage(@PathVariable Long id,
+                                                    @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        Optional<Shoe> shoeOptional = shoeRepository.findById(id);
+        if (shoeOptional.isEmpty()) return notFound("Shoe not found.", "shoe_not_found");
+        try {
+            ShoeImageAsset asset = shoeImageAssetService.acceptPendingForShoe(shoeOptional.get(), adminOptional.get().getEmail());
+            adminAuditService.log(adminOptional.get(), "shoe_image.published", "shoe", String.valueOf(id), "Published live shoe image", Map.of("identityKey", asset.getIdentityKey()));
+            return ResponseEntity.ok(Map.of("published", true, "liveImageUrl", asset.getLiveImageUrl()));
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_shoe_image");
+        }
+    }
+
+    @PostMapping("/shoes/{id}/accept-live")
+    public ResponseEntity<?> acceptPendingShoeImageAlias(@PathVariable Long id,
+                                                         @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        return acceptPendingShoeImage(id, authorizationHeader);
+    }
+
+    @DeleteMapping("/shoes/{id}/pending-image")
+    public ResponseEntity<?> clearPendingShoeImage(@PathVariable Long id,
+                                                   @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        Optional<Shoe> shoeOptional = shoeRepository.findById(id);
+        if (shoeOptional.isEmpty()) return notFound("Shoe not found.", "shoe_not_found");
+        try {
+            shoeImageAssetService.clearPendingForShoe(shoeOptional.get());
+            adminAuditService.log(adminOptional.get(), "shoe_image.pending_cleared", "shoe", String.valueOf(id), "Cleared pending shoe image");
+            return ResponseEntity.ok(Map.of("cleared", true));
+        } catch (IllegalArgumentException ex) {
+            return badRequest(ex.getMessage(), "invalid_shoe_image");
+        }
+    }
+
+    @DeleteMapping("/shoes/{id}/pending")
+    public ResponseEntity<?> clearPendingShoeImageAlias(@PathVariable Long id,
+                                                        @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        return clearPendingShoeImage(id, authorizationHeader);
     }
 
     @PostMapping("/shoes/bulk")
@@ -647,6 +835,7 @@ public class AdminPortalController {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("unverifiedShoePhotos", shoeRepository.findAll(shoeFilterSpec("", "unverified_photo", false), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(this::toShoeDto).getContent());
         body.put("missingShoeImages", shoeRepository.findAll(shoeFilterSpec("", "missing_photo", false), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(this::toShoeDto).getContent());
+        body.put("pendingRaceCourseMaps", raceCourseMapService.listRaceCourseMaps().stream().filter(RaceCourseMapService.RaceCourseMapAdminRow::hasPendingPreview).limit(8).toList());
         body.put("recentSignupIssues", runnerRepository.findAll(userFilterSpec("", "", "", "recent_signup_issues"), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(r -> toUserDto(r, 0)).getContent());
         body.put("billingExceptions", runnerRepository.findAll(userFilterSpec("", "", "", "billing_exceptions"), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(r -> toUserDto(r, 0)).getContent());
         body.put("failedSyncs", adminBackgroundJobRepository.findTop10ByStatusInOrderByCreatedAtDesc(List.of(AdminBackgroundJob.STATUS_FAILED)).stream().map(this::toJobDto).limit(8).toList());
@@ -692,6 +881,10 @@ public class AdminPortalController {
     }
 
     private ShoeAdminDto toShoeDto(Shoe shoe) {
+        return toShoeDto(shoe, null);
+    }
+
+    private ShoeAdminDto toShoeDto(Shoe shoe, ShoeImageAsset asset) {
         return new ShoeAdminDto(
                 shoe.getId(),
                 shoe.getBrand(),
@@ -700,6 +893,10 @@ public class AdminPortalController {
                 shoe.getIdentityKey(),
                 shoe.getPhotoUrl(),
                 shoe.isPhotoVerified(),
+                asset == null ? null : asset.getPendingImageUrl(),
+                asset == null ? null : asset.getPendingSource(),
+                asset == null ? null : asset.getLiveImageUrl(),
+                asset == null ? null : asset.getLiveSource(),
                 shoe.isRetired(),
                 shoe.getCreatedAt() == null ? null : shoe.getCreatedAt().toString(),
                 shoe.getRunner() == null ? null : shoe.getRunner().getId(),
@@ -780,6 +977,13 @@ public class AdminPortalController {
         return Optional.empty();
     }
 
+    private Double readOptionalDouble(Map<String, Object> body, String field) {
+        if (body == null || !body.containsKey(field) || body.get(field) == null) {
+            return null;
+        }
+        return RequestBodyValidator.optionalDouble(body, field, -180, 100000, null);
+    }
+
     private ResponseEntity<AdminApiError> forbidden() {
         return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
     }
@@ -839,6 +1043,10 @@ public class AdminPortalController {
             String identityKey,
             String photoUrl,
             boolean photoVerified,
+            String pendingImageUrl,
+            String pendingImageSource,
+            String liveImageUrl,
+            String liveImageSource,
             boolean retired,
             String createdAt,
             Long runnerId,

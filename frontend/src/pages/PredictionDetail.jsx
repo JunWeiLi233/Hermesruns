@@ -246,6 +246,7 @@ export default function PredictionDetail() {
   const scaleOpts = useMemo(() => ({
     x: {
       type: 'linear',
+      grace: '8%',
       grid: { display: false },
       ticks: {
         color: isLightTheme ? 'rgba(89, 92, 93, 0.78)' : 'rgba(232, 226, 220, 0.55)',

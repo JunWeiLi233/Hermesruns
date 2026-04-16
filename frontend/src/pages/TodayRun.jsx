@@ -12,6 +12,7 @@ import { apiJson } from '../api';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { formatDistance } from '../utils/format';
+import { computeVdotTrend } from '../utils/vdot';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import { buildRecentShoeSignal } from '../utils/shoeRotation';
 
@@ -207,7 +208,7 @@ function prettifyWorkoutType(workoutType, t) {
   }
 }
 
-function buildConfidenceModel(metrics, toneKey, hasCoachSession) {
+function buildConfidenceModel(metrics, toneKey, hasCoachSession, runs) {
   let score = 76;
 
   if (hasCoachSession) score += 6;
@@ -228,6 +229,16 @@ function buildConfidenceModel(metrics, toneKey, hasCoachSession) {
 
   if ((metrics.hardRuns7d || 0) >= (metrics.qualityCap || 1)) score -= 4;
   if ((metrics.runDays7 || 0) >= 4) score += 3;
+
+  // VDOT trend adjustment
+  if (Array.isArray(runs) && runs.length > 0) {
+    const vdotTrend = computeVdotTrend(runs);
+    if (vdotTrend.hasData) {
+      if (vdotTrend.direction === 'declining') score -= 3;
+      else if (vdotTrend.direction === 'improving') score += 2;
+      // 'maintaining' leaves score unchanged
+    }
+  }
 
   score = Math.max(42, Math.min(96, Math.round(score)));
 
@@ -314,8 +325,8 @@ export default function TodayRun() {
   const hasHeatPenalty = weatherContext?.available && (weatherContext?.pacePenaltySecPerKm ?? 0) > 0;
   const showWeatherStrip = weatherContext?.available && !heatDismissed;
   const confidence = useMemo(
-    () => buildConfidenceModel(metrics, tone.key, Boolean(coachPayload?.today)),
-    [coachPayload, metrics, tone.key],
+    () => buildConfidenceModel(metrics, tone.key, Boolean(coachPayload?.today), runs),
+    [coachPayload, metrics, tone.key, runs],
   );
 
   const coachSessionTitle = coachPayload?.today

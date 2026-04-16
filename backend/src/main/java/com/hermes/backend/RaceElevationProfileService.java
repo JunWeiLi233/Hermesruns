@@ -45,12 +45,6 @@ public class RaceElevationProfileService {
     private static final List<String> REJECT_HINTS = List.of(
             "logo", "icon", "badge", "sponsor", "partner", "facebook", "instagram", "hero", "banner"
     );
-    private static final Map<String, List<Integer>> OFFICIAL_PROFILE_SAMPLE_OVERRIDES = Map.of(
-            "tokyo-marathon", List.of(36, 34, 31, 28, 24, 20, 15, 12, 10, 8, 9, 11, 14, 16, 18, 16, 13, 10, 8, 7, 8, 10, 12, 9, 6),
-            "tokyo marathon", List.of(36, 34, 31, 28, 24, 20, 15, 12, 10, 8, 9, 11, 14, 16, 18, 16, 13, 10, 8, 7, 8, 10, 12, 9, 6),
-            "marathon.tokyo", List.of(36, 34, 31, 28, 24, 20, 15, 12, 10, 8, 9, 11, 14, 16, 18, 16, 13, 10, 8, 7, 8, 10, 12, 9, 6)
-    );
-
     private final RestTemplate restTemplate;
     private final Map<String, CachedResult> cache = new ConcurrentHashMap<>();
 
@@ -82,22 +76,30 @@ public class RaceElevationProfileService {
         if (safeWebsite != null) {
             String officialImage = findOnOfficialPages(safeWebsite);
             if (officialImage != null) {
-                List<Integer> samples = resolveSamplesWithOfficialFallback(raceName, safeWebsite, officialImage);
-                return new RaceElevationProfileResult(officialImage, "official-site", false, samples);
+                RaceElevationProfileResult result = buildProfileResult(officialImage, "official-site", false);
+                if (result != null) {
+                    return result;
+                }
             }
         }
 
         for (String query : buildEnglishQueries(raceName, city, websiteHost)) {
             String image = fetchBingImage(query);
             if (image != null) {
-                return new RaceElevationProfileResult(image, query, false, resolveSamplesWithOfficialFallback(raceName, safeWebsite, image));
+                RaceElevationProfileResult result = buildProfileResult(image, query, false);
+                if (result != null) {
+                    return result;
+                }
             }
         }
 
         for (String query : buildLocalizedQueries(raceName, city, country, websiteHost)) {
             String image = fetchBingImage(query);
             if (image != null) {
-                return new RaceElevationProfileResult(image, query, true, resolveSamplesWithOfficialFallback(raceName, safeWebsite, image));
+                RaceElevationProfileResult result = buildProfileResult(image, query, true);
+                if (result != null) {
+                    return result;
+                }
             }
         }
 
@@ -310,32 +312,12 @@ public class RaceElevationProfileService {
         }
     }
 
-    private List<Integer> resolveSamplesWithOfficialFallback(String raceName, String websiteUrl, String imageUrl) {
-        List<Integer> extracted = extractProfileSamples(imageUrl);
-        if (!extracted.isEmpty()) return extracted;
-
-        String normalizedRace = normalize(raceName);
-        if (OFFICIAL_PROFILE_SAMPLE_OVERRIDES.containsKey(normalizedRace)) {
-            return OFFICIAL_PROFILE_SAMPLE_OVERRIDES.get(normalizedRace);
+    private RaceElevationProfileResult buildProfileResult(String imageUrl, String source, boolean localizedFallbackUsed) {
+        List<Integer> samples = extractProfileSamples(imageUrl);
+        if (samples.isEmpty()) {
+            return null;
         }
-
-        try {
-            if (websiteUrl != null && !websiteUrl.isBlank()) {
-                String host = URI.create(websiteUrl).getHost();
-                if (host != null) {
-                    String normalizedHost = host.toLowerCase(Locale.ROOT);
-                    for (Map.Entry<String, List<Integer>> entry : OFFICIAL_PROFILE_SAMPLE_OVERRIDES.entrySet()) {
-                        if (normalizedHost.contains(entry.getKey())) {
-                            return entry.getValue();
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-            // ignore host parsing issues and fall through to empty samples
-        }
-
-        return List.of();
+        return new RaceElevationProfileResult(imageUrl, source, localizedFallbackUsed, samples);
     }
 
     private List<Integer> interpretProfileSamples(BufferedImage image) {

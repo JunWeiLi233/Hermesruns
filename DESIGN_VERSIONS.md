@@ -11,6 +11,33 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-04-15-32
+Date: 2026-04-15
+Surface: Admin dashboard global asset-review redesign on `/dashboard`
+Files: `backend/src/main/java/com/hermes/backend/RaceCourseMapAsset.java`, `backend/src/main/java/com/hermes/backend/RaceCourseMapAssetRepository.java`, `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`, `backend/src/main/java/com/hermes/backend/ShoeImageAsset.java`, `backend/src/main/java/com/hermes/backend/ShoeImageAssetRepository.java`, `backend/src/main/java/com/hermes/backend/ShoeImageAssetService.java`, `backend/src/main/java/com/hermes/backend/AdminPortalController.java`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/i18n/translations.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the admin dashboard around one shared global asset-review model. The page now includes a dedicated `Race Course Maps` tab with an operational grid and pending-vs-live comparison workspace, and the existing shoes admin flow now stages pending previews before publishing globally instead of writing images straight to live. Race course-map scans/uploads are stored globally per race, shoe images are staged globally per model identity, and both surfaces now follow the same `pending preview -> accept -> live` workflow.
+Why: The user wanted globally stored race course-map images and alignments, admin-controlled publish decisions, a dedicated dashboard tab for race course maps, and the same review/publish logic applied to shoe image uploads so global operator actions stay consistent.
+Rollback target: `DV-2026-04-15-30`
+Notes: Backend targeted tests passed, backend compile passed, frontend lint/build passed, the frontend bundle synced into the Spring-served static output, and backend runtime sync proof returned `PASS` with `http://localhost:8080` returning `200`.
+
+### Version: DV-2026-04-15-31
+Date: 2026-04-15
+Surface: Progression Atlas on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a new full-width `Progression Atlas` section between the upper profile dashboard cards and the lower feature grid. The section follows the approved reference structure with a day/week/month/year/total switcher, one large cumulative distance readout, a supporting stat row for elevation gain, average pace, moving time, and session count, a cumulative progression line chart, and a recent-session lane. All numbers come from the existing synced run history already loaded on `/profile`, and the section keeps direct drill-down into real run detail routes.
+Why: The user wanted `/profile` to show the runner's progression more explicitly, using the provided screenshot as a structural reference while staying inside the Hermes `design.md` Kinetic Editorial system rather than falling back to a generic boxed dashboard card.
+Rollback target: `working tree before this change`
+Notes: Frontend lint passed with one unrelated existing warning in `frontend/src/pages/RacesDetail.jsx` about a missing `useEffect` dependency. `node scripts/run-vite-build.mjs` passed and synced the updated frontend bundle into the Spring-served static output.
+
+### Version: DV-2026-04-15-30
+Date: 2026-04-15
+Surface: AI-aligned course-map and real-world route stage on `/races/details/:raceId`
+Files: `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`, `backend/src/main/java/com/hermes/backend/RaceController.java`, `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`, `backend/src/test/java/com/hermes/backend/RaceControllerTests.java`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/i18n/translations.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the old race-detail city-context-only map and chart-only elevation fallback with a new two-stage route intelligence flow. Hermes can now search for likely course-map images, use AI to align a plausible real-world route plus overlay bounds, draw that route on Leaflet, optionally embed the detected course-map image over the real map, and sample elevation from the aligned route when confidence is high enough. The page copy now explicitly labels this as AI-aligned approximation rather than verified official GPS, and it intentionally falls back to the older city-context map when the backend cannot align the course-map confidently.
+Why: The user wanted the course-map search engine to find real course maps, place them onto the real world map, and derive elevation from the aligned route instead of stopping at a decorative city map or a separate chart heuristic.
+Rollback target: `DV-2026-04-14-29`
+Notes: Targeted backend tests passed, backend compile passed, frontend lint/build passed, the frontend bundle synced into the Spring-served static output, and backend runtime sync proof returned `PASS` with `http://localhost:8080` returning `200`.
+
 ### Version: DV-2026-04-14-29
 Date: 2026-04-14
 Surface: Official elevation-chart interpretation on `/races/details/:raceId`

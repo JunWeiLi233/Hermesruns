@@ -311,6 +311,54 @@ export function collectAllVdotEntries(runs) {
   return out;
 }
 
+/**
+ * Compares recent 30-day VDOT against prior 30–60-day window to determine trend direction.
+ *
+ * Returns:
+ *   { direction: 'improving' | 'maintaining' | 'declining', delta: number, hasData: boolean }
+ *
+ * A delta of ±0.8 or more is meaningful given estimation noise; below that is "maintaining."
+ */
+export function computeVdotTrend(runs, now = Date.now()) {
+  const stats = precomputeRunStats(runs);
+  const ms30 = 30 * 24 * 60 * 60 * 1000;
+
+  const recentEntries = [];
+  const priorEntries = [];
+
+  for (const run of runs) {
+    const e = buildVdotEntry(run, { maxAgeMs: null, now, stats });
+    if (!e) continue;
+    const age = now - e.date.getTime();
+    if (age <= ms30) {
+      recentEntries.push(e);
+    } else if (age <= 2 * ms30) {
+      priorEntries.push(e);
+    }
+  }
+
+  if (recentEntries.length === 0 || priorEntries.length === 0) {
+    return { direction: 'maintaining', delta: 0, hasData: false };
+  }
+
+  const { value: recentVdot } = representativeVdotFromEntries(recentEntries);
+  const { value: priorVdot } = representativeVdotFromEntries(priorEntries);
+
+  if (recentVdot <= 0 || priorVdot <= 0) {
+    return { direction: 'maintaining', delta: 0, hasData: false };
+  }
+
+  const delta = Math.round((recentVdot - priorVdot) * 10) / 10;
+  const MEANINGFUL_DELTA = 0.8;
+
+  let direction;
+  if (delta >= MEANINGFUL_DELTA) direction = 'improving';
+  else if (delta <= -MEANINGFUL_DELTA) direction = 'declining';
+  else direction = 'maintaining';
+
+  return { direction, delta, hasData: true };
+}
+
 export function computeRollingRepresentativeSeries(sortedEntries, windowMs = VDOT_LOOKBACK_MS) {
   const result = [];
   for (let i = 0; i < sortedEntries.length; i += 1) {

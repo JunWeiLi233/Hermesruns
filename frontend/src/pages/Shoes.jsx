@@ -22,6 +22,8 @@ import {
   RECENT_SHOE_SIGNAL_WINDOW_DAYS,
 } from '../utils/shoeRotation';
 
+const cx = (...parts) => parts.filter(Boolean).join(' ');
+
 function shoeHealth(current, max) {
   if (!max || max <= 0) return 'good';
   const pct = current / max;

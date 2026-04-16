@@ -192,6 +192,7 @@ export default function Vo2MaxDetail() {
     () => buildChartModel(chartWindow.entries, chartWindow.rollingSeries, lang),
     [chartWindow.entries, chartWindow.rollingSeries, lang],
   );
+  const showDecorativeDots = false;
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const latestEntry = chartWindow.entries.at(-1) || null;
@@ -530,17 +531,17 @@ export default function Vo2MaxDetail() {
                         {chart.trendPath ? <path d={chart.trendPath} className="analysis-vo2-trend-path-glow" filter="url(#analysisVo2TrendGlow)" /> : null}
                         {chart.trendPath ? <path d={chart.trendPath} className="analysis-vo2-trend-path" /> : null}
 
-                        {false && chart.points.map((point) => (
+                        {showDecorativeDots && chart.points.map((point) => (
                           <circle key={`${point.run?.id || point.date.getTime()}-${point.vdot}`} cx={point.cx} cy={point.cy} r="4.2" className="analysis-vo2-run-dot">
                             <title>{`${point.label} · ${point.vdot.toFixed(1)} VO2max`}</title>
                           </circle>
                         ))}
 
-                        {false && chart.latestTrendPoint ? (
+                        {showDecorativeDots && chart.latestTrendPoint ? (
                           <circle cx={chart.latestTrendPoint.cx} cy={chart.latestTrendPoint.cy} r="28" className="analysis-vo2-latest-glow" />
                         ) : null}
 
-                        {false && chart.trendPoints.map((point, index) => (
+                        {showDecorativeDots && chart.trendPoints.map((point, index) => (
                           <circle
                             key={`${point.x}-${point.y}`}
                             cx={point.cx}

@@ -1253,7 +1253,8 @@ export default function AnalysisInsightDetail() {
     const n = entries.length;
     const yMax = cMax * 1.08;
 
-    const toX = (i) => padL + (i / Math.max(1, n - 1)) * plotW;
+    const xInset = 14;
+    const toX = (i) => padL + xInset + (i / Math.max(1, n - 1)) * (plotW - xInset * 2);
     const toY = (v) => padT + ((yMax - v) / yMax) * plotH;
 
     const pts = entries.map((entry, i) => ({
