@@ -54,6 +54,59 @@ class CoachControllerTests {
     }
 
     @Test
+    void getTodayReturnsRouteRecommendationForAuthenticatedRunner() {
+        AuthService authService = mock(AuthService.class);
+        AutomatedCoachService coachService = mock(AutomatedCoachService.class);
+        Runner runner = runner();
+        AutomatedCoachService.CoachTodayDto payload = new AutomatedCoachService.CoachTodayDto(
+                new AutomatedCoachService.CoachScheduledWorkoutDto(
+                        LocalDate.now(),
+                        "EASY",
+                        10.0,
+                        50,
+                        false,
+                        "Keep the effort smooth.",
+                        null,
+                        false
+                ),
+                new AutomatedCoachService.CoachStateDto(
+                        42.0,
+                        150.0,
+                        180,
+                        25,
+                        40,
+                        0,
+                        0.18,
+                        false,
+                        48,
+                        50,
+                        82,
+                        62,
+                        188,
+                        48,
+                        new AutomatedCoachService.CoachStaminaDto(95, 98, 300, 115, "down"),
+                        new AutomatedCoachService.CoachTrainingBlockDto(21.1, LocalDate.now().plusWeeks(10), 0, 18.0, "Half Build")
+                ),
+                new AutomatedCoachService.CoachRouteRecommendationDto(
+                        "north-east",
+                        "distance-match",
+                        10.0,
+                        10.1,
+                        2,
+                        new AutomatedCoachService.CoachRoutePreviewDto("M 10.00 10.00 L 20.00 20.00", 10.0, 10.0, 20.0, 20.0)
+                )
+        );
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(coachService.getTodayWithReadiness(runner)).thenReturn(payload);
+        CoachController controller = new CoachController(authService, coachService);
+
+        ResponseEntity<?> response = controller.getToday("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(payload);
+    }
+
+    @Test
     void postRecoveryReturnsBadRequestWhenServiceRejectsMetrics() {
         AuthService authService = mock(AuthService.class);
         AutomatedCoachService coachService = mock(AutomatedCoachService.class);
@@ -135,6 +188,7 @@ class CoachControllerTests {
                 62,
                 188,
                 48,
+                new AutomatedCoachService.CoachStaminaDto(95, 98, 300, 115, "down"),
                 new AutomatedCoachService.CoachTrainingBlockDto(21.1, LocalDate.now().plusWeeks(10), 0, 18.0, "Half Build"));
         LocalDate targetRaceDate = LocalDate.now().plusWeeks(10);
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));

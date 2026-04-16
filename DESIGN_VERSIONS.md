@@ -11,6 +11,87 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-04-16-42
+Date: 2026-04-16
+Surface: Garmin Connect lane on `/settings`
+Files: `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/pages/Settings.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt the Garmin Connect area in the Settings connectivity column from a generic service row into a premium import lane. The main Garmin surface now carries live state, import scope, and trust framing, manual file import is demoted into a quieter fallback tile instead of a competing dashed card, and the Garmin modal now uses a two-part editorial composition with dual-mode tonal layering and clearer status emphasis while preserving the existing credentials, limit selector, progress messaging, and manual-import escape hatch.
+Why: The previous Garmin UI was the weakest truth surface on the page: it showed static copy, duplicated actions across equal-weight utility blocks, and used border-led modal containment that didn’t match Hermes’ Kinetic Editorial system. The redesign makes Garmin import feel more trustworthy and more intentional without changing the real import behavior.
+Rollback target: `DV-2026-04-16-41`
+Notes: `cd frontend && npm run lint` and `cd frontend && node scripts/run-vite-build.mjs` passed, and the build synced a fresh frontend bundle into the Spring-served static output.
+
+### Version: DV-2026-04-16-41
+Date: 2026-04-16
+Surface: Distance-aware planned-route intelligence on `/schedule`
+Files: `backend/src/main/java/com/hermes/backend/AutomatedCoachService.java`, `backend/src/test/java/com/hermes/backend/AutomatedCoachServiceTests.java`, `backend/src/test/java/com/hermes/backend/CoachControllerTests.java`, `frontend/src/pages/Schedule.jsx`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Moved the planned-route card decision out of the frontend heatmap helper and into the coach payload Hermes already loads for `/schedule`. The route card now chooses its target mileage from the `is-today` planned workout first, falls back to the next upcoming planned workout when today has no usable distance, and recommends the surrounding area from recent runs whose distances are closest to that target. The card still renders the same compact route preview, but its secondary label now explains whether Hermes found a direct distance match, a near match, or only a lower-confidence best recent area.
+Why: The user wanted the route card to feel like real coach logic rather than a generic most-used-zone guess. Tying the card to planned mileage plus recent route evidence makes the recommendation more believable and more useful for the weekly planning surface.
+Rollback target: `DV-2026-04-16-40`
+Notes: `cd backend && .\mvnw test "-Dtest=AutomatedCoachServiceTests,CoachControllerTests"`, `cd backend && .\mvnw -q -DskipTests compile`, `cd frontend && npm run lint`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-backend-runtime-sync.mjs --files "backend/src/main/java/com/hermes/backend/AutomatedCoachService.java||backend/src/main/java/com/hermes/backend/CoachController.java"` all passed.
+
+### Version: DV-2026-04-16-40
+Date: 2026-04-16
+Surface: Shared runner-shell notification popover
+Files: `frontend/src/styles/style.css`, `frontend/src/components/topbarNotifications.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a dedicated Aerodynamic Gallery light-theme contrast layer for the shared runner-shell notification popover. The tray now keeps the same compact glass structure, but its heading copy, card copy, card surfaces, close chip, and CTA pill no longer inherit the dark-shell text palette when the signed-in shell is in light mode, which restores readable Chinese and English notification content.
+Why: The user reported that the `runner-shell-notification-popover is-zh` content was effectively invisible. The root cause was not missing Chinese copy but shared pale text colors sitting on the new vellum light-mode tray background.
+Rollback target: `DV-2026-04-16-39`
+Notes: `node frontend/src/components/topbarNotifications.smoke.test.js`, `cd frontend && npm run lint`, and `cd frontend && npm run build` all passed, and the fresh frontend bundle synced into the Spring-served static output.
+
+### Version: DV-2026-04-16-39
+Date: 2026-04-16
+Surface: Weather Engine page on `/weather-engine`
+Files: `frontend/src/pages/WeatherEngine.jsx`, `frontend/src/components/AppIcon.jsx`, `frontend/src/App.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/TodayRun.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/styles/style.css`, `backend/src/main/java/com/hermes/backend/SpaForwardingController.java`, `DESIGN_VERSIONS.md`
+What changed: Reintroduced the old temperature, weather, and Hermes heat-adaptation engine as a dedicated runner-shell page. The new route combines live Open-Meteo current and hourly weather for the runner's latest route location with the existing Hermes acclimatization engine from `/api/v1/weather/context`, and it adds a dedicated weather-engine slot in the runner shell with its own `thermostat` icon for discovery from the main runner surfaces.
+Why: The old weather and heat-readiness system had useful signal but was buried inside `TodayRun`. The new website needed that capability pulled forward into its own first-class page while staying inside the runner-shell navigation model.
+Rollback target: `DV-2026-04-16-38`
+Notes: Pending frontend lint/build and live static-bundle sync after the new route/style wiring.
+
+### Version: DV-2026-04-16-38
+Date: 2026-04-16
+Surface: Stamina grid integration redesign on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`, `TASKS.md`
+What changed: Removed the standalone circular `体力值 / Stamina` gadget treatment from the lower profile grid and rebuilt that slot as a first-class Hermes feature card. The module now keeps the same backend-driven stamina score, recovery ceiling, target pace, and heart-rate guidance, but expresses them through a shared editorial card language: a score band, integrated recovery sidecar, shared progress rail, and compact data cells that match the surrounding workout/load/session cards.
+Why: The previous stamina card still felt like an inserted object rather than part of the grid. The user wanted the functionality preserved but the design absorbed into the `/profile` card system and aligned more closely with `design.md`.
+Rollback target: `DV-2026-04-16-37`
+Notes: `cd frontend && npm run lint` passed, and `cd frontend && node scripts/run-vite-build.mjs` passed while syncing a fresh live static bundle into the backend runtime directories.
+
+### Version: DV-2026-04-16-37
+Date: 2026-04-16
+Surface: Integrated stamina card refinement on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Refined the new `体力值 / Stamina` presentation so it no longer behaves like an oversized standalone badge. The stamina module is still circular, but it now sits inside the feature grid as a more compact, editorial Hermes card with tighter proportions, calmer spacing, and better visual balance against the neighboring workout/load/session cards.
+Why: The previous implementation matched the raw reference too literally and felt too large for the surrounding grid, which made the `/profile` feature section feel uneven.
+Rollback target: `DV-2026-04-16-36`
+Notes: Frontend lint and build both passed, and the updated bundle synced into the Spring-served static output.
+
+### Version: DV-2026-04-16-36
+Date: 2026-04-16
+Surface: Backend-driven `体力值 / Stamina` module on `/profile`
+Files: `backend/src/main/java/com/hermes/backend/AutomatedCoachService.java`, `backend/src/main/java/com/hermes/backend/CoachController.java`, `backend/src/test/java/com/hermes/backend/AutomatedCoachServiceTests.java`, `backend/src/test/java/com/hermes/backend/CoachControllerTests.java`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/i18n/translations.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the old text-heavy readiness feature card with a circular `体力值 / Stamina` orb modeled on the provided reference. The card now shows current stamina %, recovery ceiling, target pace, and heart-rate guidance inside a bold circular module while keeping the explanatory coach copy below it. The UI is driven by a new backend stamina DTO calculated from coach state and today's planned workout rather than frontend-only heuristics.
+Why: The user wanted a visual `体力值` card on `/profile` that looks like the reference image and uses a real backend algorithm instead of a decorative frontend approximation.
+Rollback target: `DV-2026-04-15-35`
+Notes: Focused backend tests passed, backend compile passed, frontend lint/build passed, and backend runtime sync proof returned `PASS` with `http://localhost:8080` returning `200`.
+
+### Version: DV-2026-04-15-35
+Date: 2026-04-15
+Surface: Daily-point Progression Atlas refinement on `/profile`
+Files: `frontend/src/utils/progressionAtlas.js`, `frontend/src/utils/progressionAtlas.smoke.test.js`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Refined the Progression Atlas data density so the chart now keeps daily cumulative buckets for every timeframe, including `year` and `total`, instead of collapsing longer windows into monthly checkpoints. The section title was also localized from the placeholder English label into runner-facing product copy.
+Why: The user wanted more visible daily progression points rather than monthly aggregation, and wanted the atlas heading translated instead of left as “Progression Atlas”.
+Rollback target: `DV-2026-04-15-33`
+Notes: Frontend smoke/lint/build and local runtime health should be rerun after this refinement.
+
+### Version: DV-2026-04-15-33
+Date: 2026-04-15
+Surface: Interactive Progression Atlas refinement on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/utils/progressionAtlas.js`, `frontend/src/utils/progressionAtlas.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Refined the `Progression Atlas` chart to behave more like the approved running reference instead of a static callout graphic. The cumulative curve now renders as a smoothed editorial path over the same real progression buckets, the active point uses a cleaner halo/core treatment with a vertical guide rail, and the tooltip now tracks the nearest real data point as the user moves across the chart. The interaction still preserves the existing timeframe switcher, cumulative headline, supporting stat row, and recent-session drill-down lane.
+Why: The user wanted the atlas to feel closer to the reference by making the chart explorable, the endpoint marker more intentional, and the progression curve smoother and more detailed without inventing fake samples or leaving the Hermes `design.md` system.
+Rollback target: `DV-2026-04-15-31`
+Notes: Frontend lint passed, the shared progression smoke test passed, the frontend bundle synced into the Spring-served static output, and `http://localhost:8080` returned `200`.
+
 ### Version: DV-2026-04-15-32
 Date: 2026-04-15
 Surface: Admin dashboard global asset-review redesign on `/dashboard`

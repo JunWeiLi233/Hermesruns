@@ -10,7 +10,6 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import { formatDistance } from '../utils/format';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
-import { buildScheduleRouteModel } from '../utils/scheduleRoute';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import TopbarNotifications from '../components/TopbarNotifications';
 
@@ -317,23 +316,42 @@ function getRouteZoneLabel(zoneKey, lang) {
   return labels[zoneKey] || labels.core;
 }
 
-function getRouteSourceLabel(routeModel, lang) {
-  if (!routeModel) {
+function getRouteAnchoredRunsLabel(routeRecommendation, lang) {
+  if (!routeRecommendation) {
     return lang === 'zh-CN' ? '等待路线记录' : 'Waiting for route history';
   }
-  if (routeModel.source === 'most-used') {
-    return lang === 'zh-CN' ? '常跑区域' : 'Most-used zone';
-  }
-  return lang === 'zh-CN' ? '最近跑过的区域' : 'Most recent zone';
+  return lang === 'zh-CN'
+    ? `在这片区域跑过 ${routeRecommendation.activityCount} 次`
+    : `${routeRecommendation.activityCount} runs anchored here`;
 }
 
-function getRouteAnchoredRunsLabel(routeModel, lang) {
-  if (!routeModel) {
-    return lang === 'zh-CN' ? '等待教练安排' : 'Waiting for coach guidance';
+function getRouteConfidenceLabel(routeRecommendation, lang, unit) {
+  if (!routeRecommendation) {
+    return lang === 'zh-CN' ? '等待路线记录' : 'Waiting for route history';
   }
-  return lang === 'zh-CN'
-    ? `在这片区域跑过 ${routeModel.activityCount} 次`
-    : `${routeModel.activityCount} runs anchored here`;
+
+  const targetDistance = Number(routeRecommendation.targetDistanceKm || 0) > 0
+    ? formatDistance(routeRecommendation.targetDistanceKm, 1, lang, unit)
+    : null;
+
+  if (!targetDistance) {
+    return lang === 'zh-CN' ? '根据最近跑步记录推荐' : 'Built from your recent run history';
+  }
+
+  switch (routeRecommendation.confidence) {
+    case 'distance-match':
+      return lang === 'zh-CN'
+        ? `匹配到今日 ${targetDistance} 计划`
+        : `Matched to today's ${targetDistance} plan`;
+    case 'near-match':
+      return lang === 'zh-CN'
+        ? `最接近 ${targetDistance} 的最近路线`
+        : `Closest recent route to ${targetDistance}`;
+    default:
+      return lang === 'zh-CN'
+        ? `先用这片最近常跑区，等待更接近 ${targetDistance} 的路线`
+        : `Best recent area while we wait for a closer ${targetDistance} match`;
+  }
 }
 
 export default function Schedule() {
@@ -350,7 +368,6 @@ export default function Schedule() {
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [coachSchedule, setCoachSchedule] = useState([]);
-  const [heatmap, setHeatmap] = useState(null);
   const [shoes, setShoes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
 
@@ -365,13 +382,12 @@ export default function Schedule() {
     async function loadSchedule() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, heatmapData, shoeData] = await Promise.all([
+        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
           apiJson('/api/coach/state').catch(() => null),
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/coach/schedule?days=14').catch(() => []),
-          apiJson('/api/profile/heatmap').catch(() => null),
           apiJson('/api/shoes').catch(() => []),
         ]);
 
@@ -385,7 +401,6 @@ export default function Schedule() {
         setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
         setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
         setCoachSchedule(Array.isArray(coachScheduleData) ? coachScheduleData : []);
-        setHeatmap(heatmapData && typeof heatmapData === 'object' ? heatmapData : null);
         setShoes(Array.isArray(shoeData) ? shoeData : []);
         setLoadState('ready');
       } catch {
@@ -438,11 +453,9 @@ export default function Schedule() {
     () => pickCurrentGear(shoes),
     [shoes],
   );
-
-  const routeModel = useMemo(
-    () => buildScheduleRouteModel(heatmap, runs),
-    [heatmap, runs],
-  );
+  const routeRecommendation = coachToday?.routeRecommendation || null;
+  const routePreview = routeRecommendation?.preview || null;
+  const hasRoutePreview = Boolean(routePreview?.path);
 
   const activeBlock = coachState?.activeBlock || null;
   const displayName = getDisplayName(profile, t('profile.default_name'));
@@ -471,11 +484,26 @@ export default function Schedule() {
   const sleepLabel = coachState?.lastSleepScore != null && coachState.lastSleepScore >= 80
     ? s('sleep_high')
     : s('sleep_moderate');
-  const routeTitle = routeModel
-    ? getRouteZoneLabel(routeModel.zoneKey, lang)
+  const routeTitle = routeRecommendation
+    ? getRouteZoneLabel(routeRecommendation.zoneKey, lang)
     : activeBlock?.name || s('default_route_name');
-  const routeAnchoredRuns = getRouteAnchoredRunsLabel(routeModel, lang);
-  const routeSourceLabel = getRouteSourceLabel(routeModel, lang);
+  const routeAnchoredRuns = getRouteAnchoredRunsLabel(routeRecommendation, lang);
+  const routeConfidenceLabel = getRouteConfidenceLabel(routeRecommendation, lang, unit);
+  const routeTargetDistanceKm = Number(
+    routeRecommendation?.targetDistanceKm
+      || nextSession?.plannedDistanceKm
+      || coachToday?.today?.plannedDistanceKm
+      || 0,
+  );
+  const routeFallbackDistanceBadge = routeTargetDistanceKm > 0
+    ? formatDistance(routeTargetDistanceKm, 1, lang, unit)
+    : s('no_distance');
+  const routeFallbackStatus = routeRecommendation ? routeConfidenceLabel : routeAnchoredRuns;
+  const routeFallbackBadges = [
+    routeFallbackDistanceBadge,
+    routeRecommendation ? routeAnchoredRuns : nextSessionTitle,
+    activeBlock?.weekIndex ? s('phase_label', { week: activeBlock.weekIndex || 1 }) : null,
+  ].filter(Boolean);
 
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('loading')}</div></div>;
@@ -510,6 +538,7 @@ export default function Schedule() {
             { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
             { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
             { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
+            { key: 'weather_engine', label: lang === 'zh-CN' ? '天气引擎' : 'Weather Engine', route: '/weather-engine', icon: 'thermostat' },
             { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
             { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
             { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today', active: true },
@@ -548,7 +577,7 @@ export default function Schedule() {
           </div>
 
           <div className="runner-shell-topbar-actions">
-            <div className="runner-shell-topbar-profile-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
@@ -645,16 +674,28 @@ export default function Schedule() {
                 </article>
               </div>
 
-              <article className="schedule-plan-route-card">
+              <article className={`schedule-plan-route-card${hasRoutePreview ? ' has-route-preview' : ' is-route-fallback'}`}>
                 <div className="schedule-plan-route-map" aria-hidden="true">
-                  {routeModel?.preview ? (
+                  {hasRoutePreview ? (
                     <svg className="schedule-plan-route-map-svg" viewBox="0 0 100 100">
-                      <path className="schedule-plan-route-map-shadow" d={routeModel.preview.path} />
-                      <path className="schedule-plan-route-map-line" d={routeModel.preview.path} />
-                      <circle className="schedule-plan-route-map-start" cx={routeModel.preview.start[0]} cy={routeModel.preview.start[1]} r="3.2" />
-                      <circle className="schedule-plan-route-map-finish" cx={routeModel.preview.finish[0]} cy={routeModel.preview.finish[1]} r="3.6" />
+                      <path className="schedule-plan-route-map-shadow" d={routePreview.path} />
+                      <path className="schedule-plan-route-map-line" d={routePreview.path} />
+                      <circle className="schedule-plan-route-map-start" cx={routePreview.startX} cy={routePreview.startY} r="3.2" />
+                      <circle className="schedule-plan-route-map-finish" cx={routePreview.finishX} cy={routePreview.finishY} r="3.6" />
                     </svg>
-                  ) : null}
+                  ) : (
+                    <div className="schedule-plan-route-empty-panel">
+                      <div className="schedule-plan-route-empty-badges">
+                        {routeFallbackBadges.map((badge, index) => (
+                          <span key={`${badge}-${index}`} className="schedule-plan-route-empty-badge">{badge}</span>
+                        ))}
+                      </div>
+                      <div className="schedule-plan-route-empty-copy">
+                        <strong>{routeTitle}</strong>
+                        <span>{routeFallbackStatus}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="schedule-plan-route-content">
                   <div>
@@ -662,7 +703,7 @@ export default function Schedule() {
                     <h3>{routeTitle}</h3>
                     <div className="schedule-plan-route-meta">
                       <span>{routeAnchoredRuns}</span>
-                      <span>{routeSourceLabel}</span>
+                      <span>{routeConfidenceLabel}</span>
                     </div>
                   </div>
                   <button type="button" className="schedule-plan-watch-btn" onClick={() => navigate('/today-run')}>

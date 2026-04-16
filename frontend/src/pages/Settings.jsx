@@ -118,6 +118,21 @@ export default function Settings() {
   const stravaLabel = stravaStatus?.linked ? t('settings.stitch_strava_active') : t('settings.strava_not_connected');
   const digestLabel = digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest');
   const resolvedLanguageLabel = languageLabel;
+  const garminTone = garminImporting ? 'active' : (garminStatus ? garminStatusType || 'info' : 'ready');
+  const garminStatusLabel = garminImporting ? t('profile.garmin_connect_importing') : (garminStatus || t('settings.stitch_garmin_ready'));
+  const garminLane = {
+    eyebrow: t('profile.garmin_connect_status'),
+    title: t('profile.garmin_connect_title'),
+    summary: t('profile.garmin_connect_hint'),
+    status: garminStatusLabel,
+    tone: garminTone,
+    limitLabel: t('profile.garmin_connect_limit_label'),
+    limitValue: garminLimit,
+    manualLabel: t('profile.watch_import_files'),
+    manualValue: t('settings.stitch_manual_import_hint'),
+    credentialsNote: t('profile.garmin_connect_credentials_note'),
+    primaryAction: garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_import'),
+  };
   const completionScore = Math.round(([
     displayName.trim(),
     mantra.trim(),
@@ -367,8 +382,8 @@ export default function Settings() {
     {
       key: 'garmin',
       label: 'Garmin Connect',
-      value: garminImporting ? t('profile.garmin_connect_importing') : (garminStatus || t('settings.stitch_garmin_ready')),
-      tone: garminImporting ? 'active' : (garminStatus ? garminStatusType || 'info' : 'ready'),
+      value: garminStatusLabel,
+      tone: garminTone,
     },
     {
       key: 'manual',
@@ -498,6 +513,7 @@ export default function Settings() {
           setLang={setLang}
           quickControls={quickControls}
           syncHealthItems={syncHealthItems}
+          garminLane={garminLane}
           setupChecklist={setupChecklist}
         />
 
@@ -558,105 +574,142 @@ export default function Settings() {
         </form>
       </Modal>
 
-      <Modal isOpen={activeModal === 'garmin'} onClose={() => { if (!garminImporting) setActiveModal(null); }} title={t('profile.garmin_connect_modal_title')}>
+      <Modal
+        isOpen={activeModal === 'garmin'}
+        onClose={() => { if (!garminImporting) setActiveModal(null); }}
+        title={t('profile.garmin_connect_modal_title')}
+        shellClassName="settings-modal-shell garmin-import-modal-shell"
+        cardClassName="settings-modal-card garmin-import-modal-card"
+      >
         <form onSubmit={handleGarminImport} className="garmin-import-form">
-          <section className="garmin-import-hero">
-            <div className="garmin-import-hero-main">
-              <div className="service-icon service-icon--garmin garmin-import-hero-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M12 7v7" />
-                  <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
-                  <path d="M8 18h8" />
-                </svg>
+          <div className="garmin-import-layout">
+            <section className="garmin-import-visual">
+              <div className="garmin-import-kicker-row">
+                <span className="garmin-import-kicker-line" aria-hidden="true" />
+                <span>{garminLane.eyebrow}</span>
               </div>
-              <div className="garmin-import-hero-copy">
-                <strong>{t('profile.garmin_connect_title')}</strong>
-                <p>{t('profile.garmin_connect_hint')}</p>
+
+              <section className="garmin-import-hero">
+                <div className="service-icon service-icon--garmin garmin-import-hero-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 7v7" />
+                    <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+                    <path d="M8 18h8" />
+                  </svg>
+                </div>
+                <div className="garmin-import-hero-copy">
+                  <strong>{garminLane.title}</strong>
+                  <p>{garminLane.summary}</p>
+                </div>
+              </section>
+
+              <div className={`garmin-import-stage garmin-import-stage--${garminLane.tone}`}>
+                <span>{garminLane.eyebrow}</span>
+                <strong>{garminLane.status}</strong>
               </div>
-            </div>
-            <span className="garmin-import-pill">{t('profile.garmin_connect_status')}</span>
-          </section>
 
-          <p className="garmin-credentials-note">{t('profile.garmin_connect_credentials_note')}</p>
+              <div className="garmin-import-metric-grid">
+                <article className="garmin-import-metric">
+                  <span>{garminLane.limitLabel}</span>
+                  <strong>{garminLane.limitValue}</strong>
+                </article>
+                <article className="garmin-import-metric">
+                  <span>{garminLane.manualLabel}</span>
+                  <strong>{garminLane.manualValue}</strong>
+                </article>
+              </div>
+            </section>
 
-          <div className="garmin-import-field-grid">
-            <div className="garmin-import-field">
-              <label className="modal-label">{t('profile.garmin_connect_email_label')}</label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={garminEmail}
-                onChange={(event) => setGarminEmail(event.target.value)}
-                disabled={garminImporting}
-                required
-                autoComplete="username"
-              />
-            </div>
+            <section className="garmin-import-panel">
+              <div className="garmin-import-panel-head">
+                <div className="garmin-import-panel-copy">
+                  <span>{t('profile.garmin_connect_import')}</span>
+                  <strong>{t('profile.garmin_connect_modal_title')}</strong>
+                  <p>{garminLane.credentialsNote}</p>
+                </div>
+                <span className={`garmin-import-pill garmin-import-pill--${garminLane.tone}`}>{garminLane.eyebrow}</span>
+              </div>
 
-            <div className="garmin-import-field">
-              <label className="modal-label">{t('profile.garmin_connect_password_label')}</label>
-              <input
-                type="password"
-                value={garminPassword}
-                onChange={(event) => setGarminPassword(event.target.value)}
-                disabled={garminImporting}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-          </div>
+              <div className="garmin-import-field-grid">
+                <div className="garmin-import-field">
+                  <label className="modal-label">{t('profile.garmin_connect_email_label')}</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={garminEmail}
+                    onChange={(event) => setGarminEmail(event.target.value)}
+                    disabled={garminImporting}
+                    required
+                    autoComplete="username"
+                  />
+                </div>
 
-          <div className="garmin-import-field">
-            <label className="modal-label">{t('profile.garmin_connect_limit_label')}</label>
-            <select
-              value={garminLimit}
-              onChange={(event) => setGarminLimit(Number(event.target.value))}
-              disabled={garminImporting}
-              className="garmin-import-limit"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-              <option value={200}>200</option>
-            </select>
-          </div>
+                <div className="garmin-import-field">
+                  <label className="modal-label">{t('profile.garmin_connect_password_label')}</label>
+                  <input
+                    type="password"
+                    value={garminPassword}
+                    onChange={(event) => setGarminPassword(event.target.value)}
+                    disabled={garminImporting}
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+              </div>
 
-          {garminStatus ? (
-            <div className={`garmin-import-status garmin-import-status--${garminStatusType || 'info'}`}>
-              {garminStatus}
-            </div>
-          ) : null}
+              <div className="garmin-import-field garmin-import-field--limit">
+                <div className="garmin-import-field-head">
+                  <label className="modal-label">{t('profile.garmin_connect_limit_label')}</label>
+                  <span className="garmin-import-field-meta">10 - 200</span>
+                </div>
+                <select
+                  value={garminLimit}
+                  onChange={(event) => setGarminLimit(Number(event.target.value))}
+                  disabled={garminImporting}
+                  className="garmin-import-limit"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={200}>200</option>
+                </select>
+              </div>
 
-          <div className="modal-actions garmin-import-actions">
-            <button
-              type="button"
-              className="btn-secondary modal-button"
-              onClick={() => { if (!garminImporting) setActiveModal(null); }}
-              disabled={garminImporting}
-            >
-              {t('profile.cancel')}
-            </button>
-            <button
-              type="submit"
-              className="btn-primary modal-button"
-              disabled={garminImporting || !garminEmail.trim() || !garminPassword.trim()}
-            >
-              {garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_start')}
-            </button>
-          </div>
+              <div className="garmin-import-secondary">
+                <div className="garmin-import-secondary-copy">
+                  <strong>{garminLane.manualLabel}</strong>
+                  <span>{garminLane.manualValue}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary modal-button garmin-import-secondary-button"
+                  onClick={openManualImportFromGarmin}
+                  disabled={garminImporting}
+                >
+                  {garminLane.manualLabel}
+                </button>
+              </div>
 
-          <div className="garmin-import-secondary">
-            <span>{t('settings.stitch_manual_import_hint')}</span>
-            <button
-              type="button"
-              className="btn-secondary modal-button garmin-import-secondary-button"
-              onClick={openManualImportFromGarmin}
-              disabled={garminImporting}
-            >
-              {t('profile.watch_import_files')}
-            </button>
+              <div className="modal-actions garmin-import-actions">
+                <button
+                  type="button"
+                  className="btn-secondary modal-button"
+                  onClick={() => { if (!garminImporting) setActiveModal(null); }}
+                  disabled={garminImporting}
+                >
+                  {t('profile.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary modal-button"
+                  disabled={garminImporting || !garminEmail.trim() || !garminPassword.trim()}
+                >
+                  {garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_start')}
+                </button>
+              </div>
+            </section>
           </div>
         </form>
       </Modal>

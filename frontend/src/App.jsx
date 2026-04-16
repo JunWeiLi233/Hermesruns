@@ -16,6 +16,7 @@ const Runs = React.lazy(() => import('./pages/Runs'));
 const RunDetail = React.lazy(() => import('./pages/RunDetail'));
 const Analysis = React.lazy(() => import('./pages/Analysis'));
 const Heatmap = React.lazy(() => import('./pages/Heatmap'));
+const WeatherEngine = React.lazy(() => import('./pages/WeatherEngine'));
 const AnalysisInsightDetail = React.lazy(() => import('./pages/AnalysisInsightDetail'));
 const Vo2MaxDetail = React.lazy(() => import('./pages/Vo2MaxDetail'));
 const AddShoes = React.lazy(() => import('./pages/AddShoes'));
@@ -97,6 +98,7 @@ function App() {
                 <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
                 <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
                 <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
+                <Route path="/weather-engine" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />
                 <Route path="/analysis/vo2max" element={<UserOnlyRoute><Vo2MaxDetail /></UserOnlyRoute>} />
                 <Route path="/analysis/:insightKey" element={<UserOnlyRoute><AnalysisInsightDetail /></UserOnlyRoute>} />
                 <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />

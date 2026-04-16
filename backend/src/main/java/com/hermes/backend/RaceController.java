@@ -57,6 +57,34 @@ public class RaceController {
         return ResponseEntity.ok(races);
     }
 
+    @GetMapping("/saved-status")
+    public ResponseEntity<?> savedStatus(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("name") String name
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        try {
+            if (name == null || name.trim().isBlank()) {
+                return error(HttpStatus.BAD_REQUEST, "Race name is required.");
+            }
+            String normalizedName = name.trim();
+            InputSanitizer.rejectControlAndHtmlChars(normalizedName, "name");
+
+            Optional<RaceEvent> raceOptional =
+                    raceEventRepository.findFirstByRunnerAndNameIgnoreCaseOrderByEventDateAsc(runnerOptional.get(), normalizedName);
+            return ResponseEntity.ok(new SavedRaceStatusResponse(
+                    raceOptional.isPresent(),
+                    raceOptional.map(RaceEvent::getId).orElse(null)
+            ));
+        } catch (IllegalArgumentException error) {
+            return error(HttpStatus.BAD_REQUEST, error.getMessage());
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> create(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
@@ -469,6 +497,12 @@ public class RaceController {
             boolean completed,
             long countdownDays,
             LinkedActivitySummary matchedActivity
+    ) {
+    }
+
+    public record SavedRaceStatusResponse(
+            boolean saved,
+            Long raceId
     ) {
     }
 }

@@ -30,6 +30,7 @@ public class SpaForwardingController {
         "/run",
         "/run/{id}",
         "/analysis",
+        "/weather-engine",
         "/analysis/{insightKey}",
         "/prediction/{distKey}",
         "/today-run",

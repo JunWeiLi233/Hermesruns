@@ -235,6 +235,40 @@ function formatPaceForDisplay(paceSecPerKm, unit, t) {
   return `${mins}:${secs}/${unit === 'mile' ? t('analysis.unit_distance_mile') : t('analysis.unit_distance_km')}`;
 }
 
+function formatRotationDateValue(timestamp, lang) {
+  if (!timestamp) return lang === 'zh-CN' ? '还没有已标记记录' : 'no tagged run yet';
+
+  const now = new Date();
+  const date = new Date(timestamp);
+  const sameYear = now.getFullYear() === date.getFullYear();
+  return new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', sameYear
+    ? { month: 'short', day: 'numeric' }
+    : { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+}
+
+function formatRotationUsageValue(count, total, lang) {
+  if (!total) {
+    return lang === 'zh-CN'
+      ? `最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天还没有已标记跑步`
+      : `no shoe-tagged runs in the last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days`;
+  }
+
+  return lang === 'zh-CN'
+    ? `最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天 ${count}/${total} 次已标记跑步`
+    : `${count} of ${total} shoe-tagged runs in the last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days`;
+}
+
+function formatMileageLeftValue(currentKm, maxKm, unit, distanceUnitLabel, lang) {
+  if (!maxKm || maxKm <= 0) return lang === 'zh-CN' ? '未设置寿命上限' : 'lifecycle cap not set';
+
+  const remainingKm = Math.max(0, Number(maxKm || 0) - Number(currentKm || 0));
+  if (remainingKm <= 0) return lang === 'zh-CN' ? '已到寿命上限' : 'lifecycle cap reached';
+
+  return lang === 'zh-CN'
+    ? `约 ${formatDistanceValue(remainingKm, unit, 0)} ${distanceUnitLabel}`
+    : `about ${formatDistanceValue(remainingKm, unit, 0)} ${distanceUnitLabel}`;
+}
+
 function matchesInventoryCategory(shoe, category) {
   if (!category || category === 'all') return true;
   if (category === 'daily') return ['daily', 'stability'].includes(shoe?.type);
@@ -447,9 +481,9 @@ export default function Shoes() {
   // Stats
   const activeShoes = shoes.filter(s => !s.retired);
   const retiredShoes = shoes.filter(s => s.retired);
-  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs), [shoes, runs]);
-  const recentPerformanceRuns = shoeSignal.recentPerformanceRuns;
-  const performanceFallback = shoeSignal.recommendation;
+  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
+  const recentRunsWindow = shoeSignal.recentRuns;
+  const performanceFallback = shoeSignal.recommendation?.type === 'recommend' ? null : shoeSignal.recommendation;
   const shoePerformanceInsights = useMemo(() => {
     const topInsight = shoeSignal.performanceInsights.topInsight;
     if (!topInsight) return shoeSignal.performanceInsights;
@@ -474,6 +508,24 @@ export default function Shoes() {
       },
     };
   }, [lang, shoeSignal.performanceInsights, shoes, t, unit]);
+  const recentTaggedRuns = useMemo(
+    () => recentRunsWindow.filter((run) => run?.shoeId),
+    [recentRunsWindow],
+  );
+  const recentUsageByShoe = useMemo(() => {
+    const usage = new Map();
+    for (const run of recentTaggedRuns) {
+      const shoeId = run?.shoeId;
+      if (!shoeId) continue;
+      const nextStamp = getRunTimestamp(run);
+      const existing = usage.get(shoeId) || { count: 0, latest: 0 };
+      usage.set(shoeId, {
+        count: existing.count + 1,
+        latest: Math.max(existing.latest, nextStamp),
+      });
+    }
+    return usage;
+  }, [recentTaggedRuns]);
   const usageByShoe = useMemo(() => {
     const usage = new Map();
     for (const run of runs) {
@@ -493,85 +545,120 @@ export default function Shoes() {
     ? `最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天`
     : `Last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days`;
   const recentSignalCopy = lang === 'zh-CN'
-    ? '优先看最近 21 天里同配速下的心率和步频变化，再判断哪双鞋更省力。'
-    : 'Reads the last 21 days first, then compares heart rate and cadence at matched paces so your rotation advice reflects your current training block.';
+    ? '今天的选鞋先看同配速下的效率信号；如果信心不够，再退回到上次穿着、最近使用频次和剩余寿命。'
+    : 'Today’s pick leans on matched-pace efficiency first, then falls back to last worn, recent tagged usage, and mileage left when the rotation read is thin.';
   const recentRotationEmpty = lang === 'zh-CN'
-    ? '先在最近几周里给跑步记录标记鞋子，这里才会开始给出可信的轮换判断。'
-    : 'Tag a few runs with shoes over the next few weeks and Hermes will start surfacing a trustworthy recent-rotation signal here.';
-  const recentRotationSummary = performanceFallback?.type === 'rotation'
-    ? (lang === 'zh-CN'
-      ? `这双鞋在最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天承接了你最多的已标记跑步，共 ${performanceFallback.runCount} 次，平均配速约 ${formatPaceForDisplay(performanceFallback.avgPace, unit, t)}。`
-      : `This pair handled the most shoe-tagged work in your last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days: ${performanceFallback.runCount} runs at about ${formatPaceForDisplay(performanceFallback.avgPace, unit, t)}.`)
-    : '';
-  const recentRotationMeta = performanceFallback?.type === 'rotation'
-    ? (lang === 'zh-CN'
-      ? `最近窗口共 ${performanceFallback.totalRecentRuns} 次跑步`
-      : `${performanceFallback.totalRecentRuns} total runs in this recent block`)
-    : '';
+    ? (activeShoes.length > 0
+      ? 'Hermes 还不能高置信地区分今天该穿哪双鞋。先把最近几次跑步标记到鞋子上，这里才会给出可信的轮换证据。'
+      : '先添加一双正在穿的鞋，再把最近跑步标记到鞋子上，Hermes 才能解释今天该穿哪双。')
+    : (activeShoes.length > 0
+      ? 'Hermes cannot separate today’s shoe with confidence yet. Tag a few recent runs to your pairs and this strip will start explaining the pick with real rotation evidence.'
+      : 'Add an active pair, then tag a few recent runs to shoes so Hermes can explain today’s pick instead of guessing.');
 
-  const rotationSignalFeatureTitle = shoePerformanceInsights.topInsight
-    ? shoePerformanceInsights.topInsight.name
-    : performanceFallback
-      ? (performanceFallback.type === 'recommend'
-        ? `${performanceFallback.shoe.brand} ${performanceFallback.shoe.model}`
-        : formatShoeDisplayName({
-          brand: performanceFallback.shoe.brand,
-          model: performanceFallback.shoe.model,
-          nickname: performanceFallback.shoe.nickname,
-          lang,
-        }))
-      : t('shoes.performance_inline_title');
-  const rotationSignalFeatureSummary = shoePerformanceInsights.topInsight
-    ? shoePerformanceInsights.topInsight.summary
-    : performanceFallback
-      ? (performanceFallback.type === 'recommend'
-        ? t('shoes.perf_recommend_summary', {
-          pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t),
-          note: performanceFallback.shoe.redditNote,
-        })
-        : recentRotationSummary)
-      : recentRotationEmpty;
-  const rotationSignalMetaItems = shoePerformanceInsights.topInsight
+  const rotationSignalShoe = performanceFallback?.shoe || null;
+  const rotationSignalFeatureTitle = rotationSignalShoe
+    ? formatShoeDisplayName({
+      brand: rotationSignalShoe.brand,
+      model: rotationSignalShoe.model,
+      nickname: rotationSignalShoe.nickname,
+      lang,
+    })
+    : t('shoes.performance_inline_title');
+  const rotationSignalUsage = rotationSignalShoe?.id
+    ? (usageByShoe.get(rotationSignalShoe.id) || { count: 0, latest: 0 })
+    : { count: 0, latest: 0 };
+  const rotationSignalRecentUsage = rotationSignalShoe?.id
+    ? (recentUsageByShoe.get(rotationSignalShoe.id) || { count: 0, latest: 0 })
+    : { count: 0, latest: 0 };
+  const rotationSignalLastWornItem = rotationSignalShoe
+    ? (lang === 'zh-CN'
+      ? `上次穿着：${formatRotationDateValue(rotationSignalUsage.latest, lang)}`
+      : `Last worn: ${formatRotationDateValue(rotationSignalUsage.latest, lang)}`)
+    : null;
+  const rotationSignalRecentUsageItem = rotationSignalShoe
+    ? (lang === 'zh-CN'
+      ? `最近使用：${formatRotationUsageValue(rotationSignalRecentUsage.count, recentTaggedRuns.length, lang)}`
+      : `Recent usage: ${formatRotationUsageValue(rotationSignalRecentUsage.count, recentTaggedRuns.length, lang)}`)
+    : null;
+  const rotationSignalMileageLeftItem = rotationSignalShoe
+    ? (lang === 'zh-CN'
+      ? `里程余量：${formatMileageLeftValue(rotationSignalShoe.currentDistanceKm, rotationSignalShoe.maxDistanceKm, unit, distanceUnitLabel, lang)}`
+      : `Mileage left: ${formatMileageLeftValue(rotationSignalShoe.currentDistanceKm, rotationSignalShoe.maxDistanceKm, unit, distanceUnitLabel, lang)}`)
+    : null;
+  const rotationSignalEvidenceSentence = rotationSignalShoe
+    ? (lang === 'zh-CN'
+      ? `${rotationSignalLastWornItem}；${rotationSignalRecentUsageItem}；${rotationSignalMileageLeftItem}。`
+      : `${rotationSignalLastWornItem}. ${rotationSignalRecentUsageItem}. ${rotationSignalMileageLeftItem}.`)
+    : '';
+  const rotationSignalFeatureSummary = performanceFallback?.type === 'insight'
+    ? `${shoePerformanceInsights.topInsight.summary} ${rotationSignalEvidenceSentence}`.trim()
+    : performanceFallback?.type === 'rotation'
+      ? (lang === 'zh-CN'
+        ? `Hermes 还没有看到绝对更省力的那双，所以今天先沿用这双最稳妥。${rotationSignalEvidenceSentence}`
+        : `Hermes is not seeing a clean efficiency winner today, so this pair gets the nod from your current rotation. ${rotationSignalEvidenceSentence}`)
+      : performanceFallback?.type === 'primary'
+        ? (lang === 'zh-CN'
+          ? `Hermes 还不能高置信地区分今天该穿哪双鞋，所以先回退到你的主力鞋。${rotationSignalEvidenceSentence}继续标记最近跑步，下一次建议会更可靠。`
+          : `Hermes cannot split today’s rotation with confidence yet, so it falls back to your primary pair for now. ${rotationSignalEvidenceSentence}Keep tagging recent runs and the next pick will get sharper.`)
+        : recentRotationEmpty;
+  const rotationSignalMetaItems = performanceFallback
     ? [
-      t('shoes.performance_sample', { count: shoePerformanceInsights.topInsight.sampleCount }),
-      t('shoes.performance_compare_sample', { count: shoePerformanceInsights.topInsight.compareCount }),
-      shoePerformanceInsights.topInsight.cadenceDelta != null
+      rotationSignalLastWornItem,
+      rotationSignalRecentUsageItem,
+      rotationSignalMileageLeftItem,
+      performanceFallback.type === 'insight'
+        ? t('shoes.performance_sample', { count: shoePerformanceInsights.topInsight.sampleCount })
+        : null,
+      performanceFallback.type === 'insight'
+        ? t('shoes.performance_compare_sample', { count: shoePerformanceInsights.topInsight.compareCount })
+        : null,
+      performanceFallback.type === 'insight' && shoePerformanceInsights.topInsight.cadenceDelta != null
         ? t('shoes.performance_cadence_delta', { value: `${shoePerformanceInsights.topInsight.cadenceDelta > 0 ? '+' : ''}${shoePerformanceInsights.topInsight.cadenceDelta.toFixed(1)}` })
         : null,
-    ].filter(Boolean)
-    : performanceFallback
-      ? [
-        t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) }),
-        t('shoes.perf_based_on_runs', { count: performanceFallback.runCount }),
-        performanceFallback.type === 'rotation' ? recentRotationMeta : null,
-      ].filter(Boolean)
-      : [];
-  const rotationSignalSideTitle = shoePerformanceInsights.topInsight
-    ? (shoePerformanceInsights.topInsight.positive
-      ? t('shoes.performance_badge_gain')
-      : t('shoes.performance_badge_watch'))
-    : performanceFallback?.type === 'recommend'
-      ? t('shoes.performance_badge_watch')
-      : recentWindowLabel;
-  const rotationSignalSideCopy = shoePerformanceInsights.topInsight
-    ? t('shoes.perf_based_on_runs', { count: recentPerformanceRuns.length })
-    : performanceFallback?.type === 'rotation'
-      ? recentRotationMeta
-      : performanceFallback
+      performanceFallback.avgPace != null
         ? t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })
+        : null,
+    ].filter(Boolean)
+    : [];
+  const rotationSignalSideTitle = performanceFallback?.type === 'insight'
+    ? (lang === 'zh-CN' ? '高置信建议' : 'High confidence')
+    : performanceFallback?.type === 'rotation'
+      ? (lang === 'zh-CN' ? '轮换证据' : 'Rotation evidence')
+      : performanceFallback?.type === 'primary'
+        ? (lang === 'zh-CN' ? '保守回退' : 'Fallback mode')
+        : recentWindowLabel;
+  const rotationSignalSideCopy = performanceFallback?.type === 'insight'
+    ? (lang === 'zh-CN'
+      ? '同配速下的心率优势和当前轮换证据同时指向这双。'
+      : 'Matched-pace heart-rate gains and current rotation evidence both point to this pair.')
+    : performanceFallback?.type === 'rotation'
+      ? (lang === 'zh-CN'
+        ? '今天先按最近轮换证据和剩余寿命保守选择。'
+        : 'Today’s pick leans on recent rotation usage and remaining life rather than a stronger performance edge.')
+      : performanceFallback?.type === 'primary'
+        ? (lang === 'zh-CN'
+          ? '现在先用主力鞋兜底，等最近跑步标记更完整后再升级成真实推荐。'
+          : 'Hermes is staying conservative with your primary pair until the recent tagged data is strong enough for a real recommendation.')
         : recentRotationEmpty;
   const rotationSignalAvgPace = shoePerformanceInsights.topInsight?.paceSecPerKm ?? performanceFallback?.avgPace ?? null;
-  const rotationSignalTotalDistance = recentPerformanceRuns.reduce((sum, run) => sum + kmOf(run), 0);
-  const rotationSignalHighlightLabel = lang === 'zh-CN' ? '表现洞察 / Performance Insights' : 'Performance Insights';
-  const rotationSignalSourceLabel = performanceFallback?.type === 'recommend'
-    ? 'r/RunningShoeGeeks'
-    : 'Hermes rotation read';
-  const rotationSignalSourceHref = performanceFallback?.type === 'recommend'
-    ? 'https://www.reddit.com/r/RunningShoeGeeks/'
-    : null;
+  const rotationSignalTotalDistance = recentTaggedRuns.reduce((sum, run) => sum + kmOf(run), 0);
+  const rotationSignalHighlightLabel = performanceFallback?.type === 'primary'
+    ? (lang === 'zh-CN' ? '今日保守选择' : 'Today’s safe fallback')
+    : (lang === 'zh-CN' ? '今日跑鞋建议' : 'Today’s shoe pick');
+  const rotationSignalSourceLabel = performanceFallback?.type === 'primary'
+    ? (lang === 'zh-CN' ? 'Hermes 回退逻辑' : 'Hermes confidence fallback')
+    : (lang === 'zh-CN' ? 'Hermes 轮换判断' : 'Hermes rotation read');
+  const rotationSignalSourceHref = null;
+  const rotationSignalStatusPill = performanceFallback?.type === 'insight'
+    ? { label: lang === 'zh-CN' ? '高置信' : 'Confident pick', className: ' is-positive' }
+    : performanceFallback?.type === 'rotation'
+      ? { label: lang === 'zh-CN' ? '轮换证据' : 'Rotation evidence', className: ' is-watch' }
+      : performanceFallback?.type === 'primary'
+        ? { label: lang === 'zh-CN' ? '保守回退' : 'Fallback', className: ' is-watch' }
+        : null;
 
   const renderRotationSignal = (inside = false) => (
-    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && performanceFallback?.type === 'recommend' ? ' is-recommend' : ''}${isRotationSignalCollapsed ? ' is-collapsed' : ''}`}>
+    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && performanceFallback?.type === 'primary' ? ' is-recommend' : ''}${isRotationSignalCollapsed ? ' is-collapsed' : ''}`}>
       <div className="shoe-rotation-signal-head">
         <div className="shoe-rotation-signal-copy">
           <span className="shoe-inventory-panel-kicker">{t('shoes.performance_inline_title')}</span>
@@ -580,12 +667,14 @@ export default function Shoes() {
         </div>
         <div className="shoe-rotation-signal-pills">
           <span className="shoe-rotation-signal-pill">{recentWindowLabel}</span>
-          <span className="shoe-rotation-signal-pill is-soft">{t('shoes.perf_based_on_runs', { count: recentPerformanceRuns.length })}</span>
-          {shoePerformanceInsights.topInsight && (
-            <span className={`shoe-rotation-signal-pill${shoePerformanceInsights.topInsight.positive ? ' is-positive' : ' is-watch'}`}>
-              {shoePerformanceInsights.topInsight.positive
-                ? t('shoes.performance_badge_gain')
-                : t('shoes.performance_badge_watch')}
+          <span className="shoe-rotation-signal-pill is-soft">
+            {lang === 'zh-CN'
+              ? `最近 ${recentTaggedRuns.length} 次已标记跑步`
+              : `${recentTaggedRuns.length} recent tagged runs`}
+          </span>
+          {rotationSignalStatusPill && (
+            <span className={`shoe-rotation-signal-pill${rotationSignalStatusPill.className}`}>
+              {rotationSignalStatusPill.label}
             </span>
           )}
           <button
@@ -616,12 +705,6 @@ export default function Shoes() {
                 <strong>{rotationSignalFeatureTitle}</strong>
                 <div className="shoe-rotation-signal-highlight-summary">
                   <p>{rotationSignalFeatureSummary}</p>
-                  {performanceFallback?.type === 'recommend' && (
-                    <div className="shoe-rotation-signal-community">
-                      <span className="shoe-rotation-signal-community-name">r/RunningShoeGeeks</span>
-                      <span className="shoe-rotation-signal-community-pill">max cushion pick</span>
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="shoe-rotation-signal-highlight-rail" aria-hidden="true" />
@@ -640,12 +723,12 @@ export default function Shoes() {
               </div>
               <div className="shoe-rotation-signal-meta">
                 <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
-                  <small>{lang === 'zh-CN' ? '总公里数' : 'Total distance'}</small>
-                  <strong>{formatDistanceValue(rotationSignalTotalDistance, unit)} {getDistanceUnitLabel(unit)}</strong>
+                  <small>{lang === 'zh-CN' ? '已标记总公里数' : 'Tagged distance'}</small>
+                  <strong>{formatDistanceValue(rotationSignalTotalDistance, unit)} {distanceUnitLabel}</strong>
                 </span>
                 <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
-                  <small>{lang === 'zh-CN' ? '跑步频次' : 'Run count'}</small>
-                  <strong>{lang === 'zh-CN' ? `${recentPerformanceRuns.length} 次` : `${recentPerformanceRuns.length} runs`}</strong>
+                  <small>{lang === 'zh-CN' ? '已标记跑步' : 'Tagged runs'}</small>
+                  <strong>{lang === 'zh-CN' ? `${recentTaggedRuns.length} 次` : `${recentTaggedRuns.length} runs`}</strong>
                 </span>
               </div>
               <div className="shoe-rotation-signal-detail-list">

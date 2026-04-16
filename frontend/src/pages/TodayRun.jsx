@@ -377,11 +377,33 @@ export default function TodayRun() {
   );
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
+  const stamina = useMemo(() => {
+    const s = coachPayload?.state?.stamina;
+    if (s) {
+      return {
+        ...s,
+        scorePercent: Math.max(0, Math.min(100, Number(s.scorePercent || 0))),
+        recoveryCapPercent: Math.max(0, Math.min(100, Number(s.recoveryCapPercent || 0))),
+      };
+    }
+    return {
+      scorePercent: readinessBattery,
+      recoveryCapPercent: Math.min(100, readinessBattery + 2),
+      targetHeartRateBpm: null,
+      direction: 'steady',
+    };
+  }, [coachPayload, readinessBattery]);
+
+  const staminaScorePercent = stamina.scorePercent;
+  const staminaCapPercent = stamina.recoveryCapPercent;
+  const staminaHeartLabel = stamina.targetHeartRateBpm != null ? String(stamina.targetHeartRateBpm) : '--';
+
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
+    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气引擎' : 'Weather Engine', route: '/weather-engine', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
@@ -549,16 +571,16 @@ export default function TodayRun() {
                   </strong>
                 </article>
                 <article>
+                  <span>{t('today_run.stamina_score')}</span>
+                  <strong>{staminaScorePercent}%</strong>
+                </article>
+                <article>
                   <span>{t('today_run.metric_vo2max')}</span>
                   <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
                 </article>
                 <article>
                   <span>{t('today_run.metric_acwr')}</span>
                   <strong>{metrics.acwr !== null ? metrics.acwr.toFixed(2) : '--'}</strong>
-                </article>
-                <article>
-                  <span>{t('today_run.stitch_load_7d')}</span>
-                  <strong>{formatDistance(metrics.recent7Km || 0, 1, lang, unit)}</strong>
                 </article>
               </div>
             </aside>
@@ -645,6 +667,14 @@ export default function TodayRun() {
                         ? `${(coachPayload.state.highIntensityRatioLast7d * 100).toFixed(0)}%`
                         : '--'}
                     </strong>
+                  </article>
+                  <article>
+                    <span>{t('today_run.stamina_recovery_cap')}</span>
+                    <strong>{staminaCapPercent}%</strong>
+                  </article>
+                  <article>
+                    <span>{t('today_run.stamina_target_hr')}</span>
+                    <strong>{staminaHeartLabel} {staminaHeartLabel !== '--' ? 'bpm' : ''}</strong>
                   </article>
                   <article>
                     <span>{t('today_run.coach_grey_zone')}</span>

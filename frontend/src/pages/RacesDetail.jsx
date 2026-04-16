@@ -16,6 +16,7 @@ import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../utils/vdot';
 import { resolveRaceIntel } from '../utils/raceIntel';
 import worldRaceCatalog from '../data/worldRaceCatalog';
 import { getCachedRaceImage, resolveRaceImage } from '../utils/raceImage';
+import { shouldFetchRaceElevationProfile } from '../utils/raceDetailRequestPolicy';
 
 const DEFAULT_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuAF-j8MVIZBaOa4qq1rYw7hnzMPZGyRTeaO7f5ojhfDSBPjz6qfENN3s8WjkUPksPxWqm5Ou9DlpJo50YGOg2UBflxkDa4KDh242OhPDsAcvArSXG_zW7rNjkFksE1UWJY2ki4AO2WYkbwVzRkboLxOgkaWRa_KhIs_Dc2pFWpFAG2jXxtcQ-1nBEsFwRTbNGOQQ966BWFfSM2WQabYKQuiK1MvWc5Cwq_3GzbEmLfQBtieNgbCMSZtLNIe5hGE1fGulcEWmAha60-4';
 const EVENT_DAY_OVERRIDES = {
@@ -284,10 +285,10 @@ export default function RacesDetail() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [savedRaces, setSavedRaces] = useState([]);
-  const [loadState, setLoadState] = useState('loading');
+  const [savedRace, setSavedRace] = useState(false);
   const [resolvedHeroImage, setResolvedHeroImage] = useState(() => getCachedRaceImage(location.state?.race || worldRaceCatalog.find((entry) => entry.id === raceId) || null).imageUrl || '');
   const [courseMapData, setCourseMapData] = useState(EMPTY_COURSE_MAP);
+  const [courseMapRequestSettled, setCourseMapRequestSettled] = useState(false);
   const [elevationProfileImage, setElevationProfileImage] = useState('');
   const [elevationProfileSource, setElevationProfileSource] = useState('');
   const [elevationProfileSamples, setElevationProfileSamples] = useState([]);
@@ -307,10 +308,12 @@ export default function RacesDetail() {
     let cancelled = false;
     if (!isAuthenticated || !race?.name) {
       setCourseMapData(EMPTY_COURSE_MAP);
+      setCourseMapRequestSettled(false);
       return undefined;
     }
 
     setCourseMapData(EMPTY_COURSE_MAP);
+    setCourseMapRequestSettled(false);
 
     (async () => {
       try {
@@ -327,10 +330,12 @@ export default function RacesDetail() {
         const data = await apiJson(`/api/races/course-map?${params.toString()}`);
         if (!cancelled) {
           setCourseMapData(normalizeCourseMapPayload(data));
+          setCourseMapRequestSettled(true);
         }
       } catch {
         if (!cancelled) {
           setCourseMapData(EMPTY_COURSE_MAP);
+          setCourseMapRequestSettled(true);
         }
       }
     })();
@@ -342,7 +347,20 @@ export default function RacesDetail() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!isAuthenticated || !race?.name) return undefined;
+    const hasAlignedElevationSamples = courseMapData.elevationSamples.length > 0;
+    const shouldFetch = shouldFetchRaceElevationProfile({
+      isAuthenticated,
+      raceName: race?.name,
+      courseMapRequestSettled,
+      hasAlignedElevationSamples,
+    });
+
+    if (!shouldFetch) {
+      setElevationProfileImage('');
+      setElevationProfileSource('');
+      setElevationProfileSamples([]);
+      return undefined;
+    }
 
     (async () => {
       try {
@@ -370,9 +388,40 @@ export default function RacesDetail() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, race]);
+  }, [courseMapData.elevationSamples.length, courseMapRequestSettled, isAuthenticated, race]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (!isAuthenticated || !race?.name) {
+      setSavedRace(false);
+      return undefined;
+    }
+
+    setSavedRace(false);
+
+    (async () => {
+      try {
+        const params = new URLSearchParams({
+          name: race.name,
+        });
+        const data = await apiJson(`/api/races/saved-status?${params.toString()}`);
+        if (!cancelled) {
+          setSavedRace(data?.saved === true);
+        }
+      } catch {
+        if (!cancelled) {
+          setSavedRace(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, race?.name]);
+
+  useEffect(() => {
+    let cancelled = false;
     if (!isAuthenticated) {
       navigate('/login');
       return;
@@ -383,23 +432,25 @@ export default function RacesDetail() {
     }
 
     (async () => {
-      setLoadState('loading');
       try {
-        const [profileData, activities, raceData] = await Promise.all([
+        const [profileData, activities] = await Promise.all([
           apiJson('/api/profile/me').catch(() => null),
-          apiJson('/api/activities'),
-          apiJson('/api/races').catch(() => []),
+          apiJson('/api/activities/analysis').catch(() => []),
         ]);
+        if (cancelled) return;
         const runList = Array.isArray(activities) ? activities : [];
         runList.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
         setProfile(profileData || null);
         setRuns(runList);
-        setSavedRaces(Array.isArray(raceData) ? raceData : []);
-        setLoadState('ready');
       } catch {
-        setLoadState('error');
+        if (cancelled) return;
+        setProfile(null);
+        setRuns([]);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, navigate, race]);
 
   useEffect(() => {
@@ -517,7 +568,6 @@ export default function RacesDetail() {
     setActiveElevationPointIndex(nearestIndex);
   }
 
-  const savedRace = useMemo(() => savedRaces.find((entry) => entry.name === race?.name || entry.id === race?.id), [race, savedRaces]);
   const readinessItems = useMemo(() => ([
     {
       key: 'plan',
@@ -681,12 +731,8 @@ export default function RacesDetail() {
     };
   }, [courseMapData.imageUrl, courseMapData.overlayBounds, hasAlignedOverlay, hasAlignedRoute, mapCenter, race, routeMapPoints]);
 
-  if (loadState === 'loading') {
+  if (!isAuthenticated || !race) {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.loading')}</div></div>;
-  }
-
-  if (loadState === 'error') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.load_error')}</div></div>;
   }
 
   return (
@@ -930,11 +976,12 @@ export default function RacesDetail() {
 
               <section className="race-detail-lower-grid">
                 <article className="race-detail-map-card">
-                  <div
-                    ref={routeMapRef}
-                    className={`race-detail-map-canvas${routeMapReady ? ' is-ready' : ''}${hasAlignedOverlay ? ' has-aligned-overlay' : ''}`}
-                    aria-label={mapCardCopy.title}
-                  />
+                  <div className="race-detail-map-canvas" aria-label={mapCardCopy.title}>
+                    <div
+                      ref={routeMapRef}
+                      className={`race-detail-map-leaflet${routeMapReady ? ' is-ready' : ''}${hasAlignedOverlay ? ' has-aligned-overlay' : ''}`}
+                    />
+                  </div>
                   <div className={`race-detail-map-overlay${hasAlignedOverlay ? ' is-ai-overlay' : ''}`} />
                   <div className="race-detail-map-copy">
                     <span>{mapCardCopy.badge}</span>

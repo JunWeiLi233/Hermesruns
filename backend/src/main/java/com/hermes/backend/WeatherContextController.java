@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -24,10 +25,20 @@ public class WeatherContextController {
     public ResponseEntity<?> getContext(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
         if (runnerOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+            return error(HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
         }
 
-        AcclimatizationService.WeatherContextResponse response = acclimatizationService.buildContext(runnerOpt.get());
-        return ResponseEntity.ok(response);
+        try {
+            AcclimatizationService.WeatherContextResponse response = acclimatizationService.buildContext(runnerOpt.get());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException exception) {
+            return error(HttpStatus.BAD_REQUEST, exception.getMessage());
+        } catch (Exception exception) {
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "Server error");
+        }
+    }
+
+    private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(Map.of("error", message));
     }
 }

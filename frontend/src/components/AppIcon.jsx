@@ -371,7 +371,28 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m17.7 6.3 1.4-1.4" />
         </>
       );
-    case 'contrast':
+    case 'thermostat':
+      return titled(
+        <>
+          <path d="M10.5 5.5a1.5 1.5 0 1 1 3 0v7.1a4.1 4.1 0 1 1-3 0Z" />
+          <path d="M12 14.2v4.3" />
+          <path d="M12 18.5a2 2 0 1 0 0 .1Z" />
+        </>
+      );
+    case 'water_drop':
+      return titled(
+        <>
+          <path d="M12 4.5c2.9 3.4 4.6 5.8 4.6 8.4A4.6 4.6 0 0 1 12 17.5a4.6 4.6 0 0 1-4.6-4.6c0-2.6 1.7-5 4.6-8.4Z" />
+        </>
+      );
+    case 'air':
+      return titled(
+        <>
+          <path d="M4 10.5h11a2.5 2.5 0 1 0-2.4-3.2" />
+          <path d="M4 14h13a2.5 2.5 0 1 1-2.4 3.2" />
+          <path d="M4 17.5h7" />
+        </>
+      );    case 'contrast':
       return titled(
         <>
           <circle cx="12" cy="12" r="8.5" />

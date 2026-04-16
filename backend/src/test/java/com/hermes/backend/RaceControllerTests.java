@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class RaceControllerTests {
@@ -26,6 +27,92 @@ class RaceControllerTests {
         ResponseEntity<?> response = controller.list(null);
 
         assertError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
+    }
+
+    @Test
+    void savedStatusRejectsMissingAuthorization() {
+        AuthService authService = mock(AuthService.class);
+        when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
+        RaceController controller = createController(authService);
+
+        ResponseEntity<?> response = controller.savedStatus(null, "Boston Marathon");
+
+        assertError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
+    }
+
+    @Test
+    void savedStatusRejectsBlankRaceName() {
+        AuthService authService = mock(AuthService.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        RaceController controller = createController(authService);
+
+        ResponseEntity<?> response = controller.savedStatus("Bearer runner-token", "   ");
+
+        assertError(response, HttpStatus.BAD_REQUEST, "Race name is required.");
+    }
+
+    @Test
+    void savedStatusReturnsSavedRaceSummaryWhenRaceExists() {
+        AuthService authService = mock(AuthService.class);
+        RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        Runner runner = runner();
+        RaceEvent raceEvent = new RaceEvent();
+        raceEvent.setId(42L);
+        raceEvent.setRunner(runner);
+        raceEvent.setName("Boston Marathon");
+        raceEvent.setEventDate(LocalDate.now().plusMonths(1));
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(raceEventRepository.findFirstByRunnerAndNameIgnoreCaseOrderByEventDateAsc(runner, "Boston Marathon"))
+                .thenReturn(Optional.of(raceEvent));
+        RaceController controller = new RaceController(
+                authService,
+                raceEventRepository,
+                activityRepository,
+                mock(RaceOfficialImageService.class),
+                mock(RaceElevationProfileService.class),
+                mock(RaceCourseMapService.class)
+        );
+
+        ResponseEntity<?> response = controller.savedStatus("Bearer runner-token", "  Boston Marathon  ");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(RaceController.SavedRaceStatusResponse.class);
+        RaceController.SavedRaceStatusResponse payload = (RaceController.SavedRaceStatusResponse) response.getBody();
+        assertThat(payload.saved()).isTrue();
+        assertThat(payload.raceId()).isEqualTo(42L);
+        verify(raceEventRepository).findFirstByRunnerAndNameIgnoreCaseOrderByEventDateAsc(runner, "Boston Marathon");
+        verifyNoInteractions(activityRepository);
+    }
+
+    @Test
+    void savedStatusReturnsNotSavedWhenRaceDoesNotExist() {
+        AuthService authService = mock(AuthService.class);
+        RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(raceEventRepository.findFirstByRunnerAndNameIgnoreCaseOrderByEventDateAsc(runner, "Boston Marathon"))
+                .thenReturn(Optional.empty());
+        RaceController controller = new RaceController(
+                authService,
+                raceEventRepository,
+                activityRepository,
+                mock(RaceOfficialImageService.class),
+                mock(RaceElevationProfileService.class),
+                mock(RaceCourseMapService.class)
+        );
+
+        ResponseEntity<?> response = controller.savedStatus("Bearer runner-token", "Boston Marathon");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(RaceController.SavedRaceStatusResponse.class);
+        RaceController.SavedRaceStatusResponse payload = (RaceController.SavedRaceStatusResponse) response.getBody();
+        assertThat(payload.saved()).isFalse();
+        assertThat(payload.raceId()).isNull();
+        verify(raceEventRepository).findFirstByRunnerAndNameIgnoreCaseOrderByEventDateAsc(runner, "Boston Marathon");
+        verifyNoInteractions(activityRepository);
     }
 
     @Test

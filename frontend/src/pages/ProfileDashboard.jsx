@@ -10,13 +10,17 @@ import Modal from '../components/Modal';
 import FooterNavLinks from '../components/FooterNavLinks';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDate, formatDistance, formatDuration, formatPaceSeconds } from '../utils/format';
+import {
+  buildProgressionAtlas,
+  getNearestProgressionPointIndex,
+  PROGRESSION_TIMEFRAMES,
+} from '../utils/progressionAtlas';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
 import { estimateCurrentVdot, computeVdotTrend } from '../utils/vdot';
 
 const DASHBOARD_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCduh8I3MMazSPbifhs59F6YdwIOS-ZRvW7t_n3qJKHxcqDJP3fep7cglrfaXiwrYYPwPxFtz_ExFJggZD-Cy5WZbURvgfE6h4Bvc2M_XU19LaXiqyfdCoyiRn0Aoln4WxGCgqJqtK1Kn2Mlp-KiHvYvqqeidejVqd75xj0rXOXokd_ePH6X6P2LEuMuuZNA5N5gVErlHBg3f0Qdi_d5PaePI6Fzw8BoDHmloQLsQl4agd74Hb85CXqnA1DUwAI-P6P3oPHBwKS50k8';
 const PR_SNAPSHOT_VERSION = 1;
-const PROGRESSION_TIMEFRAMES = ['day', 'week', 'month', 'year', 'total'];
 
 function getPrSnapshotStorageKey(email) {
   return `hermes_pr_snapshot_${String(email || '').trim().toLowerCase()}`;
@@ -70,12 +74,6 @@ function formatPlannedDuration(minutes) {
   return `${mins}:00`;
 }
 
-function startOfDay(date) {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
 function startOfIsoWeek(date) {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
@@ -83,66 +81,6 @@ function startOfIsoWeek(date) {
   const diff = day === 0 ? -6 : 1 - day;
   copy.setDate(copy.getDate() + diff);
   return copy;
-}
-
-function startOfMonth(date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function startOfYear(date) {
-  return new Date(date.getFullYear(), 0, 1);
-}
-
-function endOfCurrentDay(date) {
-  const copy = new Date(date);
-  copy.setHours(23, 59, 59, 999);
-  return copy;
-}
-
-function getRunStartedAt(run) {
-  return new Date(run?.startTime || run?.startDate || 0);
-}
-
-function formatProgressionWindowLabel(start, end, timeframe, lang) {
-  const locale = lang === 'zh-CN' ? 'zh-CN' : 'en-US';
-  if (!(start instanceof Date) || Number.isNaN(start.getTime())) return '--';
-  if (!(end instanceof Date) || Number.isNaN(end.getTime())) return '--';
-
-  if (timeframe === 'day') {
-    return start.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  if (timeframe === 'week') {
-    const sameYear = start.getFullYear() === end.getFullYear();
-    const startLabel = start.toLocaleDateString(locale, sameYear
-      ? { month: 'short', day: 'numeric' }
-      : { month: 'short', day: 'numeric', year: 'numeric' });
-    const endLabel = end.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
-    return `${startLabel} - ${endLabel}`;
-  }
-
-  if (timeframe === 'month') {
-    return start.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-  }
-
-  if (timeframe === 'year') {
-    return start.toLocaleDateString(locale, { year: 'numeric' });
-  }
-
-  const startLabel = start.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
-  const endLabel = end.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
-  return `${startLabel} - ${endLabel}`;
-}
-
-function formatProgressionAxisLabel(date, timeframe, lang) {
-  const locale = lang === 'zh-CN' ? 'zh-CN' : 'en-US';
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '--';
-
-  if (timeframe === 'year' || timeframe === 'total') {
-    return date.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
-  }
-
-  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 function formatPaceDisplay(secondsPerKm, lang) {
@@ -153,125 +91,6 @@ function formatPaceDisplay(secondsPerKm, lang) {
 function formatElevationDisplay(totalMeters, lang) {
   if (!Number.isFinite(totalMeters) || totalMeters <= 0) return '--';
   return `${Math.round(totalMeters)} ${lang === 'zh-CN' ? '米' : 'm'}`;
-}
-
-function buildProgressionAtlas(runs, timeframe, lang) {
-  const locale = lang === 'zh-CN' ? 'zh-CN' : 'en-US';
-  const sortedAsc = [...runs]
-    .filter((run) => !Number.isNaN(getRunStartedAt(run).getTime()))
-    .sort((a, b) => getRunStartedAt(a) - getRunStartedAt(b));
-  const now = new Date();
-  const rangeEnd = endOfCurrentDay(now);
-
-  let rangeStart = startOfDay(now);
-  let bucket = 'day';
-
-  if (timeframe === 'week') {
-    rangeStart = startOfIsoWeek(now);
-  } else if (timeframe === 'month') {
-    rangeStart = startOfMonth(now);
-  } else if (timeframe === 'year') {
-    rangeStart = startOfYear(now);
-    bucket = 'month';
-  } else if (timeframe === 'total') {
-    rangeStart = sortedAsc[0] ? startOfDay(getRunStartedAt(sortedAsc[0])) : startOfDay(now);
-    bucket = 'month';
-  }
-
-  const filteredAsc = sortedAsc.filter((run) => {
-    const startedAt = getRunStartedAt(run);
-    return startedAt >= rangeStart && startedAt <= rangeEnd;
-  });
-  const filteredDesc = [...filteredAsc].reverse();
-
-  const totalDistanceKm = filteredAsc.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
-  const totalMovingSeconds = filteredAsc.reduce((sum, run) => sum + Number(run?.movingTimeSeconds || 0), 0);
-  const totalElevationMeters = filteredAsc.reduce(
-    (sum, run) => sum + Number(run?.elevationGainMeters || run?.totalElevationGainMeters || 0),
-    0,
-  );
-  const sessionCount = filteredAsc.length;
-  const allDistanceKm = sortedAsc.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
-  const shareOfDistance = allDistanceKm > 0 ? Math.round((totalDistanceKm / allDistanceKm) * 100) : 0;
-  const averagePaceSeconds = totalDistanceKm > 0 ? totalMovingSeconds / totalDistanceKm : null;
-
-  const grouped = filteredAsc.reduce((map, run) => {
-    const startedAt = getRunStartedAt(run);
-    const bucketDate = bucket === 'month'
-      ? new Date(startedAt.getFullYear(), startedAt.getMonth(), 1)
-      : startOfDay(startedAt);
-    const key = bucket === 'month'
-      ? `${bucketDate.getFullYear()}-${bucketDate.getMonth() + 1}`
-      : bucketDate.toISOString().slice(0, 10);
-    const existing = map.get(key) || {
-      key,
-      date: bucketDate,
-      distanceKm: 0,
-      sessions: 0,
-    };
-    existing.distanceKm += resolveRunDistanceKm(run);
-    existing.sessions += 1;
-    map.set(key, existing);
-    return map;
-  }, new Map());
-
-  let cumulativeDistance = 0;
-  const chartBaseLine = 86;
-  const chartLeft = 6;
-  const chartRight = 94;
-  const chartHeight = 56;
-  const groupedSeries = Array.from(grouped.values())
-    .sort((a, b) => a.date - b.date)
-    .map((entry, index, source) => {
-      cumulativeDistance += entry.distanceKm;
-      const ratio = source.length === 1 ? 1 : index / (source.length - 1);
-      return {
-        ...entry,
-        cumulativeDistance,
-        x: chartLeft + ((chartRight - chartLeft) * ratio),
-      };
-    });
-
-  const maxCumulativeDistance = Math.max(1, ...groupedSeries.map((entry) => entry.cumulativeDistance));
-  const chartPoints = groupedSeries.map((entry) => ({
-    ...entry,
-    y: chartBaseLine - ((entry.cumulativeDistance / maxCumulativeDistance) * chartHeight),
-    label: formatProgressionAxisLabel(entry.date, timeframe, lang),
-  }));
-  const chartLine = chartPoints.map((point) => `${point.x},${point.y}`).join(' ');
-  const chartArea = chartPoints.length > 0
-    ? `M ${chartPoints[0].x} ${chartBaseLine} L ${chartPoints.map((point) => `${point.x} ${point.y}`).join(' L ')} L ${chartPoints[chartPoints.length - 1].x} ${chartBaseLine} Z`
-    : '';
-
-  return {
-    hasData: filteredAsc.length > 0,
-    rangeLabel: formatProgressionWindowLabel(rangeStart, rangeEnd, timeframe, lang),
-    totalDistanceKm,
-    totalMovingSeconds,
-    totalElevationMeters,
-    sessionCount,
-    shareOfDistance,
-    averagePaceSeconds,
-    chartPoints,
-    chartLine,
-    chartArea,
-    latestPoint: chartPoints[chartPoints.length - 1] || null,
-    startLabel: chartPoints[0]?.label || formatProgressionAxisLabel(rangeStart, timeframe, lang),
-    endLabel: chartPoints[chartPoints.length - 1]?.label || formatProgressionAxisLabel(rangeEnd, timeframe, lang),
-    recentRuns: filteredDesc.slice(0, 4).map((run) => {
-      const distanceKm = resolveRunDistanceKm(run);
-      const movingTimeSeconds = Number(run?.movingTimeSeconds || 0);
-      const paceSeconds = distanceKm > 0 && movingTimeSeconds > 0 ? movingTimeSeconds / distanceKm : null;
-      return {
-        ...run,
-        distanceKm,
-        movingTimeSeconds,
-        paceSeconds,
-        startedAtLabel: formatRunDate(run, lang),
-        completionLabel: getRunStartedAt(run).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
-      };
-    }),
-  };
 }
 
 function getDisplayName(profile, fallback) {
@@ -419,6 +238,17 @@ function buildReadinessModel(recommendationBundle, coachState, t) {
     score,
     label,
     copy: recommendation?.purpose || t('profile.dashboard_readiness_fallback'),
+  };
+}
+
+function buildStaminaFallback(readiness, heroPace, restingHrValue) {
+  return {
+    scorePercent: readiness.score,
+    recoveryCapPercent: Math.min(100, readiness.score + 2),
+    targetPaceSecondsPerKm: null,
+    targetHeartRateBpm: restingHrValue,
+    direction: 'steady',
+    fallbackPaceLabel: heroPace || '--',
   };
 }
 
@@ -596,6 +426,7 @@ export default function ProfileDashboard() {
   const [prCelebration, setPrCelebration] = useState(null);
   const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
+  const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -750,6 +581,22 @@ export default function ProfileDashboard() {
     : 0;
   const featuredSession = recentSessions[0] || null;
   const featuredSessionMetric = featuredSession ? buildSessionMetric(featuredSession, lang, unit, t) : null;
+  const stamina = useMemo(
+    () => coachState?.stamina || buildStaminaFallback(readiness, heroPace, restingHrValue),
+    [coachState?.stamina, heroPace, readiness, restingHrValue],
+  );
+  const staminaArrowIcon = stamina.direction === 'up'
+    ? 'arrow_upward'
+    : stamina.direction === 'steady'
+      ? 'trending_flat'
+      : 'arrow_downward';
+  const staminaPaceLabel = stamina.targetPaceSecondsPerKm != null
+    ? formatPaceSeconds(stamina.targetPaceSecondsPerKm)
+    : stamina.fallbackPaceLabel || '--';
+  const staminaHeartLabel = stamina.targetHeartRateBpm != null ? String(stamina.targetHeartRateBpm) : '--';
+  const staminaScorePercent = Math.max(0, Math.min(100, Number(stamina.scorePercent || 0)));
+  const staminaCapPercent = Math.max(0, Math.min(100, Number(stamina.recoveryCapPercent || 0)));
+  const staminaCapMarkerLeft = Math.max(4, Math.min(96, staminaCapPercent));
   const progressionFrames = useMemo(() => PROGRESSION_TIMEFRAMES.map((key) => ({
     key,
     label: t(`profile.dashboard_progression_${key}`),
@@ -758,12 +605,39 @@ export default function ProfileDashboard() {
     () => buildProgressionAtlas(runs, activeProgressionFrame, lang),
     [activeProgressionFrame, lang, runs],
   );
+  const activeProgressionPoint = activeProgressionPointIndex >= 0
+    ? progressionAtlas.chartPoints[activeProgressionPointIndex] || progressionAtlas.latestPoint
+    : progressionAtlas.latestPoint;
+
+  useEffect(() => {
+    if (progressionAtlas.chartPoints.length === 0) {
+      setActiveProgressionPointIndex(-1);
+      return;
+    }
+    setActiveProgressionPointIndex(progressionAtlas.chartPoints.length - 1);
+  }, [progressionAtlas.chartPoints.length, progressionAtlas.latestPoint?.key]);
+
+  function setNearestProgressionPoint(clientX, currentTarget) {
+    if (!currentTarget || progressionAtlas.chartPoints.length === 0) return;
+
+    const bounds = currentTarget.getBoundingClientRect();
+    if (!bounds.width) return;
+
+    const xPercent = ((clientX - bounds.left) / bounds.width) * 100;
+    const nextIndex = getNearestProgressionPointIndex(progressionAtlas.chartPoints, xPercent);
+    setActiveProgressionPointIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
+  }
+
+  function resetProgressionPoint() {
+    setActiveProgressionPointIndex(progressionAtlas.chartPoints.length - 1);
+  }
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard', active: true },
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
+    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气引擎' : 'Weather Engine', route: '/weather-engine', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
@@ -1094,7 +968,12 @@ export default function ProfileDashboard() {
 
                   <div className="runner-dashboard-progression-lane">
                     <article className="runner-dashboard-progression-chart-card">
-                      <div className="runner-dashboard-progression-chart-frame">
+                      <div
+                        className="runner-dashboard-progression-chart-frame"
+                        onPointerMove={(event) => setNearestProgressionPoint(event.clientX, event.currentTarget)}
+                        onPointerDown={(event) => setNearestProgressionPoint(event.clientX, event.currentTarget)}
+                        onPointerLeave={resetProgressionPoint}
+                      >
                         <div className="runner-dashboard-progression-gridlines" aria-hidden="true">
                           <span />
                           <span />
@@ -1116,35 +995,92 @@ export default function ProfileDashboard() {
                             <path d={progressionAtlas.chartArea} fill="url(#runner-dashboard-progression-area)" />
                           ) : null}
                           {progressionAtlas.chartLine ? (
-                            <polyline
-                              points={progressionAtlas.chartLine}
+                            <path
+                              d={progressionAtlas.chartLine}
+                              className="runner-dashboard-progression-line-glow"
                               fill="none"
                               stroke="url(#runner-dashboard-progression-line)"
-                              strokeWidth="2.8"
+                              strokeWidth="4.6"
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             />
                           ) : null}
-                          {progressionAtlas.chartPoints.map((point, index) => (
-                            <circle
-                              key={point.key}
-                              cx={point.x}
-                              cy={point.y}
-                              r={index === progressionAtlas.chartPoints.length - 1 ? 2.8 : 1.7}
-                              fill={index === progressionAtlas.chartPoints.length - 1 ? '#f07561' : '#ffddd5'}
+                          {progressionAtlas.chartLine ? (
+                            <path
+                              d={progressionAtlas.chartLine}
+                              fill="none"
+                              stroke="url(#runner-dashboard-progression-line)"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          ) : null}
+                          {activeProgressionPoint ? (
+                            <line
+                              className="runner-dashboard-progression-focus-rail"
+                              x1={activeProgressionPoint.x}
+                              x2={activeProgressionPoint.x}
+                              y1={activeProgressionPoint.y}
+                              y2="86"
+                            />
+                          ) : null}
+                        </svg>
+                        <div className="runner-dashboard-progression-marker-layer" aria-hidden="true">
+                          {progressionAtlas.chartPoints.map((point) => (
+                            <span
+                              key={`${point.key}-marker`}
+                              className={`runner-dashboard-progression-marker${activeProgressionPoint?.key === point.key ? ' is-active' : ''}`}
+                              style={{
+                                left: `${point.x}%`,
+                                top: `${point.y}%`,
+                              }}
                             />
                           ))}
-                        </svg>
-                        {progressionAtlas.latestPoint ? (
+                          {activeProgressionPoint ? (
+                            <span
+                              className="runner-dashboard-progression-active-marker"
+                              style={{
+                                left: `${activeProgressionPoint.x}%`,
+                                top: `${activeProgressionPoint.y}%`,
+                              }}
+                            >
+                              <span className="runner-dashboard-progression-active-marker-halo" />
+                              <span className="runner-dashboard-progression-active-marker-core" />
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="runner-dashboard-progression-hit-lane">
+                          {progressionAtlas.chartPoints.map((point, index) => (
+                            <button
+                              key={`${point.key}-hit`}
+                              type="button"
+                              className={`runner-dashboard-progression-hitpoint${activeProgressionPoint?.key === point.key ? ' is-active' : ''}`}
+                              style={{
+                                left: `${point.x}%`,
+                                top: `${point.y}%`,
+                              }}
+                              onMouseEnter={() => setActiveProgressionPointIndex(index)}
+                              onFocus={() => setActiveProgressionPointIndex(index)}
+                              onBlur={resetProgressionPoint}
+                              aria-label={`${point.label}: ${formatDistance(point.cumulativeDistance, 1, lang, unit)}`}
+                            />
+                          ))}
+                        </div>
+                        {activeProgressionPoint ? (
                           <div
-                            className={`runner-dashboard-progression-callout${progressionAtlas.latestPoint.x >= 78 ? ' is-right' : progressionAtlas.latestPoint.x <= 22 ? ' is-left' : ''}`}
+                            className={`runner-dashboard-progression-callout${activeProgressionPoint.x >= 78 ? ' is-right' : activeProgressionPoint.x <= 22 ? ' is-left' : ''}`}
+                            role="status"
+                            aria-live="polite"
                             style={{
-                              left: `${progressionAtlas.latestPoint.x}%`,
-                              top: `${progressionAtlas.latestPoint.y}%`,
+                              left: `${activeProgressionPoint.x}%`,
+                              top: `${activeProgressionPoint.y}%`,
                             }}
                           >
-                            <strong>{formatDistance(progressionAtlas.totalDistanceKm, 1, lang, unit)}</strong>
-                            <span>{t('profile.dashboard_progression_distance')}</span>
+                            <strong>{formatDistance(activeProgressionPoint.cumulativeDistance, 1, lang, unit)}</strong>
+                            <span>{activeProgressionPoint.label}</span>
+                            <small>
+                              {formatDistance(activeProgressionPoint.distanceKm, 1, lang, unit)} · {activeProgressionPoint.sessions} {t('profile.dashboard_progression_sessions')}
+                            </small>
                           </div>
                         ) : null}
                       </div>
@@ -1197,21 +1133,55 @@ export default function ProfileDashboard() {
             </section>
 
             <section className="runner-dashboard-feature-grid" aria-label={t('profile.dashboard_nav_dashboard')}>
-              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--readiness">
+              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--readiness runner-dashboard-feature-card--stamina">
                 <div className="runner-dashboard-feature-head">
-                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_readiness_status')}</span>
+                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_stamina_title')}</span>
                   <span className="runner-dashboard-feature-eyebrow">{currentDateLine}</span>
                 </div>
-                <div className="runner-dashboard-feature-copy">
+                <div className="runner-dashboard-feature-copy runner-dashboard-stamina-copy">
                   <h3>{readiness.label}</h3>
                   <p>{readiness.copy}</p>
                 </div>
-                <div className="runner-dashboard-feature-scoreband">
-                  <strong>{readiness.score}%</strong>
-                  <span>{t('profile.dashboard_window_active')}</span>
+                <div className="runner-dashboard-stamina-hero">
+                  <div className="runner-dashboard-feature-scoreband runner-dashboard-stamina-scoreband">
+                    <span>{t('profile.dashboard_readiness_status')}</span>
+                    <div className="runner-dashboard-stamina-scoreline">
+                      <AppIcon name={staminaArrowIcon} className={`runner-dashboard-stamina-arrow runner-dashboard-stamina-arrow--${stamina.direction}`} />
+                      <strong>{staminaScorePercent}<em>%</em></strong>
+                    </div>
+                  </div>
+                  <div className="runner-dashboard-stamina-capline">
+                    <span>{t('profile.dashboard_stamina_cap')}</span>
+                    <strong>{staminaCapPercent}<em>%</em></strong>
+                    <small>{currentDateLine}</small>
+                  </div>
                 </div>
-                <div className="runner-dashboard-feature-meter" aria-hidden="true">
-                  <div className="runner-dashboard-feature-meter-fill" style={{ width: `${readiness.score}%` }} />
+                <div className="runner-dashboard-stamina-meter-wrap">
+                  <div className="runner-dashboard-stamina-meter-labels">
+                    <span>{t('profile.dashboard_stamina_title')}</span>
+                    <span>{t('profile.dashboard_stamina_cap')}</span>
+                  </div>
+                  <div className="runner-dashboard-feature-meter runner-dashboard-stamina-meter" aria-hidden="true">
+                    <div className="runner-dashboard-feature-meter-fill runner-dashboard-stamina-meter-fill" style={{ width: `${staminaScorePercent}%` }} />
+                    <span className="runner-dashboard-stamina-cap-marker" style={{ left: `${staminaCapMarkerLeft}%` }} />
+                  </div>
+                </div>
+                <div className="runner-dashboard-feature-stat-row runner-dashboard-stamina-stat-row">
+                  <div>
+                    <span>{t('profile.dashboard_stamina_pace')}</span>
+                    <strong>{staminaPaceLabel}</strong>
+                  </div>
+                  <div>
+                    <span>{t('analysis.intensity_dashboard_sample_heart_rate')}</span>
+                    <strong>
+                      {staminaHeartLabel}
+                      {staminaHeartLabel !== '--' && <em>bpm</em>}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{t('profile.dashboard_stamina_cap')}</span>
+                    <strong>{staminaCapPercent}<em>%</em></strong>
+                  </div>
                 </div>
               </article>
 

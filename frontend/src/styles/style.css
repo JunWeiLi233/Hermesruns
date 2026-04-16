@@ -9738,19 +9738,21 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     inset: 0;
     width: 100%;
     height: 100%;
+    z-index: 0;
 }
 
-.race-detail-map-canvas {
-    z-index: 0;
+.race-detail-map-leaflet {
+    width: 100%;
+    height: 100%;
     opacity: 0;
     transition: opacity 180ms ease;
 }
 
-.race-detail-map-canvas.is-ready {
+.race-detail-map-leaflet.is-ready {
     opacity: 1;
 }
 
-.race-detail-map-canvas .leaflet-container {
+.race-detail-map-leaflet {
     width: 100%;
     height: 100%;
     background:
@@ -9759,13 +9761,13 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     filter: grayscale(0.18) saturate(1.02) brightness(0.88) contrast(1.04);
 }
 
-.race-detail-map-canvas.has-aligned-overlay .leaflet-container {
+.race-detail-map-leaflet.has-aligned-overlay {
     filter: grayscale(0.08) saturate(1.04) brightness(0.94) contrast(1.02);
 }
 
-.race-detail-map-canvas .leaflet-control-container,
-.race-detail-map-canvas .leaflet-bottom,
-.race-detail-map-canvas .leaflet-top {
+.race-detail-map-leaflet .leaflet-control-container,
+.race-detail-map-leaflet .leaflet-bottom,
+.race-detail-map-leaflet .leaflet-top {
     display: none;
 }
 
@@ -10119,12 +10121,12 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-elevation-node-la
     fill: #a0392a;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-canvas .leaflet-container {
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-leaflet {
     background: #f5f6f7;
     filter: grayscale(0.68) saturate(0.84) brightness(1.03) contrast(0.98);
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-canvas.has-aligned-overlay .leaflet-container {
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-leaflet.has-aligned-overlay {
     filter: grayscale(0.32) saturate(0.94) brightness(1.02) contrast(0.99);
 }
 
@@ -19418,7 +19420,9 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
 .runner-dashboard-progression-empty {
     padding: 1.2rem;
     border-radius: 1.35rem;
-    background: rgba(18, 18, 18, 0.52);
+    background:
+        radial-gradient(circle at top right, rgba(240, 117, 97, 0.08), transparent 32%),
+        rgba(18, 18, 18, 0.54);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
 }
@@ -19426,7 +19430,9 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
 .runner-dashboard-progression-chart-frame {
     position: relative;
     min-height: 20rem;
-    padding-top: 0.6rem;
+    padding: 0.8rem 0 0.35rem;
+    border-radius: 1.15rem;
+    cursor: crosshair;
 }
 
 .runner-dashboard-progression-gridlines {
@@ -19450,15 +19456,99 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
     height: 100%;
 }
 
+.runner-dashboard-progression-line-glow {
+    opacity: 0.28;
+    filter: blur(7px);
+}
+
+.runner-dashboard-progression-focus-rail {
+    stroke: rgba(255, 255, 255, 0.2);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 4;
+}
+
+.runner-dashboard-progression-marker-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.runner-dashboard-progression-marker {
+    position: absolute;
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: rgba(255, 221, 213, 0.52);
+    transform: translate(-50%, -50%);
+    transition: background 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.runner-dashboard-progression-marker.is-active {
+    background: #fbc2b5;
+}
+
+.runner-dashboard-progression-active-marker {
+    position: absolute;
+    width: 0;
+    height: 0;
+    transform: translate(-50%, -50%);
+}
+
+.runner-dashboard-progression-active-marker-halo,
+.runner-dashboard-progression-active-marker-core {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+}
+
+.runner-dashboard-progression-active-marker-halo {
+    width: 0.9rem;
+    height: 0.9rem;
+    background: rgba(240, 117, 97, 0.18);
+}
+
+.runner-dashboard-progression-active-marker-core {
+    width: 0.42rem;
+    height: 0.42rem;
+    background: #fff3ef;
+    box-shadow: 0 0 0 1.4px #f07561;
+}
+
+.runner-dashboard-progression-hit-lane {
+    position: absolute;
+    inset: 0;
+}
+
+.runner-dashboard-progression-hitpoint {
+    position: absolute;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+}
+
+.runner-dashboard-progression-hitpoint:focus-visible {
+    outline: 2px solid rgba(255, 248, 244, 0.9);
+    outline-offset: 4px;
+}
+
 .runner-dashboard-progression-callout {
     position: absolute;
-    min-width: 10rem;
-    padding: 0.8rem 0.95rem;
-    border-radius: 1rem;
-    background: linear-gradient(135deg, #f07561, #ffb4a7);
-    color: #2f0a05;
-    box-shadow: 0 18px 32px rgba(240, 117, 97, 0.28);
+    min-width: 10.8rem;
+    padding: 0.9rem 1rem 0.85rem;
+    border-radius: 1.1rem;
+    background:
+        linear-gradient(150deg, rgba(27, 20, 19, 0.94), rgba(54, 30, 26, 0.86)),
+        linear-gradient(135deg, rgba(240, 117, 97, 0.24), rgba(255, 180, 167, 0.16));
+    color: #fff8f4;
+    box-shadow: 0 24px 44px rgba(0, 0, 0, 0.28);
     transform: translate(-50%, calc(-100% - 1rem));
+    pointer-events: none;
 }
 
 .runner-dashboard-progression-callout.is-right {
@@ -19476,17 +19566,25 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
 
 .runner-dashboard-progression-callout strong {
     font-family: "Manrope", sans-serif;
-    font-size: 1rem;
+    font-size: 1.05rem;
     line-height: 1;
 }
 
 .runner-dashboard-progression-callout span {
-    margin-top: 0.25rem;
-    color: rgba(64, 2, 0, 0.72);
+    margin-top: 0.32rem;
+    color: rgba(255, 240, 235, 0.74);
     font-size: 0.62rem;
     font-weight: 800;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+}
+
+.runner-dashboard-progression-callout small {
+    display: block;
+    margin-top: 0.38rem;
+    color: rgba(255, 240, 235, 0.72);
+    font-size: 0.72rem;
+    line-height: 1.45;
 }
 
 .runner-dashboard-progression-axis {
@@ -19621,6 +19719,178 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
     background:
         linear-gradient(135deg, rgba(240, 117, 97, 0.16), rgba(240, 117, 97, 0.02) 46%),
         rgba(28, 27, 27, 0.98);
+}
+
+.runner-dashboard-feature-card--stamina {
+    justify-content: flex-start;
+    gap: 1rem;
+    background:
+        radial-gradient(circle at top right, rgba(255, 180, 167, 0.16), transparent 34%),
+        linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
+}
+
+.runner-dashboard-stamina-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.runner-dashboard-feature-scoreband.runner-dashboard-stamina-scoreband {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    flex-wrap: nowrap;
+}
+
+.runner-dashboard-stamina-scoreline {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.4rem;
+}
+
+.runner-dashboard-stamina-scoreline strong {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(3rem, 6vw, 4rem);
+    line-height: 0.86;
+    letter-spacing: -0.1em;
+}
+
+.runner-dashboard-stamina-scoreline strong em,
+.runner-dashboard-stamina-capline strong em,
+.runner-dashboard-stamina-stat-row strong em {
+    font-style: normal;
+    font-size: 0.32em;
+    margin-left: 0.08em;
+}
+
+.runner-dashboard-stamina-arrow {
+    font-size: 2.15rem;
+    margin-bottom: 0.38rem;
+}
+
+.runner-dashboard-stamina-arrow--down {
+    color: #ff6b5f;
+}
+
+.runner-dashboard-stamina-arrow--up {
+    color: #41d48a;
+}
+
+.runner-dashboard-stamina-arrow--steady {
+    color: #f7b3a4;
+}
+
+.runner-dashboard-stamina-capline {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.28rem;
+    min-width: 6.9rem;
+    text-align: right;
+}
+
+.runner-dashboard-stamina-capline span,
+.runner-dashboard-stamina-capline small {
+    color: rgba(229, 226, 225, 0.58);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    line-height: 1.45;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-stamina-capline strong {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(1.7rem, 3.7vw, 2.4rem);
+    line-height: 0.9;
+    letter-spacing: -0.07em;
+}
+
+.runner-dashboard-stamina-capline small {
+    letter-spacing: 0.08em;
+}
+
+.runner-dashboard-feature-copy.runner-dashboard-stamina-copy {
+    margin-bottom: 0.1rem;
+}
+
+.runner-dashboard-feature-copy.runner-dashboard-stamina-copy h3 {
+    font-size: clamp(1.55rem, 3.8vw, 2.35rem);
+    line-height: 1;
+}
+
+.runner-dashboard-feature-copy.runner-dashboard-stamina-copy p {
+    max-width: 32rem;
+}
+
+.runner-dashboard-stamina-meter-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding-top: 0.25rem;
+}
+
+.runner-dashboard-stamina-meter-labels {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.runner-dashboard-stamina-meter-labels span {
+    color: rgba(229, 226, 225, 0.56);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-feature-meter.runner-dashboard-stamina-meter {
+    position: relative;
+    height: 0.78rem;
+    margin-top: 0;
+    overflow: visible;
+}
+
+.runner-dashboard-stamina-meter-fill {
+    background: linear-gradient(90deg, #f07561 0%, #ffb4a7 100%);
+}
+
+.runner-dashboard-stamina-cap-marker {
+    position: absolute;
+    top: 50%;
+    width: 0.4rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 0.22rem rgba(240, 117, 97, 0.18);
+}
+
+.runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 0;
+    padding-top: 0.1rem;
+}
+
+.runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row span {
+    color: rgba(229, 226, 225, 0.56);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row strong {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(1.2rem, 3.1vw, 1.55rem);
+    line-height: 1;
+    letter-spacing: -0.06em;
 }
 
 .runner-dashboard-feature-head,
@@ -20058,6 +20328,25 @@ body.theme-light .runner-dashboard-vdot-trend--declining {
     .runner-dashboard-session-row {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .runner-dashboard-stamina-hero {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .runner-dashboard-stamina-capline {
+        align-items: flex-start;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .runner-dashboard-stamina-arrow {
+        font-size: 1.9rem;
+    }
+
+    .runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row {
+        grid-template-columns: 1fr;
     }
 
     .runner-dashboard-session-metric {
@@ -23703,12 +23992,52 @@ body.theme-light .runner-shell-notification-popover::before {
   background: rgba(248, 248, 248, 0.94);
 }
 
+body.theme-light .runner-shell-notification-popover::after {
+  background:
+    radial-gradient(circle at top left, rgba(252, 126, 105, 0.1), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(122, 202, 222, 0.06), transparent 30%);
+}
+
 body.theme-light .runner-shell-notification-btn.is-open {
   background:
     radial-gradient(circle at 30% 30%, rgba(252, 126, 105, 0.14), transparent 62%),
     rgba(255, 255, 255, 0.98);
   color: var(--brand-accent-strong);
   box-shadow: 0 12px 26px rgba(44, 47, 48, 0.06);
+}
+
+body.theme-light .runner-shell-notification-head strong,
+body.theme-light .runner-shell-notification-card strong {
+  color: #231f20;
+}
+
+body.theme-light .runner-shell-notification-head p,
+body.theme-light .runner-shell-notification-card p {
+  color: rgba(44, 47, 48, 0.76);
+}
+
+body.theme-light .runner-shell-notification-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 248, 248, 0.88)),
+    rgba(255, 255, 255, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 12px 24px rgba(44, 47, 48, 0.06);
+}
+
+body.theme-light .runner-shell-notification-card span {
+  color: var(--brand-accent-strong);
+}
+
+body.theme-light .runner-shell-notification-close {
+  background: rgba(160, 57, 42, 0.08);
+  color: rgba(44, 47, 48, 0.72);
+}
+
+body.theme-light .runner-shell-notification-link {
+  background: linear-gradient(135deg, #a0392a, #fc7e69);
+  color: #fff7f2;
+  box-shadow: 0 14px 28px rgba(160, 57, 42, 0.18);
 }
 
 body.theme-light .dashboard-body .top-nav,
@@ -23930,6 +24259,53 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 
 .analysis-overview-grid--hero {
   grid-template-columns: minmax(0, 1.65fr) minmax(290px, 1fr);
+}
+
+.analysis-overview-card--insight {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.2rem;
+  min-height: 140px;
+}
+
+.analysis-overview-vdot-trend-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon.is-positive {
+  color: #7de0a3;
+}
+
+.analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon.is-negative {
+  color: #ff9a88;
+}
+
+.analysis-overview-insight-delta {
+  margin-left: auto;
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-family: "Manrope", var(--font-display);
+  color: #f3ede8;
+}
+
+.analysis-overview-insight-copy {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(232, 226, 220, 0.6);
 }
 
 .analysis-overview-grid--summary {
@@ -29851,6 +30227,14 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   align-items: end;
 }
 
+.schedule-plan-route-card.is-route-fallback {
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 18px;
+}
+
 .schedule-plan-route-map {
   position: absolute;
   inset: 0;
@@ -29863,6 +30247,14 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
       linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 28%, rgba(255, 255, 255, 0.02) 48%, transparent 80%),
       #201f1f;
   opacity: 0.8;
+}
+
+.schedule-plan-route-card.is-route-fallback .schedule-plan-route-map {
+  position: relative;
+  inset: auto;
+  min-height: 144px;
+  border-radius: 20px;
+  overflow: hidden;
 }
 
 .schedule-plan-route-map::after {
@@ -29909,6 +30301,59 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   stroke-width: 1.4;
 }
 
+.schedule-plan-route-empty-panel {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+}
+
+.schedule-plan-route-empty-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-plan-route-empty-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(244, 240, 234, 0.72);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-route-empty-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 28ch;
+}
+
+.schedule-plan-route-empty-copy strong {
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.42rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.schedule-plan-route-empty-copy span {
+  color: rgba(232, 226, 220, 0.76);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .schedule-plan-route-content {
   position: relative;
   z-index: 1;
@@ -29917,6 +30362,12 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   justify-content: space-between;
   align-items: end;
   gap: 18px;
+}
+
+.schedule-plan-route-card.is-route-fallback .schedule-plan-route-content {
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 14px;
 }
 
 .schedule-plan-route-content span:first-child {
@@ -29942,6 +30393,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   display: flex;
   gap: 14px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .schedule-plan-route-meta span {
@@ -31997,6 +32449,767 @@ body.theme-light .settings-atlas-build-meta > div {
   border-top-color: rgba(18, 32, 51, 0.08);
 }
 
+.settings-atlas-garmin-cluster {
+  display: grid;
+  grid-template-columns: minmax(0, 1.58fr) minmax(220px, 0.72fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.settings-atlas-service-card--garmin,
+.settings-atlas-import-drop--garmin,
+.garmin-import-modal-card,
+.garmin-import-visual,
+.garmin-import-panel {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.settings-atlas-service-card--garmin::before,
+.settings-atlas-import-drop--garmin::before,
+.garmin-import-modal-card::before,
+.garmin-import-visual::before,
+.garmin-import-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 38%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.settings-atlas-service-card--garmin > *,
+.settings-atlas-import-drop--garmin > *,
+.garmin-import-modal-card > *,
+.garmin-import-visual > *,
+.garmin-import-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-atlas-service-card--garmin {
+  align-items: stretch;
+  gap: 20px;
+  padding: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.22), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(240, 117, 97, 0.16), transparent 38%),
+    linear-gradient(160deg, rgba(23, 22, 24, 0.98), rgba(14, 20, 29, 0.96));
+  box-shadow: 0 32px 60px rgba(0, 0, 0, 0.3);
+}
+
+.settings-atlas-service-lane {
+  display: grid;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-content: start;
+}
+
+.settings-atlas-service-kicker-row,
+.garmin-import-kicker-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 226, 220, 0.6);
+}
+
+.settings-atlas-service-kicker-line,
+.garmin-import-kicker-line {
+  width: 56px;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(240, 117, 97, 0.92), rgba(122, 202, 222, 0.2));
+}
+
+.settings-atlas-service-main--garmin {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.settings-atlas-service-main--garmin .settings-atlas-service-icon.is-garmin {
+  width: 62px;
+  height: 62px;
+  border-radius: 22px;
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(122, 202, 222, 0.08)),
+    rgba(15, 23, 34, 0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 28px rgba(0, 0, 0, 0.22);
+  color: #9fe9f4;
+}
+
+.settings-atlas-service-main--garmin strong {
+  font-size: clamp(1.78rem, 2.8vw, 2.3rem);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+}
+
+.settings-atlas-service-main--garmin p,
+.settings-atlas-service-note,
+.garmin-import-hero-copy p,
+.garmin-credentials-note,
+.garmin-import-panel-copy p,
+.garmin-import-secondary-copy span {
+  color: rgba(232, 226, 220, 0.76);
+  line-height: 1.65;
+}
+
+.settings-atlas-service-main--garmin p {
+  max-width: 32rem;
+  margin-top: 6px;
+}
+
+.settings-atlas-service-state-card,
+.garmin-import-stage,
+.garmin-import-pill {
+  --garmin-tone-bg: rgba(122, 202, 222, 0.16);
+  --garmin-tone-fg: #9fe9f4;
+  --garmin-tone-ring: rgba(122, 202, 222, 0.2);
+}
+
+.settings-atlas-service-state-card,
+.garmin-import-stage {
+  display: grid;
+  gap: 8px;
+  width: fit-content;
+  min-width: min(100%, 240px);
+  padding: 16px 18px;
+  border-radius: 24px;
+  background: var(--garmin-tone-bg);
+  box-shadow: inset 0 0 0 1px var(--garmin-tone-ring);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.settings-atlas-service-state-card span,
+.garmin-import-stage span,
+.garmin-import-pill {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.settings-atlas-service-state-card span,
+.garmin-import-stage span {
+  color: color-mix(in srgb, var(--garmin-tone-fg) 78%, white 22%);
+}
+
+.settings-atlas-service-state-card strong,
+.garmin-import-stage strong,
+.garmin-import-panel-copy strong,
+.garmin-import-hero-copy strong {
+  font-family: "Manrope", var(--font-display);
+  font-weight: 800;
+}
+
+.settings-atlas-service-state-card strong,
+.garmin-import-stage strong {
+  color: #fff9f5;
+  font-size: 1.12rem;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+}
+
+.garmin-import-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--garmin-tone-bg);
+  box-shadow: inset 0 0 0 1px var(--garmin-tone-ring);
+  color: var(--garmin-tone-fg);
+  white-space: nowrap;
+}
+
+.settings-atlas-service-state-card.is-ready,
+.garmin-import-stage--ready,
+.garmin-import-pill--ready {
+  --garmin-tone-bg: rgba(122, 202, 222, 0.16);
+  --garmin-tone-fg: #9fe9f4;
+  --garmin-tone-ring: rgba(122, 202, 222, 0.2);
+}
+
+.settings-atlas-service-state-card.is-active,
+.garmin-import-stage--active,
+.garmin-import-pill--active {
+  --garmin-tone-bg: rgba(240, 117, 97, 0.16);
+  --garmin-tone-fg: #ffc6bb;
+  --garmin-tone-ring: rgba(240, 117, 97, 0.2);
+}
+
+.settings-atlas-service-state-card.is-info,
+.garmin-import-stage--info,
+.garmin-import-pill--info {
+  --garmin-tone-bg: rgba(96, 165, 250, 0.16);
+  --garmin-tone-fg: #bfdbfe;
+  --garmin-tone-ring: rgba(96, 165, 250, 0.2);
+}
+
+.settings-atlas-service-state-card.is-warn,
+.garmin-import-stage--warn,
+.garmin-import-pill--warn {
+  --garmin-tone-bg: rgba(250, 204, 21, 0.16);
+  --garmin-tone-fg: #fde68a;
+  --garmin-tone-ring: rgba(250, 204, 21, 0.2);
+}
+
+.settings-atlas-service-state-card.is-error,
+.garmin-import-stage--error,
+.garmin-import-pill--error {
+  --garmin-tone-bg: rgba(248, 113, 113, 0.16);
+  --garmin-tone-fg: #fecaca;
+  --garmin-tone-ring: rgba(248, 113, 113, 0.2);
+}
+
+.settings-atlas-service-state-card.is-success,
+.garmin-import-stage--success,
+.garmin-import-pill--success {
+  --garmin-tone-bg: rgba(34, 197, 94, 0.16);
+  --garmin-tone-fg: #bbf7d0;
+  --garmin-tone-ring: rgba(34, 197, 94, 0.2);
+}
+
+.settings-atlas-service-meta-grid,
+.garmin-import-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-atlas-service-metric,
+.garmin-import-metric {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 24px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.settings-atlas-service-metric span,
+.garmin-import-metric span,
+.settings-atlas-import-drop-kicker,
+.garmin-import-panel-copy span,
+.garmin-import-field-meta,
+.garmin-import-panel .modal-label,
+.garmin-import-secondary-copy span {
+  color: rgba(232, 226, 220, 0.6);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.settings-atlas-service-metric strong,
+.garmin-import-metric strong,
+.settings-atlas-import-drop--garmin strong,
+.garmin-import-secondary-copy strong {
+  color: inherit;
+  font-family: "Manrope", var(--font-display);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+}
+
+.settings-atlas-service-metric strong,
+.garmin-import-metric strong,
+.garmin-import-secondary-copy strong {
+  font-size: 1.18rem;
+}
+
+.settings-atlas-service-note {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 0.84rem;
+}
+
+.settings-atlas-service-card--garmin .settings-atlas-service-action {
+  width: clamp(208px, 22vw, 236px);
+  flex: 0 0 clamp(208px, 22vw, 236px);
+  align-self: stretch;
+  background: linear-gradient(135deg, rgba(240, 117, 97, 0.94), rgba(122, 202, 222, 0.52));
+  box-shadow: 0 20px 34px rgba(8, 15, 24, 0.22);
+  color: #fff8f4;
+}
+
+.settings-atlas-service-card--garmin .settings-atlas-service-action:hover {
+  box-shadow: 0 24px 38px rgba(8, 15, 24, 0.26);
+}
+
+.settings-atlas-import-drop--garmin {
+  align-content: space-between;
+  justify-items: start;
+  min-height: 100%;
+  padding: 24px 22px;
+  border: 0;
+  text-align: left;
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.15), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.02)),
+    rgba(17, 18, 21, 0.78);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 18px 32px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.settings-atlas-import-drop--garmin:hover {
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.2), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(17, 18, 21, 0.84);
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 117, 97, 0.18),
+    0 22px 36px rgba(0, 0, 0, 0.2);
+}
+
+.settings-atlas-import-drop-copy {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-atlas-import-drop--garmin strong {
+  font-size: clamp(1.52rem, 2.9vw, 1.96rem);
+}
+
+.settings-atlas-import-drop-copy p {
+  margin: 0;
+  color: rgba(232, 226, 220, 0.72);
+  line-height: 1.6;
+}
+
+.settings-atlas-import-drop--garmin .runner-dashboard-side-link-icon,
+.settings-atlas-import-drop--garmin .material-symbols-outlined {
+  justify-self: end;
+  align-self: end;
+  color: #9fe9f4;
+  opacity: 0.8;
+}
+
+.garmin-import-modal-shell {
+  background:
+    radial-gradient(circle at top left, rgba(122, 202, 222, 0.14), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(240, 117, 97, 0.18), transparent 30%),
+    rgba(4, 7, 12, 0.62);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.garmin-import-modal-card {
+  width: min(100%, 1040px);
+  padding: 28px;
+  border: 0;
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.16), transparent 24%),
+    linear-gradient(160deg, rgba(25, 24, 27, 0.96), rgba(14, 18, 28, 0.98));
+  box-shadow: 0 36px 80px rgba(0, 0, 0, 0.42);
+}
+
+.garmin-import-modal-card .modal-header {
+  padding-bottom: 22px;
+}
+
+.garmin-import-modal-card .modal-header h3 {
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(2.15rem, 4vw, 3rem);
+  font-style: italic;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.garmin-import-modal-card .modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.garmin-import-modal-card .modal-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.garmin-import-form {
+  gap: 0;
+}
+
+.garmin-import-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 20px;
+}
+
+.garmin-import-visual,
+.garmin-import-panel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.garmin-import-hero {
+  align-items: flex-start;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.garmin-import-hero-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+}
+
+.garmin-import-hero-copy {
+  gap: 6px;
+}
+
+.garmin-import-hero-copy strong {
+  font-size: clamp(1.82rem, 3.6vw, 2.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+}
+
+.garmin-import-panel-head,
+.garmin-import-field-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.garmin-import-panel-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.garmin-import-panel-copy strong {
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.garmin-import-field,
+.garmin-import-field--limit {
+  display: grid;
+  gap: 10px;
+}
+
+.garmin-import-field--limit,
+.garmin-import-secondary {
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.garmin-import-panel .modal-label {
+  margin-bottom: 0;
+}
+
+.garmin-import-panel input,
+.garmin-import-limit {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #fff7f3;
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.garmin-import-panel input::placeholder {
+  color: rgba(232, 226, 220, 0.42);
+}
+
+.garmin-import-panel input:hover,
+.garmin-import-limit:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.garmin-import-panel input:focus,
+.garmin-import-limit:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 0 0 1px rgba(252, 126, 105, 0.42),
+    0 0 0 4px rgba(240, 117, 97, 0.14);
+}
+
+.garmin-import-limit {
+  appearance: none;
+  color-scheme: dark;
+}
+
+.garmin-import-secondary {
+  align-items: center;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 0;
+}
+
+.garmin-import-secondary-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.garmin-import-secondary-button {
+  min-width: 190px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f3ee;
+  box-shadow: none;
+}
+
+.garmin-import-secondary-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.garmin-import-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 0;
+}
+
+.garmin-import-actions .modal-button {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 0;
+  border-radius: 999px;
+}
+
+.garmin-import-actions .btn-primary {
+  background: linear-gradient(135deg, #f07561, #ff9f7e);
+  box-shadow: 0 18px 30px rgba(240, 117, 97, 0.22);
+}
+
+.garmin-import-actions .btn-secondary {
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f3ee;
+}
+
+.garmin-import-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-card--garmin {
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.18), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(252, 126, 105, 0.14), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 239, 235, 0.98));
+  box-shadow: 0 24px 44px rgba(44, 47, 48, 0.08);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-kicker-row,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-kicker-row,
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-metric span,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-metric span,
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-import-drop-kicker,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel-copy span,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-field-meta,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel .modal-label,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-secondary-copy span {
+  color: rgba(89, 92, 93, 0.68);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-main--garmin .settings-atlas-service-icon.is-garmin {
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.8), rgba(122, 202, 222, 0.18)),
+    rgba(18, 32, 51, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 16px 28px rgba(44, 47, 48, 0.08);
+  color: #0f6c86;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-main--garmin p,
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-note,
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-import-drop-copy p,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-hero-copy p,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-credentials-note,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel-copy p,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-secondary-copy span {
+  color: rgba(44, 47, 48, 0.74);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-state-card,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-stage,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-pill {
+  --garmin-tone-bg: rgba(14, 165, 233, 0.1);
+  --garmin-tone-fg: #0f6c86;
+  --garmin-tone-ring: rgba(14, 165, 233, 0.14);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-state-card.is-active,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-stage--active,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-pill--active {
+  --garmin-tone-bg: rgba(252, 126, 105, 0.14);
+  --garmin-tone-fg: #a0392a;
+  --garmin-tone-ring: rgba(252, 126, 105, 0.18);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-state-card.is-info,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-stage--info,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-pill--info {
+  --garmin-tone-bg: rgba(96, 165, 250, 0.12);
+  --garmin-tone-fg: #265ea8;
+  --garmin-tone-ring: rgba(96, 165, 250, 0.16);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-state-card.is-warn,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-stage--warn,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-pill--warn {
+  --garmin-tone-bg: rgba(245, 158, 11, 0.13);
+  --garmin-tone-fg: #9a5300;
+  --garmin-tone-ring: rgba(245, 158, 11, 0.18);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-state-card.is-error,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-stage--error,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-pill--error {
+  --garmin-tone-bg: rgba(239, 68, 68, 0.12);
+  --garmin-tone-fg: #b42318;
+  --garmin-tone-ring: rgba(239, 68, 68, 0.16);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-state-card.is-success,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-stage--success,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-pill--success {
+  --garmin-tone-bg: rgba(34, 197, 94, 0.12);
+  --garmin-tone-fg: #157347;
+  --garmin-tone-ring: rgba(34, 197, 94, 0.16);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-state-card strong,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-stage strong {
+  color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-metric,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-metric,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-visual,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-field--limit,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-secondary {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.68),
+    0 14px 24px rgba(44, 47, 48, 0.06);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-import-drop--garmin {
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(245, 246, 247, 0.86));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.74),
+    0 18px 32px rgba(44, 47, 48, 0.06);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-import-drop--garmin:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(160, 57, 42, 0.16),
+    0 20px 36px rgba(44, 47, 48, 0.08);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-import-drop--garmin .runner-dashboard-side-link-icon,
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-import-drop--garmin .material-symbols-outlined {
+  color: #0f6c86;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .garmin-import-modal-shell {
+  background:
+    radial-gradient(circle at top left, rgba(122, 202, 222, 0.12), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(252, 126, 105, 0.14), transparent 28%),
+    rgba(245, 246, 247, 0.54);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .garmin-import-modal-card {
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(246, 242, 237, 0.98));
+  box-shadow: 0 28px 60px rgba(44, 47, 48, 0.12);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .garmin-import-modal-card .modal-close {
+  background: rgba(18, 32, 51, 0.06);
+  color: rgba(44, 47, 48, 0.72);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .garmin-import-modal-card .modal-close:hover {
+  background: rgba(18, 32, 51, 0.1);
+  color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel input,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-limit {
+  background: rgba(18, 32, 51, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(18, 32, 51, 0.08);
+  color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel input::placeholder {
+  color: rgba(89, 92, 93, 0.46);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel input:hover,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-limit:hover {
+  background: rgba(18, 32, 51, 0.08);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel input:focus,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-limit:focus {
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 0 0 1px rgba(160, 57, 42, 0.24),
+    0 0 0 4px rgba(160, 57, 42, 0.12);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-limit {
+  color-scheme: light;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-secondary-button,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-actions .btn-secondary {
+  background: rgba(18, 32, 51, 0.06);
+  color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-secondary-button:hover,
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-actions .btn-secondary:hover {
+  background: rgba(18, 32, 51, 0.1);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .garmin-import-actions .btn-primary {
+  background: linear-gradient(135deg, #a0392a, #fc7e69);
+  box-shadow: 0 18px 30px rgba(160, 57, 42, 0.16);
+}
+
 @media (max-width: 1180px) {
   .settings-atlas-hero,
   .settings-atlas-grid {
@@ -32039,6 +33252,68 @@ body.theme-light .settings-atlas-build-meta > div {
 
   .settings-atlas-hero-copy h2 {
     font-size: 3rem;
+  }
+}
+
+@media (max-width: 1080px) {
+  .settings-atlas-garmin-cluster,
+  .garmin-import-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-atlas-import-drop--garmin {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-atlas-service-card--garmin {
+    align-items: stretch;
+    padding: 22px 20px;
+  }
+
+  .settings-atlas-service-main--garmin {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-atlas-service-card--garmin .settings-atlas-service-action {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .settings-atlas-service-meta-grid,
+  .garmin-import-metric-grid,
+  .garmin-import-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-atlas-import-drop--garmin {
+    padding: 20px 18px;
+    justify-items: start;
+  }
+
+  .garmin-import-modal-card {
+    padding: 22px 18px;
+    border-radius: 26px;
+  }
+
+  .garmin-import-visual,
+  .garmin-import-panel {
+    padding: 20px 18px;
+    border-radius: 24px;
+  }
+
+  .garmin-import-panel-head,
+  .garmin-import-field-head,
+  .garmin-import-secondary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .garmin-import-secondary-button {
+    width: 100%;
+    min-width: 0;
   }
 }
 
@@ -36917,6 +38192,27 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-map-finis
   stroke: rgba(255, 255, 255, 0.86);
 }
 
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-card.is-route-fallback .schedule-plan-route-map {
+  background:
+      radial-gradient(circle at 18% 18%, rgba(252, 126, 105, 0.14), transparent 32%),
+      radial-gradient(circle at 78% 76%, rgba(122, 202, 222, 0.1), transparent 28%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(239, 241, 242, 0.92));
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-empty-badge {
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text-muted);
+  box-shadow: 0 10px 22px rgba(44, 47, 48, 0.05);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-empty-copy strong {
+  color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-empty-copy span {
+  color: var(--text-muted);
+}
+
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-watch-btn {
   background: var(--brand-accent-gradient);
   color: #fff6f2;
@@ -37680,6 +38976,30 @@ body.theme-light .runner-dashboard-feature-card--workout {
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 241, 242, 0.98));
 }
 
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-feature-card--stamina {
+  background:
+    radial-gradient(circle at top right, rgba(252, 126, 105, 0.16), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 239, 236, 0.98));
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-scoreline strong,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-capline strong,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-stat-row strong {
+  color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-arrow--down {
+  color: #b93f30;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-arrow--up {
+  color: #157347;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-arrow--steady {
+  color: #a0392a;
+}
+
 body.theme-light .runner-dashboard-readiness-card h2,
 body.theme-light .runner-dashboard-progression-heading h3,
 body.theme-light .runner-dashboard-progression-summary-main strong,
@@ -37725,6 +39045,13 @@ body.theme-light .runner-dashboard-mini-metric em {
   color: var(--text-muted);
 }
 
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-meter-labels span,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-stat-row span,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-capline span,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-capline small {
+  color: var(--text-muted);
+}
+
 body.theme-light .runner-dashboard-readiness-note,
 body.theme-light .runner-dashboard-progression-stat,
 body.theme-light .runner-dashboard-progression-runrow,
@@ -37735,6 +39062,15 @@ body.theme-light .runner-dashboard-feature-chip-row span,
 body.theme-light .runner-dashboard-feature-session-pill {
   background: rgba(239, 241, 242, 0.92);
   box-shadow: none;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-meter {
+  background: rgba(171, 173, 174, 0.24);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-stamina-cap-marker {
+  background: #a0392a;
+  box-shadow: 0 0 0 0.22rem rgba(160, 57, 42, 0.12);
 }
 
 body.theme-light .runner-dashboard-readiness-note,
@@ -37766,13 +39102,46 @@ body.theme-light .runner-dashboard-progression-gridlines span {
   border-top-color: rgba(171, 173, 174, 0.32);
 }
 
-body.theme-light .runner-dashboard-progression-callout {
-  color: #fff8f4;
-  box-shadow: 0 18px 30px rgba(160, 57, 42, 0.16);
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-line-glow {
+  opacity: 0.18;
 }
 
-body.theme-light .runner-dashboard-progression-callout span {
-  color: rgba(255, 248, 244, 0.82);
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-focus-rail {
+  stroke: rgba(160, 57, 42, 0.2);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-marker {
+  background: rgba(160, 57, 42, 0.16);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-marker.is-active {
+  background: rgba(240, 117, 97, 0.32);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-active-marker-halo {
+  background: rgba(240, 117, 97, 0.14);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-active-marker-core {
+  background: #ffffff;
+  box-shadow: 0 0 0 1.4px #a0392a;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-hitpoint:focus-visible {
+  outline-color: rgba(160, 57, 42, 0.72);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-callout {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 239, 236, 0.96)),
+    linear-gradient(135deg, rgba(252, 126, 105, 0.18), rgba(255, 255, 255, 0.72));
+  color: var(--text-strong);
+  box-shadow: 0 18px 30px rgba(160, 57, 42, 0.12);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-callout span,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-progression-callout small {
+  color: rgba(89, 92, 93, 0.82);
 }
 
 body.theme-light .runner-dashboard-workout-overlay {
@@ -38033,6 +39402,244 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-page .runner-shell-
 body:is(.theme-light, .theme-high-contrast-light) .add-shoes-page .runner-shell-topbar-link:hover,
 body:is(.theme-light, .theme-high-contrast-light) .add-shoes-page .runner-shell-avatar:hover {
   background: rgba(255, 255, 255, 0.96);
+}
+
+.weather-engine-canvas {
+  padding-top: 24px;
+  padding-inline: clamp(18px, 2.4vw, 32px);
+}
+
+.weather-engine-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
+  padding: 28px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at top right, rgba(240, 117, 97, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(29, 27, 27, 0.96), rgba(18, 17, 17, 0.98));
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.26);
+}
+
+.weather-engine-hero-copy {
+  max-width: 760px;
+}
+
+.weather-engine-kicker,
+.weather-engine-card-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.68rem;
+  color: rgba(244, 240, 234, 0.58);
+}
+
+.weather-engine-hero-copy h1 {
+  margin: 12px 0 10px;
+  font-size: clamp(2.4rem, 4vw, 3.8rem);
+  line-height: 1.02;
+  color: #fff4ed;
+}
+
+.weather-engine-hero-copy p {
+  margin: 0;
+  max-width: 66ch;
+  color: rgba(232, 226, 220, 0.78);
+  line-height: 1.7;
+}
+
+.weather-engine-hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.weather-engine-btn {
+  min-width: 180px;
+}
+
+.weather-engine-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.9fr);
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.weather-engine-card {
+  border-radius: 28px;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(46, 42, 40, 0.94), rgba(29, 27, 27, 0.97));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.weather-engine-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.weather-engine-card-head h2 {
+  margin: 8px 0 0;
+  color: #fff4ed;
+}
+
+.weather-engine-weather-mark,
+.weather-engine-engine-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fcad9e;
+}
+
+.weather-engine-weather-glyph {
+  width: 28px;
+  height: 28px;
+}
+
+.weather-engine-metric-grid,
+.weather-engine-engine-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.weather-engine-metric-card,
+.weather-engine-engine-stat {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.weather-engine-metric-icon {
+  color: #fcad9e;
+}
+
+.weather-engine-metric-card span,
+.weather-engine-engine-stat span {
+  color: rgba(232, 226, 220, 0.62);
+  font-size: 0.8rem;
+}
+
+.weather-engine-metric-card strong,
+.weather-engine-engine-stat strong {
+  color: #fff6ef;
+  font-size: 1.15rem;
+}
+
+.weather-engine-hourly {
+  margin-top: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.weather-engine-hourly-copy p,
+.weather-engine-engine-copy,
+.weather-engine-status-strip p,
+.weather-engine-empty p {
+  margin: 6px 0 0;
+  color: rgba(232, 226, 220, 0.72);
+  line-height: 1.6;
+}
+
+.weather-engine-status-strip {
+  margin-top: 20px;
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(240, 117, 97, 0.12);
+}
+
+.weather-engine-status-strip strong,
+.weather-engine-empty strong {
+  color: #fff6ef;
+}
+
+.weather-engine-empty {
+  margin-top: 22px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-hero {
+  background:
+    radial-gradient(circle at top right, rgba(252, 126, 105, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 241, 242, 0.96));
+  box-shadow: 0 20px 40px rgba(44, 47, 48, 0.08);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-kicker,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-card-kicker {
+  color: rgba(89, 92, 93, 0.68);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-hero-copy h1,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-card-head h2,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-metric-card strong,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-engine-stat strong,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-status-strip strong,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-empty strong {
+  color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-hero-copy p,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-hourly-copy p,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-engine-copy,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-status-strip p,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-empty p,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-metric-card span,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-engine-stat span {
+  color: rgba(89, 92, 93, 0.78);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-card {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 32px rgba(44, 47, 48, 0.06);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-weather-mark,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-engine-icon,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-metric-card,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-engine-stat,
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-empty {
+  background: rgba(44, 47, 48, 0.05);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-status-strip {
+  background: rgba(252, 126, 105, 0.12);
+}
+
+@media (max-width: 980px) {
+  .weather-engine-hero,
+  .weather-engine-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .weather-engine-hero,
+  .weather-engine-card {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .weather-engine-metric-grid,
+  .weather-engine-engine-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .add-shoes-hero-copy,

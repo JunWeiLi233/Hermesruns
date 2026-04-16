@@ -38,6 +38,7 @@ export default function SettingsAtlasLayout({
   setLang,
   quickControls,
   syncHealthItems,
+  garminLane,
   setupChecklist,
 }) {
   const digestStateLabel = digestEnabled ? t('settings.stitch_enabled') : t('settings.stitch_review');
@@ -286,28 +287,62 @@ export default function SettingsAtlasLayout({
             </button>
           </article>
 
-          <article className="settings-atlas-panel settings-atlas-service-card">
-            <div className="settings-atlas-service-main">
-              <span className="settings-atlas-service-icon">
-                <AppIcon name="watch" className="runner-dashboard-side-link-icon" />
-              </span>
-              <div>
-                <strong>GARMIN CONNECT</strong>
-                <p>{t('profile.garmin_connect_status')}</p>
-              </div>
-            </div>
-            <button type="button" className="settings-atlas-service-action is-connect" onClick={() => setActiveModal('garmin')}>
-              {t('settings.stitch_connect')}
-            </button>
-          </article>
+          <div className="settings-atlas-garmin-cluster">
+            <article className="settings-atlas-panel settings-atlas-service-card settings-atlas-service-card--garmin">
+              <div className="settings-atlas-service-lane">
+                <div className="settings-atlas-service-kicker-row">
+                  <span className="settings-atlas-service-kicker-line" aria-hidden="true" />
+                  <span>{garminLane.eyebrow}</span>
+                </div>
 
-          <button type="button" className="settings-atlas-panel settings-atlas-import-drop" onClick={() => setActiveModal('manual')}>
-            <AppIcon name="upload_file" className="runner-dashboard-side-link-icon" />
-            <div>
-              <strong>{t('profile.watch_import_files')}</strong>
-              <p>{t('profile.import_hint')}</p>
-            </div>
-          </button>
+                <div className="settings-atlas-service-main settings-atlas-service-main--garmin">
+                  <span className="settings-atlas-service-icon is-garmin" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="8" />
+                      <path d="M12 7v7" />
+                      <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
+                      <path d="M8 18h8" />
+                    </svg>
+                  </span>
+                  <div>
+                    <strong>{garminLane.title}</strong>
+                    <p>{garminLane.summary}</p>
+                  </div>
+                </div>
+
+                <div className={`settings-atlas-service-state-card is-${garminLane.tone}`}>
+                  <span>{garminLane.eyebrow}</span>
+                  <strong>{garminLane.status}</strong>
+                </div>
+
+                <div className="settings-atlas-service-meta-grid">
+                  <article className="settings-atlas-service-metric">
+                    <span>{garminLane.limitLabel}</span>
+                    <strong>{garminLane.limitValue}</strong>
+                  </article>
+                  <article className="settings-atlas-service-metric">
+                    <span>{garminLane.manualLabel}</span>
+                    <strong>{garminLane.manualValue}</strong>
+                  </article>
+                </div>
+
+                <p className="settings-atlas-service-note">{garminLane.credentialsNote}</p>
+              </div>
+
+              <button type="button" className="settings-atlas-service-action is-connect" onClick={() => setActiveModal('garmin')}>
+                {garminLane.primaryAction}
+              </button>
+            </article>
+
+            <button type="button" className="settings-atlas-panel settings-atlas-import-drop settings-atlas-import-drop--garmin" onClick={() => setActiveModal('manual')}>
+              <div className="settings-atlas-import-drop-copy">
+                <span className="settings-atlas-import-drop-kicker">{garminLane.manualValue}</span>
+                <strong>{garminLane.manualLabel}</strong>
+                <p>{t('profile.import_hint')}</p>
+              </div>
+              <AppIcon name="upload_file" className="runner-dashboard-side-link-icon" />
+            </button>
+          </div>
 
           <article className="settings-atlas-panel">
             <div className="settings-atlas-panel-head">
@@ -326,14 +361,6 @@ export default function SettingsAtlasLayout({
                   </span>
                 </div>
               ))}
-            </div>
-            <div className="settings-atlas-inline-actions">
-              <button type="button" className="settings-atlas-service-action" onClick={() => setActiveModal('garmin')}>
-                {t('profile.garmin_connect_import')}
-              </button>
-              <button type="button" className="settings-atlas-service-action" onClick={() => setActiveModal('manual')}>
-                {t('profile.watch_import_files')}
-              </button>
             </div>
           </article>
         </section>

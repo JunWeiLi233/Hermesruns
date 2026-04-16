@@ -13,6 +13,7 @@ import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
+import { computeVdotTrend } from '../utils/vdot';
 import { buildAnalysisSnapshot } from '../utils/analysisInsights';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -52,6 +53,7 @@ export default function Analysis() {
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
+  const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -208,7 +210,7 @@ export default function Analysis() {
             </div>
           </div>
           <div className="runner-shell-topbar-actions">
-            <div className="runner-shell-topbar-profile-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
@@ -350,6 +352,27 @@ export default function Analysis() {
                       <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-overview-coach-badge" />
                     </div>
                   </button>
+
+                  {vdotTrend.hasData && (
+                    <article className="analysis-overview-card analysis-overview-card--insight analysis-overview-card--vdot-insight">
+                      <div className="analysis-overview-card-head">
+                        <div>
+                          <span className="analysis-overview-card-kicker">{t('analysis.vdot_trend_insight_title')}</span>
+                          <h3 className="analysis-overview-vdot-trend-heading">
+                            <AppIcon
+                              name={vdotTrend.direction === 'improving' ? 'trending_up' : vdotTrend.direction === 'declining' ? 'trending_down' : 'trending_flat'}
+                              className={cx('runner-dashboard-side-link-icon', vdotTrend.direction === 'improving' && 'is-positive', vdotTrend.direction === 'declining' && 'is-negative')}
+                            />
+                            {t(`profile.vdot_trend_${vdotTrend.direction}`)}
+                          </h3>
+                        </div>
+                        <div className="analysis-overview-insight-delta">
+                          <strong>{vdotTrend.delta > 0 ? `+${vdotTrend.delta.toFixed(1)}` : vdotTrend.delta.toFixed(1)}</strong>
+                        </div>
+                      </div>
+                      <p className="analysis-overview-insight-copy">{t('analysis.vdot_trend_insight_copy')}</p>
+                    </article>
+                  )}
                 </div>
               </section>
 
