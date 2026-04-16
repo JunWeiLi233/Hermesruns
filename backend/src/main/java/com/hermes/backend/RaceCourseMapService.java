@@ -13,15 +13,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.apache.pdfbox.Loader;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.ImageType;
-import org.apache.pdfbox.rendering.PDFRenderer;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -44,11 +39,11 @@ public class RaceCourseMapService {
     private static final Duration CACHE_TTL = Duration.ofHours(24);
     private static final int MAX_URL_LENGTH = 500;
     private static final int MAX_IMAGE_BYTES = 6 * 1024 * 1024;
-    private static final int MAX_DOCUMENT_BYTES = 12 * 1024 * 1024;
     private static final int MAX_CANDIDATES = 6;
     private static final int TARGET_ELEVATION_SAMPLE_COUNT = 25;
     private static final int MIN_ALIGNMENT_CONFIDENCE = 68;
     private static final double EARTH_RADIUS_KM = 6371.0088;
+    private static final int CLIMB_DELTA_THRESHOLD_METERS = 1;
     private static final Pattern MEDIA_URL_PATTERN = Pattern.compile("murl&quot;:&quot;([^&]+?)&quot;", Pattern.CASE_INSENSITIVE);
     private static final Pattern META_IMAGE_PATTERN = Pattern.compile(
             "<meta[^>]+(?:property|name)=[\"'](?:og:image|og:image:url|twitter:image|twitter:image:src)[\"'][^>]+content=[\"']([^\"'#]+(?:\\?[^\"']*)?)[\"'][^>]*>|"
@@ -242,24 +237,18 @@ public class RaceCourseMapService {
                 .limit(MAX_CANDIDATES)
                 .toList();
 
-        ResolvedCandidateAsset fallbackAsset = null;
-        CourseMapCandidate fallbackCandidate = null;
         for (CourseMapCandidate candidate : ranked) {
-            ResolvedCandidateAsset resolvedAsset = resolveCandidateAsset(candidate);
-            if (resolvedAsset == null) continue;
-            if (fallbackAsset == null) {
-                fallbackAsset = resolvedAsset;
-                fallbackCandidate = candidate;
-            }
+            byte[] imageBytes = fetchImageBytes(candidate.imageUrl());
+            if (imageBytes == null) continue;
 
-            BufferedImage decoded = decodeImage(resolvedAsset.imageBytes());
+            BufferedImage decoded = decodeImage(imageBytes);
             if (decoded == null || decoded.getWidth() < 320 || decoded.getHeight() < 180) continue;
 
             if (!systemConfigService.isAiConfigured() || aiApiKey == null || aiApiKey.isBlank()) {
-                return candidateOnlyResult(resolvedAsset.imageUrl(), candidate.source(), "AI course-map alignment is not configured.");
+                return candidateOnlyResult(candidate, "AI course-map alignment is not configured.");
             }
 
-            CourseMapAlignment alignment = analyzeCandidate(resolvedAsset.imageUrl(), resolvedAsset.imageBytes(), raceName, city, country, latitude, longitude, distanceKm);
+            CourseMapAlignment alignment = analyzeCandidate(candidate, imageBytes, raceName, city, country, latitude, longitude, distanceKm);
             if (alignment == null || !alignment.isCourseMap()) continue;
             if (alignment.confidence() < MIN_ALIGNMENT_CONFIDENCE) continue;
 
@@ -268,11 +257,11 @@ public class RaceCourseMapService {
 
             OverlayBounds overlayBounds = sanitizeOverlayBounds(alignment.overlayBounds(), routePoints);
             List<RoutePoint> sampledRoute = resampleRoute(routePoints, TARGET_ELEVATION_SAMPLE_COUNT);
-            List<Integer> elevationSamples = fetchElevationSamples(sampledRoute);
+            List<Integer> elevationSamples = smoothElevationSamples(fetchElevationSamples(sampledRoute));
             Integer totalClimbMeters = computeTotalClimbMeters(elevationSamples);
 
             return new RaceCourseMapResult(
-                    resolvedAsset.imageUrl(),
+                    candidate.imageUrl(),
                     candidate.source(),
                     true,
                     alignment.confidence(),
@@ -285,10 +274,8 @@ public class RaceCourseMapService {
             );
         }
 
-        if (fallbackAsset != null && fallbackCandidate != null) {
-            return candidateOnlyResult(fallbackAsset.imageUrl(), fallbackCandidate.source(), "Hermes found a likely course-map image but could not align it confidently yet.");
-        }
-        return emptyResult("No usable course-map candidate found yet.");
+        CourseMapCandidate fallback = ranked.get(0);
+        return candidateOnlyResult(fallback, "Hermes found a likely course-map image but could not align it confidently yet.");
     }
 
     private LinkedHashMap<String, CourseMapCandidate> collectCandidates(String raceName, String city, String country, String websiteUrl) {
@@ -310,28 +297,6 @@ public class RaceCourseMapService {
     private void collectOfficialPageCandidates(Map<String, CourseMapCandidate> candidates, String websiteUrl) {
         List<String> pages = new ArrayList<>();
         pages.add(websiteUrl);
-        List<String> relativePages = List.of(
-                "course",
-                "course/",
-                "course-map",
-                "course-map/",
-                "route",
-                "route/",
-                "route-map",
-                "route-map/",
-                "the-course",
-                "race-info",
-                "race-info/course",
-                "about/course",
-                "about/course/",
-                "about/course-map",
-                "about/course-map/",
-                "about/route",
-                "about/route-map"
-        );
-        for (String relativePage : relativePages) {
-            pages.add(appendRelativePath(websiteUrl, relativePage));
-        }
         pages.add(appendPath(websiteUrl, "/course"));
         pages.add(appendPath(websiteUrl, "/course-map"));
         pages.add(appendPath(websiteUrl, "/route"));
@@ -399,7 +364,7 @@ public class RaceCourseMapService {
         try {
             String resolved = baseUri == null ? raw.trim() : baseUri.resolve(raw.trim()).toString();
             String safe = SafeUrlValidator.validateHttpsUrlOrNull(resolved, MAX_URL_LENGTH, "courseMapImageUrl");
-            if (safe == null || (!isImageFileUrl(safe) && !isPdfFileUrl(safe))) return false;
+            if (safe == null || !isImageFileUrl(safe)) return false;
             int totalScore = score + scoreText(safe);
             if (totalScore <= 0) return false;
             CourseMapCandidate existing = candidates.get(safe);
@@ -413,7 +378,7 @@ public class RaceCourseMapService {
     }
 
     private CourseMapAlignment analyzeCandidate(
-            String imageReference,
+            CourseMapCandidate candidate,
             byte[] imageBytes,
             String raceName,
             String city,
@@ -422,7 +387,7 @@ public class RaceCourseMapService {
             Double longitude,
             Double distanceKm
     ) {
-        String mediaType = detectMediaTypeFromBytes(imageBytes, imageReference);
+        String mediaType = detectMediaType(candidate.imageUrl());
         String prompt = buildAlignmentPrompt(raceName, city, country, latitude, longitude, distanceKm);
         String text = "claude".equalsIgnoreCase(aiProvider)
                 ? callClaude(imageBytes, mediaType, prompt)
@@ -610,7 +575,11 @@ public class RaceCourseMapService {
         }
         if (distanceKm != null && distanceKm > 0) {
             double routeDistanceKm = polylineDistanceKm(routePoints);
-            if (routeDistanceKm < distanceKm * 0.45 || routeDistanceKm > distanceKm * 1.85) return false;
+            if (distanceKm >= 40.0) {
+                if (routeDistanceKm < distanceKm * 0.75 || routeDistanceKm > distanceKm * 1.25) return false;
+            } else {
+                if (routeDistanceKm < distanceKm * 0.45 || routeDistanceKm > distanceKm * 1.85) return false;
+            }
         }
         return true;
     }
@@ -734,9 +703,20 @@ public class RaceCourseMapService {
         int climb = 0;
         for (int i = 1; i < samples.size(); i++) {
             int delta = samples.get(i) - samples.get(i - 1);
-            if (delta > 0) climb += delta;
+            if (delta >= CLIMB_DELTA_THRESHOLD_METERS) climb += delta;
         }
         return climb;
+    }
+
+    private List<Integer> smoothElevationSamples(List<Integer> samples) {
+        if (samples == null || samples.size() < 3) return samples == null ? List.of() : samples;
+        List<Integer> smoothed = new ArrayList<>(samples.size());
+        smoothed.add(Math.round((samples.get(0) + samples.get(1)) / 2.0f));
+        for (int i = 1; i < samples.size() - 1; i++) {
+            smoothed.add(Math.round((samples.get(i - 1) + samples.get(i) + samples.get(i + 1)) / 3.0f));
+        }
+        smoothed.add(Math.round((samples.get(samples.size() - 2) + samples.get(samples.size() - 1)) / 2.0f));
+        return smoothed;
     }
 
     private RaceCourseMapResult analyzeResolvedImage(
@@ -757,7 +737,8 @@ public class RaceCourseMapService {
         if (!systemConfigService.isAiConfigured() || aiApiKey == null || aiApiKey.isBlank()) {
             return new RaceCourseMapResult(imageReference, source, false, 0, "AI course-map alignment is not configured.", null, List.of(), List.of(), null, false);
         }
-        CourseMapAlignment alignment = analyzeCandidate(imageReference, imageBytes, raceName, city, country, latitude, longitude, distanceKm);
+        CourseMapCandidate candidate = new CourseMapCandidate(imageReference, source, 100);
+        CourseMapAlignment alignment = analyzeCandidate(candidate, imageBytes, raceName, city, country, latitude, longitude, distanceKm);
         if (alignment == null || !alignment.isCourseMap() || alignment.confidence() < MIN_ALIGNMENT_CONFIDENCE) {
             return new RaceCourseMapResult(imageReference, source, false, alignment == null ? 0 : alignment.confidence(),
                     alignment == null ? "Hermes could not align this course-map confidently yet." : alignment.summary(),
@@ -769,7 +750,7 @@ public class RaceCourseMapService {
                     "Hermes found route hints but the alignment failed the plausibility checks.", null, List.of(), List.of(), null, true);
         }
         OverlayBounds overlayBounds = sanitizeOverlayBounds(alignment.overlayBounds(), routePoints);
-        List<Integer> elevationSamples = fetchElevationSamples(resampleRoute(routePoints, TARGET_ELEVATION_SAMPLE_COUNT));
+        List<Integer> elevationSamples = smoothElevationSamples(fetchElevationSamples(resampleRoute(routePoints, TARGET_ELEVATION_SAMPLE_COUNT)));
         Integer totalClimbMeters = computeTotalClimbMeters(elevationSamples);
         return new RaceCourseMapResult(imageReference, source, true, alignment.confidence(), alignment.summary(), overlayBounds, routePoints, elevationSamples, totalClimbMeters, true);
     }
@@ -785,42 +766,7 @@ public class RaceCourseMapService {
                 return null;
             }
         }
-        if (isPdfFileUrl(imageReference)) {
-            byte[] pdfBytes = fetchDocumentBytes(imageReference);
-            if (pdfBytes != null) {
-                ResolvedCandidateAsset rendered = renderPdfCandidate(pdfBytes);
-                if (rendered != null) return rendered.imageBytes();
-            }
-        }
         return fetchImageBytes(imageReference);
-    }
-
-    private ResolvedCandidateAsset resolveCandidateAsset(CourseMapCandidate candidate) {
-        if (candidate == null || candidate.imageUrl() == null || candidate.imageUrl().isBlank()) return null;
-        if (isPdfFileUrl(candidate.imageUrl())) {
-            byte[] pdfBytes = fetchDocumentBytes(candidate.imageUrl());
-            if (pdfBytes == null) return null;
-            return renderPdfCandidate(pdfBytes);
-        }
-        byte[] imageBytes = fetchImageBytes(candidate.imageUrl());
-        if (imageBytes == null) return null;
-        return new ResolvedCandidateAsset(candidate.imageUrl(), imageBytes);
-    }
-
-    private ResolvedCandidateAsset renderPdfCandidate(byte[] pdfBytes) {
-        try (PDDocument document = Loader.loadPDF(pdfBytes)) {
-            if (document.getNumberOfPages() == 0) return null;
-            PDFRenderer renderer = new PDFRenderer(document);
-            BufferedImage image = renderer.renderImageWithDPI(0, 144, ImageType.RGB);
-            if (image == null) return null;
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            ImageIO.write(image, "png", output);
-            byte[] imageBytes = output.toByteArray();
-            if (imageBytes.length == 0) return null;
-            return new ResolvedCandidateAsset("data:image/png;base64," + Base64.getEncoder().encodeToString(imageBytes), imageBytes);
-        } catch (Exception ignored) {
-            return null;
-        }
     }
 
     private void persistPending(
@@ -964,18 +910,10 @@ public class RaceCourseMapService {
     }
 
     private byte[] fetchImageBytes(String imageUrl) {
-        return fetchBinaryBytes(imageUrl, MAX_IMAGE_BYTES);
-    }
-
-    private byte[] fetchDocumentBytes(String documentUrl) {
-        return fetchBinaryBytes(documentUrl, MAX_DOCUMENT_BYTES);
-    }
-
-    private byte[] fetchBinaryBytes(String url, int maxBytes) {
         try {
-            ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
+            ResponseEntity<byte[]> response = restTemplate.exchange(imageUrl, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
             byte[] body = response.getBody();
-            if (body == null || body.length == 0 || body.length > maxBytes) return null;
+            if (body == null || body.length == 0 || body.length > MAX_IMAGE_BYTES) return null;
             return body;
         } catch (Exception ignored) {
             return null;
@@ -1046,19 +984,6 @@ public class RaceCourseMapService {
         }
     }
 
-    private String appendRelativePath(String websiteUrl, String path) {
-        try {
-            String base = websiteUrl == null ? null : websiteUrl.trim();
-            if (base == null || base.isBlank()) return null;
-            if (!base.endsWith("/")) {
-                base = base + "/";
-            }
-            return URI.create(base).resolve(path).toString();
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
     private int scoreText(String value) {
         if (value == null || value.isBlank()) return 0;
         String lower = value.toLowerCase(Locale.ROOT);
@@ -1079,10 +1004,6 @@ public class RaceCourseMapService {
                 || lower.contains(".webp") || lower.contains(".gif") || lower.contains(".avif");
     }
 
-    private boolean isPdfFileUrl(String url) {
-        return url != null && url.toLowerCase(Locale.ROOT).contains(".pdf");
-    }
-
     private boolean shouldRefresh(RaceCourseMapResult result) {
         return result == null || (!result.courseMapDetected() && (result.imageUrl() == null || result.imageUrl().isBlank()));
     }
@@ -1091,38 +1012,17 @@ public class RaceCourseMapService {
         return new RaceCourseMapResult("", "", false, 0, summary, null, List.of(), List.of(), null, false);
     }
 
-    private RaceCourseMapResult candidateOnlyResult(String imageUrl, String source, String summary) {
-        return new RaceCourseMapResult(imageUrl, source, false, 0, summary, null, List.of(), List.of(), null, false);
+    private RaceCourseMapResult candidateOnlyResult(CourseMapCandidate candidate, String summary) {
+        return new RaceCourseMapResult(candidate.imageUrl(), candidate.source(), false, 0, summary, null, List.of(), List.of(), null, false);
     }
 
     private String detectMediaType(String imageUrl) {
-        if (imageUrl != null && imageUrl.startsWith("data:image/")) {
-            int separator = imageUrl.indexOf(';');
-            int comma = imageUrl.indexOf(',');
-            int end = separator > 0 ? separator : comma;
-            if (end > "data:".length()) {
-                return imageUrl.substring("data:".length(), end);
-            }
-        }
         String lower = imageUrl == null ? "" : imageUrl.toLowerCase(Locale.ROOT);
-        if (lower.contains(".pdf")) return "application/pdf";
         if (lower.contains(".png")) return "image/png";
         if (lower.contains(".webp")) return "image/webp";
         if (lower.contains(".gif")) return "image/gif";
         if (lower.contains(".avif")) return "image/avif";
         return "image/jpeg";
-    }
-
-    private String detectMediaTypeFromBytes(byte[] bytes, String fallbackUrl) {
-        if (bytes != null && bytes.length > 8) {
-            if (bytes[0] == (byte) 0x89 && bytes[1] == (byte) 0x50 && bytes[2] == (byte) 0x4E && bytes[3] == (byte) 0x47) {
-                return "image/png";
-            }
-            if (bytes[0] == (byte) 0xFF && bytes[1] == (byte) 0xD8 && bytes[2] == (byte) 0xFF) {
-                return "image/jpeg";
-            }
-        }
-        return detectMediaType(fallbackUrl);
     }
 
     private String normalize(String value) {
@@ -1226,8 +1126,6 @@ public class RaceCourseMapService {
             Integer confidence,
             String updatedAt
     ) {}
-
-    private record ResolvedCandidateAsset(String imageUrl, byte[] imageBytes) {}
 
     private record CourseMapCandidate(String imageUrl, String source, int score) {}
 

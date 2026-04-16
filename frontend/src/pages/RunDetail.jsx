@@ -491,15 +491,17 @@ export default function RunDetail() {
           </div>
         </div>
         <div className="run-detail-topbar-actions">
-          {run.provider && <div className="run-detail-provider-pill">{run.provider}</div>}
-          {run.provider === 'STRAVA' && (
-            <button className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
-              {syncBtnText || t('run_detail.resync_strava')}
+          <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+            {run.provider && <div className="run-detail-provider-pill">{run.provider}</div>}
+            {run.provider === 'STRAVA' && (
+              <button className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
+                {syncBtnText || t('run_detail.resync_strava')}
+              </button>
+            )}
+            <button type="button" className="run-detail-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
+              <span>{shareFeedback || t('run_detail.share')}</span>
             </button>
-          )}
-          <button type="button" className="run-detail-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
-            <span>{shareFeedback || t('run_detail.share')}</span>
-          </button>
+          </div>
         </div>
       </div>
 

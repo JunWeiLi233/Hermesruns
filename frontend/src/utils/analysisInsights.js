@@ -504,6 +504,30 @@ export function buildRunInsightRows(runs, bestVdot, unit, lang, limit = 6) {
     });
 }
 
+export function calculatePredictionConsistency(entries) {
+  if (!Array.isArray(entries) || entries.length < 3) return { score: 0, level: 'low' };
+
+  const recent = entries
+    .filter((e) => e && e.vdot > 0)
+    .sort((a, b) => b.date - a.date)
+    .slice(0, 5)
+    .map((e) => e.vdot);
+
+  if (recent.length < 3) return { score: 0, level: 'low' };
+
+  const mean = avg(recent);
+  const variance = avg(recent.map((v) => Math.pow(v - mean, 2)));
+  const stdDev = Math.sqrt(variance);
+
+  // Daniels VDOT noise: < 0.5 is very consistent, > 1.2 is high variance
+  const score = Math.max(0, Math.min(100, Math.round(100 - (stdDev * 40))));
+  let level = 'low';
+  if (score >= 85) level = 'high';
+  else if (score >= 65) level = 'moderate';
+
+  return { score, level, stdDev };
+}
+
 export function buildAnalysisSnapshot(runs, lang, unit) {
   const bestEstimate = estimateCurrentVdot(runs);
   const bestVdot = bestEstimate.representativeVdot;
@@ -530,6 +554,7 @@ export function buildAnalysisSnapshot(runs, lang, unit) {
     marathonDeltaSeconds,
     bestVdot,
   });
+  const predictionConsistency = calculatePredictionConsistency(entries);
 
   return {
     bestEstimate,
@@ -544,5 +569,6 @@ export function buildAnalysisSnapshot(runs, lang, unit) {
     marathonRow,
     marathonDeltaSeconds,
     coachInsight,
+    predictionConsistency,
   };
 }

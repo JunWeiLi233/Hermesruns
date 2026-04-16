@@ -456,20 +456,22 @@ export default function Heatmap() {
           </button>
 
           <div className="heatmap-page-action-strip">
-            <button type="button" className="heatmap-page-secondary-btn is-overlay" onClick={() => navigate('/runs')}>
-              {t('heatmap.page_open_runs')}
-            </button>
-            <button type="button" className="heatmap-page-primary-btn is-overlay" onClick={() => navigate('/settings')}>
-              {t('heatmap.page_open_settings')}
-            </button>
-            <button
-              type="button"
-              className="runner-shell-avatar heatmap-page-avatar"
-              aria-label={profile?.displayName || 'Hermes'}
-              onClick={() => navigate('/profile')}
-            >
-              {initials}
-            </button>
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+              <button type="button" className="heatmap-page-secondary-btn is-overlay" onClick={() => navigate('/runs')}>
+                {t('heatmap.page_open_runs')}
+              </button>
+              <button type="button" className="heatmap-page-primary-btn is-overlay" onClick={() => navigate('/settings')}>
+                {t('heatmap.page_open_settings')}
+              </button>
+              <button
+                type="button"
+                className="runner-shell-avatar heatmap-page-avatar"
+                aria-label={profile?.displayName || 'Hermes'}
+                onClick={() => navigate('/profile')}
+              >
+                {initials}
+              </button>
+            </div>
           </div>
         </header>
 

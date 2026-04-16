@@ -292,7 +292,7 @@ export default function WeatherEngine() {
             </div>
           </div>
           <div className="runner-shell-topbar-actions">
-            <div className="runner-shell-topbar-profile-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />

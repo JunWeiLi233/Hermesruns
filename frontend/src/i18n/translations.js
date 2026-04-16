@@ -669,7 +669,7 @@ const translations = {
       "earned_summary": "继续导入跑步记录后，这里会自动点亮你的奖励。",
       "empty_focus_title": "接下来可冲击",
       "empty_focus_copy": "进度越高，越容易优先拿到",
-      "catalog_copy": "修复中文字段 rewards.catalog_copy"
+      "catalog_copy": "探索徽章目录，解锁更多跑步成就"
     },
     "shoes": {
       "title": "Hermes | 跑鞋库",
@@ -884,9 +884,9 @@ const translations = {
       "img_search_failed": "识图失败",
       "lifespan": "寿命",
       "img_picker_copy": "上传照片或截图快速扫描你的跑鞋",
-      "img_search_title": "修复中文字段 shoes.img_search_title",
-      "img_search_copy": "修复中文字段 shoes.img_search_copy",
-      "img_empty_copy": "修复中文字段 shoes.img_empty_copy"
+      "img_search_title": "搜索跑鞋图片",
+      "img_search_copy": "输入品牌和型号搜索网络图片",
+      "img_empty_copy": "尝试更换关键词或直接上传照片"
     },
     "analysis": {
       "title": "Hermes | 跑步深度分析（VO2max / 配速区间 / 比赛预测）",
@@ -919,6 +919,9 @@ const translations = {
       "stitch_pace_per_km": "每公里配速",
       "stitch_pace_per_mile": "每英里配速",
       "stitch_vs_prev": "较上次",
+      "prediction_consistency_high": "预测高度稳定",
+      "prediction_consistency_moderate": "预测基本稳定",
+      "prediction_consistency_low": "预测存在波动",
       "stitch_no_delta": "暂无上次对比",
       "stitch_acwr_copy": "急慢性负荷比会告诉你这段训练是在被吸收，还是已经开始顶高。",
       "stitch_acwr_low": "负荷偏低",
@@ -1265,13 +1268,13 @@ const translations = {
       "pred_detail_hero_kicker": "预测走势分析",
       "pred_detail_signal_copy": "目前 {dist} 的数据趋势...",
       "pred_detail_signal_title": "成绩预测指标",
-      "injury_detail_metric_score_hint": "修复中文字段 analysis.injury_detail_metric_score_hint",
-      "injury_detail_metric_cadence_hint": "修复中文字段 analysis.injury_detail_metric_cadence_hint",
-      "injury_detail_metric_drift_hint": "修复中文字段 analysis.injury_detail_metric_drift_hint",
-      "injury_detail_metric_load_hint": "修复中文字段 analysis.injury_detail_metric_load_hint",
-      "injury_signal_cadence": "修复中文字段 analysis.injury_signal_cadence",
-      "injury_signal_drift": "修复中文字段 analysis.injury_signal_drift",
-      "injury_signal_stack": "修复中文字段 analysis.injury_signal_stack"
+      "injury_detail_metric_score_hint": "综合疲劳、训练负荷与身体信号的伤病风险评分",
+      "injury_detail_metric_cadence_hint": "步频下降可能预示疲劳积累或早期伤病",
+      "injury_detail_metric_drift_hint": "跑姿漂移增大通常意味着疲劳导致代偿动作增加",
+      "injury_detail_metric_load_hint": "急慢性负荷比衡量近期训练增幅是否过快",
+      "injury_signal_cadence": "步频变化",
+      "injury_signal_drift": "跑姿漂移",
+      "injury_signal_stack": "负荷叠加"
     },
     "today_run": {
       "title": "Hermes | 今日训练计划",
@@ -1346,6 +1349,8 @@ const translations = {
       "acclimatization_reason": "今天湿热压力较高，建议配速放慢约 +{n} 秒/公里，以维持目标心率区间。",
       "acclimatization_modal_title": "检测到高温高湿",
       "acclimatization_modal_body": "今天我们已将目标配速调整为 +{n} 秒/公里，以应对湿热并帮助你稳定在合适心率区间。随着你在接下来约 10 天逐步热适应，这个调整会逐步下降。",
+      "acclimatization_adjusted_pace": "热适应配速",
+      "acclimatization_normal_pace": "常规配速：{pace}",
       "stitch_focus_label": "马拉松焦点",
       "stitch_shell_title": "今日跑步",
       "stitch_route_label": "训练路线",
@@ -1377,19 +1382,27 @@ const translations = {
       "stitch_action_schedule": "预定训练",
       "stitch_weather_none": "暂无天气数据",
       "metric_recovery_hours": "大约还要恢复 {hours} 小时",
-      "metric_vo2max": "修复中文字段 today_run.metric_vo2max",
-      "metric_acwr": "修复中文字段 today_run.metric_acwr",
-      "stitch_load_7d": "修复中文字段 today_run.stitch_load_7d",
-      "shoe_title": "修复中文字段 today_run.shoe_title",
-      "shoe_insight_summary": "修复中文字段 today_run.shoe_insight_summary",
-      "shoe_rotation_summary": "修复中文字段 today_run.shoe_rotation_summary",
-      "shoe_primary_summary": "修复中文字段 today_run.shoe_primary_summary",
-      "shoe_current_mileage": "修复中文字段 today_run.shoe_current_mileage",
-      "shoe_mileage_left": "修复中文字段 today_run.shoe_mileage_left",
-      "shoe_open_locker": "修复中文字段 today_run.shoe_open_locker",
-      "shoe_empty_title": "修复中文字段 today_run.shoe_empty_title",
-      "shoe_empty_copy": "修复中文字段 today_run.shoe_empty_copy",
-      "shoe_empty_cta": "修复中文字段 today_run.shoe_empty_cta"
+      "metric_vo2max": "最大摄氧量",
+      "metric_acwr": "急慢性负荷比",
+      "stitch_load_7d": "7 日负荷",
+      "shoe_title": "今日跑鞋",
+      "shoe_insight_summary": "这对鞋 {runCount} 次跑步平均心率差异 {bpm} bpm",
+      "shoe_rotation_summary": "轮换中近期穿着 {count} 次",
+      "shoe_primary_summary": "你的主力训练鞋",
+      "shoe_current_mileage": "当前里程：{distance}",
+      "shoe_mileage_left": "剩余寿命：{distance}",
+      "shoe_open_locker": "打开鞋柜",
+      "shoe_empty_title": "还没有跑鞋",
+      "shoe_empty_copy": "添加你的跑鞋，获取个性化轮换建议和里程提醒。",
+      "shoe_empty_cta": "添加跑鞋",
+      "vdot_trend_label": "VO2max 趋势",
+      "vdot_trend_improving": "提升中",
+      "vdot_trend_declining": "下降中",
+      "vdot_trend_maintaining": "稳定",
+      "stamina_score": "体力值",
+      "stamina_recovery_cap": "恢复上限",
+      "stamina_target_pace": "建议配速",
+      "stamina_target_hr": "建议心率"
     },
     "settings": {
       "eyebrow": "账户设置",
@@ -2271,11 +2284,8 @@ const translations = {
     "schedule": {
       "next_up": "下一个项目"
     },
-    "": {
-      "": "修复中文字段 ."
-    },
     "leaflet": {
-      "heat": "修复中文字段 leaflet.heat"
+      "heat": "热力"
     }
   },
   "en": {
@@ -2584,11 +2594,11 @@ const translations = {
       "today_run_type_base": "Base Build",
       "metric_vo2max": "VO2max",
       "metric_acwr": "ACWR",
-      "stamina_score": "体力值",
-      "stamina_recovery_cap": "恢复上限",
-      "stamina_target_pace": "建议配速",
-      "stamina_target_hr": "建议心率",
-      "metric_recovery_hours": "{hours} 小时",
+      "stamina_score": "Stamina",
+      "stamina_recovery_cap": "Recovery Cap",
+      "stamina_target_pace": "Target Pace",
+      "stamina_target_hr": "Target HR",
+      "metric_recovery_hours": "{hours} h",
       "today_run_title_restart": "Ease Back In",
       "today_run_title_comeback": "Return To Aerobic Running",
       "today_run_title_recovery": "Recovery Run + Relaxed Strides",
@@ -2952,7 +2962,7 @@ const translations = {
       "earned_summary": "Import more runs and Hermes will start lighting these up automatically.",
       "empty_focus_title": "Up Next",
       "empty_focus_copy": "Highest progress first",
-      "catalog_copy": "Fix eng field rewards.catalog_copy"
+      "catalog_copy": "Explore the badge catalog and unlock more running achievements"
     },
     "shoes": {
       "title": "Hermes | Shoe Library",
@@ -3167,9 +3177,9 @@ const translations = {
       "img_search_failed": "Image scan failed",
       "lifespan": "Lifespan",
       "img_picker_copy": "Upload a photo or screenshot to quickly scan your shoes",
-      "img_search_title": "Fix eng field shoes.img_search_title",
-      "img_search_copy": "Fix eng field shoes.img_search_copy",
-      "img_empty_copy": "Fix eng field shoes.img_empty_copy"
+      "img_search_title": "Search Shoe Images",
+      "img_search_copy": "Enter brand and model to search for images online",
+      "img_empty_copy": "Try different keywords or upload a photo directly"
     },
     "analysis": {
       "title": "Hermes | Deep Running Analytics (VO2max, Pace Zones, Race Prediction)",
@@ -3548,13 +3558,13 @@ const translations = {
       "pred_detail_hero_kicker": "Forecast Insight",
       "pred_detail_signal_copy": "Current trends for the {dist}...",
       "pred_detail_signal_title": "Prediction Signals",
-      "injury_detail_metric_score_hint": "Fix eng field analysis.injury_detail_metric_score_hint",
-      "injury_detail_metric_cadence_hint": "Fix eng field analysis.injury_detail_metric_cadence_hint",
-      "injury_detail_metric_drift_hint": "Fix eng field analysis.injury_detail_metric_drift_hint",
-      "injury_detail_metric_load_hint": "Fix eng field analysis.injury_detail_metric_load_hint",
-      "injury_signal_cadence": "Fix eng field analysis.injury_signal_cadence",
-      "injury_signal_drift": "Fix eng field analysis.injury_signal_drift",
-      "injury_signal_stack": "Fix eng field analysis.injury_signal_stack"
+      "injury_detail_metric_score_hint": "Composite injury risk from fatigue, training load, and body signals",
+      "injury_detail_metric_cadence_hint": "Cadence drop may signal cumulative fatigue or early injury",
+      "injury_detail_metric_drift_hint": "Rising drift usually means fatigue-driven compensatory movement",
+      "injury_detail_metric_load_hint": "Acute-chronic ratio measures whether recent load ramped too fast",
+      "injury_signal_cadence": "Cadence change",
+      "injury_signal_drift": "Form drift",
+      "injury_signal_stack": "Load stack"
     },
     "today_run": {
       "title": "Hermes | Today's Run Plan",
@@ -3629,6 +3639,8 @@ const translations = {
       "acclimatization_reason": "Humidity stress is elevated today, so pace is adjusted by about +{n} sec/km to keep your effort in the right zone.",
       "acclimatization_modal_title": "Extreme heat detected",
       "acclimatization_modal_body": "We adjusted your target pace by +{n} sec/km today to account for humidity and keep your effort in-zone. This adjustment should taper down over roughly the next 10 days as you acclimatize.",
+      "acclimatization_adjusted_pace": "Heat-adjusted pace",
+      "acclimatization_normal_pace": "Normal pace: {pace}",
       "stitch_focus_label": "Marathon Focus",
       "stitch_route_label": "Route",
       "stitch_shell_title": "Today Run",
@@ -3666,17 +3678,21 @@ const translations = {
       "stamina_recovery_cap": "Recovery Cap",
       "stamina_target_pace": "Target Pace",
       "stamina_target_hr": "Target HR",
-      "stitch_load_7d": "Fix eng field today_run.stitch_load_7d",
-      "shoe_title": "Fix eng field today_run.shoe_title",
-      "shoe_insight_summary": "Fix eng field today_run.shoe_insight_summary",
-      "shoe_rotation_summary": "Fix eng field today_run.shoe_rotation_summary",
-      "shoe_primary_summary": "Fix eng field today_run.shoe_primary_summary",
-      "shoe_current_mileage": "Fix eng field today_run.shoe_current_mileage",
-      "shoe_mileage_left": "Fix eng field today_run.shoe_mileage_left",
-      "shoe_open_locker": "Fix eng field today_run.shoe_open_locker",
-      "shoe_empty_title": "Fix eng field today_run.shoe_empty_title",
-      "shoe_empty_copy": "Fix eng field today_run.shoe_empty_copy",
-      "shoe_empty_cta": "Fix eng field today_run.shoe_empty_cta"
+      "stitch_load_7d": "7-Day Load",
+      "shoe_title": "Today's Shoe",
+      "shoe_insight_summary": "{bpm} bpm heart-rate delta across {runCount} runs in this pair",
+      "shoe_rotation_summary": "Worn {count} times recently in rotation",
+      "shoe_primary_summary": "Your primary training pair",
+      "shoe_current_mileage": "Current mileage: {distance}",
+      "shoe_mileage_left": "Remaining life: {distance}",
+      "shoe_open_locker": "Open Shoe Locker",
+      "shoe_empty_title": "No shoes yet",
+      "shoe_empty_copy": "Add your running shoes for personalized rotation advice and mileage alerts.",
+      "shoe_empty_cta": "Add Shoes",
+      "vdot_trend_label": "VO2max Trend",
+      "vdot_trend_improving": "Improving",
+      "vdot_trend_declining": "Declining",
+      "vdot_trend_maintaining": "Steady"
     },
     "settings": {
       "eyebrow": "Account Settings",
@@ -4558,11 +4574,8 @@ const translations = {
     "schedule": {
       "next_up": "Up Next"
     },
-    "": {
-      "": "Fix eng field ."
-    },
     "leaflet": {
-      "heat": "Fix eng field leaflet.heat"
+      "heat": "Heat"
     }
   }
 };

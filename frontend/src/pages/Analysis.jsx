@@ -107,6 +107,7 @@ export default function Analysis() {
   const predictionRows = snapshot.predictionRows;
   const marathonRow = snapshot.marathonRow;
   const marathonDelta = snapshot.marathonDeltaSeconds;
+  const predictionConsistency = snapshot.predictionConsistency;
   const hasRuns = runs.length > 0;
   const injuryKicker = t('analysis.stitch_injury_signal');
   const injuryTitle = t('analysis.stitch_injury_title');

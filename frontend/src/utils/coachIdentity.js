@@ -6,28 +6,24 @@ const COACH_ROSTER = [
     name: 'Mara Voss',
     roleEn: 'Endurance Head Coach',
     roleZh: '耐力主教练',
-    avatarUrl: 'https://i.pravatar.cc/160?img=32',
   },
   {
     id: 'elias-brooks',
     name: 'Elias Brooks',
     roleEn: 'Race Strategy Coach',
     roleZh: '比赛策略教练',
-    avatarUrl: 'https://i.pravatar.cc/160?img=12',
   },
   {
     id: 'naomi-vale',
     name: 'Naomi Vale',
     roleEn: 'Performance Coach',
     roleZh: '表现教练',
-    avatarUrl: 'https://i.pravatar.cc/160?img=47',
   },
   {
     id: 'lucas-rye',
     name: 'Lucas Rye',
     roleEn: 'Training Block Coach',
     roleZh: '训练周期教练',
-    avatarUrl: 'https://i.pravatar.cc/160?img=59',
   },
 ];
 

@@ -303,7 +303,7 @@ function buildReasons(recommendation, t, metrics) {
   return reasons;
 }
 
-export function getTodayRunRecommendation({ runs, t, lang }) {
+export function getTodayRunRecommendation({ runs, t, lang, weatherContext }) {
   const totalKm = runs.reduce((s, r) => s + resolveRunDistanceKm(r), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
   const now = new Date();
@@ -329,13 +329,17 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
   const recoveryState = computeRecoveryState(runs, bestVdot);
   const trainingLoad = computeTrainingLoadSnapshot(runs, bestVdot);
 
-  const safeFormatPace = (seconds) => {
+  const penalty = weatherContext?.available ? (weatherContext.pacePenaltySecPerKm || 0) : 0;
+
+  const safeFormatPace = (seconds, applyPenalty = true) => {
     if (!Number.isFinite(seconds) || seconds <= 0) return null;
-    return formatPace(1, seconds, lang);
+    const s = applyPenalty ? seconds + penalty : seconds;
+    return formatPace(1, s, lang);
   };
-  const formatPaceRange = (range, fallback) => {
+
+  const formatPaceRange = (range, fallback, applyPenalty = true) => {
     if (!Array.isArray(range) || range.length === 0) return fallback;
-    const values = range.map(safeFormatPace).filter(Boolean);
+    const values = range.map((s) => safeFormatPace(s, applyPenalty)).filter(Boolean);
     if (values.length === 0) return fallback;
     if (values.length === 1) return values[0];
     return `${values[0]} - ${values[1]}`;
@@ -344,6 +348,11 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
   const easyPace = formatPaceRange(trainingPaces?.easy, t('profile.today_run_pace_easy'));
   const thresholdPace = formatPaceRange(trainingPaces?.threshold, t('profile.today_run_pace_quality'));
   const intervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'));
+
+  const normalEasyPace = formatPaceRange(trainingPaces?.easy, t('profile.today_run_pace_easy'), false);
+  const normalThresholdPace = formatPaceRange(trainingPaces?.threshold, t('profile.today_run_pace_quality'), false);
+  const normalIntervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'), false);
+
   const recoveryHours = recoveryState.recoveryHoursLeft || 0;
   const acwr = trainingLoad?.acwr ?? null;
   const micro = computeMicrocycleSnapshot(runs, nowMs);
@@ -355,6 +364,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_restart'),
       distance: t('profile.today_run_distance_restart'),
       pace: t('profile.today_run_pace_restart'),
+      normalPace: t('profile.today_run_pace_restart'),
       purpose: t('profile.today_run_purpose_restart'),
     };
   } else if (recoveryState.hasData && recoveryHours > 30) {
@@ -363,6 +373,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_recovery'),
       distance: t('profile.today_run_distance_recovery'),
       pace: easyPace,
+      normalPace: normalEasyPace,
       purpose: t('profile.today_run_purpose_recovery_analysis', { hours: recoveryHours }),
     };
   } else if (micro.hoursSinceHard !== null && micro.hoursSinceHard < 36) {
@@ -373,6 +384,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
         distance: micro.km14 >= 20 ? '6-8 km' : '4-6 km',
       }),
       pace: easyPace,
+      normalPace: normalEasyPace,
       purpose: t('profile.today_run_purpose_recovery_analysis', {
         hours: Math.max(0, Math.round(36 - micro.hoursSinceHard)),
       }),
@@ -383,6 +395,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_load_high'),
       distance: t('profile.today_run_distance_load_high'),
       pace: easyPace,
+      normalPace: normalEasyPace,
       purpose: t('profile.today_run_purpose_load_high', { acwr: acwr.toFixed(2) }),
     };
   } else if (
@@ -397,6 +410,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_quality'),
       distance: t('profile.today_run_distance_quality_analysis'),
       pace: thresholdPace,
+      normalPace: normalThresholdPace,
       purpose: t('profile.today_run_purpose_quality_analysis', { vdot: bestVdot.toFixed(1) }),
     };
   } else if (daysSinceLastRun !== null && daysSinceLastRun >= 2) {
@@ -407,6 +421,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
         distance: recent14Km >= 30 ? '8-10 km' : '6-8 km',
       }),
       pace: easyPace,
+      normalPace: normalEasyPace,
       purpose: t('profile.today_run_purpose_comeback'),
     };
   } else if (
@@ -420,6 +435,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_threshold'),
       distance: t('profile.today_run_distance_threshold'),
       pace: thresholdPace,
+      normalPace: normalThresholdPace,
       purpose: t('profile.today_run_purpose_threshold'),
     };
   } else {
@@ -430,6 +446,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
         distance: recent14Km >= 20 ? '7-9 km' : '5-7 km',
       }),
       pace: bestVdot > 0 ? easyPace : intervalPace,
+      normalPace: bestVdot > 0 ? normalEasyPace : normalIntervalPace,
       purpose: bestVdot > 0
         ? t('profile.today_run_purpose_base_analysis', { vdot: bestVdot.toFixed(1) })
         : t('profile.today_run_purpose_base'),
@@ -452,6 +469,10 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
     easyPace,
     thresholdPace,
     intervalPace,
+    normalEasyPace,
+    normalThresholdPace,
+    normalIntervalPace,
+    weatherPenalty: penalty,
   };
 
   return {

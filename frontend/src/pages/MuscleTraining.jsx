@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import AppIcon from '../components/AppIcon';
+import HermesLogo from '../components/HermesLogo';
+import FooterNavLinks from '../components/FooterNavLinks';
+import TopbarNotifications from '../components/TopbarNotifications';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -1257,9 +1260,10 @@ function createPageCopy(isZh) {
 
 export default function MuscleTraining() {
   const { isAuthenticated } = useAuth();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const { isMile } = useUnit();
   const navigate = useNavigate();
+  const location = useLocation();
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [draft, setDraft] = useState(DEFAULT_PROFILE);
   const [plan, setPlan] = useState(null);
@@ -1271,6 +1275,23 @@ export default function MuscleTraining() {
   const [notice, setNotice] = useState('');
   const [checkInNotice, setCheckInNotice] = useState('');
   const previousIsMileRef = useRef(isMile);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [shellProfile, setShellProfile] = useState(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    apiJson('/api/profile/me').then((data) => {
+      if (data && typeof data === 'object') setShellProfile(data);
+    }).catch(() => {});
+  }, [isAuthenticated, navigate]);
+
+  const displayName = shellProfile?.displayName?.trim()
+    || shellProfile?.email?.split('@')[0]
+    || 'Runner';
+  const initials = displayName.slice(0, 1).toUpperCase();
 
   const displayLang = lang;
   const isZh = displayLang === 'zh-CN';
@@ -1357,6 +1378,21 @@ export default function MuscleTraining() {
     support: isZh ? '支持' : 'Support',
     settings: isZh ? '设置' : 'Settings',
   }), [isZh]);
+
+  const navItems = [
+    { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
+    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
+    { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
+    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
+    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气引擎' : 'Weather Engine', route: '/weather-engine', icon: 'thermostat' },
+    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
+    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
+    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
+    { key: 'strength', label: stitchCopy.strength, route: '/muscle-training', icon: 'fitness_center' },
+  ].map((item) => ({
+    ...item,
+    active: location.pathname === item.route || location.pathname.startsWith(`${item.route}/`),
+  }));
   const heroTheme = useMemo(() => {
     const focus = pickLabel(copy.currentFocus, plan?.weekContext?.currentFocus, featuredSession?.emphasis || '');
     const split = String(focus || '').split(/[\s/]+/).filter(Boolean);
@@ -1531,47 +1567,69 @@ export default function MuscleTraining() {
   }
 
   return (
-    <div className="dashboard-body strength-plan-shell">
-      <LanguageSwitcher />
+    <div className={`runner-shell-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
+          <div className="runner-dashboard-brand-copy">
+            <HermesLogo dark />
+            <span>{t('analysis.stitch_brand_subtitle')}</span>
+          </div>
+          <button
+            type="button"
+            className="runner-dashboard-sidebar-toggle"
+            onClick={() => setIsSidebarCollapsed((current) => !current)}
+            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
+            aria-pressed={isSidebarCollapsed}
+          >
+            <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
+          </button>
+        </div>
 
-      <div className="strength-plan-topbar">
-        <button type="button" className="strength-plan-brand" onClick={() => navigate('/profile')}>HERMES</button>
-        <nav className="strength-plan-toplinks">
-          <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
-          <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
-          <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
-          <button type="button" onClick={() => navigate('/schedule')}>{stitchCopy.schedule}</button>
+        <nav className="runner-shell-side-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
+              onClick={() => navigate(item.route)}
+            >
+              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+              <span className="runner-dashboard-side-link-label">{item.label}</span>
+            </button>
+          ))}
         </nav>
-        <div className="strength-plan-topicons">
-          <button type="button" aria-label="Notifications">N</button>
-          <button type="button" aria-label="Settings" onClick={() => navigate('/settings')}>S</button>
-          <button type="button" className="strength-plan-avatar" onClick={() => navigate('/settings')}>H</button>
-        </div>
-      </div>
 
-      <aside className="strength-plan-sidebar">
-        <div className="strength-plan-sidebrand">
-          <strong>HERMES</strong>
-          <span>Elite Performance</span>
-        </div>
-        <div className="strength-plan-sidenav">
-          <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
-          <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
-          <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
-          <button type="button" onClick={() => navigate('/shoes')}>Shoes</button>
-          <button type="button" onClick={() => navigate('/races')}>Race Center</button>
-          <button type="button" onClick={() => navigate('/schedule')}>{stitchCopy.schedule}</button>
-        </div>
-        <button type="button" className="strength-plan-sidebar-cta" onClick={scrollToControls}>{stitchCopy.startWorkout}</button>
-        <div className="strength-plan-sidefooter">
-          <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.support}</button>
-          <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.settings}</button>
+        <div className="runner-shell-sidebar-footer">
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={scrollToControls}>
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+            <span className="runner-dashboard-workout-btn-label">{stitchCopy.startWorkout}</span>
+          </button>
         </div>
       </aside>
 
-      <main className="strength-plan-main">
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{stitchCopy.strength}</span>
+            </div>
+          </div>
 
-      <div className="dashboard-container page-body muscle-training-page">
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+                <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+              </button>
+              <button type="button" className="runner-shell-avatar" aria-label={displayName} onClick={() => navigate('/profile')}>
+                {initials}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="runner-shell-canvas muscle-training-canvas">
+          <div className="dashboard-container page-body muscle-training-page">
         <div className="muscle-training-hero">
           <div className="muscle-training-hero-copy">
             <div className="muscle-page-tools">
@@ -2127,16 +2185,13 @@ export default function MuscleTraining() {
             </section>
           </>
         )}
-      </div>
-      </main>
+          </div>
 
-      <nav className="strength-plan-mobile-dock">
-        <button type="button" onClick={() => navigate('/profile')}>{stitchCopy.dashboard}</button>
-        <button type="button" className="active" onClick={() => navigate('/muscle-training')}>{stitchCopy.strength}</button>
-        <button type="button" onClick={scrollToControls}>{stitchCopy.startWorkout}</button>
-        <button type="button" onClick={() => navigate('/analysis')}>{stitchCopy.analysis}</button>
-        <button type="button" onClick={() => navigate('/settings')}>{stitchCopy.settings}</button>
-      </nav>
+        <footer className="runner-shell-footer runner-dashboard-footer">
+          <FooterNavLinks />
+        </footer>
+        </div>
+      </main>
     </div>
   );
 }

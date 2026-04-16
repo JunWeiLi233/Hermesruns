@@ -23,7 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RaceCourseMapServiceTests {
@@ -65,6 +68,54 @@ class RaceCourseMapServiceTests {
         assertThat(result.courseMapDetected()).isFalse();
         assertThat(result.routePoints()).isEmpty();
         assertThat(result.elevationSamples()).isEmpty();
+    }
+
+    @Test
+    void resolveCourseMapSkipsBingSearchWhenOfficialSiteAlreadyYieldsCandidates() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(false);
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenAnswer(invocation -> {
+                    String url = invocation.getArgument(0, String.class);
+                    if ("https://example.com/race".equals(url)) {
+                        return ResponseEntity.ok("""
+                                <html>
+                                  <body>
+                                    <img src="/assets/course-map.png" alt="Course map" />
+                                  </body>
+                                </html>
+                                """);
+                    }
+                    return ResponseEntity.ok("<html><body>No extra candidate.</body></html>");
+                });
+        when(restTemplate.exchange(
+                eq("https://example.com/assets/course-map.png"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(samplePng()));
+
+        RaceCourseMapService service = new RaceCourseMapService(restTemplate, new com.fasterxml.jackson.databind.ObjectMapper(), systemConfigService, repository);
+
+        RaceCourseMapService.RaceCourseMapResult result = service.resolveCourseMap(
+                "Boston Marathon",
+                "Boston",
+                "United States",
+                "https://example.com/race",
+                42.36,
+                -71.05,
+                42.195
+        );
+
+        assertThat(result.imageUrl()).isEqualTo("https://example.com/assets/course-map.png");
+        verify(restTemplate, never()).exchange(
+                startsWith("https://www.bing.com/images/search"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        );
     }
 
     @Test

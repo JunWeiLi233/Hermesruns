@@ -87,10 +87,14 @@ function buildElevationProfile(ascentMeters, courseKey, absoluteProfile) {
   }));
 }
 
-function buildElevationGraph(profile) {
+function buildElevationGraph(profile, distanceKm) {
   if (!Array.isArray(profile) || profile.length === 0) {
     return null;
   }
+
+  const raceTotalKm = (distanceKm != null && Number.isFinite(Number(distanceKm)) && Number(distanceKm) > 0)
+    ? Number(distanceKm)
+    : 42.195;
 
   const width = 960;
   const height = 260;
@@ -107,7 +111,7 @@ function buildElevationGraph(profile) {
     const x = leftPad + (drawableWidth / Math.max(profile.length - 1, 1)) * index;
     const normalized = (Number(point.meters || 0) - minMeters) / rangeMeters;
     const y = baseY - normalized * (baseY - topPad);
-    const km = (42.195 * index) / Math.max(profile.length - 1, 1);
+    const km = (raceTotalKm * index) / Math.max(profile.length - 1, 1);
     return {
       ...point,
       x,
@@ -285,7 +289,7 @@ export default function RacesDetail() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [savedRace, setSavedRace] = useState(false);
+  const [savedRaces, setSavedRaces] = useState([]);
   const [resolvedHeroImage, setResolvedHeroImage] = useState(() => getCachedRaceImage(location.state?.race || worldRaceCatalog.find((entry) => entry.id === raceId) || null).imageUrl || '');
   const [courseMapData, setCourseMapData] = useState(EMPTY_COURSE_MAP);
   const [courseMapRequestSettled, setCourseMapRequestSettled] = useState(false);
@@ -391,37 +395,6 @@ export default function RacesDetail() {
   }, [courseMapData.elevationSamples.length, courseMapRequestSettled, isAuthenticated, race]);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!isAuthenticated || !race?.name) {
-      setSavedRace(false);
-      return undefined;
-    }
-
-    setSavedRace(false);
-
-    (async () => {
-      try {
-        const params = new URLSearchParams({
-          name: race.name,
-        });
-        const data = await apiJson(`/api/races/saved-status?${params.toString()}`);
-        if (!cancelled) {
-          setSavedRace(data?.saved === true);
-        }
-      } catch {
-        if (!cancelled) {
-          setSavedRace(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, race?.name]);
-
-  useEffect(() => {
-    let cancelled = false;
     if (!isAuthenticated) {
       navigate('/login');
       return;
@@ -433,24 +406,22 @@ export default function RacesDetail() {
 
     (async () => {
       try {
-        const [profileData, activities] = await Promise.all([
+        const [profileData, activities, raceData] = await Promise.all([
           apiJson('/api/profile/me').catch(() => null),
           apiJson('/api/activities/analysis').catch(() => []),
+          apiJson('/api/races').catch(() => []),
         ]);
-        if (cancelled) return;
         const runList = Array.isArray(activities) ? activities : [];
         runList.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
         setProfile(profileData || null);
         setRuns(runList);
+        setSavedRaces(Array.isArray(raceData) ? raceData : []);
       } catch {
-        if (cancelled) return;
         setProfile(null);
         setRuns([]);
+        setSavedRaces([]);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [isAuthenticated, navigate, race]);
 
   useEffect(() => {
@@ -535,15 +506,13 @@ export default function RacesDetail() {
     };
   }, [bestVdot, race, raceMeta, runs]);
   const confidence = useMemo(() => confidenceFromRuns(prediction, nearRuns.length), [nearRuns.length, prediction]);
-  const elevationBars = useMemo(
-    () => (absoluteElevationProfile
-      ? buildElevationProfile(displayedCourseGain || 0, raceMeta?.courseKey || 'flat_city', absoluteElevationProfile)
-      : null),
-    [absoluteElevationProfile, displayedCourseGain, raceMeta],
-  );
+  const elevationBars = useMemo(() => {
+    if (!absoluteElevationProfile || !absoluteElevationProfile.length) return null;
+    return buildElevationProfile(displayedCourseGain || 0, raceMeta?.courseKey || 'flat_city', absoluteElevationProfile);
+  }, [absoluteElevationProfile, displayedCourseGain, raceMeta]);
   const elevationGraph = useMemo(
-    () => buildElevationGraph(elevationBars),
-    [elevationBars],
+    () => buildElevationGraph(elevationBars, race?.distanceKm),
+    [elevationBars, race],
   );
   const activeElevationPoint = useMemo(() => {
     if (!elevationGraph) return null;
@@ -568,6 +537,7 @@ export default function RacesDetail() {
     setActiveElevationPointIndex(nearestIndex);
   }
 
+  const savedRace = useMemo(() => savedRaces.find((entry) => entry.name === race?.name || entry.id === race?.id), [race, savedRaces]);
   const readinessItems = useMemo(() => ([
     {
       key: 'plan',
@@ -707,6 +677,8 @@ export default function RacesDetail() {
           fillColor: '#f07561',
           fillOpacity: 0.96,
         }).addTo(map);
+      } else {
+        map.setView([0, 0], 1);
       }
 
       if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
@@ -730,10 +702,6 @@ export default function RacesDetail() {
       }
     };
   }, [courseMapData.imageUrl, courseMapData.overlayBounds, hasAlignedOverlay, hasAlignedRoute, mapCenter, race, routeMapPoints]);
-
-  if (!isAuthenticated || !race) {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.loading')}</div></div>;
-  }
 
   return (
     <div className={`runner-shell-page runner-dashboard-page races-dashboard-page race-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
@@ -785,7 +753,7 @@ export default function RacesDetail() {
           </div>
 
           <div className="runner-shell-topbar-actions">
-            <div className="runner-shell-topbar-profile-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />

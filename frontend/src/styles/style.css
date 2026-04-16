@@ -6285,10 +6285,21 @@ body.theme-midnight .weekly-flashcard-graph-track {
 .muscle-session-card,
 .muscle-block-card,
 .muscle-exercise-card {
-    border: 1px solid var(--line-soft, rgba(0, 0, 0, 0.2));
-    border-radius: 22px;
-    background: color-mix(in srgb, var(--surface, rgba(255, 255, 255, 0.94)) 92%, transparent);
-    box-shadow: var(--shadow-card);
+    border-radius: var(--radius-xl, 22px);
+    background: rgba(28, 27, 27, 0.96);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.muscle-training-hero-copy:hover,
+.muscle-map-card:hover,
+.muscle-metric-card:hover,
+.muscle-panel:hover,
+.muscle-session-card:hover,
+.muscle-block-card:hover,
+.muscle-exercise-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 32px 56px rgba(0, 0, 0, 0.38);
 }
 
 .muscle-training-hero-copy {
@@ -24637,6 +24648,29 @@ body.theme-light .dashboard-body .unit-toggle button.active {
   color: #f3ede8;
 }
 
+.analysis-overview-card-forecast-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.analysis-overview-confidence-pill.is-high {
+  background: rgba(89, 212, 135, 0.12);
+  color: #59d487;
+}
+
+.analysis-overview-confidence-pill.is-moderate {
+  background: rgba(255, 181, 111, 0.12);
+  color: #ffb56f;
+}
+
+.analysis-overview-confidence-pill.is-low {
+  background: rgba(255, 123, 105, 0.12);
+  color: #ff7b69;
+}
+
 .analysis-overview-status-pill,
 .analysis-overview-confidence-pill {
   display: inline-flex;
@@ -30063,8 +30097,9 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(11, 11, 12, 0.3), rgba(11, 11, 12, 0.72)),
-    url('https://images.unsplash.com/photo-1486218119243-13883505764c?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+    radial-gradient(circle at 18% 22%, rgba(255, 180, 167, 0.22), transparent 26%),
+    radial-gradient(circle at 82% 78%, rgba(240, 117, 97, 0.18), transparent 24%),
+    linear-gradient(145deg, rgba(55, 43, 40, 0.98), rgba(24, 22, 21, 0.96));
   box-shadow: inset 0 0 0 2px rgba(240, 117, 97, 0.28);
 }
 
@@ -30303,7 +30338,10 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
 }
 
 .schedule-plan-next-bg {
-  background: url('https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=1400&q=80') center/cover no-repeat;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 180, 167, 0.2), transparent 24%),
+    radial-gradient(circle at 80% 28%, rgba(122, 202, 222, 0.12), transparent 22%),
+    linear-gradient(160deg, rgba(49, 43, 41, 0.92), rgba(18, 22, 28, 0.96));
   opacity: 0.44;
   transition: transform 0.7s ease;
 }
@@ -30928,6 +30966,24 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   margin-top: 20px;
 }
 
+.today-run-plan-metric-adjusted {
+  display: flex;
+  flex-direction: column;
+}
+
+.today-run-plan-metric-adjusted small {
+  margin-top: 4px;
+  color: #ffb5a6;
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.9;
+  letter-spacing: 0.01em;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-metric-adjusted small {
+  color: var(--brand-accent);
+}
+
 .today-run-marathon-pill {
   display: inline-flex;
   align-items: center;
@@ -30962,6 +31018,37 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(18px);
+}
+
+.today-run-plan-vdot-trend.is-improving {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.today-run-plan-vdot-trend.is-declining {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.today-run-plan-vdot-trend.is-maintaining {
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.today-run-plan-vdot-trend-delta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+.today-run-plan-vdot-trend.is-improving .today-run-plan-vdot-trend-delta {
+  color: #22c55e;
+}
+
+.today-run-plan-vdot-trend.is-declining .today-run-plan-vdot-trend-delta {
+  color: #ef4444;
+}
+
+.today-run-plan-vdot-trend.is-maintaining .today-run-plan-vdot-trend-delta {
+  color: #eab308;
 }
 
 .today-run-plan-hero-metrics span,
@@ -38138,6 +38225,18 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-step-card,
 body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-reason-card,
 body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-coach-line {
   background: rgba(239, 241, 242, 0.88);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-vdot-trend.is-improving {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-vdot-trend.is-declining {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-vdot-trend.is-maintaining {
+  background: rgba(234, 179, 8, 0.12);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-step-card span {

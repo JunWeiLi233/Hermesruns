@@ -318,7 +318,7 @@ export default function TodayRun() {
     plan,
     reasons,
     metrics,
-  } = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
+  } = useMemo(() => getTodayRunRecommendation({ runs, t, lang, weatherContext }), [runs, t, lang, weatherContext]);
 
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const initials = displayName.slice(0, 1).toUpperCase();
@@ -376,6 +376,11 @@ export default function TodayRun() {
     [plan, coachPayload, t],
   );
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
+
+  const vdotTrend = useMemo(
+    () => (Array.isArray(runs) && runs.length > 0 ? computeVdotTrend(runs) : { direction: 'maintaining', delta: 0, hasData: false }),
+    [runs],
+  );
 
   const stamina = useMemo(() => {
     const s = coachPayload?.state?.stamina;
@@ -509,9 +514,12 @@ export default function TodayRun() {
                   <span>{t('profile.today_run_distance')}</span>
                   <strong>{coachDistance}</strong>
                 </article>
-                <article>
+                <article className={metrics.weatherPenalty > 0 ? 'today-run-plan-metric-adjusted' : ''}>
                   <span>{t('today_run.stitch_target_pace')}</span>
                   <strong>{recommendation.pace}</strong>
+                  {metrics.weatherPenalty > 0 && (
+                    <small>{t('today_run.acclimatization_normal_pace', { pace: recommendation.normalPace })}</small>
+                  )}
                 </article>
                 <article>
                   <span>{t('today_run.stitch_est_time')}</span>
@@ -561,28 +569,43 @@ export default function TodayRun() {
                 <p>{recommendation.purpose}</p>
               </div>
 
-              <div className="today-run-plan-panel-grid">
-                <article>
-                  <span>{t('today_run.stitch_recovery_hour')}</span>
-                  <strong>
-                    {metrics.recoveryHours > 0
-                      ? t('today_run.metric_recovery_hours', { hours: metrics.recoveryHours })
-                      : t('analysis.fully_recovered')}
-                  </strong>
-                </article>
-                <article>
-                  <span>{t('today_run.stamina_score')}</span>
-                  <strong>{staminaScorePercent}%</strong>
-                </article>
-                <article>
-                  <span>{t('today_run.metric_vo2max')}</span>
-                  <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
-                </article>
-                <article>
-                  <span>{t('today_run.metric_acwr')}</span>
-                  <strong>{metrics.acwr !== null ? metrics.acwr.toFixed(2) : '--'}</strong>
-                </article>
-              </div>
+                <div className="today-run-plan-panel-grid">
+                  <article>
+                    <span>{t('today_run.stitch_recovery_hour')}</span>
+                    <strong>
+                      {metrics.recoveryHours > 0
+                        ? t('today_run.metric_recovery_hours', { hours: metrics.recoveryHours })
+                        : t('analysis.fully_recovered')}
+                    </strong>
+                  </article>
+                  <article>
+                    <span>{t('today_run.stamina_score')}</span>
+                    <strong>{staminaScorePercent}%</strong>
+                  </article>
+                  <article>
+                    <span>{t('today_run.metric_vo2max')}</span>
+                    <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
+                  </article>
+                  <article>
+                    <span>{t('today_run.metric_acwr')}</span>
+                    <strong>{metrics.acwr !== null ? metrics.acwr.toFixed(2) : '--'}</strong>
+                  </article>
+                  {vdotTrend.hasData && (
+                    <article className={`today-run-plan-vdot-trend is-${vdotTrend.direction}`}>
+                      <span>{t('today_run.vdot_trend_label')}</span>
+                      <strong>
+                        {vdotTrend.direction === 'improving' ? t('today_run.vdot_trend_improving') :
+                         vdotTrend.direction === 'declining' ? t('today_run.vdot_trend_declining') :
+                         t('today_run.vdot_trend_maintaining')}
+                        {vdotTrend.delta !== 0 && (
+                          <span className="today-run-plan-vdot-trend-delta">
+                            ({vdotTrend.delta > 0 ? '+' : ''}{vdotTrend.delta.toFixed(1)})
+                          </span>
+                        )}
+                      </strong>
+                    </article>
+                  )}
+                </div>
             </aside>
           </section>
 
