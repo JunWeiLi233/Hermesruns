@@ -10,6 +10,7 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import { formatDistance } from '../utils/format';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
+import { buildScheduleTargetBlockModel } from '../utils/scheduleMarathonBlock';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import TopbarNotifications from '../components/TopbarNotifications';
 
@@ -18,8 +19,17 @@ const SCHEDULE_COPY = {
     loading: '正在加载训练安排...',
     load_error: '训练安排暂时无法加载。',
     hero_title: '本周训练计划',
+    hero_title_block: '目标比赛构建周',
+    hero_title_marathon: '马拉松构建周',
     target_volume: '计划总量',
     completed_volume: '已完成',
+    hero_target_distance: '目标距离',
+    hero_countdown: '目标倒计时',
+    hero_race_day: '比赛日期',
+    hero_countdown_day: '还剩 1 天',
+    hero_countdown_days: '还剩 {days} 天',
+    hero_countdown_today: '比赛日就在今天',
+    hero_countdown_passed: '目标日期已过',
     speed_focus: '速度重点',
     endurance_peak: '耐力峰值',
     recovery: '恢复',
@@ -38,11 +48,17 @@ const SCHEDULE_COPY = {
     route_gain: '预计爬升 {value} m',
     route_speed: '节奏巡航',
     sync_to_watch: '同步到手表',
+    route_target_label: '目标课距离',
+    route_target_marathon: '把路线对齐到本周马拉松关键距离。',
+    route_target_block: '把路线对齐到当前训练块的关键距离。',
     coach_title: '教练视角',
     coach_subtitle: '把本周负荷和恢复信号放在同一张面板里。',
     coach_quote: 'Hermes 当前建议',
     coach_body_block: '你现在处在当前训练块的第 {week} 周，长距离锚点来到 {longRun} km。下一步重点是稳住恢复，再把关键课的质量做扎实。',
+    coach_body_target_block: '这周是第 {week} 周目标构建。先把 {longRun} 的长距离锚点稳住，再让整周训练继续收向 {raceDistance} 的比赛目标。',
     coach_body_default: '这一周先把节奏铺开。只要按计划完成轻松跑和关键课，Hermes 就会继续把后面的训练块拉清楚。',
+    coach_block_week: '当前构建',
+    coach_race_target: '比赛目标',
     fatigue_level: '疲劳水平',
     fatigue_low: '低疲劳',
     fatigue_moderate: '可控疲劳',
@@ -52,6 +68,7 @@ const SCHEDULE_COPY = {
     sleep_moderate: '仍可提升',
     detailed_biometrics: '查看详细生理指标',
     current_gear: '当前装备',
+    long_run_anchor: '长距离锚点',
     gear_fallback: '还没有主力跑鞋',
     gear_missing: '先去跑鞋页添加一双在役鞋，Hermes 才能把装备和计划连起来。',
   },
@@ -59,8 +76,17 @@ const SCHEDULE_COPY = {
     loading: 'Loading your weekly plan...',
     load_error: 'Unable to load the schedule right now.',
     hero_title: 'Weekly Training Schedule',
+    hero_title_block: 'Race-target build week',
+    hero_title_marathon: 'Marathon build week',
     target_volume: 'Target volume',
     completed_volume: 'Completed',
+    hero_target_distance: 'Target distance',
+    hero_countdown: 'Countdown',
+    hero_race_day: 'Race day',
+    hero_countdown_day: '1 day to go',
+    hero_countdown_days: '{days} days to go',
+    hero_countdown_today: 'Race day is here',
+    hero_countdown_passed: 'Target date passed',
     speed_focus: 'Speed focus',
     endurance_peak: 'Endurance peak',
     recovery: 'Recovery',
@@ -79,11 +105,17 @@ const SCHEDULE_COPY = {
     route_gain: '{value} m projected gain',
     route_speed: 'Rhythm cruise',
     sync_to_watch: 'Send to watch',
+    route_target_label: 'Target workout',
+    route_target_marathon: 'Route tuned to this week\'s marathon-focused distance.',
+    route_target_block: 'Route tuned to the key distance in this block.',
     coach_title: 'Coach lens',
     coach_subtitle: 'Read this week\'s workload and recovery in one panel.',
     coach_quote: 'Hermes recommendation',
     coach_body_block: 'You are in week {week} of the current block, with the long-run anchor at {longRun} km. Hold recovery first, then make the next key session count.',
+    coach_body_target_block: 'This is week {week} of the current build. Keep the {longRun} long-run anchor stable and point the rest of the week toward your {raceDistance} race target.',
     coach_body_default: 'Start by settling the week into a clear rhythm. Once the easy runs and the key session land cleanly, Hermes can sharpen the next block around you.',
+    coach_block_week: 'Current build',
+    coach_race_target: 'Race target',
     fatigue_level: 'Fatigue level',
     fatigue_low: 'Low fatigue',
     fatigue_moderate: 'Manageable fatigue',
@@ -93,6 +125,7 @@ const SCHEDULE_COPY = {
     sleep_moderate: 'Still room to improve',
     detailed_biometrics: 'Open detailed biometrics',
     current_gear: 'Current gear',
+    long_run_anchor: 'Long-run anchor',
     gear_fallback: 'No primary shoe yet',
     gear_missing: 'Add an active shoe on the shoes page so Hermes can connect gear to the plan.',
   },
@@ -127,6 +160,24 @@ function startOfIsoWeek(date) {
   const diff = day === 0 ? -6 : 1 - day;
   copy.setDate(copy.getDate() + diff);
   return copy;
+}
+
+function formatScheduleTargetDate(dateValue, lang) {
+  if (!dateValue) return null;
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
+}
+
+function getScheduleCountdownLabel(countdownDays, s) {
+  if (!Number.isFinite(countdownDays)) return null;
+  if (countdownDays < 0) return s('hero_countdown_passed');
+  if (countdownDays === 0) return s('hero_countdown_today');
+  if (countdownDays === 1) return s('hero_countdown_day');
+  return s('hero_countdown_days', { days: countdownDays });
 }
 
 function getDisplayName(profile, fallback) {
@@ -458,13 +509,47 @@ export default function Schedule() {
   const hasRoutePreview = Boolean(routePreview?.path);
 
   const activeBlock = coachState?.activeBlock || null;
+  const targetBlock = useMemo(
+    () => buildScheduleTargetBlockModel(activeBlock),
+    [activeBlock],
+  );
   const displayName = getDisplayName(profile, t('profile.default_name'));
   const initials = displayName.slice(0, 1).toUpperCase();
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
-  const heroKicker = activeBlock?.name
-    ? `${activeBlock.name}: ${s('phase_label', { week: activeBlock.weekIndex || 1 })}`
+  const heroKicker = targetBlock.name
+    ? `${targetBlock.name}: ${s('phase_label', { week: targetBlock.weekIndex || 1 })}`
     : s('default_phase');
+  const heroTitle = targetBlock.hasActiveBlock
+    ? targetBlock.isMarathonBlock
+      ? s('hero_title_marathon')
+      : s('hero_title_block')
+    : s('hero_title');
+  const raceTargetDistanceLabel = targetBlock.raceDistanceKm != null
+    ? formatDistance(targetBlock.raceDistanceKm, 1, lang, unit)
+    : null;
+  const longRunAnchorLabel = targetBlock.currentLongRunKm != null
+    ? formatDistance(targetBlock.currentLongRunKm, 1, lang, unit)
+    : s('no_distance');
+  const targetRaceDateLabel = useMemo(
+    () => formatScheduleTargetDate(targetBlock.targetRaceDate, lang),
+    [targetBlock.targetRaceDate, lang],
+  );
+  const targetCountdownLabel = useMemo(
+    () => getScheduleCountdownLabel(targetBlock.countdownDays, s),
+    [targetBlock.countdownDays, s],
+  );
+  const heroSummary = [
+    targetBlock.hasTargetRace && raceTargetDistanceLabel
+      ? { label: s('hero_target_distance'), value: raceTargetDistanceLabel }
+      : null,
+    targetCountdownLabel
+      ? { label: s('hero_countdown'), value: targetCountdownLabel }
+      : null,
+    targetRaceDateLabel
+      ? { label: s('hero_race_day'), value: targetRaceDateLabel }
+      : null,
+  ].filter(Boolean);
 
   const nextSessionTitle = nextSession
     ? prettifyWorkoutType(nextSession.workoutType, t)
@@ -486,15 +571,22 @@ export default function Schedule() {
     : s('sleep_moderate');
   const routeTitle = routeRecommendation
     ? getRouteZoneLabel(routeRecommendation.zoneKey, lang)
-    : activeBlock?.name || s('default_route_name');
+    : targetBlock.name || s('default_route_name');
   const routeAnchoredRuns = getRouteAnchoredRunsLabel(routeRecommendation, lang);
   const routeConfidenceLabel = getRouteConfidenceLabel(routeRecommendation, lang, unit);
   const routeTargetDistanceKm = Number(
     routeRecommendation?.targetDistanceKm
       || nextSession?.plannedDistanceKm
       || coachToday?.today?.plannedDistanceKm
+      || targetBlock.currentLongRunKm
       || 0,
   );
+  const routeTargetDistanceLabel = routeTargetDistanceKm > 0
+    ? formatDistance(routeTargetDistanceKm, 1, lang, unit)
+    : null;
+  const routeTargetContextLabel = targetBlock.isMarathonBlock
+    ? s('route_target_marathon')
+    : s('route_target_block');
   const routeFallbackDistanceBadge = routeTargetDistanceKm > 0
     ? formatDistance(routeTargetDistanceKm, 1, lang, unit)
     : s('no_distance');
@@ -502,8 +594,13 @@ export default function Schedule() {
   const routeFallbackBadges = [
     routeFallbackDistanceBadge,
     routeRecommendation ? routeAnchoredRuns : nextSessionTitle,
-    activeBlock?.weekIndex ? s('phase_label', { week: activeBlock.weekIndex || 1 }) : null,
+    targetBlock.hasTargetRace && raceTargetDistanceLabel
+      ? raceTargetDistanceLabel
+      : targetBlock.weekIndex
+        ? s('phase_label', { week: targetBlock.weekIndex || 1 })
+        : null,
   ].filter(Boolean);
+  const coachTargetValue = [raceTargetDistanceLabel, targetRaceDateLabel].filter(Boolean).join(' / ');
 
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('loading')}</div></div>;
@@ -590,10 +687,20 @@ export default function Schedule() {
         </header>
 
         <div className="runner-shell-canvas schedule-plan-canvas">
-          <section className="schedule-plan-hero">
+          <section className={`schedule-plan-hero${targetBlock.hasActiveBlock ? ' is-block-active' : ''}${targetBlock.isMarathonBlock ? ' is-marathon-block' : ''}`}>
             <div className="schedule-plan-hero-copy">
               <span className="schedule-plan-kicker">{heroKicker}</span>
-              <h1>{s('hero_title')}</h1>
+              <h1>{heroTitle}</h1>
+              {heroSummary.length > 0 ? (
+                <div className="schedule-plan-hero-summary">
+                  {heroSummary.map((item) => (
+                    <div key={item.label} className="schedule-plan-hero-summary-chip">
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="schedule-plan-hero-metrics">
@@ -617,21 +724,27 @@ export default function Schedule() {
           </section>
 
           <section className="schedule-plan-week-grid">
-            {weekSchedule.map((day) => (
-              <article
-                key={day.key}
-                className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}`}
-              >
-                <div>
-                  <p className="schedule-plan-day-label">{day.dayLabel}</p>
-                  <p className="schedule-plan-day-tag">{day.tag}</p>
-                </div>
-                <div>
-                  <h2>{day.title}</h2>
-                  <p>{day.detail}</p>
-                </div>
-              </article>
-            ))}
+            {weekSchedule.map((day) => {
+              const isLongRunAnchor = targetBlock.hasActiveBlock && String(day.entry?.workoutType || '').toUpperCase() === 'LONG_RUN';
+              return (
+                <article
+                  key={day.key}
+                  className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}`}
+                >
+                  <div>
+                    <div className="schedule-plan-day-head">
+                      <p className="schedule-plan-day-label">{day.dayLabel}</p>
+                      {isLongRunAnchor ? <span className="schedule-plan-day-anchor">{s('long_run_anchor')}</span> : null}
+                    </div>
+                    <p className="schedule-plan-day-tag">{day.tag}</p>
+                  </div>
+                  <div>
+                    <h2>{day.title}</h2>
+                    <p>{day.detail}</p>
+                  </div>
+                </article>
+              );
+            })}
           </section>
 
           <section className="schedule-plan-bottom-grid">
@@ -705,6 +818,15 @@ export default function Schedule() {
                       <span>{routeAnchoredRuns}</span>
                       <span>{routeConfidenceLabel}</span>
                     </div>
+                    {targetBlock.hasActiveBlock && routeTargetDistanceLabel ? (
+                      <div className="schedule-plan-route-target">
+                        <div className="schedule-plan-route-target-metric">
+                          <span>{s('route_target_label')}</span>
+                          <strong>{routeTargetDistanceLabel}</strong>
+                        </div>
+                        <p>{routeTargetContextLabel}</p>
+                      </div>
+                    ) : null}
                   </div>
                   <button type="button" className="schedule-plan-watch-btn" onClick={() => navigate('/today-run')}>
                     {s('sync_to_watch')}
@@ -726,14 +848,37 @@ export default function Schedule() {
                 <div className="schedule-plan-coach-copy">
                   <h4>{s('coach_quote')}</h4>
                   <p>
-                    {activeBlock
-                      ? s('coach_body_block', {
-                        week: activeBlock.weekIndex || 1,
-                        longRun: activeBlock.currentLongRunKm?.toFixed?.(1) || activeBlock.currentLongRunKm || '--',
+                    {targetBlock.hasTargetRace
+                      ? s('coach_body_target_block', {
+                        week: targetBlock.weekIndex || 1,
+                        longRun: longRunAnchorLabel,
+                        raceDistance: raceTargetDistanceLabel || '--',
                       })
+                      : activeBlock
+                        ? s('coach_body_block', {
+                          week: activeBlock.weekIndex || 1,
+                          longRun: activeBlock.currentLongRunKm?.toFixed?.(1) || activeBlock.currentLongRunKm || '--',
+                        })
                       : s('coach_body_default')}
                   </p>
                 </div>
+
+                {targetBlock.hasActiveBlock ? (
+                  <div className="schedule-plan-coach-focus-grid">
+                    <div className="schedule-plan-coach-focus-pill">
+                      <span>{s('coach_block_week')}</span>
+                      <strong>{s('phase_label', { week: targetBlock.weekIndex || 1 })}</strong>
+                    </div>
+                    <div className="schedule-plan-coach-focus-pill">
+                      <span>{s('long_run_anchor')}</span>
+                      <strong>{longRunAnchorLabel}</strong>
+                    </div>
+                    <div className="schedule-plan-coach-focus-pill">
+                      <span>{s('coach_race_target')}</span>
+                      <strong>{coachTargetValue || raceTargetDistanceLabel || '--'}</strong>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="schedule-plan-signal-group">
                   <div className="schedule-plan-signal-row">

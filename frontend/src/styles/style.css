@@ -19729,6 +19729,68 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
         linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
 }
 
+.runner-dashboard-feature-card--race {
+  background:
+    radial-gradient(circle at top right, rgba(125, 224, 163, 0.16), transparent 34%),
+    linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
+  border-color: rgba(125, 224, 163, 0.18);
+}
+
+.runner-dashboard-race-countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.runner-dashboard-race-countdown strong {
+  font-size: 2.8rem;
+  font-weight: 800;
+  font-family: "Manrope", var(--font-display);
+  letter-spacing: -0.04em;
+  color: #7de0a3;
+  line-height: 1;
+}
+
+.runner-dashboard-race-countdown span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(125, 224, 163, 0.6);
+  text-transform: uppercase;
+}
+
+.runner-dashboard-race-prep {
+  margin-top: 1.2rem;
+}
+
+.runner-dashboard-race-phase-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(125, 224, 163, 0.15);
+  border: 1px solid rgba(125, 224, 163, 0.25);
+  border-radius: 4px;
+  color: #7de0a3;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.runner-dashboard-race-prep p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(232, 226, 220, 0.8);
+}
+
+.runner-dashboard-race-prep small {
+  display: block;
+  font-weight: 700;
+  color: rgba(125, 224, 163, 0.7);
+  margin-bottom: 4px;
+}
+
 .runner-dashboard-stamina-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -29850,9 +29912,16 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   box-shadow: inset 4px 0 0 #f07561;
 }
 
+.schedule-plan-hero.is-block-active {
+  box-shadow:
+    inset 4px 0 0 #f49787,
+    0 24px 44px rgba(240, 117, 97, 0.12);
+}
+
 .schedule-plan-hero-copy {
   position: relative;
   z-index: 1;
+  max-width: min(720px, 100%);
 }
 
 .schedule-plan-kicker {
@@ -29874,6 +29943,44 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   letter-spacing: -0.08em;
   color: #f3ede8;
   white-space: pre-line;
+  transform: none;
+}
+
+.schedule-plan-hero-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.schedule-plan-hero-summary-chip {
+  min-width: 140px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(241, 236, 231, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.schedule-plan-hero-summary-chip span,
+.schedule-plan-route-target-metric span {
+  display: block;
+  color: rgba(232, 226, 220, 0.46);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-hero-summary-chip strong {
+  display: block;
+  margin-top: 6px;
+  color: #fff7f3;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.04em;
   transform: none;
 }
 
@@ -29968,11 +30075,33 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   letter-spacing: -0.02em;
 }
 
+.schedule-plan-day-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .schedule-plan-day-tag {
   margin-top: 3px;
   color: rgba(232, 226, 220, 0.48);
   font-size: 0.56rem;
   text-transform: none;
+}
+
+.schedule-plan-day-anchor {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(241, 236, 231, 0.14);
+  color: #ffb4a7;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .schedule-plan-day--quality .schedule-plan-day-tag,
@@ -30031,6 +30160,18 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
 
 .schedule-plan-day.is-today .schedule-plan-day-tag,
 .schedule-plan-day.is-today > div:last-child p {
+  color: rgba(255, 214, 204, 0.82);
+}
+
+.schedule-plan-day.is-marathon-anchor {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 180, 167, 0.22),
+    0 18px 32px rgba(240, 117, 97, 0.1);
+}
+
+.schedule-plan-day.is-marathon-anchor .schedule-plan-day-tag,
+.schedule-plan-day.is-marathon-anchor > div:last-child p {
   color: rgba(255, 214, 204, 0.82);
 }
 
@@ -30403,6 +30544,33 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   text-transform: none;
 }
 
+.schedule-plan-route-target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px 18px;
+  margin-top: 16px;
+}
+
+.schedule-plan-route-target-metric strong {
+  display: block;
+  margin-top: 6px;
+  color: #fff7f3;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.18rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  transform: none;
+}
+
+.schedule-plan-route-target p {
+  max-width: 28ch;
+  color: rgba(232, 226, 220, 0.62);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .schedule-plan-watch-btn,
 .schedule-plan-secondary-btn {
   min-height: 38px;
@@ -30461,6 +30629,41 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   font-style: italic;
   font-weight: 800;
   line-height: 1.35;
+  transform: none;
+}
+
+.schedule-plan-coach-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.schedule-plan-coach-focus-pill {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(241, 236, 231, 0.08);
+}
+
+.schedule-plan-coach-focus-pill span {
+  display: block;
+  color: rgba(232, 226, 220, 0.44);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-coach-focus-pill strong {
+  display: block;
+  margin-top: 6px;
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.94rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
   transform: none;
 }
 
@@ -30571,6 +30774,10 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   .schedule-plan-bottom-grid {
     grid-template-columns: 1fr;
   }
+
+  .schedule-plan-coach-focus-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 860px) {
@@ -30583,7 +30790,19 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
     gap: 20px;
   }
 
+  .schedule-plan-hero-summary {
+    width: 100%;
+  }
+
+  .schedule-plan-hero-summary-chip {
+    flex: 1 1 160px;
+  }
+
   .schedule-plan-week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .schedule-plan-coach-focus-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -30615,6 +30834,14 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   .schedule-plan-route-content {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .schedule-plan-route-target {
+    width: 100%;
+  }
+
+  .schedule-plan-coach-focus-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -38003,10 +38230,12 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-gear-card {
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-kicker,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-hero-metrics span,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-hero-summary-chip span,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-readiness-card h3,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-card h3,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-head p,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-signal-row,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-focus-pill span,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-gear-row p,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-meta span {
   color: var(--text-muted);
@@ -38014,7 +38243,9 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-meta span
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-hero h1,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-hero-metrics strong,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-hero-summary-chip strong,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-signal-row strong,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-focus-pill strong,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-gear-card h3,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-gear-row strong {
   color: var(--text-strong);
@@ -38072,7 +38303,9 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-copy h4 {
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day-tag,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day > div:last-child p,
-body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-content span:first-child {
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-content span:first-child,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-target p,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-target-metric span {
   color: var(--text-muted);
 }
 
@@ -38098,6 +38331,19 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-today > 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-today .schedule-plan-day-label,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-today h2 {
   color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day-anchor,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-hero-summary-chip,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-focus-pill {
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 22px rgba(44, 47, 48, 0.05);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-marathon-anchor {
+  box-shadow:
+    inset 0 0 0 1px rgba(160, 57, 42, 0.18),
+    0 18px 32px rgba(160, 57, 42, 0.1);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day--quality {
@@ -38151,7 +38397,9 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-readiness-cente
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-readiness-center span,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-copy h4,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-content span:first-child,
-body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-next-content > span {
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-next-content > span,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day-anchor,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-target-metric strong {
   color: var(--brand-accent);
 }
 
@@ -38248,23 +38496,29 @@ body.theme-high-contrast-light .schedule-plan-day.is-today::before {
 
 body.theme-high-contrast-light .schedule-plan-kicker,
 body.theme-high-contrast-light .schedule-plan-hero-metrics span,
+body.theme-high-contrast-light .schedule-plan-hero-summary-chip span,
 body.theme-high-contrast-light .schedule-plan-readiness-card h3,
 body.theme-high-contrast-light .schedule-plan-coach-card h3,
 body.theme-high-contrast-light .schedule-plan-coach-head p,
 body.theme-high-contrast-light .schedule-plan-day-tag,
 body.theme-high-contrast-light .schedule-plan-day > div:last-child p,
+body.theme-high-contrast-light .schedule-plan-coach-focus-pill span,
 body.theme-high-contrast-light .schedule-plan-gear-row p,
-body.theme-high-contrast-light .schedule-plan-route-meta span {
+body.theme-high-contrast-light .schedule-plan-route-meta span,
+body.theme-high-contrast-light .schedule-plan-route-target p,
+body.theme-high-contrast-light .schedule-plan-route-target-metric span {
   color: #4b5563;
 }
 
 body.theme-high-contrast-light .schedule-plan-hero h1,
 body.theme-high-contrast-light .schedule-plan-hero-metrics strong,
+body.theme-high-contrast-light .schedule-plan-hero-summary-chip strong,
 body.theme-high-contrast-light .schedule-plan-day-label,
 body.theme-high-contrast-light .schedule-plan-day h2,
 body.theme-high-contrast-light .schedule-plan-next-content h3,
 body.theme-high-contrast-light .schedule-plan-route-content h3,
 body.theme-high-contrast-light .schedule-plan-signal-row strong,
+body.theme-high-contrast-light .schedule-plan-coach-focus-pill strong,
 body.theme-high-contrast-light .schedule-plan-gear-card h3,
 body.theme-high-contrast-light .schedule-plan-gear-row strong,
 body.theme-high-contrast-light .schedule-plan-readiness-center strong {
@@ -38294,6 +38548,8 @@ body.theme-high-contrast-light .schedule-plan-signal-bar span,
 body.theme-high-contrast-light .schedule-plan-readiness-center span,
 body.theme-high-contrast-light .schedule-plan-coach-copy h4,
 body.theme-high-contrast-light .schedule-plan-route-content span:first-child,
+body.theme-high-contrast-light .schedule-plan-day-anchor,
+body.theme-high-contrast-light .schedule-plan-route-target-metric strong,
 body.theme-high-contrast-light .schedule-plan-next-content > span,
 body.theme-high-contrast-light .schedule-plan-next-content button,
 body.theme-high-contrast-light .schedule-plan-secondary-btn {
@@ -38301,9 +38557,18 @@ body.theme-high-contrast-light .schedule-plan-secondary-btn {
 }
 
 body.theme-high-contrast-light .schedule-plan-next-content > span,
+body.theme-high-contrast-light .schedule-plan-hero-summary-chip,
+body.theme-high-contrast-light .schedule-plan-coach-focus-pill,
+body.theme-high-contrast-light .schedule-plan-day-anchor,
 body.theme-high-contrast-light .schedule-plan-gear-row,
 body.theme-high-contrast-light .schedule-plan-secondary-btn {
   background: rgba(255, 255, 255, 0.98);
+}
+
+body.theme-high-contrast-light .schedule-plan-day.is-marathon-anchor {
+  box-shadow:
+    inset 0 0 0 2px rgba(160, 57, 42, 0.36),
+    0 14px 28px rgba(160, 57, 42, 0.1);
 }
 
 body.theme-high-contrast-light .schedule-plan-watch-btn {

@@ -279,4 +279,47 @@ export function buildRecentShoeSignal(shoes, runs, options = {}) {
   };
 }
 
+export function calculateRotationHealth(shoes, runs) {
+  const activeShoes = (Array.isArray(shoes) ? shoes : []).filter((s) => !s?.retired);
+  const recentRuns = getRecentRuns(Array.isArray(runs) ? runs : []);
+  const shoeIdsInRecentRuns = new Set(
+    recentRuns.map((r) => r.shoeId).filter(Boolean)
+  );
+  
+  const rotationSize = activeShoes.length;
+  const uniqueUsed = shoeIdsInRecentRuns.size;
+  
+  if (rotationSize <= 1) {
+    return {
+      status: 'minimal',
+      score: 0,
+      uniqueUsed,
+      rotationSize,
+    };
+  }
+
+  if (recentRuns.length < 3) {
+    return {
+      status: 'minimal',
+      score: 0,
+      uniqueUsed,
+      rotationSize,
+    };
+  }
+
+  const ratio = uniqueUsed / rotationSize;
+  
+  let status = 'stale';
+  if (ratio >= 0.8 || uniqueUsed >= 3) status = 'excellent';
+  else if (ratio >= 0.5 || uniqueUsed >= 2) status = 'good';
+
+  return {
+    status,
+    score: Math.round(ratio * 100),
+    uniqueUsed,
+    rotationSize,
+    recentCount: recentRuns.length,
+  };
+}
+
 export { RECENT_SHOE_SIGNAL_WINDOW_DAYS };

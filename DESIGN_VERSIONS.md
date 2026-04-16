@@ -11,6 +11,24 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-04-16-44
+Date: 2026-04-16
+Surface: Marathon-target adaptation on `/schedule`
+Files: `frontend/src/pages/Schedule.jsx`, `frontend/src/styles/style.css`, `frontend/src/utils/scheduleMarathonBlock.js`, `frontend/src/utils/scheduleMarathonBlock.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: When `coachState.activeBlock` is present, `/schedule` now shifts the hero into an explicit race-build read with target distance, countdown, and race-day chips. The weekly strip now marks the long-run day as the block anchor, the planned-route card calls out the target workout distance for the block, and the coach rail now names the current build week, long-run anchor, and race target in a compact focus grid. When no active block exists, the page keeps its prior weekly-plan language and structure.
+Why: The user wanted marathon plans to feel unmistakable on `/schedule` without a broad redesign. The previous surface had the data, but it buried the race target inside generic weekly-plan copy and left the long-run anchor visually underplayed.
+Rollback target: `DV-2026-04-16-43`
+Notes: `node frontend/src/utils/scheduleMarathonBlock.test.js`, `cd frontend && npm run lint`, and `cd frontend && node scripts/run-vite-build.mjs` all passed, and the synced frontend bundle refreshed the Spring-served static output.
+
+### Version: DV-2026-04-16-43
+Date: 2026-04-16
+Surface: Planned-route card fallback on `/schedule`
+Files: `frontend/src/pages/Schedule.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: The planned-route card on `/schedule` now has an explicit no-route fallback branch instead of rendering the normal map-preview shell with nothing inside it. When Hermes has a real `routeRecommendation.preview`, the card still renders the same SVG preview state. When it does not, the card now switches into a deliberate fallback layout with route badges, an honest “Waiting for route history” headline, and a compact supporting explanation so the surface still reads like coach-owned planning rather than a broken grid cell.
+Why: The user reported that the route grid on `/schedule` looked broken. The root cause was structural, not cosmetic: the card had no true empty state, so light mode exposed a large pale blank stage whenever preview data was absent.
+Rollback target: `DV-2026-04-16-42`
+Notes: `cd frontend && npm run lint` and `cd frontend && node scripts/run-vite-build.mjs` both passed, and the updated bundle synced into the Spring-served static output.
+
 ### Version: DV-2026-04-16-42
 Date: 2026-04-16
 Surface: Garmin Connect lane on `/settings`

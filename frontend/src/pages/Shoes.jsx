@@ -18,6 +18,7 @@ import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../util
 import { kmOf } from '../utils/analysisInsights';
 import {
   buildRecentShoeSignal,
+  calculateRotationHealth,
   getRunTimestamp,
   RECENT_SHOE_SIGNAL_WINDOW_DAYS,
 } from '../utils/shoeRotation';
@@ -482,6 +483,7 @@ export default function Shoes() {
   const activeShoes = shoes.filter(s => !s.retired);
   const retiredShoes = shoes.filter(s => s.retired);
   const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
+  const rotationHealth = useMemo(() => calculateRotationHealth(shoes, runs), [shoes, runs]);
   const recentRunsWindow = shoeSignal.recentRuns;
   const performanceFallback = shoeSignal.recommendation?.type === 'recommend' ? null : shoeSignal.recommendation;
   const shoePerformanceInsights = useMemo(() => {
@@ -730,8 +732,18 @@ export default function Shoes() {
                   <small>{lang === 'zh-CN' ? '已标记跑步' : 'Tagged runs'}</small>
                   <strong>{lang === 'zh-CN' ? `${recentTaggedRuns.length} 次` : `${recentTaggedRuns.length} runs`}</strong>
                 </span>
-              </div>
-              <div className="shoe-rotation-signal-detail-list">
+                <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
+                  <small>{t('shoes.rotation_health_label')}</small>
+                  <strong className={cx(
+                    rotationHealth.status === 'excellent' && 'is-positive',
+                    rotationHealth.status === 'good' && 'is-positive',
+                    rotationHealth.status === 'stale' && 'is-negative',
+                    rotationHealth.status === 'minimal' && 'is-muted'
+                  )}>
+                    {t(`shoes.rotation_health_${rotationHealth.status}`)}
+                  </strong>
+                </span>
+              </div>              <div className="shoe-rotation-signal-detail-list">
                 {rotationSignalMetaItems.map((item) => (
                   <span key={item} className="shoe-rotation-signal-detail-item">{item}</span>
                 ))}

@@ -421,6 +421,8 @@ export default function ProfileDashboard() {
   const [runs, setRuns] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
+  const [races, _setRaces] = useState([]);
+  const [nextRace, setNextRace] = useState(null);
   const [loadState, setLoadState] = useState('loading');
   const [banner, setBanner] = useState(null);
   const [prCelebration, setPrCelebration] = useState(null);
@@ -468,11 +470,24 @@ export default function ProfileDashboard() {
           apiJson('/api/coach/state').catch(() => null),
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/profile/personal-records').catch(() => null),
-        ]).then(([coachStateData, coachTodayData, personalRecordsData]) => {
+          apiJson('/api/races').catch(() => null),
+        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData]) => {
           if (cancelled) return;
 
           setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
           setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
+
+          if (Array.isArray(racesData)) {
+            _setRaces(racesData);
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const upcoming = racesData
+              .filter(r => !r.canceled)
+              .map(r => ({ ...r, parsedDate: new Date(r.date) }))
+              .filter(r => !Number.isNaN(r.parsedDate.getTime()) && r.parsedDate >= now)
+              .sort((a, b) => a.parsedDate - b.parsedDate);
+            setNextRace(upcoming[0] || null);
+          }
 
           if (profileData?.email && personalRecordsData && typeof personalRecordsData === 'object') {
             const storageKey = getPrSnapshotStorageKey(profileData.email);
@@ -563,6 +578,22 @@ export default function ProfileDashboard() {
 
   const restingHrValue = coachState?.lastNightRestingHr ?? coachState?.profileRestingHeartRateBpm ?? null;
   const sleepScoreValue = coachState?.lastSleepScore ?? null;
+
+  const raceCountdown = useMemo(() => {
+    if (!nextRace?.parsedDate) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const diffTime = nextRace.parsedDate - now;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [nextRace]);
+
+  const racePrepPhase = useMemo(() => {
+    if (raceCountdown === null) return null;
+    if (raceCountdown <= 7) return { key: 'taper', label: t('profile.dashboard_race_phase_taper') };
+    if (raceCountdown <= 21) return { key: 'peak', label: t('profile.dashboard_race_phase_peak') };
+    if (raceCountdown <= 56) return { key: 'specific', label: t('profile.dashboard_race_phase_specific') };
+    return { key: 'base', label: t('profile.dashboard_race_phase_base') };
+  }, [raceCountdown, t]);
 
   const heroWorkout = coachToday?.today || null;
   const heroWorkoutTitle = buildWorkoutHeadline(heroWorkout, todayBundle.recommendation, t);
@@ -1133,6 +1164,48 @@ export default function ProfileDashboard() {
             </section>
 
             <section className="runner-dashboard-feature-grid" aria-label={t('profile.dashboard_nav_dashboard')}>
+              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--race">
+                <div className="runner-dashboard-feature-head">
+                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_race_countdown_title')}</span>
+                  <span className="runner-dashboard-feature-eyebrow">
+                    {nextRace ? formatDate(nextRace.date, lang === 'zh-CN' ? 'zh-CN' : 'en-US') : '--'}
+                  </span>
+                </div>
+                {nextRace ? (
+                  <>
+                    <div className="runner-dashboard-feature-copy">
+                      <h3>{nextRace.name}</h3>
+                      <div className="runner-dashboard-race-countdown">
+                        <strong>{raceCountdown}</strong>
+                        <span>{t('profile.dashboard_race_days_left', { days: '' }).trim()}</span>
+                      </div>
+                    </div>
+                    <div className="runner-dashboard-race-prep">
+                      <span className="runner-dashboard-race-phase-tag">{racePrepPhase?.label}</span>
+                      <p>
+                        <small>{t('profile.dashboard_race_prep_advice')}</small>
+                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '优先保证睡眠，适当通过短促冲刺维持神经兴奋性。' : 'Prioritize sleep and maintain neuro-muscular pop with short strides.')}
+                        {racePrepPhase?.key === 'peak' && (lang === 'zh-CN' ? '进入最高跑量周，注意核心肌群的力量补充。' : 'Peak volume weeks—ensure core strength maintenance.')}
+                        {racePrepPhase?.key === 'specific' && (lang === 'zh-CN' ? '磨炼比赛配速的体感，优化补给策略。' : 'Refine race-pace feel and practice fueling strategies.')}
+                        {racePrepPhase?.key === 'base' && (lang === 'zh-CN' ? '稳步提升有氧耐力，重点在于低心率慢跑。' : 'Build aerobic base with steady, low-HR volume.')}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="runner-dashboard-feature-copy is-empty">
+                    <h3>{t('profile.dashboard_race_no_upcoming')}</h3>
+                    <button type="button" className="runner-dashboard-feature-link" onClick={() => navigate('/races')}>
+                      {t('profile.dashboard_race_view_all', { count: races.length })}
+                    </button>
+                  </div>
+                )}
+                <div className="runner-dashboard-feature-actions">
+                  <button type="button" className="runner-dashboard-feature-secondary" onClick={() => navigate('/races')}>
+                    {t('profile.dashboard_nav_races')}
+                  </button>
+                </div>
+              </article>
+
               <article className="runner-dashboard-feature-card runner-dashboard-feature-card--readiness runner-dashboard-feature-card--stamina">
                 <div className="runner-dashboard-feature-head">
                   <span className="runner-dashboard-card-kicker">{t('profile.dashboard_stamina_title')}</span>
