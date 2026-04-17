@@ -48,6 +48,7 @@ public class RaceCourseMapService {
     private static final int MAX_CANDIDATES = 6;
     private static final int TARGET_ELEVATION_SAMPLE_COUNT = 25;
     private static final int MIN_ALIGNMENT_CONFIDENCE = 68;
+    private static final int MIN_ADMIN_PREVIEW_ALIGNMENT_CONFIDENCE = 58;
     private static final double EARTH_RADIUS_KM = 6371.0088;
     private static final int CLIMB_DELTA_THRESHOLD_METERS = 1;
     private static final Pattern MEDIA_URL_PATTERN = Pattern.compile("murl&quot;:&quot;([^&]+?)&quot;", Pattern.CASE_INSENSITIVE);
@@ -138,7 +139,15 @@ public class RaceCourseMapService {
     ) {
         RaceCourseMapAsset asset = raceCourseMapAssetRepository.findByRaceId(raceId).orElse(null);
         if (asset != null && asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) {
-            return toResult(asset, true);
+            RaceCourseMapResult liveResult = toResult(asset, true);
+            if (isStoredAlignedResult(liveResult)) {
+                return liveResult;
+            }
+            RaceCourseMapResult upgradedLiveResult = tryUpgradeLiveAsset(asset);
+            if (upgradedLiveResult != null) {
+                return upgradedLiveResult;
+            }
+            return liveResult;
         }
 
         RaceCourseMapResult resolved = resolveCourseMap(raceName, city, country, websiteUrl, latitude, longitude, distanceKm);
@@ -161,14 +170,14 @@ public class RaceCourseMapService {
             String actorEmail
     ) {
         String validated = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(imageReference, 2_000_000, "imageUrl");
-        byte[] imageBytes = readImageBytes(validated);
-        if (imageBytes == null) {
+        ResolvedCandidateAsset uploadedAsset = resolveUploadedReference(validated);
+        if (uploadedAsset == null) {
             throw new IllegalArgumentException("Unable to read course-map image.");
         }
-        String source = validated.startsWith("data:image/") ? "admin-upload" : "admin-image-url";
-        RaceCourseMapResult resolved = analyzeResolvedImage(source, validated, imageBytes, raceName, city, country, latitude, longitude, distanceKm);
-        if ((resolved.imageUrl() == null || resolved.imageUrl().isBlank()) && (validated.startsWith("http") || validated.startsWith("data:image/"))) {
-            resolved = new RaceCourseMapResult(validated, source, false, 0, "Hermes saved the upload but could not align it confidently yet.", null, List.of(), List.of(), null, false);
+        String source = validated.startsWith("data:image/") ? "admin-upload" : isPdfFileUrl(validated) ? "admin-document-url" : "admin-image-url";
+        RaceCourseMapResult resolved = analyzeResolvedImage(source, uploadedAsset.imageUrl(), uploadedAsset.imageBytes(), raceName, city, country, latitude, longitude, distanceKm);
+        if ((resolved.imageUrl() == null || resolved.imageUrl().isBlank()) && uploadedAsset.imageUrl() != null && !uploadedAsset.imageUrl().isBlank()) {
+            resolved = new RaceCourseMapResult(uploadedAsset.imageUrl(), source, false, 0, "Hermes saved the upload but could not align it confidently yet.", null, List.of(), List.of(), null, false);
         }
         persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, resolved, actorEmail);
         return resolved;
@@ -443,6 +452,7 @@ public class RaceCourseMapService {
         return """
                 You are aligning a road-race course map image to the real world.
                 Decide if the image is an actual course map for the race, not a medal, hero banner, sponsor graphic, or elevation-only chart.
+                Poster-style official race graphics still count as course maps when they visibly include a route line over a city map, landmarks, district labels, or a start/finish course diagram.
                 If it is a course map, infer an approximate real-world route and map bounds from the visible labels, landmarks, districts, bridges, parks, coastline, and race context.
 
                 Race metadata:
@@ -799,7 +809,8 @@ public class RaceCourseMapService {
             return new RaceCourseMapResult(imageReference, source, false, 0, "AI course-map alignment is not configured.", null, List.of(), List.of(), null, false);
         }
         CourseMapAlignment alignment = analyzeCandidate(imageReference, imageBytes, raceName, city, country, latitude, longitude, distanceKm);
-        if (alignment == null || !alignment.isCourseMap() || alignment.confidence() < MIN_ALIGNMENT_CONFIDENCE) {
+        int minimumConfidence = minimumAlignmentConfidenceForSource(source);
+        if (alignment == null || !alignment.isCourseMap() || alignment.confidence() < minimumConfidence) {
             return new RaceCourseMapResult(imageReference, source, false, alignment == null ? 0 : alignment.confidence(),
                     alignment == null ? "Hermes could not align this course-map confidently yet." : alignment.summary(),
                     null, List.of(), List.of(), null, alignment != null);
@@ -813,6 +824,60 @@ public class RaceCourseMapService {
         List<Integer> elevationSamples = smoothElevationSamples(fetchElevationSamples(resampleRoute(routePoints, TARGET_ELEVATION_SAMPLE_COUNT)));
         Integer totalClimbMeters = computeTotalClimbMeters(elevationSamples);
         return new RaceCourseMapResult(imageReference, source, true, alignment.confidence(), alignment.summary(), overlayBounds, routePoints, elevationSamples, totalClimbMeters, true);
+    }
+
+    private int minimumAlignmentConfidenceForSource(String source) {
+        if (source != null && source.startsWith("admin-")) {
+            return MIN_ADMIN_PREVIEW_ALIGNMENT_CONFIDENCE;
+        }
+        return MIN_ALIGNMENT_CONFIDENCE;
+    }
+
+    private boolean isStoredAlignedResult(RaceCourseMapResult result) {
+        return result != null
+                && result.courseMapDetected()
+                && result.overlayBounds() != null
+                && result.routePoints() != null
+                && result.routePoints().size() > 1;
+    }
+
+    private RaceCourseMapResult tryUpgradeLiveAsset(RaceCourseMapAsset asset) {
+        if (asset == null || asset.getLiveImageUrl() == null || asset.getLiveImageUrl().isBlank()) {
+            return null;
+        }
+        ResolvedCandidateAsset resolvedAsset = resolveUploadedReference(asset.getLiveImageUrl());
+        if (resolvedAsset == null) {
+            return null;
+        }
+        String source = asset.getLiveSource() == null || asset.getLiveSource().isBlank()
+                ? "published-live"
+                : asset.getLiveSource();
+        RaceCourseMapResult upgraded = analyzeResolvedImage(
+                source,
+                resolvedAsset.imageUrl(),
+                resolvedAsset.imageBytes(),
+                asset.getRaceName(),
+                asset.getCity(),
+                asset.getCountry(),
+                asset.getLatitude(),
+                asset.getLongitude(),
+                asset.getDistanceKm()
+        );
+        if (!isStoredAlignedResult(upgraded)) {
+            return null;
+        }
+        asset.setLiveImageUrl(upgraded.imageUrl());
+        asset.setLiveSource(upgraded.source());
+        asset.setLiveConfidence(upgraded.confidence());
+        asset.setLiveSummary(upgraded.summary());
+        asset.setLiveOverlayBoundsJson(writeJson(upgraded.overlayBounds()));
+        asset.setLiveRoutePointsJson(writeJson(upgraded.routePoints()));
+        asset.setLiveElevationSamplesJson(writeJson(upgraded.elevationSamples()));
+        asset.setLiveTotalClimbMeters(upgraded.totalClimbMeters());
+        asset.setLiveAiAssisted(upgraded.aiAssisted());
+        asset.setLiveUpdatedAt(LocalDateTime.now());
+        raceCourseMapAssetRepository.save(asset);
+        return upgraded;
     }
 
     private byte[] readImageBytes(String imageReference) {
@@ -834,6 +899,28 @@ public class RaceCourseMapService {
             }
         }
         return fetchImageBytes(imageReference);
+    }
+
+    private ResolvedCandidateAsset resolveUploadedReference(String imageReference) {
+        if (imageReference == null || imageReference.isBlank()) return null;
+        if (imageReference.startsWith("data:image/")) {
+            int comma = imageReference.indexOf(',');
+            if (comma <= 0 || comma >= imageReference.length() - 1) return null;
+            try {
+                byte[] imageBytes = Base64.getDecoder().decode(imageReference.substring(comma + 1).trim());
+                return new ResolvedCandidateAsset(imageReference, imageBytes);
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+        if (isPdfFileUrl(imageReference)) {
+            byte[] pdfBytes = fetchDocumentBytes(imageReference);
+            if (pdfBytes == null) return null;
+            return renderPdfCandidate(pdfBytes);
+        }
+        byte[] imageBytes = fetchImageBytes(imageReference);
+        if (imageBytes == null) return null;
+        return new ResolvedCandidateAsset(imageReference, imageBytes);
     }
 
     private void persistPending(
@@ -940,13 +1027,31 @@ public class RaceCourseMapService {
         String source = pending ? asset.getPendingSource() : asset.getLiveSource();
         Integer confidence = pending ? asset.getPendingConfidence() : asset.getLiveConfidence();
         String summary = pending ? asset.getPendingSummary() : asset.getLiveSummary();
+        String overlayBoundsJson = pending ? asset.getPendingOverlayBoundsJson() : asset.getLiveOverlayBoundsJson();
+        String routePointsJson = pending ? asset.getPendingRoutePointsJson() : asset.getLiveRoutePointsJson();
+        String elevationSamplesJson = pending ? asset.getPendingElevationSamplesJson() : asset.getLiveElevationSamplesJson();
+        Integer totalClimbMeters = pending ? asset.getPendingTotalClimbMeters() : asset.getLiveTotalClimbMeters();
+        Boolean aiAssisted = pending ? asset.getPendingAiAssisted() : asset.getLiveAiAssisted();
         String updatedAt = pending
                 ? (asset.getPendingUpdatedAt() == null ? null : asset.getPendingUpdatedAt().toString())
                 : (asset.getLiveUpdatedAt() == null ? null : asset.getLiveUpdatedAt().toString());
         if ((imageUrl == null || imageUrl.isBlank()) && (summary == null || summary.isBlank())) {
             return null;
         }
-        return new PreviewSnapshot(imageUrl, source, summary, confidence, updatedAt);
+        List<RoutePoint> routePoints = readJson(routePointsJson, new TypeReference<List<RoutePoint>>() {}, List.of());
+        return new PreviewSnapshot(
+                imageUrl,
+                source,
+                summary,
+                confidence,
+                updatedAt,
+                readJson(overlayBoundsJson, new TypeReference<OverlayBounds>() {}, null),
+                routePoints,
+                readJson(elevationSamplesJson, new TypeReference<List<Integer>>() {}, List.of()),
+                totalClimbMeters,
+                Boolean.TRUE.equals(aiAssisted),
+                !routePoints.isEmpty()
+        );
     }
 
     private String writeJson(Object value) {
@@ -1265,7 +1370,13 @@ public class RaceCourseMapService {
             String source,
             String summary,
             Integer confidence,
-            String updatedAt
+            String updatedAt,
+            OverlayBounds overlayBounds,
+            List<RoutePoint> routePoints,
+            List<Integer> elevationSamples,
+            Integer totalClimbMeters,
+            boolean aiAssisted,
+            boolean courseMapDetected
     ) {}
 
     private record ResolvedCandidateAsset(String imageUrl, byte[] imageBytes) {}
