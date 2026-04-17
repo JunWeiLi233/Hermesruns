@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,8 +14,6 @@ import TopbarNotifications from '../components/TopbarNotifications';
 
 const BATCH_SIZE = 10;
 const ROUTE_PREVIEW_CONCURRENCY = 2;
-const MONTH_NAMES_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTH_NAMES_ZH = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -256,7 +254,7 @@ export default function Runs() {
   const routePreviewRuns = visibleRuns;
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
-  const monthNames = lang === 'en' ? MONTH_NAMES_EN : MONTH_NAMES_ZH;
+  const monthNames = t('runs.months').split(',');
   const isAwaitingData = loadState === 'ready' && allRuns.length === 0;
   const stravaLinked = Boolean(stravaStatus?.linked);
   const awaitingTitle = t(stravaLinked ? 'runs.awaiting_title_linked' : 'runs.awaiting_title_disconnected');
@@ -270,7 +268,7 @@ export default function Runs() {
   const totalTimeText = formatDuration(filteredTimeSeconds);
   const avgPaceText = filteredRuns.length > 0
     ? formatPace(filteredDistanceKm, filteredTimeSeconds, lang)
-    : (lang === 'en' ? '0:00 /km' : '0:00 /公里');
+    : t('runs.pace_zero');
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
@@ -713,7 +711,7 @@ export default function Runs() {
           {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
           {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
           {loadState === 'ready' && visibleRuns.map((run, index) => {
-            const provider = run.provider || (lang === 'en' ? 'Manual import' : '鎵嬪姩瀵煎叆');
+            const provider = run.provider || t('runs.manual_import');
             const runName = run.name || t('runs.default_run_name');
             return (
               <article key={run.id || `${runName}-${index}`} className="recent-runs-card" onClick={() => openRun(run)}>

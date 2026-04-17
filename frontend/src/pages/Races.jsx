@@ -458,11 +458,11 @@ export default function Races() {
   ];
 
   if (loadState === 'loading') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.loading')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('races.loading')}</div></div>;
   }
 
   if (loadState === 'error') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('runs.load_error')}</div></div>;
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('races.load_error')}</div></div>;
   }
 
   return (

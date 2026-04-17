@@ -59,8 +59,12 @@ export default function Rewards() {
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
   ];
 
-  if (loadState !== 'ready') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div></div>;
+  if (loadState === 'error') {
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading"><p className="rewards-load-eyebrow">{t('rewards.error_eyebrow')}</p><p className="rewards-load-title">{t('rewards.error_title')}</p><p className="rewards-load-detail">{t('rewards.load_error')}</p><button className="rewards-load-retry" onClick={() => window.location.reload()}>{t('rewards.retry')}</button></div></div>;
+  }
+
+  if (loadState === 'loading') {
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('rewards.loading')}</div></div>;
   }
 
   return (
@@ -228,6 +232,7 @@ export default function Rewards() {
               <div className="prediction-detail-empty">
                 <strong>{t('rewards.empty_focus_title')}</strong>
                 <p>{t('rewards.earned_empty')}</p>
+                <button type="button" className="rewards-empty-cta" onClick={() => navigate('/runs')}>{t('rewards.next_cta')}</button>
               </div>
             )}
           </section>
@@ -262,6 +267,7 @@ export default function Rewards() {
               <div className="prediction-detail-empty">
                 <strong>{t('rewards.empty_focus_title')}</strong>
                 <p>{t('rewards.empty_focus_copy')}</p>
+                <button type="button" className="rewards-empty-cta" onClick={() => navigate('/runs')}>{t('rewards.next_cta')}</button>
               </div>
             )}
           </section>
