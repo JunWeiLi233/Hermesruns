@@ -363,7 +363,7 @@ export default function WeatherEngine() {
                 <div className="weather-temperature-bar weather-temperature-bar--inline">
                   <div className="weather-temperature-bar-inner weather-temperature-bar--scroll">
                     {forecastState === 'loading' ? (
-                      <div className="weather-temperature-bar--loading">{t('weather_loading')}</div>
+                      <div className="weather-temperature-bar--loading">{wt('loading')}</div>
                     ) : forecast.length ? (
                       forecast.map((slot) => (
                         <div key={slot.key} className="weather-temp-slot">

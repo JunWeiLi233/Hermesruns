@@ -303,6 +303,10 @@ const translations = {
       "today_run_type_base": "打基础",
       "metric_vo2max": "最大摄氧量",
       "metric_acwr": "急慢性负荷比",
+      "stamina_score": "体力值",
+      "stamina_recovery_cap": "恢复上限",
+      "stamina_target_pace": "建议配速",
+      "stamina_target_hr": "建议心率",
       "metric_recovery_hours": "{hours} 小时",
       "today_run_title_restart": "轻松找回节奏",
       "today_run_title_comeback": "回归有氧跑",
@@ -2350,6 +2354,11 @@ const translations = {
         "weather_advisor": "天气顾问",
         "injury_screener": "伤病筛查"
       }
+    },
+    "weather_engine": {
+      "no_penalty": "无需热修正",
+      "status_unknown": "状态待确认",
+      "open_today_run": "打开今日训练"
     }
   },
   "en": {
@@ -3298,6 +3307,9 @@ const translations = {
       "stitch_pace_per_km": "Pace / km",
       "stitch_pace_per_mile": "Pace / mile",
       "stitch_vs_prev": "vs previous",
+      "prediction_consistency_high": "Prediction highly stable",
+      "prediction_consistency_moderate": "Prediction mostly stable",
+      "prediction_consistency_low": "Prediction has variance",
       "stitch_no_delta": "No prior delta",
       "stitch_acwr_copy": "Acute versus chronic load shows whether this block is absorbable or starting to spike.",
       "stitch_acwr_low": "Underloaded",
@@ -4703,6 +4715,11 @@ const translations = {
         "weather_advisor": "Weather Advisor",
         "injury_screener": "Injury Screener"
       }
+    },
+    "weather_engine": {
+      "no_penalty": "No heat penalty",
+      "status_unknown": "Status pending",
+      "open_today_run": "Open today's run"
     }
   }
 };
