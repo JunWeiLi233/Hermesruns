@@ -9,6 +9,7 @@ import { UnitProvider } from './contexts/UnitContext';
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Signup = React.lazy(() => import('./pages/Signup'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Profile = React.lazy(() => import('./pages/Profile'));
@@ -89,6 +90,7 @@ function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/terms" element={<LegalPage variant="terms" />} />
                 <Route path="/privacy" element={<LegalPage variant="privacy" />} />
                 <Route path="/admin" element={<AdminLogin />} />

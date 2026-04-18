@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { apiJson } from '../api';
+import { apiJson, getBackendBaseUrl } from '../api';
 import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
@@ -16,6 +16,7 @@ import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../utils/vdot';
 import { resolveRaceIntel } from '../utils/raceIntel';
 import worldRaceCatalog from '../data/worldRaceCatalog';
 import { getCachedRaceImage, resolveRaceImage } from '../utils/raceImage';
+import { deriveRaceMapTrust } from '../utils/raceDetailMapTrust';
 import { shouldFetchRaceElevationProfile } from '../utils/raceDetailRequestPolicy';
 
 const DEFAULT_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuAF-j8MVIZBaOa4qq1rYw7hnzMPZGyRTeaO7f5ojhfDSBPjz6qfENN3s8WjkUPksPxWqm5Ou9DlpJo50YGOg2UBflxkDa4KDh242OhPDsAcvArSXG_zW7rNjkFksE1UWJY2ki4AO2WYkbwVzRkboLxOgkaWRa_KhIs_Dc2pFWpFAG2jXxtcQ-1nBEsFwRTbNGOQQ966BWFfSM2WQabYKQuiK1MvWc5Cwq_3GzbEmLfQBtieNgbCMSZtLNIe5hGE1fGulcEWmAha60-4';
@@ -297,10 +298,14 @@ export default function RacesDetail() {
   const [elevationProfileSource, setElevationProfileSource] = useState('');
   const [elevationProfileSamples, setElevationProfileSamples] = useState([]);
   const [activeElevationPointIndex, setActiveElevationPointIndex] = useState(null);
+  const [loadState, setLoadState] = useState('loading');
+  const [loadingActivities, setLoadingActivities] = useState(true);
   const [routeMapReady, setRouteMapReady] = useState(false);
   const elevationSvgRef = useRef(null);
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
+  const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
+  const fallbackTileUrl = useMemo(() => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', []);
 
   const race = useMemo(() => {
     const fromState = location.state?.race || null;
@@ -412,14 +417,17 @@ export default function RacesDetail() {
           apiJson('/api/races').catch(() => []),
         ]);
         const runList = Array.isArray(activities) ? activities : [];
-        runList.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+        runList.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
         setProfile(profileData || null);
         setRuns(runList);
         setSavedRaces(Array.isArray(raceData) ? raceData : []);
-      } catch {
+        setLoadingActivities(false);
+      } catch (err) {
+        console.error('Failed to load race detail activities', err);
         setProfile(null);
         setRuns([]);
         setSavedRaces([]);
+        setLoadingActivities(false);
       }
     })();
   }, [isAuthenticated, navigate, race]);
@@ -468,10 +476,20 @@ export default function RacesDetail() {
       return Math.max(8, Math.round(ratio * peak));
     });
   }, [elevationProfileSamples, raceMeta]);
-  const routePoints = useMemo(() => courseMapData.routePoints, [courseMapData.routePoints]);
+  const mapCenter = useMemo(() => (race?.lat != null && race?.lng != null ? [race.lat, race.lng] : null), [race]);
+  const mapTrust = useMemo(() => deriveRaceMapTrust({
+    imageUrl: courseMapData.imageUrl,
+    overlayBounds: courseMapData.overlayBounds,
+    routePoints: courseMapData.routePoints,
+    confidence: courseMapData.confidence,
+    distanceKm: race?.distanceKm,
+    mapCenter,
+  }), [courseMapData.confidence, courseMapData.imageUrl, courseMapData.overlayBounds, courseMapData.routePoints, mapCenter, race?.distanceKm]);
+  const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
-  const hasAlignedRoute = routeMapPoints.length > 1;
-  const hasAlignedOverlay = Boolean(courseMapData.imageUrl) && Boolean(courseMapData.overlayBounds) && hasAlignedRoute;
+  const hasAlignedRoute = mapTrust.trustedRoute;
+  const hasAlignedOverlay = mapTrust.trustedOverlay;
+  const mapViewportBounds = mapTrust.viewportBounds;
   const hasCourseMapCandidate = Boolean(courseMapData.imageUrl);
   const absoluteElevationProfile = useMemo(
     () => (courseMapData.elevationSamples.length ? courseMapData.elevationSamples : fallbackInterpretedElevationProfile),
@@ -481,7 +499,6 @@ export default function RacesDetail() {
     () => (courseMapData.totalClimbMeters != null ? courseMapData.totalClimbMeters : Math.round(raceMeta?.ascentMeters || 0)),
     [courseMapData.totalClimbMeters, raceMeta],
   );
-  const mapCenter = useMemo(() => (race?.lat != null && race?.lng != null ? [race.lat, race.lng] : null), [race]);
   const targetDate = useMemo(() => projectedRaceDate(race), [race]);
   const countdown = useMemo(() => buildCountdownParts(targetDate), [targetDate]);
   const bestVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
@@ -594,8 +611,21 @@ export default function RacesDetail() {
   }, [courseMapData.confidence, hasAlignedOverlay, hasAlignedRoute, hasCourseMapCandidate, race, t]);
 
   useEffect(() => {
+    // Show page immediately when basic race data is loaded
+    // Course map loads asynchronously in background
+    if (!loadingActivities) {
+      setLoadState('ready');
+    }
+  }, [loadingActivities]);
+
+  useEffect(() => {
     setRouteMapReady(false);
-  }, [hasAlignedOverlay, hasAlignedRoute, race?.id]);
+    // Clear map instance when route data changes to allow re-initialization with new data
+    if (routeMapInstanceRef.current) {
+      routeMapInstanceRef.current.remove();
+      routeMapInstanceRef.current = null;
+    }
+  }, [hasAlignedOverlay, hasAlignedRoute, race?.id, routeMapPoints.length]);
 
   useEffect(() => {
     if (!routeMapRef.current || !race || routeMapInstanceRef.current) return undefined;
@@ -614,71 +644,116 @@ export default function RacesDetail() {
         keyboard: false,
         tap: false,
       });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
+      const tileAttribution = '&copy; OpenStreetMap contributors';
+      let activeTileLayer = null;
+      let switchedToFallbackTiles = false;
+      const attachTileLayer = (url) => {
+        const layer = L.tileLayer(url, {
+          maxZoom: 19,
+          attribution: tileAttribution,
+        }).addTo(map);
+        layer.on('tileerror', () => {
+          if (switchedToFallbackTiles || url === fallbackTileUrl) return;
+          switchedToFallbackTiles = true;
+          if (activeTileLayer) {
+            map.removeLayer(activeTileLayer);
+          }
+          activeTileLayer = attachTileLayer(fallbackTileUrl);
+          if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => {
+              map.invalidateSize({ pan: false });
+              activeTileLayer?.redraw?.();
+            });
+          }
+        });
+        return layer;
+      };
+      activeTileLayer = attachTileLayer(tileUrl);
       const finalizeMapLayout = () => {
         map.invalidateSize({ pan: false });
+        activeTileLayer?.redraw?.();
+      };
+      const renderFallbackCityMap = () => {
+        if (mapCenter) {
+          const singleBounds = L.latLngBounds(
+            [mapCenter[0] - 0.05, mapCenter[1] - 0.08],
+            [mapCenter[0] + 0.05, mapCenter[1] + 0.08],
+          );
+          map.fitBounds(singleBounds, { padding: [26, 26] });
+          L.circleMarker(mapCenter, {
+            radius: 8,
+            color: '#fff6f2',
+            weight: 2,
+            fillColor: '#f07561',
+            fillOpacity: 0.96,
+          }).addTo(map);
+        } else {
+          map.setView([0, 0], 1);
+        }
       };
 
-      const overlayBounds = courseMapData.overlayBounds
-        ? L.latLngBounds(
-          [courseMapData.overlayBounds.south, courseMapData.overlayBounds.west],
-          [courseMapData.overlayBounds.north, courseMapData.overlayBounds.east],
-        )
-        : null;
+      try {
+        const overlayBounds = hasAlignedOverlay && courseMapData.overlayBounds
+          ? L.latLngBounds(
+            [courseMapData.overlayBounds.south, courseMapData.overlayBounds.west],
+            [courseMapData.overlayBounds.north, courseMapData.overlayBounds.east],
+          )
+          : null;
+        const viewportBounds = mapViewportBounds
+          ? L.latLngBounds(
+            [mapViewportBounds.south, mapViewportBounds.west],
+            [mapViewportBounds.north, mapViewportBounds.east],
+          )
+          : null;
 
-      if (hasAlignedOverlay && overlayBounds) {
-        L.imageOverlay(courseMapData.imageUrl, overlayBounds, {
-          opacity: 0.74,
-          interactive: false,
-          className: 'race-detail-map-ai-overlay',
-        }).addTo(map);
-        map.fitBounds(overlayBounds.pad(0.04), { padding: [26, 26] });
-      }
-
-      if (hasAlignedRoute) {
-        const polyline = L.polyline(routeMapPoints, {
-          color: '#f07561',
-          weight: 5,
-          opacity: 0.92,
-        }).addTo(map);
-        if (!hasAlignedOverlay) {
-          const bounds = polyline.getBounds().pad(0.24);
-          map.fitBounds(bounds, { padding: [26, 26] });
+        if (overlayBounds) {
+          L.imageOverlay(courseMapData.imageUrl, overlayBounds, {
+            opacity: 0.74,
+            interactive: false,
+            className: 'race-detail-map-ai-overlay',
+          }).addTo(map);
         }
 
-        L.circleMarker(routeMapPoints[0], {
-          radius: 7,
-          color: '#101214',
-          weight: 2,
-          fillColor: '#7ce8b4',
-          fillOpacity: 1,
-        }).addTo(map);
+        if (hasAlignedRoute) {
+          const polyline = L.polyline(routeMapPoints, {
+            color: '#f07561',
+            weight: 5,
+            opacity: 0.92,
+          }).addTo(map);
 
-        L.circleMarker(routeMapPoints[routeMapPoints.length - 1], {
-          radius: 8,
-          color: '#fff6f2',
-          weight: 2,
-          fillColor: '#f07561',
-          fillOpacity: 1,
-        }).addTo(map);
-      } else if (mapCenter) {
-        const singleBounds = L.latLngBounds(
-          [mapCenter[0] - 0.05, mapCenter[1] - 0.08],
-          [mapCenter[0] + 0.05, mapCenter[1] + 0.08],
-        );
-        map.fitBounds(singleBounds, { padding: [26, 26] });
-        L.circleMarker(mapCenter, {
-          radius: 8,
-          color: '#fff6f2',
-          weight: 2,
-          fillColor: '#f07561',
-          fillOpacity: 0.96,
-        }).addTo(map);
-      } else {
-        map.setView([0, 0], 1);
+          const startMarker = L.circleMarker(routeMapPoints[0], {
+            radius: 7,
+            color: '#101214',
+            weight: 2,
+            fillColor: '#7ce8b4',
+            fillOpacity: 1,
+          }).addTo(map);
+          if (routePoints[0]?.label) {
+            startMarker.bindTooltip(routePoints[0].label, { direction: 'top', offset: [0, -6] });
+          }
+
+          const finishMarker = L.circleMarker(routeMapPoints[routeMapPoints.length - 1], {
+            radius: 8,
+            color: '#fff6f2',
+            weight: 2,
+            fillColor: '#f07561',
+            fillOpacity: 1,
+          }).addTo(map);
+          if (routePoints[routePoints.length - 1]?.label) {
+            finishMarker.bindTooltip(routePoints[routePoints.length - 1].label, { direction: 'top', offset: [0, -6] });
+          }
+
+          if (viewportBounds) {
+            map.fitBounds(viewportBounds, { padding: [26, 26] });
+          } else {
+            map.fitBounds(polyline.getBounds().pad(0.24), { padding: [26, 26] });
+          }
+        } else {
+          renderFallbackCityMap();
+        }
+      } catch (error) {
+        console.error('Race detail Leaflet map failed to render aligned route; falling back to city view.', error);
+        renderFallbackCityMap();
       }
 
       if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
@@ -690,7 +765,9 @@ export default function RacesDetail() {
       setRouteMapReady(true);
 
       routeMapInstanceRef.current = map;
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Race detail Leaflet map failed to initialize.', error);
+    });
 
     return () => {
       if (resizeTimer) {
@@ -701,7 +778,15 @@ export default function RacesDetail() {
         routeMapInstanceRef.current = null;
       }
     };
-  }, [courseMapData.imageUrl, courseMapData.overlayBounds, hasAlignedOverlay, hasAlignedRoute, mapCenter, race, routeMapPoints]);
+  }, [courseMapData.imageUrl, courseMapData.overlayBounds, fallbackTileUrl, hasAlignedOverlay, hasAlignedRoute, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
+
+  if (loadState !== 'ready') {
+    return (
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">{t(loadState === 'error' ? 'races.stitch_load_error' : 'races.stitch_loading')}</div>
+      </div>
+    );
+  }
 
   return (
     <div className={`runner-shell-page runner-dashboard-page races-dashboard-page race-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
@@ -944,7 +1029,12 @@ export default function RacesDetail() {
 
               <section className="race-detail-lower-grid">
                 <article className="race-detail-map-card">
-                  <div className="race-detail-map-canvas" aria-label={mapCardCopy.title}>
+                  <div
+                    className="race-detail-map-canvas"
+                    role="img"
+                    aria-label={mapCardCopy.title}
+                    aria-describedby="race-detail-map-access-copy"
+                  >
                     <div
                       ref={routeMapRef}
                       className={`race-detail-map-leaflet${routeMapReady ? ' is-ready' : ''}${hasAlignedOverlay ? ' has-aligned-overlay' : ''}`}
@@ -954,6 +1044,9 @@ export default function RacesDetail() {
                   <div className="race-detail-map-copy">
                     <span>{mapCardCopy.badge}</span>
                     <strong>{mapCardCopy.title}</strong>
+                    <p id="race-detail-map-access-copy" className="sr-only">
+                      {`${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
+                    </p>
                   </div>
                   <div className="race-detail-map-actions">
                     <span className="race-detail-map-source">{mapCardCopy.source}</span>
@@ -970,17 +1063,17 @@ export default function RacesDetail() {
                     <h3>{t('races.detail_readiness_title')}</h3>
                     <span>{prediction ? `${confidence}%` : '--'}</span>
                   </div>
-                  <div className="race-detail-checklist">
+                  <ul className="race-detail-checklist">
                     {readinessItems.map((item) => (
-                      <div key={item.key} className={`race-detail-check-row${item.done ? ' is-done' : ''}`}>
+                      <li key={item.key} className={`race-detail-check-row${item.done ? ' is-done' : ''}`}>
                         <div>
                           <strong>{item.label}</strong>
                           <span>{item.meta}</span>
                         </div>
                         <AppIcon name={item.done ? 'check_circle' : 'radio_button_unchecked'} className="runner-dashboard-side-link-icon" />
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                   <div className="race-detail-playbook-actions">
                     <button type="button" className="race-detail-playbook-btn" onClick={() => navigate('/races')}>
                       {t('races.detail_back')}

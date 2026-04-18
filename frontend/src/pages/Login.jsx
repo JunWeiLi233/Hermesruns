@@ -215,29 +215,29 @@ export default function Login() {
 
             <form className="auth-flow-form" onSubmit={handleSubmit}>
               {banner === 'verified' && (
-                <div className="error-alert error-alert--success is-visible">
+                <div className="error-alert error-alert--success is-visible" role="status">
                   {t('index.verified_banner')}
                 </div>
               )}
               {banner === 'invalid' && (
-                <div className="error-alert is-visible">{t('index.verify_error')}</div>
+                <div className="error-alert is-visible" role="alert">{t('index.verify_error')}</div>
               )}
               {banner === 'expired' && (
-                <div className="error-alert is-visible">{t('index.verify_expired')}</div>
+                <div className="error-alert is-visible" role="alert">{t('index.verify_expired')}</div>
               )}
               {banner === 'strava_not_configured' && (
-                <div className="error-alert is-visible">{t('common.strava_not_configured')}</div>
+                <div className="error-alert is-visible" role="alert">{t('common.strava_not_configured')}</div>
               )}
               {banner === 'strava_link_confirmation_required' && (
-                <div className="error-alert is-visible">{t('profile.strava_link_confirmation_required')}</div>
+                <div className="error-alert is-visible" role="alert">{t('profile.strava_link_confirmation_required')}</div>
               )}
               {banner === 'strava_failed' && (
-                <div className="error-alert is-visible">{t('common.strava_login_failed')}</div>
+                <div className="error-alert is-visible" role="alert">{t('common.strava_login_failed')}</div>
               )}
-              {error && <div className="error-alert is-visible">{error}</div>}
+              {error && <div className="error-alert is-visible" role="alert">{error}</div>}
 
               {(showResend || banner === 'expired') && (
-                <div className="auth-resend-box auth-resend-box--login">
+                <div className="auth-resend-box auth-resend-box--login" aria-live="polite">
                   <p className="auth-resend-copy">{t('index.resend_email_placeholder')}</p>
                   <button type="button" className="btn-secondary" disabled={resendBusy || !email.trim()} onClick={handleResend}>
                     {resendBusy ? '...' : t('index.resend_verification')}
@@ -262,9 +262,9 @@ export default function Login() {
               <div className="form-group form-group--auth">
                 <div className="label-row label-row--auth">
                   <label htmlFor="password">{t('index.password_label')}</label>
-                  <a href="#" className="forgot-password forgot-password--auth" onClick={(e) => e.preventDefault()}>
+                  <Link to="/forgot-password" className="forgot-password forgot-password--auth">
                     {t('index.forgot_password')}
-                  </a>
+                  </Link>
                 </div>
                 <input
                   type="password"
@@ -289,7 +289,7 @@ export default function Login() {
           </div>
 
           <footer className="auth-flow-legal">
-            <FooterNavLinks />
+            <FooterNavLinks publicOnly={true} />
           </footer>
         </section>
       </main>

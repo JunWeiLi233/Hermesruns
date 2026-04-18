@@ -306,8 +306,13 @@ export default function Analysis() {
                       <div
                         key={bar.key}
                         className="analysis-overview-vo2-bar-col"
+                        tabIndex={0}
+                        role="img"
+                        aria-label={`${bar.label}: VO2max ${bar.value != null ? bar.value.toFixed(1) : '--'}`}
                         onPointerEnter={() => setHoveredVo2BarKey(bar.key)}
                         onPointerLeave={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
+                        onFocus={() => setHoveredVo2BarKey(bar.key)}
+                        onBlur={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
                       >
                         <div
                           className={cx('analysis-overview-vo2-bar', bar.current && 'is-current', hoveredVo2BarKey === bar.key && 'is-hovered')}
@@ -488,7 +493,20 @@ export default function Analysis() {
                     </thead>
                     <tbody>
                       {predictionRows.map((row) => (
-                        <tr key={row.key} onClick={() => navigate(`/prediction/${row.key}`)}>
+                        <tr
+                          key={row.key}
+                          className="clickable-row"
+                          role="link"
+                          tabIndex={0}
+                          aria-label={`${row.label} ${row.timeLabel} ${row.paceLabel} ${row.vdotLabel}`}
+                          onClick={() => navigate(`/prediction/${row.key}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              navigate(`/prediction/${row.key}`);
+                            }
+                          }}
+                        >
                           <td>{row.label}</td>
                           <td className="is-accent">{row.timeLabel}</td>
                           <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>

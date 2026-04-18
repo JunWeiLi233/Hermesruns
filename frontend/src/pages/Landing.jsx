@@ -247,7 +247,7 @@ export default function Landing() {
       </main>
 
       <footer className="landing-editorial-footer">
-        <FooterNavLinks className="landing-editorial-footer-links" />
+        <FooterNavLinks className="landing-editorial-footer-links" publicOnly={true} />
         <p>{t('landing.footer')}</p>
       </footer>
     </div>
