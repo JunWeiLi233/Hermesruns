@@ -244,15 +244,21 @@ public class H2ToPostgresMigrator {
     }
 
     private static void resetSequence(Connection pg, String table) throws SQLException {
+        // Whitelist table names to prevent injection
+        if (!table.matches("^(runner|activities|activity_points)$")) {
+            throw new IllegalArgumentException("Unsupported table for sequence reset: " + table);
+        }
+
         try (Statement statement = pg.createStatement();
              ResultSet resultSet = statement.executeQuery("SELECT COALESCE(MAX(id), 0) + 1 FROM " + table)) {
             if (resultSet.next()) {
                 long nextId = resultSet.getLong(1);
-                execute(pg, "SELECT setval(pg_get_serial_sequence('" + table + "', 'id'), " + nextId + ", false)");
+                // Note: pg_get_serial_sequence and setval are specific to Postgres.
+                // table name is whitelisted above.
+                execute(pg, "SELECT setval(pg_get_serial_sequence('" + table + "', 'id'), " + nextId + ", false)");       
             }
         }
     }
-
     private static void printSummary(Connection h2, Connection pg, MigrationCounts counts) throws SQLException {
         System.out.println("Migration complete.");
         System.out.println("Copied rows:");
@@ -270,6 +276,10 @@ public class H2ToPostgresMigrator {
     }
 
     private static void printCount(Connection connection, String table) throws SQLException {
+        // Whitelist table names to prevent injection
+        if (!table.matches("^(runner|activities|activity_points)$")) {
+            throw new IllegalArgumentException("Unsupported table for count: " + table);
+        }
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS row_count FROM " + table)) {
             if (resultSet.next()) {
