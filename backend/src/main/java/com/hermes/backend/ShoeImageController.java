@@ -629,9 +629,9 @@ public class ShoeImageController {
                     .body(Map.of("error", "AI API key not configured. Set APP_AI_API_KEY environment variable."));
         }
 
-        // Check AI usage quota
+        // Check and atomically reserve AI usage quota
         Runner runner = user.get();
-        String quotaError = aiUsageService.checkQuota(runner);
+        String quotaError = aiUsageService.tryConsumeQuota(runner);
         if (quotaError != null) {
             Map<String, Object> errorBody = new LinkedHashMap<>();
             errorBody.put("error", quotaError);
@@ -671,7 +671,6 @@ public class ShoeImageController {
             int end = text.lastIndexOf(']');
             if (start >= 0 && end > start) {
                 String jsonArray = text.substring(start, end + 1);
-                aiUsageService.recordUsage(runner);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("raw", jsonArray);
                 result.putAll(aiUsageService.getUsageStatus(runner));

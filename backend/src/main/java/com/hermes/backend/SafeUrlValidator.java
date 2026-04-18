@@ -79,20 +79,20 @@ public final class SafeUrlValidator {
     }
 
     /**
-     * Allows the standard remote http(s) URLs plus small inline {@code data:image/...;base64,...}
-     * payloads for user-selected local shoe photos.
+     * Allows the standard remote http(s) URLs plus small inline base64 data URLs for
+     * admin-uploaded course-map images and PDFs.
      */
     public static String validateHttpUrlOrImageDataUrlOrNull(String url, int maxLen, String fieldName) {
         if (url == null) return null;
         String s = url.trim();
         if (s.isEmpty()) return null;
-        if (s.regionMatches(true, 0, "data:image/", 0, 11)) {
-            return validateImageDataUrl(s, maxLen, fieldName);
+        if (s.regionMatches(true, 0, "data:", 0, 5)) {
+            return validateImageOrPdfDataUrl(s, maxLen, fieldName);
         }
         return validateHttpUrlOrNull(s, maxLen, fieldName);
     }
 
-    private static String validateImageDataUrl(String url, int maxLen, String fieldName) {
+    private static String validateImageOrPdfDataUrl(String url, int maxLen, String fieldName) {
         if (url.length() > maxLen) {
             throw new IllegalArgumentException(fieldName + " too long.");
         }
@@ -107,8 +107,10 @@ public final class SafeUrlValidator {
             throw new IllegalArgumentException(fieldName + " metadata is too long.");
         }
         String lowerMetadata = metadata.toLowerCase(Locale.ROOT);
-        if (!lowerMetadata.startsWith("image/")) {
-            throw new IllegalArgumentException(fieldName + " must be an image.");
+        String mediaType = lowerMetadata.split(";", 2)[0];
+        boolean isAllowedMediaType = mediaType.startsWith("image/") || "application/pdf".equals(mediaType);
+        if (!isAllowedMediaType) {
+            throw new IllegalArgumentException(fieldName + " must be an image or PDF.");
         }
         if (!lowerMetadata.contains(";base64")) {
             throw new IllegalArgumentException(fieldName + " must use base64 encoding.");

@@ -45,6 +45,11 @@ public class AiUsageService {
 
     /**
      * Returns null when a scan is allowed, or a stable error code if blocked.
+     * <p>
+     * This method performs an atomic check-and-reserve: if the runner has quota remaining,
+     * it immediately increments the counter and persists before returning, preventing
+     * concurrent over-quota scans from the TOCTOU race between checkQuota and recordUsage.
+     * </p>
      */
     public String checkQuota(Runner runner) {
         normalizeDailyWindow(runner);
@@ -57,6 +62,29 @@ public class AiUsageService {
             return "AI_FREE_TIER_PROJECT_LIMIT";
         }
 
+        return null;
+    }
+
+    /**
+     * Atomic check-and-consume: tries to reserve one scan slot for the runner.
+     * Returns null on success (slot reserved and persisted), or an error code if blocked.
+     * This prevents the check-then-act race where multiple threads pass checkQuota
+     * before any thread calls recordUsage.
+     */
+    public synchronized String tryConsumeQuota(Runner runner) {
+        normalizeDailyWindow(runner);
+
+        if (runner.getAiDailyScansUsed() >= perRunnerDailyLimit) {
+            return perRunnerDailyLimit > 0 ? "AI_FREE_TIER_USER_LIMIT" : "AI_FREE_TIER_USER_LIMIT";
+        }
+
+        if (getProjectDailyUsage() >= getEffectiveProjectDailyLimit()) {
+            return "AI_FREE_TIER_PROJECT_LIMIT";
+        }
+
+        runner.setAiDailyScansUsed(runner.getAiDailyScansUsed() + 1);
+        runner.setAiDailyLastUsedDate(LocalDate.now());
+        runnerRepository.save(runner);
         return null;
     }
 

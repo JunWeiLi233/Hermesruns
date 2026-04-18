@@ -32,6 +32,18 @@ public class RaceOfficialImageService {
             Pattern.CASE_INSENSITIVE
     );
     private static final List<String> REJECT_HINTS = List.of("logo", "icon", "badge", "sprite", "favicon");
+    private static final List<String> REJECT_HOST_HINTS = List.of(
+            "tr.line.me",
+            "google-analytics.com",
+            "googletagmanager.com",
+            "doubleclick.net"
+    );
+    private static final List<String> REJECT_PATH_HINTS = List.of(
+            "/_next/image",
+            "tag.gif",
+            "pixel",
+            "beacon"
+    );
 
     private final RestTemplate restTemplate;
     private final Map<String, CachedImage> cache = new ConcurrentHashMap<>();
@@ -119,9 +131,37 @@ public class RaceOfficialImageService {
 
     private String sanitizeResolvedImage(String resolved) {
         try {
-            return SafeUrlValidator.validateHttpsUrlOrNull(resolved, MAX_URL_LENGTH, "officialImageUrl");
+            String validated = SafeUrlValidator.validateHttpsUrlOrNull(resolved, MAX_URL_LENGTH, "officialImageUrl");
+            if (validated == null || isRejectedResolvedImage(validated)) {
+                return null;
+            }
+            return validated;
         } catch (IllegalArgumentException ignored) {
             return null;
+        }
+    }
+
+    private boolean isRejectedResolvedImage(String resolved) {
+        try {
+            URI uri = URI.create(resolved);
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+            for (String rejectHost : REJECT_HOST_HINTS) {
+                if (host.contains(rejectHost)) {
+                    return true;
+                }
+            }
+
+            String path = uri.getPath() == null ? "" : uri.getPath().toLowerCase(Locale.ROOT);
+            String query = uri.getQuery() == null ? "" : uri.getQuery().toLowerCase(Locale.ROOT);
+            String combined = path + (query.isBlank() ? "" : "?" + query);
+            for (String rejectPath : REJECT_PATH_HINTS) {
+                if (combined.contains(rejectPath)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (IllegalArgumentException ignored) {
+            return true;
         }
     }
 

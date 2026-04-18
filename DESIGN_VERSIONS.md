@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-04-16-45
+Date: 2026-04-16
+Surface: Admin dashboard race-course-map upload workflow on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/i18n/translations.js`, `backend/src/main/java/com/hermes/backend/SafeUrlValidator.java`, `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`, `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Refined the admin course-map review workspace so operators can upload local image or PDF source files directly from the dashboard, get clearer guidance about what makes a map AI-scannable, and keep the preview path aligned with the same stored route-overlay contract used by the public race-detail flow. Local PDF uploads now normalize into a rasterized preview before AI alignment, while the workspace copy now explicitly steers admins toward one clean course-map page instead of poster-style artwork.
+Why: The admin tooling already had pending/live review and AI alignment, but the upload affordance was still image-biased and too easy to misuse with decorative assets. The user wanted admins to upload course maps more easily and make sure the preview path stays useful for AI scanning instead of only looking polished.
+Rollback target: `working tree before this change`
+Notes: `cd frontend && npm run lint`, `node frontend/src/pages/dashboardCourseMapPreview.smoke.test.js`, `cd backend && ./mvnw -q -Dtest=RaceCourseMapServiceTests test`, `cd backend && ./mvnw -q -DskipTests compile`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-backend-runtime-sync.mjs --files "backend/src/main/java/com/hermes/backend/RaceCourseMapService.java||backend/src/main/java/com/hermes/backend/SafeUrlValidator.java"` all passed, and the synced frontend bundle refreshed the Spring-served static output while the runtime proof helper returned `PASS`.
+
 ### Version: DV-2026-04-16-44
 Date: 2026-04-16
 Surface: Marathon-target adaptation on `/schedule`
