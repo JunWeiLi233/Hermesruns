@@ -6942,6 +6942,48 @@ body.theme-midnight .weekly-flashcard-graph-track {
 
 /* reward-empty-state base styles are now in the shared .inline-status group above */
 
+@media (max-width: 860px) {
+    .muscle-training-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .muscle-map-card {
+        order: -1;
+    }
+
+    .muscle-map-figure {
+        width: min(100%, 180px);
+    }
+}
+
+@media (max-width: 520px) {
+    .muscle-training-page {
+        padding: 16px 12px 48px;
+    }
+
+    .muscle-training-hero-copy {
+        padding: 20px;
+    }
+
+    .muscle-training-hero-copy h1 {
+        font-size: clamp(1.5rem, 6vw, 2rem);
+    }
+
+    .muscle-exercise-card {
+        grid-template-columns: minmax(0, 100px) minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .muscle-session-head {
+        flex-wrap: wrap;
+    }
+
+    .muscle-sound-head {
+        grid-template-columns: auto auto 1fr;
+        gap: 8px;
+    }
+}
+
 @media (max-width: 900px) {
     .reward-grid {
         grid-template-columns: 1fr;
@@ -36419,6 +36461,32 @@ body.theme-light .settings-control-theme-card.is-active {
   font-weight: 800;
   letter-spacing: -0.05em;
 }
+
+.shoe-catalog-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 48px 24px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.shoe-catalog-loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(255, 107, 53, 0.2);
+    border-top-color: var(--brand-accent, #FF6B35);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.shoe-catalog-shell--loading { opacity: 0.4; pointer-events: none; }
 
 .add-shoes-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
 .add-shoes-main-column { display: grid; gap: 18px; align-content: start; }

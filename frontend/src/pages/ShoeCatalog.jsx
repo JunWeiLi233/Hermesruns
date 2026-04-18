@@ -107,6 +107,7 @@ export default function ShoeCatalog() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedModel, setSelectedModel] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const seriesSectionRef = useRef(null);
 
   useEffect(() => {
@@ -118,6 +119,7 @@ export default function ShoeCatalog() {
   }, [isAuthenticated, navigate]);
 
   async function loadCatalog() {
+    setIsLoading(true);
     try {
       const data = await apiJson('/api/shoe-catalog');
       const dynamicBrands = Array.isArray(data?.brands) ? data.brands : [];
@@ -166,6 +168,8 @@ export default function ShoeCatalog() {
       setCatalog(Array.from(byBrand.values()).sort((a, b) => a.brand.localeCompare(b.brand, 'zh-Hans-CN')));
     } catch {
       setCatalog(shoeCatalog);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -267,7 +271,13 @@ export default function ShoeCatalog() {
         </header>
 
         <div className="runner-shell-canvas">
-          <div className="add-shoes-shell">
+          {isLoading && (
+            <div className="shoe-catalog-loading" aria-live="polite" aria-busy="true">
+              <span className="shoe-catalog-loading-spinner" aria-hidden="true" />
+              <span>{lang === 'zh-CN' ? '正在加载鞋款库…' : 'Loading catalog…'}</span>
+            </div>
+          )}
+          <div className={`add-shoes-shell${isLoading ? ' shoe-catalog-shell--loading' : ''}`}>
             <section className="add-shoes-browser-panel shoe-catalog-browser-panel">
               <div className="add-shoes-browser-head">
                 <div>
