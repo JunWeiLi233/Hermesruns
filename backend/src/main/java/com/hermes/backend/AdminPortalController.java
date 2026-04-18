@@ -403,6 +403,33 @@ public class AdminPortalController {
     }
 
 
+    @PostMapping("/race-course-maps/{raceId}/pending/reanalyze")
+    public ResponseEntity<?> reanalyzeRaceCourseMap(@PathVariable String raceId,
+                                                    @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                                    @RequestBody(required = false) Map<String, Object> body) {
+        Optional<Runner> adminOptional = requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return forbidden();
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, RACE_COURSE_MAP_SCAN_FIELDS);
+            String raceName = RequestBodyValidator.requiredSafeText(body, "raceName", 160);
+            String city = RequestBodyValidator.optionalSafeText(body, "city", 120);
+            String country = RequestBodyValidator.optionalSafeText(body, "country", 120);
+            String website = RequestBodyValidator.optionalString(body, "website", MAX_PHOTO_REFERENCE_LENGTH);
+            Double lat = readOptionalDouble(body, "lat");
+            Double lng = readOptionalDouble(body, "lng");
+            Double distanceKm = readOptionalDouble(body, "distanceKm");
+            RaceCourseMapService.RaceCourseMapResult result = raceCourseMapService.reanalyzePendingCourseMap(
+                    raceId, raceName, city, country, website, lat, lng, distanceKm, adminOptional.get().getEmail());
+            adminAuditService.log(adminOptional.get(), "race_course_map.pending_reanalyzed", "race_course_map", raceId, "Re-analyzed stored pending race course map");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            if ("race_course_map_pending_missing".equals(ex.getMessage())) {
+                return notFound(ex.getMessage(), "race_course_map_pending_missing");
+            }
+            return badRequest(ex.getMessage(), "invalid_race_course_map");
+        }
+    }
+
     @PostMapping("/race-course-maps/{raceId}/accept-live")
     public ResponseEntity<?> acceptRaceCourseMap(@PathVariable String raceId,
                                                  @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {

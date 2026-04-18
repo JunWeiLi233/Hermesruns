@@ -41353,6 +41353,20 @@ body:is(.theme-light, .theme-high-contrast-light) .coach-identity-avatar {
   position: relative;
 }
 
+.admin-review-preview__image-layer,
+.admin-review-preview__map-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.admin-review-preview__image-layer {
+  z-index: 0;
+}
+
+.admin-review-preview__map-layer {
+  z-index: 1;
+}
+
 .admin-review-preview--card {
   min-height: 100%;
   width: 100%;
@@ -41387,6 +41401,7 @@ body:is(.theme-light, .theme-high-contrast-light) .coach-identity-avatar {
 .admin-review-preview__map-wash {
   position: absolute;
   inset: 0;
+  z-index: 2;
   background:
     radial-gradient(circle at top left, rgba(240, 117, 97, 0.14), transparent 34%),
     rgba(245, 246, 247, 0.82);

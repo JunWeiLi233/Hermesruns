@@ -6,6 +6,7 @@ import { apiFetch, apiJson } from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HermesLogo from '../components/HermesLogo';
 import Modal from '../components/Modal';
+import AdminCourseMapPreview from '../components/AdminCourseMapPreview';
 import SectionCard from '../components/ui/SectionCard';
 import ActionBar from '../components/ui/ActionBar';
 import DataTable from '../components/ui/DataTable';
@@ -48,6 +49,8 @@ const TAB_ITEMS = [
   { key: 'audit', labelKey: 'dashboard.tab_audit' },
 ];
 
+const COURSE_MAP_UPLOAD_ACCEPT = 'image/*,application/pdf,.pdf';
+
 function normalizePage(data) {
   if (Array.isArray(data)) {
     return {
@@ -72,6 +75,17 @@ function readFileAsDataUrl(file) {
     reader.onerror = () => reject(new Error('file_read_failed'));
     reader.readAsDataURL(file);
   });
+}
+
+function isCourseMapUploadFile(file) {
+  if (!file) return false;
+  const type = String(file.type || '').toLowerCase();
+  const name = String(file.name || '').toLowerCase();
+  return type.startsWith('image/') || type === 'application/pdf' || name.endsWith('.pdf');
+}
+
+function findCourseMapUploadFile(files) {
+  return Array.from(files || []).find(file => isCourseMapUploadFile(file)) || null;
 }
 
 function getShoeDisplayName(shoe, fallback) {
@@ -115,6 +129,28 @@ function getCourseMapLocation(item) {
   return item?.location || item?.city || item?.raceCity || item?.race?.location || item?.race?.city || '';
 }
 
+function buildCourseMapAdminPayload(item) {
+  const payload = {
+    raceName: getCourseMapRaceName(item),
+  };
+
+  const city = item?.city || item?.raceCity || item?.race?.city || '';
+  const country = item?.country || item?.race?.country || '';
+  const website = item?.officialWebsite || item?.website || item?.race?.officialWebsite || item?.race?.website || '';
+  const lat = item?.lat ?? item?.latitude ?? item?.race?.lat ?? item?.race?.latitude;
+  const lng = item?.lng ?? item?.longitude ?? item?.race?.lng ?? item?.race?.longitude;
+  const distanceKm = item?.distanceKm ?? item?.race?.distanceKm;
+
+  if (city) payload.city = city;
+  if (country) payload.country = country;
+  if (website) payload.website = website;
+  if (Number.isFinite(Number(lat))) payload.lat = Number(lat);
+  if (Number.isFinite(Number(lng))) payload.lng = Number(lng);
+  if (Number.isFinite(Number(distanceKm))) payload.distanceKm = Number(distanceKm);
+
+  return payload;
+}
+
 function getCourseMapPending(item) {
   return item?.pendingPreview || item?.pending || item?.pendingAsset || null;
 }
@@ -123,8 +159,18 @@ function getCourseMapLive(item) {
   return item?.live || item?.liveAsset || null;
 }
 
+function getCourseMapCurrentLive(item) {
+  return item?.currentLivePreview || item?.resolvedLive || item?.currentLive || null;
+}
+
 function getCourseMapImageUrl(asset) {
-  return asset?.imageUrl || asset?.sourceImageUrl || asset?.previewImageUrl || '';
+  return asset?.previewImageUrl || asset?.imageUrl || asset?.sourceImageUrl || '';
+}
+
+function hasAlignedCourseMapPreview(asset) {
+  if (!asset || typeof asset !== 'object') return false;
+  const routePoints = Array.isArray(asset.routePoints) ? asset.routePoints : [];
+  return Boolean(asset.overlayBounds) || routePoints.length > 1 || (Array.isArray(asset.elevationSamples) && asset.elevationSamples.length > 0);
 }
 
 function getCourseMapStatus(item) {
@@ -136,6 +182,36 @@ function getCourseMapStatus(item) {
 function formatAdminDate(value) {
   if (!value) return '-';
   return String(value).replace('T', ' ').slice(0, 16);
+}
+
+function getDashboardRoleLabel(role, t) {
+  if (role === 'ADMIN') return t('dashboard.role_admin');
+  if (role === 'USER') return t('dashboard.role_user');
+  return role || '-';
+}
+
+function getDashboardTierLabel(tier, t) {
+  const normalized = String(tier || '').toUpperCase();
+  if (normalized === 'PRO') return t('dashboard.tier_pro');
+  if (normalized === 'FREE') return t('dashboard.tier_free');
+  return tier || '-';
+}
+
+function getDashboardJobStatusLabel(status, t) {
+  const normalized = String(status || '').toUpperCase();
+  if (normalized === 'COMPLETED') return t('dashboard.jobs_filter_status_completed');
+  if (normalized === 'RUNNING') return t('dashboard.jobs_filter_status_running');
+  if (normalized === 'PENDING') return t('dashboard.jobs_filter_status_pending');
+  if (normalized === 'FAILED') return t('dashboard.jobs_filter_status_failed');
+  return status || '-';
+}
+
+function getDashboardJobTypeLabel(jobType, t) {
+  const normalized = String(jobType || '').toUpperCase();
+  if (normalized === 'STRAVA_SYNC') return t('dashboard.jobs_type_strava_sync');
+  if (normalized === 'GARMIN_IMPORT') return t('dashboard.jobs_type_garmin_import');
+  if (normalized === 'FILE_IMPORT') return t('dashboard.jobs_type_file_import');
+  return jobType || '-';
 }
 
 function Sparkline({ trend }) {
@@ -212,6 +288,7 @@ export default function Dashboard() {
   const [courseMapDetail, setCourseMapDetail] = useState(null);
   const [courseMapLoadState, setCourseMapLoadState] = useState('idle');
   const [courseMapAction, setCourseMapAction] = useState({ raceId: null, type: '' });
+  const [courseMapDropActive, setCourseMapDropActive] = useState(false);
 
   const loadOverview = useCallback(async () => {
     const data = await apiJson('/api/admin/overview');
@@ -370,6 +447,25 @@ export default function Dashboard() {
     const updated = shoesPage.items?.find((item) => item.id === imgPickerShoe.id);
     if (updated) setImgPickerShoe(updated);
   }, [imgPickerShoe, shoesPage.items]);
+
+  useEffect(() => {
+    if (!selectedCourseMapId) return undefined;
+    const raceId = selectedCourseMapId;
+    function handlePaste(e) {
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      const items = Array.from(e.clipboardData?.items || []);
+      const imageItem = items.find((item) => item.type && item.type.startsWith('image/'));
+      if (!imageItem) return;
+      const file = imageItem.getAsFile();
+      if (!file) return;
+      e.preventDefault();
+      uploadCourseMapPreview(raceId, file);
+    }
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCourseMapId]);
 
   async function openUser(user) {
     setSelectedUser(user);
@@ -719,7 +815,12 @@ export default function Dashboard() {
     if (!raceId) return;
     setCourseMapAction({ raceId, type: 'scan' });
     try {
-      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/scan`, { method: 'POST' });
+      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
+      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
+      });
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
     } finally {
       setCourseMapAction({ raceId: null, type: '' });
@@ -731,14 +832,41 @@ export default function Dashboard() {
     setCourseMapAction({ raceId, type: 'upload' });
     try {
       const imageDataUrl = await readFileAsDataUrl(file);
+      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
       await apiJson(`/api/admin/race-course-maps/${raceId}/pending/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageDataUrl, fileName: file.name }),
+        body: JSON.stringify({ ...buildCourseMapAdminPayload(sourceItem), imageDataUrl, fileName: file.name }),
       });
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
     } finally {
       setCourseMapAction({ raceId: null, type: '' });
+    }
+  }
+
+  async function handleCourseMapUploadSelection(event) {
+    const file = findCourseMapUploadFile(event.target.files);
+    try {
+      if (!file) {
+        if (event.target.files?.length) setMessage(t('dashboard.course_maps_file_type_error'));
+        return;
+      }
+      await uploadCourseMapPreview(selectedCourseMapId, file);
+    } finally {
+      event.target.value = '';
+    }
+  }
+
+  function handleCourseMapDrop(event) {
+    event.preventDefault();
+    setCourseMapDropActive(false);
+    const file = findCourseMapUploadFile(event.dataTransfer?.files);
+    if (file) {
+      uploadCourseMapPreview(selectedCourseMapId, file);
+      return;
+    }
+    if (event.dataTransfer?.files?.length) {
+      setMessage(t('dashboard.course_maps_file_type_error'));
     }
   }
 
@@ -758,6 +886,22 @@ export default function Dashboard() {
     setCourseMapAction({ raceId, type: 'clear' });
     try {
       await apiJson(`/api/admin/race-course-maps/${raceId}/pending`, { method: 'DELETE' });
+      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+    } finally {
+      setCourseMapAction({ raceId: null, type: '' });
+    }
+  }
+
+  async function reanalyzeCourseMap(raceId) {
+    if (!raceId) return;
+    setCourseMapAction({ raceId, type: 'reanalyze' });
+    try {
+      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
+      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/reanalyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
+      });
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
     } finally {
       setCourseMapAction({ raceId: null, type: '' });
@@ -882,7 +1026,7 @@ export default function Dashboard() {
     <div className="dashboard-body admin-command-page">
       <LanguageSwitcher />
       <nav className="top-nav admin-command-topbar">
-        <div className="nav-brand"><HermesLogo mark="ADMIN OPS" tone="light" /></div>
+        <div className="nav-brand"><HermesLogo mark={t('dashboard.brand_mark')} tone="light" /></div>
         <div className="dashboard-nav-actions admin-command-topbar-actions">
           <button type="button" className="btn-secondary btn-inline-lg" onClick={triggerSync}>{t('dashboard.nav_sync_strava')}</button>
           <button type="button" className="btn-primary btn-inline-lg" onClick={logout}>{t('dashboard.nav_logout')}</button>
@@ -986,7 +1130,7 @@ export default function Dashboard() {
             <SectionCard className="section-card--compact section-card--spaced">
               <ActionBar>
                 <input className="admin-shoe-filter" placeholder={t('dashboard.search_users')} value={userQuery.search} onChange={e => setUserQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))} />
-                <select className="admin-shoe-filter" value={userQuery.role} onChange={e => setUserQuery(prev => ({ ...prev, role: e.target.value, page: 0 }))}><option value="">{t('dashboard.filter_all_roles')}</option><option value="ADMIN">ADMIN</option><option value="USER">USER</option></select>
+                <select className="admin-shoe-filter" value={userQuery.role} onChange={e => setUserQuery(prev => ({ ...prev, role: e.target.value, page: 0 }))}><option value="">{t('dashboard.filter_all_roles')}</option><option value="ADMIN">{t('dashboard.role_admin')}</option><option value="USER">{t('dashboard.role_user')}</option></select>
                 <select className="admin-shoe-filter" value={userQuery.queue} onChange={e => setUserQuery(prev => ({ ...prev, queue: e.target.value, page: 0 }))}><option value="">{t('dashboard.filter_all_users')}</option><option value="recent_signup_issues">{t('dashboard.filter_signup_issues')}</option><option value="billing_exceptions">{t('dashboard.filter_billing')}</option></select>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadUsers()}>{t('dashboard.btn_refresh')}</button>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => saveCurrentFilter('users')}>{t('dashboard.btn_save_filter')}</button>
@@ -1006,7 +1150,7 @@ export default function Dashboard() {
                     {usersPage.items?.map(user => (
                       <tr key={user.id}>
                         <td><input type="checkbox" checked={selectedUserIds.includes(user.id)} onChange={() => toggleSelected(setSelectedUserIds, user.id)} /></td>
-                        <td>{user.email}</td><td>{user.role}</td><td>{user.subscriptionTier}</td><td>{user.createdAt?.slice(0, 10) || '-'}</td><td>{user.noteCount}</td>
+                        <td>{user.email}</td><td>{getDashboardRoleLabel(user.role, t)}</td><td>{getDashboardTierLabel(user.subscriptionTier, t)}</td><td>{user.createdAt?.slice(0, 10) || '-'}</td><td>{user.noteCount}</td>
                         <td className="data-table-actions">
                           <button type="button" className="btn-secondary btn-inline-sm" onClick={() => openUser(user)}>{t('dashboard.btn_notes')}</button>
                           <button type="button" className="btn-secondary btn-inline-sm" onClick={() => impersonateUser(user)}>{t('dashboard.btn_impersonate')}</button>
@@ -1066,7 +1210,12 @@ export default function Dashboard() {
                     <button key={raceId || getCourseMapRaceName(item)} type="button" className={`admin-asset-card${selectedCourseMapId === raceId ? ' is-active' : ''}`} onClick={() => openCourseMapWorkspace(item)}>
                       <div className="admin-asset-card__media">
                         {getCourseMapImageUrl(pending || live) ? (
-                          <img src={getCourseMapImageUrl(pending || live)} alt={getCourseMapRaceName(item)} className="admin-asset-card__image" />
+                          <AdminCourseMapPreview
+                            preview={pending || live}
+                            title={getCourseMapRaceName(item)}
+                            emptyLabel={getCourseMapRaceName(item).slice(0, 1)}
+                            variant="card"
+                          />
                         ) : (
                           <div className="admin-shoe-img-empty">{getCourseMapRaceName(item).slice(0, 1)}</div>
                         )}
@@ -1095,11 +1244,21 @@ export default function Dashboard() {
               )}
               {selectedCourseMapId && (
                 <div className="admin-review-workspace">
+                  {(() => {
+                    const pendingPreview = getCourseMapPending(courseMapDetail);
+                    const livePreview = getCourseMapCurrentLive(courseMapDetail) || getCourseMapLive(courseMapDetail);
+                    return (
+                      <>
                   <div className="admin-review-workspace__header">
                     <div>
                       <span className="section-intro-kicker">{t('dashboard.review_workspace_kicker')}</span>
                       <h3>{getCourseMapRaceName(courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || {})}</h3>
                       <p>{t('dashboard.course_maps_workspace_copy')}</p>
+                      {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type ? (
+                        <p className="admin-review-workspace__status-line">
+                          {t(`dashboard.course_maps_status_running_${courseMapAction.type}`)}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="admin-review-workspace__actions">
                       <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapAction.raceId === selectedCourseMapId} onClick={() => triggerCourseMapScan(selectedCourseMapId)}>
@@ -1107,8 +1266,17 @@ export default function Dashboard() {
                       </button>
                       <label className="btn-secondary btn-inline-md admin-upload-trigger">
                         {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'upload' ? t('dashboard.course_maps_uploading') : t('dashboard.course_maps_upload')}
-                        <input type="file" accept="image/*" onChange={e => uploadCourseMapPreview(selectedCourseMapId, e.target.files?.[0])} />
+                        <input type="file" accept={COURSE_MAP_UPLOAD_ACCEPT} onChange={handleCourseMapUploadSelection} />
                       </label>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-inline-md"
+                        disabled={!pendingPreview || courseMapAction.raceId === selectedCourseMapId}
+                        onClick={() => reanalyzeCourseMap(selectedCourseMapId)}
+                      >
+                        {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'reanalyze' ? t('dashboard.course_maps_reanalyzing') : t('dashboard.course_maps_reanalyze')}
+                      </button>
+                      <p className="admin-review-workspace__actions-hint">{t('dashboard.course_maps_actions_hint')}</p>
                     </div>
                   </div>
 
@@ -1117,30 +1285,43 @@ export default function Dashboard() {
                   )}
 
                   <div className="admin-review-compare">
-                    <div className="admin-review-panel">
+                    <div
+                      className={`admin-review-panel admin-review-drop-zone${courseMapDropActive ? ' admin-review-drop-zone--active' : ''}`}
+                      onDragOver={(e) => { e.preventDefault(); if (!courseMapDropActive) setCourseMapDropActive(true); }}
+                      onDragEnter={(e) => { e.preventDefault(); setCourseMapDropActive(true); }}
+                      onDragLeave={(e) => { if (e.currentTarget === e.target) setCourseMapDropActive(false); }}
+                      onDrop={handleCourseMapDrop}
+                    >
                       <div className="admin-review-panel__head">
                         <span className="admin-review-panel__eyebrow">{t('dashboard.review_panel_pending')}</span>
                         <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${getCourseMapImageUrl(getCourseMapPending(courseMapDetail)) ? 'pending' : 'missing'}`}>
                           {getCourseMapImageUrl(getCourseMapPending(courseMapDetail)) ? t('dashboard.review_state_pending') : t('dashboard.review_state_missing')}
                         </span>
                       </div>
-                      <div className="admin-review-preview">
-                        {getCourseMapImageUrl(getCourseMapPending(courseMapDetail)) ? (
-                          <img src={getCourseMapImageUrl(getCourseMapPending(courseMapDetail))} alt={t('dashboard.review_panel_pending')} className="admin-review-preview__image" />
-                        ) : (
-                          <div className="admin-review-preview__empty">{t('dashboard.review_pending_empty')}</div>
-                        )}
-                      </div>
+                      <AdminCourseMapPreview
+                        preview={pendingPreview}
+                        title={t('dashboard.review_panel_pending')}
+                        emptyLabel={t('dashboard.review_pending_empty')}
+                      />
+                      {!pendingPreview ? (
+                        <p className="admin-review-drop-zone__hint">{t('dashboard.course_maps_drop_hint')}</p>
+                      ) : null}
+                      <p className="admin-review-drop-zone__guide">{t('dashboard.course_maps_scan_quality_hint')}</p>
                       <div className="admin-review-panel__meta">
                         <span>{t('dashboard.course_maps_confidence_label')}</span>
-                        <strong>{typeof getCourseMapPending(courseMapDetail)?.confidence === 'number' ? `${Math.round(getCourseMapPending(courseMapDetail).confidence)}%` : t('dashboard.course_maps_confidence_unknown')}</strong>
+                        <strong>{typeof pendingPreview?.confidence === 'number' ? `${Math.round(pendingPreview.confidence)}%` : t('dashboard.course_maps_confidence_unknown')}</strong>
                       </div>
-                      <p>{getCourseMapPending(courseMapDetail)?.summary || t('dashboard.review_pending_summary_fallback')}</p>
+                      <p>{pendingPreview?.summary || t('dashboard.review_pending_summary_fallback')}</p>
+                      {hasAlignedCourseMapPreview(pendingPreview) ? (
+                        <p className="admin-review-panel__signal">
+                          {t('dashboard.course_maps_confidence_short', { confidence: Math.round(pendingPreview?.confidence || 0) })}
+                        </p>
+                      ) : null}
                       <div className="admin-review-panel__actions">
-                        <button type="button" className="btn-primary btn-inline-md" disabled={!getCourseMapPending(courseMapDetail) || courseMapAction.raceId === selectedCourseMapId} onClick={() => acceptCourseMapLive(selectedCourseMapId)}>
+                        <button type="button" className="btn-primary btn-inline-md" disabled={!pendingPreview || courseMapAction.raceId === selectedCourseMapId} onClick={() => acceptCourseMapLive(selectedCourseMapId)}>
                           {t('dashboard.review_accept_live')}
                         </button>
-                        <button type="button" className="btn-secondary btn-inline-md" disabled={!getCourseMapPending(courseMapDetail) || courseMapAction.raceId === selectedCourseMapId} onClick={() => clearCourseMapPending(selectedCourseMapId)}>
+                        <button type="button" className="btn-secondary btn-inline-md" disabled={!pendingPreview || courseMapAction.raceId === selectedCourseMapId} onClick={() => clearCourseMapPending(selectedCourseMapId)}>
                           {t('dashboard.review_replace')}
                         </button>
                       </div>
@@ -1153,20 +1334,26 @@ export default function Dashboard() {
                           {getCourseMapImageUrl(getCourseMapLive(courseMapDetail)) ? t('dashboard.review_state_live') : t('dashboard.review_state_missing')}
                         </span>
                       </div>
-                      <div className="admin-review-preview">
-                        {getCourseMapImageUrl(getCourseMapLive(courseMapDetail)) ? (
-                          <img src={getCourseMapImageUrl(getCourseMapLive(courseMapDetail))} alt={t('dashboard.review_panel_live')} className="admin-review-preview__image" />
-                        ) : (
-                          <div className="admin-review-preview__empty">{t('dashboard.review_live_empty')}</div>
-                        )}
-                      </div>
+                      <AdminCourseMapPreview
+                        preview={livePreview}
+                        title={t('dashboard.review_panel_live')}
+                        emptyLabel={t('dashboard.review_live_empty')}
+                      />
                       <div className="admin-review-panel__meta">
                         <span>{t('dashboard.course_maps_live_note')}</span>
-                        <strong>{formatAdminDate(getCourseMapLive(courseMapDetail)?.acceptedAt || getCourseMapLive(courseMapDetail)?.updatedAt)}</strong>
+                        <strong>{formatAdminDate(livePreview?.acceptedAt || livePreview?.updatedAt)}</strong>
                       </div>
-                      <p>{getCourseMapLive(courseMapDetail)?.summary || t('dashboard.review_live_summary_fallback')}</p>
+                      <p>{livePreview?.summary || t('dashboard.review_live_summary_fallback')}</p>
+                      {hasAlignedCourseMapPreview(livePreview) ? (
+                        <p className="admin-review-panel__signal">
+                          {t('dashboard.course_maps_confidence_short', { confidence: Math.round(livePreview?.confidence || 0) })}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </SectionCard>
@@ -1280,8 +1467,8 @@ export default function Dashboard() {
                       <span className="admin-shoe-owner">{item.brand}</span>
                       {(item.modelZh || item.modelEn) && (
                         <div className="admin-shoe-badges">
-                          {item.modelZh && <span className="admin-shoe-status-badge admin-shoe-unset">ZH: {item.modelZh}</span>}
-                          {item.modelEn && <span className="admin-shoe-status-badge admin-shoe-unset">EN: {item.modelEn}</span>}
+                          {item.modelZh && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_zh')}: {item.modelZh}</span>}
+                          {item.modelEn && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_en')}: {item.modelEn}</span>}
                         </div>
                       )}
                       <div className="admin-shoe-badges">
@@ -1327,7 +1514,7 @@ export default function Dashboard() {
             <DataTable>
               <table className="data-table">
                 <thead><tr><th>{t('dashboard.th_job_id')}</th><th>{t('dashboard.th_job_type')}</th><th>{t('dashboard.th_job_status')}</th><th>{t('dashboard.th_job_created_by')}</th><th>{t('dashboard.th_job_summary')}</th><th>{t('dashboard.th_job_success')}</th><th>{t('dashboard.th_job_fail')}</th></tr></thead>
-                <tbody>{jobsPage.items?.map(job => <tr key={job.id}><td>{job.id}</td><td>{job.jobType}</td><td>{job.status}</td><td>{job.createdByEmail || '-'}</td><td>{job.summary}</td><td>{job.successCount}</td><td>{job.failureCount}</td></tr>)}</tbody>
+                <tbody>{jobsPage.items?.map(job => <tr key={job.id}><td>{job.id}</td><td>{getDashboardJobTypeLabel(job.jobType, t)}</td><td>{getDashboardJobStatusLabel(job.status, t)}</td><td>{job.createdByEmail || '-'}</td><td>{job.summary}</td><td>{job.successCount}</td><td>{job.failureCount}</td></tr>)}</tbody>
               </table>
               <Pagination pageData={jobsPage} onPageChange={page => setJobQuery(prev => ({ ...prev, page }))} t={t} />
             </DataTable>
