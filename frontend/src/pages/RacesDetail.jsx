@@ -695,7 +695,7 @@ export default function RacesDetail() {
         });
         return layer;
       };
-      activeTileLayer = attachTileLayer(fallbackTileUrl);
+      activeTileLayer = attachTileLayer(tileUrl);
       const finalizeMapLayout = () => {
         if (cancelled) return;
         map.invalidateSize({ pan: false });
