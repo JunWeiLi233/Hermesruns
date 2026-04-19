@@ -9257,6 +9257,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 .race-detail-hero-overlay {
     position: absolute;
     inset: 0;
+    z-index: 1;
     background:
         linear-gradient(180deg, rgba(17, 20, 21, 0.08) 0%, rgba(17, 20, 21, 0.42) 44%, rgba(17, 20, 21, 0.96) 100%),
         linear-gradient(90deg, rgba(17, 20, 21, 0.78) 0%, rgba(17, 20, 21, 0.18) 48%, rgba(17, 20, 21, 0.68) 100%);
@@ -9264,7 +9265,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 
 .race-detail-hero-body {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -9394,7 +9395,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 .race-detail-stat-card,
 .race-detail-coach-card,
 .race-detail-course-card,
-.race-detail-map-card,
+.race-detail-map-stage,
 .race-detail-readiness-card {
     border-radius: 24px;
     background:
@@ -9774,31 +9775,45 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     text-transform: uppercase;
 }
 
-.race-detail-lower-grid {
+.race-detail-lower-stack {
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.82fr);
+    grid-template-columns: minmax(0, 1.85fr) minmax(260px, 1fr);
     gap: 18px;
+    align-items: start;
 }
 
-.race-detail-map-card {
+.race-detail-map-stage {
     position: relative;
-    min-height: 310px;
+    display: grid;
+    height: 420px;
     overflow: hidden;
 }
 
 .race-detail-map-canvas {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    grid-area: 1 / 1;
     width: 100%;
-    height: 100%;
+    height: 420px;
     z-index: 0;
+    isolation: isolate;
+    background:
+        radial-gradient(circle at 16% 18%, rgba(240, 117, 97, 0.12), transparent 26%),
+        radial-gradient(circle at 80% 16%, rgba(124, 232, 180, 0.09), transparent 22%),
+        linear-gradient(180deg, rgba(12, 14, 17, 0.16), rgba(12, 14, 17, 0.26));
 }
 
 .race-detail-map-leaflet {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
     width: 100%;
     height: 100%;
     opacity: 0;
     transition: opacity 180ms ease;
+}
+
+.race-detail-map-leaflet.is-mounted {
+    opacity: 1;
 }
 
 .race-detail-map-leaflet.is-ready {
@@ -9808,56 +9823,35 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 .race-detail-map-leaflet {
     width: 100%;
     height: 100%;
-    background:
-        radial-gradient(circle at 18% 24%, rgba(240, 117, 97, 0.08), transparent 32%),
-        linear-gradient(180deg, rgba(12, 15, 16, 0.96), rgba(16, 18, 19, 0.98));
-    filter: grayscale(0.18) saturate(1.02) brightness(0.88) contrast(1.04);
+    background: transparent;
+    filter: none;
 }
 
-.race-detail-map-leaflet.has-aligned-overlay {
-    filter: grayscale(0.08) saturate(1.04) brightness(0.94) contrast(1.02);
-}
-
-.race-detail-map-leaflet .leaflet-control-container,
-.race-detail-map-leaflet .leaflet-bottom,
-.race-detail-map-leaflet .leaflet-top {
-    display: none;
-}
-
-.race-detail-map-overlay {
+.race-detail-map-hud {
     position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-        radial-gradient(circle at center, rgba(240, 117, 97, 0.04), transparent 56%),
-        linear-gradient(180deg, rgba(12, 15, 16, 0.06), rgba(12, 15, 16, 0.38));
+    top: 0;
+    left: 0;
+    z-index: 2;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    max-width: min(320px, 42%);
+    margin: 18px;
+    padding: 16px 18px;
+    border-radius: 22px;
+    background: rgba(13, 17, 19, 0.58);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 18px 38px rgba(7, 10, 12, 0.18);
 }
 
-.race-detail-map-overlay.is-ai-overlay {
-    background:
-        radial-gradient(circle at center, rgba(240, 117, 97, 0.03), transparent 62%),
-        linear-gradient(180deg, rgba(12, 15, 16, 0.04), rgba(12, 15, 16, 0.28));
-}
-
-.race-detail-map-copy,
-.race-detail-map-actions {
-    position: absolute;
-    z-index: 1;
-}
-
-.race-detail-map-copy {
-    top: 18px;
-    left: 18px;
-    max-width: min(72%, 320px);
-}
-
-.race-detail-map-copy span {
+.race-detail-map-pill {
     display: inline-flex;
-    min-height: 34px;
+    width: max-content;
+    min-height: 30px;
     align-items: center;
-    padding: 0 14px;
+    padding: 0 12px;
     border-radius: 999px;
-    background: rgba(17, 20, 21, 0.74);
+    background: rgba(240, 117, 97, 0.18);
     color: #f0b7aa;
     font-size: 0.62rem;
     font-weight: 800;
@@ -9865,19 +9859,19 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     text-transform: uppercase;
 }
 
-.race-detail-map-copy strong {
+.race-detail-map-hud strong {
     display: block;
-    margin-top: 10px;
     font-family: "Manrope", var(--font-display);
-    font-size: 1.18rem;
+    font-size: clamp(1.24rem, 2.6vw, 1.9rem);
     font-weight: 900;
     letter-spacing: -0.05em;
+    color: #f7f4f1;
+    line-height: 0.98;
 }
 
 .race-detail-map-source {
     display: block;
     max-width: 100%;
-    text-align: right;
     line-height: 1.45;
     color: rgba(243, 237, 232, 0.72);
     font-size: 0.72rem;
@@ -9886,26 +9880,11 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     text-transform: uppercase;
 }
 
-.race-detail-map-source {
-    color: rgba(243, 237, 232, 0.72);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-}
-
-.race-detail-map-actions {
-    right: 18px;
-    bottom: 18px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 12px;
-    max-width: min(72%, 320px);
-}
-
-.race-detail-map-ai-overlay {
-    filter: saturate(1.06) contrast(1.02);
+.race-detail-map-hint {
+    display: block;
+    color: rgba(243, 237, 232, 0.68);
+    font-size: 0.78rem;
+    line-height: 1.45;
 }
 
 .race-detail-map-btn,
@@ -10026,10 +10005,6 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-hero {
     box-shadow: 0 28px 56px rgba(58, 61, 62, 0.1);
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-hero-image {
-    filter: saturate(0.92) brightness(1.04);
-}
-
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-hero-overlay {
     background:
         linear-gradient(180deg, rgba(248, 244, 238, 0.12) 0%, rgba(248, 244, 238, 0.48) 46%, rgba(247, 247, 246, 0.94) 100%),
@@ -10070,6 +10045,10 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-count-card {
         0 14px 32px rgba(44, 47, 48, 0.06);
 }
 
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-hero-image {
+    filter: saturate(0.92) brightness(1.04);
+}
+
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-count-card strong {
     color: #c9604f;
 }
@@ -10087,7 +10066,7 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-check-row span {
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-stat-card,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-coach-card,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-course-card,
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-card,
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-stage,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-readiness-card {
     background:
         radial-gradient(circle at top right, rgba(252, 126, 105, 0.1), transparent 34%),
@@ -10174,34 +10153,24 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-elevation-node-la
     fill: #a0392a;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-leaflet {
-    background: #f5f6f7;
-    filter: grayscale(0.68) saturate(0.84) brightness(1.03) contrast(0.98);
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-hud {
+    background: rgba(255, 255, 255, 0.74);
+    box-shadow:
+        inset 0 0 0 1px rgba(185, 188, 190, 0.16),
+        0 16px 32px rgba(44, 47, 48, 0.08);
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-leaflet.has-aligned-overlay {
-    filter: grayscale(0.32) saturate(0.94) brightness(1.02) contrast(0.99);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-overlay {
-    background:
-        radial-gradient(circle at center, rgba(240, 117, 97, 0.08), transparent 48%),
-        linear-gradient(180deg, rgba(247, 244, 239, 0.08), rgba(247, 244, 239, 0.34));
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-overlay.is-ai-overlay {
-    background:
-        radial-gradient(circle at center, rgba(240, 117, 97, 0.06), transparent 54%),
-        linear-gradient(180deg, rgba(247, 244, 239, 0.02), rgba(247, 244, 239, 0.22));
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-copy span,
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-pill,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-source {
     color: #9f4c3f;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-ai-overlay {
-    filter: saturate(0.98) contrast(1.01);
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-hud strong {
+    color: var(--text-strong);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-hint {
+    color: rgba(89, 92, 93, 0.76);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-btn {
@@ -10246,16 +10215,31 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-playbook-btn.is-s
 }
 
 @media (max-width: 1080px) {
-    .race-detail-command-strip,
-    .race-detail-lower-grid {
+    .race-detail-command-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .race-detail-lower-stack {
         grid-template-columns: 1fr;
     }
 
     .race-detail-stats,
     .race-detail-coach-card,
-    .race-detail-map-card,
+    .race-detail-map-stage,
     .race-detail-readiness-card {
         grid-column: span 12;
+    }
+
+    .race-detail-map-stage {
+        height: 380px;
+    }
+
+    .race-detail-map-canvas {
+        height: 380px;
+    }
+
+    .race-detail-map-hud {
+        max-width: min(100%, 280px);
     }
 }
 
@@ -24479,7 +24463,7 @@ body.theme-light .dashboard-body .unit-toggle button.active {
   font-size: 1.8rem;
   font-weight: 800;
   font-family: "Manrope", var(--font-display);
-  color: #f3ede8;
+  color: rgba(243, 237, 232, 0.82);
 }
 
 .analysis-overview-insight-copy {
@@ -24487,6 +24471,10 @@ body.theme-light .dashboard-body .unit-toggle button.active {
   font-size: 0.82rem;
   line-height: 1.5;
   color: rgba(232, 226, 220, 0.6);
+}
+
+.analysis-overview-card--vdot-insight .analysis-overview-insight-copy {
+  color: #f07561;
 }
 
 .analysis-overview-grid--summary {
@@ -24878,7 +24866,7 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 
 .analysis-overview-metric-title {
   margin: 0;
-  color: #f3ede8;
+  color: rgba(243, 237, 232, 0.82);
   font-family: "Inter", var(--font-body);
   font-size: 1rem;
   font-weight: 700;
@@ -38389,6 +38377,16 @@ body.theme-light .analysis-overview-vo2-link-row {
   color: var(--text-strong);
 }
 
+body.theme-light .analysis-overview-insight-delta,
+body.theme-light .analysis-overview-metric-title {
+  color: var(--text-strong);
+}
+
+body.theme-light .analysis-overview-card--vdot-insight .analysis-overview-insight-copy,
+body.theme-high-contrast-light .analysis-overview-card--vdot-insight .analysis-overview-insight-copy {
+  color: #2d0d08;
+}
+
 body.theme-light .analysis-overview-card--prediction-table {
   background:
     radial-gradient(circle at top right, rgba(252, 126, 105, 0.08), transparent 32%),
@@ -40884,6 +40882,13 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-meter circle
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
+.coach-identity-avatar--fallback {
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.45), transparent 40%);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+}
+
 .coach-identity-copy {
   min-width: 0;
 }
@@ -41343,6 +41348,351 @@ body:is(.theme-light, .theme-high-contrast-light) .coach-identity-avatar {
   gap: 20px;
 }
 
+.admin-coursemap-workbench {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.admin-coursemap-workbench__rail,
+.admin-coursemap-workbench__stage {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-coursemap-workbench__rail {
+  padding-right: 2px;
+}
+
+.admin-coursemap-workbench__rail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.admin-coursemap-workbench__rail-head h3 {
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.12rem;
+  letter-spacing: -0.03em;
+  color: var(--text-strong);
+}
+
+.admin-coursemap-workbench__rail-head strong {
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.6rem;
+  color: var(--text-strong);
+}
+
+.admin-coursemap-workbench__rail-copy {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.admin-coursemap-rail {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-coursemap-rail__item {
+  border: 0;
+  border-radius: 24px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at top right, rgba(252, 126, 105, 0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 246, 247, 0.98));
+  box-shadow: 0 14px 26px rgba(44, 47, 48, 0.05);
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 14px;
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  position: relative;
+}
+
+.admin-coursemap-rail__item:hover,
+.admin-coursemap-rail__item.is-active {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 34px rgba(44, 47, 48, 0.08);
+}
+
+.admin-coursemap-rail__item.is-active::before {
+  content: "";
+  position: absolute;
+  inset: 12px auto 12px 0;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fc7e69, #a0392a);
+}
+
+.admin-coursemap-rail__preview {
+  min-height: 84px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-coursemap-rail__body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-coursemap-rail__head {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-coursemap-rail__head strong {
+  color: var(--text-strong);
+  font-size: 0.96rem;
+}
+
+.admin-coursemap-rail__head span,
+.admin-coursemap-rail__meta {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.admin-coursemap-rail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-coursemap-publish-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 320px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.admin-coursemap-publish-canvas,
+.admin-coursemap-evidence-card,
+.admin-coursemap-action-group {
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.12);
+}
+
+.admin-coursemap-publish-canvas {
+  padding: 22px 24px;
+  display: grid;
+  gap: 18px;
+  min-height: 100%;
+}
+
+.admin-coursemap-publish-canvas.is-acquire {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(239, 241, 242, 0.98));
+}
+
+.admin-coursemap-publish-canvas.is-improve {
+  background: linear-gradient(180deg, rgba(255, 248, 236, 0.98), rgba(255, 243, 214, 0.96));
+}
+
+.admin-coursemap-publish-canvas.is-publish {
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(214, 241, 229, 0.98));
+}
+
+.admin-coursemap-publish-canvas.is-refresh {
+  background: linear-gradient(180deg, rgba(240, 249, 255, 0.98), rgba(224, 242, 254, 0.96));
+}
+
+.admin-coursemap-recommendation__label,
+.admin-coursemap-action-group__label,
+.admin-coursemap-publish-canvas__kicker,
+.admin-coursemap-publish-canvas__secondary-label,
+.admin-coursemap-evidence-card__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.admin-coursemap-publish-canvas__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.admin-coursemap-publish-canvas__header h4 {
+  margin: 6px 0 0;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.05em;
+  color: var(--text-strong);
+}
+
+.admin-coursemap-publish-canvas__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-coursemap-publish-canvas__identity {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-coursemap-publish-canvas__location {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.admin-coursemap-publish-canvas__copy {
+  margin: 0;
+  color: rgba(89, 92, 93, 0.88);
+  line-height: 1.65;
+  max-width: 60ch;
+}
+
+.admin-coursemap-publish-canvas__decision {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.admin-coursemap-publish-canvas__decision strong,
+.admin-coursemap-evidence-card strong {
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.2rem;
+  color: var(--text-strong);
+}
+
+.admin-coursemap-publish-canvas__decision p,
+.admin-coursemap-action-group p {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.admin-coursemap-publish-canvas__actions {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-coursemap-publish-canvas__primary {
+  width: min(100%, 420px);
+  min-height: 56px;
+  font-size: 0.95rem;
+  box-shadow: 0 18px 28px rgba(160, 57, 42, 0.18);
+}
+
+.admin-coursemap-publish-canvas__secondary {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-coursemap-publish-canvas__secondary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-coursemap-evidence-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-coursemap-evidence-card {
+  padding: 16px 18px;
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+}
+
+.admin-coursemap-evidence-card__meta,
+.admin-coursemap-evidence-card p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.admin-coursemap-evidence-card.is-publish {
+  background: rgba(236, 253, 245, 0.88);
+}
+
+.admin-coursemap-evidence-card.is-refresh {
+  background: rgba(240, 249, 255, 0.88);
+}
+
+.admin-coursemap-evidence-card.is-improve {
+  background: rgba(255, 248, 236, 0.9);
+}
+
+.admin-coursemap-evidence-card.is-missing {
+  background: rgba(245, 246, 247, 0.9);
+}
+
+.admin-coursemap-ops-band {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top right, rgba(252, 126, 105, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(243, 244, 245, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.12);
+}
+
+.admin-coursemap-ops-band__header p {
+  margin: 6px 0 0;
+  max-width: 58ch;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.admin-coursemap-workbench__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-coursemap-action-group {
+  padding: 16px 18px;
+  display: grid;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 24px rgba(44, 47, 48, 0.04);
+}
+
+.admin-coursemap-action-group__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-coursemap-panel__meta-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(245, 246, 247, 0.82);
+}
+
+.admin-coursemap-panel__meta-strip span,
+.admin-coursemap-panel__meta-strip strong {
+  font-size: 0.78rem;
+}
+
+.admin-coursemap-panel__meta-strip strong {
+  color: var(--text-strong);
+}
+
 .admin-review-workspace__header {
   display: flex;
   justify-content: space-between;
@@ -41374,6 +41724,7 @@ body:is(.theme-light, .theme-high-contrast-light) .coach-identity-avatar {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  margin-top: 4px;
 }
 
 .admin-review-panel {
@@ -41510,6 +41861,10 @@ body:is(.theme-light, .theme-high-contrast-light) .coach-identity-avatar {
   gap: 10px;
 }
 
+.admin-review-panel__actions--footer {
+  padding-top: 4px;
+}
+
 .admin-upload-trigger {
   position: relative;
   overflow: hidden;
@@ -41604,10 +41959,22 @@ body:is(.theme-light, .theme-high-contrast-light) .coach-identity-avatar {
     display: grid;
   }
 
+  .admin-coursemap-workbench,
+  .admin-coursemap-publish-layout,
+  .admin-coursemap-workbench__actions,
   .admin-review-stage__metrics,
   .admin-review-compare,
   .img-picker-compare {
     grid-template-columns: 1fr;
+  }
+
+  .admin-coursemap-publish-canvas__meta,
+  .admin-coursemap-publish-canvas__secondary-row {
+    justify-content: flex-start;
+  }
+
+  .admin-coursemap-rail__item {
+    grid-template-columns: 88px minmax(0, 1fr);
   }
 }
 
@@ -42008,6 +42375,23 @@ body:is(.theme-light, .theme-high-contrast-light) .coach-identity-avatar {
 .shoe-catalog-search-clear:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .admin-coursemap-publish-canvas,
+  .admin-coursemap-ops-band,
+  .admin-review-panel {
+    padding: 18px;
+  }
+
+  .admin-coursemap-workbench__actions,
+  .admin-coursemap-panel__meta-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-coursemap-rail__item {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
