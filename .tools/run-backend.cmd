@@ -129,11 +129,15 @@ if defined CHECK_ONLY (
   exit /b 0
 )
 
-:: Look for a Maven installation downloaded by the Maven wrapper
-for /d %%D in ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-*\*") do (
-  if exist "%%~fD\bin\mvn.cmd" (
-    set "MVN_CMD=%%~fD\bin\mvn.cmd"
-    goto :mvn_found
+:: Look for a Maven installation downloaded by the Maven wrapper.
+:: Note: for /d does not expand double wildcards (e.g. path\*\*), so we
+:: enumerate two levels explicitly with dir /b /ad.
+for /f "delims=" %%V in ('dir /b /ad "%USERPROFILE%\.m2\wrapper\dists" 2^>nul ^| findstr /i "^apache-maven-"') do (
+  for /f "delims=" %%H in ('dir /b /ad "%USERPROFILE%\.m2\wrapper\dists\%%V" 2^>nul') do (
+    if exist "%USERPROFILE%\.m2\wrapper\dists\%%V\%%H\bin\mvn.cmd" (
+      set "MVN_CMD=%USERPROFILE%\.m2\wrapper\dists\%%V\%%H\bin\mvn.cmd"
+      goto :mvn_found
+    )
   )
 )
 
@@ -149,7 +153,7 @@ if not defined JAVA_TOOL_OPTIONS (
 if defined MVN_CMD (
   call "%MVN_CMD%" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true org.springframework.boot:spring-boot-maven-plugin:run
 ) else (
-  call mvnw.cmd -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true org.springframework.boot:spring-boot-maven-plugin:run
+  call "%ROOT%\backend\mvnw.cmd" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true org.springframework.boot:spring-boot-maven-plugin:run
 )
 
 exit /b %ERRORLEVEL%
