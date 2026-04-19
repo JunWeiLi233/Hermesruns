@@ -317,7 +317,7 @@ export default function RacesDetail() {
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
   const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
-  const fallbackTileUrl = useMemo(() => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', []);
+  const fallbackTileUrl = useMemo(() => 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', []);
 
   const race = useMemo(() => {
     const fromState = location.state?.race || null;
@@ -694,7 +694,7 @@ export default function RacesDetail() {
           activeTileLayer.off();
           map.removeLayer(activeTileLayer);
         }
-        activeTileLayer = attachTileLayer(tileUrl);
+        activeTileLayer = attachTileLayer(fallbackTileUrl);
         if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
           window.requestAnimationFrame(() => {
             map.invalidateSize({ pan: false });
@@ -715,12 +715,12 @@ export default function RacesDetail() {
           }
         });
         layer.on('tileerror', () => {
-          if (url === tileUrl) return;
+          if (url !== fallbackTileUrl) return;
           switchToFallbackTiles();
         });
         return layer;
       };
-      activeTileLayer = attachTileLayer(fallbackTileUrl);
+      activeTileLayer = attachTileLayer(tileUrl);
       tileFallbackTimer = setTimeout(() => {
         if (!tileLoadConfirmed) {
           switchToFallbackTiles();
