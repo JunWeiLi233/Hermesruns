@@ -649,6 +649,7 @@ export default function RacesDetail() {
     if (!routeMapRef.current || !race || routeMapInstanceRef.current) return undefined;
     const routeMapHost = routeMapRef.current;
     let resizeTimer = null;
+    let tileFallbackTimer = null;
     let cancelled = false;
     let createdMap = null;
     let hasAppliedInitialViewport = false;
@@ -671,31 +672,60 @@ export default function RacesDetail() {
         keyboard: false,
         tap: false,
       });
+      const routeShadowPane = map.createPane('race-detail-route-shadow');
+      routeShadowPane.style.zIndex = '440';
+      const routePane = map.createPane('race-detail-route');
+      routePane.style.zIndex = '450';
+      const routeMarkerPane = map.createPane('race-detail-route-marker');
+      routeMarkerPane.style.zIndex = '460';
       const tileAttribution = '&copy; OpenStreetMap contributors';
       let activeTileLayer = null;
       let switchedToFallbackTiles = false;
+      let tileLoadConfirmed = false;
+      const switchToFallbackTiles = () => {
+        if (cancelled || switchedToFallbackTiles) return;
+        switchedToFallbackTiles = true;
+        tileLoadConfirmed = false;
+        if (tileFallbackTimer) {
+          clearTimeout(tileFallbackTimer);
+          tileFallbackTimer = null;
+        }
+        if (activeTileLayer) {
+          activeTileLayer.off();
+          map.removeLayer(activeTileLayer);
+        }
+        activeTileLayer = attachTileLayer(tileUrl);
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => {
+            map.invalidateSize({ pan: false });
+            activeTileLayer?.redraw?.();
+          });
+        }
+      };
       const attachTileLayer = (url) => {
         const layer = L.tileLayer(url, {
           maxZoom: 19,
           attribution: tileAttribution,
         }).addTo(map);
+        layer.on('tileload', () => {
+          tileLoadConfirmed = true;
+          if (tileFallbackTimer) {
+            clearTimeout(tileFallbackTimer);
+            tileFallbackTimer = null;
+          }
+        });
         layer.on('tileerror', () => {
-          if (switchedToFallbackTiles || url === fallbackTileUrl) return;
-          switchedToFallbackTiles = true;
-          if (activeTileLayer) {
-            map.removeLayer(activeTileLayer);
-          }
-          activeTileLayer = attachTileLayer(fallbackTileUrl);
-          if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-            window.requestAnimationFrame(() => {
-              map.invalidateSize({ pan: false });
-              activeTileLayer?.redraw?.();
-            });
-          }
+          if (url === tileUrl) return;
+          switchToFallbackTiles();
         });
         return layer;
       };
-      activeTileLayer = attachTileLayer(tileUrl);
+      activeTileLayer = attachTileLayer(fallbackTileUrl);
+      tileFallbackTimer = setTimeout(() => {
+        if (!tileLoadConfirmed) {
+          switchToFallbackTiles();
+        }
+      }, 2200);
       const finalizeMapLayout = () => {
         if (cancelled) return;
         map.invalidateSize({ pan: false });
@@ -746,10 +776,18 @@ export default function RacesDetail() {
         : null;
 
       if (hasAlignedRoute) {
+        L.polyline(routeMapPoints, {
+          color: '#fff6f2',
+          weight: 9,
+          opacity: 0.92,
+          pane: 'race-detail-route-shadow',
+        }).addTo(map);
+
         polyline = L.polyline(routeMapPoints, {
           color: '#f07561',
-          weight: 5,
-          opacity: 0.92,
+          weight: 6,
+          opacity: 0.98,
+          pane: 'race-detail-route',
         }).addTo(map);
 
         const startMarker = L.circleMarker(routeMapPoints[0], {
@@ -758,6 +796,7 @@ export default function RacesDetail() {
           weight: 2,
           fillColor: '#7ce8b4',
           fillOpacity: 1,
+          pane: 'race-detail-route-marker',
         }).addTo(map);
         if (routePoints[0]?.label) {
           startMarker.bindTooltip(routePoints[0].label, { direction: 'top', offset: [0, -6] });
@@ -769,6 +808,7 @@ export default function RacesDetail() {
           weight: 2,
           fillColor: '#f07561',
           fillOpacity: 1,
+          pane: 'race-detail-route-marker',
         }).addTo(map);
         if (routePoints[routePoints.length - 1]?.label) {
           finishMarker.bindTooltip(routePoints[routePoints.length - 1].label, { direction: 'top', offset: [0, -6] });
@@ -797,6 +837,9 @@ export default function RacesDetail() {
       cancelled = true;
       if (resizeTimer) {
         clearTimeout(resizeTimer);
+      }
+      if (tileFallbackTimer) {
+        clearTimeout(tileFallbackTimer);
       }
       if (routeMapInstanceRef.current === createdMap) {
         routeMapInstanceRef.current.remove();
@@ -1058,7 +1101,7 @@ export default function RacesDetail() {
                 <article className={`race-detail-map-stage${hasAlignedRoute ? ' has-route' : ''}`}>
                   <div
                     className="race-detail-map-canvas"
-                    role="img"
+                    role="region"
                     aria-label={mapCardCopy.title}
                     aria-describedby="race-detail-map-access-copy"
                   >
