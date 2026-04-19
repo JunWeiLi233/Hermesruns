@@ -9254,20 +9254,6 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     filter: saturate(0.84);
 }
 
-.race-detail-hero-map {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    width: 100%;
-    height: 100%;
-    filter: brightness(0.48) saturate(0.55);
-    pointer-events: none;
-}
-
-.race-detail-hero-map .leaflet-container {
-    background: transparent;
-}
-
 .race-detail-hero-overlay {
     position: absolute;
     inset: 0;
