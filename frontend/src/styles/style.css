@@ -9838,6 +9838,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     width: 100%;
     height: 100%;
     background: transparent;
+    filter: none;
 }
 
 .race-detail-map-hud {

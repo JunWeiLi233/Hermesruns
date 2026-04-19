@@ -319,7 +319,7 @@ export default function RacesDetail() {
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
   const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
-  const fallbackTileUrl = useMemo(() => 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', []);
+  const fallbackTileUrl = useMemo(() => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', []);
 
   const race = useMemo(() => {
     const fromState = location.state?.race || null;
