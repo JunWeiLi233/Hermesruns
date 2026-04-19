@@ -314,6 +314,8 @@ export default function RacesDetail() {
   const [routeMapReady, setRouteMapReady] = useState(false);
   const [routeMapPainted, setRouteMapPainted] = useState(false);
   const elevationSvgRef = useRef(null);
+  const heroMapRef = useRef(null);
+  const heroMapInstanceRef = useRef(null);
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
   const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
@@ -636,6 +638,39 @@ export default function RacesDetail() {
   }, [loadingActivities]);
 
   useEffect(() => {
+    if (loadState !== 'ready' || !race || !heroMapRef.current || heroMapInstanceRef.current) return undefined;
+    const heroMapHost = heroMapRef.current;
+    if (heroMapHost._leaflet_id) {
+      delete heroMapHost._leaflet_id;
+    }
+    heroMapHost.innerHTML = '';
+    const map = L.map(heroMapHost, {
+      dragging: false,
+      scrollWheelZoom: false,
+      zoomControl: false,
+      attributionControl: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      tap: false,
+      touchZoom: false,
+    });
+    if (mapCenter) {
+      map.setView(mapCenter, 11);
+    } else {
+      map.setView([20, 0], 2);
+    }
+    L.tileLayer(fallbackTileUrl, { maxZoom: 18 }).addTo(map);
+    heroMapInstanceRef.current = map;
+    return () => {
+      if (heroMapInstanceRef.current) {
+        heroMapInstanceRef.current.remove();
+        heroMapInstanceRef.current = null;
+      }
+    };
+  }, [fallbackTileUrl, loadState, mapCenter, race]);
+
+  useEffect(() => {
     setRouteMapReady(false);
     setRouteMapPainted(false);
     // Clear map instance when route data changes to allow re-initialization with new data
@@ -881,6 +916,7 @@ export default function RacesDetail() {
           <div className="race-detail-layout">
             <section className="race-detail-hero">
               <img className="race-detail-hero-image" src={heroImage} alt={race?.name || t('races.detail_nav')} />
+              <div ref={heroMapRef} className="race-detail-hero-map" aria-hidden="true" />
               <div className="race-detail-hero-overlay" />
               <div className="race-detail-hero-body">
                 <div className="race-detail-hero-main">
