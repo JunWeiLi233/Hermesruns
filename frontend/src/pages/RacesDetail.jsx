@@ -16,7 +16,7 @@ import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profi
 import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../utils/vdot';
 import { resolveRaceIntel } from '../utils/raceIntel';
 import worldRaceCatalog from '../data/worldRaceCatalog';
-import { getCachedRaceImage, resolveRaceImage } from '../utils/raceImage';
+import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache } from '../utils/raceImage';
 import { deriveRaceMapTrust } from '../utils/raceDetailMapTrust';
 import { shouldFetchRaceElevationProfile } from '../utils/raceDetailRequestPolicy';
 
@@ -301,7 +301,6 @@ export default function RacesDetail() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [savedRaces, setSavedRaces] = useState([]);
   const [resolvedHeroImage, setResolvedHeroImage] = useState(() => getCachedRaceImage(location.state?.race || worldRaceCatalog.find((entry) => entry.id === raceId) || null).imageUrl || '');
   const [courseMapData, setCourseMapData] = useState(EMPTY_COURSE_MAP);
   const [courseMapRequestSettled, setCourseMapRequestSettled] = useState(false);
@@ -316,8 +315,8 @@ export default function RacesDetail() {
   const elevationSvgRef = useRef(null);
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
-  const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
-  const fallbackTileUrl = useMemo(() => 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', []);
+  const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png?v=20260419a`, []);
+  const fallbackTileUrl = useMemo(() => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', []);
 
   const race = useMemo(() => {
     const fromState = location.state?.race || null;
@@ -439,22 +438,19 @@ export default function RacesDetail() {
 
     (async () => {
       try {
-        const [profileData, activities, raceData] = await Promise.all([
+        const [profileData, activities] = await Promise.all([
           apiJson('/api/profile/me').catch(() => null),
           apiJson('/api/activities/analysis').catch(() => []),
-          apiJson('/api/races').catch(() => []),
         ]);
         const runList = Array.isArray(activities) ? activities : [];
         runList.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
         setProfile(profileData || null);
         setRuns(runList);
-        setSavedRaces(Array.isArray(raceData) ? raceData : []);
         setLoadingActivities(false);
       } catch (err) {
         console.error('Failed to load race detail activities', err);
         setProfile(null);
         setRuns([]);
-        setSavedRaces([]);
         setLoadingActivities(false);
       }
     })();
@@ -520,7 +516,7 @@ export default function RacesDetail() {
   }), [courseMapData.confidence, courseMapData.imageUrl, courseMapData.previewImageUrl, courseMapData.routePoints, courseMapData.viewportBounds, mapCenter, race?.distanceKm]);
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
-  const hasAlignedRoute = courseMapData.routeAvailable && routeMapPoints.length > 1;
+  const hasAlignedRoute = mapTrust.trustedOverlay && courseMapData.routeAvailable && routeMapPoints.length > 1;
   const mapViewportBounds = courseMapData.viewportBounds || mapTrust.viewportBounds;
   const absoluteElevationProfile = useMemo(
     () => (courseMapData.elevationSamples.length ? courseMapData.elevationSamples : fallbackInterpretedElevationProfile),
@@ -585,29 +581,6 @@ export default function RacesDetail() {
     setActiveElevationPointIndex(nearestIndex);
   }
 
-  const savedRace = useMemo(() => savedRaces.find((entry) => entry.name === race?.name || entry.id === race?.id), [race, savedRaces]);
-  const readinessItems = useMemo(() => ([
-    {
-      key: 'plan',
-      done: !!savedRace,
-      label: t('races.detail_ready_plan'),
-      meta: savedRace ? t('races.detail_ready_plan_done') : t('races.detail_ready_plan_pending'),
-    },
-    {
-      key: 'fitness',
-      done: nearRuns.length >= 2,
-      label: t('races.detail_ready_fitness'),
-      meta: nearRuns.length >= 2
-        ? t('races.detail_ready_fitness_done', { count: nearRuns.length })
-        : t('races.detail_ready_fitness_pending'),
-    },
-    {
-      key: 'prediction',
-      done: !!prediction,
-      label: t('races.detail_ready_prediction'),
-      meta: prediction ? t('races.detail_ready_prediction_done', { confidence }) : t('races.detail_ready_prediction_pending'),
-    },
-  ]), [confidence, nearRuns.length, prediction, savedRace, t]);
   const coachInsight = useMemo(() => buildCoachInsight(t, race, raceMeta, prediction, confidence), [confidence, prediction, race, raceMeta, t]);
   const heroLabels = useMemo(() => buildRaceHeroLabels(race), [race]);
   const topnavTitle = useMemo(() => buildRaceTopnavTitle(heroLabels, race), [heroLabels, race]);
@@ -678,6 +651,12 @@ export default function RacesDetail() {
       routePane.style.zIndex = '450';
       const routeMarkerPane = map.createPane('race-detail-route-marker');
       routeMarkerPane.style.zIndex = '460';
+      const tilePane = map.getPane('tilePane');
+      if (tilePane) {
+        tilePane.style.mixBlendMode = 'normal';
+        tilePane.style.opacity = '1';
+        tilePane.style.filter = 'none';
+      }
       const tileAttribution = '&copy; OpenStreetMap contributors';
       let activeTileLayer = null;
       let switchedToFallbackTiles = false;
@@ -708,6 +687,19 @@ export default function RacesDetail() {
           attribution: tileAttribution,
         }).addTo(map);
         layer.on('tileload', () => {
+          const container = layer.getContainer?.();
+          if (container instanceof HTMLElement) {
+            container.style.mixBlendMode = 'normal';
+            container.style.opacity = '1';
+            container.style.filter = 'none';
+          }
+          const tileElements = container?.querySelectorAll?.('img.leaflet-tile') || [];
+          tileElements.forEach((tile) => {
+            tile.style.mixBlendMode = 'normal';
+            tile.style.opacity = '1';
+            tile.style.filter = 'none';
+            tile.style.visibility = 'visible';
+          });
           tileLoadConfirmed = true;
           if (tileFallbackTimer) {
             clearTimeout(tileFallbackTimer);
@@ -715,7 +707,7 @@ export default function RacesDetail() {
           }
         });
         layer.on('tileerror', () => {
-          if (url !== fallbackTileUrl) return;
+          if (url === fallbackTileUrl) return;
           switchToFallbackTiles();
         });
         return layer;
@@ -923,7 +915,7 @@ export default function RacesDetail() {
         <div className="runner-shell-canvas">
           <div className="race-detail-layout">
             <section className="race-detail-hero">
-              <img className="race-detail-hero-image" src={heroImage} alt={race?.name || t('races.detail_nav')} />
+              <img className="race-detail-hero-image" src={heroImage} alt={race?.name || t('races.detail_nav')} onError={(e) => { e.target.onerror = null; const fallback = race?.heroImage || race?.image || DEFAULT_HERO_IMAGE; if (e.target.src !== fallback) { e.target.src = fallback; } setResolvedHeroImage(''); invalidateRaceImageCache(race); }} />
               <div className="race-detail-hero-overlay" />
               <div className="race-detail-hero-body">
                 <div className="race-detail-hero-main">
@@ -1110,46 +1102,11 @@ export default function RacesDetail() {
                       className={`race-detail-map-leaflet${routeMapReady ? ' is-mounted' : ''}${routeMapPainted ? ' is-ready' : ''}`}
                     />
                   </div>
-                  <div className="race-detail-map-hud" aria-hidden="true">
-                    <span className="race-detail-map-pill">{mapCardCopy.badge}</span>
-                    <strong>{mapCardCopy.title}</strong>
-                    <span className="race-detail-map-source">{mapCardCopy.source}</span>
-                    <span className="race-detail-map-hint">
-                      {t(hasAlignedRoute ? 'races.detail_course_hover_hint_aligned' : 'races.detail_course_hover_hint')}
-                    </span>
-                  </div>
                   <p id="race-detail-map-access-copy" className="sr-only">
                     {`${mapCardCopy.title}. ${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
                   </p>
                 </article>
 
-                <article className="race-detail-readiness-card">
-                  <div className="race-detail-readiness-head">
-                    <h3>{t('races.detail_readiness_title')}</h3>
-                    <span>{prediction ? `${confidence}%` : '--'}</span>
-                  </div>
-                  <ul className="race-detail-checklist">
-                    {readinessItems.map((item) => (
-                      <li key={item.key} className={`race-detail-check-row${item.done ? ' is-done' : ''}`}>
-                        <div>
-                          <strong>{item.label}</strong>
-                          <span>{item.meta}</span>
-                        </div>
-                        <AppIcon name={item.done ? 'check_circle' : 'radio_button_unchecked'} className="runner-dashboard-side-link-icon" />
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="race-detail-playbook-actions">
-                    <button type="button" className="race-detail-playbook-btn" onClick={() => navigate('/races')}>
-                      {t('races.detail_back')}
-                    </button>
-                    {savedRace ? (
-                      <button type="button" className="race-detail-playbook-btn is-secondary" onClick={() => navigate('/schedule')}>
-                        {t('races.stitch_view_training_plan')}
-                      </button>
-                    ) : null}
-                  </div>
-                </article>
               </section>
             </section>
 

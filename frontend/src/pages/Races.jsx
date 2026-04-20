@@ -17,8 +17,9 @@ import {
   getLocalizedRaceLocation,
   getSafeRaceTargetLabel,
 } from '../utils/raceLocalization';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import worldRaceCatalog, { worldRaceCountries } from '../data/worldRaceCatalog';
-import { getCachedRaceImage, resolveRaceImage } from '../utils/raceImage';
+import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache } from '../utils/raceImage';
 
 const STATUS_OPTIONS = ['INTERESTED', 'APPLIED', 'REGISTERED', 'WAITLIST', 'COMPLETED', 'CANCELED'];
 
@@ -447,15 +448,11 @@ export default function Races() {
   const heroSummary = buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang);
   const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
-  const navItems = [
-    { key: 'dashboard', icon: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile' },
-    { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
-    { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
-    { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
-    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes' },
-    { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races', active: true },
-    { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
-  ];
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'races',
+  }), [lang, t]);
 
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('races.loading')}</div></div>;
@@ -670,7 +667,7 @@ export default function Races() {
                         })}
                         aria-label={t('races.detail_open_card', { name: getLocalizedRaceLabel(race, lang) })}
                       >
-                        <img className="race-center-discovery-image" src={getRaceCardImage(race, officialDiscoveryImages)} alt={getLocalizedRaceLabel(race, lang)} />
+                        <img className="race-center-discovery-image" src={getRaceCardImage(race, officialDiscoveryImages)} alt={getLocalizedRaceLabel(race, lang)} onError={(e) => { e.target.onerror = null; e.target.src = race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image; setOfficialDiscoveryImages((prev) => { const next = { ...prev }; delete next[race.id]; return next; }); invalidateRaceImageCache(race); }} />
                         <span className="race-center-discovery-tag">{t(`races.discovery_tag_${getDiscoveryTag(race, race.visual.tag).toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}</span>
                       </button>
                       <div className="race-center-discovery-copy">

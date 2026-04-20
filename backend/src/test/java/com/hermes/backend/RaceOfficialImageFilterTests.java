@@ -56,6 +56,13 @@ class RaceOfficialImageFilterTests {
         assertThat(serviceWithHtml(pageUrl, html).resolveOfficialImage(pageUrl)).isNull();
     }
 
+    @Test
+    void rejectsFacebookTrackerHost() {
+        String pageUrl = "https://example.com/race";
+        String html = "<img src=\"https://www.facebook.com/tr?id=1496628597147696&ev=PageView&noscript=1\" />";
+        assertThat(serviceWithHtml(pageUrl, html).resolveOfficialImage(pageUrl)).isNull();
+    }
+
     // --- tracking path rejections ---
 
     @Test
@@ -83,6 +90,20 @@ class RaceOfficialImageFilterTests {
     void rejectsBeaconPath() {
         String pageUrl = "https://example.com/race";
         String html = "<img src=\"https://example.com/beacon?t=1\" />";
+        assertThat(serviceWithHtml(pageUrl, html).resolveOfficialImage(pageUrl)).isNull();
+    }
+
+    @Test
+    void rejectsNoscriptTrackerPath() {
+        String pageUrl = "https://example.com/race";
+        String html = "<img src=\"https://cdn.example.com/tracker?ev=PageView&noscript=1\" />";
+        assertThat(serviceWithHtml(pageUrl, html).resolveOfficialImage(pageUrl)).isNull();
+    }
+
+    @Test
+    void rejectsSocialBrandingImagePattern() {
+        String pageUrl = "https://aucklandmarathon.co.nz/";
+        String html = "<meta property=\"og:image\" content=\"https://aucklandmarathon.co.nz/assets/Uploads/Auckland-Marathon-FB.jpg\" />";
         assertThat(serviceWithHtml(pageUrl, html).resolveOfficialImage(pageUrl)).isNull();
     }
 
