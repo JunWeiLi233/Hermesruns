@@ -39,24 +39,36 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | Garmin Connect | Direct account import via GarminDB / garth |
 | UI posture | Kinetic Editorial design language with `light` and `midnight` runtime themes |
 
-### AI-Agent Workflow (Shared)
+### AI-Agent Workflow (Shared) / AI 智能体工作流（共享）
 
-This repository includes a specialized, shared AI-agent workflow driven by **Gemini CLI** and **Claude Code**.
+This repository includes a specialized AI-agent workflow driven by **Gemini CLI** and **Claude Code**.
+本仓库包含一套专用的 AI 智能体工作流，由 **Gemini CLI** 和 **Claude Code** 驱动。
 
-**Collaborators can use the same commands to drive development:**
-
-1.  **Setup Agents**:
-    *   Install Gemini CLI: `npm install -g @google/gemini-cli`
-    *   Install Claude Code: `npm install -g @anthropic-ai/claude-code`
-2.  **Configure Secrets**:
+#### 1. Setup / 设置
+1.  **Install Agents / 安装智能体**:
+    *   `npm install -g @google/gemini-cli`
+    *   `npm install -g @anthropic-ai/claude-code`
+2.  **Configure Secrets / 配置密钥**:
     *   Copy `Hermes.local.env.example.ps1` to `Hermes.local.env.ps1`.
-    *   Fill in your own `GEMINI_API_KEY` and `ANTHROPIC_API_KEY`.
-3.  **Use Commands**:
-    *   Launch an autonomous development round: `/auto-hermes`
-    *   Launch a parallel max round with merge arbitration: `/auto-hermes-max`
-    *   Audit technical debt across the repo: `/auto-hermes-tech-debt`
+    *   将 `Hermes.local.env.example.ps1` 复制并重命名为 `Hermes.local.env.ps1`。
+    *   Fill in your `GEMINI_API_KEY` and `ANTHROPIC_API_KEY`.
+    *   填写你的 `GEMINI_API_KEY` 和 `ANTHROPIC_API_KEY`。
 
-The workflow state is synchronized via `TASKS.md` (queue) and `CONTEXT_LEDGER.md` (permanent change log). Persona instructions are shared in `AGENTS.md` and `.codex/agents/`.
+#### 2. Command Dictionary / 命令字典
+
+| Command / 命令 | Description (EN) | 描述 (CN) |
+| :--- | :--- | :--- |
+| `/auto-hermes` | Standard development loop: picks a task, implements, and verifies. | 标准开发循环：领取任务、实现并验证。 |
+| `/auto-hermes-max` | Advanced parallel round: launches multiple agents with a mandatory merge gate. | 高级并行轮次：启动多个智能体并经过强制合并闸门。 |
+| `/auto-hermes-tech-debt`| Runs a codebase-wide audit to identify and log technical debt tasks. | 全局技术债审计：识别并记录技术债任务。 |
+
+#### 3. Where to go? / 开发指南
+- **`TASKS.md`**: The shared **Queue**. Check here to see what the agents are working on or to add new tasks.
+  **`TASKS.md`**: 共享**任务队列**。在此查看智能体正在处理的任务或添加新任务。
+- **`CONTEXT_LEDGER.md`**: The **Audit Log**. Read this to understand the recent architectural changes and context.
+  **`CONTEXT_LEDGER.md`**: **审计日志**。通过此文件了解最近的架构变更和开发上下文。
+- **`AGENTS.md`**: **Persona definitions**. Defines how the "Coach-voice" and engineering standards are enforced.
+  **`AGENTS.md`**: **人格定义**。定义了如何执行“教练口吻”和工程标准。
 
 ### Web Routes
 
