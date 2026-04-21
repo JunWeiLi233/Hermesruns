@@ -828,7 +828,7 @@ export default function Schedule() {
                     
                     <h3>{nextSessionTitle}</h3>
                     <p>{nextSessionCopy}</p>
-                    <button type="button" onClick={() => navigate('/today-run')}>
+                    <button type="button" aria-label={s('view_drills')} onClick={() => navigate('/today-run')}>
                       {s('view_drills')}
                       <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
                     </button>

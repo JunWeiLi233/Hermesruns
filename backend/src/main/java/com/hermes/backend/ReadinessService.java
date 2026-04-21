@@ -43,6 +43,15 @@ public class ReadinessService {
         return trend;
     }
 
+    public ReadinessDay getDailyReadiness(Runner runner, LocalDate date) {
+        DailySleepData sleep = sleepRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.GARMIN, date).orElse(null);
+        DailyHRVData hrv = hrvRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.GARMIN, date).orElse(null);
+        DailyStressData stress = stressRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.GARMIN, date).orElse(null);
+        DailyWellnessSummary wellness = wellnessRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.GARMIN, date).orElse(null);
+        
+        return calculateDayReadiness(date, sleep, hrv, stress, wellness);
+    }
+
     private ReadinessDay calculateDayReadiness(LocalDate date, DailySleepData sleep, DailyHRVData hrv, DailyStressData stress, DailyWellnessSummary wellness) {
         int score = 75; // Baseline
         
