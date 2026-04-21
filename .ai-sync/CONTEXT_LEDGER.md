@@ -810,9 +810,9 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Next Risk: Potential for "red-flag" wellness signals to conflict with high-motivation "green-flag" ACWR data (handled by recovery-priority recommendations).
 - Rollback Target: working tree before 2026-04-21 Wellness & Readiness round
 
-### Unified Search-First Add Shoe UX
-- Goal: Simplify the "Add Shoe" experience by replacing the multi-step brand/series wizard with a single, searchable flat catalog.
-- Changed: Refactored `AddShoes.jsx` to a search-centric design using a `FLAT_CATALOG` derived from `shoeCatalog.js`. Users can now find their shoe directly by brand or model name in a single stage. Maintained the detailed configuration step (nickname, lifespan, primary toggle) as a follow-up action. Added new kinetic styles for the search box and results grid in `style.css`. Updated bilingual translations for the new search-first copy.
-- Preserve: Keep the `shoeCatalog.js` as the source of truth for the available running shoe database.
-- Next Risk: Catalog size growth may eventually require pagination or virtualized lists if it exceeds hundreds of models.
-- Rollback Target: working tree before 2026-04-21 Add Shoe UX round
+### Unified Search-First Add Shoe UX (REVERTED)
+- Goal: Simplify the "Add Shoe" experience.
+- Result: Design reverted to the previous multi-step wizard per user request. Refactored `AddShoes.jsx` restored from commit `dc41ba5^`. Obsolete search-centric CSS removed from `style.css`.
+- Preserve: New 2026 shoe catalog entries are kept as they are data-level improvements.
+- Next Risk: UX remains slightly more complex but maintains the established brand-browsing mental model.
+- Rollback Target: N/A (Restored to previous stable design)
