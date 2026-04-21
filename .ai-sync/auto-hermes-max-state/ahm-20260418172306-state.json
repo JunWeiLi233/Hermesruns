@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": false,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "complete",
+  "startedAt": "2026-04-18T17:23:06.768Z",
+  "completedAt": null,
+  "runId": "ahm-20260418172306",
+  "parentGoal": "No promotable work found",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260418172306.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260418172306-progress.json"
+}

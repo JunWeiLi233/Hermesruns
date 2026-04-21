@@ -1,0 +1,15 @@
+{
+  "laneId": "lane-b",
+  "parentRunId": "auto-hermes-max-iter1",
+  "correlationId": "shell-markers-racesdetail-weatherengine",
+  "goal": "Add missing analysis-stitch-topbar-profile-actions shell marker to RacesDetail.jsx and WeatherEngine.jsx",
+  "ownedFiles": ["frontend/src/pages/RacesDetail.jsx", "frontend/src/pages/WeatherEngine.jsx"],
+  "changedFiles": ["frontend/src/pages/RacesDetail.jsx", "frontend/src/pages/WeatherEngine.jsx"],
+  "completedRounds": 1,
+  "verification": "cd frontend && npm run lint (0 errors, 1 pre-existing warning in Analysis.jsx); node scripts/run-vite-build.mjs (built in 1.12s, synced to backend target/classes/static)",
+  "runtimeProof": "frontend build synced",
+  "risks": [],
+  "mustPreserve": ["all existing topbar behavior: notifications, settings button, profile"],
+  "mergeNotes": ["Added analysis-stitch-topbar-profile-actions class to the profile-actions div in both RacesDetail.jsx (line 756) and WeatherEngine.jsx (line 295). All 15 premium runner-facing shells now have the marker."],
+  "status": "approved"
+}

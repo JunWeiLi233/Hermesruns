@@ -1,0 +1,32 @@
+{
+  "laneId": "lane-a-i18n",
+  "parentRunId": "ahm-20260416-030200",
+  "correlationId": "ahm-20260416-030200:lane-a-i18n",
+  "goal": "Fix pre-existing translation parity gaps for analysis.vo2_chart_y_title and landing.stitch_footer_copy",
+  "ownedFiles": ["frontend/src/i18n/translations.js"],
+  "changedFiles": ["frontend/src/i18n/translations.js"],
+  "completedRounds": [
+    {
+      "task": "Add analysis.vo2_chart_y_title to zh-CN and en analysis sections",
+      "verification": "check-translations.mjs no longer lists analysis.vo2_chart_y_title as missing",
+      "changedFiles": ["frontend/src/i18n/translations.js"]
+    },
+    {
+      "task": "Add landing.stitch_footer_copy to zh-CN and en landing sections",
+      "verification": "check-translations.mjs no longer lists landing.stitch_footer_copy as missing",
+      "changedFiles": ["frontend/src/i18n/translations.js"]
+    }
+  ],
+  "verification": "node .tools/check-translations.mjs output shows 0 gap between zh-CN and en leaf key counts (2087 each). analysis.vo2_chart_y_title and landing.stitch_footer_copy no longer appear in the MISSING USAGE list. Remaining errors are pre-existing gaps outside this lane's scope.",
+  "runtimeProof": "BUILD NOT RUN — Bash tool denied permission for the vite build command. Translation check passed. Pre-existing build health is assumed stable since only string literals were added to translations.js.",
+  "risks": [
+    "Bash permission denial prevented frontend build proof gate. The change is limited to adding string entries to translations.js — no logic, no imports, no JSX — so build failure risk is minimal.",
+    "vo2_chart_y_title copy uses ⁻¹ unicode superscripts (ml·kg⁻¹·min⁻¹) rather than the existing profile-section encoding (ml·kg?1·min?1 which appears to be a garbled artifact). This is intentional and correct scientific notation."
+  ],
+  "mustPreserve": [
+    "All existing translation keys must remain intact",
+    "The profile.vo2_chart_y_title key (line 288/2296) is a separate key from analysis.vo2_chart_y_title — both now exist and are intentionally distinct"
+  ],
+  "mergeNotes": "Four lines added total: two zh-CN entries (landing.stitch_footer_copy, analysis.vo2_chart_y_title) and two en entries (landing.stitch_footer_copy, analysis.vo2_chart_y_title). No existing keys were touched. Pre-existing parity errors (profile.rewards.* vs rewards.* mismatch, and 50+ other missing usage keys) remain — those are outside this lane's scope and were present before this run.",
+  "status": "approved"
+}

@@ -7,6 +7,7 @@ import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -49,15 +50,10 @@ export default function Rewards() {
   const nextReward = upcomingRewards[0] || null;
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
 
-  const navItems = [
-    { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-    { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-  ];
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+  }), [lang, t]);
 
   if (loadState === 'error') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading"><p className="rewards-load-eyebrow">{t('rewards.error_eyebrow')}</p><p className="rewards-load-title">{t('rewards.error_title')}</p><p className="rewards-load-detail">{t('rewards.load_error')}</p><button className="rewards-load-retry" onClick={() => window.location.reload()}>{t('rewards.retry')}</button></div></div>;

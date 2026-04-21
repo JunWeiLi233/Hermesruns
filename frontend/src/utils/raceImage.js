@@ -102,3 +102,12 @@ export async function resolveRaceImage(race) {
   persistRaceImageEntry(cacheKey, fallback);
   return fallback;
 }
+
+export function invalidateRaceImageCache(race) {
+  const cacheKey = buildRaceImageCacheKey(race);
+  if (!cacheKey) return;
+  raceImageMemoryCache.delete(cacheKey);
+  const persisted = readPersistedRaceImageCache();
+  delete persisted[cacheKey];
+  writePersistedRaceImageCache(persisted);
+}

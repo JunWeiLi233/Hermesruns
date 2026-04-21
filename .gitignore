@@ -83,13 +83,13 @@ task-images/*
 # Cloned repos
 /run/
 /Hermes/
+.worktrees/
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
 
-# Local AI workflow files
-.claude/
+# Local AI workflow files - SHARED
 .agents/
 .ai/
 AGENTS.md
@@ -123,7 +123,7 @@ Desktop.ini
 *export*.json
 *backup*.json
 
-# AI codebase index (auto-generated, regenerated on session start)
+# AI codebase index (auto-generated)
 .ai-codex/
 
 # Python virtual environment
@@ -152,7 +152,7 @@ entities.json
 HERMES_SELF_EVOLVING_ENGINE.md
 .ai-sync/
 
-# Local AI workflow tools/reports that should stay out of GitHub
+# Local AI workflow tools/reports - SHARED
 .tools/agent-sync.mjs
 .tools/auto-commit.ps1
 .tools/auto-hermes-controller.mjs
@@ -164,7 +164,6 @@ HERMES_SELF_EVOLVING_ENGINE.md
 .tools/auto-hermes-max.mjs
 .tools/auto-hermes-round-close.mjs
 .tools/auto-hermes-self-check.mjs
-.tools/mempalace/
 .tools/rtk-codex-health.ps1
 .tools/codex-local.exe
 .tools/token_tester/
@@ -178,28 +177,28 @@ ALLOW_LIST_TERMINAL_COMMANDS.txt
 TRANSLATION_WORKFLOW.md
 frontend/VISUAL_QA_LIGHT_SYSTEM.md
 .omx/
-.codex/*
-!.codex/agents/
-!.codex/agents/**
-!.codex/skills/
-!.codex/skills/**
-.codex/skills/.system/**
-!.codex/prompts/
-!.codex/prompts/**
 
-# Gemini CLI / Antigravity local config
+# Workflow core
+.codex/
+.claude/
 .gemini/
-
-# Cursor local rules
 .cursor/
-
-# OpenCode local config
 .opencode/
 .opencode.json
+
+# Exclude sensitive parts of workflow core
+.codex/auth.json
+.codex/config.local.toml
+.codex/tmp/
+.codex/.tmp/
+.claude/settings.local.json
+.claude/prompt-log.jsonl
+.claude/agent-memory/
+.claude/checkpoints/
+.claude/worktrees/
 
 # Auto-hermes tools (task claim state, bridge, etc.)
 .tools/auto-hermes-claim-state.mjs
 .tools/auto-hermes-task-meta.mjs
 .tools/auto-hermes-tools.test.mjs
 .tools/omx-auto-hermes-bridge.mjs
-

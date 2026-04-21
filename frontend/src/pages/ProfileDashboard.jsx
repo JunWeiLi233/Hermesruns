@@ -16,8 +16,9 @@ import {
   PROGRESSION_TIMEFRAMES,
 } from '../utils/progressionAtlas';
 import { getTodayRunRecommendation } from '../utils/todayRun';
+import { buildRecentShoeSignal } from '../utils/shoeRotation';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
-import { estimateCurrentVdot, computeVdotTrend } from '../utils/vdot';
+import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../utils/vdot';
 
 const DASHBOARD_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCduh8I3MMazSPbifhs59F6YdwIOS-ZRvW7t_n3qJKHxcqDJP3fep7cglrfaXiwrYYPwPxFtz_ExFJggZD-Cy5WZbURvgfE6h4Bvc2M_XU19LaXiqyfdCoyiRn0Aoln4WxGCgqJqtK1Kn2Mlp-KiHvYvqqeidejVqd75xj0rXOXokd_ePH6X6P2LEuMuuZNA5N5gVErlHBg3f0Qdi_d5PaePI6Fzw8BoDHmloQLsQl4agd74Hb85CXqnA1DUwAI-P6P3oPHBwKS50k8';
 const PR_SNAPSHOT_VERSION = 1;
@@ -419,6 +420,7 @@ export default function ProfileDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [shoes, setShoes] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [races, _setRaces] = useState([]);
@@ -441,9 +443,10 @@ export default function ProfileDashboard() {
     async function loadDashboard() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData] = await Promise.all([
+        const [profileData, activitiesData, shoesData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
+          apiJson('/api/shoes'),
         ]);
 
         if (cancelled) return;
@@ -453,6 +456,7 @@ export default function ProfileDashboard() {
 
         setProfile(profileData);
         setRuns(list);
+        setShoes(Array.isArray(shoesData) ? shoesData : []);
         setLoadState('ready');
 
         const query = new URLSearchParams(window.location.search);
@@ -565,10 +569,27 @@ export default function ProfileDashboard() {
   }, [lang]);
 
   const todayBundle = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
+  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
+  const shoeRecommendation = shoeSignal?.recommendation;
+
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
   const profileVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
   const profileVdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
+
+  const racePredictions = useMemo(() => {
+    if (profileVdot <= 0) return [];
+    return buildOrderedRacePredictions(profileVdot, runs).map((d) => {
+      const timeMin = d.timeMin;
+      if (!timeMin || timeMin <= 0) return null;
+      const totalSec = Math.round(timeMin * 60);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const display = h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+      return { key: d.key, label: lang === 'zh-CN' ? d.labelZh : d.labelEn, time: display };
+    }).filter(Boolean);
+  }, [profileVdot, runs, lang]);
 
   const thresholdEstimate = useMemo(() => {
     if (coachState?.profileMaxHeartRateBpm) return Math.round(coachState.profileMaxHeartRateBpm * 0.88);
@@ -668,7 +689,7 @@ export default function ProfileDashboard() {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气引擎' : 'Weather Engine', route: '/weather-engine', icon: 'thermostat' },
+    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
@@ -1206,6 +1227,28 @@ export default function ProfileDashboard() {
                 </div>
               </article>
 
+              {racePredictions.length > 0 && (
+                <article
+                  className="runner-dashboard-feature-card runner-dashboard-feature-card--predictions"
+                  aria-label={t('profile.dashboard_fitness_strip_label')}
+                >
+                  <div className="runner-dashboard-feature-head">
+                    <span className="runner-dashboard-card-kicker">{t('profile.dashboard_fitness_kicker')}</span>
+                    <span className="runner-dashboard-feature-eyebrow">
+                      {profileVdot > 0 ? `${profileVdot.toFixed(1)} ${t('profile.vo2_unit_short')}` : '--'}
+                    </span>
+                  </div>
+                  <div className="runner-dashboard-fitness-strip-predictions">
+                    {racePredictions.map((pred) => (
+                      <div key={pred.key} className="runner-dashboard-fitness-strip-prediction">
+                        <label>{pred.label}</label>
+                        <strong>{pred.time}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              )}
+
               <article className="runner-dashboard-feature-card runner-dashboard-feature-card--readiness runner-dashboard-feature-card--stamina">
                 <div className="runner-dashboard-feature-head">
                   <span className="runner-dashboard-card-kicker">{t('profile.dashboard_stamina_title')}</span>
@@ -1281,6 +1324,12 @@ export default function ProfileDashboard() {
                     <strong>{heroLoad}</strong>
                   </div>
                 </div>
+                {shoeRecommendation && (
+                  <div className="runner-dashboard-feature-gear">
+                    <label>{t('profile.dashboard_recommended_gear')}</label>
+                    <strong>{shoeRecommendation.brand} {shoeRecommendation.model}</strong>
+                  </div>
+                )}
                 <div className="runner-dashboard-feature-actions">
                   <button type="button" className="runner-dashboard-feature-primary" onClick={() => navigate('/today-run')}>
                     {t('profile.dashboard_start_workout')}

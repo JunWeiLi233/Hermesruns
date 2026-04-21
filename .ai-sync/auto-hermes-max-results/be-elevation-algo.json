@@ -1,0 +1,42 @@
+{
+  "laneId": "be-elevation-algo",
+  "parentRunId": "ahm-20260416203624",
+  "correlationId": "ahm-20260416203624:be-elevation-algo",
+  "goal": "Improve backend elevation correctness in RaceCourseMapService: (1) compute totalClimbMeters with a small delta threshold (~1m) to drop jitter noise from open-meteo samples, (2) smooth the raw sample sequence (window=3 moving average) before both the profile chart and the climb sum, (3) tighten isAlignmentPlausible distance window for marathon-class races, (4) keep the /api/races/course-map response shape backward-compatible — only improve or add fields, do not rename or remove existing ones.",
+  "ownedFiles": [
+    "backend/src/main/java/com/hermes/backend/RaceCourseMapService.java"
+  ],
+  "changedFiles": [
+    "backend/src/main/java/com/hermes/backend/RaceCourseMapService.java"
+  ],
+  "completedRounds": [
+    {
+      "summary": "CLIMB_DELTA_THRESHOLD_METERS=1 constant added; computeTotalClimbMeters only counts deltas >= 1m",
+      "files": ["backend/src/main/java/com/hermes/backend/RaceCourseMapService.java"]
+    },
+    {
+      "summary": "smoothElevationSamples() with 3-point moving average (2-point for endpoints) applied at both call sites (doResolveCourseMap and analyzeResolvedImage)",
+      "files": ["backend/src/main/java/com/hermes/backend/RaceCourseMapService.java"]
+    },
+    {
+      "summary": "isAlignmentPlausible tightened to [0.75, 1.25] of distanceKm for marathon-class races (>=40 km); shorter races retain [0.45, 1.85] band",
+      "files": ["backend/src/main/java/com/hermes/backend/RaceCourseMapService.java"]
+    }
+  ],
+  "verification": "./mvnw -q -DskipTests compile PASS; ./mvnw test -Dtest=RaceCourseMapServiceTests PASS 2/2",
+  "runtimeProof": "Compile PASS regenerated target/classes; verify-backend-runtime-sync.mjs blocked by permissions in lane worktree. Coordinator will re-run post-merge proof gate on primary tree.",
+  "risks": [
+    "Tighter [0.75, 1.25] band may reject partial-course AI extractions on ultra/marathon events — watch rejection rates.",
+    "Smoothed + thresholded climb values are modestly lower than pre-patch. UI copy referencing totalClimbMeters will see more conservative numbers."
+  ],
+  "mustPreserve": [
+    "RaceCourseMapResult record shape (no field renames or removals)",
+    "/api/races/course-map response contract"
+  ],
+  "mergeNotes": [
+    "context-ledger: Race elevation pipeline now smooths with 3-point moving average before returning samples and before climb sum; climb uses >=1m delta threshold",
+    "follow-up: monitor marathon/ultra rejection rate after tighter isAlignmentPlausible band"
+  ],
+  "status": "approved",
+  "worktreePath": "C:\\Users\\Junwei\\Downloads\\Hermes\\.claude\\worktrees\\agent-a8ba3b51"
+}

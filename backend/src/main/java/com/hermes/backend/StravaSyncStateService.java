@@ -98,7 +98,10 @@ public class StravaSyncStateService {
                     processedActivities,
                     processedPages,
                     error,
-                    "RUNNING".equals(status) || "PENDING".equals(status)
+                    "RUNNING".equals(status) || "PENDING".equals(status),
+                    "none",
+                    false,
+                    java.time.LocalDateTime.now().toString()
             );
         }
     }

@@ -103,6 +103,7 @@ export default function ShoeCatalog() {
   const navigate = useNavigate();
 
   const [catalog, setCatalog] = useState(shoeCatalog);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedModel, setSelectedModel] = useState('');
@@ -190,15 +191,37 @@ export default function ShoeCatalog() {
   }, [catalog, selectedBrand]);
 
   const visibleCatalogModels = useMemo(() => {
-    if (!selectedBrand) return [];
-    const models = selectedBrand.models || [];
-    if (selectedCategory === 'all') return models;
-    return models.filter((item) => (item.category || item.type || '') === selectedCategory);
-  }, [selectedBrand, selectedCategory]);
+    const q = searchQuery.toLowerCase().trim();
+    let source = [];
+    if (selectedBrand) {
+      source = selectedBrand.models || [];
+    } else if (q) {
+      source = catalog.flatMap((brand) => (brand.models || []).map((m) => ({ ...m, brandName: brand.brand })));
+    } else {
+      return [];
+    }
+
+    let filtered = source;
+    if (q) {
+      filtered = filtered.filter((item) => {
+        const brandMatch = item.brandName && item.brandName.toLowerCase().includes(q);
+        const modelMatch = (item.model || '').toLowerCase().includes(q)
+          || (item.modelZh || '').toLowerCase().includes(q)
+          || (item.modelEn || '').toLowerCase().includes(q);
+        return brandMatch || modelMatch;
+      });
+    }
+
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter((item) => (item.category || item.type || '') === selectedCategory);
+    }
+    return filtered;
+  }, [catalog, selectedBrand, selectedCategory, searchQuery]);
 
   function handlePickBrand(brand) {
     setSelectedBrand(brand);
     setSelectedCategory('all');
+    setSearchQuery('');
     requestAnimationFrame(() => {
       seriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
@@ -208,6 +231,7 @@ export default function ShoeCatalog() {
     setSelectedBrand(null);
     setSelectedCategory('all');
     setSelectedModel('');
+    setSearchQuery('');
   }
 
   return (
@@ -280,15 +304,37 @@ export default function ShoeCatalog() {
           <div className={`add-shoes-shell${isLoading ? ' shoe-catalog-shell--loading' : ''}`}>
             <section className="add-shoes-browser-panel shoe-catalog-browser-panel">
               <div className="add-shoes-browser-head">
-                <div>
+                <div className="shoe-catalog-browser-title-wrap">
                   <span className="add-shoes-panel-kicker">{t('shoes.browser_kicker')}</span>
-                  <h1>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoes.pick_brand')}</h1>
-                  <p>
-                    {lang === 'zh-CN'
-                      ? '把品牌、系列和类型放在同一层里快速浏览，再决定跳去添加哪一双。'
-                      : 'Browse brands, series, and use-cases in one editorial layer before deciding which pair to add.'}
-                  </p>
+                  <h1>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoes.browser_heading')}</h1>
                 </div>
+
+                <div className="shoe-catalog-search-wrap">
+                  <div className="shoe-catalog-search-input-box">
+                    <AppIcon name="search" className="shoe-catalog-search-icon" />
+                    <input
+                      type="text"
+                      className="shoe-catalog-search-input"
+                      placeholder={t('shoes.catalog_search_placeholder')}
+                      value={searchQuery}
+                      onChange={(e) => {
+                        if (selectedBrand) setSelectedBrand(null);
+                        setSearchQuery(e.target.value);
+                      }}
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        className="shoe-catalog-search-clear"
+                        onClick={() => setSearchQuery('')}
+                        aria-label={t('profile.close')}
+                      >
+                        <AppIcon name="close" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <button type="button" className="runner-shell-inline-btn" onClick={handleCustom}>
                   {lang === 'zh-CN' ? '清空' : 'Clear'}
                 </button>

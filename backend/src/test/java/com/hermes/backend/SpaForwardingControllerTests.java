@@ -37,8 +37,16 @@ class SpaForwardingControllerTests {
 
     @Test
     void missingStaticResourceReturns404InsteadOfServerError() throws Exception {
-        mockMvc.perform(get("/favicon.ico"))
+        mockMvc.perform(get("/missing-static-resource.txt"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Not found"));
+    }
+
+    @Test
+    void missingHashedCssAssetReturnsPlain404InsteadOfJson() throws Exception {
+        mockMvc.perform(get("/assets/index-stale.css"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
+                .andExpect(content().string("Not found"));
     }
 }

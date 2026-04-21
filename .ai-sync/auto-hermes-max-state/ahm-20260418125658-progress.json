@@ -1,0 +1,22 @@
+{
+  "runId": "ahm-20260418125658",
+  "parentGoal": "No promotable work found",
+  "generatedAt": "2026-04-18T12:56:58.371Z",
+  "mode": "ralph-style-parallel",
+  "active": true,
+  "currentPhase": "executing",
+  "iteration": 1,
+  "maxIterations": 10,
+  "lanes": [],
+  "gates": {
+    "ownership": "pending",
+    "contract": "pending",
+    "verification": "pending",
+    "runtimeTruth": "pending",
+    "regression": "pending",
+    "arbitration": "pending",
+    "review": "pending",
+    "evidence": "pending",
+    "deslop": "pending"
+  }
+}

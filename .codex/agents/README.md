@@ -10,6 +10,7 @@
   - `planning-agent.md`
   - `reviewer-agent.md`
   - `debugger-agent.md`
+  - `seo-agent.md`
 
 - toml-configured Codex agents
   - `analyst.toml`
