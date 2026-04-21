@@ -684,8 +684,8 @@ export default function TodayRun() {
                 <p>{morningBriefing}</p>
                 {wellnessInterpretations.length > 0 && (
                   <div className="today-run-plan-wellness-insights">
-                    {wellnessInterpretations.map((insight, idx) => (
-                      <div key={idx} className="today-run-plan-wellness-insight">
+                    {wellnessInterpretations.map((insight) => (
+                      <div key={insight} className="today-run-plan-wellness-insight">
                         <AppIcon name="chat_bubble_outline" className="today-run-plan-wellness-insight-icon" />
                         <span>{insight}</span>
                       </div>
