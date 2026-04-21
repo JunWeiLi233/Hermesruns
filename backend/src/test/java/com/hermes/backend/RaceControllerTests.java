@@ -301,21 +301,23 @@ class RaceControllerTests {
                 42.36,
                 -71.05,
                 42.195
-        )).thenReturn(new RaceCourseMapService.RaceCourseMapResult(
+        )).thenReturn(new RaceCourseMapResult(
                 "https://cdn.example.com/boston-course-map.png",
                 "official-page:https://www.baa.org/course",
                 true,
                 81,
                 "Aligned the official course map onto central Boston.",
-                new RaceCourseMapService.OverlayBounds(42.41, 42.29, -70.97, -71.18),
+                new OverlayBounds(42.41, 42.29, -70.97, -71.18),
                 List.of(
-                        new RaceCourseMapService.RoutePoint(42.349, -71.078, "Start"),
-                        new RaceCourseMapService.RoutePoint(42.360, -71.058, "Finish")
+                        new RoutePoint(42.349, -71.078, "Start"),
+                        new RoutePoint(42.360, -71.058, "Finish")
                 ),
                 List.of(12, 15, 18, 16),
                 22,
                 true
         ));
+        when(raceCourseMapService.materializePreviewImageUrl("https://cdn.example.com/boston-course-map.png"))
+                .thenReturn("data:image/png;base64,runner-preview");
         RaceController controller = new RaceController(
                 authService,
                 mock(RaceEventRepository.class),
@@ -342,13 +344,78 @@ class RaceControllerTests {
         @SuppressWarnings("unchecked")
         Map<String, Object> payload = (Map<String, Object>) response.getBody();
         assertThat(payload)
-                .containsEntry("imageUrl", "https://cdn.example.com/boston-course-map.png")
-                .containsEntry("courseMapDetected", true)
+                .containsEntry("routeAvailable", true)
                 .containsEntry("confidence", 81)
                 .containsEntry("totalClimbMeters", 22)
                 .containsEntry("aiAssisted", true);
+        assertThat(payload)
+                .containsEntry("imageUrl", "https://cdn.example.com/boston-course-map.png")
+                .containsEntry("previewImageUrl", "data:image/png;base64,runner-preview");
         assertThat(payload.get("routePoints")).isInstanceOf(List.class);
-        assertThat(payload.get("overlayBounds")).isInstanceOf(RaceCourseMapService.OverlayBounds.class);
+        assertThat(payload.get("viewportBounds")).isInstanceOf(OverlayBounds.class);
+    }
+
+    @Test
+    void courseMapPreservesPreviewImageWhenOnlyCandidateImageExists() {
+        AuthService authService = mock(AuthService.class);
+        RaceCourseMapService raceCourseMapService = mock(RaceCourseMapService.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(raceCourseMapService.resolveCourseMap(
+                "Tokyo Marathon",
+                "Tokyo",
+                "Japan",
+                "https://www.marathon.tokyo/en/",
+                35.6762,
+                139.6503,
+                42.195
+        )).thenReturn(new RaceCourseMapResult(
+                "https://legacyhalf.tokyo/en/about/img/about-course-map_02_e.png",
+                "Tokyo Marathon course map",
+                false,
+                0,
+                "AI course-map alignment is not configured.",
+                null,
+                List.of(),
+                List.of(),
+                null,
+                false
+        ));
+        when(raceCourseMapService.materializePreviewImageUrl("https://legacyhalf.tokyo/en/about/img/about-course-map_02_e.png"))
+                .thenReturn("data:image/png;base64,tokyo-preview");
+        RaceController controller = new RaceController(
+                authService,
+                mock(RaceEventRepository.class),
+                mock(ActivityRepository.class),
+                mock(RaceOfficialImageService.class),
+                mock(RaceElevationProfileService.class),
+                raceCourseMapService
+        );
+
+        ResponseEntity<?> response = controller.courseMap(
+                "Bearer runner-token",
+                null,
+                "Tokyo Marathon",
+                "Tokyo",
+                "Japan",
+                "https://www.marathon.tokyo/en/",
+                35.6762,
+                139.6503,
+                42.195
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) response.getBody();
+        assertThat(payload)
+                .containsEntry("imageUrl", "https://legacyhalf.tokyo/en/about/img/about-course-map_02_e.png")
+                .containsEntry("previewImageUrl", "data:image/png;base64,tokyo-preview")
+                .containsEntry("routeAvailable", false)
+                .containsEntry("confidence", 0)
+                .containsEntry("summary", "AI course-map alignment is not configured.");
+        assertThat(payload.get("routePoints")).isEqualTo(List.of());
+        assertThat(payload.get("viewportBounds")).isNull();
     }
 
     @Test
@@ -393,14 +460,15 @@ class RaceControllerTests {
         Map<String, Object> payload = (Map<String, Object>) response.getBody();
         assertThat(payload)
                 .containsEntry("imageUrl", "")
+                .containsEntry("previewImageUrl", "")
                 .containsEntry("source", "")
-                .containsEntry("courseMapDetected", false)
+                .containsEntry("routeAvailable", false)
                 .containsEntry("confidence", 0)
                 .containsEntry("summary", "")
                 .containsEntry("routePoints", List.of())
                 .containsEntry("elevationSamples", List.of())
                 .containsEntry("aiAssisted", false);
-        assertThat(payload).containsKey("overlayBounds");
+        assertThat(payload).containsKey("viewportBounds");
         assertThat(payload).containsKey("totalClimbMeters");
     }
 

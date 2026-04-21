@@ -1,0 +1,35 @@
+{
+  "runId": "ahm-20260418172533",
+  "parentGoal": "Real max-loop sandbox run",
+  "generatedAt": "2026-04-18T17:25:33.069Z",
+  "mode": "ralph-style-parallel",
+  "active": true,
+  "currentPhase": "executing",
+  "iteration": 1,
+  "maxIterations": 10,
+  "lanes": [
+    {
+      "laneId": "sandbox-lane",
+      "goal": "Write a verified sandbox completion marker.",
+      "status": "pending-launch",
+      "ownedFiles": [
+        ".tmp/real-ahmax/work/target.txt"
+      ],
+      "completedRounds": 0,
+      "verification": null,
+      "runtimeProof": null,
+      "architectApproved": false
+    }
+  ],
+  "gates": {
+    "ownership": "pending",
+    "contract": "pending",
+    "verification": "pending",
+    "runtimeTruth": "pending",
+    "regression": "pending",
+    "arbitration": "pending",
+    "review": "pending",
+    "evidence": "pending",
+    "deslop": "pending"
+  }
+}

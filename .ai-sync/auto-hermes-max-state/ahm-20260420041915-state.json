@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": true,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "executing",
+  "startedAt": "2026-04-20T04:19:15.754Z",
+  "completedAt": null,
+  "runId": "ahm-20260420041915",
+  "parentGoal": "[security] Config status endpoint leaks sensitive configuration data without authentication. on [security] Config status endpoint leaks sensitive configuration data without authentication.",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260420041915.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260420041915-progress.json"
+}

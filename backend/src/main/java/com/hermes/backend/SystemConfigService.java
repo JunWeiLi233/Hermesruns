@@ -105,17 +105,14 @@ public class SystemConfigService {
     }
 
     /**
-     * Unified, no-secrets config status for the SPA and for deployment diagnostics.
+     * Minimal config status for the public SPA (no internal details).
      */
-    public Map<String, Object> getUnifiedConfigStatus() {
+    public Map<String, Object> getPublicConfigStatus() {
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("googleConfigured", isGoogleConfigured());
         root.put("stravaConfigured", isStravaConfigured());
         root.put("aiConfigured", isAiConfigured());
         root.put("billingCheckoutConfigured", isCheckoutFullyConfigured());
-
-        Map<String, Object> strava = getStravaStatus();
-        root.put("strava", strava);
 
         Map<String, Object> ai = new LinkedHashMap<>();
         ai.put("configured", isAiConfigured());
@@ -129,11 +126,24 @@ public class SystemConfigService {
         if (priceDisplayLabel != null && !priceDisplayLabel.isBlank()) {
             billing.put("priceLabel", priceDisplayLabel.trim());
         }
+        root.put("billing", billing);
+        return root;
+    }
+
+    /**
+     * Unified, detailed config status for deployment diagnostics (Admins only).
+     */
+    public Map<String, Object> getAdminConfigStatus() {
+        Map<String, Object> root = getPublicConfigStatus();
+
+        Map<String, Object> strava = getStravaStatus();
+        root.put("strava", strava);
+
+        Map<String, Object> billing = (Map<String, Object>) root.get("billing");
         billing.put("publicBaseUrl", publicBaseUrl);
         billing.put("webhookSecretPresent", isPresent(stripeWebhookSecret));
-        root.put("billing", billing);
 
-        // NOTE: we intentionally do not return secrets.
+        // NOTE: we intentionally do not return secrets even for admins.
         return root;
     }
 }

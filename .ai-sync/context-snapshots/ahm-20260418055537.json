@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-04-18T05:55:37.043Z",
+  "taskStatement": "Add real-time search to the Shoe Catalog to allow browsing by model name or brand.",
+  "desiredOutcome": "No promotable work found",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "Prediction",
+    "problemClass": "unknown",
+    "touchesFrontend": true,
+    "touchesBackend": false,
+    "isCrossStack": false
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "frontend/src/pages/Vo2MaxDetail.jsx | frontend/src/pages/PredictionDetail.jsx"
+  ],
+  "lanesPlanned": 0
+}

@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-04-18T05:46:51.122Z",
+  "taskStatement": "Cross-stack race trust fix",
+  "desiredOutcome": "No promotable work found",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "Races",
+    "problemClass": "unknown",
+    "touchesFrontend": true,
+    "touchesBackend": true,
+    "isCrossStack": true
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "frontend/src/pages/RacesDetail.jsx",
+    "backend/src/main/java/com/hermes/backend/RaceCourseMapService.java"
+  ],
+  "lanesPlanned": 0
+}

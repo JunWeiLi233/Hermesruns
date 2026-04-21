@@ -1,0 +1,63 @@
+{
+  "updatedAt": "2026-04-19T04:53:20.868Z",
+  "activeClaims": [],
+  "recentlyCompleted": [
+    {
+      "key": "races-detail-restore-real-world-osm-tile-rendering-on-race-detail-route-map",
+      "task": "Restore real-world OSM tile rendering on race detail route map",
+      "surface": "Races Detail",
+      "agent": "claude",
+      "owner": "frontend",
+      "files": [
+        "frontend/src/pages/RacesDetail.jsx"
+      ],
+      "verify": [
+        "eslint PASS | vite build PASS | runtime sync PASS"
+      ],
+      "rollbackTarget": "",
+      "rollbackFiles": [],
+      "review": "",
+      "note": "",
+      "next": "",
+      "status": "completed",
+      "completedAt": "2026-04-19T04:53:20.868Z"
+    },
+    {
+      "key": "races-detail-map-stage-full-width-world-map",
+      "task": "Redesign the race-detail lower map area into a full-width OpenStreetMap Leaflet stage with the readiness card below it",
+      "surface": "Races Detail",
+      "agent": "codex",
+      "owner": "frontend",
+      "status": "completed",
+      "startedAt": "",
+      "completedAt": "2026-04-19T04:23:30.000",
+      "verify": [],
+      "files": [],
+      "rollbackTarget": "",
+      "rollbackFiles": [],
+      "review": "",
+      "note": "",
+      "next": ""
+    }
+  ],
+  "mustFixQueue": [
+    {
+      "key": "dashboard-fix-broken-ui",
+      "task": "fix broken UI",
+      "surface": "dashboard",
+      "agent": "codex",
+      "owner": "",
+      "status": "must-fix",
+      "startedAt": "2026-04-17T03:20:25.830",
+      "completedAt": "",
+      "verify": [],
+      "files": [],
+      "rollbackTarget": "",
+      "rollbackFiles": [],
+      "review": "",
+      "note": "",
+      "next": ""
+    }
+  ],
+  "humanInbox": []
+}

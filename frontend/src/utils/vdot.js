@@ -192,9 +192,10 @@ function bestRecentNormalizedRaceTimeSec(runs, targetMeters, options = {}) {
     const paceSecPerKm = sec / km;
     const normalizedSec = paceSecPerKm * targetKm;
     if (!Number.isFinite(normalizedSec) || normalizedSec <= 0) continue;
+    const ageDays = (now - t) / (24 * 60 * 60 * 1000);
 
     if (best == null || normalizedSec < best.normalizedSec) {
-      best = { normalizedSec, distRatio };
+      best = { normalizedSec, distRatio, ageDays };
     }
   }
 
@@ -215,12 +216,37 @@ export function predictRaceTimeCalibrated(vdot, distanceMeters, runs, options = 
   const baseSec = baseMin * 60;
   // Stronger blend when anchor run is very close to target distance.
   const closeness = Math.max(0, 1 - Math.abs(anchor.distRatio - 1) / 0.2); // 1 at exact, 0 at bounds
-  const weight = 0.45 + 0.35 * closeness; // 0.45 .. 0.80
+  const lookbackDays = options.lookbackDays ?? 180;
+  const freshness = Math.max(0, 1 - (anchor.ageDays || 0) / lookbackDays);
+  const recencyFactor = Math.max(0.15, freshness ** 1.7);
+  const weight = (0.45 + 0.35 * closeness) * recencyFactor;
   const blendedSec = baseSec * (1 - weight) + anchor.normalizedSec * weight;
   // Guardrail: do not predict meaningfully faster than a very recent, near-distance anchor.
   // This prevents optimistic projections that disagree with proven race reality.
-  const floorSec = anchor.normalizedSec * 0.995;
+  const floorSec = anchor.ageDays <= 45 ? anchor.normalizedSec * 0.995 : 0;
   return Math.max(blendedSec, floorSec) / 60;
+}
+
+export function buildOrderedRacePredictions(vdot, runs, options = {}) {
+  if (!vdot || vdot <= 0) return [];
+
+  let previousTimeMin = null;
+  return RACE_DISTANCES.map((distance) => {
+    const predictedTimeMin = predictRaceTimeCalibrated(vdot, distance.meters, runs, options);
+    if (!predictedTimeMin || predictedTimeMin <= 0) {
+      return { ...distance, timeMin: null };
+    }
+
+    const orderedTimeMin = previousTimeMin == null
+      ? predictedTimeMin
+      : Math.max(predictedTimeMin, previousTimeMin);
+    previousTimeMin = orderedTimeMin;
+
+    return {
+      ...distance,
+      timeMin: orderedTimeMin,
+    };
+  });
 }
 
 export const RACE_DISTANCES = [

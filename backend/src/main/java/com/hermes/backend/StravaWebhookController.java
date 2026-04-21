@@ -31,6 +31,7 @@ import java.util.concurrent.Executors;
 @RestController
 @RequestMapping("/api/strava/webhook")
 public class StravaWebhookController {
+    private static final long[] WEBHOOK_RETRY_DELAYS_MS = {0L, 1500L, 5000L};
 
     private static final Logger log = LoggerFactory.getLogger(StravaWebhookController.class);
 
@@ -81,7 +82,15 @@ public class StravaWebhookController {
      * Must return 200 within 2 seconds (Strava requirement), so processing is async.
      */
     @PostMapping
-    public ResponseEntity<String> handleEvent(@RequestBody Map<String, Object> event) {
+    public ResponseEntity<String> handleEvent(
+            @RequestParam(value = "verify_token", required = false) String token,
+            @RequestBody Map<String, Object> event) {
+        
+        if (verifyToken != null && !verifyToken.equals(token)) {
+            log.warn("Strava webhook event forged or missing token. verify_token param mismatch.");
+            return ResponseEntity.status(401).body("UNAUTHORIZED");
+        }
+
         log.debug("Strava webhook event: {}", event);
 
         String objectType = str(event.get("object_type"));
@@ -123,7 +132,7 @@ public class StravaWebhookController {
                     if ("create".equals(aspectType) || "update".equals(aspectType)) {
                         log.info("Strava webhook: syncing activity {} for runner {} ({})",
                                 stravaActivityId, runner.getId(), aspectType);
-                        oAuthController.syncStravaActivityById(runner, stravaActivityId);
+                        retryWebhookSyncBurst(runner, stravaActivityId);
                     } else if ("delete".equals(aspectType)) {
                         log.info("Strava webhook: deleting activity {} for runner {}",
                                 stravaActivityId, runner.getId());
@@ -132,6 +141,27 @@ public class StravaWebhookController {
                 },
                 () -> log.warn("Strava webhook: no runner found for athlete {}", stravaAthleteId)
         );
+    }
+
+    private void retryWebhookSyncBurst(Runner runner, long stravaActivityId) {
+        for (int attempt = 0; attempt < WEBHOOK_RETRY_DELAYS_MS.length; attempt += 1) {
+            long delayMs = WEBHOOK_RETRY_DELAYS_MS[attempt];
+            if (delayMs > 0) {
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+
+            OAuthController.SingleActivitySyncResult result = oAuthController.syncStravaActivityById(runner, stravaActivityId);
+            if (result == OAuthController.SingleActivitySyncResult.SUCCESS
+                    || result == OAuthController.SingleActivitySyncResult.ALREADY_RUNNING
+                    || result == OAuthController.SingleActivitySyncResult.PERMANENT_FAILURE) {
+                return;
+            }
+        }
     }
 
     private static String str(Object v) {

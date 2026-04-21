@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": true,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "executing",
+  "startedAt": "2026-04-18T17:21:02.411Z",
+  "completedAt": null,
+  "runId": "ahm-20260418172102",
+  "parentGoal": "Cross-stack race trust fix",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260418172102.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260418172102-progress.json"
+}

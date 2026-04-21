@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { apiJson } from '../api';
+import { apiFetch, apiJson } from '../api';
+import { markStravaAutoSyncTriggered, shouldTriggerStravaAutoSync } from '../utils/stravaAutoSync';
 
 // BUG(strava-sign-in): Strava OAuth can still break in some setups (localhost webhooks, token refresh,
 // encryption key changes, or stale sessions). Re-test /api/auth/strava/* and /api/strava/sync after auth changes.
@@ -107,6 +108,17 @@ export function AuthProvider({ children }) {
 
     return () => { cancelled = true; };
   }, [token]);
+
+  useEffect(() => {
+    if (!shouldTriggerStravaAutoSync({ isAuthenticated: Boolean(token), authHydrated, token })) {
+      return;
+    }
+
+    markStravaAutoSyncTriggered({});
+    apiFetch('/api/auth/strava/auto-sync').catch(() => {
+      // Best-effort only.
+    });
+  }, [authHydrated, token]);
 
   const login = useCallback((newToken, newEmail) => {
     // Commit token before callers run navigate(); otherwise route guards still see the old (empty) session.

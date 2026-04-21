@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import { formatDate, formatDistance } from '../utils/format';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import 'leaflet/dist/leaflet.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -188,15 +191,18 @@ function formatCoordinate(value, positiveSuffix, negativeSuffix) {
 
 export default function Heatmap() {
   const { isAuthenticated } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const { unit } = useUnit();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [heatmap, setHeatmap] = useState(null);
+  const [runs, setRuns] = useState([]);
   const [heatmapState, setHeatmapState] = useState('loading');
   const [heatmapReloadToken, setHeatmapReloadToken] = useState(0);
   const [mapMountFailed, setMapMountFailed] = useState(false);
   const [isFocusGridCollapsed, setIsFocusGridCollapsed] = useState(false);
+  const [viewBounds, setViewBounds] = useState(null);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -239,9 +245,14 @@ export default function Heatmap() {
 
     async function loadHeatmap() {
       try {
-        const heatmapData = await apiJson('/api/profile/heatmap', { signal: controller.signal });
+        const [heatmapData, activitiesData] = await Promise.all([
+          apiJson('/api/profile/heatmap', { signal: controller.signal }),
+          apiJson('/api/activities', { signal: controller.signal }),
+        ]);
+
         if (cancelled) return;
         setHeatmap(heatmapData && typeof heatmapData === 'object' ? heatmapData : null);
+        setRuns(Array.isArray(activitiesData) ? activitiesData : []);
         setHeatmapState('ready');
       } catch {
         if (!cancelled) {
@@ -268,7 +279,10 @@ export default function Heatmap() {
     });
   }, []);
 
-  const points = normalizePointSpeedRatios(Array.isArray(heatmap?.points) ? heatmap.points : []);
+  const points = useMemo(
+    () => normalizePointSpeedRatios(Array.isArray(heatmap?.points) ? heatmap.points : []),
+    [heatmap?.points],
+  );
   const bounds = heatmap?.bounds || null;
 
   useEffect(() => {
@@ -326,6 +340,14 @@ export default function Heatmap() {
 
         const syncHeatLayerDensity = () => {
           const zoom = map.getZoom();
+          const bounds = map.getBounds();
+          setViewBounds({
+            west: bounds.getWest(),
+            east: bounds.getEast(),
+            north: bounds.getNorth(),
+            south: bounds.getSouth(),
+          });
+
           heatLayer.setLatLngs(buildHeatLayerPoints(points, map.getZoom()));
           heatLayer.setOptions(getHeatLayerOptions(zoom));
           heatLayer.redraw();
@@ -341,6 +363,7 @@ export default function Heatmap() {
         };
 
         map.on('zoomend', syncHeatLayerDensity);
+        map.on('moveend', syncHeatLayerDensity);
         syncHeatLayerDensity();
 
         mapInstanceRef.current = map;
@@ -373,6 +396,21 @@ export default function Heatmap() {
     ? `${formatCoordinate(centerLatitude, 'N', 'S')} / ${formatCoordinate(centerLongitude, 'E', 'W')}`
     : '--';
 
+  const filteredRuns = useMemo(() => {
+    if (!viewBounds || !runs.length) return [];
+    return runs.filter((run) => {
+      const lat = Number(run.startLatitude);
+      const lng = Number(run.startLongitude);
+      if (!lat || !lng) return false;
+      return (
+        lat >= viewBounds.south
+        && lat <= viewBounds.north
+        && lng >= viewBounds.west
+        && lng <= viewBounds.east
+      );
+    }).slice(0, 10);
+  }, [viewBounds, runs]);
+
   const focusCards = [
     { label: t('heatmap.page_runs_label'), value: activityCount },
     { label: t('heatmap.page_points_label'), value: pointCount },
@@ -390,15 +428,11 @@ export default function Heatmap() {
     color: band.color,
   }));
 
-  const quickLinks = [
-    { key: 'profile', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-    { key: 'runs', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map', active: true },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-  ];
+  const quickLinks = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'heatmap',
+  }), [lang, t]);
 
   const zoomMap = (delta) => {
     const map = mapInstanceRef.current;
@@ -593,6 +627,31 @@ export default function Heatmap() {
                 </div>
               </div>
             </aside>
+
+            {filteredRuns.length > 0 && (
+              <section className="heatmap-sessions-card">
+                <span className="heatmap-page-card-kicker">{t('heatmap.page_sessions_in_view')}</span>
+                <div className="heatmap-sessions-list">
+                  {filteredRuns.map((run) => (
+                    <button
+                      key={run.id}
+                      type="button"
+                      className="heatmap-session-row"
+                      onClick={() => navigate(`/run/${run.id}`)}
+                    >
+                      <div className="heatmap-session-main">
+                        <strong>{run.name || t('profile.dashboard_session_fallback')}</strong>
+                        <span>{formatDate(run.startTime || run.startDate, lang === 'zh-CN' ? 'zh-CN' : 'en-US')}</span>
+                      </div>
+                      <div className="heatmap-session-meta">
+                        <strong>{formatDistance(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0), 1, lang, unit)}</strong>
+                        <span>{t('heatmap.page_view_session')}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         ) : null}
 

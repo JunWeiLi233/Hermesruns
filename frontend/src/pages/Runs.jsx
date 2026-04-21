@@ -11,6 +11,8 @@ import HermesLogo from '../components/HermesLogo';
 import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import { formatStravaSyncLabel } from '../utils/stravaAutoSync';
 
 const BATCH_SIZE = 10;
 const ROUTE_PREVIEW_CONCURRENCY = 2;
@@ -91,6 +93,7 @@ export default function Runs() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [allRuns, setAllRuns] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loadState, setLoadState] = useState('loading');
   const [activeMode, setActiveMode] = useState('all');
   const [selectedYear, setSelectedYear] = useState(null);
@@ -184,27 +187,45 @@ export default function Runs() {
 
   const filteredRuns = useMemo(() => {
     const now = new Date();
-    if (activeMode === 'all') return allRuns;
-    if (activeMode === 'year') {
-      if (selectedYear == null) return allRuns;
-      return allRuns.filter((run) => new Date(run.startTime || run.startDate || 0).getFullYear() === selectedYear);
+    let result = [...allRuns];
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((run) => (run.name || t('runs.default_run_name')).toLowerCase().includes(q));
     }
-    if (activeMode === 'month') {
+
+    if (activeMode === 'year') {
+      if (selectedYear != null) {
+        result = result.filter((run) => new Date(run.startTime || run.startDate || 0).getFullYear() === selectedYear);
+      }
+    } else if (activeMode === 'month') {
       const year = selectedYear || now.getFullYear();
-      return allRuns.filter((run) => {
+      result = result.filter((run) => {
         const date = new Date(run.startTime || run.startDate || 0);
         if (date.getFullYear() !== year) return false;
         return selectedMonth == null ? true : date.getMonth() === selectedMonth;
       });
-    }
-    if (activeMode === 'day') {
-      return allRuns.filter((run) => {
+    } else if (activeMode === 'day') {
+      result = result.filter((run) => {
         const date = new Date(run.startTime || run.startDate || 0);
         return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
       });
     }
-    return allRuns;
-  }, [activeMode, allRuns, selectedMonth, selectedYear]);
+
+    if (runsSort === 'distance') {
+      result.sort((a, b) => Number(b.distanceKm || 0) - Number(a.distanceKm || 0));
+    } else if (runsSort === 'pace') {
+      result.sort((a, b) => {
+        const paceA = Number(a.movingTimeSeconds || 0) / Math.max(0.1, Number(a.distanceKm || 0));
+        const paceB = Number(b.movingTimeSeconds || 0) / Math.max(0.1, Number(b.distanceKm || 0));
+        return paceA - paceB;
+      });
+    } else {
+      result.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
+    }
+
+    return result;
+  }, [activeMode, allRuns, selectedMonth, selectedYear, searchQuery, runsSort, t]);
 
   useEffect(() => {
     setVisibleCount(BATCH_SIZE);
@@ -259,7 +280,9 @@ export default function Runs() {
   const stravaLinked = Boolean(stravaStatus?.linked);
   const awaitingTitle = t(stravaLinked ? 'runs.awaiting_title_linked' : 'runs.awaiting_title_disconnected');
   const awaitingCopy = t(stravaLinked ? 'runs.awaiting_copy_linked' : 'runs.awaiting_copy_disconnected');
-  const awaitingStatus = integrationNotice || t(stravaLinked ? 'runs.awaiting_status_linked' : 'runs.awaiting_status_disconnected');
+  const awaitingStatus = integrationNotice || (stravaLinked
+    ? formatStravaSyncLabel(stravaStatus, t)
+    : t('runs.awaiting_status_disconnected'));
   const awaitingPrimaryAction = stravaLinking ? t('profile.strava_link_connecting') : t(stravaLinked ? 'runs.awaiting_retry_sync' : 'runs.awaiting_connect_strava');
   const countText = filteredRuns.length === 0 ? t('runs.count_zero') : t('runs.count_label', { count: filteredRuns.length });
   const filteredDistanceKm = filteredRuns.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
@@ -303,15 +326,11 @@ export default function Runs() {
     { key: 'distance', label: t('runs.sort_distance') },
     { key: 'pace', label: t('runs.sort_pace') },
   ];
-  const navItems = [
-    { key: 'dashboard', icon: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile' },
-    { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
-    { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs', active: true },
-    { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
-    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes' },
-    { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
-    { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
-  ];
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'activities',
+  }), [lang, t]);
 
   function openRun(run) {
     sessionStorage.setItem('hermes_selected_run', JSON.stringify(run));
@@ -669,8 +688,24 @@ export default function Runs() {
               </div>
             </section>
             <section id="recent-runs-filters" className="recent-runs-chip-stack">
-          <div className="recent-runs-chip-row">
-            {timeFilterOptions.map((option) => (
+              <div className="recent-runs-search-bar">
+                <div className="recent-runs-search-input-wrap">
+                  <AppIcon name="search" className="recent-runs-search-icon" />
+                  <input
+                    type="text"
+                    className="recent-runs-search-input"
+                    placeholder={t('runs.search_placeholder')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button type="button" className="recent-runs-search-clear" onClick={() => setSearchQuery('')} aria-label={t('profile.close')}>
+                      <AppIcon name="close" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="recent-runs-chip-row">            {timeFilterOptions.map((option) => (
               <button key={option.key} type="button" className={`recent-runs-chip${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
                 setActiveMode(option.key);
                 setSelectedYear(null);

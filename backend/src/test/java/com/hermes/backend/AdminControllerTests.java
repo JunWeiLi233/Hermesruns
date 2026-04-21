@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -19,8 +20,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:admin-controller-tests;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+        "spring.datasource.driver-class-name=org.h2.Driver"
+})
 @Transactional
-class AdminControllerTests {
+public class AdminControllerTests {
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,10 +43,22 @@ class AdminControllerTests {
     private AdminBackgroundJobRepository adminBackgroundJobRepository;
 
     @Autowired
+    private CoachScheduledWorkoutRepository coachScheduledWorkoutRepository;
+
+    @Autowired
+    private CoachTrainingBlockRepository coachTrainingBlockRepository;
+
+    @Autowired
+    private CoachRunnerStateRepository coachRunnerStateRepository;
+
+    @Autowired
     private AuthService authService;
 
     @BeforeEach
     void clearData() {
+        coachScheduledWorkoutRepository.deleteAll();
+        coachTrainingBlockRepository.deleteAll();
+        coachRunnerStateRepository.deleteAll();
         activityRepository.deleteAll();
         adminBackgroundJobRepository.deleteAll();
         runnerRepository.deleteAll();

@@ -1,0 +1,29 @@
+{
+  "laneId": "lane-coach-page",
+  "goal": "Rework the coach-insight branch in AnalysisInsightDetail.jsx into a Garmin Coach-style coach system that helps runners plan training based on recent performance while preserving the surrounding analysis route shell.",
+  "ownedFiles": [
+    "frontend/src/pages/AnalysisInsightDetail.jsx"
+  ],
+  "changedFiles": [
+    "frontend/src/pages/AnalysisInsightDetail.jsx"
+  ],
+  "verification": [
+    "cd frontend && npm run build",
+    "http://localhost:8080/analysis/coach-insight -> 200",
+    "cd frontend && npm run lint -- src/pages/AnalysisInsightDetail.jsx (still blocked by pre-existing duplicate-key errors in frontend/src/i18n/translations.js)"
+  ],
+  "runtimeProof": "Frontend bundle rebuilt through frontend/scripts/run-vite-build.mjs and the local coach-insight route returned HTTP 200 after sync.",
+  "risks": [
+    "This lane currently keeps coach-specific copy and visual treatment inside AnalysisInsightDetail.jsx because copy and CSS ownership were out of scope; the merge pass may want to migrate those literals/styles into the dedicated lanes for longer-term maintainability.",
+    "The page lane derives the Garmin Coach-style microcycle locally from the existing analysis snapshot instead of depending on the separate coach-model lane helper, so the parent merge should choose one source of coach-plan derivation to avoid duplicated logic."
+  ],
+  "mustPreserve": [
+    "Shared signed-in analysis shell",
+    "Navigation to /analysis and /run/:id",
+    "Other insight detail branches"
+  ],
+  "mergeNotes": "Approved. The coach branch now renders a training-system hierarchy with a coach hero, readiness/focus rail, adaptive four-session microcycle, and recent-proof section without touching other insight routes. CSS lane can optionally replace the inline coach styling by targeting the existing analysis-insight-detail-page and analysis-insight panel hooks. Copy lane can optionally move the coach-system literals into translation keys if the parent wants centralized bilingual ownership instead of page-local fallback copy.",
+  "status": "approved",
+  "parentRunId": "ahm-20260413033722",
+  "correlationId": "ahm-20260413033722:lane-coach-page"
+}

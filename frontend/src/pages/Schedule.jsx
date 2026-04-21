@@ -12,128 +12,10 @@ import { formatDistance } from '../utils/format';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { buildScheduleTargetBlockModel } from '../utils/scheduleMarathonBlock';
 import { getTodayRunRecommendation } from '../utils/todayRun';
+import { computeVdotTrend } from '../utils/vdot';
+import { buildWeeklyCoachSummaryModel } from '../utils/scheduleCoachSummary';
 import TopbarNotifications from '../components/TopbarNotifications';
 
-const SCHEDULE_COPY = {
-  'zh-CN': {
-    loading: '正在加载训练安排...',
-    load_error: '训练安排暂时无法加载。',
-    hero_title: '本周训练计划',
-    hero_title_block: '目标比赛构建周',
-    hero_title_marathon: '马拉松构建周',
-    target_volume: '计划总量',
-    completed_volume: '已完成',
-    hero_target_distance: '目标距离',
-    hero_countdown: '目标倒计时',
-    hero_race_day: '比赛日期',
-    hero_countdown_day: '还剩 1 天',
-    hero_countdown_days: '还剩 {days} 天',
-    hero_countdown_today: '比赛日就在今天',
-    hero_countdown_passed: '目标日期已过',
-    speed_focus: '速度重点',
-    endurance_peak: '耐力峰值',
-    recovery: '恢复',
-    steady: '稳态推进',
-    active_rest: '主动休息',
-    training_block: '训练模块',
-    open_slot: '待安排',
-    no_distance: '等待教练安排',
-    phase_label: '第 {week} 周',
-    default_phase: '本周训练节奏',
-    readiness_title: '准备度',
-    next_up: '下一节关键课',
-    view_drills: '查看今日训练',
-    planned_route: '计划路线',
-    default_route_name: '本周默认路线',
-    route_gain: '预计爬升 {value} m',
-    route_speed: '节奏巡航',
-    sync_to_watch: '同步到手表',
-    route_target_label: '目标课距离',
-    route_target_marathon: '把路线对齐到本周马拉松关键距离。',
-    route_target_block: '把路线对齐到当前训练块的关键距离。',
-    coach_title: '教练视角',
-    coach_subtitle: '把本周负荷和恢复信号放在同一张面板里。',
-    coach_quote: 'Hermes 当前建议',
-    coach_body_block: '你现在处在当前训练块的第 {week} 周，长距离锚点来到 {longRun} km。下一步重点是稳住恢复，再把关键课的质量做扎实。',
-    coach_body_target_block: '这周是第 {week} 周目标构建。先把 {longRun} 的长距离锚点稳住，再让整周训练继续收向 {raceDistance} 的比赛目标。',
-    coach_body_default: '这一周先把节奏铺开。只要按计划完成轻松跑和关键课，Hermes 就会继续把后面的训练块拉清楚。',
-    coach_block_week: '当前构建',
-    coach_race_target: '比赛目标',
-    fatigue_level: '疲劳水平',
-    fatigue_low: '低疲劳',
-    fatigue_moderate: '可控疲劳',
-    fatigue_high: '高疲劳',
-    sleep_quality: '睡眠质量',
-    sleep_high: '恢复良好',
-    sleep_moderate: '仍可提升',
-    detailed_biometrics: '查看详细生理指标',
-    current_gear: '当前装备',
-    long_run_anchor: '长距离锚点',
-    gear_fallback: '还没有主力跑鞋',
-    gear_missing: '先去跑鞋页添加一双在役鞋，Hermes 才能把装备和计划连起来。',
-  },
-  en: {
-    loading: 'Loading your weekly plan...',
-    load_error: 'Unable to load the schedule right now.',
-    hero_title: 'Weekly Training Schedule',
-    hero_title_block: 'Race-target build week',
-    hero_title_marathon: 'Marathon build week',
-    target_volume: 'Target volume',
-    completed_volume: 'Completed',
-    hero_target_distance: 'Target distance',
-    hero_countdown: 'Countdown',
-    hero_race_day: 'Race day',
-    hero_countdown_day: '1 day to go',
-    hero_countdown_days: '{days} days to go',
-    hero_countdown_today: 'Race day is here',
-    hero_countdown_passed: 'Target date passed',
-    speed_focus: 'Speed focus',
-    endurance_peak: 'Endurance peak',
-    recovery: 'Recovery',
-    steady: 'Steady build',
-    active_rest: 'Active rest',
-    training_block: 'Training block',
-    open_slot: 'Open slot',
-    no_distance: 'Waiting for coach guidance',
-    phase_label: 'Week {week}',
-    default_phase: 'This week\'s rhythm',
-    readiness_title: 'Readiness',
-    next_up: 'Next key session',
-    view_drills: 'Open today\'s run',
-    planned_route: 'Planned route',
-    default_route_name: 'Default weekly route',
-    route_gain: '{value} m projected gain',
-    route_speed: 'Rhythm cruise',
-    sync_to_watch: 'Send to watch',
-    route_target_label: 'Target workout',
-    route_target_marathon: 'Route tuned to this week\'s marathon-focused distance.',
-    route_target_block: 'Route tuned to the key distance in this block.',
-    coach_title: 'Coach lens',
-    coach_subtitle: 'Read this week\'s workload and recovery in one panel.',
-    coach_quote: 'Hermes recommendation',
-    coach_body_block: 'You are in week {week} of the current block, with the long-run anchor at {longRun} km. Hold recovery first, then make the next key session count.',
-    coach_body_target_block: 'This is week {week} of the current build. Keep the {longRun} long-run anchor stable and point the rest of the week toward your {raceDistance} race target.',
-    coach_body_default: 'Start by settling the week into a clear rhythm. Once the easy runs and the key session land cleanly, Hermes can sharpen the next block around you.',
-    coach_block_week: 'Current build',
-    coach_race_target: 'Race target',
-    fatigue_level: 'Fatigue level',
-    fatigue_low: 'Low fatigue',
-    fatigue_moderate: 'Manageable fatigue',
-    fatigue_high: 'High fatigue',
-    sleep_quality: 'Sleep quality',
-    sleep_high: 'Recovery is strong',
-    sleep_moderate: 'Still room to improve',
-    detailed_biometrics: 'Open detailed biometrics',
-    current_gear: 'Current gear',
-    long_run_anchor: 'Long-run anchor',
-    gear_fallback: 'No primary shoe yet',
-    gear_missing: 'Add an active shoe on the shoes page so Hermes can connect gear to the plan.',
-  },
-};
-
-function formatCopy(template, vars = {}) {
-  return String(template || '').replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
-}
 
 function resolveRunDistanceKm(run) {
   const km = Number(run?.distanceKm || 0);
@@ -410,8 +292,8 @@ export default function Schedule() {
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
-  const scheduleCopy = useMemo(() => SCHEDULE_COPY[lang] || SCHEDULE_COPY.en, [lang]);
-  const s = useCallback((key, vars) => formatCopy(scheduleCopy[key] || key, vars), [scheduleCopy]);
+
+  const s = useCallback((key, vars) => t(`schedule.${key}`, vars), [t]);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -470,6 +352,10 @@ export default function Schedule() {
   const recommendationBundle = useMemo(
     () => getTodayRunRecommendation({ runs, t, lang }),
     [runs, t, lang],
+  );
+  const vdotTrend = useMemo(
+    () => computeVdotTrend(runs),
+    [runs],
   );
 
   const readiness = useMemo(
@@ -557,6 +443,125 @@ export default function Schedule() {
 
   const nextSessionCopy = nextSession?.notes
     || recommendationBundle.recommendation.purpose;
+  const weeklyAcwr = recommendationBundle.metrics?.acwr ?? null;
+  const weeklyAcwrLabel = weeklyAcwr != null ? weeklyAcwr.toFixed(2) : '--';
+  const weeklyCoachSummary = useMemo(
+    () => buildWeeklyCoachSummaryModel({
+      vdotTrend,
+      acwr: weeklyAcwr,
+      targetBlock,
+      nextSessionTitle,
+    }),
+    [nextSessionTitle, targetBlock, vdotTrend, weeklyAcwr],
+  );
+
+  const weeklySummaryTrendLine = useMemo(() => {
+    if (weeklyCoachSummary.trendState === 'improving') {
+      return s('weekly_summary_trend_improving', { delta: Math.abs(vdotTrend.delta).toFixed(1) });
+    }
+    if (weeklyCoachSummary.trendState === 'declining') {
+      return s('weekly_summary_trend_declining', { delta: Math.abs(vdotTrend.delta).toFixed(1) });
+    }
+    if (weeklyCoachSummary.trendState === 'steady') {
+      return s('weekly_summary_trend_steady');
+    }
+    return s('weekly_summary_trend_unknown');
+  }, [s, vdotTrend.delta, weeklyCoachSummary.trendState]);
+
+  const weeklySummaryLoadLine = useMemo(() => {
+    switch (weeklyCoachSummary.loadState) {
+      case 'low':
+        return s('weekly_summary_load_low', { acwr: weeklyAcwrLabel });
+      case 'optimal':
+        return s('weekly_summary_load_optimal', { acwr: weeklyAcwrLabel });
+      case 'high':
+        return s('weekly_summary_load_high', { acwr: weeklyAcwrLabel });
+      case 'danger':
+        return s('weekly_summary_load_danger', { acwr: weeklyAcwrLabel });
+      default:
+        return s('weekly_summary_load_unknown');
+    }
+  }, [s, weeklyAcwrLabel, weeklyCoachSummary.loadState]);
+
+  const weeklySummaryFocusLine = useMemo(() => {
+    if (weeklyCoachSummary.focusMode === 'target-race') {
+      return s('weekly_summary_focus_target_race', {
+        week: weeklyCoachSummary.focus.weekIndex || 1,
+        raceDistance: raceTargetDistanceLabel || '--',
+      });
+    }
+    if (weeklyCoachSummary.focusMode === 'training-block') {
+      return s('weekly_summary_focus_training_block', {
+        week: weeklyCoachSummary.focus.weekIndex || 1,
+        longRun: longRunAnchorLabel,
+      });
+    }
+    return s('weekly_summary_focus_next_session', {
+      session: weeklyCoachSummary.focus.nextSessionTitle || nextSessionTitle,
+    });
+  }, [
+    longRunAnchorLabel,
+    nextSessionTitle,
+    raceTargetDistanceLabel,
+    s,
+    weeklyCoachSummary.focus.nextSessionTitle,
+    weeklyCoachSummary.focus.weekIndex,
+    weeklyCoachSummary.focusMode,
+  ]);
+
+  const weeklySummaryBody = useMemo(
+    () => s('weekly_summary_body', {
+      trend: weeklySummaryTrendLine,
+      load: weeklySummaryLoadLine,
+      focus: weeklySummaryFocusLine,
+    }),
+    [s, weeklySummaryFocusLine, weeklySummaryLoadLine, weeklySummaryTrendLine],
+  );
+
+  const weeklySummaryTrendValue = useMemo(() => {
+    if (weeklyCoachSummary.trendState === 'improving') {
+      return s('weekly_summary_trend_value_improving', { delta: Math.abs(vdotTrend.delta).toFixed(1) });
+    }
+    if (weeklyCoachSummary.trendState === 'declining') {
+      return s('weekly_summary_trend_value_declining', { delta: Math.abs(vdotTrend.delta).toFixed(1) });
+    }
+    if (weeklyCoachSummary.trendState === 'steady') {
+      return s('weekly_summary_trend_value_steady');
+    }
+    return s('weekly_summary_trend_value_unknown');
+  }, [s, vdotTrend.delta, weeklyCoachSummary.trendState]);
+
+  const weeklySummaryLoadValue = useMemo(() => {
+    switch (weeklyCoachSummary.loadState) {
+      case 'low':
+        return s('weekly_summary_load_value_low', { acwr: weeklyAcwrLabel });
+      case 'optimal':
+        return s('weekly_summary_load_value_optimal', { acwr: weeklyAcwrLabel });
+      case 'high':
+        return s('weekly_summary_load_value_high', { acwr: weeklyAcwrLabel });
+      case 'danger':
+        return s('weekly_summary_load_value_danger', { acwr: weeklyAcwrLabel });
+      default:
+        return s('weekly_summary_load_value_unknown');
+    }
+  }, [s, weeklyAcwrLabel, weeklyCoachSummary.loadState]);
+
+  const weeklySummaryFocusValue = useMemo(() => {
+    if (weeklyCoachSummary.focusMode === 'target-race') {
+      return raceTargetDistanceLabel || '--';
+    }
+    if (weeklyCoachSummary.focusMode === 'training-block') {
+      return s('phase_label', { week: weeklyCoachSummary.focus.weekIndex || 1 });
+    }
+    return weeklyCoachSummary.focus.nextSessionTitle || nextSessionTitle;
+  }, [
+    nextSessionTitle,
+    raceTargetDistanceLabel,
+    s,
+    weeklyCoachSummary.focus.nextSessionTitle,
+    weeklyCoachSummary.focus.weekIndex,
+    weeklyCoachSummary.focusMode,
+  ]);
 
   const fatigueLevel = readiness.score >= 86
     ? s('fatigue_low')
@@ -635,7 +640,7 @@ export default function Schedule() {
             { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
             { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
             { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-            { key: 'weather_engine', label: lang === 'zh-CN' ? '天气引擎' : 'Weather Engine', route: '/weather-engine', icon: 'thermostat' },
+    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
             { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
             { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
             { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today', active: true },
@@ -843,6 +848,25 @@ export default function Schedule() {
                     <p>{s('coach_subtitle')}</p>
                   </div>
                   <CoachIdentityBadge coach={assignedCoach} lang={lang} className="schedule-plan-coach-badge" />
+                </div>
+
+                <div className={`schedule-plan-weekly-summary is-${weeklyCoachSummary.loadState}`}>
+                  <span className="schedule-plan-weekly-summary-kicker">{s('weekly_summary_eyebrow')}</span>
+                  <p className="schedule-plan-weekly-summary-body">{weeklySummaryBody}</p>
+                  <div className="schedule-plan-coach-focus-grid schedule-plan-coach-focus-grid--summary">
+                    <div className="schedule-plan-coach-focus-pill">
+                      <span>{s('weekly_summary_metric_fitness')}</span>
+                      <strong>{weeklySummaryTrendValue}</strong>
+                    </div>
+                    <div className="schedule-plan-coach-focus-pill">
+                      <span>{s('weekly_summary_metric_load')}</span>
+                      <strong>{weeklySummaryLoadValue}</strong>
+                    </div>
+                    <div className="schedule-plan-coach-focus-pill">
+                      <span>{s('weekly_summary_metric_focus')}</span>
+                      <strong>{weeklySummaryFocusValue}</strong>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="schedule-plan-coach-copy">

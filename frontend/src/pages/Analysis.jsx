@@ -13,6 +13,7 @@ import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { computeVdotTrend } from '../utils/vdot';
 import { buildAnalysisSnapshot } from '../utils/analysisInsights';
 
@@ -116,15 +117,11 @@ export default function Analysis() {
   const hoveredVo2Bar = vo2Bars.find((bar) => bar.key === hoveredVo2BarKey) || null;
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
-  const navItems = [
-    { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights', active: true },
-    { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-  ];
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'analysis',
+  }), [lang, t]);
 
   async function handleImport(event) {
     event.preventDefault();
@@ -479,7 +476,6 @@ export default function Analysis() {
               <section className="analysis-overview-card analysis-overview-card--prediction-table">
                 <div className="analysis-overview-table-head">
                   <h2>{t('analysis.stitch_predictions_title')}</h2>
-                  <span className="analysis-overview-confidence-pill">{t('analysis.stitch_confidence', { value: 94 })}</span>
                 </div>
                 <div className="analysis-overview-table-wrap">
                   <table className="analysis-overview-table">
@@ -488,7 +484,6 @@ export default function Analysis() {
                         <th>{t('analysis.stitch_event_distance')}</th>
                         <th>{t('analysis.stitch_estimated_time')}</th>
                         <th>{t(unit === 'mile' ? 'analysis.stitch_pace_per_mile' : 'analysis.stitch_pace_per_km')}</th>
-                        <th>{t('analysis.stitch_vdot_equivalent')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -498,7 +493,7 @@ export default function Analysis() {
                           className="clickable-row"
                           role="link"
                           tabIndex={0}
-                          aria-label={`${row.label} ${row.timeLabel} ${row.paceLabel} ${row.vdotLabel}`}
+                          aria-label={`${row.label} ${row.timeLabel} ${row.paceLabel}`}
                           onClick={() => navigate(`/prediction/${row.key}`)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -510,7 +505,6 @@ export default function Analysis() {
                           <td>{row.label}</td>
                           <td className="is-accent">{row.timeLabel}</td>
                           <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>
-                          <td>{row.vdotLabel}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,0 +1,16 @@
+[
+  {
+    "at": "2026-04-18T09:40:35.1962485-04:00",
+    "laneId": "lane-1",
+    "event": "round-complete",
+    "summary": "Added focused controller tests for ShoeQueryNormalizationController and normalized the 401 error response onto the endpoint's map-shaped error contract.",
+    "changedFiles": [
+      "backend/src/main/java/com/hermes/backend/ShoeQueryNormalizationController.java",
+      "backend/src/test/java/com/hermes/backend/ShoeQueryNormalizationControllerTests.java"
+    ],
+    "verification": [
+      "cmd /c \"set MAVEN_OPTS=-Xmx256m -Xms128m && cd /d backend && mvnw.cmd -q -Dtest=ShoeQueryNormalizationControllerTests test\"",
+      "cmd /c \"set MAVEN_OPTS=-Xmx256m -Xms128m && cd /d backend && mvnw.cmd -q -DskipTests compile\""
+    ]
+  }
+]
