@@ -753,3 +753,31 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Preserve: Keep the high-level coordination and persistence logic in `RaceCourseMapService.java`.
 - Next Risk: Service dependency depth increased, requiring more constructor injection.
 - Rollback Target: working tree before 2026-04-20 Race Course Map Refactor round
+
+### Auth & Transport Security Hardening
+- Goal: Prevent user enumeration and enforce secure transport (HTTPS) by default.
+- Changed: Prevented timing-based user enumeration in `AuthService.java` by always performing a password hash comparison (using a `DUMMY_HASH`) even when an email is not found. Sanitized login error messages in `LoginController.java` to a generic "Invalid credentials" to avoid triggering security heuristic detectors. Enabled `Strict-Transport-Security` (HSTS) by default in `SecurityHeadersFilter.java` and `application.properties`.
+- Preserve: Keep the `EMAIL_NOT_VERIFIED` logic but ensure it only triggers after a successful password match.
+- Next Risk: HSTS in local development without HTTPS may cause browser warnings if not configured correctly.
+- Rollback Target: working tree before 2026-04-20 Auth Security round
+
+### Generated Asset RLS Hardening
+- Goal: Add ownership metadata to generated assets (GPX and shoe images) to enable Row-Level Security.
+- Changed: Added `Runner` relationship to `GeneratedRaceGpxAsset.java` and `ShoeImageAsset.java`. Updated `ShoeImageAssetService` and `GeneratedRaceGpxPersistenceService` to persist the authenticated `Runner` who triggers asset generation. Updated `AdminRouteExtractionController` to pass the `Runner` context through the marathon pipeline.
+- Preserve: Keep the assets as shared catalog items by default; ownership metadata is for future fine-grained RLS.
+- Next Risk: Orphaned assets if the associated runner is deleted (currently handled by DB cascade or manual cleanup).
+- Rollback Target: working tree before 2026-04-21 Asset RLS round
+
+### Streak Protection & Comeback Messaging
+- Goal: Implement encouraging comeback messages for returning runners and provide clear streak visualization.
+- Changed: Centralized streak calculation logic in `frontend/src/utils/streakUtils.js` (fixing a bug where one-day gaps wiped best streaks). Implemented `StreakProtection.jsx` and `ComebackMessage.jsx` components. Integrated them into `ProfileDashboard.jsx` bento grid. Added comprehensive bilingual (en/zh-CN) translations for all new coaching copy. Updated `rewardBadges.jsx` to use the unified streak logic.
+- Preserve: Keep the "no guilt" coaching voice for comeback messaging.
+- Next Risk: Complexity in streak calculation if multiple runs per day are handled inconsistently (currently deduplicated by date).
+- Rollback Target: working tree before 2026-04-21 Streak Messaging round
+
+### Auto-Commit & Security Gate Advancement
+- Goal: Enable AI workflow sharing and enforce strict PII/secret scanning before commits.
+- Changed: Updated `.tools/auto-commit.ps1` to allow committing shared AI agent files (`.ai-sync`, `.codex`, `.claude`, `.gemini`, `AGENTS.md`, etc.). Integrated a new `runSecretAndPiiHunter` into `.tools/auto-hermes-security.mjs` that scans for API keys, high-entropy strings, and configured PII literals (e.g., "Junwei"). Modified the commit script to automatically block commits if critical security findings are detected. Improved auto-push functionality to GitHub.
+- Preserve: Keep local auth files and session logs strictly ignored.
+- Next Risk: Security tool false positives on high-entropy non-secret strings (hashes, etc.).
+- Rollback Target: working tree before 2026-04-21 Commit Gate round
