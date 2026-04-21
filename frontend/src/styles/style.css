@@ -162,7 +162,7 @@
     }
 }
 
-/* HERMES wordmark — bold navy, tight kerning (matches brand asset) */
+/* HERMES wordmark �?bold navy, tight kerning (matches brand asset) */
 .hermes-logo {
     display: inline-flex;
     align-items: center;
@@ -2885,7 +2885,7 @@ body.theme-light .dashboard-body {
 
 /* ── Shared app-notice system (info / success / warning / error) ─────── */
 /* Canonical pattern: use app-notice + app-notice--{variant}.            */
-/* strava-sync-notice is the reference implementation — kept as-is.     */
+/* strava-sync-notice is the reference implementation �?kept as-is.     */
 .app-notice {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -2926,7 +2926,7 @@ body.theme-light .dashboard-body {
     line-height: 1.5;
 }
 
-/* Notice variants — same palette as strava-sync-notice */
+/* Notice variants �?same palette as strava-sync-notice */
 .app-notice--info,
 .strava-sync-notice--info {
     border: 1px solid rgba(14, 165, 233, 0.18);
@@ -12596,7 +12596,7 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
 }
 
 /* ============================================================
-   Profile page — sync modal & lang switcher
+   Profile page �?sync modal & lang switcher
    ============================================================ */
 
 .modal-overlay {
@@ -12896,7 +12896,7 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* Image picker — clickable shoe image */
+/* Image picker �?clickable shoe image */
 .shoe-img-clickable {
   cursor: pointer; position: relative; border-radius: 8px; transition: box-shadow 0.2s;
   width: 120px; height: 120px; flex-shrink: 0; overflow: hidden;
@@ -12904,7 +12904,7 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
 }
 .shoe-img-clickable:hover { box-shadow: 0 0 0 2px var(--brand-accent, #FF6B35); }
 .shoe-img-clickable:hover::after {
-  content: '✎'; position: absolute; top: 2px; right: 2px;
+  content: '�?; position: absolute; top: 2px; right: 2px;
   background: var(--brand-accent, #FF6B35); color: #fff; font-size: 0.6rem;
   width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
 }
@@ -18533,7 +18533,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 }
 
 /* ===================================================================
-   Landing v2 — clean, athletic, premium
+   Landing v2 �?clean, athletic, premium
    =================================================================== */
 
 .landing-v2 {
@@ -49783,140 +49783,3 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-load-callout.is-dan
   margin-top: -2px;
 }
 
-/* Unified Add Shoe Styles */
-.add-shoes-kinetic-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
-.add-shoes-search-box {
-  position: relative;
-  margin-bottom: 32px;
-}
-.add-shoes-search-box input {
-  width: 100%;
-  padding: 16px 20px 16px 52px;
-  border-radius: 16px;
-  border: 1px solid var(--slate-200);
-  background: var(--slate-50);
-  font-size: 16px;
-  font-weight: 500;
-  outline: none;
-  transition: all 0.2s ease;
-}
-.add-shoes-search-box input:focus {
-  background: #fff;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(240, 117, 97, 0.1);
-}
-.add-shoes-search-icon {
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--slate-400);
-}
-.add-shoes-results-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-.add-shoes-result-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 16px;
-  background: #fff;
-  border: 1px solid var(--slate-100);
-  text-align: left;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-.add-shoes-result-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-.add-shoes-result-logo {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--slate-50);
-  border-radius: 12px;
-}
-.add-shoes-result-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.add-shoes-result-brand {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--slate-400);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.add-shoes-result-model {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--slate-900);
-  margin: 1px 0;
-}
-.add-shoes-result-category {
-  font-size: 12px;
-  color: var(--slate-500);
-}
-.add-shoes-result-chevron {
-  color: var(--slate-300);
-  width: 16px;
-  height: 16px;
-}
-.add-shoes-config-layout {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 40px;
-  align-items: start;
-}
-@media (max-width: 800px) {
-  .add-shoes-config-layout {
-    grid-template-columns: 1fr;
-  }
-}
-.add-shoes-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.add-shoes-field label {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--slate-700);
-  margin-bottom: 8px;
-}
-.add-shoes-field input[type="text"] {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: 1px solid var(--slate-200);
-  font-size: 15px;
-}
-.add-shoes-range-control {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.add-shoes-range-control input { flex: 1; }
-.add-shoes-preview-card {
-  background: #fff;
-  padding: 24px;
-  border-radius: 24px;
-  border: 1px solid var(--slate-100);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-}
-.add-shoes-preview-logo {
-  margin-bottom: 20px;
-}
