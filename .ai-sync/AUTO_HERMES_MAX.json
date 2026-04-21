@@ -1,0 +1,98 @@
+{
+  "generatedAt": "2026-04-14T04:30:09.941Z",
+  "runtime": "codex-live",
+  "mode": "adaptive",
+  "status": "ready-to-launch",
+  "nextAction": "codex-max-launch-lanes",
+  "mustNotReplyYet": true,
+  "parentGoal": "Redesign the VO2 max detail page to match the provided cinematic Hermes Kinetic reference while preserving the live Hermes VO2 data and signed-in shell behavior.",
+  "parentRunId": "ahm-20260414043009",
+  "correlationId": "ahm-20260414043009:parent",
+  "preserve": [
+    "Keep auth, routing, and the shared signed-in runner shell intact.",
+    "Preserve the real VO2 math, live run-derived points, and trend logic from frontend/src/pages/Vo2MaxDetail.jsx.",
+    "Match the provided reference's glass dashboard, oversized editorial headline, and chart-led hierarchy without turning the route into a static mock."
+  ],
+  "resultsDir": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results",
+  "laneSelection": {
+    "strategy": "auto",
+    "minLaneCount": 1,
+    "maxLaneCount": 5
+  },
+  "decisionSignals": {
+    "coordinationCost": "medium",
+    "mergeComplexity": "medium"
+  },
+  "candidateLaneCount": 2,
+  "selectedLaneCount": 2,
+  "selectionRationale": "Auto-selected 2 lane(s) from 2 candidate lane(s) using effort, coordination cost, and merge complexity.",
+  "deferredLanes": [],
+  "blockedLanes": [],
+  "launchDecisionCard": [
+    {
+      "laneId": "lane-review-vo2-reference",
+      "goal": "Extract the critical mimic scope, preserve set, and design risks for the VO2 max detail reference without editing code.",
+      "decision": "launched",
+      "dependencyState": "parallel-ready",
+      "reason": "launched: priority 1, effort medium, dependency parallel-ready"
+    },
+    {
+      "laneId": "lane-implement-vo2-redesign",
+      "goal": "Implement the VO2 max detail redesign so it matches the supplied cinematic reference while preserving live Hermes behavior.",
+      "decision": "launched",
+      "dependencyState": "parallel-ready",
+      "reason": "launched: priority 2, effort medium, dependency parallel-ready"
+    }
+  ],
+  "lanes": [
+    {
+      "laneId": "lane-review-vo2-reference",
+      "parentRunId": "ahm-20260414043009",
+      "correlationId": "ahm-20260414043009:lane-review-vo2-reference",
+      "goal": "Extract the critical mimic scope, preserve set, and design risks for the VO2 max detail reference without editing code.",
+      "parentGoal": "Redesign the VO2 max detail page to match the provided cinematic Hermes Kinetic reference while preserving the live Hermes VO2 data and signed-in shell behavior.",
+      "mode": "single-round",
+      "ownedFiles": [
+        ".ai-sync/auto-hermes-max-results/lane-review-vo2-reference.json"
+      ],
+      "mustPreserve": [
+        "Review only, no code edits."
+      ],
+      "verify": "Review frontend/src/pages/Vo2MaxDetail.jsx, frontend/src/styles/style.css, design.md, and the supplied HTML reference.",
+      "mergeNotes": "Keep the strongest hierarchy and trust constraints only.",
+      "priority": 1,
+      "effort": "medium",
+      "dependsOn": [],
+      "dependencyState": "parallel-ready",
+      "status": "pending-launch",
+      "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-review-vo2-reference.json",
+      "command": "/auto-hermes scope=\"Extract the critical mimic scope, preserve set, and design risks for the VO2 max detail reference without editing code.\" mode=single-round"
+    },
+    {
+      "laneId": "lane-implement-vo2-redesign",
+      "parentRunId": "ahm-20260414043009",
+      "correlationId": "ahm-20260414043009:lane-implement-vo2-redesign",
+      "goal": "Implement the VO2 max detail redesign so it matches the supplied cinematic reference while preserving live Hermes behavior.",
+      "parentGoal": "Redesign the VO2 max detail page to match the provided cinematic Hermes Kinetic reference while preserving the live Hermes VO2 data and signed-in shell behavior.",
+      "mode": "single-round",
+      "ownedFiles": [
+        "frontend/src/pages/Vo2MaxDetail.jsx",
+        "frontend/src/styles/style.css"
+      ],
+      "mustPreserve": [
+        "Keep real VO2 trend/run-point data, auth guards, navigation shell, and route wiring intact.",
+        "Do not revert unrelated worktree changes."
+      ],
+      "verify": "cd frontend && npm run lint && cd frontend && node scripts/run-vite-build.mjs",
+      "mergeNotes": "Coordinator must run frontend runtime proof after integration.",
+      "priority": 2,
+      "effort": "medium",
+      "dependsOn": [],
+      "dependencyState": "parallel-ready",
+      "status": "pending-launch",
+      "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-implement-vo2-redesign.json",
+      "command": "/auto-hermes scope=\"Implement the VO2 max detail redesign so it matches the supplied cinematic reference while preserving live Hermes behavior.\" mode=single-round"
+    }
+  ],
+  "issues": []
+}

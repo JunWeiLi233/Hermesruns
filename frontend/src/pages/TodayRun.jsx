@@ -5,16 +5,20 @@ import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
+import InfoDisclosure from '../components/ui/InfoDisclosure';
+import ShoeRecommendation from '../components/ShoeRecommendation';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { getTodayRunRecommendation } from '../utils/todayRun';
+import { getTodayRunAcwrInsight } from '../utils/todayRunAcwrInsight';
+import { generateMorningBriefing } from '../utils/coachVoice';
 import { formatDistance } from '../utils/format';
 import { computeVdotTrend } from '../utils/vdot';
 import { formatShoeDisplayName } from '../utils/shoeNames';
-import { buildRecentShoeSignal } from '../utils/shoeRotation';
+import { buildRecentShoeSignal, predictRetirement } from '../utils/shoeRotation';
 
 const MARATHON_BLOCK_WEEKS = 16;
 
@@ -263,6 +267,7 @@ export default function TodayRun() {
   const [loadState, setLoadState] = useState('loading');
   const [coachPayload, setCoachPayload] = useState(null);
   const [weatherContext, setWeatherContext] = useState(null);
+  const [isDownshifted, setIsDownshifted] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [heatDismissed, setHeatDismissed] = useState(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -318,7 +323,12 @@ export default function TodayRun() {
     plan,
     reasons,
     metrics,
-  } = useMemo(() => getTodayRunRecommendation({ runs, t, lang, weatherContext }), [runs, t, lang, weatherContext]);
+  } = useMemo(() => getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery: isDownshifted }), [runs, races, t, lang, weatherContext, isDownshifted]);
+
+  const morningBriefing = useMemo(
+    () => generateMorningBriefing({ recommendation, metrics, lang }),
+    [recommendation, metrics, lang],
+  );
 
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const initials = displayName.slice(0, 1).toUpperCase();
@@ -363,6 +373,11 @@ export default function TodayRun() {
       Number(shoeRecommendation.shoe.maxDistanceKm || 0) - Number(shoeRecommendation.shoe.currentDistanceKm || 0),
     )
     : 0;
+  const recommendedShoe = shoeRecommendation?.shoe || null;
+  const recommendedShoeHealth = useMemo(() => {
+    if (!recommendedShoe) return null;
+    return predictRetirement(recommendedShoe, runs);
+  }, [recommendedShoe, runs]);
   const heroLocation = marathonPlan.race?.location || marathonPlan.race?.city || t('today_run.stitch_route_fallback');
   const readinessBattery = Math.max(
     48,
@@ -380,6 +395,15 @@ export default function TodayRun() {
   const vdotTrend = useMemo(
     () => (Array.isArray(runs) && runs.length > 0 ? computeVdotTrend(runs) : { direction: 'maintaining', delta: 0, hasData: false }),
     [runs],
+  );
+  const acwrInsight = useMemo(() => getTodayRunAcwrInsight(metrics.acwr), [metrics.acwr]);
+  const acwrNarrative = useMemo(
+    () => ({
+      title: t(acwrInsight.calloutTitleKey, acwrInsight.calloutParams),
+      body: t(acwrInsight.calloutBodyKey, acwrInsight.calloutParams),
+      stripLabel: t(acwrInsight.stripLabelKey),
+    }),
+    [acwrInsight.calloutBodyKey, acwrInsight.calloutParams, acwrInsight.calloutTitleKey, acwrInsight.stripLabelKey, t],
   );
 
   const stamina = useMemo(() => {
@@ -408,7 +432,7 @@ export default function TodayRun() {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气引擎' : 'Weather Engine', route: '/weather-engine', icon: 'thermostat' },
+    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
@@ -496,17 +520,125 @@ export default function TodayRun() {
         </header>
 
         <div className="runner-shell-canvas today-run-plan-canvas">
+          <section className="today-run-coaching-strip" aria-label={t('today_run.coaching_intelligence_title')}>
+            <div className="today-run-coaching-strip-inner">
+              <article className="today-run-coaching-answer today-run-coaching-answer--action">
+                <span className="today-run-coaching-answer-kicker">{t('today_run.coaching_intelligence_title')}</span>
+                <strong className={`today-run-coaching-answer-value is-${tone.key}`}>
+                  {tone.key === 'recovery' || tone.key === 'restart'
+                    ? t('today_run.coaching_intelligence_rest')
+                    : tone.key === 'easy'
+                      ? t('today_run.coaching_intelligence_easy')
+                      : t('today_run.coaching_intelligence_run')}
+                </strong>
+                <span className="today-run-coaching-answer-sub">{recommendation.purpose}</span>
+              </article>
+
+              <article className="today-run-coaching-answer today-run-coaching-answer--fitness">
+                <span className="today-run-coaching-answer-kicker">{t('today_run.vdot_trend_label')}</span>
+                <strong className={`today-run-coaching-answer-value is-${vdotTrend.direction}`}>
+                  {vdotTrend.hasData
+                    ? t(`today_run.coaching_intelligence_fitness_${vdotTrend.direction === 'improving' ? 'improving' : vdotTrend.direction === 'declining' ? 'declining' : 'steady'}`)
+                    : '--'}
+                </strong>
+                {vdotTrend.hasData && vdotTrend.delta !== 0 && (
+                  <span className="today-run-coaching-answer-delta">
+                    {vdotTrend.delta > 0 ? '+' : ''}{vdotTrend.delta.toFixed(1)}
+                  </span>
+                )}
+              </article>
+
+              <article className={`today-run-coaching-answer today-run-coaching-answer--load is-acwr-${acwrInsight.zone}`}>
+                <span className="today-run-coaching-answer-kicker">{t('today_run.metric_acwr')}</span>
+                <strong className="today-run-coaching-answer-value">
+                  {metrics.acwr != null ? metrics.acwr.toFixed(2) : '--'}
+                </strong>
+                <span className="today-run-coaching-answer-sub">{acwrNarrative.stripLabel}</span>
+              </article>
+
+              <article className="today-run-coaching-answer today-run-coaching-answer--shoe">
+                <span className="today-run-coaching-answer-kicker">{t('today_run.coaching_intelligence_shoe_label')}</span>
+                <strong className="today-run-coaching-answer-value">
+                  {recommendedShoeName || t('today_run.coaching_intelligence_no_shoe')}
+                </strong>
+                {recommendedShoeMileageLeftKm > 0 && (
+                  <span className="today-run-coaching-answer-sub">
+                    {t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })}
+                  </span>
+                )}
+                {recommendedShoeHealth && recommendedShoeHealth.healthPercent != null && (
+                  <span className={`today-run-shoe-health today-run-shoe-health--${recommendedShoeHealth.healthPercent > 50 ? 'healthy' : recommendedShoeHealth.healthPercent > 20 ? 'warning' : 'replace'}`}>
+                    <span className="today-run-shoe-health-bar">
+                      <span className="today-run-shoe-health-bar-fill" style={{ width: `${Math.min(100, recommendedShoeHealth.healthPercent)}%` }} />
+                    </span>
+                    <span className="today-run-shoe-health-label">
+                      {recommendedShoeHealth.healthPercent > 50
+                        ? t('today_run.shoe_health_healthy')
+                        : recommendedShoeHealth.healthPercent > 20
+                          ? t('today_run.shoe_health_warning')
+                          : t('today_run.shoe_health_replace')}
+                    </span>
+                  </span>
+                )}
+              </article>
+            </div>
+          </section>
+
           <section className="today-run-plan-hero">
             <div className="today-run-plan-hero-copy">
               <span className="today-run-plan-kicker">{t('today_run.stitch_focus_label')}</span>
               <h1>{marathonPlan.focusTitle}</h1>
               <p>{marathonPlan.focusCopy}</p>
 
+              <InfoDisclosure className="today-run-overview-disclosure">
+                <p>{t('today_run.copy')}</p>
+              </InfoDisclosure>
+
+              <div className="today-run-plan-morning-briefing">
+                <span className="today-run-plan-morning-briefing-label">{t('today_run.morning_briefing_label')}</span>
+                <p>{morningBriefing}</p>
+                <button
+                  type="button"
+                  className={`today-run-plan-downshift-btn${isDownshifted ? ' is-active' : ''}`}
+                  onClick={() => setIsDownshifted(!isDownshifted)}
+                >
+                  <AppIcon name={isDownshifted ? 'refresh' : 'low_priority'} className="runner-dashboard-side-link-icon" />
+                  <span>{t(isDownshifted ? 'profile.reset' : 'today_run.downshift_trigger')}</span>
+                </button>
+              </div>
+
               <div className="today-run-plan-badges">
                 <span className="today-run-marathon-pill">{coachSessionTitle}</span>
                 <span className="today-run-marathon-pill">{heroLocation}</span>
                 <span className="today-run-marathon-pill">{marathonPlan.countdown}</span>
-                <span className="today-run-marathon-pill">{`${t('analysis.stitch_confidence', { value: confidence.score })}`}</span>
+              </div>
+
+              <div className="today-run-plan-rationale">
+                <div className="today-run-plan-rationale-header">
+                  <span className="today-run-plan-rationale-label">{t('today_run.rationale_title')}</span>
+                </div>
+                <div className="today-run-plan-rationale-content">
+                  {reasons.slice(0, 3).map((reason, index) => (
+                    <span key={index} className="today-run-plan-rationale-item">
+                      <AppIcon name="check_circle" className="today-run-plan-rationale-icon" />
+                      {reason}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`today-run-load-callout is-${acwrInsight.zone}`}>
+                <div className="today-run-load-callout-copy">
+                  <span>{t('today_run.acwr_state_kicker')}</span>
+                  <strong>{acwrNarrative.title}</strong>
+                  <p>{acwrNarrative.body}</p>
+                </div>
+                <div className="today-run-load-callout-metric">
+                  <small>{t('today_run.acwr_state_current_label')}</small>
+                  <strong>{metrics.acwr != null ? metrics.acwr.toFixed(2) : '--'}</strong>
+                  <span className="today-run-load-callout-zone">{acwrNarrative.stripLabel}</span>
+                  <span>{t('today_run.acwr_state_safe_zone')}</span>
+                </div>
               </div>
 
               <div className="today-run-plan-hero-metrics">
@@ -611,6 +743,10 @@ export default function TodayRun() {
 
           <section className="today-run-plan-grid">
             <div className="today-run-plan-left">
+              <div className="mb-6">
+                <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
+              </div>
+
               <article className="today-run-plan-card">
                 <div className="today-run-plan-card-head">
                   <div>

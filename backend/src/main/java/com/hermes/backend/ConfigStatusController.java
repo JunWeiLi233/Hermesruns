@@ -17,12 +17,19 @@ public class ConfigStatusController {
     }
 
     /**
-     * Single place for programmers to check which integrations are configured.
-     * No secrets are returned.
+     * Public config check for the SPA to show/hide integration buttons.
      */
     @GetMapping("/status")
-    public Map<String, Object> getUnifiedStatus() {
-        return systemConfigService.getUnifiedConfigStatus();
+    public Map<String, Object> getPublicStatus() {
+        return systemConfigService.getPublicConfigStatus();
+    }
+
+    /**
+     * Detailed diagnostic status for admins.
+     */
+    @GetMapping("/admin/status")
+    public Map<String, Object> getAdminStatus() {
+        return systemConfigService.getAdminConfigStatus();
     }
 }
 

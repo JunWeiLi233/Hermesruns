@@ -1,0 +1,449 @@
+# Gemini CLI custom command
+
+[command]
+description = "Run the Hermes bounded autonomous workflow. Reads TASKS.md, picks the top task, implements it, verifies, reviews, promotes follow-ups, and self-loops until no promotable work remains."
+
+[command.prompt]
+text = """
+# Hermes Adaptive Workflow
+
+Treat `/auto-hermes` as the canonical Hermes repo shortcut.
+If `TASKS.md` exists, `/auto-hermes` by itself is enough to start queue execution.
+
+---
+
+## Session Start
+
+Run once, in order, before any task work:
+
+1. **`using-superpowers`** — lock session discipline: `/auto-hermes` now treats the relevant superpowers skills as mandatory workflow helpers for this run. Hermes gates take precedence, user instructions override everything.
+
+2. **Check `.ai-sync/HUMAN_LOOP.md`** — if it says `pause`, `stop`, or `must-ask`, stop immediately. Otherwise check it only when a stop condition is imminent; do not re-read it every iteration.
+
+3. **Refresh queue context** — run:
+   ```
+   node .tools/generate-codex.js
+   node .tools/optimize-agent-context.mjs --agent gemini --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
+   powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 -Quiet
+   node .tools/omx-auto-hermes-bridge.mjs
+   ```
+   Then read `.ai-codex/optimized-claude.md` for queue status at session start. Only read `TASKS.md` directly if the regeneration command fails.
+
+4. **Read** `AGENTS.md`, `docs/auto-hermes/index.md` when present, `.ai-sync/OMX_AUTO_HERMES_BRIDGE.md`, `.ai-sync/AGENT_SYNC.md`, then `.ai-sync/CONTEXT_LEDGER.md`.
+
+5. **Record-system posture** — treat `AGENTS.md` as the policy plane and top-level map, then use `docs/auto-hermes/index.md` plus the controller/coordinator brief for progressive disclosure. Do not broaden into multiple workflow files unless the current round actually needs them.
+
+`.ai-codex/optimized-claude.md` is the queue status at session start only. After any TASKS.md write during the session, use the re-read triggers below — `optimized-claude.md` is stale after the first write.
+
+Do not re-read these files at the start of every loop iteration. Re-read only on these specific triggers:
+- Re-read `TASKS.md` after step 9 (both must-fix and reverse-recommended branches write to it), step 11, or L4-6 writes to it, before re-entering Level 1.
+- Re-read `.ai-sync/CONTEXT_LEDGER.md` after L4-4 writes held brainstorming candidates to it.
+- Re-read `.ai-sync/AGENT_SYNC.md` before every task selection round if `git log --oneline -5` shows a commit from a non-self agent since the last round, or if `.ai-sync/AGENT_SYNC.md`'s `## Active Claims` was non-empty at session start.
+
+---
+
+## Mode Switch — Concrete Task vs. Self-Loop
+
+**Check for arguments first. Mode is determined before anything else.**
+
+### Concrete Task Mode (arguments provided)
+When `/auto-hermes` is called with a specific task, instruction, or description:
+- **Vagueness check**: if the argument has no file reference, no function/symbol target, no clear Done-when, and no concrete acceptance criteria — invoke the `deep-interview` OMX skill with a `--quick` scope sharpening pass before execution (notation: `$deep-interview --quick <args>` is shorthand for "invoke the OMX deep-interview skill in quick mode", not a literal shell command). If OMX is unavailable, proceed with a best-effort scope written inline and append one line to `.ai-sync/CONTEXT_LEDGER.md` noting `deep-interview: skipped (OMX unavailable)` — do not block the round.
+- **New feature/component/page**: trigger `brainstorming` (see Skill Triggers) — explore 3 design options internally, score them against `design.md`, the current approved Hermes surface, any explicit user reference, and the frontend design-review gate, then choose the strongest option autonomously. Ask the user only if the Human Gate is triggered.
+- If already concrete — proceed to the Canonical Round Shape with `mode=concrete`. **Retain `mode=concrete` as the active mode for the entire duration of this round — do not lose it between steps.**
+- After the task is complete and verified: **stop**. Steps 10 and 11 are skipped; step 12 stops rather than re-entering the engine. Do not promote follow-ups or enter the self-loop.
+
+### Self-Loop Mode (no arguments)
+When `/auto-hermes` is called with no arguments:
+- Enter the Self-Loop Engine below.
+- Continue looping through all promotion levels until a stop condition fires.
+
+---
+
+## Skill Triggers
+
+All skill triggers are defined here. This is the single source of truth. Step numbers (1–12) reference the Canonical Round Shape steps below. L4-N numbers (L4-1 through L4-7) reference the Level 4 Self-Generation steps in the Self-Loop Engine.
+
+### Claude-side skills (`.claude/skills/`)
+
+| Skill | Trigger condition | Mandatory at |
+|---|---|---|
+| `ui-ux-pro-max` | Round touches UI structure, visual design, interaction patterns, or new/refactored components | PM step (step 3) — before locking frontend inputs; Builder (step 4) — before writing any UI code. **Authority order**: current live Hermes surface → explicit user reference → skill suggestions. Never overrides an approved layout without explicit user instruction. |
+| `frontend-design` | Any frontend implementation round | Builder (step 4) — apply as checklist throughout implementation |
+| `translation-sync` | Any user-visible string added or changed in JSX | Step 6 — after Verify, before code-reviewer. Run `node .tools/check-translations.mjs`. Authoritative exit-code behavior: **exit 0** → proceed to step 7. **exit 1** (missing/mismatched keys) → block this round; fix `frontend/src/i18n/translations.js` in both `zh-CN` and `en`, rerun until exit 0. **exit 2** (non-blocking bypass-scan findings only) → continue, but write one tech-debt task to `## Tech Debt Tasks` naming the specific bypass site(s). Never claim the step passed without capturing the exit code. |
+| `handoff-state` | Scope (known after PM step) will touch 5+ files; OR a blocker stops the loop | After PM step (step 3), before Builder (step 4): write/refresh `.claude/CLAUDE_CHECKPOINT.md` — must include `commitSha: <current git HEAD SHA>` so `reverse-recommended` can revert atomically. Before stopping on blocker: write checkpoint. |
+| `caveman` | User says `caveman`, `terse`, `less tokens`; OR context budget is visibly tight | Session-wide — stays active until user disables |
+| `loop-mode` | Always active in Self-Loop Mode | Level 4 self-generation: invokes `suggest-tasks.mjs` as part of L4-1. **Evolver pass ordering**: runs *after* step 10 (follow-up + tech-debt pass) and *before* step 11 (TASKS.md write), so any evolver-flagged debt lands in the same TASKS.md write. Trigger only when the round touched 3+ files OR added a new function, class, or branch that did not previously exist in the repo — skip for single-file style fixes, copy changes, or selector changes. If the host runtime supports agent dispatch, that pass may use the `evolver` agent card; otherwise keep it as a local review/evolution pass with the same contract. |
+
+### OMX skills (`.codex/skills/`) — require OMX runtime
+
+| Skill | Trigger condition | Mandatory at |
+|---|---|---|
+| `deep-interview` | Vague argument (no files/symbols/acceptance criteria); PM finds scope unclear; Level 4 candidate is broad | Mode switch; PM step (step 3); L4-3 — use `--quick` flag. If OMX is unavailable: skip and append one line `deep-interview: skipped (OMX unavailable)` to `.ai-sync/CONTEXT_LEDGER.md`; do not block the round. |
+| `ralplan` | Task is `structural-redesign` or `cross-stack` touching 5+ files; Level 4 candidate is architectural | PM step (step 3) — output replaces PM's own plan |
+| `ralph` | Task has `mustFixCount: 2` or higher in its task text; task is explicitly marked critical | Builder (step 4) — use `--no-deslop` inside the Hermes loop |
+| `team` | PM picks `cross-stack` AND OMX team runtime (tmux) is confirmed available | Builder (step 4) — fall back to sequential if tmux unavailable |
+
+### RTK (shell compactor) — Codex only
+
+| Tool | Trigger condition | Mandatory at |
+|---|---|---|
+| RTK | Any shell verification, build, or lint command | Step 5 (Verify) — prefer RTK-wrapped commands for `mvnw`, `npm run`, `node .tools/...`; RTK is a compactor, not proof of success; always read returned status |
+
+### Superpowers skills (`~/.codex/superpowers/`) — mandatory workflow layer
+
+Superpowers is installed in this workspace. `/auto-hermes` treats the listed superpowers skills as mandatory workflow helpers when their trigger conditions match. This is a repo/workflow contract, not a claim that the host runtime auto-invokes them natively.
+
+**Authority**: Hermes-specific gates (runtime proof, design review, Task Quality Rubric, Evidence Gate) outrank superpowers skills. User instructions outrank both.
+
+| Skill | Trigger condition | Mandatory at | Rule |
+|---|---|---|---|
+| `using-superpowers` | Once per session | Session Start step 1 — before anything else | Lock discipline; from this point `/auto-hermes` must follow the listed superpowers workflow rules for the rest of the run |
+| `brainstorming` | Task involves a new feature, new component, or new page AND does not already have specific files and a concrete implementation approach stated | PM step (step 3) or Mode Switch in Concrete Task Mode — before any implementation, regardless of which promotion level selected the task. **Concrete Task Mode**: produce 3 options with tradeoffs, choose the strongest autonomously using `design.md`, the current approved Hermes surface, any explicit user reference, and the frontend design-review gate, then implement it. **Self-Loop Mode**: fires at PM step (step 3) whenever the task is a new feature, component, or page — this applies to tasks promoted from any level (L1, L2, L3, or L4). Skip at PM step only if task already contains `[brainstorming: complete]` (set by L4-4). Ask the user only when the Human Gate says the design choice is a real product fork. | A brainstorming pass that produces 0 options passing Evidence Gate is treated as a gate failure — do not promote. Rejected options are logged to `.ai-sync/CONTEXT_LEDGER.md` as held candidates only — not queued anywhere. |
+| `subagent-driven-development` | Task has 2+ genuinely parallelizable subtasks with disjoint file ownership — each subtask could be implemented independently and merged | Builder (step 4) — if the host runtime supports agent dispatch, use one fresh subagent per independent subtask; otherwise keep the same decomposition contract locally and integrate before code review | Do not trigger for sequential work or tasks that simply touch many files. Touching many files ≠ disjoint ownership. |
+| `systematic-debugging` | Any verification failure, test failure, or reported bug during the current round | Before any fix attempt in step 4 or step 5 — diagnose root cause first. For must-fix tasks: fires at step 4 of the must-fix round, not when the verdict was issued. | Iron law: no fix without confirmed root cause. Never retry the same failing command without understanding why. |
+| `verification-before-completion` | Always | Step 5 (Verify) — before marking this step done | Iron law: evidence before assertions. Do not claim "done", "fixed", or "passing" without verification output in hand. If verification cannot run, say so explicitly. |
+| `requesting-code-review` | Non-trivial task: 2+ files changed, new logic, or new feature | Step 7 — after translation-sync (step 6), before Customer Pass (step 8). Run a fresh `code-reviewer` review pass. If the host runtime supports agent dispatch, this may use the `code-reviewer` agent card; otherwise keep the same review contract locally. If code-reviewer emits `must-fix`, the Reviewer verdict is `must-fix-before-next-round`. | The Reviewer reads code-reviewer output — the Reviewer does not launch code-reviewer. |
+| `finishing-a-development-branch` | User explicitly requests branch/PR wrap-up or publishing | Finish Action only — replaces simple auto-commit with structured branch-finish workflow | Do not invoke for normal loop completions; local commit is the default |
+
+---
+
+## Self-Loop Engine
+
+**(Self-Loop Mode only. Not used in Concrete Task Mode.)**
+
+`/auto-hermes` is a continuous loop. It does not stop when `## Active Tasks` is empty — it promotes and continues. The **loop helper** (`auto-hermes-loop.mjs`) is the single authority for task selection and loop state. Claude runs as the executor: it reads the brief, executes one bounded round, then runs round-close and re-enters.
+
+### Claude Self-Loop Protocol (primary loop mechanism)
+
+At the start of Self-Loop Mode, and after every completed round, run this cycle:
+
+**Step A — Refresh the loop brief:**
+```
+node .tools/auto-hermes-loop.mjs --write --runtime gemini
+```
+This writes `.ai-sync/AUTO_HERMES_COORDINATOR.md` with the next task and the `Next Action` directive.
+
+**Step B — Read the coordinator brief:**
+Open `.ai-sync/AUTO_HERMES_COORDINATOR.md`. Check `Next Action`:
+- `claude-execute-round` → proceed to Step C with the `Current Work Unit` as the active task.
+- `stop` → go to the Stop step below.
+- Any other value → treat as `stop` unless a live executor is explicitly wired.
+
+**Step C — Execute one bounded round:**
+Run the full Canonical Round Shape (PM → Builder → code-reviewer → Customer Pass → Reviewer) on the work unit emitted in the coordinator brief. The `Surface`, `Files`, `Done when`, and `Verify` fields in the brief are authoritative — do not re-read TASKS.md to pick a different task.
+
+- Frontend surface: full frontend pipeline including translation-sync, lint, and vite build.
+- Backend surface: full backend pipeline including mvnw compile and targeted tests.
+- Cross-stack: both pipelines, sequential.
+
+**Step D — Close the round:**
+After verification, call round-close with real outputs (copy values from the coordinator brief):
+```
+node .tools/auto-hermes-round-close.mjs --write --agent gemini \
+  --task "<title>" --surface "<surface>" --owner "<owner>" \
+  --files "<f1>||<f2>" --verify "<verify>" --verdict pass
+```
+If verification failed: use `--verdict fail --blocker "<reason>"`. Round-close writes the must-fix task to TASKS.md automatically.
+
+**Round-close is mandatory every round** — it is the mechanism that advances TASKS.md, promotes the next task, and refreshes the coordinator brief. Never skip it.
+
+**Step E — Loop back to Step A.**
+
+### Level Promotion (inside the loop helper — reference only)
+
+The loop helper internally runs these promotion levels when it selects the next task. You do not run these manually — they are driven by the controller. Documented here for context:
+
+- **Level 1 — Active Tasks**: top item in `## Active Tasks` wins. Must-fix tasks trigger `systematic-debugging` at Builder step.
+- **Level 2 — Suggested Next Tasks**: highest-tier, concrete candidate (has `Files:`, `Done when:`, `Verify:`). Passes Daily Opening Test.
+- **Level 3 — Tech Debt Tasks**: first bounded item with `Files:`, `Done when:`, `Verify:`.
+- **Level 4 — Self-Generation**: runs `node .tools/suggest-tasks.mjs --max 5`, applies Evidence Gate + Feature Invention Gate + Task Quality Rubric + Tier Gate. Writes only the single strongest passing candidate. Runaway Guard: if 3 consecutive L4 rounds produce no accepted candidate, stop and checkpoint.
+
+The controller's `loopDecision` field is the canonical signal: `continue-self-loop` = proceed, anything else = stop.
+
+### Stop
+When `Next Action` is `stop` (or controller signals no promotable work):
+- Run the auto-commit finish action if product source files changed (see Finish Action).
+- Report: "loop complete — no promotable work remains."
+- Stop.
+
+### Runaway Guard
+Lives in `.ai-sync/RUNAWAY_COUNTER.json` as `{ "count": N }`. The loop helper manages this file. If the guard fires (count ≥ 3), the controller emits `loopDecision: stop-runaway-guard` — Step B will read `stop` and halt. Write a `handoff-state` checkpoint before stopping.
+
+---
+
+## TASKS.md Section Structure
+
+TASKS.md sections appear in this fixed order (top to bottom):
+
+```
+## Active Tasks
+## Blocked Tasks
+## Suggested Next Tasks
+## Tech Debt Tasks
+## Daily Log
+```
+
+`## Blocked Tasks` holds tasks that cannot proceed because a must-fix verdict was issued against them. Each entry is the original task block verbatim, with one annotation line appended:
+
+```
+- Task title
+  Files: ...
+  Done when: ...
+  Verify: ...
+  Blocked by: <must-fix title> | Original: ## Suggested Next Tasks
+```
+
+If `## Blocked Tasks` does not exist when step 9 first needs it, create the section between `## Active Tasks` and `## Suggested Next Tasks`.
+
+---
+
+## Shared Lifecycle Reference
+
+Shared `/auto-hermes` lifecycle rules now live in:
+- [auto-hermes-shared-contract.md](C:\Users\Junwei\Downloads\Hermes\.codex\workflows\auto-hermes-shared-contract.md)
+- [auto-hermes-architecture.md](C:\Users\Junwei\Downloads\Hermes\.codex\workflows\auto-hermes-architecture.md)
+- [auto-hermes-claim-taxonomy.md](C:\Users\Junwei\Downloads\Hermes\.codex\workflows\auto-hermes-claim-taxonomy.md)
+
+Those workflow docs are now the authority for:
+- follow-up and tech-debt pass
+- canonical round shape
+- shared runtime-truth wording
+- autonomous decision contract
+- human gate
+- stop rules
+- finish action
+
+This command file should only own:
+- session start behavior
+- mode switch behavior
+- skill triggers
+- Claude-specific runtime/skill details
+- frontend design-review routing details
+
+## PM → Builder → code-reviewer → Customer Pass → Reviewer Cycle
+
+### PM
+- Read only the active task and minimal local context.
+- Choose exactly one work unit for the round.
+- Pick owner: frontend, backend, or cross-stack.
+- Use `TICKET.md` only when the round is broad enough to benefit from a written ticket.
+- `deep-interview` trigger: see Skill Triggers.
+- `brainstorming` trigger: see Skill Triggers — skip if task contains `[brainstorming: complete]`.
+- `ralplan` trigger: see Skill Triggers.
+- For non-trivial frontend rounds, lock before handing to Builder:
+  - exact surface, visual goal, preserve list, round type, reference source
+  - `ui-ux-pro-max` trigger: see Skill Triggers — authority order is strict.
+
+### Builder
+- Implement only the chosen work unit.
+- Keep contracts explicit and bounded.
+- `team` trigger (cross-stack): see Skill Triggers.
+- `ralph` trigger: see Skill Triggers.
+- `subagent-driven-development` trigger: see Skill Triggers — only for genuinely parallelizable subtasks with disjoint file ownership.
+- `systematic-debugging` trigger: see Skill Triggers — fires on any error during implementation, and fires first on must-fix tasks before any code is written.
+- For user-visible frontend work: coach-voice copy; translation-sync runs at step 6, not here; do not skip design-quality review when layout, hierarchy, or states change.
+- For live website/runtime claims, use the repo proof gates — do not assume source edits are live.
+
+### Customer Pass
+Runs at step 8, full pipeline only, runner-facing surfaces only.
+
+Checks the changed surface from three runner personas (The Competitor, The Builder, The Enthusiast):
+- UI/visual design problems (hierarchy, empty states, mobile layout)
+- Feature gaps (what the persona would immediately reach for)
+- Data or logic errors (wrong numbers, missing metric basis, misleading display)
+- Coach-voice quality
+
+Verdicts:
+- `customer-approved` — reviewer proceeds
+- `customer-must-fix` — reviewer must block
+- `customer-flagged` — reviewer decides whether to block or log as follow-up
+
+### Reverse-Recommended Revert Primitive
+When Reviewer emits `reverse-recommended`, the revert uses the `commitSha` recorded in `.claude/CLAUDE_CHECKPOINT.md` (written by `handoff-state` at step 3 of this round). Concrete revert rules:
+- **If `git HEAD` matches `commitSha`** (no in-round commit was made): hard-reset the *specific files* the round touched to `commitSha` via `git checkout <commitSha> -- <file1> <file2> ...` — never a repo-wide `git reset --hard`.
+- **If the round committed on top of `commitSha`** (round produced commit `R`): revert via `git revert --no-edit R` so the revert itself is a new commit. Do not force-push; the revert stays local until push gates pass.
+- **If no checkpoint exists or `commitSha` is missing**: escalate through the Human Gate before any destructive action.
+- After revert: re-run the runtime proof gate for the touched surface and confirm the file(s) match the pre-round state; write a new `## Active Tasks` entry named `reverse: <original task title>` with `Files:`, `Done when: surface matches commit <commitSha>`, `Verify: git diff <commitSha> -- <files>`.
+- Never auto-revert across multiple rounds; the primitive targets only the current round's diff.
+
+### Reviewer
+Runs at step 9. In full pipeline: reads code-reviewer output first, then Customer Pass output. In one-specialist: reads Builder output directly.
+- Check regression risk, trust gaps, missing states, missing tests, shallow product value.
+- For non-trivial frontend rounds: hierarchy, spacing, fidelity to design direction, coach-value tone, mobile and desktop integrity.
+- Output exactly one of: `approve-next-round` · `must-fix-before-next-round` · `reverse-recommended`
+- `must-fix-before-next-round` is required when Customer Pass emitted `customer-must-fix` or code-reviewer emitted `must-fix`.
+- When Customer Pass emitted `customer-flagged`: the Reviewer decides — if the flagged issue would cause a runner to distrust the data or abandon the surface, treat it as `customer-must-fix` and block; otherwise log it as a follow-up task and proceed with `approve-next-round`.
+- The Reviewer reads and synthesizes — it does not launch new subagents.
+
+### Tech-Debt Reviewer
+Runs after Reviewer and before queue writeback on every round.
+- This is a mandatory bounded check, not an optional polish pass.
+- Inspect only the just-changed files plus at most 2 directly related files.
+- Produce at most 1 implementation-ready tech-debt item.
+- Allowed output:
+  - one strict debt task with `Files:`, `Context:`, `Done when:`, `Verify:`
+  - or `none` when no bounded debt is justified
+- Do not write vague cleanup, speculative architecture, or duplicate debt that is weaker than the current top debt item.
+- In `mode=concrete`, still run this review, but do not use it to extend the run into autonomous self-loop continuation unless the current round explicitly owns queue writeback.
+
+---
+
+## Frontend Design-Review Workflow
+
+Applies when the round changes: layout or hierarchy, empty/loading/error states, interaction treatment, reference-driven UI, or primary-surface copy.
+
+Routing (evaluated at Canonical Round step 2 before locking the execution shape):
+- Tiny visual fix, no hierarchy risk → single-agent shape
+- Non-trivial frontend change → one-specialist shape: `frontend-agent → reviewer-agent` (step 9 included). If the surface is runner-facing, also run step 8 (Customer Pass) before the Reviewer — insert it between step 5 and step 9 even in one-specialist shape.
+- Broad or ambiguous visual target → full pipeline: `PM → frontend-agent → reviewer-agent`
+
+The round does not pass just because the code builds. Weak design review → strongest issue becomes next must-fix.
+
+---
+
+## Runtime Truth
+- Do not claim the live website changed unless the frontend runtime proof gate passes.
+- Do not claim backend behavior changed unless the backend runtime proof gate passes.
+- If source changed but runtime sync did not happen, report: "source changed, live site not synced yet."
+- Hallucination-sensitive runtime claims must use the shared claim taxonomy instead of raw yes/no wording:
+  - self-loop continuation
+  - loop owner execution
+  - Claude-side agent/reviewer dispatch
+  - native ECC availability
+  - RTK availability
+- `prepared` or `requested` never means `executing`, and `executing` never means `verified`.
+
+## Loop Ownership
+
+`.tools/auto-hermes-loop.mjs` is the preferred outer-loop owner whenever an executor path is configured.
+
+That means:
+- the helper owns `controller -> worker round -> controller` re-entry
+- the helper’s claim states are the authority for whether the loop is merely prepared, actively executing, or fully verified
+- prompt-level continuation is a fallback, not the primary loop mechanism
+
+---
+
+## Autonomous Decision Contract
+
+The agent makes all decisions during a run without asking the user. This is not optional behavior.
+
+### Forbidden patterns — never emit these mid-run
+
+| Forbidden | Replace with |
+|---|---|
+| "If you want, I can do one more round…" | Just do the next round. |
+| "Here's what each console line / error means…" | Diagnose internally. Fix or write a `[must-fix]` task. |
+| "The fastest cleanup is: hard refresh, clear cache…" | Do the cleanup in code. Do not instruct the user to do it. |
+| "Would you like me to…" / "Should I…" | Make the decision and act. |
+| "I noticed X error. Let me know if you'd like me to fix it." | Fix it now or write a must-fix task and continue. |
+| "Status now: that path is fixed. If you still see…" | Verify with the proof gate. If it passes, proceed. If not, fix it. |
+| Any mid-run status report or error explanation narrated at the user | Internal only. Only the final stop message is user-facing. |
+
+### When verification fails mid-run
+
+1. `systematic-debugging` fires immediately — diagnose root cause internally.
+2. If the fix is cheap and bounded: fix it within the same round.
+3. If the fix requires a new round: write a `[must-fix]` task to `## Active Tasks`, go to step 12, re-enter Level 1.
+4. Only escalate to the Human Gate when the fix is destructive or irreversible and cannot proceed safely.
+
+Never narrate the error to the user and stop. Never suggest cleanup steps the agent can do in code.
+
+---
+
+## Concurrent Agent Resilience
+
+Other agents (Codex, Gemini, Cursor, etc.) may be writing to the same repo in parallel. This is expected and normal. The self-loop never stops, pauses, or waits because of concurrent activity. Instead it absorbs, synthesizes, and continues.
+
+### Pre-task sync check (before every round)
+
+Before picking a task, run:
+```
+git log --oneline -5
+```
+If the most recent commit was not made by you (check `git config user.name`), re-read `.ai-sync/AGENT_SYNC.md`. Then:
+- If another agent **completed** work on the same surface you're about to pick → read their changed files first so your work builds on, not over, theirs.
+- If another agent **claims** the exact surface you were about to pick → skip it and pick the next unowned surface. Do not duplicate work that has an active claim.
+- If their work is on a **different surface** → ignore their activity and proceed normally.
+
+### Mid-task file conflict (another agent committed while you were working)
+
+Before writing a file, check if it changed since you last read it:
+```
+git diff HEAD -- <file>
+```
+If it changed:
+1. Re-read the file in its current state.
+2. Identify the regions you intended to change vs. the regions they changed.
+3. Apply the synthesis rule below.
+4. Write the synthesized result. Never silently overwrite.
+
+### Synthesis rules (applied in order)
+
+| Situation | Action |
+|---|---|
+| Their change and yours are in **different regions** of the file | Merge both — keep all changes |
+| Their change and yours affect the **same region** but are compatible (e.g. both add new i18n keys) | Synthesize — combine the additions |
+| Their change and yours **conflict** (same lines, different intent) | Keep the version that better serves the runner outcome; write a `[concurrent-conflict]` tech-debt task naming the file and line range; continue |
+| Their change **subsumes yours** (they already did what you planned) | Skip that file; mark the deliverable done; continue to next file |
+
+### Absorbing good external work
+
+If another agent added something genuinely valuable to a file you were about to change:
+- Keep their addition. Do not revert or ignore it.
+- If their addition overlaps your implementation plan, update your plan to compose on top of it rather than replace it.
+- Credit it in the round's verification notes (e.g. "absorbed Codex's `evictStaleWindows` eviction logic").
+
+### Commit attribution
+
+Never amend or rewrite another agent's commits. Your commit stands on its own, following the changed-after-theirs version of the files.
+
+### The one rule that overrides everything
+
+**Never stop, pause, or ask the user because another agent is active.** Concurrent activity is a collaboration signal, not a blocker. Worst case: write a `[concurrent-conflict]` must-fix task and continue to the next file.
+
+---
+
+## Human Gate
+Ask the human only when:
+- `.ai-sync/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
+- Verification failed and the next move is risky or irreversible
+- A `reverse-recommended` revert cannot be performed automatically
+- A product fork has non-obvious consequences
+
+Do not ask the human between rounds for normal loop continuation.
+
+---
+
+## Stop Rules
+Stop only when:
+- Level 5 reached (all promotion levels exhausted)
+- Verification fails with a real unresolvable blocker — `handoff-state` trigger: write checkpoint before stopping
+- `reverse-recommended` revert requires human input — `handoff-state` trigger: write checkpoint before stopping
+- `.ai-sync/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask` — `handoff-state` trigger: write checkpoint before stopping
+- Runaway Guard fires (counter reaches 3 in `.ai-sync/RUNAWAY_COUNTER.json`)
+
+**`## Active Tasks` being empty is not a stop condition.** Promote and continue.
+
+---
+
+## Finish Action
+On a Level 5 stop, run the auto-commit finish action if **product source files** changed.
+
+Product source files: anything under `frontend/src/`, `backend/src/`, `frontend/public/`, migration files, `translations.js`, `pom.xml`. Commit gates are defined in `CLAUDE.md` — run them before staging.
+
+Not product source files (never trigger a commit): `.ai-sync/`, `.claude/`, `.ai-codex/`, `TASKS.md`, `CLAUDE.md`, `AGENTS.md`, `PRODUCT.md`, task images, loop guides, local exports.
+
+- Commit when all commit gates pass
+- Push only when a real publish need exists and push gates pass
+- Local commit is the default finish state
+- `finishing-a-development-branch` trigger: see Skill Triggers — only on explicit user request
+
+---
+
+## Notes
+- Run one bounded task per round — never pick 1–3 tasks at once.
+- Source edits are not proof of a live change.
+- No forced feature branches, PR rituals, or discard-the-diff circuit breakers by default.
+"""

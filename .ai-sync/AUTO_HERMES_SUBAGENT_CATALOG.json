@@ -1,0 +1,1097 @@
+{
+  "sourceRepo": "https://github.com/VoltAgent/awesome-codex-subagents",
+  "mode": "repo-local-codex-only",
+  "updatedAt": "2026-04-17T22:42:27.474Z",
+  "cacheDir": ".ai-sync/voltagent-codex-subagents",
+  "agentsDir": ".codex/agents",
+  "installedAgents": [
+    {
+      "repoName": "api-designer",
+      "installedName": "voltagent-api-designer",
+      "category": "01-core-development",
+      "description": "Use when a task needs API contract design, evolution planning, or compatibility review before implementation starts.",
+      "file": ".codex/agents/voltagent-api-designer.toml",
+      "sourceRelativePath": "categories/01-core-development/api-designer.toml"
+    },
+    {
+      "repoName": "backend-developer",
+      "installedName": "voltagent-backend-developer",
+      "category": "01-core-development",
+      "description": "Use when a task needs scoped backend implementation or backend bug fixes after the owning path is known.",
+      "file": ".codex/agents/voltagent-backend-developer.toml",
+      "sourceRelativePath": "categories/01-core-development/backend-developer.toml"
+    },
+    {
+      "repoName": "code-mapper",
+      "installedName": "voltagent-code-mapper",
+      "category": "01-core-development",
+      "description": "Use when the parent agent needs a high-confidence map of code paths, ownership boundaries, and execution flow before changes are made.",
+      "file": ".codex/agents/voltagent-code-mapper.toml",
+      "sourceRelativePath": "categories/01-core-development/code-mapper.toml"
+    },
+    {
+      "repoName": "electron-pro",
+      "installedName": "voltagent-electron-pro",
+      "category": "01-core-development",
+      "description": "Use when a task needs Electron-specific implementation or debugging across main/renderer/preload boundaries, packaging, and desktop runtime behavior.",
+      "file": ".codex/agents/voltagent-electron-pro.toml",
+      "sourceRelativePath": "categories/01-core-development/electron-pro.toml"
+    },
+    {
+      "repoName": "frontend-developer",
+      "installedName": "voltagent-frontend-developer",
+      "category": "01-core-development",
+      "description": "Use when a task needs scoped frontend implementation or UI bug fixes with production-level behavior and quality.",
+      "file": ".codex/agents/voltagent-frontend-developer.toml",
+      "sourceRelativePath": "categories/01-core-development/frontend-developer.toml"
+    },
+    {
+      "repoName": "fullstack-developer",
+      "installedName": "voltagent-fullstack-developer",
+      "category": "01-core-development",
+      "description": "Use when one bounded feature or bug spans frontend and backend and a single worker should own the entire path.",
+      "file": ".codex/agents/voltagent-fullstack-developer.toml",
+      "sourceRelativePath": "categories/01-core-development/fullstack-developer.toml"
+    },
+    {
+      "repoName": "graphql-architect",
+      "installedName": "voltagent-graphql-architect",
+      "category": "01-core-development",
+      "description": "Use when a task needs GraphQL schema evolution, resolver architecture, federation design, or distributed graph performance/security review.",
+      "file": ".codex/agents/voltagent-graphql-architect.toml",
+      "sourceRelativePath": "categories/01-core-development/graphql-architect.toml"
+    },
+    {
+      "repoName": "microservices-architect",
+      "installedName": "voltagent-microservices-architect",
+      "category": "01-core-development",
+      "description": "Use when a task needs service-boundary design, inter-service contract review, or distributed-system architecture decisions.",
+      "file": ".codex/agents/voltagent-microservices-architect.toml",
+      "sourceRelativePath": "categories/01-core-development/microservices-architect.toml"
+    },
+    {
+      "repoName": "mobile-developer",
+      "installedName": "voltagent-mobile-developer",
+      "category": "01-core-development",
+      "description": "Use when a task needs mobile implementation or debugging across app lifecycle, API integration, and device/platform-specific UX constraints.",
+      "file": ".codex/agents/voltagent-mobile-developer.toml",
+      "sourceRelativePath": "categories/01-core-development/mobile-developer.toml"
+    },
+    {
+      "repoName": "ui-designer",
+      "installedName": "voltagent-ui-designer",
+      "category": "01-core-development",
+      "description": "Use when a task needs concrete UI decisions, interaction design, and implementation-ready design guidance before or during development.",
+      "file": ".codex/agents/voltagent-ui-designer.toml",
+      "sourceRelativePath": "categories/01-core-development/ui-designer.toml"
+    },
+    {
+      "repoName": "ui-fixer",
+      "installedName": "voltagent-ui-fixer",
+      "category": "01-core-development",
+      "description": "Use when a UI issue is already reproduced and the parent agent wants the smallest safe patch.",
+      "file": ".codex/agents/voltagent-ui-fixer.toml",
+      "sourceRelativePath": "categories/01-core-development/ui-fixer.toml"
+    },
+    {
+      "repoName": "websocket-engineer",
+      "installedName": "voltagent-websocket-engineer",
+      "category": "01-core-development",
+      "description": "Use when a task needs real-time transport and state work across WebSocket lifecycle, message contracts, and reconnect/failure behavior.",
+      "file": ".codex/agents/voltagent-websocket-engineer.toml",
+      "sourceRelativePath": "categories/01-core-development/websocket-engineer.toml"
+    },
+    {
+      "repoName": "angular-architect",
+      "installedName": "voltagent-angular-architect",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Angular-specific help for component architecture, dependency injection, routing, signals, or enterprise application structure.",
+      "file": ".codex/agents/voltagent-angular-architect.toml",
+      "sourceRelativePath": "categories/02-language-specialists/angular-architect.toml"
+    },
+    {
+      "repoName": "cpp-pro",
+      "installedName": "voltagent-cpp-pro",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs C++ work involving performance-sensitive code, memory ownership, concurrency, or systems-level integration.",
+      "file": ".codex/agents/voltagent-cpp-pro.toml",
+      "sourceRelativePath": "categories/02-language-specialists/cpp-pro.toml"
+    },
+    {
+      "repoName": "csharp-developer",
+      "installedName": "voltagent-csharp-developer",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs C# or .NET application work involving services, APIs, async flows, or application architecture.",
+      "file": ".codex/agents/voltagent-csharp-developer.toml",
+      "sourceRelativePath": "categories/02-language-specialists/csharp-developer.toml"
+    },
+    {
+      "repoName": "django-developer",
+      "installedName": "voltagent-django-developer",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Django-specific work across models, views, forms, ORM behavior, or admin and middleware flows.",
+      "file": ".codex/agents/voltagent-django-developer.toml",
+      "sourceRelativePath": "categories/02-language-specialists/django-developer.toml"
+    },
+    {
+      "repoName": "dotnet-core-expert",
+      "installedName": "voltagent-dotnet-core-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs modern .NET and ASP.NET Core expertise for APIs, hosting, middleware, or cross-platform application behavior.",
+      "file": ".codex/agents/voltagent-dotnet-core-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/dotnet-core-expert.toml"
+    },
+    {
+      "repoName": "dotnet-framework-4.8-expert",
+      "installedName": "voltagent-dotnet-framework-4.8-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs .NET Framework 4.8 expertise for legacy enterprise applications, compatibility constraints, or Windows-bound integrations.",
+      "file": ".codex/agents/voltagent-dotnet-framework-4.8-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/dotnet-framework-4.8-expert.toml"
+    },
+    {
+      "repoName": "elixir-expert",
+      "installedName": "voltagent-elixir-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Elixir and OTP expertise for processes, supervision, fault tolerance, or Phoenix application behavior.",
+      "file": ".codex/agents/voltagent-elixir-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/elixir-expert.toml"
+    },
+    {
+      "repoName": "erlang-expert",
+      "installedName": "voltagent-erlang-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Erlang/OTP and rebar3 expertise for BEAM processes, testing, releases, upgrades, or distributed runtime behavior.",
+      "file": ".codex/agents/voltagent-erlang-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/erlang-expert.toml"
+    },
+    {
+      "repoName": "flutter-expert",
+      "installedName": "voltagent-flutter-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Flutter expertise for widget behavior, state management, rendering issues, or mobile cross-platform implementation.",
+      "file": ".codex/agents/voltagent-flutter-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/flutter-expert.toml"
+    },
+    {
+      "repoName": "golang-pro",
+      "installedName": "voltagent-golang-pro",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Go expertise for concurrency, service implementation, interfaces, tooling, or performance-sensitive backend paths.",
+      "file": ".codex/agents/voltagent-golang-pro.toml",
+      "sourceRelativePath": "categories/02-language-specialists/golang-pro.toml"
+    },
+    {
+      "repoName": "java-architect",
+      "installedName": "voltagent-java-architect",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Java application or service architecture help across framework boundaries, JVM behavior, or large codebase structure.",
+      "file": ".codex/agents/voltagent-java-architect.toml",
+      "sourceRelativePath": "categories/02-language-specialists/java-architect.toml"
+    },
+    {
+      "repoName": "javascript-pro",
+      "installedName": "voltagent-javascript-pro",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs JavaScript-focused work for runtime behavior, browser or Node execution, or application-level code that is not TypeScript-led.",
+      "file": ".codex/agents/voltagent-javascript-pro.toml",
+      "sourceRelativePath": "categories/02-language-specialists/javascript-pro.toml"
+    },
+    {
+      "repoName": "kotlin-specialist",
+      "installedName": "voltagent-kotlin-specialist",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Kotlin expertise for JVM applications, Android code, coroutines, or modern strongly typed service logic.",
+      "file": ".codex/agents/voltagent-kotlin-specialist.toml",
+      "sourceRelativePath": "categories/02-language-specialists/kotlin-specialist.toml"
+    },
+    {
+      "repoName": "laravel-specialist",
+      "installedName": "voltagent-laravel-specialist",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Laravel-specific work across routing, Eloquent, queues, validation, or application structure.",
+      "file": ".codex/agents/voltagent-laravel-specialist.toml",
+      "sourceRelativePath": "categories/02-language-specialists/laravel-specialist.toml"
+    },
+    {
+      "repoName": "nextjs-developer",
+      "installedName": "voltagent-nextjs-developer",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Next.js-specific work across routing, rendering modes, server actions, data fetching, or deployment-sensitive frontend behavior.",
+      "file": ".codex/agents/voltagent-nextjs-developer.toml",
+      "sourceRelativePath": "categories/02-language-specialists/nextjs-developer.toml"
+    },
+    {
+      "repoName": "php-pro",
+      "installedName": "voltagent-php-pro",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs PHP expertise for application logic, framework integration, runtime debugging, or server-side code evolution.",
+      "file": ".codex/agents/voltagent-php-pro.toml",
+      "sourceRelativePath": "categories/02-language-specialists/php-pro.toml"
+    },
+    {
+      "repoName": "powershell-5.1-expert",
+      "installedName": "voltagent-powershell-5.1-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Windows PowerShell 5.1 expertise for legacy automation, full .NET Framework interop, or Windows administration scripts.",
+      "file": ".codex/agents/voltagent-powershell-5.1-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/powershell-5.1-expert.toml"
+    },
+    {
+      "repoName": "powershell-7-expert",
+      "installedName": "voltagent-powershell-7-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs modern PowerShell 7 expertise for cross-platform automation, scripting, or .NET-based operational tooling.",
+      "file": ".codex/agents/voltagent-powershell-7-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/powershell-7-expert.toml"
+    },
+    {
+      "repoName": "python-pro",
+      "installedName": "voltagent-python-pro",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs a Python-focused subagent for runtime behavior, packaging, typing, testing, or framework-adjacent implementation.",
+      "file": ".codex/agents/voltagent-python-pro.toml",
+      "sourceRelativePath": "categories/02-language-specialists/python-pro.toml"
+    },
+    {
+      "repoName": "rails-expert",
+      "installedName": "voltagent-rails-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Ruby on Rails expertise for models, controllers, jobs, callbacks, or convention-driven application changes.",
+      "file": ".codex/agents/voltagent-rails-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/rails-expert.toml"
+    },
+    {
+      "repoName": "react-specialist",
+      "installedName": "voltagent-react-specialist",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs a React-focused agent for component behavior, state flow, rendering bugs, or modern React patterns.",
+      "file": ".codex/agents/voltagent-react-specialist.toml",
+      "sourceRelativePath": "categories/02-language-specialists/react-specialist.toml"
+    },
+    {
+      "repoName": "rust-engineer",
+      "installedName": "voltagent-rust-engineer",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Rust expertise for ownership-heavy systems code, async runtime behavior, or performance-sensitive implementation.",
+      "file": ".codex/agents/voltagent-rust-engineer.toml",
+      "sourceRelativePath": "categories/02-language-specialists/rust-engineer.toml"
+    },
+    {
+      "repoName": "spring-boot-engineer",
+      "installedName": "voltagent-spring-boot-engineer",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Spring Boot expertise for service behavior, configuration, data access, or enterprise API implementation.",
+      "file": ".codex/agents/voltagent-spring-boot-engineer.toml",
+      "sourceRelativePath": "categories/02-language-specialists/spring-boot-engineer.toml"
+    },
+    {
+      "repoName": "sql-pro",
+      "installedName": "voltagent-sql-pro",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs SQL query design, query review, schema-aware debugging, or database migration analysis.",
+      "file": ".codex/agents/voltagent-sql-pro.toml",
+      "sourceRelativePath": "categories/02-language-specialists/sql-pro.toml"
+    },
+    {
+      "repoName": "swift-expert",
+      "installedName": "voltagent-swift-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Swift expertise for iOS or macOS code, async flows, Apple platform APIs, or strongly typed application logic.",
+      "file": ".codex/agents/voltagent-swift-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/swift-expert.toml"
+    },
+    {
+      "repoName": "typescript-pro",
+      "installedName": "voltagent-typescript-pro",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs strong TypeScript help for types, interfaces, refactors, or compiler-driven fixes.",
+      "file": ".codex/agents/voltagent-typescript-pro.toml",
+      "sourceRelativePath": "categories/02-language-specialists/typescript-pro.toml"
+    },
+    {
+      "repoName": "vue-expert",
+      "installedName": "voltagent-vue-expert",
+      "category": "02-language-specialists",
+      "description": "Use when a task needs Vue expertise for component behavior, Composition API patterns, routing, or state and rendering issues.",
+      "file": ".codex/agents/voltagent-vue-expert.toml",
+      "sourceRelativePath": "categories/02-language-specialists/vue-expert.toml"
+    },
+    {
+      "repoName": "azure-infra-engineer",
+      "installedName": "voltagent-azure-infra-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs Azure-specific infrastructure review or implementation across resources, networking, identity, or automation.",
+      "file": ".codex/agents/voltagent-azure-infra-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/azure-infra-engineer.toml"
+    },
+    {
+      "repoName": "cloud-architect",
+      "installedName": "voltagent-cloud-architect",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs cloud architecture review across compute, storage, networking, reliability, or multi-service design.",
+      "file": ".codex/agents/voltagent-cloud-architect.toml",
+      "sourceRelativePath": "categories/03-infrastructure/cloud-architect.toml"
+    },
+    {
+      "repoName": "database-administrator",
+      "installedName": "voltagent-database-administrator",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs operational database administration review for availability, backups, recovery, permissions, or runtime health.",
+      "file": ".codex/agents/voltagent-database-administrator.toml",
+      "sourceRelativePath": "categories/03-infrastructure/database-administrator.toml"
+    },
+    {
+      "repoName": "deployment-engineer",
+      "installedName": "voltagent-deployment-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs deployment workflow changes, release strategy updates, or rollout and rollback safety analysis.",
+      "file": ".codex/agents/voltagent-deployment-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/deployment-engineer.toml"
+    },
+    {
+      "repoName": "devops-engineer",
+      "installedName": "voltagent-devops-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs CI, deployment pipeline, release automation, or environment configuration work.",
+      "file": ".codex/agents/voltagent-devops-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/devops-engineer.toml"
+    },
+    {
+      "repoName": "devops-incident-responder",
+      "installedName": "voltagent-devops-incident-responder",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs rapid operational triage across CI, deployments, infrastructure automation, and service delivery failures.",
+      "file": ".codex/agents/voltagent-devops-incident-responder.toml",
+      "sourceRelativePath": "categories/03-infrastructure/devops-incident-responder.toml"
+    },
+    {
+      "repoName": "docker-expert",
+      "installedName": "voltagent-docker-expert",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs Dockerfile review, image optimization, multi-stage build fixes, or container runtime debugging.",
+      "file": ".codex/agents/voltagent-docker-expert.toml",
+      "sourceRelativePath": "categories/03-infrastructure/docker-expert.toml"
+    },
+    {
+      "repoName": "incident-responder",
+      "installedName": "voltagent-incident-responder",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs broad production incident triage, containment planning, or evidence-driven root cause analysis.",
+      "file": ".codex/agents/voltagent-incident-responder.toml",
+      "sourceRelativePath": "categories/03-infrastructure/incident-responder.toml"
+    },
+    {
+      "repoName": "kubernetes-specialist",
+      "installedName": "voltagent-kubernetes-specialist",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs Kubernetes manifest review, rollout safety analysis, or cluster workload debugging.",
+      "file": ".codex/agents/voltagent-kubernetes-specialist.toml",
+      "sourceRelativePath": "categories/03-infrastructure/kubernetes-specialist.toml"
+    },
+    {
+      "repoName": "network-engineer",
+      "installedName": "voltagent-network-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs network-path analysis, service connectivity debugging, load-balancer review, or infrastructure network design input.",
+      "file": ".codex/agents/voltagent-network-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/network-engineer.toml"
+    },
+    {
+      "repoName": "platform-engineer",
+      "installedName": "voltagent-platform-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs internal platform, golden-path, or self-service infrastructure design for developers.",
+      "file": ".codex/agents/voltagent-platform-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/platform-engineer.toml"
+    },
+    {
+      "repoName": "security-engineer",
+      "installedName": "voltagent-security-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs infrastructure and platform security engineering across IAM, secrets, network controls, or hardening work.",
+      "file": ".codex/agents/voltagent-security-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/security-engineer.toml"
+    },
+    {
+      "repoName": "sre-engineer",
+      "installedName": "voltagent-sre-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs reliability engineering work involving SLOs, alerting, error budgets, operational safety, or service resilience.",
+      "file": ".codex/agents/voltagent-sre-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/sre-engineer.toml"
+    },
+    {
+      "repoName": "terraform-engineer",
+      "installedName": "voltagent-terraform-engineer",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs Terraform module design, plan review, state-aware change analysis, or IaC refactoring.",
+      "file": ".codex/agents/voltagent-terraform-engineer.toml",
+      "sourceRelativePath": "categories/03-infrastructure/terraform-engineer.toml"
+    },
+    {
+      "repoName": "terragrunt-expert",
+      "installedName": "voltagent-terragrunt-expert",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs Terragrunt-specific help for module orchestration, environment layering, dependency wiring, or DRY infrastructure structure.",
+      "file": ".codex/agents/voltagent-terragrunt-expert.toml",
+      "sourceRelativePath": "categories/03-infrastructure/terragrunt-expert.toml"
+    },
+    {
+      "repoName": "windows-infra-admin",
+      "installedName": "voltagent-windows-infra-admin",
+      "category": "03-infrastructure",
+      "description": "Use when a task needs Windows infrastructure administration across Active Directory, DNS, DHCP, GPO, or Windows automation.",
+      "file": ".codex/agents/voltagent-windows-infra-admin.toml",
+      "sourceRelativePath": "categories/03-infrastructure/windows-infra-admin.toml"
+    },
+    {
+      "repoName": "accessibility-tester",
+      "installedName": "voltagent-accessibility-tester",
+      "category": "04-quality-security",
+      "description": "Use when a task needs an accessibility audit of UI changes, interaction flows, or component behavior.",
+      "file": ".codex/agents/voltagent-accessibility-tester.toml",
+      "sourceRelativePath": "categories/04-quality-security/accessibility-tester.toml"
+    },
+    {
+      "repoName": "ad-security-reviewer",
+      "installedName": "voltagent-ad-security-reviewer",
+      "category": "04-quality-security",
+      "description": "Use when a task needs Active Directory security review across identity boundaries, delegation, GPO exposure, or directory hardening.",
+      "file": ".codex/agents/voltagent-ad-security-reviewer.toml",
+      "sourceRelativePath": "categories/04-quality-security/ad-security-reviewer.toml"
+    },
+    {
+      "repoName": "architect-reviewer",
+      "installedName": "voltagent-architect-reviewer",
+      "category": "04-quality-security",
+      "description": "Use when a task needs architectural review for coupling, system boundaries, long-term maintainability, or design coherence.",
+      "file": ".codex/agents/voltagent-architect-reviewer.toml",
+      "sourceRelativePath": "categories/04-quality-security/architect-reviewer.toml"
+    },
+    {
+      "repoName": "browser-debugger",
+      "installedName": "voltagent-browser-debugger",
+      "category": "04-quality-security",
+      "description": "Use when a task needs browser-based reproduction, UI evidence gathering, or client-side debugging through a browser MCP server.",
+      "file": ".codex/agents/voltagent-browser-debugger.toml",
+      "sourceRelativePath": "categories/04-quality-security/browser-debugger.toml"
+    },
+    {
+      "repoName": "chaos-engineer",
+      "installedName": "voltagent-chaos-engineer",
+      "category": "04-quality-security",
+      "description": "Use when a task needs resilience analysis for dependency failure, degraded modes, recovery behavior, or controlled fault-injection planning.",
+      "file": ".codex/agents/voltagent-chaos-engineer.toml",
+      "sourceRelativePath": "categories/04-quality-security/chaos-engineer.toml"
+    },
+    {
+      "repoName": "code-reviewer",
+      "installedName": "voltagent-code-reviewer",
+      "category": "04-quality-security",
+      "description": "Use when a task needs a broader code-health review covering maintainability, design clarity, and risky implementation choices in addition to correctness.",
+      "file": ".codex/agents/voltagent-code-reviewer.toml",
+      "sourceRelativePath": "categories/04-quality-security/code-reviewer.toml"
+    },
+    {
+      "repoName": "compliance-auditor",
+      "installedName": "voltagent-compliance-auditor",
+      "category": "04-quality-security",
+      "description": "Use when a task needs compliance-oriented review of controls, auditability, policy alignment, or evidence gaps in a regulated workflow.",
+      "file": ".codex/agents/voltagent-compliance-auditor.toml",
+      "sourceRelativePath": "categories/04-quality-security/compliance-auditor.toml"
+    },
+    {
+      "repoName": "debugger",
+      "installedName": "voltagent-debugger",
+      "category": "04-quality-security",
+      "description": "Use when a task needs deep bug isolation across code paths, stack traces, runtime behavior, or failing tests.",
+      "file": ".codex/agents/voltagent-debugger.toml",
+      "sourceRelativePath": "categories/04-quality-security/debugger.toml"
+    },
+    {
+      "repoName": "error-detective",
+      "installedName": "voltagent-error-detective",
+      "category": "04-quality-security",
+      "description": "Use when a task needs log, exception, or stack-trace analysis to identify the most probable failure source quickly.",
+      "file": ".codex/agents/voltagent-error-detective.toml",
+      "sourceRelativePath": "categories/04-quality-security/error-detective.toml"
+    },
+    {
+      "repoName": "penetration-tester",
+      "installedName": "voltagent-penetration-tester",
+      "category": "04-quality-security",
+      "description": "Use when a task needs adversarial review of an application path for exploitability, abuse cases, or practical attack surface analysis.",
+      "file": ".codex/agents/voltagent-penetration-tester.toml",
+      "sourceRelativePath": "categories/04-quality-security/penetration-tester.toml"
+    },
+    {
+      "repoName": "performance-engineer",
+      "installedName": "voltagent-performance-engineer",
+      "category": "04-quality-security",
+      "description": "Use when a task needs performance investigation for slow requests, hot paths, rendering regressions, or scalability bottlenecks.",
+      "file": ".codex/agents/voltagent-performance-engineer.toml",
+      "sourceRelativePath": "categories/04-quality-security/performance-engineer.toml"
+    },
+    {
+      "repoName": "powershell-security-hardening",
+      "installedName": "voltagent-powershell-security-hardening",
+      "category": "04-quality-security",
+      "description": "Use when a task needs PowerShell-focused hardening across script safety, admin automation, execution controls, or Windows security posture.",
+      "file": ".codex/agents/voltagent-powershell-security-hardening.toml",
+      "sourceRelativePath": "categories/04-quality-security/powershell-security-hardening.toml"
+    },
+    {
+      "repoName": "qa-expert",
+      "installedName": "voltagent-qa-expert",
+      "category": "04-quality-security",
+      "description": "Use when a task needs test strategy, acceptance coverage planning, or risk-based QA guidance for a feature or release.",
+      "file": ".codex/agents/voltagent-qa-expert.toml",
+      "sourceRelativePath": "categories/04-quality-security/qa-expert.toml"
+    },
+    {
+      "repoName": "reviewer",
+      "installedName": "voltagent-reviewer",
+      "category": "04-quality-security",
+      "description": "Use when a task needs PR-style review focused on correctness, security, behavior regressions, and missing tests.",
+      "file": ".codex/agents/voltagent-reviewer.toml",
+      "sourceRelativePath": "categories/04-quality-security/reviewer.toml"
+    },
+    {
+      "repoName": "security-auditor",
+      "installedName": "voltagent-security-auditor",
+      "category": "04-quality-security",
+      "description": "Use when a task needs focused security review of code, auth flows, secrets handling, input validation, or infrastructure configuration.",
+      "file": ".codex/agents/voltagent-security-auditor.toml",
+      "sourceRelativePath": "categories/04-quality-security/security-auditor.toml"
+    },
+    {
+      "repoName": "test-automator",
+      "installedName": "voltagent-test-automator",
+      "category": "04-quality-security",
+      "description": "Use when a task needs implementation of automated tests, test harness improvements, or targeted regression coverage.",
+      "file": ".codex/agents/voltagent-test-automator.toml",
+      "sourceRelativePath": "categories/04-quality-security/test-automator.toml"
+    },
+    {
+      "repoName": "ai-engineer",
+      "installedName": "voltagent-ai-engineer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs implementation or debugging of model-backed application features, agent flows, or evaluation hooks.",
+      "file": ".codex/agents/voltagent-ai-engineer.toml",
+      "sourceRelativePath": "categories/05-data-ai/ai-engineer.toml"
+    },
+    {
+      "repoName": "data-analyst",
+      "installedName": "voltagent-data-analyst",
+      "category": "05-data-ai",
+      "description": "Use when a task needs data interpretation, metric breakdown, trend explanation, or decision support from existing analytics outputs.",
+      "file": ".codex/agents/voltagent-data-analyst.toml",
+      "sourceRelativePath": "categories/05-data-ai/data-analyst.toml"
+    },
+    {
+      "repoName": "data-engineer",
+      "installedName": "voltagent-data-engineer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs ETL, ingestion, transformation, warehouse, or data-pipeline implementation and debugging.",
+      "file": ".codex/agents/voltagent-data-engineer.toml",
+      "sourceRelativePath": "categories/05-data-ai/data-engineer.toml"
+    },
+    {
+      "repoName": "data-scientist",
+      "installedName": "voltagent-data-scientist",
+      "category": "05-data-ai",
+      "description": "Use when a task needs statistical reasoning, experiment interpretation, feature analysis, or model-oriented data exploration.",
+      "file": ".codex/agents/voltagent-data-scientist.toml",
+      "sourceRelativePath": "categories/05-data-ai/data-scientist.toml"
+    },
+    {
+      "repoName": "database-optimizer",
+      "installedName": "voltagent-database-optimizer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs database performance analysis for query plans, schema design, indexing, or data access patterns.",
+      "file": ".codex/agents/voltagent-database-optimizer.toml",
+      "sourceRelativePath": "categories/05-data-ai/database-optimizer.toml"
+    },
+    {
+      "repoName": "llm-architect",
+      "installedName": "voltagent-llm-architect",
+      "category": "05-data-ai",
+      "description": "Use when a task needs architecture review for prompts, tool use, retrieval, evaluation, or multi-step LLM workflows.",
+      "file": ".codex/agents/voltagent-llm-architect.toml",
+      "sourceRelativePath": "categories/05-data-ai/llm-architect.toml"
+    },
+    {
+      "repoName": "machine-learning-engineer",
+      "installedName": "voltagent-machine-learning-engineer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs ML system implementation work across training pipelines, feature flow, model serving, or inference integration.",
+      "file": ".codex/agents/voltagent-machine-learning-engineer.toml",
+      "sourceRelativePath": "categories/05-data-ai/machine-learning-engineer.toml"
+    },
+    {
+      "repoName": "ml-engineer",
+      "installedName": "voltagent-ml-engineer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs practical machine learning implementation across feature engineering, inference wiring, and model-backed application logic.",
+      "file": ".codex/agents/voltagent-ml-engineer.toml",
+      "sourceRelativePath": "categories/05-data-ai/ml-engineer.toml"
+    },
+    {
+      "repoName": "mlops-engineer",
+      "installedName": "voltagent-mlops-engineer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs model deployment, registry, pipeline, monitoring, or environment orchestration for machine learning systems.",
+      "file": ".codex/agents/voltagent-mlops-engineer.toml",
+      "sourceRelativePath": "categories/05-data-ai/mlops-engineer.toml"
+    },
+    {
+      "repoName": "nlp-engineer",
+      "installedName": "voltagent-nlp-engineer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs NLP-specific implementation or analysis involving text processing, embeddings, ranking, or language-model-adjacent pipelines.",
+      "file": ".codex/agents/voltagent-nlp-engineer.toml",
+      "sourceRelativePath": "categories/05-data-ai/nlp-engineer.toml"
+    },
+    {
+      "repoName": "postgres-pro",
+      "installedName": "voltagent-postgres-pro",
+      "category": "05-data-ai",
+      "description": "Use when a task needs PostgreSQL-specific expertise for schema design, performance behavior, locking, or operational database features.",
+      "file": ".codex/agents/voltagent-postgres-pro.toml",
+      "sourceRelativePath": "categories/05-data-ai/postgres-pro.toml"
+    },
+    {
+      "repoName": "prompt-engineer",
+      "installedName": "voltagent-prompt-engineer",
+      "category": "05-data-ai",
+      "description": "Use when a task needs prompt revision, instruction design, eval-oriented prompt comparison, or prompt-output contract tightening.",
+      "file": ".codex/agents/voltagent-prompt-engineer.toml",
+      "sourceRelativePath": "categories/05-data-ai/prompt-engineer.toml"
+    },
+    {
+      "repoName": "build-engineer",
+      "installedName": "voltagent-build-engineer",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs build-graph debugging, bundling fixes, compiler pipeline work, or CI build stabilization.",
+      "file": ".codex/agents/voltagent-build-engineer.toml",
+      "sourceRelativePath": "categories/06-developer-experience/build-engineer.toml"
+    },
+    {
+      "repoName": "cli-developer",
+      "installedName": "voltagent-cli-developer",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs a command-line interface feature, UX review, argument parsing change, or shell-facing workflow improvement.",
+      "file": ".codex/agents/voltagent-cli-developer.toml",
+      "sourceRelativePath": "categories/06-developer-experience/cli-developer.toml"
+    },
+    {
+      "repoName": "dependency-manager",
+      "installedName": "voltagent-dependency-manager",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs dependency upgrades, package graph analysis, version-policy cleanup, or third-party library risk assessment.",
+      "file": ".codex/agents/voltagent-dependency-manager.toml",
+      "sourceRelativePath": "categories/06-developer-experience/dependency-manager.toml"
+    },
+    {
+      "repoName": "documentation-engineer",
+      "installedName": "voltagent-documentation-engineer",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs technical documentation that must stay faithful to current code, tooling, and operator workflows.",
+      "file": ".codex/agents/voltagent-documentation-engineer.toml",
+      "sourceRelativePath": "categories/06-developer-experience/documentation-engineer.toml"
+    },
+    {
+      "repoName": "dx-optimizer",
+      "installedName": "voltagent-dx-optimizer",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs developer-experience improvements in setup time, local workflows, feedback loops, or day-to-day tooling friction.",
+      "file": ".codex/agents/voltagent-dx-optimizer.toml",
+      "sourceRelativePath": "categories/06-developer-experience/dx-optimizer.toml"
+    },
+    {
+      "repoName": "git-workflow-manager",
+      "installedName": "voltagent-git-workflow-manager",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs help with branching strategy, merge flow, release branching, or repository collaboration conventions.",
+      "file": ".codex/agents/voltagent-git-workflow-manager.toml",
+      "sourceRelativePath": "categories/06-developer-experience/git-workflow-manager.toml"
+    },
+    {
+      "repoName": "legacy-modernizer",
+      "installedName": "voltagent-legacy-modernizer",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs a modernization path for older code, frameworks, or architecture without losing behavioral safety.",
+      "file": ".codex/agents/voltagent-legacy-modernizer.toml",
+      "sourceRelativePath": "categories/06-developer-experience/legacy-modernizer.toml"
+    },
+    {
+      "repoName": "mcp-developer",
+      "installedName": "voltagent-mcp-developer",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs work on MCP servers, MCP clients, tool wiring, or protocol-aware integrations.",
+      "file": ".codex/agents/voltagent-mcp-developer.toml",
+      "sourceRelativePath": "categories/06-developer-experience/mcp-developer.toml"
+    },
+    {
+      "repoName": "powershell-module-architect",
+      "installedName": "voltagent-powershell-module-architect",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs PowerShell module structure, command design, packaging, or profile architecture work.",
+      "file": ".codex/agents/voltagent-powershell-module-architect.toml",
+      "sourceRelativePath": "categories/06-developer-experience/powershell-module-architect.toml"
+    },
+    {
+      "repoName": "powershell-ui-architect",
+      "installedName": "voltagent-powershell-ui-architect",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs PowerShell-based UI work for terminals, forms, WPF, or admin-oriented interactive tooling.",
+      "file": ".codex/agents/voltagent-powershell-ui-architect.toml",
+      "sourceRelativePath": "categories/06-developer-experience/powershell-ui-architect.toml"
+    },
+    {
+      "repoName": "refactoring-specialist",
+      "installedName": "voltagent-refactoring-specialist",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs a low-risk structural refactor that preserves behavior while improving readability, modularity, or maintainability.",
+      "file": ".codex/agents/voltagent-refactoring-specialist.toml",
+      "sourceRelativePath": "categories/06-developer-experience/refactoring-specialist.toml"
+    },
+    {
+      "repoName": "slack-expert",
+      "installedName": "voltagent-slack-expert",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs Slack platform work involving bots, interactivity, events, workflows, or Slack-specific integration behavior.",
+      "file": ".codex/agents/voltagent-slack-expert.toml",
+      "sourceRelativePath": "categories/06-developer-experience/slack-expert.toml"
+    },
+    {
+      "repoName": "tooling-engineer",
+      "installedName": "voltagent-tooling-engineer",
+      "category": "06-developer-experience",
+      "description": "Use when a task needs internal developer tooling, scripts, automation glue, or workflow support utilities.",
+      "file": ".codex/agents/voltagent-tooling-engineer.toml",
+      "sourceRelativePath": "categories/06-developer-experience/tooling-engineer.toml"
+    },
+    {
+      "repoName": "api-documenter",
+      "installedName": "voltagent-api-documenter",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs consumer-facing API documentation generated from the real implementation, schema, and examples.",
+      "file": ".codex/agents/voltagent-api-documenter.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/api-documenter.toml"
+    },
+    {
+      "repoName": "blockchain-developer",
+      "installedName": "voltagent-blockchain-developer",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs blockchain or Web3 implementation and review across smart-contract integration, wallet flows, or transaction lifecycle handling.",
+      "file": ".codex/agents/voltagent-blockchain-developer.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/blockchain-developer.toml"
+    },
+    {
+      "repoName": "embedded-systems",
+      "installedName": "voltagent-embedded-systems",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs embedded or hardware-adjacent work involving device constraints, firmware boundaries, timing, or low-level integration.",
+      "file": ".codex/agents/voltagent-embedded-systems.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/embedded-systems.toml"
+    },
+    {
+      "repoName": "fintech-engineer",
+      "installedName": "voltagent-fintech-engineer",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs financial systems engineering across ledgers, reconciliation, transfers, settlement, or compliance-sensitive transactional flows.",
+      "file": ".codex/agents/voltagent-fintech-engineer.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/fintech-engineer.toml"
+    },
+    {
+      "repoName": "game-developer",
+      "installedName": "voltagent-game-developer",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs game-specific implementation or debugging involving gameplay systems, rendering loops, asset flow, or player-state behavior.",
+      "file": ".codex/agents/voltagent-game-developer.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/game-developer.toml"
+    },
+    {
+      "repoName": "iot-engineer",
+      "installedName": "voltagent-iot-engineer",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs IoT system work involving devices, telemetry, edge communication, or cloud-device coordination.",
+      "file": ".codex/agents/voltagent-iot-engineer.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/iot-engineer.toml"
+    },
+    {
+      "repoName": "m365-admin",
+      "installedName": "voltagent-m365-admin",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs Microsoft 365 administration help across Exchange Online, Teams, SharePoint, identity, or tenant-level automation.",
+      "file": ".codex/agents/voltagent-m365-admin.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/m365-admin.toml"
+    },
+    {
+      "repoName": "mobile-app-developer",
+      "installedName": "voltagent-mobile-app-developer",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs app-level mobile product work across screens, state, API integration, and release-sensitive mobile behavior.",
+      "file": ".codex/agents/voltagent-mobile-app-developer.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/mobile-app-developer.toml"
+    },
+    {
+      "repoName": "payment-integration",
+      "installedName": "voltagent-payment-integration",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs payment-flow review or implementation for checkout, idempotency, webhooks, retries, or settlement state handling.",
+      "file": ".codex/agents/voltagent-payment-integration.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/payment-integration.toml"
+    },
+    {
+      "repoName": "quant-analyst",
+      "installedName": "voltagent-quant-analyst",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs quantitative analysis of models, strategies, simulations, or numeric decision logic.",
+      "file": ".codex/agents/voltagent-quant-analyst.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/quant-analyst.toml"
+    },
+    {
+      "repoName": "risk-manager",
+      "installedName": "voltagent-risk-manager",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs explicit risk analysis for product, operational, financial, or architectural decisions.",
+      "file": ".codex/agents/voltagent-risk-manager.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/risk-manager.toml"
+    },
+    {
+      "repoName": "seo-specialist",
+      "installedName": "voltagent-seo-specialist",
+      "category": "07-specialized-domains",
+      "description": "Use when a task needs search-focused technical review across crawlability, metadata, rendering, information architecture, or content discoverability.",
+      "file": ".codex/agents/voltagent-seo-specialist.toml",
+      "sourceRelativePath": "categories/07-specialized-domains/seo-specialist.toml"
+    },
+    {
+      "repoName": "business-analyst",
+      "installedName": "voltagent-business-analyst",
+      "category": "08-business-product",
+      "description": "Use when a task needs requirements clarified, scope normalized, or acceptance criteria extracted from messy inputs before engineering work starts.",
+      "file": ".codex/agents/voltagent-business-analyst.toml",
+      "sourceRelativePath": "categories/08-business-product/business-analyst.toml"
+    },
+    {
+      "repoName": "content-marketer",
+      "installedName": "voltagent-content-marketer",
+      "category": "08-business-product",
+      "description": "Use when a task needs product-adjacent content strategy or messaging that still has to stay grounded in real technical capabilities.",
+      "file": ".codex/agents/voltagent-content-marketer.toml",
+      "sourceRelativePath": "categories/08-business-product/content-marketer.toml"
+    },
+    {
+      "repoName": "customer-success-manager",
+      "installedName": "voltagent-customer-success-manager",
+      "category": "08-business-product",
+      "description": "Use when a task needs support-pattern synthesis, adoption risk analysis, or customer-facing operational guidance from engineering context.",
+      "file": ".codex/agents/voltagent-customer-success-manager.toml",
+      "sourceRelativePath": "categories/08-business-product/customer-success-manager.toml"
+    },
+    {
+      "repoName": "legal-advisor",
+      "installedName": "voltagent-legal-advisor",
+      "category": "08-business-product",
+      "description": "Use when a task needs legal-risk spotting in product or engineering behavior, especially around terms, data handling, or externally visible commitments.",
+      "file": ".codex/agents/voltagent-legal-advisor.toml",
+      "sourceRelativePath": "categories/08-business-product/legal-advisor.toml"
+    },
+    {
+      "repoName": "product-manager",
+      "installedName": "voltagent-product-manager",
+      "category": "08-business-product",
+      "description": "Use when a task needs product framing, prioritization, or feature-shaping based on engineering reality and user impact.",
+      "file": ".codex/agents/voltagent-product-manager.toml",
+      "sourceRelativePath": "categories/08-business-product/product-manager.toml"
+    },
+    {
+      "repoName": "project-manager",
+      "installedName": "voltagent-project-manager",
+      "category": "08-business-product",
+      "description": "Use when a task needs dependency mapping, milestone planning, sequencing, or delivery-risk coordination across multiple workstreams.",
+      "file": ".codex/agents/voltagent-project-manager.toml",
+      "sourceRelativePath": "categories/08-business-product/project-manager.toml"
+    },
+    {
+      "repoName": "sales-engineer",
+      "installedName": "voltagent-sales-engineer",
+      "category": "08-business-product",
+      "description": "Use when a task needs technically accurate solution positioning, customer-question handling, or implementation tradeoff explanation for pre-sales contexts.",
+      "file": ".codex/agents/voltagent-sales-engineer.toml",
+      "sourceRelativePath": "categories/08-business-product/sales-engineer.toml"
+    },
+    {
+      "repoName": "scrum-master",
+      "installedName": "voltagent-scrum-master",
+      "category": "08-business-product",
+      "description": "Use when a task needs process facilitation, iteration planning, or workflow friction analysis for an engineering team.",
+      "file": ".codex/agents/voltagent-scrum-master.toml",
+      "sourceRelativePath": "categories/08-business-product/scrum-master.toml"
+    },
+    {
+      "repoName": "technical-writer",
+      "installedName": "voltagent-technical-writer",
+      "category": "08-business-product",
+      "description": "Use when a task needs release notes, migration notes, onboarding material, or developer-facing prose derived from real code changes.",
+      "file": ".codex/agents/voltagent-technical-writer.toml",
+      "sourceRelativePath": "categories/08-business-product/technical-writer.toml"
+    },
+    {
+      "repoName": "ux-researcher",
+      "installedName": "voltagent-ux-researcher",
+      "category": "08-business-product",
+      "description": "Use when a task needs UI feedback synthesized into actionable product and implementation guidance.",
+      "file": ".codex/agents/voltagent-ux-researcher.toml",
+      "sourceRelativePath": "categories/08-business-product/ux-researcher.toml"
+    },
+    {
+      "repoName": "wordpress-master",
+      "installedName": "voltagent-wordpress-master",
+      "category": "08-business-product",
+      "description": "Use when a task needs WordPress-specific implementation or debugging across themes, plugins, content architecture, or operational site behavior.",
+      "file": ".codex/agents/voltagent-wordpress-master.toml",
+      "sourceRelativePath": "categories/08-business-product/wordpress-master.toml"
+    },
+    {
+      "repoName": "agent-installer",
+      "installedName": "voltagent-agent-installer",
+      "category": "09-meta-orchestration",
+      "description": "Use when a task needs help selecting, copying, or organizing custom agent files from this repository into Codex agent directories.",
+      "file": ".codex/agents/voltagent-agent-installer.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/agent-installer.toml"
+    },
+    {
+      "repoName": "agent-organizer",
+      "installedName": "voltagent-agent-organizer",
+      "category": "09-meta-orchestration",
+      "description": "Use when the parent agent needs help choosing subagents and dividing a larger task into clean delegated threads.",
+      "file": ".codex/agents/voltagent-agent-organizer.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/agent-organizer.toml"
+    },
+    {
+      "repoName": "context-manager",
+      "installedName": "voltagent-context-manager",
+      "category": "09-meta-orchestration",
+      "description": "Use when a task needs a compact project context summary that other subagents can rely on before deeper work begins.",
+      "file": ".codex/agents/voltagent-context-manager.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/context-manager.toml"
+    },
+    {
+      "repoName": "error-coordinator",
+      "installedName": "voltagent-error-coordinator",
+      "category": "09-meta-orchestration",
+      "description": "Use when multiple errors or symptoms need to be grouped, prioritized, and assigned to the right debugging or review agents.",
+      "file": ".codex/agents/voltagent-error-coordinator.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/error-coordinator.toml"
+    },
+    {
+      "repoName": "it-ops-orchestrator",
+      "installedName": "voltagent-it-ops-orchestrator",
+      "category": "09-meta-orchestration",
+      "description": "Use when a task needs coordinated operational planning across infrastructure, incident response, identity, endpoint, and admin workflows.",
+      "file": ".codex/agents/voltagent-it-ops-orchestrator.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/it-ops-orchestrator.toml"
+    },
+    {
+      "repoName": "knowledge-synthesizer",
+      "installedName": "voltagent-knowledge-synthesizer",
+      "category": "09-meta-orchestration",
+      "description": "Use when multiple agents have returned findings and the parent agent needs a distilled, non-redundant synthesis.",
+      "file": ".codex/agents/voltagent-knowledge-synthesizer.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/knowledge-synthesizer.toml"
+    },
+    {
+      "repoName": "multi-agent-coordinator",
+      "installedName": "voltagent-multi-agent-coordinator",
+      "category": "09-meta-orchestration",
+      "description": "Use when a task needs a concrete multi-agent plan with clear role separation, dependencies, and result integration.",
+      "file": ".codex/agents/voltagent-multi-agent-coordinator.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/multi-agent-coordinator.toml"
+    },
+    {
+      "repoName": "performance-monitor",
+      "installedName": "voltagent-performance-monitor",
+      "category": "09-meta-orchestration",
+      "description": "Use when a task needs ongoing performance-signal interpretation across build, runtime, or operational metrics before deeper optimization starts.",
+      "file": ".codex/agents/voltagent-performance-monitor.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/performance-monitor.toml"
+    },
+    {
+      "repoName": "task-distributor",
+      "installedName": "voltagent-task-distributor",
+      "category": "09-meta-orchestration",
+      "description": "Use when a broad task needs to be broken into concrete sub-tasks with clear boundaries for multiple agents or contributors.",
+      "file": ".codex/agents/voltagent-task-distributor.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/task-distributor.toml"
+    },
+    {
+      "repoName": "workflow-orchestrator",
+      "installedName": "voltagent-workflow-orchestrator",
+      "category": "09-meta-orchestration",
+      "description": "Use when the parent agent needs an explicit Codex subagent workflow for a complex task with multiple stages.",
+      "file": ".codex/agents/voltagent-workflow-orchestrator.toml",
+      "sourceRelativePath": "categories/09-meta-orchestration/workflow-orchestrator.toml"
+    },
+    {
+      "repoName": "competitive-analyst",
+      "installedName": "voltagent-competitive-analyst",
+      "category": "10-research-analysis",
+      "description": "Use when a task needs a grounded comparison of tools, products, libraries, or implementation options.",
+      "file": ".codex/agents/voltagent-competitive-analyst.toml",
+      "sourceRelativePath": "categories/10-research-analysis/competitive-analyst.toml"
+    },
+    {
+      "repoName": "data-researcher",
+      "installedName": "voltagent-data-researcher",
+      "category": "10-research-analysis",
+      "description": "Use when a task needs source gathering and synthesis around datasets, metrics, data pipelines, or evidence-backed quantitative questions.",
+      "file": ".codex/agents/voltagent-data-researcher.toml",
+      "sourceRelativePath": "categories/10-research-analysis/data-researcher.toml"
+    },
+    {
+      "repoName": "docs-researcher",
+      "installedName": "voltagent-docs-researcher",
+      "category": "10-research-analysis",
+      "description": "Use when a task needs documentation-backed verification of APIs, version-specific behavior, or framework options.",
+      "file": ".codex/agents/voltagent-docs-researcher.toml",
+      "sourceRelativePath": "categories/10-research-analysis/docs-researcher.toml"
+    },
+    {
+      "repoName": "market-researcher",
+      "installedName": "voltagent-market-researcher",
+      "category": "10-research-analysis",
+      "description": "Use when a task needs market landscape, positioning, or demand-side research tied to a technical product or category.",
+      "file": ".codex/agents/voltagent-market-researcher.toml",
+      "sourceRelativePath": "categories/10-research-analysis/market-researcher.toml"
+    },
+    {
+      "repoName": "research-analyst",
+      "installedName": "voltagent-research-analyst",
+      "category": "10-research-analysis",
+      "description": "Use when a task needs a structured investigation of a technical topic, implementation approach, or design question.",
+      "file": ".codex/agents/voltagent-research-analyst.toml",
+      "sourceRelativePath": "categories/10-research-analysis/research-analyst.toml"
+    },
+    {
+      "repoName": "search-specialist",
+      "installedName": "voltagent-search-specialist",
+      "category": "10-research-analysis",
+      "description": "Use when a task needs fast, high-signal searching of the codebase or external sources before deeper analysis begins.",
+      "file": ".codex/agents/voltagent-search-specialist.toml",
+      "sourceRelativePath": "categories/10-research-analysis/search-specialist.toml"
+    },
+    {
+      "repoName": "trend-analyst",
+      "installedName": "voltagent-trend-analyst",
+      "category": "10-research-analysis",
+      "description": "Use when a task needs trend synthesis across technology shifts, adoption patterns, or emerging implementation directions.",
+      "file": ".codex/agents/voltagent-trend-analyst.toml",
+      "sourceRelativePath": "categories/10-research-analysis/trend-analyst.toml"
+    }
+  ]
+}

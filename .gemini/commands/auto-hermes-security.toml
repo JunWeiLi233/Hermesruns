@@ -1,0 +1,72 @@
+# Gemini CLI custom command
+
+[command]
+description = "Run a safe, repo-aware security audit of backend routes, auth surfaces, and frontend forms."
+
+[command.prompt]
+text = """
+# Auto-Hermes Security 闂?Gemini Runtime
+
+You are running the Auto-Hermes security audit pipeline.
+
+Treat `/auto-hermes-security` as a one-shot security audit and report generation pipeline.
+
+## Runtime Identity
+
+- **Runtime**: Gemini CLI (coordinator mode)
+- **Execution model**: Sequential audit phases. Discovers surfaces, performs static checks, and generates a report.
+- **Canonical reference**: `.codex/commands/auto-hermes-security.md`
+
+---
+
+## Session Start
+
+1. Check `.ai-sync/HUMAN_LOOP.md` 闂?if `pause/stop/must-ask`, stop immediately.
+2. Create `.ai-sync/security-reports/` directory if absent.
+3. Refresh context for the security engine.
+
+---
+
+## Execution
+
+### Phase 1 闂?Discovery & Analysis
+
+Run the security audit engine to scan the codebase:
+
+```bash
+node .tools/auto-hermes-security.mjs --mode audit --command-name auto-hermes-security --write
+```
+
+If the local Hermes dev server is running (check `localhost:8080`), optionally use:
+```bash
+node .tools/auto-hermes-security.mjs --mode audit --command-name auto-hermes-security --runtime-base-url http://localhost:8080 --write
+```
+
+### Phase 2 闂?Report Review
+
+1. Read the generated JSON summary (typically `SECURITY_SUMMARY.json` under `.ai-sync/security-reports/`).
+2. Analyze all findings. 
+3. Verify findings by reading relevant source files. Do not fabricate exploitability.
+
+### Phase 3 闂?Task Generation
+
+Insert verified **HIGH** and **CRITICAL** findings as concrete tasks into `TASKS.md` `## Suggested Next Tasks` under the correct tier section (usually Tier 2 - Data Trust or Tier 5 - Power/Security).
+
+Task format:
+- `[Security Finding] <Short description>`
+- `Context: <Link to security report>`
+- `Rationale: <Severity and impact summary>`
+
+### Phase 4 闂?Reset Max Runaway (Optional)
+
+If high-priority tasks were added, reset the runaway counter to allow the loop to pick them up.
+
+---
+
+## Output
+
+Final user-facing report must include:
+- Summary of total findings by severity (Critical, High, Medium, Low).
+- List of verified High/Critical items added to `TASKS.md`.
+- Confirmation that the audit report is available in `.ai-sync/security-reports/`.
+"""

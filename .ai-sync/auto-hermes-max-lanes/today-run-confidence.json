@@ -1,0 +1,36 @@
+{
+  "laneId": "today-run-confidence",
+  "parentRunId": "ahm-20260418192619",
+  "correlationId": "ahm-20260418192619:today-run-confidence",
+  "goal": "Add recommendation confidence + rationale to Today's Run.",
+  "parentGoal": "Enhance Today's Run with transparency (confidence/rationale) and finalize the downshift flow.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/TodayRun.jsx",
+    "frontend/src/utils/todayRun.js"
+  ],
+  "mustPreserve": [],
+  "verify": "",
+  "mergeNotes": "",
+  "priority": 1,
+  "effort": "medium",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "isolation": "direct",
+  "queueWritebackMode": "deferred-to-parent",
+  "contextLedgerWritebackMode": "deferred-to-parent",
+  "allowedStatuses": [
+    "approved",
+    "must-fix",
+    "blocked"
+  ],
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\today-run-confidence.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\today-run-confidence-activity.json",
+  "requiresVerification": true,
+  "requiresArchitectReview": true,
+  "requiresDeslopPass": true,
+  "requiresRegressionReverification": true,
+  "command": "/auto-hermes scope=\"Add recommendation confidence + rationale to Today's Run.\" mode=loop owned=\"frontend/src/pages/TodayRun.jsx|frontend/src/utils/todayRun.js\" isolation=\"direct\""
+}

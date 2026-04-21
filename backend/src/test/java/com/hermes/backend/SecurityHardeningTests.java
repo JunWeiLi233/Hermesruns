@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:security-hardening-tests;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+})
 @Transactional
 class SecurityHardeningTests {
 
@@ -30,10 +34,22 @@ class SecurityHardeningTests {
     private RunnerRepository runnerRepository;
 
     @Autowired
+    private CoachScheduledWorkoutRepository coachScheduledWorkoutRepository;
+
+    @Autowired
+    private CoachTrainingBlockRepository coachTrainingBlockRepository;
+
+    @Autowired
+    private CoachRunnerStateRepository coachRunnerStateRepository;
+
+    @Autowired
     private AuthService authService;
 
     @BeforeEach
     void resetData() {
+        coachScheduledWorkoutRepository.deleteAll();
+        coachTrainingBlockRepository.deleteAll();
+        coachRunnerStateRepository.deleteAll();
         runnerRepository.deleteAll();
     }
 

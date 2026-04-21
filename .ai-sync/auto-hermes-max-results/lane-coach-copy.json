@@ -1,0 +1,27 @@
+{
+  "laneId": "lane-coach-copy",
+  "goal": "Redesign /analysis/coach-insight into a Garmin Coach-style running coach system based on recent runner performance, while preserving Hermes analysis-shell behavior and translation safety.",
+  "ownedFiles": [
+    "frontend/src/i18n/translations.js"
+  ],
+  "changedFiles": [
+    "frontend/src/i18n/translations.js"
+  ],
+  "verification": [
+    "node --check frontend/src/i18n/translations.js"
+  ],
+  "runtimeProof": "Not applicable; this lane only changed translation copy and did not touch a runtime surface.",
+  "risks": [
+    "Page code must follow the new coach_insight_* key names to consume this copy.",
+    "If the coach-insight route expects additional labels, it may need a follow-up lane to add them in the same naming family."
+  ],
+  "mustPreserve": [
+    "Existing translation keys used by other analysis detail surfaces",
+    "Coach-like tone instead of generic SaaS copy",
+    "Aligned zh-CN and en copy blocks"
+  ],
+  "mergeNotes": "Approved as a bounded translation lane. Key naming assumption: the page should read from the new coach_insight_* family, with fallback to existing analysis copy keys where needed.",
+  "status": "approved",
+  "parentRunId": "auto-hermes-max",
+  "correlationId": "lane-coach-copy"
+}

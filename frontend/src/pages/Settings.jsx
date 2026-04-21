@@ -11,6 +11,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import { formatStravaSyncLabel, stravaSyncTone } from '../utils/stravaAutoSync';
 
 const MANTRA_STORAGE_KEY = 'hermes.settings.mantra';
 const DIGEST_STORAGE_KEY = 'hermes.settings.digest';
@@ -50,6 +52,11 @@ export default function Settings() {
   const [garminImporting, setGarminImporting] = useState(false);
   const [garminStatus, setGarminStatus] = useState('');
   const [garminStatusType, setGarminStatusType] = useState('');
+  const [garminWellnessSyncEnabled, setGarminWellnessSyncEnabled] = useState(false);
+  const [garminWellnessImporting, setGarminWellnessImporting] = useState(false);
+  const [garminWellnessStatus, setGarminWellnessStatus] = useState('');
+  const [garminWellnessLastSynced, setGarminWellnessLastSynced] = useState(null);
+  const [garminCredentialsSaved, setGarminCredentialsSaved] = useState(false);
 
   useEffect(() => {
     try {
@@ -99,15 +106,10 @@ export default function Settings() {
   const displayNameResolved = resolveDisplayName(profile, t('profile.default_name'));
   const initials = displayNameResolved.slice(0, 1).toUpperCase();
 
-  const navItems = [
-    { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-    { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-  ];
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+  }), [lang, t]);
 
   const themeCards = useMemo(() => ([
     { value: 'midnight', label: t('settings.stitch_theme_pulse'), icon: 'dark_mode' },
@@ -115,7 +117,7 @@ export default function Settings() {
   ]), [t]);
   const activeThemeLabel = themeCards.find((card) => card.value === theme)?.label || '';
   const languageLabel = lang === 'zh-CN' ? '\u4e2d\u6587' : 'English (US)';
-  const stravaLabel = stravaStatus?.linked ? t('settings.stitch_strava_active') : t('settings.strava_not_connected');
+  const stravaLabel = formatStravaSyncLabel(stravaStatus, t);
   const digestLabel = digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest');
   const resolvedLanguageLabel = languageLabel;
   const garminTone = garminImporting ? 'active' : (garminStatus ? garminStatusType || 'info' : 'ready');
@@ -257,6 +259,8 @@ export default function Settings() {
         return;
       }
 
+      handleGarminSaveCredentials();
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || t('profile.garmin_connect_failed'));
@@ -315,6 +319,75 @@ export default function Settings() {
       setGarminStatusType('error');
       setGarminImporting(false);
     }
+  }
+
+  async function handleGarminWellnessToggle() {
+    try {
+      await apiJson('/api/garmin/connect/wellness/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !garminWellnessSyncEnabled }),
+      });
+      setGarminWellnessSyncEnabled(!garminWellnessSyncEnabled);
+    } catch { /* toggle failure is non-critical */ }
+  }
+
+  async function handleGarminWellnessSync() {
+    if (garminWellnessImporting) return;
+    setGarminWellnessImporting(true);
+    setGarminWellnessStatus('');
+    try {
+      await apiFetch('/api/garmin/connect/wellness/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daysBack: 30 }),
+      });
+      let attempts = 0;
+      const maxAttempts = 120;
+      const poll = async () => {
+        if (attempts >= maxAttempts) {
+          setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
+          setGarminWellnessImporting(false);
+          return;
+        }
+        attempts += 1;
+        try {
+          const data = await apiJson('/api/garmin/connect/wellness/status');
+          if (data.active) {
+            setGarminWellnessStatus(t('profile.garmin_wellness_syncing'));
+            setTimeout(poll, 2500);
+            return;
+          }
+          setGarminWellnessImporting(false);
+          if (data.status === 'COMPLETED') {
+            setGarminWellnessStatus(t('profile.garmin_wellness_success'));
+            if (data.lastSynced) setGarminWellnessLastSynced(data.lastSynced);
+          } else if (data.status === 'FAILED') {
+            setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
+          } else if (data.status === 'NO_DATA') {
+            setGarminWellnessStatus(t('profile.garmin_wellness_no_data'));
+          }
+        } catch {
+          setTimeout(poll, 3000);
+        }
+      };
+      setTimeout(poll, 2500);
+    } catch {
+      setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
+      setGarminWellnessImporting(false);
+    }
+  }
+
+  async function handleGarminSaveCredentials() {
+    if (!garminEmail.trim() || !garminPassword.trim()) return;
+    try {
+      await apiJson('/api/garmin/connect/wellness/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ garminEmail: garminEmail.trim(), garminPassword }),
+      });
+      setGarminCredentialsSaved(true);
+    } catch { /* credential save failure is non-critical */ }
   }
 
   function toggleDigest() {
@@ -377,7 +450,7 @@ export default function Settings() {
       key: 'strava',
       label: 'Strava',
       value: stravaLinking ? t('profile.strava_link_connecting') : stravaLabel,
-      tone: stravaStatus?.linked ? 'live' : 'review',
+      tone: stravaLinking ? 'active' : stravaSyncTone(stravaStatus),
     },
     {
       key: 'garmin',
@@ -385,11 +458,17 @@ export default function Settings() {
       value: garminStatusLabel,
       tone: garminTone,
     },
-    {
+{
       key: 'manual',
       label: t('profile.watch_import_files'),
       value: importStatus || t('settings.stitch_manual_import_ready'),
       tone: importStatus ? 'active' : 'ready',
+    },
+    {
+      key: 'garmin-wellness',
+      label: t('profile.garmin_wellness_title'),
+      value: garminWellnessSyncEnabled ? t('profile.garmin_wellness_enabled') : t('profile.garmin_wellness_disabled'),
+      tone: garminWellnessSyncEnabled ? 'success' : 'muted',
     },
   ];
 
@@ -711,7 +790,49 @@ export default function Settings() {
               </div>
             </section>
           </div>
-        </form>
+</form>
+        <div className="garmin-wellness-section">
+          <div className="garmin-wellness-section-title">{t('profile.garmin_wellness_title')}</div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #999)', marginBottom: '0.75rem' }}>{t('profile.garmin_wellness_desc')}</p>
+          <div className="garmin-wellness-row">
+            <span>{t('profile.garmin_wellness_auto_sync')}</span>
+            <button
+              type="button"
+              className={`garmin-wellness-toggle${garminWellnessSyncEnabled ? ' garmin-wellness-toggle--active' : ''}`}
+              onClick={handleGarminWellnessToggle}
+              aria-label={t('profile.garmin_wellness_auto_sync')}
+            />
+          </div>
+          <div className="garmin-wellness-row">
+            <span style={{ fontSize: '0.82rem' }}>{t('profile.garmin_wellness_auto_sync_desc')}</span>
+          </div>
+          <div className="garmin-wellness-row" style={{ marginTop: '0.5rem' }}>
+            <button
+              type="button"
+              className="garmin-wellness-sync-btn"
+              onClick={handleGarminWellnessSync}
+              disabled={garminWellnessImporting}
+            >
+              {garminWellnessImporting ? t('profile.garmin_wellness_syncing') : t('profile.garmin_wellness_sync_now')}
+            </button>
+            <button
+              type="button"
+              className="garmin-wellness-save-credentials-btn"
+              onClick={handleGarminSaveCredentials}
+              disabled={!garminEmail.trim() || !garminPassword.trim()}
+            >
+              {garminCredentialsSaved ? t('profile.garmin_wellness_credentials_saved') : t('profile.garmin_wellness_save_credentials')}
+            </button>
+          </div>
+          {garminWellnessStatus && (
+            <div className="garmin-wellness-status">{garminWellnessStatus}</div>
+          )}
+          {!garminWellnessImporting && garminWellnessLastSynced && (
+            <div className="garmin-wellness-status">
+              {t('profile.garmin_wellness_last_synced')}: {new Date(garminWellnessLastSynced).toLocaleString()}
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

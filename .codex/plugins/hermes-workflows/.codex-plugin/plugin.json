@@ -1,0 +1,25 @@
+{
+  "name": "hermes-workflows",
+  "version": "1.0.0",
+  "description": "Local Hermes workflow shortcuts for Codex.",
+  "author": {
+    "name": "Junwei Li"
+  },
+  "commands": "./commands/",
+  "interface": {
+    "displayName": "Hermes Workflows",
+    "shortDescription": "Repo-aware Hermes workflow shortcuts including /auto-hermes, /auto-hermes-max, and /auto-hermes-tech-debt",
+    "longDescription": "Local command bundle for Hermes repo workflows, tech-debt audit, and related commands in Codex.",
+    "developerName": "Junwei Li",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Run the Hermes workflow commands in Codex."
+    ],
+    "brandColor": "#FF7E67"
+  }
+}
