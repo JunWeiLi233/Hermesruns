@@ -816,3 +816,10 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Preserve: New 2026 shoe catalog entries are kept as they are data-level improvements.
 - Next Risk: UX remains slightly more complex but maintains the established brand-browsing mental model.
 - Rollback Target: N/A (Restored to previous stable design)
+
+### Wearable Wellness Interpretation Layer
+- Goal: Turn raw recovery data into human-readable "Coach Voice" insights.
+- Changed: Created `wellnessInterpretation.js` utility to translate raw Garmin signals (Sleep, HRV, Stress, RHR) into semantic coaching sentences. Integrated this layer into `TodayRun.jsx` within a new "Wellness Insights" section in the morning briefing. Added comprehensive bilingual (en/zh-CN) translations for all recovery scenarios. Enhanced `TodayRun.jsx` with a new `chat_bubble_outline` icon path for interpretations.
+- Preserve: Maintain the direct, supportive, and data-backed coaching voice.
+- Next Risk: Insight fatigue if too many sentences are shown at once (currently limited to 1 per signal type).
+- Rollback Target: working tree before 2026-04-21 Wellness Interpretation round

@@ -19,6 +19,7 @@ import { formatDistance } from '../utils/format';
 import { computeVdotTrend } from '../utils/vdot';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import { buildRecentShoeSignal, predictRetirement } from '../utils/shoeRotation';
+import { interpretWellness } from '../utils/wellnessInterpretation';
 
 const MARATHON_BLOCK_WEEKS = 16;
 
@@ -212,7 +213,7 @@ function prettifyWorkoutType(workoutType, t) {
   }
 }
 
-function buildConfidenceModel(metrics, toneKey, hasCoachSession, runs) {
+function buildConfidenceModel(metrics, toneKey, hasCoachSession, runs, coachState) {
   let score = 76;
 
   if (hasCoachSession) score += 6;
@@ -233,6 +234,24 @@ function buildConfidenceModel(metrics, toneKey, hasCoachSession, runs) {
 
   if ((metrics.hardRuns7d || 0) >= (metrics.qualityCap || 1)) score -= 4;
   if ((metrics.runDays7 || 0) >= 4) score += 3;
+
+  // Recovery Data (Garmin Wellness)
+  if (coachState) {
+    if (coachState.lastSleepScore != null) {
+      if (coachState.lastSleepScore < 50) score -= 15;
+      else if (coachState.lastSleepScore < 70) score -= 5;
+      else if (coachState.lastSleepScore > 85) score += 5;
+    }
+    if (coachState.lastStressScore != null) {
+      if (coachState.lastStressScore > 75) score -= 10;
+      else if (coachState.lastStressScore < 25) score += 5;
+    }
+    if (coachState.lastNightRestingHr != null && coachState.baselineRestingHr != null) {
+      const hrDelta = coachState.lastNightRestingHr - coachState.baselineRestingHr;
+      if (hrDelta > 5) score -= 8;
+      else if (hrDelta < -2) score += 4;
+    }
+  }
 
   // VDOT trend adjustment
   if (Array.isArray(runs) && runs.length > 0) {
@@ -323,7 +342,7 @@ export default function TodayRun() {
     plan,
     reasons,
     metrics,
-  } = useMemo(() => getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery: isDownshifted }), [runs, races, t, lang, weatherContext, isDownshifted]);
+  } = useMemo(() => getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery: isDownshifted, coachPayload }), [runs, races, t, lang, weatherContext, isDownshifted, coachPayload]);
 
   const morningBriefing = useMemo(
     () => generateMorningBriefing({ recommendation, metrics, lang }),
@@ -335,7 +354,7 @@ export default function TodayRun() {
   const hasHeatPenalty = weatherContext?.available && (weatherContext?.pacePenaltySecPerKm ?? 0) > 0;
   const showWeatherStrip = weatherContext?.available && !heatDismissed;
   const confidence = useMemo(
-    () => buildConfidenceModel(metrics, tone.key, Boolean(coachPayload?.today), runs),
+    () => buildConfidenceModel(metrics, tone.key, Boolean(coachPayload?.today), runs, coachPayload?.state),
     [coachPayload, metrics, tone.key, runs],
   );
 
@@ -391,6 +410,11 @@ export default function TodayRun() {
     [plan, coachPayload, t],
   );
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
+
+  const wellnessInterpretations = useMemo(
+    () => (coachPayload?.state ? interpretWellness(coachPayload.state, t) : []),
+    [coachPayload?.state, t],
+  );
 
   const vdotTrend = useMemo(
     () => (Array.isArray(runs) && runs.length > 0 ? computeVdotTrend(runs) : { direction: 'maintaining', delta: 0, hasData: false }),
@@ -522,16 +546,56 @@ export default function TodayRun() {
         <div className="runner-shell-canvas today-run-plan-canvas">
           <section className="today-run-coaching-strip" aria-label={t('today_run.coaching_intelligence_title')}>
             <div className="today-run-coaching-strip-inner">
-              <article className="today-run-coaching-answer today-run-coaching-answer--action">
-                <span className="today-run-coaching-answer-kicker">{t('today_run.coaching_intelligence_title')}</span>
-                <strong className={`today-run-coaching-answer-value is-${tone.key}`}>
-                  {tone.key === 'recovery' || tone.key === 'restart'
-                    ? t('today_run.coaching_intelligence_rest')
-                    : tone.key === 'easy'
-                      ? t('today_run.coaching_intelligence_easy')
-                      : t('today_run.coaching_intelligence_run')}
+              <article className={`today-run-coaching-answer today-run-coaching-answer--readiness is-verdict-${(coachPayload?.state?.readinessVerdict || tone.key).toLowerCase()}`}>
+                <span className="today-run-coaching-answer-kicker">{t('today_run.readiness_label')}</span>
+                <strong className="today-run-coaching-answer-value">
+                  {coachPayload?.state?.readinessVerdict
+                    ? t(`today_run.readiness_verdict_${coachPayload.state.readinessVerdict.toLowerCase()}`)
+                    : (tone.key === 'recovery' || tone.key === 'restart'
+                      ? t('today_run.coaching_intelligence_rest')
+                      : tone.key === 'easy'
+                        ? t('today_run.coaching_intelligence_easy')
+                        : t('today_run.coaching_intelligence_run'))}
                 </strong>
-                <span className="today-run-coaching-answer-sub">{recommendation.purpose}</span>
+                <span className="today-run-coaching-answer-sub">{coachPayload?.state?.readinessScore != null ? `${coachPayload.state.readinessScore}/100` : recommendation.purpose}</span>
+                <div className="today-run-readiness-signals">
+                  {coachPayload?.state?.readinessSleep != null && (
+                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_sleep')}>
+                      <AppIcon name="sleep" className="today-run-readiness-signal-icon" />
+                      <span className="today-run-readiness-signal-bar">
+                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessSleep}%` }} />
+                      </span>
+                      <small>{coachPayload.state.readinessSleep}</small>
+                    </span>
+                  )}
+                  {coachPayload?.state?.readinessHrv != null && (
+                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_hrv')}>
+                      <AppIcon name="monitor_heart" className="today-run-readiness-signal-icon" />
+                      <span className="today-run-readiness-signal-bar">
+                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessHrv}%` }} />
+                      </span>
+                      <small>{coachPayload.state.readinessHrv}</small>
+                    </span>
+                  )}
+                  {coachPayload?.state?.readinessRhr != null && (
+                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_rhr')}>
+                      <AppIcon name="favorite" className="today-run-readiness-signal-icon" />
+                      <span className="today-run-readiness-signal-bar">
+                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessRhr}%` }} />
+                      </span>
+                      <small>{coachPayload.state.readinessRhr}</small>
+                    </span>
+                  )}
+                  {coachPayload?.state?.readinessStress != null && (
+                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_stress')}>
+                      <AppIcon name="stress" className="today-run-readiness-signal-icon" />
+                      <span className="today-run-readiness-signal-bar">
+                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessStress}%` }} />
+                      </span>
+                      <small>{coachPayload.state.readinessStress}</small>
+                    </span>
+                  )}
+                </div>
               </article>
 
               <article className="today-run-coaching-answer today-run-coaching-answer--fitness">
@@ -547,6 +611,27 @@ export default function TodayRun() {
                   </span>
                 )}
               </article>
+
+              {coachPayload?.state && (coachPayload.state.lastSleepScore != null || coachPayload.state.lastStressScore != null) && (
+                <article className="today-run-coaching-answer today-run-coaching-answer--wellness">
+                  <span className="today-run-coaching-answer-kicker">{t('today_run.wellness_signal_label')}</span>
+                  <div className="today-run-coaching-wellness-row">
+                    {coachPayload.state.lastSleepScore != null && (
+                      <div className="today-run-coaching-wellness-item" title={t('profile.dashboard_sleep_score')}>
+                        <AppIcon name="sleep" className="today-run-coaching-wellness-icon" />
+                        <strong>{coachPayload.state.lastSleepScore}</strong>
+                      </div>
+                    )}
+                    {coachPayload.state.lastStressScore != null && (
+                      <div className="today-run-coaching-wellness-item" title={t('profile.dashboard_stress_score')}>
+                        <AppIcon name="stress" className="today-run-coaching-wellness-icon" />
+                        <strong>{coachPayload.state.lastStressScore}</strong>
+                      </div>
+                    )}
+                  </div>
+                  <span className="today-run-coaching-answer-sub">{t('today_run.wellness_signal_sub')}</span>
+                </article>
+              )}
 
               <article className={`today-run-coaching-answer today-run-coaching-answer--load is-acwr-${acwrInsight.zone}`}>
                 <span className="today-run-coaching-answer-kicker">{t('today_run.metric_acwr')}</span>
@@ -597,6 +682,16 @@ export default function TodayRun() {
               <div className="today-run-plan-morning-briefing">
                 <span className="today-run-plan-morning-briefing-label">{t('today_run.morning_briefing_label')}</span>
                 <p>{morningBriefing}</p>
+                {wellnessInterpretations.length > 0 && (
+                  <div className="today-run-plan-wellness-insights">
+                    {wellnessInterpretations.map((insight, idx) => (
+                      <div key={idx} className="today-run-plan-wellness-insight">
+                        <AppIcon name="chat_bubble_outline" className="today-run-plan-wellness-insight-icon" />
+                        <span>{insight}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <button
                   type="button"
                   className={`today-run-plan-downshift-btn${isDownshifted ? ' is-active' : ''}`}
