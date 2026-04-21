@@ -15,10 +15,24 @@ public class CoachController {
 
     private final AuthService authService;
     private final AutomatedCoachService automatedCoachService;
+    private final ReadinessService readinessService;
 
-    public CoachController(AuthService authService, AutomatedCoachService automatedCoachService) {
+    public CoachController(AuthService authService, AutomatedCoachService automatedCoachService, ReadinessService readinessService) {
         this.authService = authService;
         this.automatedCoachService = automatedCoachService;
+        this.readinessService = readinessService;
+    }
+
+    @GetMapping("/readiness-trend")
+    public ResponseEntity<?> getReadinessTrend(
+            @RequestHeader(value = "Authorization", required = false) String auth,
+            @RequestParam(defaultValue = "7") int days
+    ) {
+        Optional<Runner> runner = authService.findByAuthorizationHeader(auth);
+        if (runner.isEmpty()) {
+            return unauthorized();
+        }
+        return ResponseEntity.ok(readinessService.getReadinessTrend(runner.get(), days));
     }
 
     @GetMapping("/state")
@@ -65,7 +79,8 @@ public class CoachController {
                     runner.get(),
                     body != null ? body.restingHeartRateBpm() : null,
                     body != null ? body.sleepScore() : null,
-                    body != null ? body.hrvMs() : null
+                    body != null ? body.hrvMs() : null,
+                    body != null ? body.stressScore() : null
             );
             return ResponseEntity.ok(Map.of("ok", true));
         } catch (IllegalArgumentException e) {
@@ -157,7 +172,7 @@ public class CoachController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    public record RecoveryBody(Integer restingHeartRateBpm, Integer sleepScore, Integer hrvMs) {}
+    public record RecoveryBody(Integer restingHeartRateBpm, Integer sleepScore, Integer hrvMs, Integer stressScore) {}
 
     public record CoachProfileBody(Integer maxHeartRateBpm, Integer restingHeartRateBpm) {}
 
