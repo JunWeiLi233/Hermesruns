@@ -31,18 +31,20 @@ public class RaceOfficialImageService {
             "<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>",
             Pattern.CASE_INSENSITIVE
     );
-    private static final List<String> REJECT_HINTS = List.of("logo", "icon", "badge", "sprite", "favicon");
+    private static final List<String> REJECT_HINTS = List.of("logo", "icon", "badge", "sprite", "favicon", "-fb.");
     private static final List<String> REJECT_HOST_HINTS = List.of(
             "tr.line.me",
             "google-analytics.com",
             "googletagmanager.com",
-            "doubleclick.net"
+            "doubleclick.net",
+            "facebook.com"
     );
     private static final List<String> REJECT_PATH_HINTS = List.of(
             "/_next/image",
             "tag.gif",
             "pixel",
-            "beacon"
+            "beacon",
+            "noscript"
     );
 
     private final RestTemplate restTemplate;

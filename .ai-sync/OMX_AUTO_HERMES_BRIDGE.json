@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-04-20T23:09:47.667Z",
+  "omxDetected": true,
+  "configPresent": true,
+  "hooksPresent": true,
+  "availableSkills": [
+    "deep-interview",
+    "ralplan",
+    "ralph",
+    "team"
+  ],
+  "availableAgents": [
+    "planner.toml",
+    "executor.toml",
+    "code-reviewer.toml",
+    "debugger.toml",
+    "architect.toml"
+  ],
+  "autoReady": true,
+  "sessionAutoDiscovery": "unverified-live-session",
+  "mapping": {
+    "clarify": "$deep-interview",
+    "plan": "$ralplan",
+    "loop": "$ralph",
+    "parallel": "$team"
+  },
+  "guidance": [
+    "If the current session did not auto-load OMX skills, /auto-hermes should still follow this mapping explicitly.",
+    "Treat OMX as preferred workflow/runtime layer when autoReady is true.",
+    "A restarted Codex session is still required before claiming OMX hooks are active live."
+  ]
+}

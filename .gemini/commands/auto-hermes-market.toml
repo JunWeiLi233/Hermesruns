@@ -1,0 +1,81 @@
+# Gemini CLI custom command
+
+[command]
+description = "Run the Auto-Hermes market research pipeline. Launches 5 research agents to analyze TAM, competitors, pricing, social signals, and trends, then synthesizes the results into actionable TASKS.md items."
+
+[command.prompt]
+text = """
+# Auto-Hermes Market 闂?Gemini Runtime
+
+You are running the Auto-Hermes market research pipeline.
+
+Treat `/auto-hermes-market` as a one-shot research and task-generation pipeline.
+
+## Runtime Identity
+
+- **Runtime**: Gemini CLI (coordinator mode)
+- **Execution model**: Sequential research phases. Launches 5 specialist agents one after another, then synthesizes findings.
+- **Canonical command**: `.claude/commands/auto-hermes-market.md` is the source of truth for protocol and anti-hallucination gates.
+
+## Arguments
+{{args}}
+- `scope` 闂?required: market segment to research (e.g. `running analytics apps`)
+- No argument: infer from `PRODUCT.md` 闂?North Star section
+
+---
+
+## Session Start
+
+1. Check `.ai-sync/HUMAN_LOOP.md` 闂?if `pause/stop/must-ask`, stop immediately.
+2. Create `.ai-sync/market/` directory if absent.
+3. If no scope: read `PRODUCT.md` and extract the target market.
+
+---
+
+## Execution
+
+### Phase 1 闂?Research (7 agents)
+
+Launch the 7 research agents sequentially. Each must write its findings to its designated JSON file in `.ai-sync/market/`.
+
+| Agent | Output file | Primary search queries |
+|---|---|---|
+| Market Analyst | `.ai-sync/market/market-analyst.json` | `"<scope>" market size 2024`, `"<scope>" TAM billion` |
+| Competitor Hunter | `.ai-sync/market/competitor-hunter.json` | `best <scope> apps 2024`, `<scope> alternatives site:reddit.com` |
+| Pricing Engineer | `.ai-sync/market/pricing-engineer.json` | `<competitor>/pricing` for each verified competitor |
+| Social Signal | `.ai-sync/market/social-signal.json` | `site:reddit.com "<scope>"`, `"<scope>" "worth paying for"` |
+| User Needs Researcher | `.ai-sync/market/user-needs.json` | `"running app pain points"`, `"frustrations with Garmin/Strava site:reddit.com"`, `"marathon training unmet needs"` |
+| SEO Agent | `.ai-sync/market/seo-agent.json` | `high volume keywords "<scope>"`, `"marathon training plan SEO gaps"`, `"running tools organic opportunities"` |
+| Trend Validator | `.ai-sync/market/trend-validator.json` | `"<scope>" funding 2024 site:techcrunch.com`, `"<scope>" trend growing` |
+
+**Verification rule (all agents)**: Every number, competitor, or price point MUST have a fetched `sourceUrl`. No URL = mark `unverified`. Partial data is better than fabricated data.
+
+### Phase 2 闂?Synthesis
+
+After all 7 reports are written (or marked failed):
+1. Read all files from `.ai-sync/market/`.
+2. Score opportunities (0闂?10) based on product fit and market potential.
+3. **Crucial**: Prioritize opportunities that solve the "Runner Needs" identified in the `user-needs.json` report.
+4. Write `MARKET_INTELLIGENCE.json` (raw data) and `MARKET_INTELLIGENCE.md` (summary report).
+
+### Phase 3 闂?Task generation
+
+Insert scored opportunities (>= 6/10) as concrete tasks into `TASKS.md` `## Suggested Next Tasks` under the correct tier section.
+Task format:
+- `[Market Opportunity] <Short description>`
+- `Context: <Link to report>`
+- `Rationale: <Why this opportunity scores high>`
+
+### Phase 4 闂?Reset Max Runaway
+
+Write `{"count": 0}` to `.ai-sync/AUTO_HERMES_MAX_RUNAWAY.json` to allow execution loops to resume with the new data.
+
+---
+
+## Output
+
+Final user-facing report must include:
+- Summary of TAM and Top 3 Competitors.
+- List of 3-5 generated tasks in `TASKS.md`.
+- Confirmation that Max Runaway has been reset.
+"""

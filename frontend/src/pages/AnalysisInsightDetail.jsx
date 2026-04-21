@@ -230,7 +230,6 @@ function coachSystemCopy(lang) {
       evidenceIntro: '这些训练记录正在驱动本轮教练系统。',
       keyWorkoutLabel: '下一次关键课',
       raceForecastLabel: '当前马拉松预测',
-      confidenceLabel: '计划置信度',
       volume7Label: '近7天训练量',
       volume28Label: '近28天训练量',
       runCountLabel: '近7天训练次数',
@@ -239,7 +238,6 @@ function coachSystemCopy(lang) {
       injuryLabel: '伤病风险',
       vdotLabel: '当前 VDOT',
       primaryActionLabel: '今日优先动作',
-      confidenceStates: { high: '高', medium: '中', low: '保守' },
       sessionSlots: ['今天', '下一次质量课', '长跑主线', '支撑训练'],
       sessionTarget: '目标',
       sessionWhy: '原因',
@@ -323,7 +321,6 @@ function coachSystemCopy(lang) {
     evidenceIntro: 'These sessions are currently driving the coach system.',
     keyWorkoutLabel: 'Next key workout',
     raceForecastLabel: 'Current marathon forecast',
-    confidenceLabel: 'Plan confidence',
     volume7Label: '7-day volume',
     volume28Label: '28-day volume',
     runCountLabel: '7-day runs',
@@ -332,7 +329,6 @@ function coachSystemCopy(lang) {
     injuryLabel: 'Injury signal',
     vdotLabel: 'Current VDOT',
     primaryActionLabel: 'Primary move today',
-    confidenceStates: { high: 'High', medium: 'Medium', low: 'Conservative' },
     sessionSlots: ['Today', 'Next quality', 'Long run line', 'Support work'],
     sessionTarget: 'Target',
     sessionWhy: 'Why',
@@ -415,7 +411,6 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
   if (daysSinceLastRun != null && daysSinceLastRun >= 2) readinessScore += 6;
   readinessScore = clamp(Math.round(readinessScore), 38, 95);
 
-  const confidenceKey = readinessScore >= 78 ? 'high' : readinessScore >= 62 ? 'medium' : 'low';
   const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
   const sessionTemplates = copy.actions[phaseKey] || copy.actions.build;
   const sessionTargets = [
@@ -445,7 +440,6 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
     palette,
     phaseKey,
     readinessScore,
-    confidenceLabel: copy.confidenceStates[confidenceKey],
     readinessDescription: copy.readinessDescriptions[phaseKey],
     title: copy.planTitles[phaseKey],
     subtitle: copy.planSubtitles[phaseKey],
@@ -674,7 +668,7 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
   if (daysSinceLastRun != null && daysSinceLastRun >= 2) readinessScore += 6;
   readinessScore = clamp(Math.round(readinessScore), 38, 95);
 
-  const confidenceLabel = lang === 'zh-CN'
+  const readinessBandLabel = lang === 'zh-CN'
     ? (readinessScore >= 78 ? '高' : readinessScore >= 62 ? '中' : '保守')
     : (readinessScore >= 78 ? 'High' : readinessScore >= 62 ? 'Medium' : 'Conservative');
   const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
@@ -709,14 +703,12 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
       evidenceIntro: t('analysis.coach_insight_recent_copy'),
       keyWorkoutLabel: lang === 'zh-CN' ? '下一次关键课' : 'Next key workout',
       raceForecastLabel: lang === 'zh-CN' ? '当前马拉松预测' : 'Current marathon forecast',
-      confidenceLabel: lang === 'zh-CN' ? '计划置信度' : 'Plan confidence',
       primaryActionLabel: lang === 'zh-CN' ? '今日优先动作' : 'Primary move today',
       sessionWhy: lang === 'zh-CN' ? '原因' : 'Why',
     },
     palette,
     phaseKey,
     readinessScore,
-    confidenceLabel,
     readinessDescription: stateCopy.readiness,
     title: stateCopy.title,
     subtitle: stateCopy.subtitle,
@@ -1470,7 +1462,7 @@ export default function AnalysisInsightDetail() {
                   </h1>
                   <p>{coachSystem.subtitle}</p>
                   <div className="analysis-coach-command-pill-row">
-                    {[coachSystem.forecastDelta, `${coachSystem.copy.confidenceLabel}: ${coachSystem.confidenceLabel}`, `${coachSystem.copy.keyWorkoutLabel}: ${coachSystem.keyWorkout}`].map((pill) => (
+                    {[coachSystem.forecastDelta, `${coachSystem.copy.keyWorkoutLabel}: ${coachSystem.keyWorkout}`].map((pill) => (
                       <span key={pill} className="analysis-coach-command-pill">{pill}</span>
                     ))}
                   </div>
@@ -1607,7 +1599,6 @@ export default function AnalysisInsightDetail() {
                       <h3>{coachPrimarySession.title}</h3>
                       <div className="analysis-coach-command-plan-meta">
                         <span>{coachPrimarySession.target}</span>
-                        <span>{coachSystem.confidenceLabel}</span>
                       </div>
                       <div className="analysis-coach-command-why-card">
                         <span>{t('analysis.coach_dashboard_coach_why')}</span>
@@ -2055,6 +2046,42 @@ export default function AnalysisInsightDetail() {
                 ))}
               </section>
 
+              <section className="analysis-load-command-methodology">
+                <article className="analysis-load-command-methodology-card">
+                  <div className="analysis-load-command-panel-head">
+                    <div>
+                      <span className="analysis-overview-card-kicker">{t('analysis.load_methodology_kicker')}</span>
+                      <h2>{t('analysis.load_methodology_title')}</h2>
+                    </div>
+                  </div>
+                  <div className="analysis-load-command-methodology-content">
+                    <div className="analysis-load-command-methodology-formula">
+                      <div className="analysis-formula-box">
+                        <span className="analysis-formula-label">ACWR =</span>
+                        <div className="analysis-formula-fraction">
+                          <span className="analysis-formula-numerator">{lang === 'zh-CN' ? '急性负荷 (7天 EWMA)' : 'Acute Load (7-day EWMA)'}</span>
+                          <hr />
+                          <span className="analysis-formula-denominator">{lang === 'zh-CN' ? '慢性负荷 (28天 EWMA)' : 'Chronic Load (28-day EWMA)'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="analysis-load-command-methodology-grid">
+                      <div className="analysis-method-item">
+                        <h3>{t('analysis.load_method_acute_title')}</h3>
+                        <p>{t('analysis.load_method_acute_body')}</p>
+                      </div>
+                      <div className="analysis-method-item">
+                        <h3>{t('analysis.load_method_chronic_title')}</h3>
+                        <p>{t('analysis.load_method_chronic_body')}</p>
+                      </div>
+                      <div className="analysis-method-item">
+                        <h3>{t('analysis.load_method_ratio_title')}</h3>
+                        <p>{t('analysis.load_method_ratio_body')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </section>
               <section className="analysis-load-command-bottom-grid">
                 <div className="analysis-load-command-side-column">
                   <article className="analysis-load-command-judgment-card">

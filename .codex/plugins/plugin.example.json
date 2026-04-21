@@ -1,0 +1,12 @@
+{
+  "name": "hermes-codex-bundle",
+  "version": "0.1.0",
+  "purpose": "Portable Codex bundle for Hermes workflows",
+  "includes": [
+    "skills",
+    "commands",
+    "agents",
+    "mcp"
+  ],
+  "notes": "Package related Codex capabilities together for team reuse."
+}

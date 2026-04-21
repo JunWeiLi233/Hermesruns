@@ -1,0 +1,86 @@
+{
+  "mode": "website-audit",
+  "generatedAt": "2026-04-18T17:02:55.366Z",
+  "rootDir": "C:\\Users\\Junwei\\Downloads\\Hermes",
+  "queueState": {
+    "status": "confirmed-empty",
+    "path": "TASKS.md",
+    "source": "explicit-or-inferred"
+  },
+  "queueEmpty": true,
+  "candidate": {
+    "mode": "website-audit",
+    "surface": "TodayRun",
+    "title": "Improve TodayRun page",
+    "files": [
+      "frontend/src/pages/TodayRun.jsx"
+    ],
+    "problemClass": "frontend-design",
+    "owner": "frontend-agent",
+    "verify": "cd frontend && npm run lint && npm run build",
+    "reason": "Pages index resolves TodayRun to an existing frontend page."
+  },
+  "candidates": [
+    {
+      "mode": "website-audit",
+      "surface": "TodayRun",
+      "title": "Improve TodayRun page",
+      "files": [
+        "frontend/src/pages/TodayRun.jsx"
+      ],
+      "problemClass": "frontend-design",
+      "owner": "frontend-agent",
+      "verify": "cd frontend && npm run lint && npm run build",
+      "reason": "Pages index resolves TodayRun to an existing frontend page."
+    }
+  ],
+  "signals": {
+    "productScreens": [
+      "Today's Run",
+      "Profile",
+      "Analysis",
+      "Runs",
+      "Shoes",
+      "Races",
+      "Rewards",
+      "Settings",
+      "Landing"
+    ],
+    "pagesIndexed": [
+      "AddShoes",
+      "AdminLogin",
+      "Analysis",
+      "AnalysisInsightDetail",
+      "Dashboard",
+      "Heatmap",
+      "Landing",
+      "LegalPage",
+      "Login",
+      "MuscleTraining",
+      "PredictionDetail",
+      "Profile",
+      "ProfileDashboard",
+      "Races",
+      "RacesDetail",
+      "Rewards",
+      "RunDetail",
+      "Runs",
+      "Schedule",
+      "Settings",
+      "ShoeCatalog",
+      "Shoes",
+      "Signup",
+      "TodayRun",
+      "Vo2MaxDetail",
+      "WeatherEngine",
+      "WorkflowBuilder"
+    ],
+    "contextLedgerPresent": true
+  },
+  "inputs": {
+    "tasks": "TASKS.md",
+    "product": "PRODUCT.md",
+    "pagesIndex": ".ai-codex/pages.md",
+    "contextLedger": ".ai-sync/CONTEXT_LEDGER.md"
+  }
+}

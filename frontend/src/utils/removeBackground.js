@@ -1,16 +1,82 @@
+import { apiFetch } from '../api';
+
 /**
  * Background removal algorithm using flood-fill from corners.
- * Works well for product images with white/solid backgrounds.
- * Algorithm: sample corner colors → flood fill from edges → feather alpha.
+ * Works well for product images with white/solid or checkerboard-like backgrounds.
+ * Algorithm: sample edge colors -> flood fill from edges -> feather alpha.
  */
 
-// Cache for processed images (URL → bg-removed data URL)
+// Cache for processed images (URL -> bg-removed data URL)
 const bgRemovedCache = {};
+const fetchedImageCache = {};
 
 export { bgRemovedCache };
 
+function isDataUrl(src) {
+  return typeof src === 'string' && src.startsWith('data:image/');
+}
+
+function isBlobUrl(src) {
+  return typeof src === 'string' && src.startsWith('blob:');
+}
+
+function isRemoteHttpUrl(src) {
+  return typeof src === 'string' && /^https?:\/\//i.test(src);
+}
+
+function isSameOriginUrl(src) {
+  if (!isRemoteHttpUrl(src)) return true;
+  try {
+    return new URL(src).origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function isLikelyNeutralBackgroundPixel(r, g, b, a) {
+  if (a < 8) return true;
+  const spread = Math.max(r, g, b) - Math.min(r, g, b);
+  const brightness = (r + g + b) / 3;
+  return spread <= 28 && brightness >= 176;
+}
+
+function matchesAnyBackgroundSample(r, g, b, samples, tolerance) {
+  for (const sample of samples) {
+    const dr = r - sample.r;
+    const dg = g - sample.g;
+    const db = b - sample.b;
+    const distance = Math.sqrt(dr * dr + dg * dg + db * db);
+    if (distance <= tolerance) return true;
+  }
+  return false;
+}
+
+async function resolveProcessableImageSource(imgSrc) {
+  if (!imgSrc || isDataUrl(imgSrc) || isBlobUrl(imgSrc) || isSameOriginUrl(imgSrc)) {
+    return imgSrc;
+  }
+
+  if (fetchedImageCache[imgSrc]) {
+    return fetchedImageCache[imgSrc];
+  }
+
+  const proxyUrl = `/api/shoes/render-source?url=${encodeURIComponent(imgSrc)}`;
+
+  try {
+    const response = await apiFetch(proxyUrl);
+    if (!response.ok) return imgSrc;
+    const blob = await response.blob();
+    if (!blob.type.startsWith('image/')) return imgSrc;
+    const objectUrl = URL.createObjectURL(blob);
+    fetchedImageCache[imgSrc] = objectUrl;
+    return objectUrl;
+  } catch {
+    return imgSrc;
+  }
+}
+
 export default function removeBackground(imgSrc) {
-  return new Promise((resolve) => {
+  return resolveProcessableImageSource(imgSrc).then((resolvedSrc) => new Promise((resolve) => {
     const img = new Image();
     let settled = false;
     const safeResolve = (value) => {
@@ -19,35 +85,50 @@ export default function removeBackground(imgSrc) {
       resolve(value);
     };
     // Avoid hanging forever on slow/blocked hosts.
-    const timeoutId = window.setTimeout(() => safeResolve(imgSrc), 6000);
+    const timeoutId = window.setTimeout(() => safeResolve(resolvedSrc || imgSrc), 6000);
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
         const w = img.width, h = img.height;
         canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          window.clearTimeout(timeoutId);
+          safeResolve(resolvedSrc || imgSrc);
+          return;
+        }
         ctx.drawImage(img, 0, 0);
         const imageData = ctx.getImageData(0, 0, w, h);
         const data = imageData.data;
 
-        // Sample corner colors to determine background
-        const corners = [
+        const edgeSamples = [];
+        const samplePositions = [
           [0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1],
-          [Math.floor(w * 0.1), 0], [Math.floor(w * 0.9), 0],
-          [0, Math.floor(h * 0.1)], [0, Math.floor(h * 0.9)],
+          [Math.floor(w * 0.1), 0], [Math.floor(w * 0.5), 0], [Math.floor(w * 0.9), 0],
+          [Math.floor(w * 0.1), h - 1], [Math.floor(w * 0.5), h - 1], [Math.floor(w * 0.9), h - 1],
+          [0, Math.floor(h * 0.1)], [0, Math.floor(h * 0.5)], [0, Math.floor(h * 0.9)],
+          [w - 1, Math.floor(h * 0.1)], [w - 1, Math.floor(h * 0.5)], [w - 1, Math.floor(h * 0.9)],
         ];
-        let bgR = 0, bgG = 0, bgB = 0, count = 0;
-        for (const [cx, cy] of corners) {
+
+        for (const [cx, cy] of samplePositions) {
           const i = (cy * w + cx) * 4;
-          bgR += data[i]; bgG += data[i + 1]; bgB += data[i + 2];
-          count++;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3];
+          if (isLikelyNeutralBackgroundPixel(r, g, b, a)) {
+            edgeSamples.push({ r, g, b });
+          }
         }
-        bgR = Math.round(bgR / count);
-        bgG = Math.round(bgG / count);
-        bgB = Math.round(bgB / count);
+
+        if (edgeSamples.length === 0) {
+          window.clearTimeout(timeoutId);
+          safeResolve(resolvedSrc || imgSrc);
+          return;
+        }
 
         // Flood-fill from all edge pixels
-        const tolerance = 45;
+        const tolerance = 34;
         const visited = new Uint8Array(w * h);
         const bgMask = new Uint8Array(w * h); // 1 = background
         const queue = [];
@@ -65,9 +146,13 @@ export default function removeBackground(imgSrc) {
           visited[idx] = 1;
 
           const i = idx * 4;
-          const dr = data[i] - bgR, dg = data[i + 1] - bgG, db = data[i + 2] - bgB;
-          const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-          if (dist > tolerance) continue;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3];
+          if (!isLikelyNeutralBackgroundPixel(r, g, b, a) || !matchesAnyBackgroundSample(r, g, b, edgeSamples, tolerance)) {
+            continue;
+          }
 
           bgMask[idx] = 1;
           queue.push(px - 1, py); queue.push(px + 1, py);
@@ -107,13 +192,13 @@ export default function removeBackground(imgSrc) {
       } catch {
         // Cross-origin images without CORS headers taint canvas; just use original URL.
         window.clearTimeout(timeoutId);
-        safeResolve(imgSrc);
+        safeResolve(resolvedSrc || imgSrc);
       }
     };
     img.onerror = () => {
       window.clearTimeout(timeoutId);
-      safeResolve(imgSrc);
+      safeResolve(resolvedSrc || imgSrc);
     }; // fallback to original
-    img.src = imgSrc;
-  });
+    img.src = resolvedSrc || imgSrc;
+  }));
 }

@@ -1,0 +1,64 @@
+[command]
+description = "Run a bounded Hermes tech-debt audit. Reviews frontend, backend, and automation surfaces across 10 specific debt categories, then writes step-by-step debt tasks into TASKS.md."
+
+[command.prompt]
+text = """
+# Hermes Tech Debt Audit
+
+Treat `/auto-hermes-tech-debt` as the repo-local Gemini CLI command for one-shot Hermes tech-debt review.
+
+## Runtime Identity
+
+- Runtime: Gemini CLI
+- Execution model: sequential one-shot audit
+- Shared engine: `.tools/auto-hermes-tech-debt.mjs`
+- Shared contract: `.codex/workflows/auto-hermes-tech-debt-contract.md`
+- Writeback target: `TASKS.md` under `## Tech Debt Tasks`
+
+## Goal
+
+Review the project in bounded slices, identify deterministic tech debt, and write only implementation-ready step-by-step tasks. Do not auto-fix product code in this run.
+
+## Session Start
+
+1. Read `AGENTS.md`
+2. Read `.ai-sync/AGENT_SYNC.md`
+3. Read `.ai-sync/CONTEXT_LEDGER.md`
+4. Read `TASKS.md`
+
+## Audit Slices
+
+Review:
+- frontend
+- backend
+- docs / automation / workflow tooling
+
+## Debt Categories
+
+The engine detects 10 categories of specific, actionable debt:
+
+| Kind | Description | Priority Boost |
+|---|---|---|
+| `debt-markers` | Explicit TODO/FIXME/HACK/XXX comments | +10 |
+| `god-class` | Classes with 15+ methods, 12+ fields, or 8+ injected dependencies | +9 |
+| `missing-error-handling` | Empty catch blocks, e.printStackTrace(), or swallowed exceptions | +8 |
+| `circular-dependency-risk` | Controllers/services with 8+ injected dependencies | +7 |
+| `hardcoded-config` | Hardcoded URLs, localhost refs, magic numbers, inline hex colors | +6 |
+| `dead-code` | @Deprecated members on public API surface | +5 |
+| `duplicate-logic` | Repeated object construction patterns (5+ occurrences) | +4 |
+| `oversized-file` | Files exceeding line thresholds (550 backend, 700 frontend, 450 tools) | +3 |
+| `inconsistent-naming` | Spring beans not following naming conventions | +2 |
+| `missing-focused-tests` | Java classes or .mjs tools without matching test files | +1 |
+
+## Preferred Invocation
+
+```bash
+node .tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write --max 8
+```
+
+## Truth Rules
+
+- Findings are heuristic debt signals, not guaranteed bugs.
+- Do not write vague cleanup tasks.
+- Do not claim repo-wide semantic understanding from deterministic scans alone.
+"""

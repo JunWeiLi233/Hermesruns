@@ -61,4 +61,52 @@ class RaceOfficialImageServiceTests {
         assertThat(service.resolveOfficialImage("https://example.com/race"))
                 .isEqualTo("https://cdn.example.com/hero.jpg");
     }
+
+    @Test
+    void resolveOfficialImageSkipsNextImageProxyAndUsesLaterDirectImage() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.exchange(
+                eq("https://www.maratonadorio.com.br/"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(ResponseEntity.ok("""
+                <html>
+                  <head>
+                    <meta property="og:image" content="/_next/image?url=%2Fimagens%2Fbandeira-brasil.png&w=128&q=75" />
+                  </head>
+                  <body>
+                    <img src="https://www.maratonadorio.com.br/imagens/maratona-hero.jpg" />
+                  </body>
+                </html>
+                """));
+
+        RaceOfficialImageService service = new RaceOfficialImageService(restTemplate);
+
+        assertThat(service.resolveOfficialImage("https://www.maratonadorio.com.br/"))
+                .isEqualTo("https://www.maratonadorio.com.br/imagens/maratona-hero.jpg");
+    }
+
+    @Test
+    void resolveOfficialImageSkipsTrackerPixelAndUsesLaterImage() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.exchange(
+                eq("https://example.com/race"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(ResponseEntity.ok("""
+                <html>
+                  <body>
+                    <img src="https://tr.line.me/tag.gif?c_t=lap&t_id=abc&e=pv&noscript=1" />
+                    <img src="https://cdn.example.com/race-photo.jpg" />
+                  </body>
+                </html>
+                """));
+
+        RaceOfficialImageService service = new RaceOfficialImageService(restTemplate);
+
+        assertThat(service.resolveOfficialImage("https://example.com/race"))
+                .isEqualTo("https://cdn.example.com/race-photo.jpg");
+    }
 }

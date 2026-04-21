@@ -221,7 +221,6 @@ export default function PredictionDetail() {
       insights: [
         t(improving ? 'analysis.pred_marathon_judgment_insight_up_1' : 'analysis.pred_marathon_judgment_insight_flat_1'),
         t('analysis.pred_marathon_judgment_insight_2', { runs: nearRuns.length }),
-        t('analysis.pred_marathon_judgment_insight_3', { confidence: stats.confidence }),
       ],
     };
   }, [historyData.length, nearRuns.length, stats, t]);
@@ -369,13 +368,6 @@ export default function PredictionDetail() {
                       <span>{t('analysis.pred_detail_pace')}</span>
                       <strong>{stats ? `${fmtPace(stats.latestPaceSec)} ${paceUnitLabel}` : '--'}</strong>
                     </div>
-                    <div>
-                      <span>{t('analysis.pred_marathon_confidence')}</span>
-                      <strong>{stats ? `${stats.confidence}%` : '--'}</strong>
-                    </div>
-                  </div>
-                  <div className="prediction-marathon-confidence-bar" aria-hidden="true">
-                    <div style={{ width: `${stats?.confidence ?? 0}%` }} />
                   </div>
                   <p>{t('analysis.pred_marathon_reliability', { weeks: historyData.length || 0 })}</p>
                 </div>
@@ -550,6 +542,34 @@ export default function PredictionDetail() {
                   )}
                 </section>
               </section>
+
+              <section className="analysis-load-command-methodology analysis-vdot-methodology is-prediction-vdot">
+                <article className="analysis-load-command-methodology-card">
+                  <div className="analysis-load-command-panel-head">
+                    <div>
+                      <span className="analysis-overview-card-kicker">{t('analysis.vdot_methodology_title')}</span>
+                      <h2>{t('analysis.vdot_methodology_title')}</h2>
+                    </div>
+                  </div>
+                  <div className="analysis-load-command-methodology-content">
+                    <p className="analysis-vdot-methodology-intro">{t('analysis.vdot_methodology_intro')}</p>
+                    <div className="analysis-load-command-methodology-grid">
+                      <div className="analysis-method-item">
+                        <h3>{t('analysis.vdot_method_cost_title')}</h3>
+                        <p>{t('analysis.vdot_method_cost_body')}</p>
+                      </div>
+                      <div className="analysis-method-item">
+                        <h3>{t('analysis.vdot_method_fraction_title')}</h3>
+                        <p>{t('analysis.vdot_method_fraction_body')}</p>
+                      </div>
+                      <div className="analysis-method-item">
+                        <h3>{t('analysis.vdot_method_representative_title')}</h3>
+                        <p>{t('analysis.vdot_method_representative_body')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </section>
             </>
           ) : (
             <>
@@ -573,10 +593,6 @@ export default function PredictionDetail() {
                   <div className="prediction-detail-kpi">
                     <span>{t('analysis.pred_detail_runs')}</span>
                     <strong>{nearRuns.length}</strong>
-                  </div>
-                  <div className="prediction-detail-kpi">
-                    <span>{t('analysis.stitch_confidence', { value: stats?.confidence ?? 0 })}</span>
-                    <strong>{historyData.length}</strong>
                   </div>
                 </div>
               </div>
@@ -627,7 +643,6 @@ export default function PredictionDetail() {
                 <span className="analysis-overview-card-kicker">{t('analysis.pred_detail_trend_title')}</span>
                 <h2>{distLabel}</h2>
               </div>
-              <span className="analysis-overview-confidence-pill">{t('analysis.stitch_confidence', { value: stats?.confidence ?? 0 })}</span>
             </div>
             {trendChartData ? (
               <div className="prediction-detail-chart-wrap">
@@ -758,6 +773,34 @@ export default function PredictionDetail() {
                 <p>{noRelatedRunsCopy}</p>
               </div>
             )}
+          </section>
+
+          <section className="analysis-load-command-methodology analysis-vdot-methodology is-prediction-vdot">
+            <article className="analysis-load-command-methodology-card">
+              <div className="analysis-load-command-panel-head">
+                <div>
+                  <span className="analysis-overview-card-kicker">{t('analysis.vdot_methodology_title')}</span>
+                  <h2>{t('analysis.vdot_methodology_title')}</h2>
+                </div>
+              </div>
+              <div className="analysis-load-command-methodology-content">
+                <p className="analysis-vdot-methodology-intro">{t('analysis.vdot_methodology_intro')}</p>
+                <div className="analysis-load-command-methodology-grid">
+                  <div className="analysis-method-item">
+                    <h3>{t('analysis.vdot_method_cost_title')}</h3>
+                    <p>{t('analysis.vdot_method_cost_body')}</p>
+                  </div>
+                  <div className="analysis-method-item">
+                    <h3>{t('analysis.vdot_method_fraction_title')}</h3>
+                    <p>{t('analysis.vdot_method_fraction_body')}</p>
+                  </div>
+                  <div className="analysis-method-item">
+                    <h3>{t('analysis.vdot_method_representative_title')}</h3>
+                    <p>{t('analysis.vdot_method_representative_body')}</p>
+                  </div>
+                </div>
+              </div>
+            </article>
           </section>
 
           <footer className="runner-shell-footer">

@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-04-18T01:52:19.808Z",
+  "eligible": true,
+  "attemptedCommit": true,
+  "attemptedPush": false,
+  "message": "ShoeCatalog fetches data but shows no loading indicator - runners see a ",
+  "surface": "ShoeCatalog",
+  "task": "ShoeCatalog fetches data but shows no loading indicator - runners see a blank flash before data arrives",
+  "summary": "",
+  "files": [
+    "frontend/src/pages/ShoeCatalog.jsx",
+    "frontend/src/styles/style.css"
+  ],
+  "policies": [
+    {
+      "path": "frontend/src/pages/ShoeCatalog.jsx",
+      "bucket": "publishable",
+      "reason": "Repo code, product doc, or shared helper that may ship."
+    },
+    {
+      "path": "frontend/src/styles/style.css",
+      "bucket": "publishable",
+      "reason": "Repo code, product doc, or shared helper that may ship."
+    }
+  ],
+  "verify": [
+    "cd frontend && npm run lint (PASS) + vite build PASS"
+  ],
+  "reason": "Auto-commit execution failed: C:\\Users\\Junwei\\Downloads\\Hermes\\.tools\\auto-commit.ps1 : �Ҳ�������ʵ�ʲ�����frontend/src/styles/style.css����λ����ʽ��\r\n����\r\n    + CategoryInfo          : InvalidArgument: (:) [auto-commit.ps1]��ParentContainsErrorRecordException\r\n    + FullyQualifiedErrorId : PositionalParameterNotFound,auto-commit.ps1\nCommand failed: powershell -File C:\\Users\\Junwei\\Downloads\\Hermes\\.tools\\auto-commit.ps1 -Message ShoeCatalog fetches data but shows no loading indicator - runners see a  -Paths frontend/src/pages/ShoeCatalog.jsx frontend/src/styles/style.css\nC:\\Users\\Junwei\\Downloads\\Hermes\\.tools\\auto-commit.ps1 : �Ҳ�������ʵ�ʲ�����frontend/src/styles/style.css����λ����ʽ��\r\n����\r\n    + CategoryInfo          : InvalidArgument: (:) [auto-commit.ps1]��ParentContainsErrorRecordException\r\n    + FullyQualifiedErrorId : PositionalParameterNotFound,auto-commit.ps1",
+  "command": "powershell -File .tools/auto-commit.ps1 -Message \"ShoeCatalog fetches data but shows no loading indicator - runners see a \" -Paths \"frontend/src/pages/ShoeCatalog.jsx\",\"frontend/src/styles/style.css\"",
+  "commitResult": "",
+  "commitError": "C:\\Users\\Junwei\\Downloads\\Hermes\\.tools\\auto-commit.ps1 : �Ҳ�������ʵ�ʲ�����frontend/src/styles/style.css����λ����ʽ��\r\n����\r\n    + CategoryInfo          : InvalidArgument: (:) [auto-commit.ps1]��ParentContainsErrorRecordException\r\n    + FullyQualifiedErrorId : PositionalParameterNotFound,auto-commit.ps1\nCommand failed: powershell -File C:\\Users\\Junwei\\Downloads\\Hermes\\.tools\\auto-commit.ps1 -Message ShoeCatalog fetches data but shows no loading indicator - runners see a  -Paths frontend/src/pages/ShoeCatalog.jsx frontend/src/styles/style.css\nC:\\Users\\Junwei\\Downloads\\Hermes\\.tools\\auto-commit.ps1 : �Ҳ�������ʵ�ʲ�����frontend/src/styles/style.css����λ����ʽ��\r\n����\r\n    + CategoryInfo          : InvalidArgument: (:) [auto-commit.ps1]��ParentContainsErrorRecordException\r\n    + FullyQualifiedErrorId : PositionalParameterNotFound,auto-commit.ps1"
+}

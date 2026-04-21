@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": true,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "executing",
+  "startedAt": "2026-04-18T14:01:21.280Z",
+  "completedAt": null,
+  "runId": "ahm-20260418140121",
+  "parentGoal": "Fix suggest-tasks.mjs false positive detection and finalize RacesDetail UX.",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260418140121.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260418140121-progress.json"
+}

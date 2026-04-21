@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": true,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "executing",
+  "startedAt": "2026-04-18T17:36:35.474Z",
+  "completedAt": null,
+  "runId": "ahm-20260418173635",
+  "parentGoal": "Fresh /auto-hermes-max verification run",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260418173635.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260418173635-progress.json"
+}

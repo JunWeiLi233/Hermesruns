@@ -94,14 +94,15 @@ function App() {
                 <Route path="/terms" element={<LegalPage variant="terms" />} />
                 <Route path="/privacy" element={<LegalPage variant="privacy" />} />
                 <Route path="/admin" element={<AdminLogin />} />
-                <Route path="/dashboard" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
+                <Route path="/dashboard/*" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
                 <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
                 <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
                 <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
                 <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
                 <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
                 <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
-                <Route path="/weather-engine" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />
+                <Route path="/weather" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />
+                <Route path="/weather-engine" element={<Navigate to="/weather" replace />} />
                 <Route path="/analysis/vo2max" element={<UserOnlyRoute><Vo2MaxDetail /></UserOnlyRoute>} />
                 <Route path="/analysis/:insightKey" element={<UserOnlyRoute><AnalysisInsightDetail /></UserOnlyRoute>} />
                 <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />

@@ -1,0 +1,24 @@
+{
+  "laneId": "frontend-pipeline-ui",
+  "parentRunId": "ahm-20260418052036",
+  "correlationId": "ahm-20260418052036:frontend-pipeline-ui",
+  "goal": "Add 'Run Pipeline' button and status display to admin dashboard course-map workspace.",
+  "parentGoal": "Finalize and expose the Marathon Route Extraction Pipeline with UI, translations, and integration tests.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/Dashboard.jsx",
+    "frontend/src/styles/style.css"
+  ],
+  "mustPreserve": [],
+  "verify": "",
+  "mergeNotes": "",
+  "priority": 1,
+  "effort": "medium",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\frontend-pipeline-ui.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\frontend-pipeline-ui-activity.json",
+  "command": "/auto-hermes scope=\"Add 'Run Pipeline' button and status display to admin dashboard course-map workspace.\" mode=loop owned=\"frontend/src/pages/Dashboard.jsx|frontend/src/styles/style.css\""
+}
