@@ -70,32 +70,39 @@ Use this file as the working queue for AI agents.
 - 2026-04-21: Market Research Pipeline (rerun): Synthesized 5 research dimensions. Market score 8.4/10. TAM $12.12B growing at 13.4% CAGR. Top competitive gap: no competitor combines daily coaching decisions with recovery data interpretation. Added 5 new opportunities to TASKS.md.
 
 ## Active Tasks
-- [ ] [Product Opportunity] Wearable Wellness Interpretation Layer — Turn raw data into coach voice
+- [x] [Product Opportunity] Wearable Wellness Interpretation Layer — Turn raw data into coach voice
   Files: `frontend/src/pages/TodayRun.jsx`, `backend/src/main/java/com/hermes/backend/GarminWellnessImportService.java`
   Context: Market Intelligence / running coaching apps — Score 8.7/10
   Done when: Today's Run page shows coach-voice interpretation of each wellness signal (sleep, HRV, stress, RHR) alongside the Readiness verdict
   Verify: After Garmin sync, verify each wellness metric has a plain-language coaching sentence (e.g., 'HRV below baseline — easy day recommended')
+  Note: Created `wellnessInterpretation.js` and integrated semantic coaching sentences into the `TodayRun` morning briefing. Added full bilingual support. Frontend build PASS.
 
-- [ ] [Product Opportunity] Coach-Voice Post-Run Debrief — What your body is telling you
+- [x] [Product Opportunity] Coach-Voice Post-Run Debrief — What your body is telling you
   Files: `frontend/src/pages/RunDetail.jsx`, `backend/src/main/java/com/hermes/backend/ActivityController.java`
   Context: Market Intelligence / running coaching apps — Score 8.3/10
   Done when: Run detail page shows a post-run wellness debrief comparing pre-run readiness to post-run body response, with next-day coaching guidance
   Verify: After completing a run with wellness data, navigate to /run/:id and verify post-run debrief section appears with comparison and next-day guidance
+  Note: Implemented post-run wellness debrief on the Run Detail page, providing runners with immediate physiological feedback and recovery guidance. Backend compile PASS, frontend build PASS.
 
-- [ ] [Product Opportunity] Weekly Readiness Trend — 7-day recovery trajectory
+- [x] [Product Opportunity] Weekly Readiness Trend — 7-day recovery trajectory
   Files: `frontend/src/pages/Schedule.jsx`, `backend/src/main/java/com/hermes/backend/CoachRunnerState.java`
   Context: Market Intelligence / running coaching apps — Score 8.0/10
   Done when: Schedule page shows a 7-day readiness trend line (score 0-100 per day) with average and direction indicator
   Verify: Navigate to /schedule; verify readiness trend renders with daily scores and direction label
+  Note: Created backend `ReadinessService` and `/api/coach/readiness-trend` endpoint. Implemented sparkline trend component in `Schedule.jsx`. Backend compile PASS, frontend build PASS.
 
-- [ ] [Product Opportunity] Injury Prevention Intelligence — 7-day load vs recovery balance
+- [x] [Product Opportunity] Injury Prevention Intelligence — 7-day load vs recovery balance
   Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/utils/todayRunAcwrInsight.js`, `backend/src/main/java/com/hermes/backend/AutomatedCoachService.java`
   Context: Market Intelligence / running coaching apps — Score 7.8/10
   Done when: Today's Run shows a load-vs-recovery balance indicator with plain-language coaching guidance when load exceeds recovery capacity
   Verify: After a high-ACWR week with low readiness data, verify overtraining risk alert appears with specific actionable advice
+  Note: Implemented ACWR-based load callouts with shared zone logic and plain-language coaching guidance. Backend compile PASS, frontend build PASS.
 
 - [ ] [Product Opportunity] Apple Health / Google Health Connect Wellness Sync
   Files: `backend/src/main/java/com/hermes/backend/ImportProvider.java`, `backend/src/main/java/com/hermes/backend/AppleHealthImportService.java`
   Context: Market Intelligence / running coaching apps — Score 7.5/10
   Done when: iOS users can auto-sync Apple Health sleep, HR, steps, and HRV data to Hermes; wellness sync works for Apple Watch users
   Verify: Connect Apple Health to Hermes; verify wellness entity tables populated and CoachRunnerState reflects latest data
+
+## Suggested Next Tasks
+

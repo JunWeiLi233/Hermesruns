@@ -162,7 +162,7 @@
     }
 }
 
-/* HERMES wordmark �?bold navy, tight kerning (matches brand asset) */
+/* HERMES wordmark 鈥?bold navy, tight kerning (matches brand asset) */
 .hermes-logo {
     display: inline-flex;
     align-items: center;
@@ -2475,7 +2475,7 @@ body.theme-light .dashboard-body {
     letter-spacing: -0.06em;
 }
 
-/* ── Unified user menu (avatar + name + dropdown) ── */
+/* 鈹€鈹€ Unified user menu (avatar + name + dropdown) 鈹€鈹€ */
 .user-menu-shell {
     position: relative;
 }
@@ -2883,9 +2883,9 @@ body.theme-light .dashboard-body {
 
 /* strava-sync-notice variants are now shared with .app-notice--* above */
 
-/* ── Shared app-notice system (info / success / warning / error) ─────── */
+/* 鈹€鈹€ Shared app-notice system (info / success / warning / error) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 /* Canonical pattern: use app-notice + app-notice--{variant}.            */
-/* strava-sync-notice is the reference implementation �?kept as-is.     */
+/* strava-sync-notice is the reference implementation 鈥?kept as-is.     */
 .app-notice {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -2926,7 +2926,7 @@ body.theme-light .dashboard-body {
     line-height: 1.5;
 }
 
-/* Notice variants �?same palette as strava-sync-notice */
+/* Notice variants 鈥?same palette as strava-sync-notice */
 .app-notice--info,
 .strava-sync-notice--info {
     border: 1px solid rgba(14, 165, 233, 0.18);
@@ -2955,7 +2955,7 @@ body.theme-light .dashboard-body {
     color: #b91c1c;
 }
 
-/* ── Shared inline status (loading / empty / error inside a card) ─────── */
+/* 鈹€鈹€ Shared inline status (loading / empty / error inside a card) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 /* Canonical pattern: use inline-status for text-only in-card states.    */
 /* history-status, reward-empty-state, run-empty-state are merged here.  */
 .inline-status,
@@ -2970,7 +2970,7 @@ body.theme-light .dashboard-body {
     line-height: 1.6;
 }
 
-/* ── Premium first-use empty state ───────────────────────────────────── */
+/* 鈹€鈹€ Premium first-use empty state 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .premium-empty-state {
     display: flex;
     flex-direction: column;
@@ -3342,7 +3342,7 @@ body.theme-light .dashboard-body {
     color: var(--text-muted, #64748b);
 }
 
-/* ── Daily Steps Section ── */
+/* 鈹€鈹€ Daily Steps Section 鈹€鈹€ */
 .daily-steps-section {
   margin-top: 24px; padding: 28px;
 }
@@ -3408,7 +3408,7 @@ body.theme-light .dashboard-body {
     color: var(--text-muted, #aaa); text-align: center;
 }
 
-/* ── Calories (Profile) ── */
+/* 鈹€鈹€ Calories (Profile) 鈹€鈹€ */
 .calories-section {
     margin-top: 24px;
     padding: 28px;
@@ -3549,7 +3549,7 @@ body.theme-light .dashboard-body {
     line-height: 1.45;
 }
 
-/* ── Personal Records Section ── */
+/* 鈹€鈹€ Personal Records Section 鈹€鈹€ */
 .pr-section {
   margin-top: 24px; padding: 28px;
 }
@@ -3686,7 +3686,7 @@ body.theme-light .dashboard-body {
     border-color: rgba(255, 107, 53, 0.16);
 }
 
-/* ── Subscription card ── */
+/* 鈹€鈹€ Subscription card 鈹€鈹€ */
 .subscription-section {
     transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
 }
@@ -3952,7 +3952,7 @@ body.theme-light .dashboard-body {
     opacity: 1;
 }
 
-/* ── AI Quota bar (Shoes scan modal) ── */
+/* 鈹€鈹€ AI Quota bar (Shoes scan modal) 鈹€鈹€ */
 .ai-quota-bar {
     display: flex;
     align-items: center;
@@ -3991,7 +3991,7 @@ body.theme-light .dashboard-body {
     font-size: 13px;
 }
 
-/* ── Connected Services card ── */
+/* 鈹€鈹€ Connected Services card 鈹€鈹€ */
 .connected-services-section {
     transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
 }
@@ -4786,7 +4786,7 @@ body.theme-midnight .analysis-primary-fill-card {
     background: rgba(255, 255, 255, 0.03);
 }
 
-/* ── Admin Shoe Image Management ── */
+/* 鈹€鈹€ Admin Shoe Image Management 鈹€鈹€ */
 .admin-shoe-section {
   margin-top: 28px; padding: 26px;
   background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(6px);
@@ -8010,7 +8010,7 @@ body.theme-midnight .weekly-flashcard-graph-track {
     fill: rgba(255, 181, 88, 0.92);
 }
 
-/* ── Rewards hero card ────────────────────────────────────────────────── */
+/* 鈹€鈹€ Rewards hero card 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .rewards-hero-card {
     display: flex;
     flex-direction: column;
@@ -8112,7 +8112,7 @@ body.theme-midnight .weekly-flashcard-graph-track {
     white-space: nowrap;
 }
 
-/* ── Rewards sections ─────────────────────────────────────────────────── */
+/* 鈹€鈹€ Rewards sections 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .rewards-section {
     margin-top: 20px;
 }
@@ -8209,7 +8209,7 @@ body.theme-midnight .weekly-flashcard-graph-track {
     color: var(--text-muted, #64748b);
     font-style: italic;
 }
-/* ── Reward card: next-to-earn variant ────────────────────────────────── */
+/* 鈹€鈹€ Reward card: next-to-earn variant 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .reward-card--next {
     background: color-mix(in srgb, var(--surface, rgba(255, 255, 255, 0.94)) 97%, transparent);
     border: 1px solid rgba(148, 163, 184, 0.2);
@@ -8226,7 +8226,7 @@ body.theme-midnight .weekly-flashcard-graph-track {
     margin: 2px 0 6px;
 }
 
-/* ── Reward progress bar ──────────────────────────────────────────────── */
+/* 鈹€鈹€ Reward progress bar 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .reward-progress-bar {
     height: 5px;
     background: rgba(148, 163, 184, 0.16);
@@ -8249,7 +8249,7 @@ body.theme-midnight .weekly-flashcard-graph-track {
     color: var(--brand-accent, #ff6b35);
 }
 
-/* ── Legacy reward-section passthrough ───────────────────────────────── */
+/* 鈹€鈹€ Legacy reward-section passthrough 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .reward-section {
     margin-top: 18px;
 }
@@ -12500,7 +12500,7 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-playbook-btn.is-s
     font-size: 0.82rem;
 }
 
-/* ── Training Load & ACWR ── */
+/* 鈹€鈹€ Training Load & ACWR 鈹€鈹€ */
 .training-load-card {
     margin-bottom: 25px;
 }
@@ -12596,7 +12596,7 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
 }
 
 /* ============================================================
-   Profile page �?sync modal & lang switcher
+   Profile page 鈥?sync modal & lang switcher
    ============================================================ */
 
 .modal-overlay {
@@ -12662,7 +12662,7 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
 }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* ─── Shoe Library Page ─── */
+/* 鈹€鈹€鈹€ Shoe Library Page 鈹€鈹€鈹€ */
 .shoes-page .shoe-action-btns {
   display: flex; gap: 10px; align-items: center;
 }
@@ -12896,7 +12896,7 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* Image picker �?clickable shoe image */
+/* Image picker 鈥?clickable shoe image */
 .shoe-img-clickable {
   cursor: pointer; position: relative; border-radius: 8px; transition: box-shadow 0.2s;
   width: 120px; height: 120px; flex-shrink: 0; overflow: hidden;
@@ -12904,7 +12904,10 @@ body.theme-high-contrast-light .dashboard-body .vdot-best-effort {
 }
 .shoe-img-clickable:hover { box-shadow: 0 0 0 2px var(--brand-accent, #FF6B35); }
 .shoe-img-clickable:hover::after {
-  content: '�?; position: absolute; top: 2px; right: 2px;
+  content: "✎";
+  position: absolute;
+  top: 2px;
+  right: 2px;
   background: var(--brand-accent, #FF6B35); color: #fff; font-size: 0.6rem;
   width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
 }
@@ -14296,7 +14299,7 @@ body:is(.theme-light, .theme-high-contrast-light) .shoe-scan-result-conflict {
   font-size: 0.82rem; color: var(--classic-muted, #888); font-weight: 600;
 }
 
-/* ─── Scan Conflict Resolution ─── */
+/* 鈹€鈹€鈹€ Scan Conflict Resolution 鈹€鈹€鈹€ */
 .scan-result-duplicate {
   border-color: rgba(245, 158, 11, 0.3);
   background: rgba(245, 158, 11, 0.08);
@@ -14376,7 +14379,7 @@ body:is(.theme-light, .theme-high-contrast-light) .shoe-scan-result-conflict {
   color: #fff;
 }
 
-/* ─── Run Detail Shoe Section ─── */
+/* 鈹€鈹€鈹€ Run Detail Shoe Section 鈹€鈹€鈹€ */
 .shoe-run-section {
   background: var(--classic-surface, #fff);
   border: 1px solid var(--classic-border, #eee);
@@ -14418,7 +14421,7 @@ body:is(.theme-light, .theme-high-contrast-light) .shoe-scan-result-conflict {
 .shoe-run-option:hover { background: var(--classic-border, #f5f5f5); }
 .shoe-run-option.active { color: var(--classic-accent, #fa5d29); font-weight: 600; }
 
-/* ─── Shoe Add Wizard ─── */
+/* 鈹€鈹€鈹€ Shoe Add Wizard 鈹€鈹€鈹€ */
 .shoe-wizard { min-height: 200px; }
 .shoe-wizard-head {
   display: flex;
@@ -16830,7 +16833,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
     color: #f2e9e7;
 }
 
-/* ─── Run Detail Stitch Page ───────────────────────────────────────────── */
+/* 鈹€鈹€鈹€ Run Detail Stitch Page 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .run-detail-page {
   background:
     radial-gradient(circle at top left, rgba(240, 117, 97, 0.08), transparent 26%),
@@ -18533,7 +18536,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 }
 
 /* ===================================================================
-   Landing v2 �?clean, athletic, premium
+   Landing v2 鈥?clean, athletic, premium
    =================================================================== */
 
 .landing-v2 {
@@ -19015,7 +19018,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
   margin-top: 18px;
 }
 
-/* ── Unified first-view hero padding for signed-in pages ─────────────── */
+/* 鈹€鈹€ Unified first-view hero padding for signed-in pages 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .profile-page-intro,
 .analysis-page-header,
 .rewards-hero-card {
@@ -49783,3 +49786,33 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-load-callout.is-dan
   margin-top: -2px;
 }
 
+
+/* Wellness Interpretation Styles */
+.today-run-plan-wellness-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(var(--indigo-rgb, 129, 140, 248), 0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(var(--indigo-rgb, 129, 140, 248), 0.1);
+}
+.today-run-plan-wellness-insight {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.today-run-plan-wellness-insight-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--indigo-500);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.today-run-plan-wellness-insight span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--slate-700);
+  line-height: 1.5;
+}
