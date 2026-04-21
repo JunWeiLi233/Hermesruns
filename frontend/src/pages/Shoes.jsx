@@ -8,11 +8,13 @@ import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import Modal from '../components/Modal';
 import HermesLogo from '../components/HermesLogo';
+import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
 import TopbarNotifications from '../components/TopbarNotifications';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
 import { kmOf } from '../utils/analysisInsights';
@@ -41,47 +43,6 @@ function normalizeBrandKey(brand) {
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[!.,]/g, '');
-}
-
-function brandLogoSpec(brand) {
-  // Keep brand marks self-contained so the catalog works without external logo assets.
-  // We still keep `shoeCatalog.logo` as a fallback/compat field.
-  const key = normalizeBrandKey(brand);
-
-  const make = ({ bg, fg, text }) => ({
-    bg,
-    fg,
-    text,
-    fontSize: /[\u4e00-\u9fff]/.test(text) ? 12 : 13,
-  });
-
-  if (key === 'nike') return make({ bg: '#f97316', fg: '#ffffff', text: 'NIKE' });
-  if (key === 'adidas') return make({ bg: '#111827', fg: '#ffffff', text: 'ADID' });
-  if (key === 'asics') return make({ bg: '#2563eb', fg: '#ffffff', text: 'ASICS' });
-  if (key === 'newbalance') return make({ bg: '#fbbf24', fg: '#0f172a', text: 'NB' });
-  if (key === 'hoka') return make({ bg: '#22c55e', fg: '#ffffff', text: 'HOKA' });
-  if (key === 'brooks') return make({ bg: '#3b82f6', fg: '#ffffff', text: 'BROOKS' });
-  if (key === 'saucony') return make({ bg: '#ef4444', fg: '#ffffff', text: 'SAU' });
-  if (key === 'on') return make({ bg: '#e5e7eb', fg: '#0f172a', text: 'ON' });
-  if (key === 'mizuno') return make({ bg: '#8b5cf6', fg: '#ffffff', text: 'M' });
-  if (key === 'altra') return make({ bg: '#a16207', fg: '#ffffff', text: 'AL' });
-  if (key === 'puma') return make({ bg: '#0f172a', fg: '#ffffff', text: 'PUMA' });
-  if (key === 'reebok') return make({ bg: '#f59e0b', fg: '#0f172a', text: 'REEB' });
-  if (key === 'underarmour' || key === 'ua') return make({ bg: '#111827', fg: '#ffffff', text: 'UA' });
-  if (key === '361' || key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361' });
-  if (key === 'li-ning' || key === 'lining' || key === 'lining') return make({ bg: '#dc2626', fg: '#ffffff', text: 'LI' });
-  if (key === 'anta') return make({ bg: '#f97316', fg: '#ffffff', text: 'ANTA' });
-  if (key === 'xtep') return make({ bg: '#2563eb', fg: '#ffffff', text: 'XTEP' });
-  if (key === 'skechers') return make({ bg: '#06b6d4', fg: '#ffffff', text: 'S' });
-
-  if (key === 'erke') return make({ bg: '#60a5fa', fg: '#0b1220', text: 'ERKE' });
-  if (key === 'peak') return make({ bg: '#ef4444', fg: '#ffffff', text: 'PEAK' });
-  if (key === 'qiaodan') return make({ bg: '#111827', fg: '#ffffff', text: 'QD' });
-  if (key === 'warrior') return make({ bg: '#dc2626', fg: '#ffffff', text: 'WAR' });
-  if (key === 'double-star' || key === 'doublestar') return make({ bg: '#64748b', fg: '#ffffff', text: 'DS' });
-
-
-  return null;
 }
 
 function containsCjk(text) {
@@ -146,50 +107,38 @@ async function fileToOptimizedDataUrl(file, t) {
   }
 }
 
-function BrandLogo({ brand, fallbackEmoji }) {
-  const spec = brandLogoSpec(brand);
-  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || 'S'}</span>;
-
-  // Keep logo legible across themes: SVG uses fixed colors by design.
-  return (
-    <svg className="shoe-brand-logo-svg" viewBox="0 0 40 40" role="img" aria-label={`${brand} logo`}>
-      <rect x="2" y="2" width="36" height="36" rx="10" fill={spec.bg} />
-      <text
-        x="20"
-        y="25"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={spec.fg}
-        fontFamily={/[\u4e00-\u9fff]/.test(spec.text) ? `'Microsoft YaHei','PingFang SC',system-ui,Segoe UI,Arial'` : 'system-ui,Segoe UI,Arial'}
-        fontSize={spec.fontSize}
-        fontWeight="800"
-      >
-        {spec.text}
-      </text>
-    </svg>
-  );
-}
-
 /** Shoe image component with auto background removal */
-function ShoeImage({ src, alt }) {
+function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   const [processed, setProcessed] = useState(null);
 
   useEffect(() => {
-    if (!src) return;
+    if (!src) {
+      setProcessed(null);
+      return undefined;
+    }
     if (bgRemovedCache[src]) { setProcessed(bgRemovedCache[src]); return; }
+    let cancelled = false;
     removeBackground(src).then(result => {
+      if (cancelled) return;
       bgRemovedCache[src] = result;
       setProcessed(result);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [src]);
 
   if (!src) {
-    return <div className="shoe-img-placeholder"><span>S</span></div>;
+    return fallback || <div className="shoe-img-placeholder"><span>S</span></div>;
   }
   if (!processed) {
-    return <div className="shoe-img-placeholder shoe-img-loading" />;
+    return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className="shoe-img" src={processed} alt={alt} />;
+  return <img className={className} src={processed} alt={alt} onError={onError} />;
+}
+
+function ShoeImage({ src, alt }) {
+  return <ProcessedDisplayImage src={src} alt={alt} className="shoe-img" fallback={<div className="shoe-img-placeholder shoe-img-loading" />} />;
 }
 
 function PreviewShoeArt({ tone, label }) {
@@ -555,7 +504,7 @@ export default function Shoes() {
       ? 'Hermes 还不能高置信地区分今天该穿哪双鞋。先把最近几次跑步标记到鞋子上，这里才会给出可信的轮换证据。'
       : '先添加一双正在穿的鞋，再把最近跑步标记到鞋子上，Hermes 才能解释今天该穿哪双。')
     : (activeShoes.length > 0
-      ? 'Hermes cannot separate today’s shoe with confidence yet. Tag a few recent runs to your pairs and this strip will start explaining the pick with real rotation evidence.'
+      ? 'Hermes cannot separate today’s shoe clearly yet. Tag a few recent runs to your pairs and this strip will start explaining the pick with real rotation evidence.'
       : 'Add an active pair, then tag a few recent runs to shoes so Hermes can explain today’s pick instead of guessing.');
 
   const rotationSignalShoe = performanceFallback?.shoe || null;
@@ -602,7 +551,7 @@ export default function Shoes() {
       : performanceFallback?.type === 'primary'
         ? (lang === 'zh-CN'
           ? `Hermes 还不能高置信地区分今天该穿哪双鞋，所以先回退到你的主力鞋。${rotationSignalEvidenceSentence}继续标记最近跑步，下一次建议会更可靠。`
-          : `Hermes cannot split today’s rotation with confidence yet, so it falls back to your primary pair for now. ${rotationSignalEvidenceSentence}Keep tagging recent runs and the next pick will get sharper.`)
+          : `Hermes cannot split today’s rotation clearly yet, so it falls back to your primary pair for now. ${rotationSignalEvidenceSentence}Keep tagging recent runs and the next pick will get sharper.`)
         : recentRotationEmpty;
   const rotationSignalMetaItems = performanceFallback
     ? [
@@ -624,7 +573,7 @@ export default function Shoes() {
     ].filter(Boolean)
     : [];
   const rotationSignalSideTitle = performanceFallback?.type === 'insight'
-    ? (lang === 'zh-CN' ? '高置信建议' : 'High confidence')
+    ? (lang === 'zh-CN' ? '明确建议' : 'Clear pick')
     : performanceFallback?.type === 'rotation'
       ? (lang === 'zh-CN' ? '轮换证据' : 'Rotation evidence')
       : performanceFallback?.type === 'primary'
@@ -649,7 +598,7 @@ export default function Shoes() {
     ? (lang === 'zh-CN' ? '今日保守选择' : 'Today’s safe fallback')
     : (lang === 'zh-CN' ? '今日跑鞋建议' : 'Today’s shoe pick');
   const rotationSignalSourceLabel = performanceFallback?.type === 'primary'
-    ? (lang === 'zh-CN' ? 'Hermes 回退逻辑' : 'Hermes confidence fallback')
+    ? (lang === 'zh-CN' ? 'Hermes 回退逻辑' : 'Hermes fallback logic')
     : (lang === 'zh-CN' ? 'Hermes 轮换判断' : 'Hermes rotation read');
   const rotationSignalSourceHref = null;
   const rotationSignalStatusPill = performanceFallback?.type === 'insight'
@@ -779,15 +728,11 @@ export default function Shoes() {
     </section>
   );
 
-  const navItems = [
-    { key: 'dashboard', icon: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile' },
-    { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
-    { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
-    { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
-    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
-    { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
-    { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
-  ];
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'shoes',
+  }), [lang, t]);
 
   function openManualAdd() {
     navigate('/shoes/add');
@@ -1179,6 +1124,18 @@ export default function Shoes() {
                 <span>{distanceUnitLabel}</span>
               </div>
             </div>
+            
+            {(current >= max || (max > 0 && current > max * 0.9)) && !shoe.retired && (
+              <div className={`shoe-inventory-alert is-${current >= max ? 'critical' : 'warning'}`}>
+                <AppIcon name="warning" className="shoe-inventory-alert-icon" />
+                <span>
+                  {current >= max 
+                    ? t('shoes.shoe_mileage_replace', { current: Math.round(current), max: Math.round(max) })
+                    : t('shoes.shoe_mileage_warning', { current: Math.round(current), max: Math.round(max) })}
+                </span>
+              </div>
+            )}
+
             {!shoe.retired && (
               <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
                 <span className="shoe-inventory-brand-label">{t('shoes.retirement_health')}</span>
@@ -1235,7 +1192,10 @@ export default function Shoes() {
             <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
           </button>
           <div className="shoe-inventory-card-meta">
-            <span>{localizeShoeBrand(shoe.brand, lang)}</span>
+            <span className="shoe-inventory-card-meta-brand">
+              <ShoeBrandLogo brand={shoe.brand} fallbackEmoji={shoe.logo} />
+              <em>{localizeShoeBrand(shoe.brand, lang)}</em>
+            </span>
             <span>{preview ? t('shoes.stitch_preview_label') : t('shoes.uses_count', { count: usage.count })}</span>
           </div>
         </div>
@@ -1536,7 +1496,7 @@ export default function Shoes() {
                   </div>
                   <div className="img-picker-preview">
                     {imgPickerShoe.photoUrl
-                      ? <img src={imgPickerShoe.photoUrl} alt="current" className="img-picker-current-img" />
+                      ? <ProcessedDisplayImage src={imgPickerShoe.photoUrl} alt="current" className="img-picker-current-img" fallback={<div className="shoe-img-placeholder shoe-img-loading" />} />
                       : <div className="shoe-img-placeholder"><span>S</span></div>}
                   </div>
                 </section>
@@ -1569,10 +1529,11 @@ export default function Shoes() {
                         )}
                       </div>
                       <div className="img-picker-pending-card">
-                        <img
+                        <ProcessedDisplayImage
                           src={imgPendingUploadUrl}
                           alt={t('shoes.img_preview_title')}
                           className="img-picker-pending-img"
+                          fallback={<div className="shoe-img-placeholder shoe-img-loading" />}
                         />
                         <div className="img-picker-pending-copy">
                           <p>{t('shoes.img_preview_hint')}</p>
@@ -1654,7 +1615,9 @@ export default function Shoes() {
                     {imgCandidates.map((url, i) => (
                       <button key={i} type="button" className="img-picker-candidate"
                         onClick={() => selectImage(url)}>
-                        <img src={url} alt={`candidate ${i + 1}`}
+                        <ProcessedDisplayImage src={url} alt={`candidate ${i + 1}`}
+                          className="img-picker-candidate-img"
+                          fallback={<div className="shoe-img-placeholder shoe-img-loading" />}
                           onError={e => { e.target.parentElement.style.display = 'none'; }} />
                       </button>
                     ))}

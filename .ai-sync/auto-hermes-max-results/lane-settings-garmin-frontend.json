@@ -1,0 +1,65 @@
+{
+  "laneId": "lane-settings-garmin-frontend",
+  "parentRunId": "ahm-20260416150646",
+  "correlationId": "ahm-20260416150646:lane-settings-garmin-frontend",
+  "goal": "Implement Garmin-specific CSS so the current Settings JSX renders as one dominant premium dual-mode Hermes import lane with a quieter manual fallback and a glass/layered import modal, without editing JSX or breaking real import behavior.",
+  "ownedFiles": [
+    "frontend/src/styles/style.css"
+  ],
+  "changedFiles": [
+    "frontend/src/styles/style.css"
+  ],
+  "completedRounds": [
+    {
+      "order": 1,
+      "focus": "Settings Garmin lane CSS finisher",
+      "status": "completed",
+      "result": "Added Garmin-only atlas, modal, theming, and responsive selectors; left JSX untouched."
+    }
+  ],
+  "verification": [
+    {
+      "command": "cd frontend && npm run lint",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "command": "cd frontend && node scripts/run-vite-build.mjs",
+      "status": "passed",
+      "exitCode": 0
+    }
+  ],
+  "runtimeProof": {
+    "status": "live-bundle-synced",
+    "command": "cd frontend && node scripts/run-vite-build.mjs",
+    "evidence": [
+      "Vite build completed successfully.",
+      "backend/src/main/resources/static/assets/index-B62Pr1es.css was emitted.",
+      "The build script reported: Synced live backend static dir: C:\\Users\\Junwei\\Downloads\\Hermes\\backend\\target\\classes\\static"
+    ]
+  },
+  "risks": [
+    {
+      "severity": "medium",
+      "detail": "This lane has build/lint proof, but not in-browser visual QA. Hierarchy, density, and contrast should still be eyeballed against the live Settings surface before merge."
+    },
+    {
+      "severity": "medium",
+      "detail": "frontend/src/styles/style.css was already dirty before this lane. The file-level git diff includes unrelated work, so merge review should isolate the Garmin-specific selectors added around the Settings atlas and Garmin modal blocks."
+    }
+  ],
+  "mustPreserve": [
+    "Keep the surrounding Settings command-center structure intact.",
+    "Keep manual import visible as the fallback path.",
+    "Preserve real Garmin form behavior and import wiring.",
+    "Keep the result dual-mode safe for dark and light families.",
+    "Do not touch JSX files from this lane."
+  ],
+  "mergeNotes": [
+    "New Garmin selectors were added late in style.css so they override the older border-heavy Garmin utility styles without rewriting unrelated selectors.",
+    "The atlas changes are scoped to Garmin-only classes such as settings-atlas-garmin-cluster, settings-atlas-service-card--garmin, settings-atlas-import-drop--garmin, and related service/meta/state selectors.",
+    "The modal changes are scoped to garmin-import-modal-shell/card, garmin-import-layout, garmin-import-visual/panel, garmin-import-stage, garmin-import-pill variants, and related field/action selectors.",
+    "Responsive fallbacks were added for the Garmin lane and modal only."
+  ],
+  "status": "completed"
+}

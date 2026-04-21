@@ -15,7 +15,7 @@ import static org.mockito.Mockito.when;
 class ConfigStatusControllerTests {
 
     @Test
-    void unifiedStatusDelegatesToSystemConfigService() {
+    void publicStatusDelegatesToSystemConfigService() {
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         ConfigStatusController controller = new ConfigStatusController(systemConfigService);
 
@@ -24,24 +24,34 @@ class ConfigStatusControllerTests {
         expected.put("stravaConfigured", false);
         expected.put("aiConfigured", true);
         expected.put("billingCheckoutConfigured", false);
-        when(systemConfigService.getUnifiedConfigStatus()).thenReturn(expected);
+        when(systemConfigService.getPublicConfigStatus()).thenReturn(expected);
 
-        Map<String, Object> response = controller.getUnifiedStatus();
+        Map<String, Object> response = controller.getPublicStatus();
 
         assertSame(expected, response);
-        verify(systemConfigService).getUnifiedConfigStatus();
+        verify(systemConfigService).getPublicConfigStatus();
     }
 
     @Test
-    void unifiedStatusCanReturnNestedNoSecretsSnapshot() {
+    void adminStatusDelegatesToSystemConfigService() {
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         ConfigStatusController controller = new ConfigStatusController(systemConfigService);
 
-        Map<String, Object> strava = new LinkedHashMap<>();
-        strava.put("configured", false);
-        strava.put("clientIdPresent", true);
-        strava.put("clientSecretPresent", false);
-        strava.put("reason", "STRAVA_CLIENT_SECRET is missing/blank.");
+        Map<String, Object> expected = new LinkedHashMap<>();
+        expected.put("googleConfigured", true);
+        expected.put("stravaConfigured", true);
+        when(systemConfigService.getAdminConfigStatus()).thenReturn(expected);
+
+        Map<String, Object> response = controller.getAdminStatus();
+
+        assertSame(expected, response);
+        verify(systemConfigService).getAdminConfigStatus();
+    }
+
+    @Test
+    void publicStatusCanReturnNestedNoSecretsSnapshot() {
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        ConfigStatusController controller = new ConfigStatusController(systemConfigService);
 
         Map<String, Object> ai = new LinkedHashMap<>();
         ai.put("configured", true);
@@ -53,20 +63,16 @@ class ConfigStatusControllerTests {
         status.put("stravaConfigured", false);
         status.put("aiConfigured", true);
         status.put("billingCheckoutConfigured", false);
-        status.put("strava", strava);
         status.put("ai", ai);
 
-        when(systemConfigService.getUnifiedConfigStatus()).thenReturn(status);
+        when(systemConfigService.getPublicConfigStatus()).thenReturn(status);
 
-        Map<String, Object> response = controller.getUnifiedStatus();
+        Map<String, Object> response = controller.getPublicStatus();
 
         assertEquals(false, response.get("billingCheckoutConfigured"));
-        assertTrue(response.containsKey("strava"));
         assertTrue(response.containsKey("ai"));
         @SuppressWarnings("unchecked")
-        Map<String, Object> returnedStrava = (Map<String, Object>) response.get("strava");
-        assertEquals(true, returnedStrava.get("clientIdPresent"));
-        assertEquals(false, returnedStrava.get("clientSecretPresent"));
-        assertTrue(returnedStrava.containsKey("reason"));
+        Map<String, Object> returnedAi = (Map<String, Object>) response.get("ai");
+        assertEquals("openai", returnedAi.get("provider"));
     }
 }

@@ -236,21 +236,11 @@ public class RaceController {
             InputSanitizer.rejectControlAndHtmlChars(name, "name");
             InputSanitizer.rejectControlAndHtmlChars(city, "city");
             InputSanitizer.rejectControlAndHtmlChars(country, "country");
-            RaceCourseMapService.RaceCourseMapResult result =
+            RaceCourseMapResult result =
                     raceId == null || raceId.isBlank()
                             ? raceCourseMapService.resolveCourseMap(name, city, country, website, lat, lng, distanceKm)
                             : raceCourseMapService.resolveCourseMapWithStorage(raceId, name, city, country, website, lat, lng, distanceKm);
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("imageUrl", result.imageUrl() == null ? "" : result.imageUrl());
-            payload.put("source", result.source() == null ? "" : result.source());
-            payload.put("courseMapDetected", result.courseMapDetected());
-            payload.put("confidence", result.confidence());
-            payload.put("summary", result.summary() == null ? "" : result.summary());
-            payload.put("overlayBounds", result.overlayBounds());
-            payload.put("routePoints", result.routePoints() == null ? List.of() : result.routePoints());
-            payload.put("elevationSamples", result.elevationSamples() == null ? List.of() : result.elevationSamples());
-            payload.put("totalClimbMeters", result.totalClimbMeters());
-            payload.put("aiAssisted", result.aiAssisted());
+            Map<String, Object> payload = toRunnerCourseMapPayload(result);
             return ResponseEntity.ok(payload);
         } catch (IllegalArgumentException error) {
             return error(HttpStatus.BAD_REQUEST, error.getMessage());
@@ -440,16 +430,45 @@ public class RaceController {
     private Map<String, Object> emptyCourseMapPayload() {
         Map<String, Object> payload = new HashMap<>();
         payload.put("imageUrl", "");
+        payload.put("previewImageUrl", "");
         payload.put("source", "");
-        payload.put("courseMapDetected", false);
+        payload.put("routeAvailable", false);
         payload.put("confidence", 0);
         payload.put("summary", "");
-        payload.put("overlayBounds", null);
+        payload.put("viewportBounds", null);
         payload.put("routePoints", List.of());
         payload.put("elevationSamples", List.of());
         payload.put("totalClimbMeters", null);
         payload.put("aiAssisted", false);
         return payload;
+    }
+
+    private Map<String, Object> toRunnerCourseMapPayload(RaceCourseMapResult result) {
+        Map<String, Object> payload = new HashMap<>();
+        boolean routeAvailable = hasVerifiedRoute(result);
+        String imageUrl = result == null || result.imageUrl() == null ? "" : result.imageUrl();
+        String previewImageUrl = imageUrl.isBlank()
+                ? ""
+                : raceCourseMapService.materializePreviewImageUrl(imageUrl);
+        payload.put("imageUrl", imageUrl);
+        payload.put("previewImageUrl", previewImageUrl == null || previewImageUrl.isBlank() ? imageUrl : previewImageUrl);
+        payload.put("source", result == null || result.source() == null ? "" : result.source());
+        payload.put("routeAvailable", routeAvailable);
+        payload.put("confidence", routeAvailable && result != null ? result.confidence() : 0);
+        payload.put("summary", result == null || result.summary() == null ? "" : result.summary());
+        payload.put("viewportBounds", routeAvailable && result != null ? result.overlayBounds() : null);
+        payload.put("routePoints", routeAvailable && result != null && result.routePoints() != null ? result.routePoints() : List.of());
+        payload.put("elevationSamples", routeAvailable && result != null && result.elevationSamples() != null ? result.elevationSamples() : List.of());
+        payload.put("totalClimbMeters", routeAvailable && result != null ? result.totalClimbMeters() : null);
+        payload.put("aiAssisted", routeAvailable && result != null && result.aiAssisted());
+        return payload;
+    }
+
+    private boolean hasVerifiedRoute(RaceCourseMapResult result) {
+        return result != null
+                && result.courseMapDetected()
+                && result.routePoints() != null
+                && !result.routePoints().isEmpty();
     }
 
     private record ValidationResult(boolean valid, String message) {

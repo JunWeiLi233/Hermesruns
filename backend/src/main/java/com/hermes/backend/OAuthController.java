@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PreDestroy;
@@ -27,6 +28,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -134,12 +136,18 @@ public class OAuthController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         Map<String, Object> status = new HashMap<>(systemConfigService.getStravaStatus());
-        boolean linked = authService.findByAuthorizationHeader(authorizationHeader)
-                .map(runner -> runner.getStravaAthleteId() != null
-                        && runner.getStravaRefreshToken() != null
-                        && !runner.getStravaRefreshToken().isBlank())
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        boolean linked = runnerOptional
+                .map(this::isRunnerStravaLinked)
                 .orElse(false);
         status.put("linked", linked);
+        status.put("syncStatus", runnerOptional
+                .map(runner -> {
+                    StravaSyncTracker tracker = stravaSyncStates.get(runner.getId());
+                    return tracker == null ? StravaSyncStatusResponse.idle() : tracker.snapshot();
+                })
+                .orElse(StravaSyncStatusResponse.idle()));
+        status.put("autoUpdateMode", "webhook_retry_burst_then_on_open_catch_up");
         return ResponseEntity.ok(status);
     }
 
@@ -149,17 +157,17 @@ public class OAuthController {
             return errorRedirect("Google sign-in is not configured.", state);
         }
 
-        String authUrl = "https://accounts.google.com/o/oauth2/v2/auth"
-                + "?client_id=" + urlEncode(googleClientId)
-                + "&redirect_uri=" + urlEncode(googleRedirectUri)
-                + "&response_type=code"
-                + "&scope=email%20profile";
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
+                .queryParam("client_id", googleClientId)
+                .queryParam("redirect_uri", googleRedirectUri)
+                .queryParam("response_type", "code")
+                .queryParam("scope", "email profile");
 
         if (state != null && !state.isBlank()) {
-            authUrl += "&state=" + urlEncode(state);
+            builder.queryParam("state", state);
         }
 
-        return new RedirectView(authUrl);
+        return new RedirectView(builder.toUriString());
     }
 
     @GetMapping("/auth/strava/start")
@@ -374,7 +382,7 @@ public class OAuthController {
 
                     Long runnerId = newRunner.getId();
                     CompletableFuture.runAsync(
-                            () -> fetchAndSaveStravaActivities(accessToken, runnerId, false),
+                            () -> fetchAndSaveStravaActivities(accessToken, runnerId, false, "oauth_login"),
                             stravaBackgroundExecutor
                     );
 
@@ -423,7 +431,7 @@ public class OAuthController {
 
             Long runnerId = runner.getId();
             CompletableFuture.runAsync(
-                    () -> fetchAndSaveStravaActivities(accessToken, runnerId, false),
+                    () -> fetchAndSaveStravaActivities(accessToken, runnerId, false, "oauth_link"),
                     stravaBackgroundExecutor
             );
 
@@ -469,11 +477,58 @@ public class OAuthController {
             return ResponseEntity.ok("No Strava account linked");
         }
 
-        CompletableFuture.runAsync(
-                () -> fetchAndSaveStravaActivities(accessToken, runner.getId(), false),
-                stravaBackgroundExecutor
-        );
-        return ResponseEntity.ok("Strava sync started");
+        return switch (scheduleStravaSync(runner, accessToken, false, "manual_resync")) {
+            case STARTED, ALREADY_RUNNING -> ResponseEntity.ok("Strava sync started");
+            case NOT_LINKED -> ResponseEntity.ok("No Strava account linked");
+            case RELINK_REQUIRED -> ResponseEntity.ok("Strava token is invalid; please relink your Strava account.");
+        };
+    }
+
+    @GetMapping("/auth/strava/auto-sync")
+    public ResponseEntity<?> triggerOnOpenStravaCatchUp(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid or expired session token."));
+        }
+
+        Runner runner = runnerOpt.get();
+        String accessToken;
+        try {
+            accessToken = resolveRunnerStravaAccessToken(runner);
+        } catch (Exception ex) {
+            System.err.println("Strava catch-up skipped for runner " + runner.getId() + ": " + ex.getMessage());
+            return ResponseEntity.ok(Map.of(
+                    "started", false,
+                    "status", "RELINK_REQUIRED",
+                    "message", "Strava authorization expired. Please relink your account."
+            ));
+        }
+
+        SyncLaunchResult launch = scheduleStravaSync(runner, accessToken, true, "app_open_catch_up");
+        return switch (launch) {
+            case STARTED -> ResponseEntity.ok(Map.of(
+                    "started", true,
+                    "status", "STARTED",
+                    "message", "Strava catch-up started."
+            ));
+            case ALREADY_RUNNING -> ResponseEntity.ok(Map.of(
+                    "started", false,
+                    "status", "ALREADY_RUNNING",
+                    "message", "Strava sync is already running."
+            ));
+            case NOT_LINKED -> ResponseEntity.ok(Map.of(
+                    "started", false,
+                    "status", "NOT_LINKED",
+                    "message", "No Strava account linked."
+            ));
+            case RELINK_REQUIRED -> ResponseEntity.ok(Map.of(
+                    "started", false,
+                    "status", "RELINK_REQUIRED",
+                    "message", "Strava authorization expired. Please relink your account."
+            ));
+        };
     }
 
     @GetMapping("/auth/strava/sync-status")
@@ -521,9 +576,9 @@ public class OAuthController {
      * @param recentOnly when true (scheduled / incremental jobs), only fetch the first {@link #stravaRecentSyncMaxPages}
      *                   pages and stop early once a page contains runs that are already stored (Strava lists newest first).
      */
-    void fetchAndSaveStravaActivities(String accessToken, Long runnerId, boolean recentOnly) {
+    void fetchAndSaveStravaActivities(String accessToken, Long runnerId, boolean recentOnly, String trigger) {
         StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runnerId, ignored -> new StravaSyncTracker());
-        if (!tracker.tryBeginSync()) {
+        if (!tracker.tryBeginSync(trigger, recentOnly)) {
             return;
         }
 
@@ -622,6 +677,20 @@ public class OAuthController {
         SKIPPED_NON_RUN,
         NEW_OR_UPDATED_RUN,
         DUPLICATE_RUN
+    }
+
+    enum SingleActivitySyncResult {
+        SUCCESS,
+        ALREADY_RUNNING,
+        RETRYABLE_FAILURE,
+        PERMANENT_FAILURE
+    }
+
+    enum SyncLaunchResult {
+        STARTED,
+        ALREADY_RUNNING,
+        NOT_LINKED,
+        RELINK_REQUIRED
     }
 
     private StravaActivitySyncResult syncSingleStravaActivity(Runner runner, StravaSyncTracker tracker, Map<String, Object> activityData,
@@ -801,10 +870,14 @@ public class OAuthController {
     /**
      * Fetch and sync a single Strava activity by its ID (used by webhook handler).
      */
-    void syncStravaActivityById(Runner runner, long stravaActivityId) {
+    SingleActivitySyncResult syncStravaActivityById(Runner runner, long stravaActivityId) {
         String accessToken = resolveRunnerStravaAccessToken(runner);
-        if (accessToken == null || accessToken.isBlank()) return;
+        if (accessToken == null || accessToken.isBlank()) return SingleActivitySyncResult.PERMANENT_FAILURE;
 
+        StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runner.getId(), ignored -> new StravaSyncTracker());
+        if (!tracker.tryBeginSync("webhook_activity", true)) {
+            return SingleActivitySyncResult.ALREADY_RUNNING;
+        }
         try {
             RestTemplate restTemplate = this.restTemplate;
             HttpHeaders headers = new HttpHeaders();
@@ -816,13 +889,27 @@ public class OAuthController {
                     url, HttpMethod.GET, new HttpEntity<>(headers),
                     new ParameterizedTypeReference<Map<String, Object>>() {}).getBody();
 
-            if (activityData == null) return;
+            if (activityData == null) {
+                tracker.markFailed("Strava activity payload was empty.");
+                return SingleActivitySyncResult.RETRYABLE_FAILURE;
+            }
 
-            StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runner.getId(), ignored -> new StravaSyncTracker());
             boolean[] gpsRateLimited = {false};
             syncSingleStravaActivity(runner, tracker, activityData, gpsRateLimited, restTemplate, headers, accessToken);
+            tracker.markCompleted();
+            return SingleActivitySyncResult.SUCCESS;
+        } catch (org.springframework.web.client.HttpClientErrorException exception) {
+            if (exception.getStatusCode() == HttpStatus.NOT_FOUND || exception.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                tracker.markFailed("Strava activity is not ready yet.");
+                return SingleActivitySyncResult.RETRYABLE_FAILURE;
+            }
+            tracker.markFailed("Unable to sync Strava activity right now.");
+            System.err.println("Strava webhook sync failed for activity " + stravaActivityId + ": " + exception.getMessage());
+            return SingleActivitySyncResult.PERMANENT_FAILURE;
         } catch (Exception e) {
+            tracker.markFailed("Unable to sync Strava activity right now.");
             System.err.println("Strava webhook sync failed for activity " + stravaActivityId + ": " + e.getMessage());
+            return SingleActivitySyncResult.RETRYABLE_FAILURE;
         }
     }
 
@@ -914,6 +1001,31 @@ public class OAuthController {
         return null;
     }
 
+    private boolean isRunnerStravaLinked(Runner runner) {
+        return runner.getStravaAthleteId() != null
+                && runner.getStravaRefreshToken() != null
+                && !runner.getStravaRefreshToken().isBlank();
+    }
+
+    private SyncLaunchResult scheduleStravaSync(Runner runner, String accessToken, boolean recentOnly, String trigger) {
+        if (!isRunnerStravaLinked(runner)) {
+            return SyncLaunchResult.NOT_LINKED;
+        }
+        if (accessToken == null || accessToken.isBlank()) {
+            return SyncLaunchResult.RELINK_REQUIRED;
+        }
+
+        StravaSyncTracker tracker = stravaSyncStates.computeIfAbsent(runner.getId(), ignored -> new StravaSyncTracker());
+        if (!tracker.tryQueueSync(trigger, recentOnly)) {
+            return SyncLaunchResult.ALREADY_RUNNING;
+        }
+        CompletableFuture.runAsync(
+                () -> fetchAndSaveStravaActivities(accessToken, runner.getId(), recentOnly, trigger),
+                stravaBackgroundExecutor
+        );
+        return SyncLaunchResult.STARTED;
+    }
+
     private RedirectView errorRedirect(String message, String state) {
         return new RedirectView(resolveEntryPage(state) + "?error=" + urlEncode(message));
     }
@@ -983,10 +1095,10 @@ public class OAuthController {
         currentRunner.setEmailVerified(true);
         runnerRepository.save(currentRunner);
 
-        CompletableFuture.runAsync(
-                () -> fetchAndSaveStravaActivities(accessToken, currentRunner.getId(), false),
-                stravaBackgroundExecutor
-        );
+            CompletableFuture.runAsync(
+                    () -> fetchAndSaveStravaActivities(accessToken, currentRunner.getId(), false, "strava_link_confirmed"),
+                    stravaBackgroundExecutor
+            );
 
         return new RedirectView("/profile?linking=linked");
     }
@@ -1084,17 +1196,17 @@ public class OAuthController {
     }
 
     private String buildStravaAuthUrl(String state) {
-        String authUrl = "https://www.strava.com/oauth/authorize"
-                + "?client_id=" + urlEncode(stravaClientId)
-                + "&redirect_uri=" + urlEncode(stravaRedirectUri)
-                + "&response_type=code"
-                + "&approval_prompt=auto"
-                + "&scope=" + urlEncode("read,activity:read_all");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://www.strava.com/oauth/authorize")
+                .queryParam("client_id", stravaClientId)
+                .queryParam("redirect_uri", stravaRedirectUri)
+                .queryParam("response_type", "code")
+                .queryParam("approval_prompt", "auto")
+                .queryParam("scope", "read,activity:read_all");
 
         if (state != null && !state.isBlank()) {
-            authUrl += "&state=" + urlEncode(state);
+            builder.queryParam("state", state);
         }
-        return authUrl;
+        return builder.toUriString();
     }
 
     private Optional<PendingStravaLinkRequest> decodeProfileLinkState(String state) {
@@ -1276,10 +1388,13 @@ public class OAuthController {
             int processedActivities,
             int processedPages,
             String error,
-            boolean active
+            boolean active,
+            String trigger,
+            boolean recentOnly,
+            String updatedAt
     ) {
         static StravaSyncStatusResponse idle() {
-            return new StravaSyncStatusResponse("IDLE", 0, 0, 0, 0, 0, null, false);
+            return new StravaSyncStatusResponse("IDLE", 0, 0, 0, 0, 0, null, false, "none", false, null);
         }
     }
 
@@ -1291,9 +1406,11 @@ public class OAuthController {
         private int processedActivities;
         private int processedPages;
         private String error;
+        private String trigger = "none";
+        private boolean recentOnly;
         private long lastUpdatedMs = System.currentTimeMillis();
 
-        synchronized void resetForNewSync() {
+        synchronized void resetForNewSync(String nextTrigger, boolean nextRecentOnly) {
             status = "PENDING";
             importedRuns = 0;
             skippedNonRuns = 0;
@@ -1301,17 +1418,34 @@ public class OAuthController {
             processedActivities = 0;
             processedPages = 0;
             error = null;
+            trigger = nextTrigger == null || nextTrigger.isBlank() ? "unknown" : nextTrigger;
+            recentOnly = nextRecentOnly;
+            lastUpdatedMs = System.currentTimeMillis();
         }
 
         /**
          * @return false if a sync is already in progress for this runner (avoids overlapping Strava API pulls).
          */
-        synchronized boolean tryBeginSync() {
+        synchronized boolean tryBeginSync(String nextTrigger, boolean nextRecentOnly) {
+            if ("RUNNING".equals(status)) {
+                return false;
+            }
+            if ("PENDING".equals(status)) {
+                status = "RUNNING";
+                lastUpdatedMs = System.currentTimeMillis();
+                return true;
+            }
+            resetForNewSync(nextTrigger, nextRecentOnly);
+            status = "RUNNING";
+            return true;
+        }
+
+        synchronized boolean tryQueueSync(String nextTrigger, boolean nextRecentOnly) {
             if ("RUNNING".equals(status) || "PENDING".equals(status)) {
                 return false;
             }
-            resetForNewSync();
-            status = "RUNNING";
+            resetForNewSync(nextTrigger, nextRecentOnly);
+            status = "PENDING";
             return true;
         }
 
@@ -1359,7 +1493,10 @@ public class OAuthController {
                     processedActivities,
                     processedPages,
                     error,
-                    "RUNNING".equals(status) || "PENDING".equals(status)
+                    "RUNNING".equals(status) || "PENDING".equals(status),
+                    trigger,
+                    recentOnly,
+                    Instant.ofEpochMilli(lastUpdatedMs).toString()
             );
         }
     }

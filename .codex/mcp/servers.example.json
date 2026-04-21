@@ -1,0 +1,16 @@
+{
+  "servers": [
+    {
+      "name": "mempalace",
+      "purpose": "Long-term project memory and recall",
+      "transport": "stdio",
+      "notes": "Use for prior decisions, bug history, and durable context."
+    },
+    {
+      "name": "omx_code_intel",
+      "purpose": "Diagnostics and code-intelligence helpers",
+      "transport": "stdio",
+      "notes": "Use for diagnostics, symbols, and targeted workspace checks."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-04-18T13:02:54.219Z",
+  "taskStatement": "com.hermes.backend.AdminControllerTests has 3 error(s) and 0 failure(s) - regressions may be passing silently",
+  "desiredOutcome": "com.hermes.backend.AdminControllerTests has 3 error(s) and 0 failure(s) - regressions may be passing silently on Admin",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "Admin",
+    "problemClass": "unknown",
+    "touchesFrontend": false,
+    "touchesBackend": true,
+    "isCrossStack": false
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "backend/target/surefire-reports/TEST-com.hermes.backend.AdminControllerTests.xml"
+  ],
+  "lanesPlanned": 1
+}

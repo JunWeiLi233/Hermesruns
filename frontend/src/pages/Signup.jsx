@@ -271,18 +271,18 @@ export default function Signup() {
 
             <form className="signup-flow-form" onSubmit={handleSubmit}>
               {banner === 'strava_link_confirmation_required' && (
-                <div className="error-alert is-visible">{t('profile.strava_link_confirmation_required')}</div>
+                <div className="error-alert is-visible" role="alert">{t('profile.strava_link_confirmation_required')}</div>
               )}
               {banner === 'strava_not_configured' && (
-                <div className="error-alert is-visible">{t('common.strava_not_configured')}</div>
+                <div className="error-alert is-visible" role="alert">{t('common.strava_not_configured')}</div>
               )}
               {banner === 'strava_failed' && (
-                <div className="error-alert is-visible">{t('common.strava_login_failed')}</div>
+                <div className="error-alert is-visible" role="alert">{t('common.strava_login_failed')}</div>
               )}
-              {error && <div className="error-alert is-visible">{error}</div>}
+              {error && <div className="error-alert is-visible" role="alert">{error}</div>}
 
               <div className="signup-flow-field">
-                <label htmlFor="email">{s('email_label')}</label>
+                <label htmlFor="email">{t('signup.email_label')}</label>
                 <input
                   type="email"
                   id="email"
@@ -295,7 +295,22 @@ export default function Signup() {
               </div>
 
               <div className="signup-flow-field">
-                <label htmlFor="password">{s('password_label')}</label>
+                <label htmlFor="password">{t('signup.password_label')}</label>
+                
+                <div className="password-rules-display">
+                  <ul className="password-rules-list">
+                    {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'].map((id) => {
+                      const isPassed = !displayFailed.includes(id) && password.length > 0;
+                      return (
+                        <li key={id} className={`password-rule-item${isPassed ? ' is-passed' : ''}`}>
+                          <AppIcon name={isPassed ? 'check' : 'close'} className="rule-icon" />
+                          <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+
                 <input
                   type="password"
                   id="password"
@@ -311,7 +326,7 @@ export default function Signup() {
               </div>
 
               <div className="signup-flow-field">
-                <label htmlFor="confirm-password">{s('confirm_password_label')}</label>
+                <label htmlFor="confirm-password">{t('signup.confirm_password_label') || (lang === 'zh-CN' ? '确认密码' : 'Confirm password')}</label>
                 <input
                   type="password"
                   id="confirm-password"
@@ -323,20 +338,8 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="signup-flow-rules">
-                <h3>{s('security_title')}</h3>
-                <ul>
-                  {['MIN_LENGTH', 'DIGIT', 'SPECIAL'].map((id) => (
-                    <li key={id} className={displayFailed.includes(id) ? '' : 'is-passed'}>
-                      <span aria-hidden="true">{displayFailed.includes(id) ? '○' : '●'}</span>
-                      <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
               <button type="submit" className="signup-flow-primary" disabled={loading}>
-                {loading ? t('signup.submit_loading') : s('submit')}
+                {loading ? t('signup.submit_loading') : t('signup.submit')}
               </button>
 
               <button
@@ -344,7 +347,8 @@ export default function Signup() {
                 className="signup-flow-google"
                 onClick={() => startOAuth('google')}
               >
-                {t('signup.google')}
+                <span className="auth-flow-google-g" aria-hidden="true">G</span>
+                <span>{t('signup.google')}</span>
               </button>
             </form>
 
@@ -359,7 +363,7 @@ export default function Signup() {
       </main>
 
       <footer className="signup-flow-footer">
-        <FooterNavLinks className="signup-flow-footer-links" />
+        <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
         <p>{s('footer_copy')}</p>
       </footer>
     </div>

@@ -1,0 +1,27 @@
+{
+  "laneId": "lane-schedule-route-grid-review",
+  "parentRunId": "ahm-20260416185030",
+  "correlationId": "ahm-20260416185030:lane-schedule-route-grid-review",
+  "goal": "Review the broken `/schedule` planned-route card against the screenshot and current Schedule surface, then extract the exact visual failure, preserve set, and empty-state direction without editing app code.",
+  "parentGoal": "Fix the broken planned-route grid card on `/schedule` so the empty/no-route state reads like an intentional Hermes fallback instead of a collapsed blank map block.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    ".ai-sync/auto-hermes-max-results/lane-schedule-route-grid-review.json"
+  ],
+  "mustPreserve": [
+    "Review only; do not edit source files.",
+    "Ground the verdict in the screenshot, design.md, and the current Schedule capsule.",
+    "Keep runner trust and coach-owned route logic ahead of decorative polish."
+  ],
+  "verify": "Read frontend/src/pages/Schedule.jsx and the schedule-plan-route CSS blocks in frontend/src/styles/style.css.",
+  "mergeNotes": "",
+  "priority": 1,
+  "effort": "small",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-schedule-route-grid-review.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-schedule-route-grid-review-activity.json",
+  "command": "/auto-hermes scope=\"Review the broken `/schedule` planned-route card against the screenshot and current Schedule surface, then extract the exact visual failure, preserve set, and empty-state direction without editing app code.\" mode=loop owned=\".ai-sync/auto-hermes-max-results/lane-schedule-route-grid-review.json\""
+}

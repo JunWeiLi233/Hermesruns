@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -15,7 +16,7 @@ import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profi
 import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../utils/vdot';
 import { resolveRaceIntel } from '../utils/raceIntel';
 import worldRaceCatalog from '../data/worldRaceCatalog';
-import { getCachedRaceImage, resolveRaceImage } from '../utils/raceImage';
+import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache } from '../utils/raceImage';
 import { deriveRaceMapTrust } from '../utils/raceDetailMapTrust';
 import { shouldFetchRaceElevationProfile } from '../utils/raceDetailRequestPolicy';
 
@@ -29,6 +30,7 @@ const EVENT_DAY_OVERRIDES = {
   'new-york-city-marathon': 1,
   'valencia-marathon': 6,
 };
+const ELEVATION_SAMPLE_INTERVAL_KM = 0.05;
 
 function projectedRaceDate(race) {
   const now = new Date();
@@ -61,12 +63,54 @@ function buildRaceTopnavTitle(heroLabels, race) {
   return race?.name || '';
 }
 
+function normalizeTileX(tileX, zoom) {
+  const worldTileCount = 2 ** Math.max(0, zoom);
+  return ((tileX % worldTileCount) + worldTileCount) % worldTileCount;
+}
+
+const buildStreetTileFallbackSnapshot = (map, tileUrlTemplate) => {
+  if (!map || !tileUrlTemplate) return null;
+  const pixelBounds = map.getPixelBounds?.();
+  if (!pixelBounds) return null;
+  const zoom = Math.max(0, Math.min(19, Math.round(map.getZoom?.() ?? 0)));
+  const tileSize = 256;
+  const worldTileCount = 2 ** zoom;
+  const minTileX = Math.floor(pixelBounds.min.x / tileSize);
+  const maxTileX = Math.floor((pixelBounds.max.x - 1) / tileSize);
+  const minTileY = Math.floor(pixelBounds.min.y / tileSize);
+  const maxTileY = Math.floor((pixelBounds.max.y - 1) / tileSize);
+  const tiles = [];
+
+  for (let tileY = minTileY; tileY <= maxTileY; tileY += 1) {
+    if (tileY < 0 || tileY >= worldTileCount) continue;
+    for (let tileX = minTileX; tileX <= maxTileX; tileX += 1) {
+      const normalizedTileX = normalizeTileX(tileX, zoom);
+      tiles.push({
+        key: `${zoom}-${normalizedTileX}-${tileY}`,
+        url: tileUrlTemplate
+          .replace('{z}', String(zoom))
+          .replace('{x}', String(normalizedTileX))
+          .replace('{y}', String(tileY)),
+        left: (tileX * tileSize) - pixelBounds.min.x,
+        top: (tileY * tileSize) - pixelBounds.min.y,
+      });
+    }
+  }
+
+  if (!tiles.length) return null;
+  return {
+    zoom,
+    width: Math.max(1, pixelBounds.max.x - pixelBounds.min.x),
+    height: Math.max(1, pixelBounds.max.y - pixelBounds.min.y),
+    tiles,
+  };
+};
+
 function buildElevationProfile(ascentMeters, courseKey, absoluteProfile) {
   if (Array.isArray(absoluteProfile) && absoluteProfile.length) {
     return absoluteProfile.map((meters, index) => ({
       key: `${courseKey || 'custom'}-${index}`,
       meters: Math.round(Number(meters || 0)),
-      isHighlight: index === 6 || index === 12 || index === 18 || index === absoluteProfile.length - 1,
     }));
   }
 
@@ -84,8 +128,38 @@ function buildElevationProfile(ascentMeters, courseKey, absoluteProfile) {
   return base.map((value, index) => ({
     key: `${courseKey}-${index}`,
     meters: Math.max(8, Math.round(value * scale)),
-    isHighlight: index === 6 || index === 14 || index === 21,
   }));
+}
+
+function buildElevationDistanceMarks(distanceKm, sampleCount) {
+  const totalKm = (distanceKm != null && Number.isFinite(Number(distanceKm)) && Number(distanceKm) > 0)
+    ? Number(distanceKm)
+    : Math.max(sampleCount - 1, 1);
+  if (sampleCount <= 1) return [0];
+
+  const sampleMarks = [0];
+  const sampleSteps = Math.max(1, Math.floor(totalKm / ELEVATION_SAMPLE_INTERVAL_KM));
+  for (let step = 1; step <= sampleSteps; step += 1) {
+    sampleMarks.push(Number((step * ELEVATION_SAMPLE_INTERVAL_KM).toFixed(3)));
+  }
+  const lastDistance = sampleMarks[sampleMarks.length - 1];
+  if (Math.abs(totalKm - lastDistance) > 0.001) {
+    sampleMarks.push(Number(totalKm.toFixed(3)));
+  }
+
+  if (sampleMarks.length === sampleCount) {
+    return sampleMarks;
+  }
+
+  const step = totalKm / Math.max(sampleCount - 1, 1);
+  return Array.from({ length: sampleCount }, (_, index) => Number((step * index).toFixed(3)));
+}
+
+function formatElevationMarkerLabel(km, raceTotalKm, index, totalCount) {
+  const isFinish = index === totalCount - 1 && Math.abs(km - raceTotalKm) > 0.05;
+  if (isFinish) return 'F';
+  if (Math.abs(km - Math.round(km)) < 0.05) return String(Math.round(km));
+  return km.toFixed(1);
 }
 
 function buildElevationGraph(profile, distanceKm) {
@@ -97,7 +171,7 @@ function buildElevationGraph(profile, distanceKm) {
     ? Number(distanceKm)
     : 42.195;
 
-  const width = 960;
+  const width = Math.max(960, Math.round(raceTotalKm * 28) + 68);
   const height = 260;
   const baseY = 214;
   const leftPad = 26;
@@ -107,12 +181,13 @@ function buildElevationGraph(profile, distanceKm) {
   const minMeters = Math.min(...profile.map((point) => Number(point.meters || 0)));
   const maxMeters = Math.max(...profile.map((point) => Number(point.meters || 0)), 1);
   const rangeMeters = Math.max(8, maxMeters - minMeters);
+  const distanceMarks = buildElevationDistanceMarks(raceTotalKm, profile.length);
 
   const points = profile.map((point, index) => {
-    const x = leftPad + (drawableWidth / Math.max(profile.length - 1, 1)) * index;
+    const km = distanceMarks[index] ?? ((raceTotalKm * index) / Math.max(profile.length - 1, 1));
+    const x = leftPad + (drawableWidth * km) / Math.max(raceTotalKm, 0.1);
     const normalized = (Number(point.meters || 0) - minMeters) / rangeMeters;
     const y = baseY - normalized * (baseY - topPad);
-    const km = (raceTotalKm * index) / Math.max(profile.length - 1, 1);
     return {
       ...point,
       x,
@@ -126,17 +201,27 @@ function buildElevationGraph(profile, distanceKm) {
     .join(' ');
   const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${baseY} L ${points[0].x.toFixed(1)} ${baseY} Z`;
 
-  const markerIndexes = [0, 6, 12, 18, profile.length - 1]
-    .filter((value, index, array) => array.indexOf(value) === index)
-    .filter((index) => points[index]);
-
-  const markers = markerIndexes.map((index, order) => ({
-    id: `marker-${index}`,
-    x: points[index].x,
-    y: points[index].y,
-    value: points[index].meters,
-    label: ['S', '10', '21', '30', 'F'][order] || String(order + 1),
-  }));
+  const markers = points.filter((point, index) => {
+    const isFinish = index === points.length - 1;
+    const roundedKm = Math.round(point.km);
+    const isWholeKilometer = Math.abs(point.km - roundedKm) < 0.05;
+    return isFinish || roundedKm === 0 || isWholeKilometer;
+  }).map((point, markerIndex) => {
+    const index = points.indexOf(point);
+    const isFinish = index === points.length - 1;
+    const roundedKm = Math.round(point.km);
+    const isMajor = isFinish || roundedKm === 0 || roundedKm % 5 === 0;
+    return {
+      id: `marker-${markerIndex}`,
+      x: point.x,
+      y: point.y,
+      value: point.meters,
+      km: point.km,
+      label: formatElevationMarkerLabel(point.km, raceTotalKm, index, points.length),
+      isMajor,
+      isFinish,
+    };
+  });
 
   return {
     width,
@@ -150,12 +235,7 @@ function buildElevationGraph(profile, distanceKm) {
   };
 }
 
-function confidenceFromRuns(prediction, runsNearTarget) {
-  if (!prediction) return 0;
-  return Math.max(72, Math.min(96, 76 + Math.min(runsNearTarget, 5) * 4));
-}
-
-function buildCoachInsight(t, race, raceMeta, prediction, confidence) {
+function buildCoachInsight(t, race, raceMeta, prediction) {
   const courseTone = t(`races.intel_course_${raceMeta?.courseKey || 'flat_city'}_title`);
   if (!prediction) {
     return t('races.detail_coach_no_prediction', { course: courseTone, race: race?.name || '' });
@@ -164,13 +244,11 @@ function buildCoachInsight(t, race, raceMeta, prediction, confidence) {
     return t('races.detail_coach_hard_course', {
       course: courseTone,
       time: formatDuration(prediction.adjustedSeconds),
-      confidence,
     });
   }
   return t('races.detail_coach_fast_course', {
     course: courseTone,
     time: formatDuration(prediction.adjustedSeconds),
-    confidence,
   });
 }
 
@@ -211,12 +289,13 @@ function buildRaceHeroLabels(race) {
 }
 
 const EMPTY_COURSE_MAP = Object.freeze({
+  previewImageUrl: '',
   imageUrl: '',
   source: '',
-  courseMapDetected: false,
+  routeAvailable: false,
   confidence: 0,
   summary: '',
-  overlayBounds: null,
+  viewportBounds: null,
   routePoints: [],
   elevationSamples: [],
   totalClimbMeters: null,
@@ -257,17 +336,26 @@ function normalizeRoutePoints(rawPoints) {
     .filter(Boolean);
 }
 
+function resolveCourseMapPreviewImageUrl(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  if (typeof payload.previewImageUrl === 'string' && payload.previewImageUrl) return payload.previewImageUrl;
+  if (typeof payload.imageUrl === 'string' && payload.imageUrl) return payload.imageUrl;
+  if (typeof payload.sourceImageUrl === 'string' && payload.sourceImageUrl) return payload.sourceImageUrl;
+  return '';
+}
+
 function normalizeCourseMapPayload(payload) {
   if (!payload || typeof payload !== 'object') return EMPTY_COURSE_MAP;
   const confidence = Math.max(0, Math.min(100, Math.round(asFiniteNumber(payload.confidence) ?? 0)));
   const totalClimbMeters = asFiniteNumber(payload.totalClimbMeters);
   return {
+    previewImageUrl: resolveCourseMapPreviewImageUrl(payload),
     imageUrl: typeof payload.imageUrl === 'string' ? payload.imageUrl : '',
     source: typeof payload.source === 'string' ? payload.source : '',
-    courseMapDetected: payload.courseMapDetected === true,
+    routeAvailable: payload.routeAvailable === true,
     confidence,
     summary: typeof payload.summary === 'string' ? payload.summary : '',
-    overlayBounds: normalizeOverlayBounds(payload.overlayBounds),
+    viewportBounds: normalizeOverlayBounds(payload.viewportBounds),
     routePoints: normalizeRoutePoints(payload.routePoints),
     elevationSamples: Array.isArray(payload.elevationSamples)
       ? payload.elevationSamples
@@ -290,7 +378,6 @@ export default function RacesDetail() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [savedRaces, setSavedRaces] = useState([]);
   const [resolvedHeroImage, setResolvedHeroImage] = useState(() => getCachedRaceImage(location.state?.race || worldRaceCatalog.find((entry) => entry.id === raceId) || null).imageUrl || '');
   const [courseMapData, setCourseMapData] = useState(EMPTY_COURSE_MAP);
   const [courseMapRequestSettled, setCourseMapRequestSettled] = useState(false);
@@ -301,10 +388,14 @@ export default function RacesDetail() {
   const [loadState, setLoadState] = useState('loading');
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [routeMapReady, setRouteMapReady] = useState(false);
+  const [routeMapPainted, setRouteMapPainted] = useState(false);
+  const [streetTileFallback, setStreetTileFallback] = useState(null);
+  const raceDetailElevationChartRef = useRef(null);
+  const raceDetailElevationStageRef = useRef(null);
   const elevationSvgRef = useRef(null);
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
-  const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
+  const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png?v=20260420b`, []);
   const fallbackTileUrl = useMemo(() => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', []);
 
   const race = useMemo(() => {
@@ -312,6 +403,18 @@ export default function RacesDetail() {
     if (fromState?.id === raceId) return fromState;
     return worldRaceCatalog.find((entry) => entry.id === raceId) || null;
   }, [location.state, raceId]);
+  const catalogRace = useMemo(
+    () => worldRaceCatalog.find((entry) => entry.id === raceId) || null,
+    [raceId],
+  );
+  const fallbackMapLatitude = useMemo(
+    () => asFiniteNumber(race?.lat) ?? asFiniteNumber(catalogRace?.lat),
+    [catalogRace?.lat, race?.lat],
+  );
+  const fallbackMapLongitude = useMemo(
+    () => asFiniteNumber(race?.lng) ?? asFiniteNumber(catalogRace?.lng),
+    [catalogRace?.lng, race?.lng],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -333,8 +436,8 @@ export default function RacesDetail() {
           country: race.country || '',
           website: race.officialWebsite || '',
         });
-        if (race.lat != null) params.set('lat', String(race.lat));
-        if (race.lng != null) params.set('lng', String(race.lng));
+        if (fallbackMapLatitude != null) params.set('lat', String(fallbackMapLatitude));
+        if (fallbackMapLongitude != null) params.set('lng', String(fallbackMapLongitude));
         if (race.distanceKm != null) params.set('distanceKm', String(race.distanceKm));
         const data = await apiJson(`/api/races/course-map?${params.toString()}`);
         if (!cancelled) {
@@ -352,11 +455,11 @@ export default function RacesDetail() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, race, raceId]);
+  }, [fallbackMapLatitude, fallbackMapLongitude, isAuthenticated, race, raceId]);
 
   useEffect(() => {
     let cancelled = false;
-    const hasAlignedElevationSamples = courseMapData.elevationSamples.length > 0;
+    const hasAlignedElevationSamples = Array.isArray(courseMapData.elevationSamples) && courseMapData.elevationSamples.length > 0;
     const shouldFetch = shouldFetchRaceElevationProfile({
       isAuthenticated,
       raceName: race?.name,
@@ -365,12 +468,16 @@ export default function RacesDetail() {
     });
 
     if (!shouldFetch) {
-      setElevationProfileImage('');
-      setElevationProfileSource('');
-      setElevationProfileSamples([]);
+      if (hasAlignedElevationSamples) {
+        setElevationProfileSamples(courseMapData.elevationSamples);
+        setElevationProfileSource(t('races.detail_course_route_source'));
+      } else {
+        setElevationProfileImage('');
+        setElevationProfileSource('');
+        setElevationProfileSamples([]);
+      }
       return undefined;
     }
-
     (async () => {
       try {
         const params = new URLSearchParams({
@@ -397,7 +504,7 @@ export default function RacesDetail() {
     return () => {
       cancelled = true;
     };
-  }, [courseMapData.elevationSamples.length, courseMapRequestSettled, isAuthenticated, race]);
+  }, [courseMapData.elevationSamples, courseMapRequestSettled, isAuthenticated, race, t]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -411,22 +518,19 @@ export default function RacesDetail() {
 
     (async () => {
       try {
-        const [profileData, activities, raceData] = await Promise.all([
+        const [profileData, activities] = await Promise.all([
           apiJson('/api/profile/me').catch(() => null),
           apiJson('/api/activities/analysis').catch(() => []),
-          apiJson('/api/races').catch(() => []),
         ]);
         const runList = Array.isArray(activities) ? activities : [];
         runList.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
         setProfile(profileData || null);
         setRuns(runList);
-        setSavedRaces(Array.isArray(raceData) ? raceData : []);
         setLoadingActivities(false);
       } catch (err) {
         console.error('Failed to load race detail activities', err);
         setProfile(null);
         setRuns([]);
-        setSavedRaces([]);
         setLoadingActivities(false);
       }
     })();
@@ -476,21 +580,24 @@ export default function RacesDetail() {
       return Math.max(8, Math.round(ratio * peak));
     });
   }, [elevationProfileSamples, raceMeta]);
-  const mapCenter = useMemo(() => (race?.lat != null && race?.lng != null ? [race.lat, race.lng] : null), [race]);
+  const mapCenter = useMemo(
+    () => (fallbackMapLatitude != null && fallbackMapLongitude != null
+      ? [fallbackMapLatitude, fallbackMapLongitude]
+      : null),
+    [fallbackMapLatitude, fallbackMapLongitude],
+  );
   const mapTrust = useMemo(() => deriveRaceMapTrust({
-    imageUrl: courseMapData.imageUrl,
-    overlayBounds: courseMapData.overlayBounds,
+    imageUrl: courseMapData.previewImageUrl || courseMapData.imageUrl,
+    overlayBounds: courseMapData.viewportBounds,
     routePoints: courseMapData.routePoints,
     confidence: courseMapData.confidence,
     distanceKm: race?.distanceKm,
     mapCenter,
-  }), [courseMapData.confidence, courseMapData.imageUrl, courseMapData.overlayBounds, courseMapData.routePoints, mapCenter, race?.distanceKm]);
+  }), [courseMapData.confidence, courseMapData.imageUrl, courseMapData.previewImageUrl, courseMapData.routePoints, courseMapData.viewportBounds, mapCenter, race?.distanceKm]);
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
-  const hasAlignedRoute = mapTrust.trustedRoute;
-  const hasAlignedOverlay = mapTrust.trustedOverlay;
-  const mapViewportBounds = mapTrust.viewportBounds;
-  const hasCourseMapCandidate = Boolean(courseMapData.imageUrl);
+  const hasAlignedRoute = mapTrust.trustedOverlay && courseMapData.routeAvailable && routeMapPoints.length > 1;
+  const mapViewportBounds = mapTrust.viewportBounds || courseMapData.viewportBounds;
   const absoluteElevationProfile = useMemo(
     () => (courseMapData.elevationSamples.length ? courseMapData.elevationSamples : fallbackInterpretedElevationProfile),
     [courseMapData.elevationSamples, fallbackInterpretedElevationProfile],
@@ -522,7 +629,6 @@ export default function RacesDetail() {
       bestVdot,
     };
   }, [bestVdot, race, raceMeta, runs]);
-  const confidence = useMemo(() => confidenceFromRuns(prediction, nearRuns.length), [nearRuns.length, prediction]);
   const elevationBars = useMemo(() => {
     if (!absoluteElevationProfile || !absoluteElevationProfile.length) return null;
     return buildElevationProfile(displayedCourseGain || 0, raceMeta?.courseKey || 'flat_city', absoluteElevationProfile);
@@ -536,6 +642,38 @@ export default function RacesDetail() {
     if (activeElevationPointIndex == null) return null;
     return elevationGraph.points[activeElevationPointIndex] || null;
   }, [activeElevationPointIndex, elevationGraph]);
+
+  useLayoutEffect(() => {
+    if (!elevationGraph || !raceDetailElevationChartRef.current || !raceDetailElevationStageRef.current) return undefined;
+    const chartViewport = raceDetailElevationChartRef.current;
+    const chartStage = raceDetailElevationStageRef.current;
+
+    const centerChartViewport = () => {
+      const midpointPoint = elevationGraph.points[Math.floor(elevationGraph.points.length / 2)];
+      const targetScrollLeft = Math.max(
+        0,
+        Math.min(
+          chartViewport.scrollWidth - chartViewport.clientWidth,
+          (midpointPoint?.x || chartViewport.scrollWidth / 2) - (chartViewport.clientWidth / 2),
+        ),
+      );
+      chartViewport.scrollLeft = targetScrollLeft;
+    };
+
+    const frameId = window.requestAnimationFrame(centerChartViewport);
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => centerChartViewport());
+      resizeObserver.observe(chartViewport);
+      resizeObserver.observe(chartStage);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+    };
+  }, [elevationGraph, raceId]);
+
   const elevationTooltipLabel = 'Elevation';
   function handleElevationPointerMove(event) {
     if (!elevationGraph || !elevationSvgRef.current) return;
@@ -554,41 +692,11 @@ export default function RacesDetail() {
     setActiveElevationPointIndex(nearestIndex);
   }
 
-  const savedRace = useMemo(() => savedRaces.find((entry) => entry.name === race?.name || entry.id === race?.id), [race, savedRaces]);
-  const readinessItems = useMemo(() => ([
-    {
-      key: 'plan',
-      done: !!savedRace,
-      label: t('races.detail_ready_plan'),
-      meta: savedRace ? t('races.detail_ready_plan_done') : t('races.detail_ready_plan_pending'),
-    },
-    {
-      key: 'fitness',
-      done: nearRuns.length >= 2,
-      label: t('races.detail_ready_fitness'),
-      meta: nearRuns.length >= 2
-        ? t('races.detail_ready_fitness_done', { count: nearRuns.length })
-        : t('races.detail_ready_fitness_pending'),
-    },
-    {
-      key: 'prediction',
-      done: !!prediction,
-      label: t('races.detail_ready_prediction'),
-      meta: prediction ? t('races.detail_ready_prediction_done', { confidence }) : t('races.detail_ready_prediction_pending'),
-    },
-  ]), [confidence, nearRuns.length, prediction, savedRace, t]);
-  const coachInsight = useMemo(() => buildCoachInsight(t, race, raceMeta, prediction, confidence), [confidence, prediction, race, raceMeta, t]);
+  const coachInsight = useMemo(() => buildCoachInsight(t, race, raceMeta, prediction), [prediction, race, raceMeta, t]);
   const heroLabels = useMemo(() => buildRaceHeroLabels(race), [race]);
   const topnavTitle = useMemo(() => buildRaceTopnavTitle(heroLabels, race), [heroLabels, race]);
   const mapCardCopy = useMemo(() => {
     const city = race?.city || race?.name || '';
-    if (hasAlignedOverlay) {
-      return {
-        badge: t('races.detail_map_overlay_badge'),
-        title: t('races.detail_route_title', { city }),
-        source: t('races.detail_map_overlay_source', { confidence: courseMapData.confidence }),
-      };
-    }
     if (hasAlignedRoute) {
       return {
         badge: t('races.detail_map_route_badge'),
@@ -596,19 +704,12 @@ export default function RacesDetail() {
         source: t('races.detail_map_route_source', { confidence: courseMapData.confidence }),
       };
     }
-    if (hasCourseMapCandidate) {
-      return {
-        badge: t('races.detail_map_detected_badge'),
-        title: t('races.detail_map_city_title', { city }),
-        source: t('races.detail_map_detected_source'),
-      };
-    }
     return {
       badge: t('races.detail_map_city_badge'),
       title: t('races.detail_map_city_title', { city }),
       source: t('races.detail_map_city_source'),
     };
-  }, [courseMapData.confidence, hasAlignedOverlay, hasAlignedRoute, hasCourseMapCandidate, race, t]);
+  }, [courseMapData.confidence, hasAlignedRoute, race, t]);
 
   useEffect(() => {
     // Show page immediately when basic race data is loaded
@@ -620,22 +721,34 @@ export default function RacesDetail() {
 
   useEffect(() => {
     setRouteMapReady(false);
+    setRouteMapPainted(false);
+    setStreetTileFallback(null);
     // Clear map instance when route data changes to allow re-initialization with new data
     if (routeMapInstanceRef.current) {
       routeMapInstanceRef.current.remove();
       routeMapInstanceRef.current = null;
     }
-  }, [hasAlignedOverlay, hasAlignedRoute, race?.id, routeMapPoints.length]);
+  }, [courseMapData.imageUrl, courseMapData.previewImageUrl, hasAlignedRoute, race?.id, routeMapPoints.length]);
 
   useEffect(() => {
     if (!routeMapRef.current || !race || routeMapInstanceRef.current) return undefined;
+    const routeMapHost = routeMapRef.current;
     let resizeTimer = null;
+    let tileFallbackTimer = null;
+    let cancelled = false;
+    let createdMap = null;
+    let hasAppliedInitialViewport = false;
 
-    import('leaflet').then((leafletModule) => {
-      if (!routeMapRef.current || routeMapInstanceRef.current) return;
-      const L = leafletModule.default || leafletModule;
-      const map = L.map(routeMapRef.current, {
-        zoomControl: false,
+    if (cancelled || !routeMapRef.current) return undefined;
+    if (routeMapRef.current !== routeMapHost || routeMapInstanceRef.current) return undefined;
+    if (routeMapHost._leaflet_id) {
+      delete routeMapHost._leaflet_id;
+    }
+    routeMapHost.innerHTML = '';
+
+    try {
+      const map = L.map(routeMapHost, {
+        zoomControl: true,
         attributionControl: true,
         dragging: true,
         scrollWheelZoom: true,
@@ -644,34 +757,89 @@ export default function RacesDetail() {
         keyboard: false,
         tap: false,
       });
+      const routeShadowPane = map.createPane('race-detail-route-shadow');
+      routeShadowPane.style.zIndex = '440';
+      const routePane = map.createPane('race-detail-route');
+      routePane.style.zIndex = '450';
+      const routeMarkerPane = map.createPane('race-detail-route-marker');
+      routeMarkerPane.style.zIndex = '460';
+      const tilePane = map.getPane('tilePane');
+      if (tilePane) {
+        tilePane.style.mixBlendMode = 'normal';
+        tilePane.style.opacity = '1';
+        tilePane.style.filter = 'none';
+      }
       const tileAttribution = '&copy; OpenStreetMap contributors';
       let activeTileLayer = null;
       let switchedToFallbackTiles = false;
+      let tileLoadConfirmed = false;
+      const refreshStreetTileFallback = (tileTemplate = tileUrl) => {
+        if (cancelled) return;
+        setStreetTileFallback(buildStreetTileFallbackSnapshot(map, tileTemplate));
+      };
+      const switchToFallbackTiles = () => {
+        if (cancelled || switchedToFallbackTiles) return;
+        switchedToFallbackTiles = true;
+        tileLoadConfirmed = false;
+        if (tileFallbackTimer) {
+          clearTimeout(tileFallbackTimer);
+          tileFallbackTimer = null;
+        }
+        if (activeTileLayer) {
+          activeTileLayer.off();
+          map.removeLayer(activeTileLayer);
+        }
+        activeTileLayer = attachTileLayer(fallbackTileUrl);
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => {
+            map.invalidateSize({ pan: false });
+            activeTileLayer?.redraw?.();
+            refreshStreetTileFallback(fallbackTileUrl);
+          });
+        }
+      };
       const attachTileLayer = (url) => {
         const layer = L.tileLayer(url, {
           maxZoom: 19,
           attribution: tileAttribution,
         }).addTo(map);
+        layer.on('tileload', () => {
+          const container = layer.getContainer?.();
+          if (container instanceof HTMLElement) {
+            container.style.mixBlendMode = 'normal';
+            container.style.opacity = '1';
+            container.style.filter = 'none';
+          }
+          const tileElements = container?.querySelectorAll?.('img.leaflet-tile') || [];
+          tileElements.forEach((tile) => {
+            tile.style.mixBlendMode = 'normal';
+            tile.style.opacity = '1';
+            tile.style.filter = 'none';
+            tile.style.visibility = 'visible';
+            tile.style.display = 'block';
+            tile.style.maxWidth = 'none';
+            tile.style.maxHeight = 'none';
+          });
+          tileLoadConfirmed = true;
+          setStreetTileFallback(null);
+          if (tileFallbackTimer) {
+            clearTimeout(tileFallbackTimer);
+            tileFallbackTimer = null;
+          }
+        });
         layer.on('tileerror', () => {
-          if (switchedToFallbackTiles || url === fallbackTileUrl) return;
-          switchedToFallbackTiles = true;
-          if (activeTileLayer) {
-            map.removeLayer(activeTileLayer);
-          }
-          activeTileLayer = attachTileLayer(fallbackTileUrl);
-          if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-            window.requestAnimationFrame(() => {
-              map.invalidateSize({ pan: false });
-              activeTileLayer?.redraw?.();
-            });
-          }
+          if (url === fallbackTileUrl) return;
+          switchToFallbackTiles();
         });
         return layer;
       };
-      activeTileLayer = attachTileLayer(tileUrl);
       const finalizeMapLayout = () => {
+        if (cancelled) return;
         map.invalidateSize({ pan: false });
+        applyRouteMapViewport();
         activeTileLayer?.redraw?.();
+        setRouteMapPainted(true);
+        setRouteMapReady(true);
       };
       const renderFallbackCityMap = () => {
         if (mapCenter) {
@@ -691,70 +859,67 @@ export default function RacesDetail() {
           map.setView([0, 0], 1);
         }
       };
-
-      try {
-        const overlayBounds = hasAlignedOverlay && courseMapData.overlayBounds
-          ? L.latLngBounds(
-            [courseMapData.overlayBounds.south, courseMapData.overlayBounds.west],
-            [courseMapData.overlayBounds.north, courseMapData.overlayBounds.east],
-          )
-          : null;
-        const viewportBounds = mapViewportBounds
-          ? L.latLngBounds(
-            [mapViewportBounds.south, mapViewportBounds.west],
-            [mapViewportBounds.north, mapViewportBounds.east],
-          )
-          : null;
-
-        if (overlayBounds) {
-          L.imageOverlay(courseMapData.imageUrl, overlayBounds, {
-            opacity: 0.74,
-            interactive: false,
-            className: 'race-detail-map-ai-overlay',
-          }).addTo(map);
-        }
-
-        if (hasAlignedRoute) {
-          const polyline = L.polyline(routeMapPoints, {
-            color: '#f07561',
-            weight: 5,
-            opacity: 0.92,
-          }).addTo(map);
-
-          const startMarker = L.circleMarker(routeMapPoints[0], {
-            radius: 7,
-            color: '#101214',
-            weight: 2,
-            fillColor: '#7ce8b4',
-            fillOpacity: 1,
-          }).addTo(map);
-          if (routePoints[0]?.label) {
-            startMarker.bindTooltip(routePoints[0].label, { direction: 'top', offset: [0, -6] });
-          }
-
-          const finishMarker = L.circleMarker(routeMapPoints[routeMapPoints.length - 1], {
-            radius: 8,
-            color: '#fff6f2',
-            weight: 2,
-            fillColor: '#f07561',
-            fillOpacity: 1,
-          }).addTo(map);
-          if (routePoints[routePoints.length - 1]?.label) {
-            finishMarker.bindTooltip(routePoints[routePoints.length - 1].label, { direction: 'top', offset: [0, -6] });
-          }
-
-          if (viewportBounds) {
-            map.fitBounds(viewportBounds, { padding: [26, 26] });
-          } else {
-            map.fitBounds(polyline.getBounds().pad(0.24), { padding: [26, 26] });
-          }
+      let polyline = null;
+      const applyRouteMapViewport = ({ force = false } = {}) => {
+        if (hasAppliedInitialViewport && !force) return;
+        if (hasAlignedRoute && polyline) {
+          map.fitBounds(polyline.getBounds().pad(0.12), { padding: [26, 26], maxZoom: 16 });
         } else {
           renderFallbackCityMap();
         }
-      } catch (error) {
-        console.error('Race detail Leaflet map failed to render aligned route; falling back to city view.', error);
-        renderFallbackCityMap();
+        hasAppliedInitialViewport = true;
+      };
+
+      if (hasAlignedRoute) {
+        L.polyline(routeMapPoints, {
+          color: '#fff6f2',
+          weight: 9,
+          opacity: 0.92,
+          pane: 'race-detail-route-shadow',
+        }).addTo(map);
+
+        polyline = L.polyline(routeMapPoints, {
+          color: '#f07561',
+          weight: 6,
+          opacity: 0.98,
+          pane: 'race-detail-route',
+        }).addTo(map);
+
+        const startMarker = L.circleMarker(routeMapPoints[0], {
+          radius: 7,
+          color: '#101214',
+          weight: 2,
+          fillColor: '#7ce8b4',
+          fillOpacity: 1,
+          pane: 'race-detail-route-marker',
+        }).addTo(map);
+        if (routePoints[0]?.label) {
+          startMarker.bindTooltip(routePoints[0].label, { direction: 'top', offset: [0, -6] });
+        }
+
+        const finishMarker = L.circleMarker(routeMapPoints[routeMapPoints.length - 1], {
+          radius: 8,
+          color: '#fff6f2',
+          weight: 2,
+          fillColor: '#f07561',
+          fillOpacity: 1,
+          pane: 'race-detail-route-marker',
+        }).addTo(map);
+        if (routePoints[routePoints.length - 1]?.label) {
+          finishMarker.bindTooltip(routePoints[routePoints.length - 1].label, { direction: 'top', offset: [0, -6] });
+        }
       }
+      map.invalidateSize({ pan: false });
+      applyRouteMapViewport({ force: true });
+      activeTileLayer = attachTileLayer(tileUrl);
+      tileFallbackTimer = setTimeout(() => {
+        if (!tileLoadConfirmed && !switchedToFallbackTiles) {
+          refreshStreetTileFallback(tileUrl);
+          map.invalidateSize({ pan: false });
+          applyRouteMapViewport({ force: true });
+          activeTileLayer?.redraw?.();
+        }
+      }, 2200);
 
       if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
         window.requestAnimationFrame(finalizeMapLayout);
@@ -762,23 +927,33 @@ export default function RacesDetail() {
         finalizeMapLayout();
       }
       resizeTimer = setTimeout(finalizeMapLayout, 180);
-      setRouteMapReady(true);
-
-      routeMapInstanceRef.current = map;
-    }).catch((error) => {
-      console.error('Race detail Leaflet map failed to initialize.', error);
-    });
+      if (!cancelled) {
+        routeMapInstanceRef.current = map;
+        createdMap = map;
+        setRouteMapReady(true);
+      }
+    } catch (error) {
+      if (!cancelled) {
+        console.error('Race detail Leaflet map failed to initialize.', error);
+      }
+    }
 
     return () => {
+      cancelled = true;
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
-      if (routeMapInstanceRef.current) {
+      if (tileFallbackTimer) {
+        clearTimeout(tileFallbackTimer);
+      }
+      if (routeMapInstanceRef.current === createdMap) {
         routeMapInstanceRef.current.remove();
         routeMapInstanceRef.current = null;
+      } else if (createdMap) {
+        createdMap.remove();
       }
     };
-  }, [courseMapData.imageUrl, courseMapData.overlayBounds, fallbackTileUrl, hasAlignedOverlay, hasAlignedRoute, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
+  }, [courseMapData.imageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, fallbackTileUrl, hasAlignedRoute, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
 
   if (loadState !== 'ready') {
     return (
@@ -853,7 +1028,7 @@ export default function RacesDetail() {
         <div className="runner-shell-canvas">
           <div className="race-detail-layout">
             <section className="race-detail-hero">
-              <img className="race-detail-hero-image" src={heroImage} alt={race?.name || t('races.detail_nav')} />
+              <img className="race-detail-hero-image" src={heroImage} alt={race?.name || t('races.detail_nav')} onError={(e) => { e.target.onerror = null; const fallback = race?.heroImage || race?.image || DEFAULT_HERO_IMAGE; if (e.target.src !== fallback) { e.target.src = fallback; } setResolvedHeroImage(''); invalidateRaceImageCache(race); }} />
               <div className="race-detail-hero-overlay" />
               <div className="race-detail-hero-body">
                 <div className="race-detail-hero-main">
@@ -900,13 +1075,6 @@ export default function RacesDetail() {
                     <span>{t('races.detail_stat_prediction')}</span>
                     <strong>{prediction ? formatDuration(prediction.adjustedSeconds) : '--'}</strong>
                   </article>
-                  <article className="race-detail-stat-card">
-                    <span>{t('races.detail_stat_confidence')}</span>
-                    <strong>{prediction ? confidence : '--'}<em>%</em></strong>
-                    <div className="race-detail-confidence-bar">
-                      <i style={{ width: `${prediction ? confidence : 0}%` }} />
-                    </div>
-                  </article>
                 </div>
 
                 <article className="race-detail-coach-card">
@@ -938,14 +1106,14 @@ export default function RacesDetail() {
                     </div>
                   </div>
                 </div>
-                <div className="race-detail-elevation-chart">
+                <div ref={raceDetailElevationChartRef} className="race-detail-elevation-chart">
                   {elevationGraph ? (
-                    <>
+                    <div ref={raceDetailElevationStageRef} className="race-detail-elevation-stage" style={{ width: `${elevationGraph.width}px` }}>
                       {activeElevationPoint ? (
                         <div
-                          className={`race-detail-elevation-tooltip${activeElevationPoint.x <= 120 ? ' is-left' : activeElevationPoint.x >= elevationGraph.width - 120 ? ' is-right' : ''}`}
+                          className={`race-detail-elevation-tooltip${activeElevationPoint.x <= 120 ? ' is-left' : activeElevationPoint.x >= elevationGraph.width - 120 ? ' is-right' : ''}${activeElevationPoint.y <= 84 ? ' is-below' : ''}`}
                           style={{
-                            left: `${(activeElevationPoint.x / elevationGraph.width) * 100}%`,
+                            left: `${activeElevationPoint.x}px`,
                             top: `${Math.max(18, activeElevationPoint.y - 10)}px`,
                           }}
                           role="status"
@@ -958,6 +1126,7 @@ export default function RacesDetail() {
                       <svg
                         ref={elevationSvgRef}
                         className="race-detail-elevation-svg"
+                        style={{ width: `${elevationGraph.width}px` }}
                         viewBox={`0 0 ${elevationGraph.width} ${elevationGraph.height}`}
                         role="img"
                         aria-label={t('races.detail_course_profile')}
@@ -985,20 +1154,28 @@ export default function RacesDetail() {
                       {elevationGraph.markers.map((marker) => (
                         <g
                           key={marker.id}
-                          className={`race-detail-elevation-marker${activeElevationPoint && Math.abs(activeElevationPoint.x - marker.x) < 6 ? ' is-active' : ''}`}
+                          className={`race-detail-elevation-marker${activeElevationPoint && Math.abs(activeElevationPoint.x - marker.x) < 8 ? ' is-active' : ''}${marker.isMajor ? ' is-major' : ' is-minor'}`}
                         >
-                          <line className="race-detail-elevation-guide" x1={marker.x} y1={marker.y} x2={marker.x} y2={elevationGraph.baseY} />
-                          <text className="race-detail-elevation-value" x={marker.x} y={Math.max(18, marker.y - 10)} textAnchor="middle">
-                            {marker.value}m
-                          </text>
-                          <circle className="race-detail-elevation-node" cx={marker.x} cy={elevationGraph.baseY} r="11" />
+                          <line
+                            className={`race-detail-elevation-guide${marker.isMajor ? '' : ' is-minor'}`}
+                            x1={marker.x}
+                            y1={marker.isMajor ? marker.y : elevationGraph.baseY - 18}
+                            x2={marker.x}
+                            y2={elevationGraph.baseY}
+                          />
+                          {marker.isMajor ? (
+                            <text className="race-detail-elevation-value" x={marker.x} y={Math.max(18, marker.y - 10)} textAnchor="middle">
+                              {marker.value}m
+                            </text>
+                          ) : null}
+                          <circle className={`race-detail-elevation-node${marker.isMajor ? '' : ' is-minor'}`} cx={marker.x} cy={elevationGraph.baseY} r={marker.isMajor ? 11 : 7} />
                           <text className="race-detail-elevation-node-label" x={marker.x} y={elevationGraph.baseY + 4} textAnchor="middle">
                             {marker.label}
                           </text>
                         </g>
                       ))}
                       </svg>
-                    </>
+                    </div>
                   ) : (
                     <div className="race-detail-elevation-empty">
                       <strong>{t('races.detail_course_empty_title')}</strong>
@@ -1027,64 +1204,37 @@ export default function RacesDetail() {
                 </div>
               </article>
 
-              <section className="race-detail-lower-grid">
-                <article className="race-detail-map-card">
+              <section className="race-detail-lower-stack">
+                <article className={`race-detail-map-stage${hasAlignedRoute ? ' has-route' : ''}`}>
                   <div
                     className="race-detail-map-canvas"
-                    role="img"
+                    role="region"
                     aria-label={mapCardCopy.title}
                     aria-describedby="race-detail-map-access-copy"
                   >
+                    {streetTileFallback ? (
+                      <div className="race-detail-map-street-fallback" aria-hidden="true">
+                        {streetTileFallback.tiles.map((tile) => (
+                          <img
+                            key={tile.key}
+                            className="race-detail-map-street-fallback-tile"
+                            src={tile.url}
+                            alt=""
+                            style={{ left: `${tile.left}px`, top: `${tile.top}px` }}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                     <div
                       ref={routeMapRef}
-                      className={`race-detail-map-leaflet${routeMapReady ? ' is-ready' : ''}${hasAlignedOverlay ? ' has-aligned-overlay' : ''}`}
+                      className={`race-detail-map-leaflet${routeMapReady ? ' is-mounted' : ''}${routeMapPainted ? ' is-ready' : ''}`}
                     />
                   </div>
-                  <div className={`race-detail-map-overlay${hasAlignedOverlay ? ' is-ai-overlay' : ''}`} />
-                  <div className="race-detail-map-copy">
-                    <span>{mapCardCopy.badge}</span>
-                    <strong>{mapCardCopy.title}</strong>
-                    <p id="race-detail-map-access-copy" className="sr-only">
-                      {`${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
-                    </p>
-                  </div>
-                  <div className="race-detail-map-actions">
-                    <span className="race-detail-map-source">{mapCardCopy.source}</span>
-                    {race?.officialWebsite ? (
-                      <a className="race-detail-map-btn" href={race.officialWebsite} target="_blank" rel="noreferrer">
-                        {t('races.intel_official_site')}
-                      </a>
-                    ) : null}
-                  </div>
+                  <p id="race-detail-map-access-copy" className="sr-only">
+                    {`${mapCardCopy.title}. ${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
+                  </p>
                 </article>
 
-                <article className="race-detail-readiness-card">
-                  <div className="race-detail-readiness-head">
-                    <h3>{t('races.detail_readiness_title')}</h3>
-                    <span>{prediction ? `${confidence}%` : '--'}</span>
-                  </div>
-                  <ul className="race-detail-checklist">
-                    {readinessItems.map((item) => (
-                      <li key={item.key} className={`race-detail-check-row${item.done ? ' is-done' : ''}`}>
-                        <div>
-                          <strong>{item.label}</strong>
-                          <span>{item.meta}</span>
-                        </div>
-                        <AppIcon name={item.done ? 'check_circle' : 'radio_button_unchecked'} className="runner-dashboard-side-link-icon" />
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="race-detail-playbook-actions">
-                    <button type="button" className="race-detail-playbook-btn" onClick={() => navigate('/races')}>
-                      {t('races.detail_back')}
-                    </button>
-                    {savedRace ? (
-                      <button type="button" className="race-detail-playbook-btn is-secondary" onClick={() => navigate('/schedule')}>
-                        {t('races.stitch_view_training_plan')}
-                      </button>
-                    ) : null}
-                  </div>
-                </article>
               </section>
             </section>
 

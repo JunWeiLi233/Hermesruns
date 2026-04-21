@@ -1,0 +1,20 @@
+{
+  "laneId": "lane-coach-copy",
+  "parentRunId": "ahm-20260413033722",
+  "correlationId": "ahm-20260413033722:lane-coach-copy",
+  "goal": "Add the new Chinese and English coach-insight copy needed for the Garmin Coach-style training system, including planning, readiness, and recent-performance guidance labels.",
+  "parentGoal": "Redesign /analysis/coach-insight into a Garmin Coach-style running coach system based on the runner's recent performance, with bounded parallel lanes that preserve Hermes data wiring and shared analysis shell behavior.",
+  "mode": "single-round",
+  "ownedFiles": [
+    "frontend/src/i18n/translations.js"
+  ],
+  "mustPreserve": [
+    "Existing translation keys used by other analysis detail surfaces",
+    "Coach-like tone instead of generic SaaS copy"
+  ],
+  "verify": "Add only the new keys required for the coach-insight surface and keep both zh-CN and en blocks aligned.",
+  "mergeNotes": "Do not attempt duplicate-key cleanup beyond the touched coach-insight additions in this lane.",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-coach-copy.json",
+  "command": "/auto-hermes scope=\"Add the new Chinese and English coach-insight copy needed for the Garmin Coach-style training system, including planning, readiness, and recent-performance guidance labels.\" mode=single-round"
+}

@@ -1,0 +1,30 @@
+{
+  "agent": "market-analyst",
+  "scope": "running coaching apps",
+  "completedAt": "2026-04-20T03:10:00.000Z",
+  "status": "complete",
+  "marketSize": {
+    "value": "$12.12B (2025, fitness apps total)",
+    "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
+    "verified": true
+  },
+  "tam": {
+    "value": "$33.58B by 2033 (fitness apps total)",
+    "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
+    "verified": true
+  },
+  "growthRate": {
+    "value": "13.40% CAGR 2026-2033",
+    "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
+    "verified": true
+  },
+  "notes": [
+    "Running-specific apps are a sub-segment of the broader fitness app market",
+    "Exercise & weight loss segment held 53.69% revenue share in 2025",
+    "North America led with 39.82% revenue share in 2025",
+    "Asia Pacific is the fastest growing region",
+    "Runna raised $9.09M in venture capital (noted in Grand View Research report)",
+    "858 million fitness app downloads in 2023 (Business of Apps)",
+    "The running coaching sub-segment is estimated at $1-2B based on exercise & weight loss share"
+  ]
+}

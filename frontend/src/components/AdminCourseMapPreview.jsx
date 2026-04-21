@@ -43,7 +43,27 @@ function resolvePreviewImageUrl(preview) {
         : '';
 }
 
-export default function AdminCourseMapPreview({ preview, title, emptyLabel, variant = 'panel' }) {
+function normalizeFallbackCenter(rawCenter) {
+  if (!rawCenter || typeof rawCenter !== 'object') return null;
+  const lat = asFiniteNumber(rawCenter.lat ?? rawCenter.latitude);
+  const lng = asFiniteNumber(rawCenter.lng ?? rawCenter.longitude);
+  if (lat == null || lng == null) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return {
+    lat,
+    lng,
+    label: typeof rawCenter.label === 'string' ? rawCenter.label : '',
+  };
+}
+
+export default function AdminCourseMapPreview({
+  preview,
+  title,
+  emptyLabel,
+  variant = 'panel',
+  forceLiveMap = false,
+  fallbackCenter = null,
+}) {
   const mapHostRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const [mapReady, setMapReady] = useState(false);
@@ -55,17 +75,22 @@ export default function AdminCourseMapPreview({ preview, title, emptyLabel, vari
   const overlayBounds = useMemo(() => normalizeOverlayBounds(preview?.overlayBounds), [preview?.overlayBounds]);
   const routePoints = useMemo(() => normalizeRoutePoints(preview?.routePoints), [preview?.routePoints]);
   const polylinePoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
+  const fallbackLatLng = useMemo(() => {
+    const normalized = normalizeFallbackCenter(fallbackCenter);
+    return normalized ? [normalized.lat, normalized.lng] : null;
+  }, [fallbackCenter]);
   const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
   const hasAlignedRoute = polylinePoints.length > 1;
   const hasAlignedOverlay = Boolean(imageUrl) && Boolean(overlayBounds) && hasAlignedRoute;
-  const shouldRenderMap = !mapFailed && (hasAlignedOverlay || hasAlignedRoute);
+  const hasFallbackCenter = Boolean(fallbackLatLng);
+  const shouldRenderMap = !mapFailed && (hasAlignedOverlay || hasAlignedRoute || (forceLiveMap && hasFallbackCenter));
   const canRenderImage = Boolean(imageUrl) && !imageFailed;
 
   useEffect(() => {
     setMapReady(false);
     setMapFailed(false);
     setImageFailed(false);
-  }, [imageUrl, overlayBounds, preview, hasAlignedRoute]);
+  }, [imageUrl, overlayBounds, preview, hasAlignedRoute, forceLiveMap, hasFallbackCenter]);
 
   useEffect(() => {
     if (!mapHostRef.current || !shouldRenderMap) return undefined;
@@ -106,6 +131,10 @@ export default function AdminCourseMapPreview({ preview, title, emptyLabel, vari
         }
         if (polyline) {
           map.fitBounds(polyline.getBounds().pad(0.08), { padding: [18, 18] });
+          return;
+        }
+        if (fallbackLatLng) {
+          map.setView(fallbackLatLng, 11, { animate: false });
         }
       };
 
@@ -122,6 +151,16 @@ export default function AdminCourseMapPreview({ preview, title, emptyLabel, vari
           color: '#f07561',
           weight: 4,
           opacity: 0.92,
+        }).addTo(map);
+      }
+
+      if (!hasAlignedRoute && fallbackLatLng) {
+        L.circleMarker(fallbackLatLng, {
+          radius: 6,
+          weight: 2,
+          color: '#f07561',
+          fillColor: '#ffb4a7',
+          fillOpacity: 0.82,
         }).addTo(map);
       }
 
@@ -156,7 +195,7 @@ export default function AdminCourseMapPreview({ preview, title, emptyLabel, vari
         mapInstanceRef.current = null;
       }
     };
-  }, [hasAlignedOverlay, hasAlignedRoute, imageUrl, overlayBounds, polylinePoints, shouldRenderMap, tileUrl]);
+  }, [fallbackLatLng, hasAlignedOverlay, hasAlignedRoute, imageUrl, overlayBounds, polylinePoints, shouldRenderMap, tileUrl]);
 
   if (shouldRenderMap) {
     return (

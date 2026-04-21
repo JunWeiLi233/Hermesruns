@@ -601,6 +601,34 @@ export default function Vo2MaxDetail() {
                 <p>{primaryDriver}</p>
               </div>
             </footer>
+
+            <section className="analysis-load-command-methodology analysis-vdot-methodology">
+              <article className="analysis-load-command-methodology-card">
+                <div className="analysis-load-command-panel-head">
+                  <div>
+                    <span className="analysis-overview-card-kicker">{t('analysis.vdot_methodology_title')}</span>
+                    <h2>{t('analysis.vdot_methodology_title')}</h2>
+                  </div>
+                </div>
+                <div className="analysis-load-command-methodology-content">
+                  <p className="analysis-vdot-methodology-intro">{t('analysis.vdot_methodology_intro')}</p>
+                  <div className="analysis-load-command-methodology-grid">
+                    <div className="analysis-method-item">
+                      <h3>{t('analysis.vdot_method_cost_title')}</h3>
+                      <p>{t('analysis.vdot_method_cost_body')}</p>
+                    </div>
+                    <div className="analysis-method-item">
+                      <h3>{t('analysis.vdot_method_fraction_title')}</h3>
+                      <p>{t('analysis.vdot_method_fraction_body')}</p>
+                    </div>
+                    <div className="analysis-method-item">
+                      <h3>{t('analysis.vdot_method_representative_title')}</h3>
+                      <p>{t('analysis.vdot_method_representative_body')}</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
           </section>
         </div>
       </main>

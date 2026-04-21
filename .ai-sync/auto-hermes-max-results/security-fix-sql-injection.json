@@ -1,0 +1,40 @@
+{
+  "laneId": "security-fix-sql-injection",
+  "parentRunId": "ahm-20260418192038",
+  "correlationId": "ahm-20260418192038:security-fix",
+  "goal": "Fix SQL injection vulnerability in H2ToPostgresMigrator.java printCount() method",
+  "ownedFiles": [
+    ".tools/H2ToPostgresMigrator.java"
+  ],
+  "changedFiles": [
+    ".tools/H2ToPostgresMigrator.java"
+  ],
+  "completedRounds": 1,
+  "verification": {
+    "compile": "PASS",
+    "syntaxCheck": "PASS",
+    "command": "javac -cp src/main/resources;src/main/java ../.tools/H2ToPostgresMigrator.java"
+  },
+  "runtimeProof": null,
+  "risks": [
+    "Migration tool is developer-facing only; no runtime exposure"
+  ],
+  "mustPreserve": [
+    "Migration functionality for runner, activities, activity_points tables",
+    "Sequence reset logic for PostgreSQL"
+  ],
+  "mergeNotes": [
+    "Added whitelist validation to printCount() method",
+    "Pattern matches: ^(runner|activities|activity_points)$",
+    "Consistent with existing resetSequence() validation pattern"
+  ],
+  "status": "approved",
+  "findingDetails": {
+    "originalSeverity": "HIGH",
+    "checker": "injection-hunter",
+    "target": ".tools/H2ToPostgresMigrator.java",
+    "fixType": "input-validation",
+    "validationPattern": "^(runner|activities|activity_points)$"
+  },
+  "completedAt": "2026-04-18T19:25:00.000Z"
+}

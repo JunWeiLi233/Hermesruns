@@ -11,6 +11,186 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-04-20-06
+Date: 2026-04-20
+Surface: Admin portal / `/dashboard`, `/dashboard/users`, `/dashboard/course-maps`, `/dashboard/shoes`, `/dashboard/jobs`, `/dashboard/audit`, `/dashboard/settings`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `docs/superpowers/specs/2026-04-20-admin-portal-runner-shell-alignment-design.md`, `DESIGN_VERSIONS.md`
+What changed: Aligned the full admin portal to the broader Hermes runner-shell family instead of letting each route feel like a separate admin experiment. The shared admin shell now uses a stronger Hermes brand block, richer route-aware sidebar navigation, live operator status cards, a compact editorial topbar with active-route summary, and a shared route metric rail that sits above every admin surface. The existing overview, users, course maps, shoes, jobs, audit, and settings workbenches remain intact, but they now inherit one clearer shell rhythm and typography/spacing language.
+Why: The admin portal already had several strong route-level redesigns, but the overall experience still felt stitched together from separate passes. This round implements the approved “shared editorial translation” direction so the operator portal feels like the admin twin of the user portal across pages rather than a collection of isolated admin surfaces.
+Rollback target: `DV-2026-04-20-05`
+Notes: Verification passed with the admin dashboard smoke tests, `cd frontend && npm run lint` (warning-only state), `cd frontend && npm run build`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/Dashboard.jsx||frontend/src/styles/style.css"`.
+
+### Version: DV-2026-04-20-05
+Date: 2026-04-20
+Surface: Add Shoes / `/shoes/add` brand deck logo treatment
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Refined the new `/shoes/add` brand deck so the featured and secondary brand cards now use the running-shoe brand logo as part of the card background treatment instead of rendering a separate floating `add-shoes-brand-deck-feature-art` badge. The logo now lives inside the card composition itself, which makes the deck feel cleaner and closer to the supplied reference.
+Why: The previous featured-brand card still carried a distinct logo badge in the top-right corner, which made the composition feel more layered than the user wanted. This pass simplifies the visual hierarchy and lets the logo act as a built-in card background signal instead.
+Rollback target: `DV-2026-04-20-04`
+Notes: Verification passed with `node frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `cd frontend && npm run lint`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/AddShoes.jsx||frontend/src/styles/style.css||frontend/src/pages/addShoesKineticEditorial.smoke.test.js"`.
+
+### Version: DV-2026-04-20-04
+Date: 2026-04-20
+Surface: Add Shoes / `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `docs/superpowers/specs/2026-04-20-add-shoes-kinetic-editorial-design.md`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt `/shoes/add` into a darker kinetic-editorial footwear setup surface inspired by the supplied HERMES STITCH reference. The page keeps the real Hermes add-shoe workflow, but the top fold is now a stronger editorial hero, brand selection has been promoted into a premium brand deck with a featured lane, model picking now reads as a catalog board instead of a plain utility grid, and the final configuration step is presented as a selected-shoe payload panel rather than a generic form card.
+Why: The previous Add Shoes page was functional but visually closer to a polished utility wizard than to the stronger premium footwear-selection language the user supplied. This pass brings the page much closer to that reference without sacrificing the existing catalog/search/submit behavior.
+Rollback target: working tree before this change
+Notes: Verification passed with `node frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `cd frontend && npm run lint`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/AddShoes.jsx||frontend/src/styles/style.css||frontend/src/pages/addShoesKineticEditorial.smoke.test.js"`.
+
+### Version: DV-2026-04-20-03
+Date: 2026-04-20
+Surface: Admin Dashboard / `/dashboard/course-maps` left rail race cards
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/components/AdminCourseMapPreview.jsx`, `frontend/src/pages/dashboardCourseMapRailLeaflet.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the static poster-style course-map thumbnails in the `/dashboard/course-maps` left rail with real Leaflet/OpenStreetMap-backed mini map cards. The existing status/confidence chrome still sits on top of each card, but the image layer now comes from a live map viewport: aligned routes still fit to their geometry, while races that only have city-level coordinates now still render a real map centered on that fallback location with a small marker.
+Why: The previous rail cards looked like uploaded assets, not like trustworthy geographic previews. This pass makes the queue read as a real map workflow from the first glance without disturbing the main publish stage.
+Rollback target: working tree before this change
+Notes: Verification passed with `dashboardCourseMapRailLeaflet.smoke.test.js`, `dashboardCourseMapPreview.smoke.test.js`, eslint, Vite build, and frontend runtime sync.
+
+### Version: DV-2026-04-20-02
+Date: 2026-04-20
+Surface: Today's Run / ACWR load warning callout
+Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/utils/todayRunAcwrInsight.js`, `frontend/src/utils/todayRunAcwrInsight.test.js`, `frontend/src/utils/todayRunAcwrNarrative.smoke.test.js`, `frontend/src/i18n/translations.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Added a dedicated ACWR load-warning callout beneath the rationale block on `/today-run`, tied to a shared `describeAcwrState` helper so the coaching strip and the new warning surface use the same zone thresholds. The runner now sees the live ACWR number, the safe build zone, and coach-style plain-language guidance instead of only a ratio plus a short strip label.
+Why: The previous Today's Run surface already exposed the ACWR number and zone color, but it still made the runner interpret what the ratio meant for today's decision. This pass turns the load signal into a direct coaching answer inside the first screenful.
+Rollback target: working tree before this change
+Notes: Verification passed with `todayRunAcwrInsight.test.js`, `todayRunAcwrNarrative.smoke.test.js`, eslint, Vite build, and frontend runtime sync.
+
+### Version: DV-2026-04-19-13
+Date: 2026-04-19
+Surface: Admin command topbar on `/dashboard` and child admin routes
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/utils/dashboardTopbarNav.js`, `frontend/src/utils/dashboardTopbarNav.test.js`, `DESIGN_VERSIONS.md`
+What changed: The admin command topbar now reflects the current `/dashboard/*` route instead of always showing the same hardcoded trio. The root overview route shows only the Dashboard entry next to the Hermes wordmark, while child routes show Dashboard plus the current section label with the active item highlighted. The dedicated admin notification icon button was also removed from the topbar so the shell reads more like a route-aware breadcrumb bar.
+Why: The previous shell kept showing `Dashboard / Fleet / Events` even when the operator was on a different admin page, which made the topbar feel disconnected from the current route. This pass makes the nav state truthful to the page the user is actually on.
+Rollback target: `DV-2026-04-19-12`
+Notes: This is a shell-navigation refinement only. It preserves the existing route-driven admin portal, settings access, and avatar/logout action while tightening the visible topbar hierarchy.
+
+### Version: DV-2026-04-19-12
+Date: 2026-04-19
+Surface: Admin audit terminal on `/dashboard/audit`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/dashboardAuditTerminal.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt `/dashboard/audit` from a plain filter row plus generic table into a reference-driven Sync Pipeline Terminal. The page now opens with a dark operations hero, a 4-card telemetry strip, a dedicated event-terminal shell with live-log pills, trace search, status badges, and terminal-style rows, plus lower drill-down cards for failure clusters and archive exploration. The redesign stays inside the existing Hermes admin shell and keeps the real audit data source intact.
+Why: The old audit route still read like a generic admin table and did not match the stronger terminal-style operator reference the user provided. This pass gives audit the same deliberate command-center identity as the rest of the admin portal.
+Rollback target: `DV-2026-04-19-11`
+Notes: This is a frontend-only audit-surface redesign. It preserves the current route, query state, pagination contract, and real audit payload fields while changing hierarchy and visual treatment.
+
+### Version: DV-2026-04-19-11
+Date: 2026-04-19
+Surface: Admin portal light-mode treatment across `/dashboard` overview, users, course maps, shoes, jobs, audit, and settings
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/dashboardAdminLightMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a real light-mode palette for the full admin portal instead of leaving the route-driven operator shell visually anchored to the midnight treatment. The admin sidebar now uses a vellum editorial shell, the overview hero shifts to a bright kinetic HUD, the course-map track hub and its footer panels render as layered light surfaces, the shoe moderation workbench adopts light queue/repository treatments, and the new settings hero now reads as a light control-room surface instead of a dark holdover.
+Why: After the route split, the admin portal still looked effectively dark-first in light theme, especially in the shell chrome and the heavier course-map and shoe workbench sections. The request was to make every admin page actually honor light mode.
+Rollback target: `DV-2026-04-19-10`
+Notes: This is a light-mode styling pass only. It preserves the route structure, queue behavior, course-map workflow, and settings controls while giving the admin shell a mode-correct visual baseline.
+
+### Version: DV-2026-04-19-10
+Date: 2026-04-19
+Surface: Admin dashboard shell and operator settings routing on `/dashboard`
+Files: `frontend/src/App.jsx`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/dashboardRouteSections.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Converted the admin dashboard from a tab-only surface into a route-driven operator shell. `/dashboard` now stays the true overview landing page while the shell exposes dedicated paths for users, course maps, shoes, jobs, audit, and the new `/dashboard/settings` page. The settings icon now routes to a first-class operator preferences page for language, theme, and sign-out, while the existing left rail, top bar, course-map track hub, and shoe workbench remain inside the same kinetic admin shell.
+Why: The prior admin shell had the right visual identity, but key operator areas still lived as local tab state with no durable URLs, and settings had no real home inside the dashboard experience.
+Rollback target: `DV-2026-04-19-09`
+Notes: This pass preserves the existing workbench behavior and queue flows while making the admin shell navigable by route and giving operator preferences a dedicated page instead of a hidden icon jump.
+
+### Version: DV-2026-04-19-09
+Date: 2026-04-19
+Surface: Admin race-track hub on `/dashboard` course-map workspace
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Extended the `赛事赛道图` workspace so the course-map tab now claims more of the available admin canvas on wide screens. The course-map tab gets its own widened main-shell modifier, the left rail stays intact, the publish/evidence strip expands horizontally, and the lower right workspace now uses a split row where the operations band and preview-review shell sit side by side instead of leaving a large empty right-side area.
+Why: The previous track-hub pass improved hierarchy but still tapered early inside the shared admin shell, leaving visible unused space on the right on large screens.
+Rollback target: `DV-2026-04-19-08`
+Notes: This is a width-and-layout refinement only. It preserves the same course-map actions, preview logic, and admin shell while giving the course-map tab a wider desktop footprint than the other admin tabs.
+
+### Version: DV-2026-04-19-08
+Date: 2026-04-19
+Surface: Admin race-track hub on `/dashboard` course-map workspace
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Tightened the `赛事赛道图` workspace into a darker, more literal Race Track Hub remap while keeping the Hermes admin shell and left course rail intact. The course queue now sits inside explicit sidebar panels, the dominant map stage now exposes a structured telemetry footer, and the publish decision, evidence cards, operations band, and pending-vs-live comparison now read as one continuous right-side operator canvas instead of separate generic admin blocks.
+Why: The prior course-map redesign had the right pieces, but it still felt like multiple admin modules placed next to each other. This pass brings the workspace materially closer to the supplied reference without sacrificing the real upload, scan, reanalyze, pipeline, and publish flows.
+Rollback target: `DV-2026-04-19-07`
+Notes: This pass also localizes the new track-hub labels in both zh-CN and en, derives the visible alignment-quality grade from confidence instead of using a fixed claim, and keeps `AdminCourseMapPreview` as the live map/overlay engine inside the redesigned stage.
+
+### Version: DV-2026-04-19-07
+Date: 2026-04-19
+Surface: Admin race-track hub on `/dashboard` course-map workspace
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseHubRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the `赛事赛道图` / course-map tab into a darker reference-shaped Race Track Hub with a new telemetry hero, a left-side course-management column, and a dominant right-side course-intelligence map stage. The underlying Hermes course-map publish workflow remains intact inside the redesigned stage through the same pending/live preview handling, recommendation engine, evidence stack, and operations band.
+Why: The previous course-map tab preserved the publish workflow but still read like a generic admin workbench. This pass pulls it much closer to the supplied “Admin Race Track Hub” reference while keeping the real scan/upload/reanalyze/publish behaviors live.
+Rollback target: `DV-2026-04-19-06`
+Notes: This is a course-map workspace redesign only. It preserves `AdminCourseMapPreview`, confidence/trust logic, PDF/image upload support, and the existing publish controls rather than replacing them with static mock content.
+
+### Version: DV-2026-04-19-06
+Date: 2026-04-19
+Surface: Admin dashboard overview composition on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardKineticShell.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Tightened the admin overview toward the supplied kinetic admin reference by turning the overview tab into a real single-page command canvas: a performance HUD top fold, a users-and-tracks row, and a gear-verification plus audit-feed row. The older intermediate overview bento now stays visually hidden, while the deeper course-map publish desk and shoe workbench remain available behind the same admin shell.
+Why: The prior pass established the right shell and workbench direction, but the visible overview still read like a hybrid portal rather than a near-direct transplant of the provided dashboard composition.
+Rollback target: `DV-2026-04-19-05`
+Notes: This pass preserves admin routing, auth, course-map review logic, and shoe-image moderation behavior. It is a hierarchy/layout tightening pass on the overview surface rather than a backend workflow rewrite.
+
+### Version: DV-2026-04-19-05
+Date: 2026-04-19
+Surface: Admin dashboard shell, overview HUD, and shoe review workbench on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardKineticShell.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the admin dashboard around a near-direct transplant of the supplied kinetic admin reference by adding a dark editorial sidebar shell, a stronger overview HUD plus bento support panels, and a first-class shoe review workbench with queue rail and focused compare stage. The existing course-map publish desk and Hermes review/publish workflows remain intact, while the older flat overview blocks are visually demoted.
+Why: The previous admin dashboard had the right operator features but still read like a generic mixed-mode utility page. This pass brings the shell and top-fold hierarchy closer to the approved reference without sacrificing the real course-map and shoe workbench behaviors Hermes depends on.
+Rollback target: `DV-2026-04-18-02`
+Notes: This is an admin-only surface redesign. It preserves route/auth behavior, the existing course-map publish canvas and evidence stack, and the image-review modal flows while giving `/dashboard` a more deliberate operator-desk identity.
+
+### Version: DV-2026-04-19-02
+Date: 2026-04-19
+Surface: Race Detail full-width map stage on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the lower race-detail section from a split map/readiness row into a dominant full-width Leaflet world-map stage with a lightweight floating HUD, moved readiness below the map, and reduced the AI visualization to the georeferenced route line plus start/finish markers instead of any scanned-image treatment.
+Why: The previous lower block no longer read as a trustworthy map-first surface and had drifted across multiple fallback- and overlay-oriented layouts. This pass restores clear interactive map ownership and matches the approved route-only redesign.
+Rollback target: `DV-2026-04-19-01`
+Notes: The hero remains editorial, the course/elevation card remains separate, and the runner-facing map stage now uses route trust to decide whether the AI-scanned geometry is shown on the live Leaflet world map.
+
+### Version: DV-2026-04-19-01
+Date: 2026-04-19
+Surface: Race Detail course-map card on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the DOM-based static tile/image fallback from the lower race-detail map card so the card is owned entirely by the live Leaflet surface. Route framing, zoom, pan, and city fallback now all happen inside the Leaflet stage itself instead of visually dropping back to a static image layer.
+Why: The user explicitly wanted a real Leaflet map they could zoom and drag around, not a lower map card that could still present itself as a static image fallback.
+Rollback target: `DV-2026-04-18-49`
+Notes: This is an interaction correction on the existing lower map card, not a hero or data-flow redesign. The hero remains editorial while the lower card stays the dedicated interactive map stage.
+
+### Version: DV-2026-04-18-49
+Date: 2026-04-18
+Surface: Race Detail course-map card on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the interactive Leaflet route map back out of the hero/background and into the lower race-detail map card below the main hero and course section. The hero returns to the editorial race image treatment, while the lower map card keeps the live Leaflet stage with zoom, pan, route polyline, trust-gated course-image overlay, and static-tile fallback during tile paint.
+Why: The previous version made the whole hero a map surface, but the requested layout was to keep the map as a dedicated card lower on the page while still behaving like a real Leaflet map the runner can move around.
+Rollback target: `DV-2026-04-18-48`
+Notes: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `node frontend/src/utils/raceDetailMapTrust.test.js`, `cd frontend && npm run lint`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/RacesDetail.jsx||frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js||frontend/src/styles/style.css"` all passed, and the refreshed frontend bundle synced into the live Spring-served static output.
+
+### Version: DV-2026-04-18-48
+Date: 2026-04-18
+Surface: Race Detail hero background on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted the Leaflet race map from the lower course-map card into the hero/background stage of the page itself. The top fold now uses the real Leaflet world map as the visual foundation, keeps the route and trusted course-image overlay georeferenced inside that hero map, lets the content chrome float above it without blocking drag/zoom across the whole stage, and collapses the lower layout to a single readiness rail instead of a second duplicate map block.
+Why: The previous round improved the lower map card, but it still left the page background reading like a static hero image. The user wanted the race-detail page itself to feel like a movable world map while keeping the route locked to the correct geography.
+Rollback target: `DV-2026-04-18-47`
+Notes: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `node frontend/src/utils/raceDetailMapTrust.test.js`, `cd frontend && npm run lint`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/RacesDetail.jsx||frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js||frontend/src/styles/style.css"` all passed, and the refreshed frontend bundle synced into the live Spring-served static output.
+
+### Version: DV-2026-04-18-47
+Date: 2026-04-18
+Surface: Race Detail interactive map stage on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the map-first Leaflet card but changed its interaction baseline so the live Leaflet stage becomes visible as soon as it mounts, the static tile fallback stays underneath only while tiles finish painting, and the route viewport auto-frames once instead of repeatedly snapping the user back after mount. The trusted route polyline and aligned course-image overlay still stay georeferenced in the same map stack, so runners can pan and zoom around the world map without the route drifting out of place.
+Why: The user wanted the race-detail background to behave like a real movable world map rather than feeling like a fixed preview. The previous version could still read as static because the Leaflet layer stayed visually hidden until tile paint and its layout helper could re-apply route framing after mount.
+Rollback target: `DV-2026-04-18-46`
+Notes: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `node frontend/src/utils/raceDetailMapTrust.test.js`, `cd frontend && npm run lint`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/RacesDetail.jsx||frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js||frontend/src/styles/style.css"` all passed, and the refreshed frontend bundle synced into the live Spring-served static output.
+
+### Version: DV-2026-04-18-46
+Date: 2026-04-18
+Surface: Race Detail map stage on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the first race-detail map grid into a true Leaflet-first stage. The centered poster-style fallback image was removed from the card, the basemap now owns the full surface, trusted route overlays stay embedded inside the map layer, image-only course-map states render as a subdued top-layer visual veil over the map instead of a separate poster block, and the title/source/CTA chrome now lives in compact floating HUD panels at the corners.
+Why: The previous card still read like a poster composition sitting on top of a map. The user wanted the first grid to feel like the provided real-map reference, where the course route is embedded in the Leaflet stage itself rather than presented as a detached promo panel.
+Rollback target: `working tree before this change`
+Notes: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `node frontend/src/utils/raceDetailMapTrust.test.js`, `cd frontend && npm run lint`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/RacesDetail.jsx||frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js||frontend/src/styles/style.css"` all passed, and the refreshed frontend bundle synced into the live Spring-served static output.
+
 ### Version: DV-2026-04-16-45
 Date: 2026-04-16
 Surface: Admin dashboard race-course-map upload workflow on `/dashboard`
@@ -1630,3 +1810,164 @@ What changed: Moved Profile's recommended run into a compact bar beneath Recent 
 Why: Improve UI consistency, reduce theme drift, make Profile hierarchy cleaner, and align nav wording with the broader running hub.
 Rollback target: working tree before this change
 Notes: No design-specific commit hash was captured when this version was introduced, so restoring this exact version later may require using the file notes plus git history around the same date if available.
+### Version: DV-2026-04-18-01
+Date: 2026-04-18
+Surface: Admin Portal / Race Course Maps workbench
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/dashboardCourseMapPreview.smoke.test.js`, `frontend/src/pages/dashboardCourseMapWorkbench.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the admin race course-map flow into a single-race workbench with a left-side race queue, a recommended-next-step status block, grouped source/analysis actions, larger pending-vs-live comparison panels, and stronger publish controls placed closer to the pending preview decision point.
+Why: The previous admin course-map flow was optimized for generic review, not for repeatedly uploading, scanning, reanalyzing, and publishing one race at a time. The new workbench reduces context switching and makes the next operator action more obvious.
+Rollback target: working tree before this change
+Notes: This is an admin-only workflow redesign. It preserves the existing backend review actions and aligned preview component while reorganizing the operator experience around one-race iteration speed.
+
+### Version: DV-2026-04-18-02
+Date: 2026-04-18
+Surface: Admin Portal / Race Course Maps publishing workspace refinement
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/dashboardCourseMapPreview.smoke.test.js`, `frontend/src/pages/dashboardCourseMapWorkspace.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the course-map review surface from a squeezed summary row into a quieter editorial publishing desk with a calmer queue rail, one dominant publish canvas, a stacked evidence column, and a grouped operations band beneath the decision surface. The comparison panels remain available lower on the page, but no longer compete with the primary publish call.
+Why: The previous workbench still compressed recommendation, evidence, and actions into too many equal-weight cards. This pass restores clearer hierarchy so operators can understand what is ready, what is weak, and what to do next in one glance.
+Rollback target: `DV-2026-04-18-01`
+Notes: This is a structural refinement of the admin course-map workbench, not a backend workflow rewrite. It preserves the existing review actions, previews, and pipeline triggers while giving the publish decision materially more visual priority.
+
+### Version: DV-2026-04-19-01
+Date: 2026-04-19
+Surface: Races Detail / lower world-map stage
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `frontend/src/utils/raceDetailMapLayering.smoke.test.js`, `frontend/src/utils/raceDetailMapVisualBaseline.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted the lower `/races/details/:raceId` map block into a taller full-width OpenStreetMap stage with a compact floating HUD, changed the Leaflet host to a described map region, and moved the readiness/playbook card into a narrower supporting row below instead of keeping the old desktop split-grid layout.
+Why: The previous lower section still treated the map like one peer card in a utility row, which weakened the spatial hierarchy and made the real-world map feel less central than the approved race-detail map-stage direction.
+Rollback target: working tree before this change
+Notes: This is a runner-facing map-stage refinement, not a backend route-pipeline rewrite. It keeps the existing route-only Leaflet rendering, trust logic, city fallback, and tile fallback behavior intact while clarifying the layout hierarchy.
+
+### Version: DV-2026-04-19-02
+Date: 2026-04-19
+Surface: Races Detail / OSM basemap and AI-route emphasis
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/utils/raceDetailMapVisualBaseline.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Refined the lower race-detail map stage so the OpenStreetMap tiles stay visually cleaner underneath, while the AI-scanned route now renders through dedicated top-layer Leaflet panes with a bright backing stroke, stronger coral path, and route markers that sit explicitly above the basemap.
+Why: The previous implementation already used Leaflet tiles plus an AI route, but the layering was implicit. This pass makes the bottom-layer map and top-layer scanned route visually unambiguous.
+Rollback target: `DV-2026-04-19-01`
+Notes: This is a visual/runtime layering refinement only. It preserves the existing route trust logic, city fallback, and non-image route presentation.
+
+### Version: DV-2026-04-19-03
+Date: 2026-04-19
+Surface: Races Detail / basemap failover reliability
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/utils/raceDetailMapFallback.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a tile-load confirmation gate to the race-detail Leaflet basemap flow so the page no longer trusts the local tile proxy just because the layer mounted. If no real tile arrives quickly, the map now switches to the direct OpenStreetMap fallback instead of leaving the AI route over a blank gray canvas.
+Why: The screenshot showed Leaflet controls and route overlays without any real-world tiles, which meant the map looked mounted but the basemap itself had failed. This pass makes blank-tile failure recover automatically.
+Rollback target: `DV-2026-04-19-02`
+Notes: This is a runtime reliability fix, not a visual redesign. It keeps the existing route-on-top layering and only hardens how the bottom-layer basemap is proven working.
+
+### Version: DV-2026-04-19-04
+Date: 2026-04-19
+Surface: Races Detail / lower section simplification
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the lower `race-detail-readiness-card` checklist/playbook block from `/races/details/:raceId`, stopped fetching saved-race data that only fed that card, and tightened the race-detail smoke guard so the lower section stays map-only.
+Why: The user asked to remove the readiness companion and keep the lower area focused on the world-map stage itself.
+Rollback target: `DV-2026-04-19-03`
+Notes: This is a surface simplification only. The map stage, basemap failover path, and AI-route rendering remain unchanged.
+
+### Version: DV-2026-04-19-05
+Date: 2026-04-19
+Surface: Admin Dashboard / shoes moderation tab
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the admin shoes moderation tab around the provided HERMES STITCH reference with a cinematic audit hero, darker search and database-health band, spotlight review cards, and a stronger global repository list while preserving the existing queue rail, moderation actions, bulk controls, catalog access, and sidebar shell.
+Why: The previous shoes tab still read like a generic admin workbench. The user asked for this section to match the stronger reference composition without changing the left sidebar.
+Rollback target: working tree before this change
+Notes: This redesign is scoped to the shoes section only. Existing admin navigation and review behavior stay wired to the real Hermes data and modal flows.
+
+### Version: DV-2026-04-19-06
+Date: 2026-04-19
+Surface: Admin Dashboard / shared right-side canvas width
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Removed the tighter shared width cap on the admin dashboard content container so the overview, users, shoes, jobs, audit, and course-map tabs can all expand farther to the right inside the existing main column. The left sidebar, its width, and its positioning stay unchanged.
+Why: The user asked for the dashboard pages to fill the blank space on the right without touching the sidebar. The real bottleneck was the shared dashboard container width, not the per-tab content blocks.
+Rollback target: `DV-2026-04-19-05`
+Notes: This is a shell-width refinement only. It preserves the current tab layouts and simply gives them more horizontal room to breathe.
+
+### Version: DV-2026-04-19-07
+Date: 2026-04-19
+Surface: Admin Dashboard / 赛事赛道图 comparison workspace
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Expanded the lower pending-vs-live comparison area in the course-map track hub by letting both the operations band and the review shell span the full stage width, then restoring the review cards to a real two-column comparison grid instead of squeezing them into the old narrow right-side lane.
+Why: The provided screenshot showed the comparison previews and copy getting crushed together in the `赛事赛道图` workspace. The issue was the shell column assignment, not the sidebar or the preview component itself.
+Rollback target: `DV-2026-04-19-06`
+Notes: This is a layout-only fix for the course-map workspace. It preserves the sidebar, publish canvas, and the existing preview/review actions.
+
+### Version: DV-2026-04-19-08
+Date: 2026-04-19
+Surface: Admin Dashboard / 赛事赛道图 footer workspace
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the lower course-map workspace against the supplied Admin Race Track Hub reference by replacing the broken stacked compare/evidence area with a cleaner three-panel footer: neural parameters, extraction output, and operator controls. The dominant map stage and left course-management rail remain intact, while the lower action area now uses wider reference-like panels instead of overlapping narrow cards and button columns.
+Why: The previous iterative fixes left the bottom half of `赛事赛道图` structurally unstable. Resetting the footer to the reference’s three-column operator layout was safer and clearer than continuing to patch the broken stacked grids.
+Rollback target: `DV-2026-04-19-07`
+Notes: This redesign is scoped to the course-map workspace only. It preserves the existing sidebar shell, map preview engine, scan/upload/reanalyze/pipeline actions, and real Hermes race data wiring.
+
+### Version: DV-2026-04-19-09
+Date: 2026-04-19
+Surface: Admin Dashboard / course-map command bridge
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Refined the `admin-track-hub-workspace-stack` into a denser command-bridge deck by making the publish canvas the dominant left-side panel, turning operator controls into a dedicated right-side lane, and compressing the review signals into a supporting block beneath the publish area. The existing course-map actions, evidence cards, preview wiring, and responsive collapse remain intact.
+Why: The user asked to extend this grid into a denser multi-column command deck. The prior equal-weight three-panel footer still felt like adjacent cards instead of one coordinated command surface.
+Rollback target: `DV-2026-04-19-08`
+Notes: This is a hierarchy/layout refinement on top of the existing track-hub redesign. On narrower breakpoints the bridge collapses back to a single-column sequence so the denser desktop deck does not crowd the workspace.
+
+### Version: DV-2026-04-19-10
+Date: 2026-04-19
+Surface: Admin Dashboard / course-map command bridge stabilization
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Repaired the broken command-bridge footer by replacing the fragile nested publish subgrid with a simpler publish-body wrapper, changing the footer panels from mixed flex-row behavior to safer stacked grid behavior, forcing the review signals back to a single-column support block, adding earlier desktop-to-single-column collapse for the bridge, and adding wrap-safe text rules for verdicts, headings, and metadata rows.
+Why: The previous command-bridge refinement over-compressed the lower dashboard deck into narrow cards at medium desktop widths, which caused large text to spill vertically and made the section visually unusable.
+Rollback target: `DV-2026-04-19-09`
+Notes: This is a stabilization pass, not a new visual direction. It preserves the dark track-hub hierarchy of publish-left / ops-right on wide screens, but removes the brittle nested layout contract that caused catastrophic overflow.
+
+### Version: DV-2026-04-19-11
+Date: 2026-04-19
+Surface: Admin Dashboard / course-map workspace full-width span
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Fixed the remaining lower-deck squeeze by forcing `admin-track-hub-workspace-stack` to span the full width of the parent 12-column stage grid inside the course-map shell. The command bridge was already simplified, but the wrapper itself was still auto-placing into a single parent column, which compressed the entire lower workspace into a narrow strip. The smoke guard now explicitly requires that full-width span rule.
+Why: The latest screenshot showed the whole lower dashboard deck crammed into a thin left-side band with empty space to the right, which pointed to a parent grid placement bug rather than only inner-card density.
+Rollback target: `DV-2026-04-19-10`
+Notes: This is a grid-placement correction, not a new visual redesign. It keeps the stabilized bridge contract and ensures the lower deck can actually use the full stage width it was designed for.
+
+### Version: DV-2026-04-19-12
+Date: 2026-04-19
+Surface: Admin Dashboard / users command center
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/dashboardUsersCommandCenter.smoke.test.js`, `docs/superpowers/specs/2026-04-19-dashboard-users-command-center-design.md`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt `/dashboard/users` from a legacy filter-row plus plain table into a darker roster command center with a dominant roster-story hero, balanced signup/billing/selection/filter KPI cards, an integrated command strip for search and saved views, a dedicated bulk-actions deck, and a denser premium roster table that keeps notes and impersonation intact.
+Why: The user asked for a Hermes-adapted redesign based on the provided reference, but explicitly wanted a stronger command-center layout rather than a close mimic or another generic admin table.
+Rollback target: `DV-2026-04-19-11`
+Notes: This redesign stays inside the existing route-driven admin shell and preserves real `/api/admin/users` data wiring, queue-driven filters, saved filters, export, notes, and impersonation behavior.
+
+### Version: DV-2026-04-20-01
+Date: 2026-04-20
+Surface: Admin Dashboard / users command center light mode
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/dashboardAdminLightMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Translated the new `/dashboard/users` command-center surface from the dark roster deck into Hermes light mode by re-expressing the hero, KPI cards, saved-view lane, bulk-actions deck, roster-board shell, avatar treatments, and role/tier badges as warm editorial vellum surfaces with softer coral emphasis and readable light-theme contrast.
+Why: The user asked to apply light mode specifically to `dashboard/users`, and the new command-center surface had been implemented only in the dark treatment while the rest of the admin shell already supported light mode.
+Rollback target: `DV-2026-04-19-12`
+Notes: This is a theme translation only. It preserves the existing `/dashboard/users` hierarchy, routing, data wiring, filters, bulk actions, notes, impersonation, and export behavior.
+
+### Version: DV-2026-04-19-12
+Date: 2026-04-19
+Surface: Admin Dashboard / jobs command deck
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js`, `frontend/package.json`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt `/dashboard/jobs` into an editorial command deck with a dark-led hero, real page-scoped summary cards, a spotlight job band, a selectable terminal-style queue, and a sticky selected-job detail rail. The route keeps the existing `/api/admin/jobs` filters and pagination contract, but now also surfaces truthful fields the old flat table hid, including trigger source, created/started/finished times, total count, and raw `detailsJson`.
+Why: The old jobs route was still just a utility filter row and plain data table, which did not match the stronger operations-terminal reference or the newer Hermes admin-shell hierarchy. This pass brings the top fold much closer to the reference while keeping the lower inspection area calmer and more Hermes-consistent.
+Rollback target: `DV-2026-04-19-11`
+Notes: This redesign is scoped to `/dashboard/jobs` only. The shared admin shell, routing model, backend jobs contract, and page-level filter/pagination behavior remain intact.
+
+### Version: DV-2026-04-20-02
+Date: 2026-04-20
+Surface: Weather page on `/weather`
+Files: `frontend/src/App.jsx`, `frontend/src/pages/WeatherEngine.jsx`, `frontend/src/utils/runnerShellNav.js`, `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/TodayRun.jsx`, `frontend/src/pages/WorkflowBuilder.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted the old `/weather-engine` runner surface into `/weather`, updated runner-nav targets to the new route, and rebuilt the page as a Hermes-native cinematic weather board instead of a pair of equal-weight utility cards. The new structure uses a temperature-led hero with live engine status, compact humidity/wind HUD cards, a horizontal 12-hour forecast pipeline, a larger `Heat Adaptation Engine` analysis card, and a dedicated `Coach Judgment` rail with direct training actions.
+Why: The user supplied a stronger editorial weather reference and explicitly asked for the route/name shift from `weather-engine` to `weather`. Matching that intent required both the navigation rename and a hierarchy reset so the page reads like a decision surface before a run rather than a generic weather dashboard.
+Rollback target: `DV-2026-04-16-39`
+Notes: This redesign preserves the existing `/api/v1/weather/context` and Open-Meteo weather wiring. `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `cd frontend && npm run lint` (with unrelated pre-existing warnings only), `cd frontend && node scripts/run-vite-build.mjs`, and frontend runtime sync all passed.
+
+### Version: DV-2026-04-20-03
+Date: 2026-04-20
+Surface: Races Detail elevation chart on `/races/details/:raceId`
+Files: `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`, `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the race-detail elevation profile from a fixed sparse checkpoint chart into a kilometer-aware course tool. The backend now samples aligned-route elevation by race distance instead of a flat 25-point contract, so long races can carry one elevation point per kilometer plus the true finish. The frontend chart now derives kilometer distance marks, renders every kilometer on a wider scrollable stage, keeps stronger emphasis on 5 km / finish milestones, and removes the old hard-coded `S / 10 / 21 / 30 / F` marker scheme that was flattening long-course detail.
+Why: The user wanted the elevation chart to respect every kilometer and show more accurate elevation change over the full course. That required fixing both the data contract and the chart geometry instead of only restyling the existing sparse profile.
+Rollback target: `DV-2026-04-14-29`
+Notes: `cd backend && ./mvnw -q -Dtest=RaceCourseMapServiceTests test`, `cd backend && ./mvnw -q -DskipTests compile`, `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`, `cd frontend && npm run lint` (with unrelated pre-existing warnings only), frontend build, frontend runtime sync, and backend runtime sync all passed.
