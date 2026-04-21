@@ -47,11 +47,11 @@ Use this file as the working queue for AI agents.
   Verify: `npm run lint` and check `/shoes/add` page manually.
   Note: Fully implemented all 6 trending 2026 models into the shared catalog. frontend build PASS.
 
-- [x] Refactor Add Shoe UX to searchable single-name selection
+- [x] Refactor Add Shoe UX to searchable single-name selection (REVERTED)
   Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`
   Rationale: Simplify the user experience by moving from a brand-series wizard to a unified search-centric discovery.
   Done when: Users can search the flat catalog and pick a shoe name directly.
-  Note: Refactored `AddShoes.jsx` to a unified search-first stage. Added kinetic styles for the search box and result grid. Updated bilingual translations. frontend build PASS.
+  Note: DESIGN REVERTED to previous multi-step wizard per user request. 2026 catalog data preserved. frontend build PASS.
 
 - [x] Run `/auto-hermes-find-shoe` to update catalog with 2026 models
   Files: `frontend/src/data/shoeCatalog.js`
