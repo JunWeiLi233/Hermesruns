@@ -39,6 +39,22 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | Garmin Connect | Direct account import via GarminDB / garth |
 | UI posture | Kinetic Editorial design language with `light` and `midnight` runtime themes |
 
+<!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS START -->
+### Live Architecture Diagrams
+
+#### AI Agents Workflow
+
+![Hermes AI agents workflow](docs/architecture/ai-agents-workflow.svg)
+
+Source artifact: [docs/architecture/ai-agents-workflow.html](docs/architecture/ai-agents-workflow.html)
+
+#### SaaS Architecture
+
+![Hermes SaaS architecture](docs/architecture/saas-architecture.svg)
+
+Source artifact: [docs/architecture/saas-architecture.html](docs/architecture/saas-architecture.html)
+<!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS END -->
+
 ### AI-Agent Workflow (Shared) / AI 智能体工作流（共享）
 
 This repository includes a specialized AI-agent workflow driven by **Gemini CLI** and **Claude Code**.

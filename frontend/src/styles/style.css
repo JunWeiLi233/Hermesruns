@@ -43197,10 +43197,6 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-meter circle
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08)),
     rgba(255, 255, 255, 0.04);
-  background-image: var(--add-shoes-brand-bg-image);
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   pointer-events: none;
 }
@@ -43208,11 +43204,10 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-meter circle
 .add-shoes-brand-deck-feature.is-active {
   background-image:
     linear-gradient(90deg, rgba(16, 18, 22, 0.96) 0%, rgba(16, 18, 22, 0.9) 42%, rgba(16, 18, 22, 0.64) 72%, rgba(16, 18, 22, 0.34) 100%),
-    var(--add-shoes-brand-bg-image),
     radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.14) 28%, rgba(240, 117, 97, 0.18) 42%, transparent 62%),
     linear-gradient(160deg, rgba(20, 22, 26, 0.98), rgba(9, 10, 13, 0.98));
-  background-size: auto, min(56%, 280px), min(48%, 240px), auto;
-  background-position: center, right 24px center, right 18px center, center;
+  background-size: auto, min(48%, 240px), auto;
+  background-position: center, right 18px center, center;
   background-repeat: no-repeat;
 }
 
@@ -43359,6 +43354,16 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-meter circle
   height: 54px;
 }
 
+.add-shoes-page .add-shoes-brand-tile .shoe-brand-logo-img,
+.add-shoes-page .add-shoes-model-art .shoe-brand-logo-img,
+.add-shoes-page .add-shoes-rotation-mark .shoe-brand-logo-img {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .add-shoes-model-board {
   gap: 20px;
 }
@@ -43442,11 +43447,10 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-model-board .add-sh
 body:is(.theme-light, .theme-high-contrast-light) .add-shoes-brand-deck-feature.is-active {
   background-image:
     linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.94) 42%, rgba(255, 255, 255, 0.66) 72%, rgba(255, 255, 255, 0.34) 100%),
-    var(--add-shoes-brand-bg-image),
     radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.18) 28%, rgba(252, 126, 105, 0.18) 44%, transparent 64%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 241, 242, 0.98));
-  background-size: auto, min(56%, 280px), min(48%, 240px), auto;
-  background-position: center, right 24px center, right 18px center, center;
+  background-size: auto, min(48%, 240px), auto;
+  background-position: center, right 18px center, center;
   background-repeat: no-repeat;
 }
 
@@ -43480,10 +43484,6 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-brand-deck-card::be
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 241, 238, 0.9)),
     rgba(255, 255, 255, 0.78);
-  background-image: var(--add-shoes-brand-bg-image);
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
   box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.14);
 }
 
@@ -49561,3 +49561,362 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-load-callout.is-dan
   border: 0;
 }
 
+
+/* Weather Adjusted Fitness Styles */
+.runner-dashboard-vdot-overview {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.runner-dashboard-vdot-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.runner-dashboard-vdot-hero strong {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--slate-900);
+}
+.runner-dashboard-vdot-hero span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--slate-500);
+  text-transform: uppercase;
+}
+.runner-dashboard-vdot-adjusted {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.runner-dashboard-vdot-adjusted span {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--indigo-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.runner-dashboard-vdot-adjusted strong {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--indigo-600);
+}
+.runner-dashboard-mini-metric-vdot {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.runner-dashboard-mini-metric-adjusted {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--indigo-500);
+}
+.analysis-overview-vo2-bar-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.analysis-overview-vo2-bar.is-adjusted {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--indigo-100);
+  opacity: 0.6;
+  z-index: 0;
+}
+.analysis-overview-vo2-tooltip-values {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.analysis-overview-vo2-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.analysis-overview-vo2-tooltip-row.is-adjusted {
+  color: var(--indigo-600);
+  border-top: 1px solid rgba(0,0,0,0.05);
+  padding-top: 2px;
+}
+.analysis-overview-vo2-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 0 4px;
+}
+.analysis-overview-vo2-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate-500);
+}
+.analysis-overview-vo2-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.analysis-overview-vo2-legend-dot.is-adjusted {
+  background: var(--indigo-400);
+}
+
+/* TodayRun Wellness Styles */
+.today-run-coaching-wellness-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 4px 0 2px;
+}
+.today-run-coaching-wellness-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.today-run-coaching-wellness-item strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--slate-900);
+}
+.today-run-coaching-wellness-icon {
+   width: 14px;
+   height: 14px;
+   opacity: 0.7;
+   color: var(--indigo-500);
+ }
+
+.today-run-coaching-answer--readiness {
+  border-left: 3px solid rgba(255,255,255,0.15);
+}
+
+.today-run-coaching-answer--readiness.is-verdict-go {
+  border-left-color: #4ade80;
+}
+.is-verdict-go .today-run-coaching-answer-value {
+  color: #4ade80;
+}
+
+.today-run-coaching-answer--readiness.is-verdict-easy {
+  border-left-color: #60a5fa;
+}
+.is-verdict-easy .today-run-coaching-answer-value {
+  color: #60a5fa;
+}
+
+.today-run-coaching-answer--readiness.is-verdict-recovery {
+  border-left-color: #fb923c;
+}
+.is-verdict-recovery .today-run-coaching-answer-value {
+  color: #fb923c;
+}
+
+.today-run-coaching-answer--readiness.is-verdict-rest {
+  border-left-color: #f87171;
+}
+.is-verdict-rest .today-run-coaching-answer-value {
+  color: #f87171;
+}
+
+.today-run-readiness-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.today-run-readiness-signal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+}
+
+.today-run-readiness-signal small {
+  min-width: 18px;
+  text-align: right;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+
+.today-run-readiness-signal-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.today-run-readiness-signal-bar {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.today-run-readiness-signal-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #60a5fa, #4ade80);
+  transition: width 0.4s ease;
+}
+
+.today-run-plan-metric-adjusted {
+  position: relative;
+}
+.today-run-plan-metric-adjusted small {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--slate-400);
+  text-decoration: line-through;
+  margin-top: -2px;
+}
+
+/* Unified Add Shoe Styles */
+.add-shoes-kinetic-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+.add-shoes-search-box {
+  position: relative;
+  margin-bottom: 32px;
+}
+.add-shoes-search-box input {
+  width: 100%;
+  padding: 16px 20px 16px 52px;
+  border-radius: 16px;
+  border: 1px solid var(--slate-200);
+  background: var(--slate-50);
+  font-size: 16px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.add-shoes-search-box input:focus {
+  background: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(240, 117, 97, 0.1);
+}
+.add-shoes-search-icon {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--slate-400);
+}
+.add-shoes-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.add-shoes-result-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--slate-100);
+  text-align: left;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.add-shoes-result-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.add-shoes-result-logo {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--slate-50);
+  border-radius: 12px;
+}
+.add-shoes-result-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.add-shoes-result-brand {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.add-shoes-result-model {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--slate-900);
+  margin: 1px 0;
+}
+.add-shoes-result-category {
+  font-size: 12px;
+  color: var(--slate-500);
+}
+.add-shoes-result-chevron {
+  color: var(--slate-300);
+  width: 16px;
+  height: 16px;
+}
+.add-shoes-config-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 40px;
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .add-shoes-config-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.add-shoes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.add-shoes-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--slate-700);
+  margin-bottom: 8px;
+}
+.add-shoes-field input[type="text"] {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--slate-200);
+  font-size: 15px;
+}
+.add-shoes-range-control {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.add-shoes-range-control input { flex: 1; }
+.add-shoes-preview-card {
+  background: #fff;
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid var(--slate-100);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+}
+.add-shoes-preview-logo {
+  margin-bottom: 20px;
+}
