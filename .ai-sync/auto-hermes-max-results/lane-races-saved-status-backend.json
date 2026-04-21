@@ -1,0 +1,49 @@
+{
+  "laneId": "lane-races-saved-status-backend",
+  "parentRunId": "ahm-20260416112154",
+  "correlationId": "ahm-20260416112154:lane-races-saved-status-backend",
+  "goal": "Add the smallest backend saved-status summary path so race detail can ask whether the viewed race is already saved without hydrating the full decorated /api/races list.",
+  "ownedFiles": [
+    "backend/src/main/java/com/hermes/backend/RaceController.java",
+    "backend/src/main/java/com/hermes/backend/RaceEventRepository.java",
+    "backend/src/test/java/com/hermes/backend/RaceControllerTests.java"
+  ],
+  "changedFiles": [
+    "backend/src/main/java/com/hermes/backend/RaceController.java",
+    "backend/src/main/java/com/hermes/backend/RaceEventRepository.java",
+    "backend/src/test/java/com/hermes/backend/RaceControllerTests.java"
+  ],
+  "completedRounds": [
+    {
+      "round": 1,
+      "summary": "Added a lightweight auth-protected saved-status endpoint, a direct repository lookup, and focused controller coverage."
+    }
+  ],
+  "verification": [
+    {
+      "command": "cd backend && ./mvnw test -Dtest=RaceControllerTests",
+      "status": "passed"
+    },
+    {
+      "command": "cd backend && ./mvnw -q -DskipTests compile",
+      "status": "passed"
+    }
+  ],
+  "runtimeProof": {
+    "status": "not-run",
+    "details": "This lane only performed targeted tests and compile verification. No local backend restart or live /api runtime proof was run here."
+  },
+  "risks": [
+    "Saved-status resolves by runner plus case-insensitive race name and returns the earliest event-date match to mirror the current /api/races ordering, so duplicate same-name saved races will map to the first sorted entry."
+  ],
+  "mustPreserve": [
+    "Keep /api/races list/create/update/delete contracts unchanged.",
+    "Keep GET /api/races/saved-status auth-protected like the other /api/races endpoints.",
+    "Keep the saved-status lookup lightweight and avoid decorating run activity data."
+  ],
+  "mergeNotes": [
+    "Frontend can call GET /api/races/saved-status?name=<race name> and read { saved, raceId }.",
+    "The repository method intentionally mirrors the existing /api/races list ordering with OrderByEventDateAsc."
+  ],
+  "status": "approved"
+}

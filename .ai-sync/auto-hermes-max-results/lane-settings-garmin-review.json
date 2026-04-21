@@ -1,0 +1,151 @@
+{
+  "laneId": "lane-settings-garmin-review",
+  "parentRunId": "ahm-20260416150646",
+  "correlationId": "ahm-20260416150646:lane-settings-garmin-review",
+  "status": "approved",
+  "surface": "/settings Garmin Connect service card + Garmin import modal",
+  "mode": "dual-mode",
+  "roundType": "structural-redesign",
+  "summary": "The Garmin flow is functionally real but visually fragmented. The main Garmin card is disconnected from live state, the manual fallback competes as a separate equal tile, and the modal still leans on line-heavy utility-form containment that undercuts Hermes' premium command-center language.",
+  "strongestCurrentDesignProblems": [
+    {
+      "severity": "high",
+      "title": "The primary Garmin card is not telling the truth about live state",
+      "detail": "The most visible Garmin entry point shows static status copy and a generic connect CTA even though the page already tracks real Garmin ready/importing/result state elsewhere. That makes the hero action feel less trustworthy than the sync-health panel beneath it.",
+      "evidence": [
+        {
+          "file": "frontend/src/components/SettingsAtlasLayout.jsx",
+          "lines": "289-300",
+          "note": "Garmin card renders static status copy and a constant connect button."
+        },
+        {
+          "file": "frontend/src/pages/Settings.jsx",
+          "lines": "360-378",
+          "note": "syncHealthItems already contain Garmin ready/importing/result state."
+        }
+      ]
+    },
+    {
+      "severity": "high",
+      "title": "The Garmin journey is split across too many equal-weight blocks and duplicate triggers",
+      "detail": "Garmin import, manual file import, sync health, and inline actions are all present, but they read as parallel utility cards rather than one clear import story. The user has to infer the relationship between Garmin credentials import and the manual fallback instead of seeing one deliberate hierarchy.",
+      "evidence": [
+        {
+          "file": "frontend/src/components/SettingsAtlasLayout.jsx",
+          "lines": "289-335",
+          "note": "Garmin card, manual import tile, sync-health panel, and duplicate inline actions all sit in the same connectivity rail."
+        },
+        {
+          "file": ".ai-sync/CONTEXT_LEDGER.md",
+          "lines": "98-100",
+          "note": "Settings is supposed to feel like one editorial command center, not disconnected utility cards."
+        }
+      ]
+    },
+    {
+      "severity": "medium",
+      "title": "The current Garmin visuals drift toward divider-heavy utility UI instead of Hermes tonal layering",
+      "detail": "The manual import tile depends on a dashed border, and the modal stacks border-defined hero, select, status, and secondary footer treatments. That line-first containment works against Hermes' No-Line Rule and makes the Garmin experience feel closer to a generic SaaS settings form than a premium runner-control import surface.",
+      "evidence": [
+        {
+          "file": "design.md",
+          "lines": "64-74",
+          "note": "Hermes prefers surface shifts, spacing, glass, and ghost-border fallback over hard containment lines."
+        },
+        {
+          "file": "frontend/src/styles/style.css",
+          "lines": "32080-32100",
+          "note": "Manual import drop uses a 2px dashed border as primary containment."
+        },
+        {
+          "file": "frontend/src/styles/style.css",
+          "lines": "14047-14155",
+          "note": "Garmin modal hero, limit field, status box, and footer all use border-led treatment."
+        }
+      ]
+    },
+    {
+      "severity": "medium",
+      "title": "The modal supports a long-running import but does not frame it as a guided, confidence-building flow",
+      "detail": "The import can run asynchronously with repeated status polling, yet the UI mostly presents a basic credentials form plus a generic message box. The runner gets limited guidance about scope, what the limit changes, or what phase the import is currently in.",
+      "evidence": [
+        {
+          "file": "frontend/src/pages/Settings.jsx",
+          "lines": "219-301",
+          "note": "Import submission and polling logic already support active, success, warning, and error states."
+        },
+        {
+          "file": "frontend/src/pages/Settings.jsx",
+          "lines": "610-629",
+          "note": "The modal presents only a bare limit select and a generic status block."
+        },
+        {
+          "file": "frontend/src/pages/Settings.jsx",
+          "lines": "650-659",
+          "note": "Manual import exists as a good escape hatch, but it is visually separated rather than integrated into a guided flow."
+        }
+      ]
+    }
+  ],
+  "preserveList": [
+    "Keep Garmin inside the existing Settings command-center layout and shared signed-in shell; do not spin it out into a separate page or collapse the broader atlas structure.",
+    "Preserve the compact Settings header/hero proportions plus the current quick-controls, sync-health, and setup-checklist feature layer around the Garmin work.",
+    "Preserve the real Garmin credentials import flow and existing handler wiring behind the current modal launch.",
+    "Preserve the credentials note, email field, password field, limit selector, and live status messaging states.",
+    "Preserve the current importing lock behavior where the Garmin modal cannot be casually closed mid-import.",
+    "Preserve manual file import as a visible escape hatch from the Garmin journey, not a hidden tertiary affordance.",
+    "Preserve the sync-health panel as the place where Strava, Garmin, and manual import state stay legible inside Settings.",
+    "Preserve the existing settings/profile translation path and do not replace working copy with hard-coded literals or undeclared keys.",
+    "Preserve dual-mode behavior and shared structure across dark and light settings surfaces."
+  ],
+  "highestValueImplementationDirection": {
+    "northStar": "Turn Garmin from a generic service tile into an editorial import lane: one primary surface that explains the import, reflects live state, and contains the manual fallback as a clearly secondary escape hatch.",
+    "layoutMoves": [
+      "Keep the work inside the Connectivity column, but stop treating Garmin import and manual import as two equal standalone cards.",
+      "Make Garmin the dominant connectivity action with a stronger headline, live-state badge/subcopy, and a clearer import CTA that matches the real behavior.",
+      "Nest manual import as a secondary fallback inside the Garmin composition or immediately adjacent to it, instead of leaving it as a competing dashed-border tile.",
+      "Use the sync-health panel as instrumentation and reassurance, not as another equally strong CTA cluster."
+    ],
+    "modalMoves": [
+      "Rebuild the modal as a two-part composition: a trust-and-scope band on top, then a focused action/progress area underneath.",
+      "Keep the credentials note, fields, limit selector, current status messages, and manual-import fallback exactly intact in behavior.",
+      "Frame the limit selector as import scope with one short helper line so runners understand the tradeoff.",
+      "Give the importing state a dedicated progress zone or phase language so long polls feel intentional rather than like a stalled form."
+    ],
+    "visualRules": [
+      "Follow Hermes' Kinetic Editorial hierarchy: one obvious focal point, asymmetry where useful, and breathing room before extra chrome.",
+      "Replace border-led containment with tonal stacking, glass, and spacing; use ghost borders only where clarity truly requires them.",
+      "Keep Manrope for headline/value authority and Inter for operational copy and controls.",
+      "Use the coral gradient on the true primary import action only; keep fallback and status affordances quieter."
+    ],
+    "copyTone": [
+      "Avoid enterprise wording that implies a permanent integration handshake when this surface is actually a runner-facing import flow.",
+      "Bias toward language like Import from Garmin and Use file import instead, while keeping the underlying real behavior unchanged."
+    ],
+    "dualModeGuidance": [
+      "Preserve the same structural hierarchy in dark and light mode; change tone, not layout logic.",
+      "If shared atlas selectors are touched, prefer shared tokens or body:is(.theme-light, .theme-high-contrast-light) patterns over another dark-only or light-only island."
+    ]
+  },
+  "risksOrBlockers": [
+    {
+      "severity": "medium",
+      "type": "implementation-risk",
+      "detail": "The inspected Garmin atlas CSS only exposes body.theme-light overrides in this block, and no high-contrast-light counterpart appeared in the reviewed selectors. A redesign that touches shared atlas selectors could silently regress the light-family variants if it stays too literal."
+    },
+    {
+      "severity": "medium",
+      "type": "preserve-risk",
+      "detail": "If the redesign hides the manual import fallback or turns the Garmin area into a static showcase card, it will fail the preserve set even if it looks more polished."
+    },
+    {
+      "severity": "low",
+      "type": "copy-risk",
+      "detail": "If CTA language keeps saying Connect without clarifying that the action opens a credentialed import flow, user expectation will still skew toward OAuth-style linking."
+    }
+  ],
+  "notes": [
+    "ui-ux-pro-max was used only as supporting research. Its generic testimonial/block-layout recommendation was rejected because design.md remains the canonical Hermes authority.",
+    "No app code was edited in this lane."
+  ]
+}

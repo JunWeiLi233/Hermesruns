@@ -39,6 +39,25 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | Garmin Connect | Direct account import via GarminDB / garth |
 | UI posture | Kinetic Editorial design language with `light` and `midnight` runtime themes |
 
+### AI-Agent Workflow (Shared)
+
+This repository includes a specialized, shared AI-agent workflow driven by **Gemini CLI** and **Claude Code**.
+
+**Collaborators can use the same commands to drive development:**
+
+1.  **Setup Agents**:
+    *   Install Gemini CLI: `npm install -g @google/gemini-cli`
+    *   Install Claude Code: `npm install -g @anthropic-ai/claude-code`
+2.  **Configure Secrets**:
+    *   Copy `Hermes.local.env.example.ps1` to `Hermes.local.env.ps1`.
+    *   Fill in your own `GEMINI_API_KEY` and `ANTHROPIC_API_KEY`.
+3.  **Use Commands**:
+    *   Launch an autonomous development round: `/auto-hermes`
+    *   Launch a parallel max round with merge arbitration: `/auto-hermes-max`
+    *   Audit technical debt across the repo: `/auto-hermes-tech-debt`
+
+The workflow state is synchronized via `TASKS.md` (queue) and `CONTEXT_LEDGER.md` (permanent change log). Persona instructions are shared in `AGENTS.md` and `.codex/agents/`.
+
 ### Web Routes
 
 | Route | Surface | What it does now |

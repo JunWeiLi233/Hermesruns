@@ -1,0 +1,29 @@
+{
+  "laneId": "lane-races-saved-status-backend",
+  "parentRunId": "ahm-20260416112154",
+  "correlationId": "ahm-20260416112154:lane-races-saved-status-backend",
+  "goal": "Add the smallest backend saved-status summary path for race detail so the client can ask whether the viewed race is already saved without hydrating the full decorated `/api/races` list.",
+  "parentGoal": "Add a race-detail saved-status summary path so `/races/details/:raceId` does not hydrate checklist state from the full decorated `/api/races` payload.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "backend/src/main/java/com/hermes/backend/RaceController.java",
+    "backend/src/main/java/com/hermes/backend/RaceEventRepository.java",
+    "backend/src/test/java/com/hermes/backend/RaceControllerTests.java"
+  ],
+  "mustPreserve": [
+    "Preserve existing `/api/races` list/create/update/delete contracts.",
+    "Keep the new endpoint auth-protected and lightweight.",
+    "Return a stable minimal JSON shape the frontend can consume safely."
+  ],
+  "verify": "cd backend && ./mvnw test -Dtest=RaceControllerTests,cd backend && ./mvnw -q -DskipTests compile",
+  "mergeNotes": "",
+  "priority": 1,
+  "effort": "small",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-races-saved-status-backend.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-races-saved-status-backend-activity.json",
+  "command": "/auto-hermes scope=\"Add the smallest backend saved-status summary path for race detail so the client can ask whether the viewed race is already saved without hydrating the full decorated `/api/races` list.\" mode=loop owned=\"backend/src/main/java/com/hermes/backend/RaceController.java|backend/src/main/java/com/hermes/backend/RaceEventRepository.java|backend/src/test/java/com/hermes/backend/RaceControllerTests.java\""
+}

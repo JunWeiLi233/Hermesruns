@@ -1,0 +1,28 @@
+{
+  "laneId": "lane-schedule-route-grid-frontend",
+  "parentRunId": "ahm-20260416185030",
+  "correlationId": "ahm-20260416185030:lane-schedule-route-grid-frontend",
+  "goal": "Fix the broken planned-route card on `/schedule` so the no-route state becomes a deliberate coach-style fallback while the preview state still renders normally.",
+  "parentGoal": "Fix the broken planned-route grid card on `/schedule` so the empty/no-route state reads like an intentional Hermes fallback instead of a collapsed blank map block.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/Schedule.jsx",
+    "frontend/src/styles/style.css"
+  ],
+  "mustPreserve": [
+    "Preserve the existing routeRecommendation data contract and preview rendering when preview data exists.",
+    "Keep the shared schedule shell, coach rail, and gear panel intact.",
+    "Stay dual-mode safe and aligned with Hermes Kinetic Editorial styling."
+  ],
+  "verify": "cd frontend && npm run lint,cd frontend && node scripts/run-vite-build.mjs",
+  "mergeNotes": "",
+  "priority": 2,
+  "effort": "small",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-schedule-route-grid-frontend.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-schedule-route-grid-frontend-activity.json",
+  "command": "/auto-hermes scope=\"Fix the broken planned-route card on `/schedule` so the no-route state becomes a deliberate coach-style fallback while the preview state still renders normally.\" mode=loop owned=\"frontend/src/pages/Schedule.jsx|frontend/src/styles/style.css\""
+}

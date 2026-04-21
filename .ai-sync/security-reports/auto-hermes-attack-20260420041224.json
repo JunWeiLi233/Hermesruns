@@ -1,0 +1,2129 @@
+{
+  "runId": "auto-hermes-attack-20260420041224",
+  "generatedAt": "2026-04-20T04:12:24.121Z",
+  "commandName": "auto-hermes-attack",
+  "mode": "attack",
+  "aggressive": false,
+  "status": "completed",
+  "summary": "Attack simulation completed. 43 total findings (7 runtime-verified). Active probes: 7 runtime-verified findings (0 CRITICAL, 3 HIGH). ",
+  "runtime": {
+    "provided": true,
+    "baseUrl": "http://localhost:8080",
+    "hostname": "localhost",
+    "localDev": true
+  },
+  "inventory": {
+    "tables": [
+      {
+        "name": "activities",
+        "className": "Activity",
+        "file": "backend/src/main/java/com/hermes/backend/Activity.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "activity_points",
+        "className": "ActivityPoint",
+        "file": "backend/src/main/java/com/hermes/backend/ActivityPoint.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "admin_audit_log",
+        "className": "AdminAuditLog",
+        "file": "backend/src/main/java/com/hermes/backend/AdminAuditLog.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "admin_background_job",
+        "className": "AdminBackgroundJob",
+        "file": "backend/src/main/java/com/hermes/backend/AdminBackgroundJob.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "admin_saved_filter",
+        "className": "AdminSavedFilter",
+        "file": "backend/src/main/java/com/hermes/backend/AdminSavedFilter.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "coach_feedback_alert",
+        "className": "CoachFeedbackAlert",
+        "file": "backend/src/main/java/com/hermes/backend/CoachFeedbackAlert.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "coach_runner_state",
+        "className": "CoachRunnerState",
+        "file": "backend/src/main/java/com/hermes/backend/CoachRunnerState.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "coach_scheduled_workout",
+        "className": "CoachScheduledWorkout",
+        "file": "backend/src/main/java/com/hermes/backend/CoachScheduledWorkout.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "coach_training_block",
+        "className": "CoachTrainingBlock",
+        "file": "backend/src/main/java/com/hermes/backend/CoachTrainingBlock.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "digital_cosmetic_drop",
+        "className": "DigitalCosmeticDrop",
+        "file": "backend/src/main/java/com/hermes/backend/DigitalCosmeticDrop.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "generated_race_gpx_asset",
+        "className": "GeneratedRaceGpxAsset",
+        "file": "backend/src/main/java/com/hermes/backend/GeneratedRaceGpxAsset.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "muscle_training_check_in",
+        "className": "MuscleTrainingCheckIn",
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingCheckIn.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "muscle_training_preference",
+        "className": "MuscleTrainingPreference",
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingPreference.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "processed_stripe_event",
+        "className": "ProcessedStripeEvent",
+        "file": "backend/src/main/java/com/hermes/backend/ProcessedStripeEvent.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "race_course_map_asset",
+        "className": "RaceCourseMapAsset",
+        "file": "backend/src/main/java/com/hermes/backend/RaceCourseMapAsset.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "race_events",
+        "className": "RaceEvent",
+        "file": "backend/src/main/java/com/hermes/backend/RaceEvent.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "runner",
+        "className": "Runner",
+        "file": "backend/src/main/java/com/hermes/backend/Runner.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "runner_admin_note",
+        "className": "RunnerAdminNote",
+        "file": "backend/src/main/java/com/hermes/backend/RunnerAdminNote.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "shoes",
+        "className": "Shoe",
+        "file": "backend/src/main/java/com/hermes/backend/Shoe.java",
+        "ownershipSignals": true
+      },
+      {
+        "name": "shoe_catalog_brands",
+        "className": "ShoeCatalogBrand",
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogBrand.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "shoe_catalog_models",
+        "className": "ShoeCatalogModel",
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogModel.java",
+        "ownershipSignals": false
+      },
+      {
+        "name": "shoe_image_asset",
+        "className": "ShoeImageAsset",
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageAsset.java",
+        "ownershipSignals": false
+      }
+    ],
+    "endpoints": [
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+        "controller": "ActivityController",
+        "method": "GET",
+        "path": "/api/activities"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+        "controller": "ActivityController",
+        "method": "GET",
+        "path": "/api/activities/analysis"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+        "controller": "ActivityController",
+        "method": "GET",
+        "path": "/api/activities/heatmap"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+        "controller": "ActivityController",
+        "method": "GET",
+        "path": "/api/activities/{id}/points"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+        "controller": "ActivityController",
+        "method": "GET",
+        "path": "/api/activities/{id}/analytics"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+        "controller": "ActivityController",
+        "method": "GET",
+        "path": "/api/activities/{id}/elevation/status"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+        "controller": "ActivityController",
+        "method": "POST",
+        "path": "/api/activities/{id}/elevation/recalibrate"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminController.java",
+        "controller": "AdminController",
+        "method": "GET",
+        "path": "/api/admin/stats"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminController.java",
+        "controller": "AdminController",
+        "method": "POST",
+        "path": "/api/admin/sync-all"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/overview"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/users"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/users/export"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/users/{id}/notes"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/users/{id}/notes"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/users/{id}/impersonate"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/users/bulk"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/shoes"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/shoes/export"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/race-course-maps"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/race-course-maps/{raceId}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/race-course-maps/{raceId}/pending/scan"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/race-course-maps/{raceId}/pending/upload"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/race-course-maps/{raceId}/pending/reanalyze"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/race-course-maps/{raceId}/accept-live"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "DELETE",
+        "path": "/api/admin/race-course-maps/{raceId}/pending"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/shoes"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/shoes/{id}/pending-image"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/shoes/{id}/pending/upload"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/shoes/{id}/accept-image"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/shoes/{id}/accept-live"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "DELETE",
+        "path": "/api/admin/shoes/{id}/pending-image"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "DELETE",
+        "path": "/api/admin/shoes/{id}/pending"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/shoes/bulk"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "DELETE",
+        "path": "/api/admin/shoes/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/queues"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/jobs"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/jobs/strava-sync"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/audit"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "GET",
+        "path": "/api/admin/filters"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "POST",
+        "path": "/api/admin/filters"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+        "controller": "AdminPortalController",
+        "method": "DELETE",
+        "path": "/api/admin/filters/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminRouteExtractionController.java",
+        "controller": "AdminRouteExtractionController",
+        "method": "POST",
+        "path": "/api/admin/marathon-pipeline/run"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminRouteExtractionController.java",
+        "controller": "AdminRouteExtractionController",
+        "method": "GET",
+        "path": "/api/admin/marathon-pipeline/jobs/{jobId}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/BillingController.java",
+        "controller": "BillingController",
+        "method": "GET",
+        "path": "/api/billing/config"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/BillingController.java",
+        "controller": "BillingController",
+        "method": "POST",
+        "path": "/api/billing/checkout"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/BillingController.java",
+        "controller": "BillingController",
+        "method": "POST",
+        "path": "/api/billing/webhook"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "GET",
+        "path": "/api/coach/state"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "GET",
+        "path": "/api/coach/schedule"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "GET",
+        "path": "/api/coach/today"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "POST",
+        "path": "/api/coach/recovery"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "PATCH",
+        "path": "/api/coach/profile"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "POST",
+        "path": "/api/coach/training-block"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "POST",
+        "path": "/api/coach/training-block/stop"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "GET",
+        "path": "/api/coach/alerts"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/CoachController.java",
+        "controller": "CoachController",
+        "method": "POST",
+        "path": "/api/coach/alerts/{id}/dismiss"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ConfigStatusController.java",
+        "controller": "ConfigStatusController",
+        "method": "GET",
+        "path": "/api/config/status"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/DigitalCosmeticsController.java",
+        "controller": "DigitalCosmeticsController",
+        "method": "GET",
+        "path": "/api/cosmetics/inventory"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/DigitalCosmeticsController.java",
+        "controller": "DigitalCosmeticsController",
+        "method": "GET",
+        "path": "/api/cosmetics/theme"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/GarminConnectController.java",
+        "controller": "GarminConnectController",
+        "method": "POST",
+        "path": "/api/garmin/connect/import"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/GarminConnectController.java",
+        "controller": "GarminConnectController",
+        "method": "GET",
+        "path": "/api/garmin/connect/import/status"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ImportController.java",
+        "controller": "ImportController",
+        "method": "POST",
+        "path": "/api/import/files"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ImportController.java",
+        "controller": "ImportController",
+        "method": "POST",
+        "path": "/api/import/batch"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LocalConsoleErrorController.java",
+        "controller": "LocalConsoleErrorController",
+        "method": "POST",
+        "path": "/api/dev/console-errors"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "POST",
+        "path": "/api/auth/login"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "GET",
+        "path": "/api/auth/password-rules"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "GET",
+        "path": "/api/auth/verify-email"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "POST",
+        "path": "/api/auth/resend-verification"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "POST",
+        "path": "/api/auth/signup"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "POST",
+        "path": "/api/auth/password-reset/request"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "POST",
+        "path": "/api/auth/password-reset/confirm"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "GET",
+        "path": "/api/auth/runners"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "DELETE",
+        "path": "/api/auth/runners/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "POST",
+        "path": "/api/auth/admin-login"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+        "controller": "LoginController",
+        "method": "POST",
+        "path": "/api/auth/runners/{id}/subscription"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MapTileController.java",
+        "controller": "MapTileController",
+        "method": "GET",
+        "path": "/api/maps/tiles/{z}/{x}/{y}.png"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+        "controller": "MuscleTrainingController",
+        "method": "GET",
+        "path": "/api/training/muscle/profile"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+        "controller": "MuscleTrainingController",
+        "method": "PUT",
+        "path": "/api/training/muscle/profile"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+        "controller": "MuscleTrainingController",
+        "method": "GET",
+        "path": "/api/training/muscle/plan"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+        "controller": "MuscleTrainingController",
+        "method": "GET",
+        "path": "/api/training/muscle/check-in/today"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+        "controller": "MuscleTrainingController",
+        "method": "PUT",
+        "path": "/api/training/muscle/check-in/today"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+        "controller": "MuscleTrainingController",
+        "method": "DELETE",
+        "path": "/api/training/muscle/check-in/today"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+        "controller": "MuscleTrainingController",
+        "method": "GET",
+        "path": "/api/training/muscle/recommendation"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/providers"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/strava/status"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/google/start"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/strava/start"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "POST",
+        "path": "/api/auth/strava/link-url"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/google/callback"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/strava/callback"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/strava/sync"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/strava/auto-sync"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/strava/sync-status"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+        "controller": "OAuthController",
+        "method": "GET",
+        "path": "/api/auth/protected/ping"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ProfileController.java",
+        "controller": "ProfileController",
+        "method": "GET",
+        "path": "/api/profile/me"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ProfileController.java",
+        "controller": "ProfileController",
+        "method": "PATCH",
+        "path": "/api/profile/me/name"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ProfileController.java",
+        "controller": "ProfileController",
+        "method": "GET",
+        "path": "/api/profile/heatmap"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ProfileController.java",
+        "controller": "ProfileController",
+        "method": "GET",
+        "path": "/api/profile/personal-records"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "GET",
+        "path": "/api/races"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "GET",
+        "path": "/api/races/saved-status"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "POST",
+        "path": "/api/races"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "PUT",
+        "path": "/api/races/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "DELETE",
+        "path": "/api/races/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "GET",
+        "path": "/api/races/official-image"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "GET",
+        "path": "/api/races/elevation-profile"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/RaceController.java",
+        "controller": "RaceController",
+        "method": "GET",
+        "path": "/api/races/course-map"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+        "controller": "ShoeCatalogController",
+        "method": "GET",
+        "path": "/api/shoe-catalog"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+        "controller": "ShoeCatalogController",
+        "method": "POST",
+        "path": "/api/shoe-catalog/admin/brands"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+        "controller": "ShoeCatalogController",
+        "method": "POST",
+        "path": "/api/shoe-catalog/admin/models"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+        "controller": "ShoeCatalogController",
+        "method": "DELETE",
+        "path": "/api/shoe-catalog/admin/brands/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+        "controller": "ShoeCatalogController",
+        "method": "POST",
+        "path": "/api/shoe-catalog/admin/import-page"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+        "controller": "ShoeCatalogController",
+        "method": "PUT",
+        "path": "/api/shoe-catalog/admin/models/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+        "controller": "ShoeCatalogController",
+        "method": "DELETE",
+        "path": "/api/shoe-catalog/admin/models/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "GET",
+        "path": "/api/shoes"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "GET",
+        "path": "/api/shoes/duplicate-clusters"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "POST",
+        "path": "/api/shoes/match-batch"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "POST",
+        "path": "/api/shoes/merge"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "GET",
+        "path": "/api/shoes/recent"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "POST",
+        "path": "/api/shoes"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "PUT",
+        "path": "/api/shoes/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "DELETE",
+        "path": "/api/shoes/{id}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+        "controller": "ShoeController",
+        "method": "PATCH",
+        "path": "/api/shoes/{shoeId}/assign/{activityId}"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "GET",
+        "path": "/api/shoes/admin/all"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "POST",
+        "path": "/api/shoes/admin/{id}/search-images"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "PUT",
+        "path": "/api/shoes/admin/{id}/photo"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "PUT",
+        "path": "/api/shoes/admin/{id}/verify-photo"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "PUT",
+        "path": "/api/shoes/admin/{id}/unverify-photo"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "POST",
+        "path": "/api/shoes/{id}/find-image"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "POST",
+        "path": "/api/shoes/{id}/search-images"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "PUT",
+        "path": "/api/shoes/{id}/photo"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "GET",
+        "path": "/api/shoes/scan-available"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "GET",
+        "path": "/api/shoes/ai-usage"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "controller": "ShoeImageController",
+        "method": "POST",
+        "path": "/api/shoes/scan-image"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/ShoeQueryNormalizationController.java",
+        "controller": "ShoeQueryNormalizationController",
+        "method": "POST",
+        "path": "/api/shoes/query-normalization"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/SpaForwardingController.java",
+        "controller": "SpaForwardingController",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/StravaWebhookController.java",
+        "controller": "StravaWebhookController",
+        "method": "GET",
+        "path": "/api/strava/webhook"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/StravaWebhookController.java",
+        "controller": "StravaWebhookController",
+        "method": "POST",
+        "path": "/api/strava/webhook"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/WeatherContextController.java",
+        "controller": "WeatherContextController",
+        "method": "GET",
+        "path": "/api/v1/weather/context"
+      }
+    ],
+    "forms": [
+      {
+        "file": "frontend/src/components/SettingsAtlasLayout.jsx",
+        "hasPassword": false,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "textarea",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/AddShoes.jsx",
+        "hasPassword": false,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/AdminLogin.jsx",
+        "hasPassword": true,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Analysis.jsx",
+        "hasPassword": false,
+        "submitHandlers": 2,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Dashboard.jsx",
+        "hasPassword": false,
+        "submitHandlers": 3,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "textarea",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/ForgotPassword.jsx",
+        "hasPassword": false,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Login.jsx",
+        "hasPassword": true,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/MuscleTraining.jsx",
+        "hasPassword": false,
+        "submitHandlers": 2,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Races.jsx",
+        "hasPassword": false,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Runs.jsx",
+        "hasPassword": false,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Settings.jsx",
+        "hasPassword": true,
+        "submitHandlers": 2,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "select",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Shoes.jsx",
+        "hasPassword": false,
+        "submitHandlers": 2,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      },
+      {
+        "file": "frontend/src/pages/Signup.jsx",
+        "hasPassword": true,
+        "submitHandlers": 1,
+        "inputs": [
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          },
+          {
+            "tag": "input",
+            "name": "",
+            "type": ""
+          }
+        ]
+      }
+    ],
+    "configFiles": [
+      {
+        "file": "backend/src/main/resources/application.properties",
+        "content": "spring.application.name=backend\r\n\r\n# deployment: set HERMES_ENV=production on public servers (enforces stronger Strava webhook settings when Strava is enabled)\r\nhermes.environment=${HERMES_ENV:development}\r\n\r\n# hide stack traces from default error responses (controllers still return explicit JSON errors)\r\nserver.error.include-stacktrace=never\r\nserver.error.include-exception=false\r\n\r\n# trust X-Forwarded-* from reverse proxy (nginx, cloud load balancer)\r\nserver.forward-headers-strategy=framework\r\n\r\n# production: enforce HTTPS at the app layer (safe behind reverse proxy)\r\napp.security.force-https=${APP_FORCE_HTTPS:false}\r\n\r\n# optional: comma-separated origins if the React app is not served from the same host as /api (e.g. https://app.example.com)\r\napp.cors.allowed-origins=${APP_CORS_ALLOWED_ORIGINS:}\r\n\r\n# set true only when the site is served over HTTPS everywhere (via reverse TLS termination is OK)\r\napp.security.enable-hsts=${APP_ENABLE_HSTS:false}\r\n\r\n# Database configuration\r\n# Default storage is local H2. To switch to PostgreSQL, provide APP_DB_URL, APP_DB_USERNAME,\r\n# APP_DB_PASSWORD, and APP_DB_DRIVER=org.postgresql.Driver before startup.\r\nspring.datasource.url=${APP_DB_URL:jdbc:h2:file:./hermes_db_v2;AUTO_SERVER=TRUE}\r\nspring.datasource.driverClassName=${APP_DB_DRIVER:org.h2.Driver}\r\nspring.datasource.username=${APP_DB_USERNAME:sa}\r\nspring.datasource.password=${APP_DB_PASSWORD:}\r\n\r\n# Schema management\r\nspring.jpa.hibernate.ddl-auto=${APP_JPA_DDL_AUTO:update}\r\nspring.jpa.show-sql=false\r\nspring.h2.console.enabled=false\r\n\r\n# File upload limits (phone screenshots can be 5–10 MB)\r\nspring.servlet.multipart.max-file-size=20MB\r\nspring.servlet.multipart.max-request-size=20MB\r\n\r\n# Google OAuth 2.0 Credentials\r\n# Configure these with environment variables before starting Hermes.\r\ngoogle.client.id=${APP_GOOGLE_CLIENT_ID:}\r\ngoogle.client.secret=${APP_GOOGLE_CLIENT_SECRET:}\r\napp.google.redirect-uri=${APP_GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/google/callback}\r\n\r\n# Strava OAuth 2.0 Credentials\r\n# Configure these with environment variables before starting Hermes.\r\n# Strava token storage also requires APP_DATA_ENCRYPTION_KEY.\r\nstrava.client.id=${STRAVA_CLIENT_ID:}\r\nstrava.client.secret=${STRAVA_CLIENT_SECRET:}\r\napp.strava.redirect-uri=${STRAVA_REDIRECT_URI:http://localhost:8080/api/auth/strava/callback}\r\n\r\n# Automated coach (polarized 80/20, nightly audit)\r\napp.coach.nightly.enabled=true\r\napp.coach.nightly.cron=0 0 3 * * *\r\n\r\n# Background Strava pull (uses stored refresh tokens; Hermes must stay running)\r\nstrava.sync.enabled=true\r\n# Default 10 minutes — pulls recent activities for every Strava-linked runner\r\nstrava.sync.interval-ms=${STRAVA_SYNC_INTERVAL_MS:600000}\r\n# Pages × 200 activities max per runner per scheduled run (newest pages first; stops early if no new runs)\r\nstrava.sync.max-pages-recent=5\r\n# Full history cap (login / manual resync)\r\nstrava.sync.max-pages-full=50\r\n\r\n# Strava Webhook (push notifications for new activities)\r\n# Create a subscription once via Strava API:\r\n#   POST https://www.strava.com/api/v3/push_subscriptions\r\n#   client_id, client_secret, callback_url=https://YOUR_DOMAIN/api/strava/webhook,\r\n#   verify_token=<same value as below>\r\nstrava.webhook.verify-token=${STRAVA_WEBHOOK_VERIFY_TOKEN:}\n\r\n# AI Vision API (for shoe image scanning)\r\n# Set APP_AI_API_KEY to enable AI-powered shoe mileage extraction from screenshots.\r\napp.ai.api-key=${APP_AI_API_KEY:}\napp.ai.model=${APP_AI_MODEL:gemini-2.5-flash}\napp.ai.provider=${APP_AI_PROVIDER:gemini}\napp.ai.free-tier.per-runner-daily-limit=${APP_AI_FREE_TIER_PER_RUNNER_DAILY_LIMIT:5}\napp.ai.free-tier.project-daily-limit=${APP_AI_FREE_TIER_PROJECT_DAILY_LIMIT:200}\napp.ai.free-tier.project-daily-reserve=${APP_AI_FREE_TIER_PROJECT_DAILY_RESERVE:20}\n\n# Marathon route extraction pipeline\n# Step 1 uses Gemini structured JSON output. Step 2 shells out to the local Python/OpenCV worker.\napp.route-extraction.python-command=${APP_ROUTE_EXTRACTION_PYTHON_COMMAND:python}\napp.route-extraction.python-script=${APP_ROUTE_EXTRACTION_PYTHON_SCRIPT:}\n\n# Marathon route georeferencing\napp.google.geocoding.api-key=${APP_GOOGLE_GEOCODING_API_KEY:}\napp.google.geocoding.url=${APP_GOOGLE_GEOCODING_URL:https://maps.googleapis.com/maps/api/geocode/json}\n\n# Marathon route map matching\napp.route-matching.osrm.base-url=${APP_ROUTE_MATCHING_OSRM_BASE_URL:https://router.project-osrm.org}\napp.route-matching.osrm.profile=${APP_ROUTE_MATCHING_OSRM_PROFILE:driving}\n\n# Stripe Checkout (Pro subscription — one-time payment per checkout, extends Pro by line-item quantity months)\n# Create a one-time Price in Stripe Dashboard and paste its price_xxx id. Webhook: POST /api/billing/webhook\r\napp.billing.stripe.secret-key=${STRIPE_SECRET_KEY:}\r\napp.billing.stripe.webhook-secret=${STRIPE_WEBHOOK_SECRET:}\r\napp.billing.stripe.price-pro-monthly=${STRIPE_PRICE_PRO_MONTHLY:}\r\napp.billing.public-base-url=${APP_PUBLIC_BASE_URL:http://localhost:8080}\r\n# Optional: shown in the Profile UI only (e.g. $9 / month or ¥68/月)\r\napp.billing.price-display-label=${APP_BILLING_PRICE_LABEL:}\r\n\r\n# Email (verification links for password sign-up). If SPRING_MAIL_HOST is empty, new accounts skip inbox verification (dev only).\r\nspring.mail.host=${SPRING_MAIL_HOST:}\r\nspring.mail.port=${SPRING_MAIL_PORT:587}\r\nspring.mail.username=${SPRING_MAIL_USERNAME:}\r\nspring.mail.password=${SPRING_MAIL_PASSWORD:}\r\nspring.mail.properties.mail.smtp.auth=true\r\nspring.mail.properties.mail.smtp.starttls.enable=true\r\nspring.mail.properties.mail.smtp.starttls.required=true\r\napp.mail.from=${APP_MAIL_FROM:noreply@localhost}\r\n"
+      },
+      {
+        "file": "backend/src/main/resources/application-production.properties",
+        "content": "# Cloud-ready production defaults. Keep secrets in environment variables.\n\n# Enable strict transport security for HTTPS deployments (including TLS termination behind proxy/LB).\napp.security.enable-hsts=true\n\n# Production should use managed DB credentials from env; this prevents accidental fallback to local defaults.\nspring.datasource.url=${APP_DB_URL}\nspring.datasource.driverClassName=${APP_DB_DRIVER:org.postgresql.Driver}\nspring.datasource.username=${APP_DB_USERNAME}\nspring.datasource.password=${APP_DB_PASSWORD}\n\n# Avoid schema auto-mutation in cloud environments.\nspring.jpa.hibernate.ddl-auto=validate\n\n"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "auth-bypass-prober:get-api-config-status:potential-auth-bypass:-endpoint-under-api-appears-to-lack-authentication-guards.",
+      "checker": "auth-bypass-prober",
+      "severity": "CRITICAL",
+      "summary": "Potential Auth Bypass: Endpoint under /api/ appears to lack authentication guards.",
+      "target": "GET /api/config/status",
+      "file": "backend/src/main/java/com/hermes/backend/ConfigStatusController.java",
+      "evidence": [
+        "Endpoint is not on the public whitelist and does not use @RequestHeader('Authorization') or @AuthenticationPrincipal."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "auth-bypass-prober:post-api-dev-console-errors:potential-auth-bypass:-endpoint-under-api-appears-to-lack-authentication-guards.",
+      "checker": "auth-bypass-prober",
+      "severity": "CRITICAL",
+      "summary": "Potential Auth Bypass: Endpoint under /api/ appears to lack authentication guards.",
+      "target": "POST /api/dev/console-errors",
+      "file": "backend/src/main/java/com/hermes/backend/LocalConsoleErrorController.java",
+      "evidence": [
+        "Endpoint is not on the public whitelist and does not use @RequestHeader('Authorization') or @AuthenticationPrincipal."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "auth-bypass-prober:get-api-maps-tiles-z-x-y-.png:potential-auth-bypass:-endpoint-under-api-appears-to-lack-authentication-guards.",
+      "checker": "auth-bypass-prober",
+      "severity": "CRITICAL",
+      "summary": "Potential Auth Bypass: Endpoint under /api/ appears to lack authentication guards.",
+      "target": "GET /api/maps/tiles/{z}/{x}/{y}.png",
+      "file": "backend/src/main/java/com/hermes/backend/MapTileController.java",
+      "evidence": [
+        "Endpoint is not on the public whitelist and does not use @RequestHeader('Authorization') or @AuthenticationPrincipal."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "auth-bypass-prober:get-:potential-auth-bypass:-endpoint-under-api-appears-to-lack-authentication-guards.",
+      "checker": "auth-bypass-prober",
+      "severity": "CRITICAL",
+      "summary": "Potential Auth Bypass: Endpoint under /api/ appears to lack authentication guards.",
+      "target": "GET /",
+      "file": "backend/src/main/java/com/hermes/backend/SpaForwardingController.java",
+      "evidence": [
+        "Endpoint is not on the public whitelist and does not use @RequestHeader('Authorization') or @AuthenticationPrincipal."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "auth-bypass-prober:get-api-strava-webhook:potential-auth-bypass:-endpoint-under-api-appears-to-lack-authentication-guards.",
+      "checker": "auth-bypass-prober",
+      "severity": "CRITICAL",
+      "summary": "Potential Auth Bypass: Endpoint under /api/ appears to lack authentication guards.",
+      "target": "GET /api/strava/webhook",
+      "file": "backend/src/main/java/com/hermes/backend/StravaWebhookController.java",
+      "evidence": [
+        "Endpoint is not on the public whitelist and does not use @RequestHeader('Authorization') or @AuthenticationPrincipal."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "auth-bypass-prober:post-api-strava-webhook:potential-auth-bypass:-endpoint-under-api-appears-to-lack-authentication-guards.",
+      "checker": "auth-bypass-prober",
+      "severity": "CRITICAL",
+      "summary": "Potential Auth Bypass: Endpoint under /api/ appears to lack authentication guards.",
+      "target": "POST /api/strava/webhook",
+      "file": "backend/src/main/java/com/hermes/backend/StravaWebhookController.java",
+      "evidence": [
+        "Endpoint is not on the public whitelist and does not use @RequestHeader('Authorization') or @AuthenticationPrincipal."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "injection-hunter:backend-src-main-java-com-hermes-backend-oauthcontroller.java:possible-sql-injection:-dynamic-query-construction-with-unescaped-input.",
+      "checker": "injection-hunter",
+      "severity": "CRITICAL",
+      "summary": "Possible SQL Injection: Dynamic query construction with unescaped input.",
+      "target": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+      "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+      "evidence": [
+        "Detected SQL-like text combined with dynamic variable concatenation."
+      ],
+      "verification": "static-only",
+      "confidence": 0.9
+    },
+    {
+      "id": "injection-hunter:.tools-h2topostgresmigrator.java:possible-sql-injection:-dynamic-query-construction-with-unescaped-input.",
+      "checker": "injection-hunter",
+      "severity": "CRITICAL",
+      "summary": "Possible SQL Injection: Dynamic query construction with unescaped input.",
+      "target": ".tools/H2ToPostgresMigrator.java",
+      "file": ".tools/H2ToPostgresMigrator.java",
+      "evidence": [
+        "Detected SQL-like text combined with dynamic variable concatenation."
+      ],
+      "verification": "static-only",
+      "confidence": 0.9
+    },
+    {
+      "id": "active-data-leak:-api-config-status:config-status-endpoint-leaks-sensitive-configuration-data-without-authentication.",
+      "checker": "active-data-leak",
+      "severity": "HIGH",
+      "summary": "Config status endpoint leaks sensitive configuration data without authentication.",
+      "target": "/api/config/status",
+      "file": "",
+      "evidence": [
+        "HTTP 200 returned without any Authorization header.",
+        "Exposed sensitive fields: billingCheckoutConfigured=false, strava.clientIdPresent=true, strava.clientSecretPresent=true, strava.redirectUri=http://localhost:8080/api/auth/strava/ca..., ai.provider=gemini, billing=[object Object], billing.configured=false, billing.provider=stripe, billing.publicBaseUrl=http://localhost:8080, billing.webhookSecretPresent=false",
+        "An attacker can enumerate integration config, OAuth redirect URIs, and service provider details."
+      ],
+      "verification": "runtime-verified",
+      "confidence": 0.95
+    },
+    {
+      "id": "active-data-leak:-api-billing-config:billing-config-endpoint-leaks-sensitive-configuration-data-without-authentication.",
+      "checker": "active-data-leak",
+      "severity": "HIGH",
+      "summary": "Billing config endpoint leaks sensitive configuration data without authentication.",
+      "target": "/api/billing/config",
+      "file": "",
+      "evidence": [
+        "HTTP 200 returned without any Authorization header.",
+        "Exposed sensitive fields: provider=stripe",
+        "An attacker can enumerate integration config, OAuth redirect URIs, and service provider details."
+      ],
+      "verification": "runtime-verified",
+      "confidence": 0.95
+    },
+    {
+      "id": "active-webhook-abuse:-api-strava-webhook:strava-webhook-accepts-unauthenticated-forged-activity-events.",
+      "checker": "active-webhook-abuse",
+      "severity": "HIGH",
+      "summary": "Strava webhook accepts unauthenticated forged activity events.",
+      "target": "/api/strava/webhook",
+      "file": "",
+      "evidence": [
+        "POST request with forged activity event (owner_id=1) returned HTTP 200.",
+        "Response: EVENT_RECEIVED",
+        "An attacker could inject fake activity sync requests for any runner."
+      ],
+      "verification": "runtime-verified",
+      "confidence": 0.85
+    },
+    {
+      "id": "idor-hunter:get-api-admin-users-id-notes:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "GET /api/admin/users/{id}/notes",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:post-api-admin-users-id-notes:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "POST /api/admin/users/{id}/notes",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:post-api-admin-users-id-impersonate:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "POST /api/admin/users/{id}/impersonate",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:post-api-admin-shoes-id-pending-image:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "POST /api/admin/shoes/{id}/pending-image",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:post-api-admin-shoes-id-pending-upload:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "POST /api/admin/shoes/{id}/pending/upload",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:post-api-admin-shoes-id-accept-image:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "POST /api/admin/shoes/{id}/accept-image",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:post-api-admin-shoes-id-accept-live:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "POST /api/admin/shoes/{id}/accept-live",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:delete-api-admin-shoes-id-pending-image:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "DELETE /api/admin/shoes/{id}/pending-image",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:delete-api-admin-shoes-id-pending:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "DELETE /api/admin/shoes/{id}/pending",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:delete-api-admin-shoes-id-:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "DELETE /api/admin/shoes/{id}",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:delete-api-admin-filters-id-:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "DELETE /api/admin/filters/{id}",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:delete-api-auth-runners-id-:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "DELETE /api/auth/runners/{id}",
+      "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:post-api-auth-runners-id-subscription:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "POST /api/auth/runners/{id}/subscription",
+      "file": "backend/src/main/java/com/hermes/backend/LoginController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:delete-api-shoe-catalog-admin-brands-id-:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "DELETE /api/shoe-catalog/admin/brands/{id}",
+      "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:put-api-shoe-catalog-admin-models-id-:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "PUT /api/shoe-catalog/admin/models/{id}",
+      "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "idor-hunter:delete-api-shoe-catalog-admin-models-id-:potential-idor:-endpoint-accesses-resource-by-id-without-verifying-ownership.",
+      "checker": "idor-hunter",
+      "severity": "HIGH",
+      "summary": "Potential IDOR: Endpoint accesses resource by ID without verifying ownership.",
+      "target": "DELETE /api/shoe-catalog/admin/models/{id}",
+      "file": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+      "evidence": [
+        "Endpoint accepts a resource ID but the controller appears to use a generic 'findById' call without a 'runner' constraint."
+      ],
+      "verification": "static-only",
+      "confidence": 0.7
+    },
+    {
+      "id": "rls-auditor:activity-points:missing-row-level-ownership:-potential-for-unauthorized-data-access.",
+      "checker": "rls-auditor",
+      "severity": "HIGH",
+      "summary": "Missing Row-Level Ownership: Potential for unauthorized data access.",
+      "target": "activity_points",
+      "file": "backend/src/main/java/com/hermes/backend/ActivityPoint.java",
+      "evidence": [
+        "Entity class ActivityPoint maps to table activity_points.",
+        "Critical: No runnerId/userId/ownerId detected. This entity might be accessible to any authenticated (or unauthenticated) user."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "rls-auditor:admin-background-job:missing-row-level-ownership:-potential-for-unauthorized-data-access.",
+      "checker": "rls-auditor",
+      "severity": "HIGH",
+      "summary": "Missing Row-Level Ownership: Potential for unauthorized data access.",
+      "target": "admin_background_job",
+      "file": "backend/src/main/java/com/hermes/backend/AdminBackgroundJob.java",
+      "evidence": [
+        "Entity class AdminBackgroundJob maps to table admin_background_job.",
+        "Critical: No runnerId/userId/ownerId detected. This entity might be accessible to any authenticated (or unauthenticated) user."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "rls-auditor:admin-saved-filter:missing-row-level-ownership:-potential-for-unauthorized-data-access.",
+      "checker": "rls-auditor",
+      "severity": "HIGH",
+      "summary": "Missing Row-Level Ownership: Potential for unauthorized data access.",
+      "target": "admin_saved_filter",
+      "file": "backend/src/main/java/com/hermes/backend/AdminSavedFilter.java",
+      "evidence": [
+        "Entity class AdminSavedFilter maps to table admin_saved_filter.",
+        "Critical: No runnerId/userId/ownerId detected. This entity might be accessible to any authenticated (or unauthenticated) user."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "rls-auditor:processed-stripe-event:missing-row-level-ownership:-potential-for-unauthorized-data-access.",
+      "checker": "rls-auditor",
+      "severity": "HIGH",
+      "summary": "Missing Row-Level Ownership: Potential for unauthorized data access.",
+      "target": "processed_stripe_event",
+      "file": "backend/src/main/java/com/hermes/backend/ProcessedStripeEvent.java",
+      "evidence": [
+        "Entity class ProcessedStripeEvent maps to table processed_stripe_event.",
+        "Critical: No runnerId/userId/ownerId detected. This entity might be accessible to any authenticated (or unauthenticated) user."
+      ],
+      "verification": "static-only",
+      "confidence": 0.8
+    },
+    {
+      "id": "active-security-headers:response-headers:missing-security-header:-strict-transport-security",
+      "checker": "active-security-headers",
+      "severity": "MEDIUM",
+      "summary": "Missing security header: strict-transport-security",
+      "target": "response-headers",
+      "file": "",
+      "evidence": [
+        "The strict-transport-security response header is not set.",
+        "Without HSTS, users are vulnerable to protocol downgrade attacks."
+      ],
+      "verification": "runtime-verified",
+      "confidence": 0.95
+    },
+    {
+      "id": "active-user-enum:-api-auth-reset-password:password-reset-reveals-non-existence-of-email-enables-user-enumeration.",
+      "checker": "active-user-enum",
+      "severity": "MEDIUM",
+      "summary": "Password reset reveals non-existence of email — enables user enumeration.",
+      "target": "/api/auth/reset-password",
+      "file": "",
+      "evidence": [
+        "HTTP 404 for a nonexistent email address.",
+        "Response: {\"error\":\"Not found\"}",
+        "Differential response allows attackers to enumerate valid email accounts."
+      ],
+      "verification": "runtime-verified",
+      "confidence": 0.8
+    },
+    {
+      "id": "active-user-enum:-api-auth-login:login-error-message-reveals-account-existence-enables-user-enumeration.",
+      "checker": "active-user-enum",
+      "severity": "MEDIUM",
+      "summary": "Login error message reveals account existence — enables user enumeration.",
+      "target": "/api/auth/login",
+      "file": "",
+      "evidence": [
+        "HTTP 401 for nonexistent email.",
+        "Response contains: {\"error\":\"Invalid email or password.\"}",
+        "Differential error messages allow attackers to determine if an email is registered."
+      ],
+      "verification": "runtime-verified",
+      "confidence": 0.75
+    },
+    {
+      "id": "pii-leak-hunter:backend-src-main-java-com-hermes-backend-runner.java:sensitive-data-exposure:-entity-dto-might-leak-pii-in-json-responses.",
+      "checker": "pii-leak-hunter",
+      "severity": "MEDIUM",
+      "summary": "Sensitive Data Exposure: Entity/DTO might leak PII in JSON responses.",
+      "target": "backend/src/main/java/com/hermes/backend/Runner.java",
+      "file": "backend/src/main/java/com/hermes/backend/Runner.java",
+      "evidence": [
+        "Detected potential PII field without explicit @JsonIgnore or Write-Only protection."
+      ],
+      "verification": "static-only",
+      "confidence": 0.6
+    },
+    {
+      "id": "active-rate-limit:-api-auth-login:login-endpoint-rate-limits-after-7-attempts-rate-limiting-is-active.",
+      "checker": "active-rate-limit",
+      "severity": "LOW",
+      "summary": "Login endpoint rate-limits after 7 attempts — rate limiting is active.",
+      "target": "/api/auth/login",
+      "file": "",
+      "evidence": [
+        "Rate limit (429) triggered after 7 attempts.",
+        "Brute-force protection is in place."
+      ],
+      "verification": "runtime-verified",
+      "confidence": 0.9
+    },
+    {
+      "id": "leak-detector:get-api-activities-id-elevation-status:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
+      "checker": "leak-detector",
+      "severity": "LOW",
+      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
+      "target": "GET /api/activities/{id}/elevation/status",
+      "file": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+      "evidence": [
+        "Controller route /api/activities/{id}/elevation/status matched the config/export/status review heuristic."
+      ],
+      "verification": "static-only",
+      "confidence": 0.5
+    },
+    {
+      "id": "leak-detector:get-api-admin-users-export:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
+      "checker": "leak-detector",
+      "severity": "LOW",
+      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
+      "target": "GET /api/admin/users/export",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Controller route /api/admin/users/export matched the config/export/status review heuristic."
+      ],
+      "verification": "static-only",
+      "confidence": 0.5
+    },
+    {
+      "id": "leak-detector:get-api-admin-shoes-export:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
+      "checker": "leak-detector",
+      "severity": "LOW",
+      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
+      "target": "GET /api/admin/shoes/export",
+      "file": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "evidence": [
+        "Controller route /api/admin/shoes/export matched the config/export/status review heuristic."
+      ],
+      "verification": "static-only",
+      "confidence": 0.5
+    },
+    {
+      "id": "leak-detector:get-api-billing-config:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
+      "checker": "leak-detector",
+      "severity": "LOW",
+      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
+      "target": "GET /api/billing/config",
+      "file": "backend/src/main/java/com/hermes/backend/BillingController.java",
+      "evidence": [
+        "Controller route /api/billing/config matched the config/export/status review heuristic."
+      ],
+      "verification": "static-only",
+      "confidence": 0.5
+    },
+    {
+      "id": "leak-detector:get-api-config-status:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
+      "checker": "leak-detector",
+      "severity": "LOW",
+      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
+      "target": "GET /api/config/status",
+      "file": "backend/src/main/java/com/hermes/backend/ConfigStatusController.java",
+      "evidence": [
+        "Controller route /api/config/status matched the config/export/status review heuristic."
+      ],
+      "verification": "static-only",
+      "confidence": 0.5
+    },
+    {
+      "id": "leak-detector:get-api-garmin-connect-import-status:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
+      "checker": "leak-detector",
+      "severity": "LOW",
+      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
+      "target": "GET /api/garmin/connect/import/status",
+      "file": "backend/src/main/java/com/hermes/backend/GarminConnectController.java",
+      "evidence": [
+        "Controller route /api/garmin/connect/import/status matched the config/export/status review heuristic."
+      ],
+      "verification": "static-only",
+      "confidence": 0.5
+    },
+    {
+      "id": "leak-detector:get-api-auth-strava-status:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
+      "checker": "leak-detector",
+      "severity": "LOW",
+      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
+      "target": "GET /api/auth/strava/status",
+      "file": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+      "evidence": [
+        "Controller route /api/auth/strava/status matched the config/export/status review heuristic."
+      ],
+      "verification": "static-only",
+      "confidence": 0.5
+    }
+  ],
+  "taskWriteback": {
+    "attempted": false,
+    "ids": []
+  }
+}

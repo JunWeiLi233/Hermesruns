@@ -83,13 +83,7 @@ public class BillingController {
      */
     @GetMapping("/config")
     public Map<String, Object> billingConfig() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("checkoutConfigured", systemConfigService.isCheckoutFullyConfigured());
-        m.put("provider", "stripe");
-        if (priceDisplayLabel != null && !priceDisplayLabel.isBlank()) {
-            m.put("priceLabel", priceDisplayLabel.trim());
-        }
-        return m;
+        return (Map<String, Object>) systemConfigService.getPublicConfigStatus().get("billing");
     }
 
     /**

@@ -1,0 +1,23 @@
+{
+  "laneId": "fe-race-map",
+  "parentRunId": "ahm-20260416203624",
+  "correlationId": "ahm-20260416203624:fe-race-map",
+  "goal": "Guarantee a real Leaflet map always renders on /races/detail/:raceId (OSM tiles + correct fallback chain when no aligned overlay/route) and make the elevation chart source-truthful: do not fall back to synthetic hardcoded per-course elevation arrays when real samples are absent — show an explicit empty state instead, and only plot real points from courseMapData.elevationSamples or elevationProfileSamples. Also fix the pointer tooltip km math to respect the race's real distanceKm instead of hardcoded 42.195.",
+  "parentGoal": "improves algorithm in races/detail/:raceId, make sure there's a real map and correct calculation of elevation map",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/RacesDetail.jsx"
+  ],
+  "mustPreserve": [],
+  "verify": "",
+  "mergeNotes": "",
+  "priority": 1,
+  "effort": "medium",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\fe-race-map.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\fe-race-map-activity.json",
+  "command": "/auto-hermes scope=\"Guarantee a real Leaflet map always renders on /races/detail/:raceId (OSM tiles + correct fallback chain when no aligned overlay/route) and make the elevation chart source-truthful: do not fall back to synthetic hardcoded per-course elevation arrays when real samples are absent — show an explicit empty state instead, and only plot real points from courseMapData.elevationSamples or elevationProfileSamples. Also fix the pointer tooltip km math to respect the race's real distanceKm instead of hardcoded 42.195.\" mode=loop owned=\"frontend/src/pages/RacesDetail.jsx\""
+}

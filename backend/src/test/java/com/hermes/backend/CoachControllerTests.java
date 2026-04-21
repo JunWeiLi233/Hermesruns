@@ -87,14 +87,15 @@ class CoachControllerTests {
                         new AutomatedCoachService.CoachStaminaDto(95, 98, 300, 115, "down"),
                         new AutomatedCoachService.CoachTrainingBlockDto(21.1, LocalDate.now().plusWeeks(10), 0, 18.0, "Half Build")
                 ),
-                new AutomatedCoachService.CoachRouteRecommendationDto(
+                new CoachRouteRecommendationDto(
                         "north-east",
                         "distance-match",
                         10.0,
                         10.1,
                         2,
-                        new AutomatedCoachService.CoachRoutePreviewDto("M 10.00 10.00 L 20.00 20.00", 10.0, 10.0, 20.0, 20.0)
-                )
+                        new CoachRoutePreviewDto("M 10.00 10.00 L 20.00 20.00", 10.0, 10.0, 20.0, 20.0)
+                ),
+                null
         );
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(coachService.getTodayWithReadiness(runner)).thenReturn(payload);

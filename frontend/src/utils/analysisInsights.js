@@ -1,12 +1,14 @@
 import { formatDuration, formatPaceSeconds } from './format';
 import {
   calculateVdot,
+  buildOrderedRacePredictions,
   collectAllVdotEntries,
   estimateCurrentVdot,
   predictRaceTimeCalibrated,
   RACE_DISTANCES,
   danielsRunningVo2CostMlKgMin,
   computeTrainingPaces,
+  vdotToPaceSecondsPerKm,
 } from './vdot';
 
 export const KM_TO_MILE = 1.60934;
@@ -19,6 +21,14 @@ export const ZONES = [
   { key: 'interval', minFrac: 0.92, color: '#ff6e5d' },
   { key: 'rep', minFrac: 1.05, color: '#ff5647' },
 ];
+
+const TRAINING_ZONE_DISPLAY_FRACTIONS = {
+  easy: [0.59, 0.74],
+  marathon: [0.75, 0.83],
+  threshold: [0.83, 0.92],
+  interval: [0.92, 1.05],
+  repetition: [1.05, 1.1],
+};
 
 const avg = (values) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0);
 
@@ -264,7 +274,7 @@ export function buildVo2Bars(entries, lang) {
 export function buildPredictionRows(bestVdot, runs, lang, unit) {
   if (!bestVdot) return [];
 
-  return RACE_DISTANCES.map((distance) => ({ ...distance, timeMin: predictRaceTimeCalibrated(bestVdot, distance.meters, runs) }))
+  return buildOrderedRacePredictions(bestVdot, runs)
     .map((row) => {
       const totalSeconds = Math.round((row.timeMin || 0) * 60);
       const paceSec = row.timeMin ? (totalSeconds / row.meters) * 1000 : null;
@@ -273,7 +283,6 @@ export function buildPredictionRows(bestVdot, runs, lang, unit) {
         label: lang === 'zh-CN' ? row.labelZh : row.labelEn,
         timeLabel: row.timeMin ? formatDuration(totalSeconds) : '--',
         paceLabel: paceSec ? formatPaceSeconds(unit === 'mile' ? paceSec * KM_TO_MILE : paceSec) : '--:--',
-        vdotLabel: row.timeMin ? calculateVdot(row.meters, row.timeMin).toFixed(1) : '--',
       };
     });
 }
@@ -541,8 +550,13 @@ export function buildTrainingZones(bestVdot, lang, unit) {
   ];
 
   return zones.map((zone) => {
-    const range = zone.range.map((s) => {
-      const pace = unit === 'mile' ? s * KM_TO_MILE : s;
+    const displaySeconds = zone.range.length > 1
+      ? zone.range
+      : (TRAINING_ZONE_DISPLAY_FRACTIONS[zone.key] || [])
+        .map((fraction) => vdotToPaceSecondsPerKm(bestVdot, fraction))
+        .filter(Boolean);
+    const range = (displaySeconds.length ? displaySeconds : zone.range).map((seconds) => {
+      const pace = unit === 'mile' ? seconds * KM_TO_MILE : seconds;
       return formatPaceSeconds(pace);
     });
     return {

@@ -1,0 +1,23 @@
+{
+  "laneId": "runs-search",
+  "parentRunId": "ahm-20260418053508",
+  "correlationId": "ahm-20260418053508:runs-search",
+  "goal": "Add name search to the Runs page.",
+  "parentGoal": "Enhance Today's Run recommendation with race-aware coaching and add Tier 1/2 feature gaps (ACWR detail, Runs search).",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/Runs.jsx"
+  ],
+  "mustPreserve": [],
+  "verify": "",
+  "mergeNotes": "",
+  "priority": 3,
+  "effort": "small",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\runs-search.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\runs-search-activity.json",
+  "command": "/auto-hermes scope=\"Add name search to the Runs page.\" mode=loop owned=\"frontend/src/pages/Runs.jsx\""
+}

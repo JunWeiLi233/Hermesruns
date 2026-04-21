@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-04-20T04:19:15.754Z",
+  "taskStatement": "Security Hardening: Config Leak & Strava Webhook Forge",
+  "desiredOutcome": "[security] Config status endpoint leaks sensitive configuration data without authentication. on [security] Config status endpoint leaks sensitive configuration data without authentication.",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "[security] Config status endpoint leaks sensitive configuration data without authentication.",
+    "problemClass": "unknown",
+    "touchesFrontend": false,
+    "touchesBackend": true,
+    "isCrossStack": false
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "/api/config/status"
+  ],
+  "lanesPlanned": 1
+}

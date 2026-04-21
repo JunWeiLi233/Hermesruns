@@ -1,0 +1,18 @@
+{
+  "laneId": "lane-1-login",
+  "goal": "Refine /login hero and CTA hierarchy",
+  "parentGoal": "Refresh all public auth pages",
+  "mode": "single-round",
+  "ownedFiles": [
+    "frontend/src/pages/Login.jsx",
+    "frontend/src/styles/style.css"
+  ],
+  "mustPreserve": [
+    "Strava-first auth flow",
+    "existing legal links"
+  ],
+  "verify": "cd frontend && npm run lint",
+  "mergeNotes": "",
+  "status": "pending-launch",
+  "command": "/auto-hermes scope=\"Refine /login hero and CTA hierarchy\" mode=single-round"
+}

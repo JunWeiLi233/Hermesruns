@@ -1,0 +1,21 @@
+[
+  {
+    "at": "2026-04-20T02:19:00-04:00",
+    "laneId": "lane-frontend",
+    "event": "round-complete",
+    "summary": "Added a Today Run ACWR load callout and helper-driven coach narrative so runners see the zone plus clear plain-language guidance instead of only a ratio chip.",
+    "changedFiles": [
+      "frontend/src/pages/TodayRun.jsx",
+      "frontend/src/utils/todayRunAcwrInsight.js",
+      "frontend/src/styles/style.css",
+      "frontend/src/utils/todayRunAcwrInsight.test.js",
+      "frontend/src/utils/todayRunAcwrNarrative.smoke.test.js"
+    ],
+    "verification": [
+      "node frontend/src/utils/todayRunAcwrInsight.test.js",
+      "node frontend/src/utils/todayRunAcwrNarrative.smoke.test.js",
+      "cmd /c \"cd /d frontend && node scripts/run-vite-build.mjs\"",
+      "node .tools/verify-frontend-runtime-sync.mjs --files \"frontend/src/pages/TodayRun.jsx||frontend/src/styles/style.css||frontend/src/utils/todayRunAcwrInsight.js\""
+    ]
+  }
+]

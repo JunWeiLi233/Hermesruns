@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-04-18T05:55:18.547Z",
+  "taskStatement": "Add VDOT methodology sections to VO2max and Prediction detail pages to increase calculation transparency",
+  "desiredOutcome": "No promotable work found",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "Prediction",
+    "problemClass": "unknown",
+    "touchesFrontend": true,
+    "touchesBackend": false,
+    "isCrossStack": false
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "frontend/src/pages/Vo2MaxDetail.jsx | frontend/src/pages/PredictionDetail.jsx"
+  ],
+  "lanesPlanned": 0
+}

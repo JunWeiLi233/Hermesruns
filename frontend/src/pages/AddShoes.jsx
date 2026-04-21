@@ -7,47 +7,17 @@ import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import ShoeBrandLogo, { getShoeBrandLogoBackgroundStyle } from '../components/ShoeBrandLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import shoeCatalog from '../data/shoeCatalog';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
+const EXTRA_BRAND_KEYS = ['lining', 'anta', 'brooks', 'hoka'];
 
 function normalizeBrandKey(brand) {
-  return (brand || '').toString().trim().toLowerCase().replace(/\s+/g, '').replace(/[!.,]/g, '');
-}
-
-function brandLogoSpec(brand) {
-  const key = normalizeBrandKey(brand);
-  const make = ({ bg, fg, text }) => ({ bg, fg, text, fontSize: /[\u4e00-\u9fff]/.test(text) ? 12 : 13 });
-  if (key === 'nike') return make({ bg: '#f97316', fg: '#ffffff', text: 'NIKE' });
-  if (key === 'adidas') return make({ bg: '#111827', fg: '#ffffff', text: 'ADID' });
-  if (key === 'asics') return make({ bg: '#2563eb', fg: '#ffffff', text: 'ASICS' });
-  if (key === 'newbalance') return make({ bg: '#fbbf24', fg: '#0f172a', text: 'NB' });
-  if (key === 'hoka') return make({ bg: '#22c55e', fg: '#ffffff', text: 'HOKA' });
-  if (key === 'brooks') return make({ bg: '#3b82f6', fg: '#ffffff', text: 'BROOKS' });
-  if (key === 'saucony') return make({ bg: '#ef4444', fg: '#ffffff', text: 'SAU' });
-  if (key === 'on') return make({ bg: '#e5e7eb', fg: '#0f172a', text: 'ON' });
-  if (key === 'mizuno') return make({ bg: '#8b5cf6', fg: '#ffffff', text: 'M' });
-  if (key === 'altra') return make({ bg: '#a16207', fg: '#ffffff', text: 'AL' });
-  if (key === 'puma') return make({ bg: '#0f172a', fg: '#ffffff', text: 'PUMA' });
-  if (key === '361' || key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361' });
-  if (key === 'xtep') return make({ bg: '#2563eb', fg: '#ffffff', text: 'XTEP' });
-  return null;
-}
-
-function BrandLogo({ brand, fallbackEmoji }) {
-  const spec = brandLogoSpec(brand);
-  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || 'S'}</span>;
-  return (
-    <svg className="shoe-brand-logo-svg" viewBox="0 0 40 40" role="img" aria-label={`${brand} logo`}>
-      <rect x="2" y="2" width="36" height="36" rx="10" fill={spec.bg} />
-      <text x="20" y="25" textAnchor="middle" dominantBaseline="middle" fill={spec.fg} fontFamily={/[\u4e00-\u9fff]/.test(spec.text) ? `'Microsoft YaHei','PingFang SC',system-ui,Segoe UI,Arial'` : 'system-ui,Segoe UI,Arial'} fontSize={spec.fontSize} fontWeight="800">
-        {spec.text}
-      </text>
-    </svg>
-  );
+  return (brand || '').toString().trim().toLowerCase().replace(/[\s!.,'"-]+/g, '');
 }
 
 function shoeHealth(current, max) {
@@ -181,6 +151,7 @@ export default function AddShoes() {
   const [formMaxDist, setFormMaxDist] = useState('500');
   const [formPrimary, setFormPrimary] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showExtraBrands, setShowExtraBrands] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -210,6 +181,12 @@ export default function AddShoes() {
   ];
 
   const browserBrands = useMemo(() => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)), [catalog]);
+  const extraBrands = useMemo(
+    () => EXTRA_BRAND_KEYS
+      .map((key) => browserBrands.find((brand) => normalizeBrandKey(brand.brand) === key))
+      .filter(Boolean),
+    [browserBrands],
+  );
 
   useEffect(() => {
     if (!browserBrands.length) return;
@@ -217,6 +194,13 @@ export default function AddShoes() {
     if (matched) { setBrowserBrandKey(matched.brand); return; }
     if (!browserBrandKey) setBrowserBrandKey(browserBrands[0].brand);
   }, [browserBrandKey, browserBrands, preselectedBrand]);
+
+  useEffect(() => {
+    if (!browserBrand) return;
+    if (extraBrands.some((brand) => brand.brand === browserBrand.brand)) {
+      setShowExtraBrands(true);
+    }
+  }, [browserBrand, extraBrands]);
 
   const browserBrand = useMemo(() => browserBrands.find((brand) => brand.brand === browserBrandKey) || browserBrands[0] || null, [browserBrands, browserBrandKey]);
   const browserBrandsToShow = useMemo(() => {
@@ -279,6 +263,11 @@ export default function AddShoes() {
     : t('shoes.add_page_search_models_empty');
   const selectedCategoryLabel = selectedCatalogModel ? getCatalogCategoryLabel(selectedCatalogModel.category || selectedCatalogModel.type, lang) : '';
   const browserModelCount = browserBrand?.models?.length || 0;
+  const featuredBrand = browserBrand || browserBrandsToShow[0] || null;
+  const secondaryBrands = browserBrandsToShow.filter((brand) => brand.brand !== featuredBrand?.brand);
+  const fleetDistanceDisplay = `${formatDistanceValue(totalMileage, unit, 1)} ${distanceUnitLabel}`;
+  const selectedDistanceDisplay = `${formMaxDist || '--'} ${distanceUnitLabel}`;
+  const selectedTypeLabel = selectedCatalogModel ? t(`shoes.${TYPE_LABELS[selectedCatalogModel.type] || 'type_daily'}`) : '';
 
   function handleBrandPick(brand) {
     setBrowserBrandKey(brand.brand);
@@ -370,18 +359,23 @@ export default function AddShoes() {
         </header>
 
         <div className="runner-shell-canvas add-shoes-canvas">
-          <section className="add-shoes-hero">
-            <div className="add-shoes-hero-copy">
+          <section className="add-shoes-editorial-hero">
+            <div className="add-shoes-editorial-hero-main">
               <span className="analysis-overview-card-kicker">{t('shoes.stitch_surface_label')}</span>
-              <h1>{t('shoes.add_page_title')}</h1>
-              <p>{browserSubcopy}</p>
+              <div className="add-shoes-editorial-headline">
+                <h1>
+                  {t('shoes.add_page_title')}
+                  <span>{selectedBrandName || browserTitle}</span>
+                </h1>
+                <p>{browserSubcopy}</p>
+              </div>
               <div className="add-shoes-hero-pills">
                 <span className="add-shoes-hero-pill">{selectedBrandName || browserTitle}</span>
                 <span className="add-shoes-hero-pill">{t('shoes.add_page_models_count', { count: browserModelCount })}</span>
                 <span className="add-shoes-hero-pill">{t('shoes.add_page_active_pairs_count', { count: activeShoes.length })}</span>
               </div>
             </div>
-            <div className="add-shoes-hero-status">
+            <div className="add-shoes-editorial-hero-rail">
               <article className="add-shoes-status-card">
                 <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_active_pairs')}</span>
                 <strong>{activeShoes.length}</strong>
@@ -389,7 +383,7 @@ export default function AddShoes() {
               </article>
               <article className="add-shoes-status-card">
                 <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_fleet_distance')}</span>
-                <strong>{formatDistanceValue(totalMileage, unit, 1)} {distanceUnitLabel}</strong>
+                <strong>{fleetDistanceDisplay}</strong>
                 <p>{t('shoes.add_page_status_fleet_distance_copy')}</p>
               </article>
               <article className="add-shoes-status-card">
@@ -426,38 +420,90 @@ export default function AddShoes() {
 
                 <section className="add-shoes-step add-shoes-step-card">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">1</span><div><h2>{t('shoes.add_page_step_brand_title')}</h2><p>{t('shoes.add_page_step_brand_copy')}</p></div></div>
-                  <div className="add-shoes-brand-grid">
-                    {browserBrandsToShow.map((brand) => {
-                      const isActive = browserBrand?.brand === brand.brand;
-                      return (
-                        <button key={brand.brand} type="button" className={cx('add-shoes-brand-card', isActive && 'is-active')} onClick={() => handleBrandPick(brand)}>
-                          <span className="add-shoes-brand-tile"><BrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
-                          <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
-                        </button>
-                      );
-                    })}
+                  <div className="add-shoes-brand-deck">
+                    {featuredBrand ? (
+                      <button type="button" className="add-shoes-brand-deck-feature is-active" onClick={() => handleBrandPick(featuredBrand)} style={getShoeBrandLogoBackgroundStyle(featuredBrand.brand)}>
+                        <span className="add-shoes-brand-deck-flag">{t('shoes.browser_kicker')}</span>
+                        <div className="add-shoes-brand-deck-feature-copy">
+                          <strong>{localizeShoeBrand(featuredBrand.brand, lang)}</strong>
+                          <span>{t('shoes.model_count', { count: featuredBrand.models?.length || 0 })}</span>
+                          <p>{t('shoes.add_page_browser_setup_copy')}</p>
+                        </div>
+                      </button>
+                    ) : null}
+                    <div className="add-shoes-brand-deck-grid">
+                      {secondaryBrands.map((brand) => {
+                        const isActive = browserBrand?.brand === brand.brand;
+                        return (
+                          <button key={brand.brand} type="button" className={cx('add-shoes-brand-deck-card', isActive && 'is-active')} onClick={() => handleBrandPick(brand)} style={getShoeBrandLogoBackgroundStyle(brand.brand)}>
+                            <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
+                            <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                  {extraBrands.length ? (
+                    <div className="add-shoes-brand-expand-shell">
+                      <button
+                        type="button"
+                        className={cx('add-shoes-brand-expand-btn', showExtraBrands && 'is-open')}
+                        onClick={() => setShowExtraBrands((current) => !current)}
+                        aria-expanded={showExtraBrands}
+                      >
+                        <span>{showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}</span>
+                        <AppIcon name={showExtraBrands ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
+                      </button>
+                      {showExtraBrands ? (
+                        <div className="add-shoes-brand-expand-grid">
+                          {extraBrands.map((brand) => {
+                            const isActive = browserBrand?.brand === brand.brand;
+                            return (
+                              <button
+                                key={`extra-${brand.brand}`}
+                                type="button"
+                                className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
+                                onClick={() => handleBrandPick(brand)}
+                                style={getShoeBrandLogoBackgroundStyle(brand.brand)}
+                              >
+                                <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
+                                <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </section>
 
-                <section className="add-shoes-step add-shoes-step-card">
+                <section className="add-shoes-step add-shoes-step-card add-shoes-model-board">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>{t('shoes.add_page_step_model_title')}</h2><p>{t('shoes.add_page_step_model_copy')}</p></div></div>
-                  <div className="add-shoes-filter-row">
-                    {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => setBrowserCategory(categoryKey)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
-                    {browserTypeOptions.slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => setBrowserType(typeKey)}>{typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
+                  <div className="add-shoes-model-board-top">
+                    <div className="add-shoes-filter-row">
+                      {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => setBrowserCategory(categoryKey)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
+                      {browserTypeOptions.slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => setBrowserType(typeKey)}>{typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
+                    </div>
+                    <div className="add-shoes-search-row">
+                      <span className="add-shoes-search-icon" aria-hidden="true"><AppIcon name="search" /></span>
+                      <input type="text" value={modelQuery} onChange={(event) => setModelQuery(event.target.value)} placeholder={browserModelPlaceholder} />
+                    </div>
                   </div>
-                  <div className="add-shoes-search-row">
-                    <span className="add-shoes-search-icon" aria-hidden="true"><AppIcon name="search" /></span>
-                    <input type="text" value={modelQuery} onChange={(event) => setModelQuery(event.target.value)} placeholder={browserModelPlaceholder} />
-                  </div>
-                  <div className="add-shoes-model-grid-shell">
-                    <div className="add-shoes-model-grid-head"><strong>{browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : t('shoes.browser_brand')}</strong><span>{t('shoes.model_count', { count: browserModels.length })}</span></div>
+                  <div className="add-shoes-model-board-shell">
+                    <div className="add-shoes-model-grid-head add-shoes-model-board-header">
+                      <div>
+                        <strong>{browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : t('shoes.browser_brand')}</strong>
+                        <p>{t('shoes.browser_copy')}</p>
+                      </div>
+                      <span>{t('shoes.model_count', { count: browserModels.length })}</span>
+                    </div>
                     <div className="add-shoes-model-grid">
                       {browserModels.map((model, index) => {
                         const cardKey = `${browserBrand?.brand || 'brand'}:${model.model}:${index}`;
                         const isActive = selectedModelKey === `${browserBrand?.brand || ''}:${model.model}`;
                         return (
                           <button key={cardKey} type="button" className={cx('add-shoes-model-card', isActive && 'is-active')} onClick={() => handleModelPick(model)}>
-                            <span className="add-shoes-model-art"><BrandLogo brand={browserBrand?.brand || model.brand} fallbackEmoji={browserBrand?.logo} /></span>
+                            <span className="add-shoes-model-art"><ShoeBrandLogo brand={browserBrand?.brand || model.brand} fallbackEmoji={browserBrand?.logo} /></span>
                             <strong>{getCatalogModelLabel(model, lang)}</strong>
                             <span>{getCatalogCategoryLabel(model.category || model.type, lang)}</span>
                           </button>
@@ -468,25 +514,32 @@ export default function AddShoes() {
                   </div>
                 </section>
 
-                <section className="add-shoes-step add-shoes-step--form add-shoes-step-card">
+                <section className="add-shoes-step add-shoes-step--form add-shoes-step-card add-shoes-setup-payload">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">3</span><div><h2>{t('shoes.add_page_step_configure_title')}</h2><p>{t('shoes.add_page_step_configure_copy')}</p></div></div>
-                  <div className="add-shoes-selected-summary">
-                    <span className="add-shoes-panel-kicker">{t('shoes.add_page_selected_kicker')}</span>
-                    <strong>{selectedModelName || t('shoes.add_page_selected_empty')}</strong>
-                    <p>{selectedCatalogModel ? `${selectedBrandName} / ${selectedCategoryLabel}` : t('shoes.add_page_selected_copy')}</p>
+                  <div className="add-shoes-setup-payload-shell">
+                    <div className="add-shoes-selected-summary">
+                      <span className="add-shoes-panel-kicker">{t('shoes.add_page_selected_kicker')}</span>
+                      <strong>{selectedModelName || t('shoes.add_page_selected_empty')}</strong>
+                      <p>{selectedCatalogModel ? `${selectedBrandName} / ${selectedCategoryLabel}` : t('shoes.add_page_selected_copy')}</p>
+                      <div className="add-shoes-selected-meta">
+                        <span className="add-shoes-hero-pill">{selectedTypeLabel || t('shoes.add_page_step_configure_title')}</span>
+                        <span className="add-shoes-hero-pill">{selectedDistanceDisplay}</span>
+                        <span className="add-shoes-hero-pill">{formPrimary ? t('shoes.set_primary') : t('shoes.add_page_complete_setup')}</span>
+                      </div>
+                    </div>
+                    <form className="add-shoes-form" onSubmit={handleSubmit}>
+                      <div className="add-shoes-form-grid">
+                        <label className="add-shoes-field"><span className="modal-label">{t('shoes.nickname')}</span><input type="text" value={formNickname} onChange={(event) => setFormNickname(event.target.value)} placeholder={t('shoes.nickname_placeholder')} /></label>
+                        <label className="add-shoes-field"><span className="modal-label">{t('shoes.max_distance')}</span><input type="number" value={formMaxDist} onChange={(event) => setFormMaxDist(event.target.value)} min="100" max="2000" step="50" /></label>
+                      </div>
+                      <label className="add-shoes-toggle"><input type="checkbox" checked={formPrimary} onChange={(event) => setFormPrimary(event.target.checked)} /><span>{t('shoes.set_primary')}</span></label>
+                      {submitState === 'error' ? <p className="add-shoes-form-error">{t('shoes.add_page_error')}</p> : null}
+                      <div className="add-shoes-form-actions">
+                        <button type="button" className="add-shoes-secondary-btn" onClick={() => navigate('/shoes')}>{t('shoes.cancel')}</button>
+                        <button type="submit" className="add-shoes-primary-btn" disabled={!formBrand.trim() || !formModel.trim() || submitState === 'saving'}><AppIcon name="add" className="runner-dashboard-side-link-icon" /><span>{submitState === 'saving' ? t('shoes.add_page_saving') : t('shoes.add_page_complete_setup')}</span></button>
+                      </div>
+                    </form>
                   </div>
-                  <form className="add-shoes-form" onSubmit={handleSubmit}>
-                    <div className="add-shoes-form-grid">
-                      <label className="add-shoes-field"><span className="modal-label">{t('shoes.nickname')}</span><input type="text" value={formNickname} onChange={(event) => setFormNickname(event.target.value)} placeholder={t('shoes.nickname_placeholder')} /></label>
-                      <label className="add-shoes-field"><span className="modal-label">{t('shoes.max_distance')}</span><input type="number" value={formMaxDist} onChange={(event) => setFormMaxDist(event.target.value)} min="100" max="2000" step="50" /></label>
-                    </div>
-                    <label className="add-shoes-toggle"><input type="checkbox" checked={formPrimary} onChange={(event) => setFormPrimary(event.target.checked)} /><span>{t('shoes.set_primary')}</span></label>
-                    {submitState === 'error' ? <p className="add-shoes-form-error">{t('shoes.add_page_error')}</p> : null}
-                    <div className="add-shoes-form-actions">
-                      <button type="button" className="add-shoes-secondary-btn" onClick={() => navigate('/shoes')}>{t('shoes.cancel')}</button>
-                      <button type="submit" className="add-shoes-primary-btn" disabled={!formBrand.trim() || !formModel.trim() || submitState === 'saving'}><AppIcon name="add" className="runner-dashboard-side-link-icon" /><span>{submitState === 'saving' ? t('shoes.add_page_saving') : t('shoes.add_page_complete_setup')}</span></button>
-                    </div>
-                  </form>
                 </section>
               </section>
             </div>

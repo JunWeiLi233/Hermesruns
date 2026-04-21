@@ -1,0 +1,30 @@
+{
+  "completedTask": "[security] Billing config endpoint leaks sensitive configuration data without authentication.",
+  "changedFiles": [
+    "/api/billing/config"
+  ],
+  "verification": "`node .tools/auto-hermes-security.mjs --mode audit --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --json`",
+  "remainingWork": [
+    {
+      "description": "Backend work on [security] Billing config endpoint leaks sensitive configuration data without authentication.",
+      "surface": "[security] Billing config endpoint leaks sensitive configuration data without authentication.",
+      "problemClass": "backend-logic",
+      "estimatedScope": "backend",
+      "effort": "medium"
+    }
+  ],
+  "parallelismRecommendation": {
+    "suggestedLanes": 1,
+    "rationale": "Single-lane work: no disjoint file ownership for parallel execution.",
+    "proposedScopes": [
+      {
+        "goal": "[security] Billing config endpoint leaks sensitive configuration data without authentication. on [security] Billing config endpoint leaks sensitive configuration data without authentication.",
+        "surface": "[security] Billing config endpoint leaks sensitive configuration data without authentication.",
+        "problemClass": "backend-logic",
+        "ownedFiles": [
+          "/api/billing/config"
+        ]
+      }
+    ]
+  }
+}
