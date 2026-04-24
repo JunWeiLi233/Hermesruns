@@ -39,7 +39,7 @@ assert.doesNotMatch(
 
 assert.match(
   styleSource,
-  /\.race-detail-map-canvas\s*\{[\s\S]*background:\s*linear-gradient\(180deg,\s*rgba\(12,\s*14,\s*17,\s*0\.0[0-9]+\),\s*rgba\(12,\s*14,\s*17,\s*0\.1[0-9]+\)\);/,
+  /\.race-detail-map-canvas\s*\{[\s\S]*background:\s*#ece7df;/,
   'Race detail map canvas should keep only a very light atmospheric wash so the OpenStreetMap layer reads as the true bottom layer.',
 );
 
@@ -51,8 +51,8 @@ assert.doesNotMatch(
 
 assert.match(
   racesDetailSource,
-  /const routeShadowPane = map\.createPane\('race-detail-route-shadow'\);[\s\S]*const routePane = map\.createPane\('race-detail-route'\);[\s\S]*const routeMarkerPane = map\.createPane\('race-detail-route-marker'\);/,
-  'RacesDetail should create dedicated Leaflet panes so the AI-scanned route is explicitly rendered above the basemap.',
+  /const courseImagePane = map\.createPane\('race-detail-course-image'\);[\s\S]*const routeShadowPane = map\.createPane\('race-detail-route-shadow'\);[\s\S]*const routePane = map\.createPane\('race-detail-route'\);[\s\S]*const routeMarkerPane = map\.createPane\('race-detail-route-marker'\);/,
+  'RacesDetail should create dedicated Leaflet panes so the transparent course-map image sits above the basemap and below the AI-scanned route.',
 );
 
 assert.match(

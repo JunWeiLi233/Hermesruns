@@ -21,6 +21,7 @@ public class MarathonRouteMatchAndExportService {
     }
 
     public MarathonRouteMatchAndExportResult matchExportAndPersist(
+            Runner runner,
             String raceId,
             String raceName,
             String city,
@@ -35,6 +36,7 @@ public class MarathonRouteMatchAndExportService {
                 .toList();
         String gpxXml = gpxExportService.exportTrack(raceName, "OSRM matched marathon route", matchedAsRaw);
         GeneratedRaceGpxAsset persistedAsset = generatedRaceGpxPersistenceService.save(
+                runner,
                 raceId,
                 raceName,
                 city,

@@ -54,10 +54,18 @@ public class AdminSecurityFilter implements Filter {
     }
 
     private boolean isAdminEndpoint(String path) {
-        // Broad prefix matching for known admin surfaces
-        return path.startsWith("/api/admin/") || 
-               path.equals("/api/admin") ||
+        if ("/api/auth/admin-login".equals(path)) {
+            return false;
+        }
+        if ("/api/dev/console-errors".equals(path)) {
+            return false;
+        }
+        // Centralized protection for any path containing "/admin/" or specific admin entry points
+        return path.contains("/admin/") ||
+               path.startsWith("/api/admin") ||
+               path.contains("/admin-login") ||
                path.startsWith("/api/auth/runners") ||
-               path.startsWith("/api/shoe-catalog/admin");
+               path.startsWith("/api/shoe-catalog/admin") ||
+               path.startsWith("/api/dev/");
     }
 }

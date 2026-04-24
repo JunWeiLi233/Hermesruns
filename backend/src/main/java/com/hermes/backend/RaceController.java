@@ -431,6 +431,7 @@ public class RaceController {
         Map<String, Object> payload = new HashMap<>();
         payload.put("imageUrl", "");
         payload.put("previewImageUrl", "");
+        payload.put("overlayImageUrl", "");
         payload.put("source", "");
         payload.put("routeAvailable", false);
         payload.put("confidence", 0);
@@ -446,21 +447,28 @@ public class RaceController {
     private Map<String, Object> toRunnerCourseMapPayload(RaceCourseMapResult result) {
         Map<String, Object> payload = new HashMap<>();
         boolean routeAvailable = hasVerifiedRoute(result);
+        boolean cityLevelReference = hasCityLevelReference(result);
+        boolean courseMapAvailable = routeAvailable || cityLevelReference;
         String imageUrl = result == null || result.imageUrl() == null ? "" : result.imageUrl();
         String previewImageUrl = imageUrl.isBlank()
                 ? ""
                 : raceCourseMapService.materializePreviewImageUrl(imageUrl);
+        String overlayImageUrl = routeAvailable && result != null && result.overlayBounds() != null && !imageUrl.isBlank()
+                ? raceCourseMapService.materializeTransparentOverlayImageUrl(imageUrl)
+                : "";
         payload.put("imageUrl", imageUrl);
         payload.put("previewImageUrl", previewImageUrl == null || previewImageUrl.isBlank() ? imageUrl : previewImageUrl);
+        payload.put("overlayImageUrl", overlayImageUrl == null ? "" : overlayImageUrl);
         payload.put("source", result == null || result.source() == null ? "" : result.source());
-        payload.put("routeAvailable", routeAvailable);
-        payload.put("confidence", routeAvailable && result != null ? result.confidence() : 0);
+        payload.put("routeAvailable", courseMapAvailable);
+        payload.put("cityLevelReference", cityLevelReference);
+        payload.put("confidence", courseMapAvailable && result != null ? result.confidence() : 0);
         payload.put("summary", result == null || result.summary() == null ? "" : result.summary());
-        payload.put("viewportBounds", routeAvailable && result != null ? result.overlayBounds() : null);
+        payload.put("viewportBounds", courseMapAvailable && result != null ? result.overlayBounds() : null);
         payload.put("routePoints", routeAvailable && result != null && result.routePoints() != null ? result.routePoints() : List.of());
         payload.put("elevationSamples", routeAvailable && result != null && result.elevationSamples() != null ? result.elevationSamples() : List.of());
         payload.put("totalClimbMeters", routeAvailable && result != null ? result.totalClimbMeters() : null);
-        payload.put("aiAssisted", routeAvailable && result != null && result.aiAssisted());
+        payload.put("aiAssisted", courseMapAvailable && result != null && result.aiAssisted());
         return payload;
     }
 
@@ -469,6 +477,16 @@ public class RaceController {
                 && result.courseMapDetected()
                 && result.routePoints() != null
                 && !result.routePoints().isEmpty();
+    }
+
+    private boolean hasCityLevelReference(RaceCourseMapResult result) {
+        if (result == null || !result.courseMapDetected() || result.overlayBounds() == null) return false;
+        if (result.routePoints() != null && !result.routePoints().isEmpty()) return false;
+        String summary = result.summary() == null ? "" : result.summary().toLowerCase(java.util.Locale.ROOT);
+        return result.confidence() >= 58
+                && result.aiAssisted()
+                && summary.contains("city-level course-map match")
+                && summary.contains("not a distance-accurate route overlay");
     }
 
     private record ValidationResult(boolean valid, String message) {

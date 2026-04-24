@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,10 +16,17 @@ import java.util.Optional;
 public class WeatherContextController {
     private final AuthService authService;
     private final AcclimatizationService acclimatizationService;
+    private final WeatherAdjustedFitnessService fitnessService;
+    private final ActivityRepository activityRepository;
 
-    public WeatherContextController(AuthService authService, AcclimatizationService acclimatizationService) {
+    public WeatherContextController(AuthService authService,
+                                  AcclimatizationService acclimatizationService,
+                                  WeatherAdjustedFitnessService fitnessService,
+                                  ActivityRepository activityRepository) {
         this.authService = authService;
         this.acclimatizationService = acclimatizationService;
+        this.fitnessService = fitnessService;
+        this.activityRepository = activityRepository;
     }
 
     @GetMapping("/context")
@@ -36,6 +44,24 @@ public class WeatherContextController {
         } catch (Exception exception) {
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "Server error");
         }
+    }
+
+    @GetMapping("/fitness-interpretation")
+    public ResponseEntity<?> getFitnessInterpretation(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
+        if (runnerOpt.isEmpty()) {
+            return error(HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
+        }
+
+        List<Activity> recentRuns = activityRepository.findRunsBetween(
+                runnerOpt.get(),
+                ActivityType.RUN,
+                java.time.LocalDateTime.now().minusDays(90),
+                java.time.LocalDateTime.now().plusDays(1)
+        );
+
+        WeatherAdjustedFitnessService.WeatherAdjustedFitnessResult result = fitnessService.calculateAdjustedFitness(recentRuns);
+        return ResponseEntity.ok(result);
     }
 
     private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {

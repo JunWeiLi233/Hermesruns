@@ -79,10 +79,16 @@ assert.match(
   'Add Shoes styles should define the setup payload shell.',
 );
 
-assert.match(
+assert.doesNotMatch(
+  addShoesSource,
+  /getShoeBrandLogoBackgroundStyle/,
+  'Add Shoes should not paint raw logo assets as CSS background layers behind the visible brand logo.',
+);
+
+assert.doesNotMatch(
   styleSource,
-  /\.add-shoes-brand-deck-feature\.is-active[\s\S]*--add-shoes-brand-bg-image/,
-  'Add Shoes styles should use the active featured card background for the brand logo treatment.',
+  /--add-shoes-brand-bg-image/,
+  'Add Shoes styles should not rely on the raw brand asset background variable, because that reintroduces leftover image backgrounds.',
 );
 
 console.log('[PASS] Add Shoes kinetic editorial guardrails passed.');

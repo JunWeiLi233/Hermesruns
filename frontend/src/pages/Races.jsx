@@ -18,7 +18,7 @@ import {
   getSafeRaceTargetLabel,
 } from '../utils/raceLocalization';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import worldRaceCatalog, { worldRaceCountries } from '../data/worldRaceCatalog';
+import { standardCityRoadMarathonCatalog, worldRaceCountries } from '../data/worldRaceCatalog';
 import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache } from '../utils/raceImage';
 
 const STATUS_OPTIONS = ['INTERESTED', 'APPLIED', 'REGISTERED', 'WAITLIST', 'COMPLETED', 'CANCELED'];
@@ -310,7 +310,7 @@ export default function Races() {
 
   const filteredCatalog = useMemo(() => {
     const query = catalogQuery.trim().toLowerCase();
-    return worldRaceCatalog.filter((race) => {
+    return standardCityRoadMarathonCatalog.filter((race) => {
       const matchesCountry = selectedCountry === 'All' || race.country === selectedCountry;
       if (!matchesCountry) return false;
       if (!query) return true;

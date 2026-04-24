@@ -163,6 +163,37 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
                     ap.activity_id,
                     ap.latitude,
                     ap.longitude,
+                    ap.sequence_index,
+                    row_number() over (partition by ap.activity_id order by ap.sequence_index asc) as point_ordinal,
+                    count(*) over (partition by ap.activity_id) as activity_point_count
+                from activity_points ap
+                where ap.activity_id in (:activityIds)
+            )
+            select activity_id, latitude, longitude, sequence_index
+            from ranked_points
+            where point_ordinal = 1
+               or point_ordinal = activity_point_count
+               or mod(
+                    point_ordinal - 1,
+                    case
+                        when :targetPointsPerActivity <= 2 then 1
+                        when activity_point_count <= :targetPointsPerActivity then 1
+                        else cast(ceiling(activity_point_count * 1.0 / :targetPointsPerActivity) as integer)
+                    end
+                  ) = 0
+            order by activity_id asc, sequence_index asc
+            """, nativeQuery = true)
+    List<Object[]> findRoutePreviewSamplesByActivityIds(
+            @Param("activityIds") List<Long> activityIds,
+            @Param("targetPointsPerActivity") int targetPointsPerActivity
+    );
+
+    @Query(value = """
+            with ranked_points as (
+                select
+                    ap.activity_id,
+                    ap.latitude,
+                    ap.longitude,
                     ap.distance_meters,
                     ap.elapsed_seconds,
                     ap.sequence_index,

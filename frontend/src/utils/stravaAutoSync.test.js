@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 
 import {
+  clearStravaOauthPendingFlag,
+  consumeStravaOauthPendingFlag,
   formatStravaSyncLabel,
   markStravaAutoSyncTriggered,
+  markStravaOauthPendingFlag,
   shouldTriggerStravaAutoSync,
   stravaSyncTone,
 } from './stravaAutoSync.js';
@@ -15,6 +18,9 @@ function createStorage() {
     },
     setItem(key, value) {
       data.set(key, String(value));
+    },
+    removeItem(key) {
+      data.delete(key);
     },
   };
 }
@@ -38,6 +44,20 @@ const t = (key) => key;
     storage,
     nowMs: 1000 + (5 * 60 * 1000),
   }), false);
+}
+
+{
+  const storage = createStorage();
+  markStravaOauthPendingFlag({ storage, nowMs: 1000 });
+  assert.equal(consumeStravaOauthPendingFlag({ storage, nowMs: 2000 }), true);
+  assert.equal(consumeStravaOauthPendingFlag({ storage, nowMs: 2001 }), false);
+}
+
+{
+  const storage = createStorage();
+  markStravaOauthPendingFlag({ storage, nowMs: 1000 });
+  clearStravaOauthPendingFlag({ storage });
+  assert.equal(consumeStravaOauthPendingFlag({ storage, nowMs: 2000 }), false);
 }
 
 assert.equal(formatStravaSyncLabel({ linked: false }, t), 'settings.strava_not_connected');

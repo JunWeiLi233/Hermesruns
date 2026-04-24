@@ -15,6 +15,11 @@ const promptFiles = [
     references: ['.codex/commands/auto-hermes.md', 'docs/auto-hermes/index.md'],
   },
   {
+    file: '.github/prompts/auto-hermes-self.prompt.md',
+    command: '/auto-hermes-self',
+    references: ['.codex/commands/auto-hermes-self.md', '.tools/auto-hermes-self-loop.mjs'],
+  },
+  {
     file: '.github/prompts/auto-hermes-max.prompt.md',
     command: '/auto-hermes-max',
     references: ['.codex/commands/auto-hermes-max.md', '.codex/workflows/auto-hermes-architecture.md'],
@@ -39,11 +44,21 @@ const promptFiles = [
     command: '/auto-hermes-tech-debt',
     references: ['.codex/commands/auto-hermes-tech-debt.md', '.codex/workflows/auto-hermes-tech-debt-contract.md'],
   },
+  {
+    file: '.github/prompts/auto-hermes-structure-update.prompt.md',
+    command: '/auto-hermes-structure-update',
+    references: ['.codex/commands/auto-hermes-structure-update.md', '.codex/workflows/auto-hermes-structure-update-contract.md'],
+  },
+  {
+    file: '.github/prompts/auto-hermes-submit-main.prompt.md',
+    command: '/auto-hermes-submit-main',
+    references: ['.codex/commands/auto-hermes-submit-main.md', 'docs/repo-rules/git-and-publish.md'],
+  },
 ];
 
 assert.match(
   copilotInstructions,
-  /\/auto-hermes-tech-debt/,
+  /\/auto-hermes-self/,
   'Repository Copilot instructions should advertise the Hermes prompt-file slash commands.',
 );
 
