@@ -20,6 +20,7 @@ public class MarathonRoutePipelineService {
     }
 
     public PipelineResult runPipeline(
+            Runner runner,
             String raceId,
             String raceName,
             String city,
@@ -27,18 +28,28 @@ public class MarathonRoutePipelineService {
             String officialWebsite,
             Double distanceKm,
             String imageFilePath
-    ) {
-        // Step 1 & 2: Route Extraction (Java + Python)
-        RoutePathExtractionResultDTO extractionResult = extractionService.extractRoutePath(imageFilePath);
+        ) {
+        if (!georeferencingService.isConfiguredForPipelineFallback()) {
+            throw new IllegalStateException("Marathon route pipeline is disabled while Google geocoding is removed.");
+        }
 
-        // Step 3: Georeferencing (Gemini + Google)
+        // Step 1 & 2: Route Extraction (Java + Python)
+        RoutePathExtractionResultDTO extractionResult = extractionService.extractRoutePath(
+                imageFilePath,
+                raceName,
+                city,
+                country,
+                distanceKm
+        );
+
+        // Step 3: Georeferencing (Qwen + Google)
         MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult georefResult = 
             georeferencingService.georeferenceRoute(imageFilePath, raceName, city, country, extractionResult);
 
         // Step 4: Map Matching & Export (OSRM + Persistence)
         MarathonRouteMatchAndExportService.MarathonRouteMatchAndExportResult matchExportResult =
             matchAndExportService.matchExportAndPersist(
-                raceId, raceName, city, country, officialWebsite, distanceKm, georefResult.rawBreadcrumbs());
+                runner, raceId, raceName, city, country, officialWebsite, distanceKm, georefResult.rawBreadcrumbs());
 
         return new PipelineResult(
             extractionResult,

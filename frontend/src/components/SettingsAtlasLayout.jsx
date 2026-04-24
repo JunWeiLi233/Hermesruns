@@ -20,7 +20,6 @@ export default function SettingsAtlasLayout({
   stravaLinking,
   connectStrava,
   disconnectStrava,
-  setActiveModal,
   toggleDigest,
   logout,
   saveProfile,
@@ -327,14 +326,13 @@ export default function SettingsAtlasLayout({
                 </div>
 
                 <p className="settings-atlas-service-note">{garminLane.credentialsNote}</p>
+                <button type="button" className="settings-atlas-service-action is-connect" onClick={() => navigate('/settings/garmin-import')}>
+                  {garminLane.primaryAction}
+                </button>
               </div>
-
-              <button type="button" className="settings-atlas-service-action is-connect" onClick={() => setActiveModal('garmin')}>
-                {garminLane.primaryAction}
-              </button>
             </article>
 
-            <button type="button" className="settings-atlas-panel settings-atlas-import-drop settings-atlas-import-drop--garmin" onClick={() => setActiveModal('manual')}>
+            <button type="button" className="settings-atlas-panel settings-atlas-import-drop settings-atlas-import-drop--garmin" onClick={() => navigate('/settings/import-data')}>
               <div className="settings-atlas-import-drop-copy">
                 <span className="settings-atlas-import-drop-kicker">{garminLane.manualValue}</span>
                 <strong>{garminLane.manualLabel}</strong>

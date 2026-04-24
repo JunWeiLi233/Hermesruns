@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
@@ -20,6 +20,7 @@ import { computeVdotTrend } from '../utils/vdot';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import { buildRecentShoeSignal, predictRetirement } from '../utils/shoeRotation';
 import { interpretWellness } from '../utils/wellnessInterpretation';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 
 const MARATHON_BLOCK_WEEKS = 16;
 
@@ -276,7 +277,6 @@ export default function TodayRun() {
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
-  const location = useLocation();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -413,7 +413,7 @@ export default function TodayRun() {
 
   const wellnessInterpretations = useMemo(
     () => (coachPayload?.state ? interpretWellness(coachPayload.state, t) : []),
-    [coachPayload?.state, t],
+    [coachPayload, t],
   );
 
   const vdotTrend = useMemo(
@@ -451,19 +451,11 @@ export default function TodayRun() {
   const staminaCapPercent = stamina.recoveryCapPercent;
   const staminaHeartLabel = stamina.targetHeartRateBpm != null ? String(stamina.targetHeartRateBpm) : '--';
 
-  const navItems = [
-    { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-    { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-  ].map((item) => ({
-    ...item,
-    active: location.pathname === item.route || location.pathname.startsWith(`${item.route}/`),
-  }));
+  const navItems = useMemo(
+    () => getRunnerShellNavItems({ t, lang }),
+    [lang, t],
+  );
+
 
   if (loadState === 'loading') {
     return (
@@ -515,9 +507,14 @@ export default function TodayRun() {
         </nav>
 
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/schedule')}>
-            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&lt;</span>
-            <span className="runner-dashboard-workout-btn-label">{t('today_run.stitch_action_schedule')}</span>
+          <button
+            type="button"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
+            onClick={() => navigate('/today-run')}
+            aria-label={t('profile.dashboard_start_workout')}
+          >
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+            <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>
         </div>
       </aside>
@@ -560,39 +557,39 @@ export default function TodayRun() {
                 <span className="today-run-coaching-answer-sub">{coachPayload?.state?.readinessScore != null ? `${coachPayload.state.readinessScore}/100` : recommendation.purpose}</span>
                 <div className="today-run-readiness-signals">
                   {coachPayload?.state?.readinessSleep != null && (
-                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_sleep')}>
-                      <AppIcon name="sleep" className="today-run-readiness-signal-icon" />
+                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_sleep')}: ${coachPayload.state.readinessSleep}`}>
+                      <AppIcon name="sleep" className="today-run-readiness-signal-icon" aria-hidden="true" />
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessSleep}%` }} />
                       </span>
-                      <small>{coachPayload.state.readinessSleep}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessSleep}</small>
                     </span>
                   )}
                   {coachPayload?.state?.readinessHrv != null && (
-                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_hrv')}>
-                      <AppIcon name="monitor_heart" className="today-run-readiness-signal-icon" />
+                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_hrv')}: ${coachPayload.state.readinessHrv}`}>
+                      <AppIcon name="monitor_heart" className="today-run-readiness-signal-icon" aria-hidden="true" />
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessHrv}%` }} />
                       </span>
-                      <small>{coachPayload.state.readinessHrv}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessHrv}</small>
                     </span>
                   )}
                   {coachPayload?.state?.readinessRhr != null && (
-                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_rhr')}>
-                      <AppIcon name="favorite" className="today-run-readiness-signal-icon" />
+                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_rhr')}: ${coachPayload.state.readinessRhr}`}>
+                      <AppIcon name="favorite" className="today-run-readiness-signal-icon" aria-hidden="true" />
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessRhr}%` }} />
                       </span>
-                      <small>{coachPayload.state.readinessRhr}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessRhr}</small>
                     </span>
                   )}
                   {coachPayload?.state?.readinessStress != null && (
-                    <span className="today-run-readiness-signal" title={t('today_run.readiness_signal_stress')}>
-                      <AppIcon name="stress" className="today-run-readiness-signal-icon" />
+                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_stress')}: ${coachPayload.state.readinessStress}`}>
+                      <AppIcon name="stress" className="today-run-readiness-signal-icon" aria-hidden="true" />
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessStress}%` }} />
                       </span>
-                      <small>{coachPayload.state.readinessStress}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessStress}</small>
                     </span>
                   )}
                 </div>
@@ -617,14 +614,14 @@ export default function TodayRun() {
                   <span className="today-run-coaching-answer-kicker">{t('today_run.wellness_signal_label')}</span>
                   <div className="today-run-coaching-wellness-row">
                     {coachPayload.state.lastSleepScore != null && (
-                      <div className="today-run-coaching-wellness-item" title={t('profile.dashboard_sleep_score')}>
-                        <AppIcon name="sleep" className="today-run-coaching-wellness-icon" />
+                      <div className="today-run-coaching-wellness-item" aria-label={`${t('profile.dashboard_sleep_score')}: ${coachPayload.state.lastSleepScore}`}>
+                        <AppIcon name="sleep" className="today-run-coaching-wellness-icon" aria-hidden="true" />
                         <strong>{coachPayload.state.lastSleepScore}</strong>
                       </div>
                     )}
                     {coachPayload.state.lastStressScore != null && (
-                      <div className="today-run-coaching-wellness-item" title={t('profile.dashboard_stress_score')}>
-                        <AppIcon name="stress" className="today-run-coaching-wellness-icon" />
+                      <div className="today-run-coaching-wellness-item" aria-label={`${t('profile.dashboard_stress_score')}: ${coachPayload.state.lastStressScore}`}>
+                        <AppIcon name="stress" className="today-run-coaching-wellness-icon" aria-hidden="true" />
                         <strong>{coachPayload.state.lastStressScore}</strong>
                       </div>
                     )}
@@ -713,14 +710,13 @@ export default function TodayRun() {
                   <span className="today-run-plan-rationale-label">{t('today_run.rationale_title')}</span>
                 </div>
                 <div className="today-run-plan-rationale-content">
-                  {reasons.slice(0, 3).map((reason, index) => (
-                    <span key={index} className="today-run-plan-rationale-item">
+                  {reasons.slice(0, 3).map((reason) => (
+                    <span key={reason} className="today-run-plan-rationale-item">
                       <AppIcon name="check_circle" className="today-run-plan-rationale-icon" />
                       {reason}
                     </span>
                   ))}
-                </div>
-              </div>
+                </div>              </div>
 
               <div className={`today-run-load-callout is-${acwrInsight.zone}`}>
                 <div className="today-run-load-callout-copy">
@@ -852,9 +848,9 @@ export default function TodayRun() {
                 </div>
 
                 <div className="today-run-plan-step-list">
-                  {blueprintSteps.map((step, index) => (
+                  {blueprintSteps.map((step) => (
                     <article
-                      key={`${step.phase}-${index}`}
+                      key={`${step.phase}-${step.label}`}
                       className="today-run-plan-step-card"
                     >
                       <span>{step.phase}</span>
@@ -906,7 +902,7 @@ export default function TodayRun() {
 
                 <div className="today-run-plan-reason-list">
                   {reasons.slice(0, 3).map((reason, index) => (
-                    <article key={`${reason}-${index}`} className="today-run-plan-reason-card">
+                    <article key={reason} className="today-run-plan-reason-card">
                       <strong>{String(index + 1).padStart(2, '0')}</strong>
                       <p>{reason}</p>
                     </article>

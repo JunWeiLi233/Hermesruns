@@ -1,0 +1,159 @@
+package com.hermes.backend;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class QwenAnchorPixelClientTests {
+
+    @Test
+    void extractAnchorPixelsInvokesConfiguredPythonWorkerAndParsesJson(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("course.png");
+        Files.write(imagePath, new byte[] {1, 2, 3, 4});
+
+        RecordingQwenAnchorPixelClient client = new RecordingQwenAnchorPixelClient(
+                new ObjectMapper(),
+                new FakeProcess("""
+                        {"anchors":[{"label":"Start","x":123,"y":456},{"label":"River Crossing","x":234,"y":567},{"label":"Downtown Turn","x":345,"y":678},{"label":"Finish","x":456,"y":789}]}
+                        """, "", 0)
+        );
+        ReflectionTestUtils.setField(client, "pythonExecutable", "python-custom");
+        ReflectionTestUtils.setField(client, "pythonScriptPath", "backend/src/main/resources/python/extract_anchor_pixels_qwen.py");
+        ReflectionTestUtils.setField(client, "modelId", "Qwen/Qwen2.5-VL-7B-Instruct");
+        ReflectionTestUtils.setField(client, "deviceMap", "auto");
+
+        List<RouteAnchorPixelPointDTO> result = client.extractAnchorPixels(
+                imagePath.toString(),
+                new RouteParametersDTO("#22AA66", List.of("Start", "River Crossing", "Downtown Turn", "Finish"))
+        );
+
+        assertThat(client.command()).containsExactly(
+                "python-custom",
+                "backend/src/main/resources/python/extract_anchor_pixels_qwen.py",
+                "--image",
+                imagePath.toString(),
+                "--model-id",
+                "Qwen/Qwen2.5-VL-7B-Instruct",
+                "--device-map",
+                "auto",
+                "--anchor",
+                "Start",
+                "--anchor",
+                "River Crossing",
+                "--anchor",
+                "Downtown Turn",
+                "--anchor",
+                "Finish"
+        );
+        assertThat(result)
+                .extracting(RouteAnchorPixelPointDTO::label, RouteAnchorPixelPointDTO::x, RouteAnchorPixelPointDTO::y)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("Start", 123, 456),
+                        org.assertj.core.groups.Tuple.tuple("River Crossing", 234, 567),
+                        org.assertj.core.groups.Tuple.tuple("Downtown Turn", 345, 678),
+                        org.assertj.core.groups.Tuple.tuple("Finish", 456, 789)
+                );
+    }
+
+    @Test
+    void extractAnchorPixelsRejectsResponsesWithoutExactlyFourAnchors(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("course.png");
+        Files.write(imagePath, new byte[] {1, 2, 3, 4});
+
+        RecordingQwenAnchorPixelClient client = new RecordingQwenAnchorPixelClient(
+                new ObjectMapper(),
+                new FakeProcess("""
+                        {"anchors":[{"label":"Start","x":1,"y":2},{"label":"River Crossing","x":3,"y":4},{"label":"Finish","x":7,"y":8}]}
+                        """, "", 0)
+        );
+
+        assertThatThrownBy(() -> client.extractAnchorPixels(
+                imagePath.toString(),
+                new RouteParametersDTO("#22AA66", List.of("Start", "River Crossing", "Downtown Turn", "Finish"))
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("exactly 4");
+    }
+
+    private static final class RecordingQwenAnchorPixelClient extends QwenAnchorPixelClient {
+        private final Process process;
+        private List<String> command;
+
+        private RecordingQwenAnchorPixelClient(ObjectMapper objectMapper, Process process) {
+            super(objectMapper);
+            this.process = process;
+        }
+
+        @Override
+        protected Process startPythonProcess(List<String> command) {
+            this.command = List.copyOf(command);
+            return process;
+        }
+
+        private List<String> command() {
+            return command;
+        }
+    }
+
+    private static final class FakeProcess extends Process {
+        private final InputStream inputStream;
+        private final InputStream errorStream;
+        private final int exitCode;
+
+        private FakeProcess(String stdout, String stderr, int exitCode) {
+            this.inputStream = new ByteArrayInputStream(stdout.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            this.errorStream = new ByteArrayInputStream(stderr.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            this.exitCode = exitCode;
+        }
+
+        @Override
+        public OutputStream getOutputStream() {
+            return OutputStream.nullOutputStream();
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return inputStream;
+        }
+
+        @Override
+        public InputStream getErrorStream() {
+            return errorStream;
+        }
+
+        @Override
+        public int waitFor() {
+            return exitCode;
+        }
+
+        @Override
+        public int exitValue() {
+            return exitCode;
+        }
+
+        @Override
+        public void destroy() {
+        }
+
+        @Override
+        public Process destroyForcibly() {
+            return this;
+        }
+
+        @Override
+        public boolean isAlive() {
+            return false;
+        }
+    }
+}

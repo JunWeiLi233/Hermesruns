@@ -291,6 +291,7 @@ function buildRaceHeroLabels(race) {
 const EMPTY_COURSE_MAP = Object.freeze({
   previewImageUrl: '',
   imageUrl: '',
+  overlayImageUrl: '',
   source: '',
   routeAvailable: false,
   confidence: 0,
@@ -316,6 +317,11 @@ function normalizeOverlayBounds(rawBounds) {
   if (north == null || south == null || east == null || west == null) return null;
   if (north <= south || east <= west) return null;
   return { north, south, east, west };
+}
+
+function toLeafletBoundsCorners(bounds) {
+  if (!bounds) return null;
+  return [[bounds.south, bounds.west], [bounds.north, bounds.east]];
 }
 
 function normalizeRoutePoints(rawPoints) {
@@ -351,6 +357,7 @@ function normalizeCourseMapPayload(payload) {
   return {
     previewImageUrl: resolveCourseMapPreviewImageUrl(payload),
     imageUrl: typeof payload.imageUrl === 'string' ? payload.imageUrl : '',
+    overlayImageUrl: typeof payload.overlayImageUrl === 'string' ? payload.overlayImageUrl : '',
     source: typeof payload.source === 'string' ? payload.source : '',
     routeAvailable: payload.routeAvailable === true,
     confidence,
@@ -597,6 +604,14 @@ export default function RacesDetail() {
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
   const hasAlignedRoute = mapTrust.trustedOverlay && courseMapData.routeAvailable && routeMapPoints.length > 1;
+  const courseMapImageOverlayBounds = useMemo(
+    () => (hasAlignedRoute && courseMapData.overlayImageUrl
+      ? toLeafletBoundsCorners(courseMapData.viewportBounds)
+      : null),
+    [courseMapData.overlayImageUrl, courseMapData.viewportBounds, hasAlignedRoute],
+  );
+  const hasTransparentCourseMapOverlay = Boolean(courseMapImageOverlayBounds && courseMapData.overlayImageUrl);
+  const hasCityLevelCourseMap = mapTrust.cityLevelMatch && courseMapData.routeAvailable && !hasAlignedRoute;
   const mapViewportBounds = mapTrust.viewportBounds || courseMapData.viewportBounds;
   const absoluteElevationProfile = useMemo(
     () => (courseMapData.elevationSamples.length ? courseMapData.elevationSamples : fallbackInterpretedElevationProfile),
@@ -649,18 +664,20 @@ export default function RacesDetail() {
     const chartStage = raceDetailElevationStageRef.current;
 
     const centerChartViewport = () => {
+      const stageWidth = chartStage.scrollWidth || chartStage.offsetWidth || elevationGraph.width;
       const midpointPoint = elevationGraph.points[Math.floor(elevationGraph.points.length / 2)];
       const targetScrollLeft = Math.max(
         0,
         Math.min(
           chartViewport.scrollWidth - chartViewport.clientWidth,
-          (midpointPoint?.x || chartViewport.scrollWidth / 2) - (chartViewport.clientWidth / 2),
+          (midpointPoint?.x || stageWidth / 2) - (chartViewport.clientWidth / 2),
         ),
       );
       chartViewport.scrollLeft = targetScrollLeft;
     };
 
-    const frameId = window.requestAnimationFrame(centerChartViewport);
+    const frameId = window.requestAnimationFrame(() => window.requestAnimationFrame(centerChartViewport));
+    const settleTimer = window.setTimeout(centerChartViewport, 140);
     let resizeObserver = null;
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => centerChartViewport());
@@ -670,6 +687,7 @@ export default function RacesDetail() {
 
     return () => {
       window.cancelAnimationFrame(frameId);
+      window.clearTimeout(settleTimer);
       resizeObserver?.disconnect();
     };
   }, [elevationGraph, raceId]);
@@ -704,12 +722,19 @@ export default function RacesDetail() {
         source: t('races.detail_map_route_source', { confidence: courseMapData.confidence }),
       };
     }
+    if (hasCityLevelCourseMap) {
+      return {
+        badge: t('races.detail_map_detected_badge'),
+        title: t('races.detail_map_city_title', { city }),
+        source: t('races.detail_map_detected_source'),
+      };
+    }
     return {
       badge: t('races.detail_map_city_badge'),
       title: t('races.detail_map_city_title', { city }),
       source: t('races.detail_map_city_source'),
     };
-  }, [courseMapData.confidence, hasAlignedRoute, race, t]);
+  }, [courseMapData.confidence, hasAlignedRoute, hasCityLevelCourseMap, race, t]);
 
   useEffect(() => {
     // Show page immediately when basic race data is loaded
@@ -728,7 +753,7 @@ export default function RacesDetail() {
       routeMapInstanceRef.current.remove();
       routeMapInstanceRef.current = null;
     }
-  }, [courseMapData.imageUrl, courseMapData.previewImageUrl, hasAlignedRoute, race?.id, routeMapPoints.length]);
+  }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, hasAlignedRoute, race?.id, routeMapPoints.length]);
 
   useEffect(() => {
     if (!routeMapRef.current || !race || routeMapInstanceRef.current) return undefined;
@@ -757,6 +782,10 @@ export default function RacesDetail() {
         keyboard: false,
         tap: false,
       });
+      const courseImagePane = map.createPane('race-detail-course-image');
+      courseImagePane.style.zIndex = '430';
+      courseImagePane.style.pointerEvents = 'none';
+      courseImagePane.style.mixBlendMode = 'multiply';
       const routeShadowPane = map.createPane('race-detail-route-shadow');
       routeShadowPane.style.zIndex = '440';
       const routePane = map.createPane('race-detail-route');
@@ -870,6 +899,15 @@ export default function RacesDetail() {
         hasAppliedInitialViewport = true;
       };
 
+      if (hasTransparentCourseMapOverlay) {
+        L.imageOverlay(courseMapData.overlayImageUrl, courseMapImageOverlayBounds, {
+          pane: 'race-detail-course-image',
+          opacity: 0.72,
+          interactive: false,
+          className: 'race-detail-course-map-overlay',
+        }).addTo(map);
+      }
+
       if (hasAlignedRoute) {
         L.polyline(routeMapPoints, {
           color: '#fff6f2',
@@ -953,7 +991,7 @@ export default function RacesDetail() {
         createdMap.remove();
       }
     };
-  }, [courseMapData.imageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, fallbackTileUrl, hasAlignedRoute, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
+  }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, courseMapImageOverlayBounds, fallbackTileUrl, hasAlignedRoute, hasTransparentCourseMapOverlay, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
 
   if (loadState !== 'ready') {
     return (

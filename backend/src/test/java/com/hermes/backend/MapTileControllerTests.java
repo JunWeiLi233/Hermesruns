@@ -1,7 +1,7 @@
 package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,7 +34,7 @@ class MapTileControllerTests {
         when(restTemplate.exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+            ArgumentMatchers.<HttpEntity<?>>any(),
                 eq(byte[].class)
         )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
 
@@ -55,7 +55,7 @@ class MapTileControllerTests {
         when(restTemplate.exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+            ArgumentMatchers.<HttpEntity<?>>any(),
                 eq(byte[].class)
         )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
 
@@ -70,7 +70,7 @@ class MapTileControllerTests {
         verify(restTemplate, times(1)).exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+            ArgumentMatchers.<HttpEntity<?>>any(),
                 eq(byte[].class)
         );
     }
@@ -86,7 +86,7 @@ class MapTileControllerTests {
         when(restTemplate.exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+            ArgumentMatchers.<HttpEntity<?>>any(),
                 eq(byte[].class)
         )).thenAnswer(invocation -> {
             upstreamCalls.incrementAndGet();
@@ -122,7 +122,7 @@ class MapTileControllerTests {
         when(restTemplate.exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+            ArgumentMatchers.<HttpEntity<?>>any(),
                 eq(byte[].class)
         )).thenThrow(new RuntimeException("blocked"));
 
@@ -141,7 +141,7 @@ class MapTileControllerTests {
         when(restTemplate.exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+            ArgumentMatchers.<HttpEntity<?>>any(),
                 eq(byte[].class)
         ))
                 .thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile))
@@ -165,7 +165,7 @@ class MapTileControllerTests {
         when(restTemplate.exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+            ArgumentMatchers.<HttpEntity<?>>any(),
                 eq(byte[].class)
         )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
 
@@ -173,16 +173,12 @@ class MapTileControllerTests {
 
         controller.tile(10, 20, 30);
 
-        ArgumentCaptor<HttpEntity> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).exchange(
                 eq("https://tile.openstreetmap.org/10/20/30.png"),
                 eq(HttpMethod.GET),
-                entityCaptor.capture(),
+            argThat(entity -> "http://localhost:8080/".equals(entity.getHeaders().getFirst(HttpHeaders.REFERER))
+                && "http://localhost:8080".equals(entity.getHeaders().getFirst(HttpHeaders.ORIGIN))),
                 eq(byte[].class)
         );
-
-        HttpHeaders headers = entityCaptor.getValue().getHeaders();
-        assertThat(headers.getFirst(HttpHeaders.REFERER)).isEqualTo("http://localhost:8080/");
-        assertThat(headers.getFirst(HttpHeaders.ORIGIN)).isEqualTo("http://localhost:8080");
     }
 }

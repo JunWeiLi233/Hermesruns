@@ -20,7 +20,7 @@ const BRAND_ZH_MAP = {
   xtep: '特步',
   peak: '匹克',
   erke: '鸿星尔克',
-  qiaodan: '乔丹',
+  qiaodan: '中国乔丹',
   warrior: '回力',
   doublestar: '双星',
   '361': '361°',

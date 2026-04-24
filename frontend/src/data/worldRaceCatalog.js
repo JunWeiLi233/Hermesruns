@@ -1048,7 +1048,21 @@ export function getRaceImageSourceCandidates(race) {
   return [...new Set(candidates.filter(Boolean))];
 }
 
-export const worldRaceCountries = [
+const FULL_MARATHON_DISTANCE_KM = 42.195;
+const NON_STANDARD_CITY_ROAD_MARATHON_IDS = new Set([
+  'big-sur-marathon',
+  'queenstown-marathon',
+]);
+
+export function isStandardCityRoadMarathon(race) {
+  const distanceKm = Number(race?.distanceKm);
+  return Math.abs(distanceKm - FULL_MARATHON_DISTANCE_KM) < 0.5
+    && !NON_STANDARD_CITY_ROAD_MARATHON_IDS.has(race?.id);
+}
+
+export const standardCityRoadMarathonCatalog = worldRaceCatalog.filter(isStandardCityRoadMarathon);
+
+const WORLD_RACE_COUNTRY_LAYOUT = [
   { key: 'United States', x: 17, y: 36, region: 'North America' },
   { key: 'Canada', x: 16, y: 20, region: 'North America' },
   { key: 'Mexico', x: 15, y: 50, region: 'North America' },
@@ -1092,6 +1106,10 @@ export const worldRaceCountries = [
   { key: 'Australia', x: 86, y: 78, region: 'Oceania' },
   { key: 'New Zealand', x: 96, y: 87, region: 'Oceania' },
 ];
+
+export const worldRaceCountries = WORLD_RACE_COUNTRY_LAYOUT.filter((country) => (
+  standardCityRoadMarathonCatalog.some((race) => race.country === country.key)
+));
 
 export default worldRaceCatalog;
 

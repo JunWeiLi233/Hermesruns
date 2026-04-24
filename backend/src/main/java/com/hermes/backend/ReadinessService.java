@@ -52,6 +52,64 @@ public class ReadinessService {
         return calculateDayReadiness(date, sleep, hrv, stress, wellness);
     }
 
+    public ReadinessResult compute(CoachRunnerState state) {
+        int sleep = normalizeSleepComponent(state.getLastSleepScore());
+        int hrv = normalizeHrvComponent(state.getLastHrvStatus(), state.getLastHrvMs());
+        int rhr = normalizeRhrComponent(state.getBaselineRestingHr(), state.getLastNightRestingHr());
+        int stress = normalizeStressComponent(state.getLastStressScore());
+
+        int score = (sleep + hrv + rhr + stress) / 4;
+        String verdict;
+        if (score >= 85) verdict = "GO";
+        else if (score >= 70) verdict = "EASY";
+        else if (score >= 50) verdict = "RECOVERY";
+        else verdict = "REST";
+
+        return new ReadinessResult(score, verdict, sleep, hrv, rhr, stress);
+    }
+
+    private int normalizeSleepComponent(Integer sleepScore) {
+        if (sleepScore == null) return 75;
+        return clamp(sleepScore);
+    }
+
+    private int normalizeHrvComponent(String hrvStatus, Integer hrvMs) {
+        if (hrvStatus != null && !hrvStatus.isBlank()) {
+            String normalized = hrvStatus.trim().toUpperCase();
+            if ("BALANCED".equals(normalized)) return 85;
+            if ("LOW".equals(normalized) || "POOR".equals(normalized) || "UNBALANCED".equals(normalized)) return 45;
+        }
+        if (hrvMs == null) return 75;
+        if (hrvMs >= 80) return 85;
+        if (hrvMs >= 55) return 75;
+        if (hrvMs >= 35) return 60;
+        return 45;
+    }
+
+    private int normalizeRhrComponent(Integer baselineRestingHr, Integer lastNightRestingHr) {
+        if (lastNightRestingHr == null) return 75;
+        if (baselineRestingHr == null) {
+            if (lastNightRestingHr <= 50) return 82;
+            if (lastNightRestingHr <= 60) return 75;
+            return 60;
+        }
+
+        int delta = lastNightRestingHr - baselineRestingHr;
+        if (delta <= -3) return 85;
+        if (delta <= 2) return 78;
+        if (delta <= 6) return 62;
+        return 45;
+    }
+
+    private int normalizeStressComponent(Integer stressScore) {
+        if (stressScore == null) return 75;
+        return clamp(100 - stressScore);
+    }
+
+    private int clamp(int value) {
+        return Math.max(0, Math.min(100, value));
+    }
+
     private ReadinessDay calculateDayReadiness(LocalDate date, DailySleepData sleep, DailyHRVData hrv, DailyStressData stress, DailyWellnessSummary wellness) {
         int score = 75; // Baseline
         
@@ -89,4 +147,13 @@ public class ReadinessService {
     }
 
     public record ReadinessDay(LocalDate date, int score) {}
+
+    public record ReadinessResult(
+            int score,
+            String verdict,
+            int sleepScore,
+            int hrvScore,
+            int rhrScore,
+            int stressScore
+    ) {}
 }

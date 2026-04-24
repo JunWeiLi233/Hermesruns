@@ -42,6 +42,8 @@ function startOfIsoWeek(date) {
   const diff = day === 0 ? -6 : 1 - day;
   copy.setDate(copy.getDate() + diff);
   return copy;
+}
+
 function formatScheduleTargetDate(dateValue, lang) {
   if (!dateValue) return null;
   const date = new Date(`${dateValue}T00:00:00`);
@@ -52,48 +54,9 @@ function formatScheduleTargetDate(dateValue, lang) {
   });
 }
 
-function ReadinessTrend({ data, t, lang }) {
-  if (!data || data.length < 2) return null;
 
-  const width = 100;
-  const height = 40;
-  const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - (d.score / 100) * height;
-    return `${x},${y}`;
-  }).join(' ');
 
-  const latest = data[data.length - 1].score;
-  const prior = data[0].score;
-  const delta = latest - prior;
-  const direction = delta > 3 ? 'up' : delta < -3 ? 'down' : 'steady';
 
-  return (
-    <div className="schedule-plan-readiness-trend">
-      <div className="schedule-plan-readiness-trend-header">
-        <span>{t('schedule.readiness_7d_trend')}</span>
-        <div className={`schedule-plan-readiness-trend-delta is-${direction}`}>
-          <AppIcon name={direction === 'up' ? 'arrow_upward' : direction === 'down' ? 'arrow_downward' : 'trending_flat'} />
-          <strong>{Math.abs(delta)}</strong>
-        </div>
-      </div>
-      <div className="schedule-plan-readiness-trend-chart">
-        <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-          <polyline
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={points}
-          />
-        </svg>
-      </div>
-    </div>
-  );
-}
-  }).format(date);
-}
 
 function getScheduleCountdownLabel(countdownDays, s) {
   if (!Number.isFinite(countdownDays)) return null;
@@ -342,7 +305,6 @@ export default function Schedule() {
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [coachSchedule, setCoachSchedule] = useState([]);
-  const [readinessTrend, setReadinessTrend] = useState([]);
   const [shoes, setShoes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
 
@@ -357,13 +319,12 @@ export default function Schedule() {
     async function loadSchedule() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, readinessTrendData, shoeData] = await Promise.all([
+        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
           apiJson('/api/coach/state').catch(() => null),
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/coach/schedule?days=14').catch(() => []),
-          apiJson('/api/coach/readiness-trend?days=7').catch(() => []),
           apiJson('/api/shoes').catch(() => []),
         ]);
 
@@ -377,7 +338,6 @@ export default function Schedule() {
         setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
         setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
         setCoachSchedule(Array.isArray(coachScheduleData) ? coachScheduleData : []);
-        setReadinessTrend(Array.isArray(readinessTrendData) ? readinessTrendData : []);
         setShoes(Array.isArray(shoeData) ? shoeData : []);
         setLoadState('ready');
       } catch {
@@ -449,7 +409,7 @@ export default function Schedule() {
 
   const heroKicker = targetBlock.name
     ? `${targetBlock.name}: ${s('phase_label', { week: targetBlock.weekIndex || 1 })}`
-    : s('default_phase');
+    : s('phase_label', { week: 1 });
   const heroTitle = targetBlock.hasActiveBlock
     ? targetBlock.isMarathonBlock
       ? s('hero_title_marathon')
@@ -848,8 +808,8 @@ export default function Schedule() {
                   ) : (
                     <div className="schedule-plan-route-empty-panel">
                       <div className="schedule-plan-route-empty-badges">
-                        {routeFallbackBadges.map((badge, index) => (
-                          <span key={`${badge}-${index}`} className="schedule-plan-route-empty-badge">{badge}</span>
+                        {routeFallbackBadges.map((badge) => (
+                          <span key={badge} className="schedule-plan-route-empty-badge">{badge}</span>
                         ))}
                       </div>
                       <div className="schedule-plan-route-empty-copy">

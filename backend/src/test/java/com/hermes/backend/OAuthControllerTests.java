@@ -33,6 +33,45 @@ import static org.mockito.Mockito.when;
 
 class OAuthControllerTests {
 
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        private static HttpEntity<?> anyHttpEntity() {
+                return (HttpEntity) any(HttpEntity.class);
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        private static <T> ParameterizedTypeReference<T> anyTypeRef() {
+                return (ParameterizedTypeReference) any(ParameterizedTypeReference.class);
+        }
+
+    private static class OAuthController extends com.hermes.backend.OAuthController {
+        OAuthController(
+                RunnerRepository runnerRepository,
+                AuthService authService,
+                ActivityRepository activityRepository,
+                ActivityPointRepository activityPointRepository,
+                SecretEncryptionService secretEncryptionService,
+                AiUsageService aiUsageService,
+                RestTemplate restTemplate,
+                SystemConfigService systemConfigService,
+                ApplicationEventPublisher applicationEventPublisher,
+                AutomatedCoachService automatedCoachService
+        ) {
+            super(
+                    runnerRepository,
+                    authService,
+                    activityRepository,
+                    activityPointRepository,
+                    secretEncryptionService,
+                    aiUsageService,
+                    restTemplate,
+                    systemConfigService,
+                    applicationEventPublisher,
+                    automatedCoachService,
+                    null
+            );
+        }
+    }
+
     @Test
     void authenticatedStravaLinkFlowAttachesAthleteToCurrentRunner() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
@@ -78,8 +117,8 @@ class OAuthControllerTests {
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenReturn(ResponseEntity.ok(Map.of(
                 "access_token", "fresh-token",
                 "refresh_token", "refresh-token",
@@ -167,8 +206,8 @@ class OAuthControllerTests {
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenReturn(ResponseEntity.ok(Map.of(
                 "access_token", "fresh-token",
                 "refresh_token", "refresh-token",
@@ -240,8 +279,8 @@ class OAuthControllerTests {
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenReturn(ResponseEntity.ok(Map.of(
                 "access_token", "fresh-token",
                 "refresh_token", "refresh-token",
@@ -302,8 +341,8 @@ class OAuthControllerTests {
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenReturn(ResponseEntity.ok(Map.of(
                 "access_token", "fresh-token",
                 "refresh_token", "refresh-token",
@@ -380,7 +419,9 @@ class OAuthControllerTests {
         existingActivity.setActivityType(ActivityType.RUN);
         existingActivity.setRunner(freshRunner);
 
-        when(runnerRepository.findById(7L)).thenReturn(Optional.of(staleRunner), Optional.of(freshRunner));
+        when(runnerRepository.findById(7L))
+                .thenReturn(Optional.of(staleRunner))
+                .thenReturn(Optional.of(freshRunner));
         when(secretEncryptionService.decrypt("encrypted-new-access")).thenReturn("fresh-access-token");
         when(secretEncryptionService.decrypt("encrypted-refresh")).thenReturn("refresh-token");
         when(activityRepository.findByRunnerAndProviderAndSourceChecksum(freshRunner, ImportProvider.STRAVA, "STRAVA_12345"))
@@ -395,7 +436,7 @@ class OAuthControllerTests {
                 new byte[0],
                 null
         );
-        ResponseEntity<List<Map<String, Object>>> activityPage = ResponseEntity.ok(List.of(Map.of(
+        ResponseEntity<Object> activityPage = ResponseEntity.ok((Object) List.of(Map.of(
                 "id", "12345",
                 "sport_type", "Run",
                 "type", "Run",
@@ -408,15 +449,15 @@ class OAuthControllerTests {
         when(restTemplate.exchange(
                 eq("https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenThrow(unauthorized).thenReturn(activityPage);
 
         when(restTemplate.exchange(
                 eq("https://www.strava.com/api/v3/athlete/activities?per_page=200&page=2"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenReturn(ResponseEntity.ok(List.of()));
 
         controller.fetchAndSaveStravaActivities("stale-access-token", 7L, false, "test_retry");
@@ -424,8 +465,8 @@ class OAuthControllerTests {
         verify(restTemplate, times(2)).exchange(
                 eq("https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         );
         verify(runnerRepository, times(2)).findById(7L);
         verify(activityRepository).save(any(Activity.class));
@@ -554,7 +595,6 @@ class OAuthControllerTests {
         var response = controller.getStravaStatus("Bearer token");
 
         assertNotNull(response.getBody());
-        @SuppressWarnings("unchecked")
         Map<String, Object> body = response.getBody();
         assertTrue((Boolean) body.get("linked"));
         assertTrue(body.containsKey("syncStatus"));
@@ -689,8 +729,8 @@ class OAuthControllerTests {
         when(restTemplate.exchange(
                 eq("https://oauth2.googleapis.com/token"),
                 eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenThrow(new org.springframework.web.client.RestClientException("token error"));
 
         RedirectView redirect = controller.handleGoogleCallback("code", "state");
@@ -720,6 +760,27 @@ class OAuthControllerTests {
 
         assertNotNull(redirect.getUrl());
         assertTrue(redirect.getUrl().contains("STRAVA_NOT_CONFIGURED"));
+    }
+
+    @Test
+    void startStravaAuthRedirectsWithStructuredConfigErrorCodeWhenStravaNotConfigured() {
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        AuthService authService = mock(AuthService.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+
+        OAuthController controller = new OAuthController(
+                runnerRepository, authService, null, null, null, null, null,
+                systemConfigService, null, null
+        );
+
+        when(systemConfigService.isStravaConfigured()).thenReturn(false);
+
+        RedirectView redirect = controller.startStravaAuth("signup");
+
+        assertNotNull(redirect.getUrl());
+        assertTrue(redirect.getUrl().startsWith("/signup?"));
+        assertTrue(redirect.getUrl().contains("error=STRAVA_NOT_CONFIGURED"));
+        assertTrue(redirect.getUrl().contains("details="));
     }
 
     @Test
@@ -788,8 +849,8 @@ class OAuthControllerTests {
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                any(ParameterizedTypeReference.class)
+                anyHttpEntity(),
+                anyTypeRef()
         )).thenReturn(ResponseEntity.ok(Map.of("access_token", "", "athlete", Map.of("id", 12345L))));
 
         RedirectView redirect = controller.handleStravaCallback("code", null, "state");
@@ -914,12 +975,24 @@ class OAuthControllerTests {
 
     private static void setField(Object target, String fieldName, Object value) {
         try {
-            Field field = target.getClass().getDeclaredField(fieldName);
+            Field field = findField(target.getClass(), fieldName);
             field.setAccessible(true);
             field.set(target, value);
         } catch (ReflectiveOperationException exception) {
             throw new AssertionError("Failed to set field " + fieldName, exception);
         }
+    }
+
+    private static Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
+        Class<?> current = type;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
     }
 
     private static String extractQueryParam(String url, String name) {

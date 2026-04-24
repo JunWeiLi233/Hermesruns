@@ -11,6 +11,13 @@ import SectionCard from '../components/ui/SectionCard';
 import ActionBar from '../components/ui/ActionBar';
 import DataTable from '../components/ui/DataTable';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
+import {
+  buildCourseMapAdminDetailFallback,
+  buildCourseMapWorkspaceSource,
+  getCourseMapCatalogMarathons,
+  hasCourseMapBackendRecord,
+  mergeCourseMapQueueItems,
+} from '../utils/courseMapCatalogQueue.js';
 import { getDashboardTopbarTabKeys } from '../utils/dashboardTopbarNav';
 
 function ShoeImage({ src, alt, className, noImageLabel }) {
@@ -110,6 +117,10 @@ function readFileAsDataUrl(file) {
     reader.onerror = () => reject(new Error('file_read_failed'));
     reader.readAsDataURL(file);
   });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isCourseMapUploadFile(file) {
@@ -274,7 +285,7 @@ function getCourseMapImageUrl(asset) {
 function hasAlignedCourseMapPreview(asset) {
   if (!asset || typeof asset !== 'object') return false;
   const routePoints = Array.isArray(asset.routePoints) ? asset.routePoints : [];
-  return Boolean(asset.overlayBounds) || routePoints.length > 1 || (Array.isArray(asset.elevationSamples) && asset.elevationSamples.length > 0);
+  return Boolean(asset.overlayBounds) && routePoints.length > 1;
 }
 
 function getCourseMapPreviewConfidence(asset) {
@@ -300,8 +311,8 @@ function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
       tone: 'refresh',
       title: t('dashboard.course_maps_recommendation_refresh_title'),
       body: t('dashboard.course_maps_recommendation_refresh_body'),
-      cta: t('dashboard.course_maps_scan'),
-      action: 'scan',
+      cta: t('dashboard.course_maps_upload'),
+      action: 'upload',
     };
   }
 
@@ -372,8 +383,12 @@ function getDashboardJobStatusLabel(status, t) {
 function getDashboardJobTypeLabel(jobType, t) {
   const normalized = String(jobType || '').toUpperCase();
   if (normalized === 'STRAVA_SYNC') return t('dashboard.jobs_type_strava_sync');
+  if (normalized === 'STRAVA_GLOBAL_SYNC') return t('dashboard.jobs_type_strava_global_sync');
   if (normalized === 'GARMIN_IMPORT') return t('dashboard.jobs_type_garmin_import');
+  if (normalized === 'GARMIN_WELLNESS_SYNC') return t('dashboard.jobs_type_garmin_wellness_sync');
   if (normalized === 'FILE_IMPORT') return t('dashboard.jobs_type_file_import');
+  if (normalized === 'COURSE_MAP_PREVIEW_UPLOAD') return t('dashboard.jobs_type_course_map_upload');
+  if (normalized === 'COURSE_MAP_PREVIEW_REANALYZE') return t('dashboard.jobs_type_course_map_reanalyze');
   return jobType || '-';
 }
 
@@ -462,6 +477,91 @@ function getDashboardJobDetailsPreview(job) {
   }
 }
 
+function getDashboardJobParsedDetails(job) {
+  const raw = String(job?.detailsJson || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatDashboardJobValue(value) {
+  if (value == null || value === '') return '-';
+  if (Array.isArray(value)) return `${value.length} items`;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return Number.isFinite(value) ? value.toLocaleString() : String(value);
+  if (typeof value === 'object') {
+    const compact = JSON.stringify(value);
+    return compact.length > 84 ? `${compact.slice(0, 81)}...` : compact;
+  }
+  const text = String(value);
+  return text.length > 96 ? `${text.slice(0, 93)}...` : text;
+}
+
+function getDashboardJobPayloadHighlights(parsedDetails) {
+  if (!parsedDetails) return [];
+  return Object.entries(parsedDetails)
+    .filter(([key]) => key !== 'qwenScanSteps' && key !== 'lastQwenScanStep')
+    .slice(0, 8)
+    .map(([key, value]) => ({
+      key,
+      label: key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' '),
+      value: formatDashboardJobValue(value),
+    }));
+}
+
+function getDashboardJobTimelineSteps(parsedDetails) {
+  if (!parsedDetails) return [];
+  const scanSteps = Array.isArray(parsedDetails.qwenScanSteps) ? parsedDetails.qwenScanSteps : [];
+  if (scanSteps.length > 0) {
+    return scanSteps.map((step, index) => ({
+      key: `${step?.stage || 'step'}-${step?.at || index}`,
+      at: step?.at,
+      stage: step?.stage || `step_${index + 1}`,
+      status: step?.status || 'info',
+      message: step?.message || '',
+      details: step?.details && typeof step.details === 'object' ? step.details : null,
+    }));
+  }
+  const lastStep = parsedDetails.lastQwenScanStep;
+  if (!lastStep || typeof lastStep !== 'object') return [];
+  return [{
+    key: `${lastStep.stage || 'last'}-${lastStep.at || 'step'}`,
+    at: lastStep.at,
+    stage: lastStep.stage || 'last_step',
+    status: lastStep.status || 'info',
+    message: lastStep.message || '',
+    details: lastStep.details && typeof lastStep.details === 'object' ? lastStep.details : null,
+  }];
+}
+
+function getDashboardJobTimelineTone(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (/(fail|error|denied|invalid|timeout|blocked)/.test(normalized)) return 'failed';
+  if (/(running|start|scan|process|align|extract|search|geocode|qwen)/.test(normalized)) return 'running';
+  if (/(pending|queued|wait|retry)/.test(normalized)) return 'pending';
+  return 'completed';
+}
+
+function formatDashboardJobDuration(startValue, endValue) {
+  if (!startValue || !endValue) return '-';
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  const diffMs = end.getTime() - start.getTime();
+  if (!Number.isFinite(diffMs) || diffMs < 0) return '-';
+  const seconds = Math.max(0, Math.round(diffMs / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes < 60) return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
 export default function Dashboard() {
   const { logout, login, isAuthenticated } = useAuth();
   const { t, lang, setLang } = useI18n();
@@ -493,6 +593,8 @@ export default function Dashboard() {
   const [selectedShoeIds, setSelectedShoeIds] = useState([]);
   const [selectedShoeWorkbenchId, setSelectedShoeWorkbenchId] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
+  const [selectedJobDetail, setSelectedJobDetail] = useState(null);
+  const [selectedJobDetailState, setSelectedJobDetailState] = useState('idle');
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [userNotes, setUserNotes] = useState([]);
@@ -525,6 +627,40 @@ export default function Dashboard() {
   const courseMapUploadInputRef = useRef(null);
   const courseMapDetailRequestRef = useRef(0);
   const activeTab = useMemo(() => getDashboardSectionFromPathname(location.pathname), [location.pathname]);
+
+  const courseMapCatalogItems = useMemo(() => getCourseMapCatalogMarathons(), []);
+  const courseMapBackendItems = useMemo(
+    () => (Array.isArray(courseMapsPage.items) ? courseMapsPage.items : []),
+    [courseMapsPage.items],
+  );
+
+  const courseMapQueueItems = useMemo(() => {
+    const combined = mergeCourseMapQueueItems({
+      catalogItems: courseMapCatalogItems,
+      backendItems: courseMapBackendItems,
+    });
+
+    const query = String(courseMapQuery.search || '').trim().toLowerCase();
+    const requestedStatus = String(courseMapQuery.status || '').trim().toLowerCase();
+
+    return combined.filter((item) => {
+      if (requestedStatus && getCourseMapStatus(item) !== requestedStatus) return false;
+      if (!query) return true;
+      const haystack = [
+        getCourseMapRaceName(item),
+        getCourseMapLocation(item),
+        item?.city,
+        item?.country,
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [courseMapBackendItems, courseMapCatalogItems, courseMapQuery.search, courseMapQuery.status]);
+
+  const getCourseMapActionSourceItem = useCallback((raceId) => {
+    const queueItem = courseMapQueueItems.find((item) => getCourseMapRaceId(item) === raceId) || null;
+    const detail = getCourseMapRaceId(courseMapDetail) === raceId ? courseMapDetail : null;
+    return buildCourseMapWorkspaceSource({ queueItem, detail });
+  }, [courseMapDetail, courseMapQueueItems]);
 
   const navigateToTab = useCallback((tab, options) => {
     navigate(TAB_ROUTE_MAP[tab] || TAB_ROUTE_MAP.overview, options);
@@ -605,8 +741,20 @@ export default function Dashboard() {
     setSavedFilters(await apiJson(`/api/admin/filters?scope=${scope}`));
   }, []);
 
-  const loadCourseMapDetail = useCallback(async (raceId) => {
+  const loadCourseMapDetail = useCallback(async (raceId, detailOptions = null) => {
     if (!raceId) return;
+    const { fallbackItem = null, forceFetch = false } = detailOptions && typeof detailOptions === 'object' && (
+      Object.hasOwn(detailOptions, 'fallbackItem') || Object.hasOwn(detailOptions, 'forceFetch')
+    )
+      ? detailOptions
+      : { fallbackItem: detailOptions, forceFetch: false };
+    if (!forceFetch && !hasCourseMapBackendRecord(raceId, courseMapBackendItems)) {
+      setCourseMapDetail(buildCourseMapAdminDetailFallback(
+        fallbackItem || courseMapQueueItems.find((item) => getCourseMapRaceId(item) === raceId) || { raceId },
+      ));
+      setCourseMapLoadState('ready');
+      return;
+    }
     const requestId = courseMapDetailRequestRef.current + 1;
     courseMapDetailRequestRef.current = requestId;
     setCourseMapLoadState('loading');
@@ -617,10 +765,12 @@ export default function Dashboard() {
       setCourseMapLoadState('ready');
     } catch {
       if (courseMapDetailRequestRef.current !== requestId) return;
-      setCourseMapDetail(null);
-      setCourseMapLoadState('error');
+      setCourseMapDetail(buildCourseMapAdminDetailFallback(
+        fallbackItem || courseMapQueueItems.find((item) => getCourseMapRaceId(item) === raceId) || { raceId },
+      ));
+      setCourseMapLoadState('ready');
     }
-  }, []);
+  }, [courseMapBackendItems, courseMapQueueItems]);
 
   const bootstrap = useCallback(async () => {
     setLoadState('loading');
@@ -692,15 +842,42 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (activeTab !== 'courseMaps') return;
-    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapsPage.items?.[0]);
+    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapQueueItems?.[0]);
     if (!nextId) {
       setCourseMapDetail(null);
       setCourseMapLoadState('idle');
       return;
     }
     if (selectedCourseMapId !== nextId) setSelectedCourseMapId(nextId);
-    loadCourseMapDetail(nextId);
-  }, [activeTab, courseMapsPage.items, loadCourseMapDetail, selectedCourseMapId]);
+    const nextItem = courseMapQueueItems.find((item) => getCourseMapRaceId(item) === nextId) || null;
+    loadCourseMapDetail(nextId, nextItem);
+  }, [activeTab, courseMapQueueItems, loadCourseMapDetail, selectedCourseMapId]);
+
+  useEffect(() => {
+    if (activeTab !== 'jobs' || selectedJobId == null) {
+      setSelectedJobDetail(null);
+      setSelectedJobDetailState('idle');
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setSelectedJobDetailState('loading');
+    apiJson(`/api/admin/jobs/${selectedJobId}`, { signal: controller.signal })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setSelectedJobDetail(data);
+        setSelectedJobDetailState('ready');
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        if (error?.name === 'AbortError') return;
+        setSelectedJobDetail(null);
+        setSelectedJobDetailState('error');
+        setMessage(t('dashboard.jobs_deck_detail_load_failed'));
+      });
+
+    return () => controller.abort();
+  }, [activeTab, selectedJobId, t]);
 
   useEffect(() => {
     if (!imgPickerShoe) return;
@@ -1080,24 +1257,8 @@ export default function Dashboard() {
   function openCourseMapWorkspace(item) {
     const raceId = getCourseMapRaceId(item);
     setSelectedCourseMapId(raceId);
-    setCourseMapDetail((current) => (getCourseMapRaceId(current) === raceId ? current : null));
-    loadCourseMapDetail(raceId);
-  }
-
-  async function triggerCourseMapScan(raceId) {
-    if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'scan' });
-    try {
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
-      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/scan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
-      });
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
-    } finally {
-      setCourseMapAction({ raceId: null, type: '' });
-    }
+    setCourseMapDetail((current) => (getCourseMapRaceId(current) === raceId ? current : buildCourseMapAdminDetailFallback(item)));
+    loadCourseMapDetail(raceId, item);
   }
 
   async function uploadCourseMapPreview(raceId, file) {
@@ -1105,13 +1266,23 @@ export default function Dashboard() {
     setCourseMapAction({ raceId, type: 'upload' });
     try {
       const imageDataUrl = await readFileAsDataUrl(file);
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
-      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/upload`, {
+      const sourceItem = getCourseMapActionSourceItem(raceId);
+      const { jobId } = await apiJson(`/api/admin/race-course-maps/${raceId}/pending/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...buildCourseMapAdminPayload(sourceItem), imageDataUrl, fileName: file.name }),
       });
+      setCourseMapAction({ raceId, type: 'processing' });
+      const job = await waitForAdminJob(jobId);
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      if (job.status === 'FAILED') {
+        throw new Error(job.summary || 'Course-map upload failed.');
+      }
+      if (job.summary) {
+        setMessage(job.summary);
+      }
+    } catch (error) {
+      setMessage(error.message || 'Course-map upload failed.');
     } finally {
       setCourseMapAction({ raceId: null, type: '' });
     }
@@ -1139,7 +1310,8 @@ export default function Dashboard() {
     setCourseMapAction({ raceId, type: 'accept' });
     try {
       await apiJson(`/api/admin/race-course-maps/${raceId}/accept-live`, { method: 'POST' });
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      await Promise.all([loadCourseMaps(), loadQueues()]);
+      await loadCourseMapDetail(raceId);
     } finally {
       setCourseMapAction({ raceId: null, type: '' });
     }
@@ -1149,23 +1321,56 @@ export default function Dashboard() {
     if (!raceId) return;
     setCourseMapAction({ raceId, type: 'reanalyze' });
     try {
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
-      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/reanalyze`, {
+      const sourceItem = getCourseMapActionSourceItem(raceId);
+      const { jobId } = await apiJson(`/api/admin/race-course-maps/${raceId}/pending/reanalyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
       });
+      const job = await waitForAdminJob(jobId);
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      if (job.status === 'FAILED') {
+        throw new Error(job.summary || 'Course-map re-analysis failed.');
+      }
+      if (job.summary) {
+        setMessage(job.summary);
+      }
+    } catch (error) {
+      setMessage(error.message || 'Course-map re-analysis failed.');
     } finally {
       setCourseMapAction({ raceId: null, type: '' });
     }
+  }
+
+  async function waitForAdminJob(jobId, maxAttempts = 180) {
+    if (!jobId) {
+      throw new Error('Missing admin job id.');
+    }
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const pollSignal = AbortSignal.timeout(10000);
+      let job;
+      try {
+        job = await apiJson(`/api/admin/jobs/${jobId}`, { signal: pollSignal });
+      } catch (error) {
+        if (error?.name === 'AbortError' || error?.name === 'TimeoutError') {
+          throw new Error('Timed out checking course-map job status.');
+        }
+        throw error;
+      }
+      const status = String(job.status || '').toUpperCase();
+      if (status === 'COMPLETED' || status === 'FAILED') {
+        return job;
+      }
+      await sleep(2000);
+    }
+    throw new Error('Timed out waiting for course-map job completion.');
   }
 
   async function runMarathonPipeline(raceId) {
     if (!raceId) return;
     setCourseMapAction({ raceId, type: 'pipeline' });
     try {
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
+      const sourceItem = getCourseMapActionSourceItem(raceId);
       const payload = {
         ...buildCourseMapAdminPayload(sourceItem),
         raceId,
@@ -1188,8 +1393,10 @@ export default function Dashboard() {
         throw new Error(jobStatus.error || 'Unknown pipeline failure');
       }
 
+      setCourseMapAction({ raceId, type: 'refresh' });
+      await Promise.all([loadCourseMaps(), loadQueues()]);
+      await loadCourseMapDetail(raceId, { forceFetch: true, fallbackItem: sourceItem });
       setMessage(t('dashboard.course_maps_pipeline_success'));
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
     } catch (e) {
       setMessage(t('dashboard.course_maps_pipeline_failed', { error: e.message }));
     } finally {
@@ -1202,9 +1409,6 @@ export default function Dashboard() {
     switch (recommendation.action) {
       case 'upload':
         openCourseMapUploadPicker();
-        break;
-      case 'scan':
-        triggerCourseMapScan(selectedCourseMapId);
         break;
       case 'reanalyze':
         reanalyzeCourseMap(selectedCourseMapId);
@@ -1275,22 +1479,22 @@ export default function Dashboard() {
   }, [shoesPage.items]);
 
   const courseMapSummary = useMemo(() => {
-    const items = courseMapsPage.items || [];
+    const items = courseMapQueueItems || [];
     return items.reduce((summary, item) => {
       const state = getCourseMapStatus(item);
       summary.total += 1;
       summary[state] += 1;
       return summary;
     }, { total: 0, pending: 0, live: 0, missing: 0 });
-  }, [courseMapsPage.items]);
+  }, [courseMapQueueItems]);
 
   const selectedCourseMapItem = useMemo(
     () => (
       getCourseMapRaceId(courseMapDetail) === selectedCourseMapId
         ? courseMapDetail
-        : courseMapsPage.items?.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null
+        : courseMapQueueItems.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null
     ),
-    [courseMapDetail, courseMapsPage.items, selectedCourseMapId],
+    [courseMapDetail, courseMapQueueItems, selectedCourseMapId],
   );
 
   const pendingCourseMapPreview = useMemo(
@@ -1312,6 +1516,14 @@ export default function Dashboard() {
     ?? getCourseMapPreviewConfidence(liveCourseMapPreview);
 
   const courseMapDisplayPreview = pendingCourseMapPreview || liveCourseMapPreview || null;
+  const pendingCourseMapPointCount = Array.isArray(pendingCourseMapPreview?.routePoints)
+    ? pendingCourseMapPreview.routePoints.length
+    : Number(pendingCourseMapPreview?.pointCount || 0);
+  const liveCourseMapPointCount = Array.isArray(liveCourseMapPreview?.routePoints)
+    ? liveCourseMapPreview.routePoints.length
+    : Number(liveCourseMapPreview?.pointCount || 0);
+  const pendingCourseMapAligned = hasAlignedCourseMapPreview(pendingCourseMapPreview);
+  const liveCourseMapAligned = hasAlignedCourseMapPreview(liveCourseMapPreview);
   const courseMapRoutePoints = Array.isArray(courseMapDisplayPreview?.routePoints) ? courseMapDisplayPreview.routePoints : [];
   const courseMapElevationSamples = Array.isArray(courseMapDisplayPreview?.elevationSamples) ? courseMapDisplayPreview.elevationSamples : [];
   const courseMapElevationGainValue = courseMapElevationSamples.length > 1
@@ -1335,6 +1547,7 @@ export default function Dashboard() {
     : liveCourseMapPreview
       ? t('dashboard.review_panel_live')
       : t('dashboard.review_state_missing');
+  const courseMapDisplaySummary = courseMapDisplayPreview?.summary || '';
 
   const courseMapSecondaryActions = !selectedCourseMapId
     ? []
@@ -1344,12 +1557,6 @@ export default function Dashboard() {
         label: t('dashboard.course_maps_upload'),
         disabled: courseMapAction.raceId === selectedCourseMapId,
         onClick: openCourseMapUploadPicker,
-      },
-      {
-        key: 'scan',
-        label: t('dashboard.course_maps_scan'),
-        disabled: courseMapAction.raceId === selectedCourseMapId,
-        onClick: () => triggerCourseMapScan(selectedCourseMapId),
       },
       {
         key: 'reanalyze',
@@ -1369,6 +1576,12 @@ export default function Dashboard() {
 
   const pendingCourseMapConfidence = getCourseMapPreviewConfidence(pendingCourseMapPreview);
   const liveCourseMapConfidence = getCourseMapPreviewConfidence(liveCourseMapPreview);
+  const pendingCourseMapBadgeValue = pendingCourseMapPreview
+    ? (pendingCourseMapConfidence != null ? `${pendingCourseMapConfidence}%` : courseMapSurfaceQuality)
+    : t('dashboard.review_state_missing');
+  const liveCourseMapBadgeValue = liveCourseMapPreview
+    ? (liveCourseMapConfidence != null ? `${liveCourseMapConfidence}%` : t('dashboard.review_state_live'))
+    : t('dashboard.review_state_missing');
   const courseMapFooterSignals = [
     {
       key: 'pending',
@@ -1391,7 +1604,7 @@ export default function Dashboard() {
     { key: 'points', label: t('dashboard.course_maps_stage_point_count'), value: courseMapPointCount.toLocaleString() },
     { key: 'surface', label: t('dashboard.course_maps_metric_surface_quality'), value: courseMapSurfaceQuality },
   ];
-  const courseMapAlignmentReady = (pendingCourseMapConfidence ?? liveCourseMapConfidence ?? 0) >= 90;
+  const courseMapAlignmentReady = hasAlignedCourseMapPreview(pendingCourseMapPreview || liveCourseMapPreview) && ((pendingCourseMapConfidence ?? liveCourseMapConfidence ?? 0) >= 90);
 
   const adminStatusItems = useMemo(() => {
     const failedSyncCount = queueCards.find((card) => card.key === 'FAILED')?.count || 0;
@@ -1437,10 +1650,6 @@ export default function Dashboard() {
     ];
   }, [navigateToTab, queueCards, t, totalQueueCount]);
 
-  const activeTabLabel = useMemo(
-    () => t(TAB_ITEMS.find((tab) => tab.key === activeTab)?.labelKey || 'dashboard.tab_overview'),
-    [activeTab, t],
-  );
   const topbarTabs = useMemo(
     () => getDashboardTopbarTabKeys(activeTab)
       .map((tabKey) => TAB_ITEM_MAP[tabKey])
@@ -1491,10 +1700,16 @@ export default function Dashboard() {
     }
   }, [jobsPage.items, prioritizedJobId, selectedJobId]);
 
-  const selectedJob = useMemo(
+  const selectedJobListRow = useMemo(
     () => jobsPage.items?.find((job) => job.id === selectedJobId) || null,
     [jobsPage.items, selectedJobId],
   );
+  const selectedJob = useMemo(() => {
+    if (selectedJobDetail && selectedJobDetail.id === selectedJobId) {
+      return { ...(selectedJobListRow || {}), ...selectedJobDetail };
+    }
+    return selectedJobListRow;
+  }, [selectedJobDetail, selectedJobId, selectedJobListRow]);
 
   const jobsCommandMetrics = useMemo(() => {
     const items = jobsPage.items || [];
@@ -1537,11 +1752,29 @@ export default function Dashboard() {
     () => getDashboardJobDetailsPreview(selectedJob),
     [selectedJob],
   );
+  const jobsSelectedParsedDetails = useMemo(
+    () => getDashboardJobParsedDetails(selectedJob),
+    [selectedJob],
+  );
+  const jobsSelectedPayloadHighlights = useMemo(
+    () => getDashboardJobPayloadHighlights(jobsSelectedParsedDetails),
+    [jobsSelectedParsedDetails],
+  );
+  const jobsSelectedTimelineSteps = useMemo(
+    () => getDashboardJobTimelineSteps(jobsSelectedParsedDetails),
+    [jobsSelectedParsedDetails],
+  );
   const jobsSelectedProgress = selectedJob ? getDashboardJobProgress(selectedJob) : 0;
   const jobsSelectedProcessed = selectedJob
     ? Number(selectedJob.successCount || 0) + Number(selectedJob.failureCount || 0)
     : 0;
   const jobsSelectedTotal = selectedJob ? Number(selectedJob.totalCount || 0) : 0;
+  const jobsSelectedQueueDelay = selectedJob
+    ? formatDashboardJobDuration(selectedJob.createdAt, selectedJob.startedAt || selectedJob.finishedAt)
+    : '-';
+  const jobsSelectedRunDuration = selectedJob
+    ? formatDashboardJobDuration(selectedJob.startedAt, selectedJob.finishedAt)
+    : '-';
   const jobsFeaturedMeta = jobsFeaturedJob
     ? [
       getDashboardJobStatusLabel(jobsFeaturedJob.status, t),
@@ -1731,14 +1964,6 @@ export default function Dashboard() {
               <span className="admin-command-sidebar__cta-icon" data-icon="add" aria-hidden="true" />
               <span>{t('dashboard.tab_course_maps')}</span>
             </button>
-            <button type="button" className="admin-command-sidebar__link" onClick={() => navigateToTab('users')}>
-              <span className="admin-command-sidebar__link-icon" data-icon="help" aria-hidden="true" />
-              <span>{t('dashboard.tab_users')}</span>
-            </button>
-            <button type="button" className="admin-command-sidebar__link" onClick={() => navigateToTab('audit')}>
-              <span className="admin-command-sidebar__link-icon" data-icon="history" aria-hidden="true" />
-              <span>{t('dashboard.tab_audit')}</span>
-            </button>
             <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout" onClick={logout}>
               <span className="admin-command-sidebar__link-icon" data-icon="logout" aria-hidden="true" />
               <span>{t('dashboard.nav_logout')}</span>
@@ -1768,19 +1993,6 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
-              </div>
-              <div className="admin-command-topbar__actions">
-                <div className="admin-command-topbar__pills">
-                  <span className="admin-command-topbar__pill">{currentLanguageLabel}</span>
-                  <span className="admin-command-topbar__pill">{currentThemeLabel}</span>
-                  <span className="admin-command-topbar__pill is-live">{t('dashboard.settings_live_badge')}</span>
-                </div>
-                <button type="button" className={`admin-command-topbar__icon${activeTab === 'settings' ? ' is-active' : ''}`} onClick={() => navigateToTab('settings')}>
-                  <span className="admin-command-topbar__icon-mark" data-icon="settings" aria-hidden="true" />
-                </button>
-                <button type="button" className="admin-command-topbar__avatar" onClick={logout} aria-label={t('dashboard.nav_logout')}>
-                  <span>{String(activeTabLabel || 'H').slice(0, 1)}</span>
-                </button>
               </div>
             </div>
           </header>
@@ -2414,7 +2626,7 @@ export default function Dashboard() {
                       <span className="section-intro-kicker">{t('dashboard.course_maps_kicker')}</span>
                       <h3>{t('dashboard.course_maps_sidebar_title')}</h3>
                     </div>
-                    <strong>{courseMapsPage.totalItems}</strong>
+                    <strong>{courseMapQueueItems.length}</strong>
                   </div>
                   <p className="admin-coursemap-workbench__rail-copy">{t('dashboard.course_maps_workbench_list_copy')}</p>
                   <div className="admin-track-hub-sidebar__search">
@@ -2428,7 +2640,7 @@ export default function Dashboard() {
                     <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCourseMaps()}>{t('dashboard.btn_refresh')}</button>
                   </div>
                   <div className="admin-coursemap-rail">
-                    {courseMapsPage.items?.map(item => {
+                    {courseMapQueueItems.map(item => {
                       const raceId = getCourseMapRaceId(item);
                       const status = getCourseMapStatus(item);
                       const pending = getCourseMapPending(item);
@@ -2530,46 +2742,116 @@ export default function Dashboard() {
                             {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'reanalyze' ? t('dashboard.course_maps_reanalyzing') : t('dashboard.course_maps_reanalyze')}
                           </button>
                           <button type="button" className="btn-primary btn-inline-md" disabled={(!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId} onClick={() => runMarathonPipeline(selectedCourseMapId)}>
-                            {t('dashboard.course_maps_run_pipeline')}
+                            {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'refresh'
+                              ? t('dashboard.course_maps_refreshing_preview')
+                              : courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline'
+                                ? t('dashboard.course_maps_pipeline_running')
+                                : t('dashboard.course_maps_run_pipeline')}
                           </button>
                         </div>
                       </div>
 
-                      <div className="admin-track-hub-map-stage">
-                        <div className="admin-track-hub-map-stage__frame">
-                          <AdminCourseMapPreview
-                            preview={courseMapDisplayPreview}
-                            title={getCourseMapRaceName(selectedCourseMapItem || {})}
-                            emptyLabel={t('dashboard.review_pending_empty')}
-                          />
-                          <div className="admin-track-hub-map-stage__overlay">
-                            <div className="admin-track-hub-map-stage__scan">
-                              <span className="admin-track-hub-map-stage__scan-indicator" aria-hidden="true" />
-                              <div>
-                                <span>{t('dashboard.course_maps_stage_scan_area')}</span>
-                                <strong>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</strong>
-                              </div>
-                            </div>
-                            <div className="admin-track-hub-map-stage__footer">
-                              <div className="admin-track-hub-map-stage__telemetry-grid">
-                                <div className="admin-track-hub-map-stage__telemetry-card">
-                                  <span>{t('dashboard.course_maps_stage_map_source')}</span>
-                                  <strong>{courseMapPrimarySourceLabel}</strong>
-                                </div>
-                                <div className="admin-track-hub-map-stage__telemetry-card">
-                                  <span>{t('dashboard.course_maps_stage_extraction_pipeline')}</span>
-                                  <strong>{t('dashboard.course_maps_run_pipeline')}</strong>
-                                </div>
-                                <div className="admin-track-hub-map-stage__telemetry-card">
-                                  <span>{t('dashboard.course_maps_stage_point_count')}</span>
-                                  <strong>{courseMapPointCount.toLocaleString()}</strong>
-                                </div>
-                              </div>
-                              <button type="button" className="btn-secondary btn-inline-md admin-track-hub-map-stage__telemetry-action" onClick={() => triggerCourseMapScan(selectedCourseMapId)}>
-                                {t('dashboard.course_maps_scan')}
-                              </button>
+                      <div className="admin-track-hub-map-stage admin-track-hub-map-stage--compare">
+                        <div className="admin-track-hub-map-stage__headerband">
+                          <div className="admin-track-hub-map-stage__scan">
+                            <span className="admin-track-hub-map-stage__scan-indicator" aria-hidden="true" />
+                            <div>
+                              <span>{t('dashboard.course_maps_stage_scan_area')}</span>
+                              <strong>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</strong>
                             </div>
                           </div>
+                          <div className="admin-track-hub-map-stage__compare-copy">
+                            <span>{t('dashboard.course_maps_stage_preview_comparison')}</span>
+                            <strong>{getCourseMapRaceName(selectedCourseMapItem || {})}</strong>
+                          </div>
+                        </div>
+
+                        <div className="admin-track-hub-map-stage__compare-grid">
+                          <article className="admin-track-hub-map-panel admin-track-hub-map-panel--live">
+                            <div className="admin-track-hub-map-panel__head">
+                              <div>
+                                <span>{t('dashboard.review_panel_live')}</span>
+                                <strong>{liveCourseMapPreview ? t('dashboard.review_state_live') : t('dashboard.review_state_missing')}</strong>
+                              </div>
+                              <span className={`admin-track-hub-map-panel__badge is-${liveCourseMapPreview ? 'live' : 'missing'}`}>
+                                {liveCourseMapBadgeValue}
+                              </span>
+                            </div>
+                            <div className="admin-track-hub-map-panel__frame">
+                              <AdminCourseMapPreview
+                                preview={liveCourseMapPreview}
+                                title={`${getCourseMapRaceName(selectedCourseMapItem || {})} ${t('dashboard.review_panel_live')}`}
+                                emptyLabel={t('dashboard.review_live_empty')}
+                                forceLiveMap={true}
+                                fallbackCenter={getCourseMapViewportFallback(selectedCourseMapItem)}
+                                allowImageFallback={false}
+                                unalignedLabel={t('dashboard.course_maps_unaligned_preview')}
+                              />
+                            </div>
+                            <div className="admin-track-hub-map-panel__meta">
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_map_source')}</span>
+                                <strong>{t('dashboard.review_panel_live')}</strong>
+                              </article>
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_point_count')}</span>
+                                <strong>{liveCourseMapPreview ? liveCourseMapPointCount.toLocaleString() : '--'}</strong>
+                              </article>
+                            </div>
+                          </article>
+
+                          <article className="admin-track-hub-map-panel admin-track-hub-map-panel--pending">
+                            <div className="admin-track-hub-map-panel__head">
+                              <div>
+                                <span>{t('dashboard.review_panel_pending')}</span>
+                                <strong>{pendingCourseMapPreview ? t('dashboard.review_state_pending') : t('dashboard.review_state_missing')}</strong>
+                              </div>
+                              <span className={`admin-track-hub-map-panel__badge is-${pendingCourseMapPreview ? 'pending' : 'missing'}`}>
+                                {pendingCourseMapBadgeValue}
+                              </span>
+                            </div>
+                            <div className="admin-track-hub-map-panel__frame">
+                              <AdminCourseMapPreview
+                                preview={pendingCourseMapPreview}
+                                title={`${getCourseMapRaceName(selectedCourseMapItem || {})} ${t('dashboard.review_panel_pending')}`}
+                                emptyLabel={t('dashboard.review_pending_empty')}
+                                forceLiveMap={true}
+                                fallbackCenter={getCourseMapViewportFallback(selectedCourseMapItem)}
+                                allowImageFallback={false}
+                                unalignedLabel={t('dashboard.course_maps_unaligned_preview')}
+                              />
+                            </div>
+                            <div className="admin-track-hub-map-panel__meta">
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_map_source')}</span>
+                                <strong>{t('dashboard.review_panel_pending')}</strong>
+                              </article>
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_point_count')}</span>
+                                <strong>{pendingCourseMapPreview ? pendingCourseMapPointCount.toLocaleString() : '--'}</strong>
+                              </article>
+                            </div>
+                          </article>
+                        </div>
+
+                        <div className="admin-track-hub-map-stage__footer">
+                          <div className="admin-track-hub-map-stage__telemetry-grid">
+                            <div className="admin-track-hub-map-stage__telemetry-card">
+                              <span>{t('dashboard.course_maps_stage_map_source')}</span>
+                              <strong>{courseMapPrimarySourceLabel}</strong>
+                            </div>
+                            <div className="admin-track-hub-map-stage__telemetry-card">
+                              <span>{t('dashboard.course_maps_stage_extraction_pipeline')}</span>
+                              <strong>{t('dashboard.course_maps_run_pipeline')}</strong>
+                            </div>
+                            <div className="admin-track-hub-map-stage__telemetry-card">
+                              <span>{t('dashboard.course_maps_stage_point_count')}</span>
+                              <strong>{courseMapPointCount.toLocaleString()}</strong>
+                            </div>
+                          </div>
+                          <button type="button" className="btn-secondary btn-inline-md admin-track-hub-map-stage__telemetry-action" onClick={openCourseMapUploadPicker}>
+                            {t('dashboard.course_maps_upload')}
+                          </button>
                         </div>
                       </div>
 
@@ -2616,6 +2898,9 @@ export default function Dashboard() {
                                 <p className="admin-coursemap-publish-canvas__location">
                                   {getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}
                                 </p>
+                                {courseMapDisplaySummary ? (
+                                  <p className="admin-coursemap-publish-canvas__copy">{courseMapDisplaySummary}</p>
+                                ) : null}
                               </div>
 
                               <aside className="admin-coursemap-evidence-stack admin-track-hub-footer-output-grid">
@@ -2677,9 +2962,6 @@ export default function Dashboard() {
                                   <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapAction.raceId === selectedCourseMapId} onClick={openCourseMapUploadPicker}>
                                     {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'upload' ? t('dashboard.course_maps_uploading') : t('dashboard.course_maps_upload')}
                                   </button>
-                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapAction.raceId === selectedCourseMapId} onClick={() => triggerCourseMapScan(selectedCourseMapId)}>
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'scan' ? t('dashboard.course_maps_scan_running') : t('dashboard.course_maps_scan')}
-                                  </button>
                                 </div>
                                 <p>{t('dashboard.course_maps_action_group_source_hint')}</p>
                               </div>
@@ -2701,7 +2983,11 @@ export default function Dashboard() {
                                     disabled={(!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId}
                                     onClick={() => runMarathonPipeline(selectedCourseMapId)}
                                   >
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline' ? t('dashboard.course_maps_pipeline_running') : t('dashboard.course_maps_run_pipeline')}
+                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'refresh'
+                                      ? t('dashboard.course_maps_refreshing_preview')
+                                      : courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline'
+                                        ? t('dashboard.course_maps_pipeline_running')
+                                        : t('dashboard.course_maps_run_pipeline')}
                                   </button>
                                 </div>
                                 <p>{t('dashboard.course_maps_action_group_analysis_hint')}</p>
@@ -3170,8 +3456,12 @@ export default function Dashboard() {
                     <select className="admin-shoe-filter" value={jobQuery.jobType} onChange={e => setJobQuery(prev => ({ ...prev, jobType: e.target.value, page: 0 }))}>
                       <option value="">{t('dashboard.jobs_filter_all_types')}</option>
                       <option value="STRAVA_SYNC">{t('dashboard.jobs_type_strava_sync')}</option>
+                      <option value="STRAVA_GLOBAL_SYNC">{t('dashboard.jobs_type_strava_global_sync')}</option>
                       <option value="GARMIN_IMPORT">{t('dashboard.jobs_type_garmin_import')}</option>
+                      <option value="GARMIN_WELLNESS_SYNC">{t('dashboard.jobs_type_garmin_wellness_sync')}</option>
                       <option value="FILE_IMPORT">{t('dashboard.jobs_type_file_import')}</option>
+                      <option value="COURSE_MAP_PREVIEW_UPLOAD">{t('dashboard.jobs_type_course_map_upload')}</option>
+                      <option value="COURSE_MAP_PREVIEW_REANALYZE">{t('dashboard.jobs_type_course_map_reanalyze')}</option>
                     </select>
                     {(jobQuery.status || jobQuery.jobType) && (
                       <button type="button" className="btn-secondary btn-inline-md" onClick={() => setJobQuery({ jobType: '', status: '', page: 0 })}>
@@ -3256,6 +3546,13 @@ export default function Dashboard() {
                       <span className="section-intro-kicker">{t('dashboard.jobs_deck_detail_title')}</span>
                       <h3>{getDashboardJobTraceId(selectedJob)}</h3>
                       <p>{selectedJob.summary || t('dashboard.jobs_deck_detail_empty_copy')}</p>
+                      <span className={`admin-jobs-detail__fetch-state is-${selectedJobDetailState}`}>
+                        {selectedJobDetailState === 'loading'
+                          ? t('dashboard.jobs_deck_detail_loading')
+                          : selectedJobDetailState === 'error'
+                            ? t('dashboard.jobs_deck_detail_load_failed')
+                            : t('dashboard.jobs_deck_detail_loaded')}
+                      </span>
                     </div>
 
                     <div className="admin-jobs-detail__badges">
@@ -3309,6 +3606,69 @@ export default function Dashboard() {
                         <span>{t('dashboard.jobs_deck_detail_total')}</span>
                         <strong>{Number(selectedJob.totalCount || 0).toLocaleString()}</strong>
                       </article>
+                      <article className="admin-jobs-detail__stat">
+                        <span>{t('dashboard.jobs_deck_detail_queue_delay')}</span>
+                        <strong>{jobsSelectedQueueDelay}</strong>
+                      </article>
+                      <article className="admin-jobs-detail__stat">
+                        <span>{t('dashboard.jobs_deck_detail_run_duration')}</span>
+                        <strong>{jobsSelectedRunDuration}</strong>
+                      </article>
+                    </div>
+
+                    <div className="admin-jobs-detail__payload-shell">
+                      <div className="admin-jobs-detail__section-head">
+                        <strong>{t('dashboard.jobs_deck_detail_payload_highlights')}</strong>
+                        <span>{t('dashboard.jobs_deck_detail_payload_highlights_copy')}</span>
+                      </div>
+                      {jobsSelectedPayloadHighlights.length > 0 ? (
+                        <div className="admin-jobs-detail__payload-grid">
+                          {jobsSelectedPayloadHighlights.map((item) => (
+                            <article className="admin-jobs-detail__payload-card" key={item.key}>
+                              <span>{item.label}</span>
+                              <strong>{item.value}</strong>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="admin-jobs-detail__json-empty">{t('dashboard.jobs_deck_detail_no_payload_highlights')}</div>
+                      )}
+                    </div>
+
+                    <div className="admin-jobs-detail__timeline-shell">
+                      <div className="admin-jobs-detail__section-head">
+                        <strong>{t('dashboard.jobs_deck_detail_timeline')}</strong>
+                        <span>{t('dashboard.jobs_deck_detail_timeline_copy')}</span>
+                      </div>
+                      {jobsSelectedTimelineSteps.length > 0 ? (
+                        <ol className="admin-jobs-detail__timeline">
+                          {jobsSelectedTimelineSteps.map((step) => {
+                            const tone = getDashboardJobTimelineTone(step.status);
+                            return (
+                              <li className={`is-${tone}`} key={step.key}>
+                                <span className="admin-jobs-detail__timeline-dot" aria-hidden="true" />
+                                <div className="admin-jobs-detail__timeline-main">
+                                  <div className="admin-jobs-detail__timeline-meta">
+                                    <strong>{step.stage}</strong>
+                                    <span>{step.status}</span>
+                                    <small>{formatAdminDate(step.at)}</small>
+                                  </div>
+                                  {step.message && <p>{step.message}</p>}
+                                  {step.details && (
+                                    <div className="admin-jobs-detail__timeline-details">
+                                      {Object.entries(step.details).slice(0, 4).map(([key, value]) => (
+                                        <span key={key}>{key}: {formatDashboardJobValue(value)}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      ) : (
+                        <div className="admin-jobs-detail__json-empty">{t('dashboard.jobs_deck_detail_no_timeline')}</div>
+                      )}
                     </div>
 
                     <div className="admin-jobs-detail__json-shell">
