@@ -536,6 +536,28 @@ export default function RunDetail() {
 
         <section className="run-detail-main-grid">
           <div className="run-detail-primary-column">
+            {analytics?.debrief && (
+              <section className="run-detail-section run-detail-debrief-section">
+                <h2>{t('run_detail.coach_debrief_title')}</h2>
+                <div className="run-detail-panel run-detail-debrief-panel">
+                  <div className="run-detail-debrief-header">
+                    <div className="run-detail-debrief-readiness">
+                      <span>{t('run_detail.pre_run_readiness')}</span>
+                      <strong>{analytics.debrief.readinessScore}%</strong>
+                    </div>
+                    <AppIcon name="coach_voice" className="run-detail-debrief-icon" />
+                  </div>
+                  <div className="run-detail-debrief-content">
+                    <p className="run-detail-debrief-interpretation">{analytics.debrief.interpretation}</p>
+                    <div className="run-detail-debrief-guidance">
+                      <span className="run-detail-debrief-guidance-label">{t('run_detail.next_day_guidance')}</span>
+                      <p>{analytics.debrief.nextDayGuidance}</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             <section className="run-detail-section">
               <h2>{t('run_detail.physiological_response')}</h2>
               <div className="run-detail-panel">

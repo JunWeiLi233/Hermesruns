@@ -1,0 +1,46 @@
+{
+  "gates": {
+    "minor_fix": { "required": ["EG", "SP", "tiny_QA"], "complexity_threshold": 2 },
+    "milestone": { "required": ["SIG", "FIG", "SE7"], "complexity_threshold": 4 },
+    "epic": { "required": ["SIG", "CPG", "FIG", "SE7"], "complexity_threshold": 7 }
+  },
+  "complexity": {
+    "files_touched_weight": 1,
+    "duplication_weight": 1,
+    "state_complexity_weight": 1,
+    "translation_drift_weight": 1,
+    "verification_complexity_weight": 1,
+    "fragility_weight": 1,
+    "tech_debt_threshold": 4
+  },
+  "promotion": {
+    "must_fix_priority": 100,
+    "trust_resilience_priority": 80,
+    "product_depth_priority": 60,
+    "motivation_delight_priority": 40,
+    "tech_debt_priority": 20
+  },
+  "loop": {
+    "max_rounds": 24,
+    "max_same_work_unit_repeats": 3,
+    "runaway_threshold": 3,
+    "stall_recovery_retries": 2,
+    "evolve_interval": 5
+  },
+  "routing": {
+    "single_agent_threshold": 0.3,
+    "specialist_threshold": 0.6,
+    "parallel_builders_threshold": 0.8
+  },
+  "rollback": {
+    "auto_revert_max_files": 5,
+    "auto_revert_product_only": true
+  },
+  "human_gate": {
+    "default_mode": "autonomous",
+    "destructive_require_human": true,
+    "irreversible_require_human": true,
+    "high_risk_pause": true,
+    "medium_risk_auto_proceed": true
+  }
+}

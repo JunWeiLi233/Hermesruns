@@ -147,23 +147,42 @@ export function deriveRaceMapTrust({
   const routeCenterDriftFromRaceKm = routeCenter && Array.isArray(mapCenter)
     ? haversineKm(routeCenter.lat, routeCenter.lng, mapCenter[0], mapCenter[1])
     : 0;
+  const overlayCenterDriftFromRaceKm = overlayCenter && Array.isArray(mapCenter)
+    ? haversineKm(overlayCenter.lat, overlayCenter.lng, mapCenter[0], mapCenter[1])
+    : 0;
   const routeSegmentRatio = largestSegmentRatio(normalizedRoutePoints);
   const routeDistanceKm = polylineDistanceKm(normalizedRoutePoints);
   const minimumPlausibleRouteKm = Number.isFinite(Number(distanceKm))
     ? Math.max(3, Number(distanceKm) * 0.45)
     : 3;
+  const confidenceValue = Number.isFinite(Number(confidence)) ? Number(confidence) : 0;
+  const routeIsNearRaceCity = routeCenterDriftFromRaceKm === 0
+    || routeCenterDriftFromRaceKm <= Math.max(35, Number(distanceKm || 0));
+  const cityReferenceBoundsLookReasonable = overlayAreaKm2 >= 8 && overlayAreaKm2 <= 2400;
+  const storedCityLevelReference = Boolean(imageUrl)
+    && Boolean(overlayBounds)
+    && normalizedRoutePoints.length === 0
+    && confidenceValue >= 58
+    && cityReferenceBoundsLookReasonable
+    && (
+      overlayCenterDriftFromRaceKm === 0
+      || overlayCenterDriftFromRaceKm <= Math.max(35, Number(distanceKm || 0))
+    );
 
-  const overlayConfidenceFloor = Number.isFinite(confidence) ? Math.max(78, Number(distanceKm) >= 40 ? 82 : 76) : 82;
+  const overlayConfidenceFloor = confidenceValue > 0 ? Math.max(78, Number(distanceKm) >= 40 ? 82 : 76) : 82;
   const overlayLooksTrustworthy = Boolean(imageUrl)
     && Boolean(overlayBounds)
     && trustedRoute
     && routeDistanceKm >= minimumPlausibleRouteKm
-    && Number(confidence || 0) >= overlayConfidenceFloor
+    && confidenceValue >= overlayConfidenceFloor
     && boundsContainRouteWithMargin(overlayBounds, routeBounds)
     && overlayAreaRatio <= 14
     && centerDriftKm <= 18
     && routeSegmentRatio <= 0.5
     && (routeCenterDriftFromRaceKm === 0 || routeCenterDriftFromRaceKm <= Math.max(24, Number(distanceKm || 0) * 1.5));
+
+  const cityLevelMatch = Boolean(imageUrl)
+    && ((trustedRoute && routeIsNearRaceCity) || storedCityLevelReference);
 
   const viewportBounds = trustedRoute
     ? (
@@ -171,11 +190,14 @@ export function deriveRaceMapTrust({
         ? padBounds(overlayBounds, 0.04)
         : padBounds(routeBounds, 0.22)
     )
+    : storedCityLevelReference
+      ? padBounds(overlayBounds, 0.06)
     : null;
 
   return {
     trustedRoute,
     trustedOverlay: overlayLooksTrustworthy,
+    cityLevelMatch,
     viewportBounds,
     routeBounds,
     routePoints: normalizedRoutePoints,

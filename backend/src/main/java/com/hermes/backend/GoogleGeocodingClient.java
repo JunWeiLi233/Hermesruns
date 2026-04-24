@@ -26,6 +26,10 @@ public class GoogleGeocodingClient {
         this.restTemplate = restTemplate;
     }
 
+    public boolean isConfigured() {
+        return apiKey != null && !apiKey.isBlank();
+    }
+
     public List<GeocodedAnchorPointDTO> geocodeAnchorPoints(
             String raceName,
             String city,
@@ -36,7 +40,7 @@ public class GoogleGeocodingClient {
         validateRequiredText("city", city);
         validateRequiredText("country", country);
         validateAnchorLabels(anchorLabels);
-        if (apiKey == null || apiKey.isBlank()) {
+        if (!isConfigured()) {
             throw new IllegalStateException("Google geocoding API key is not configured.");
         }
 

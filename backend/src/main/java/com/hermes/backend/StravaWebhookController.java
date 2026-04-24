@@ -80,27 +80,29 @@ public class StravaWebhookController {
     /**
      * Strava event callback — receives activity create/update/delete/deauthorize events.
      * Must return 200 within 2 seconds (Strava requirement), so processing is async.
+     *
+     * <p>Strava does not send a verify_token on POST event callbacks (only on GET
+     * subscription validation). Instead, we validate the event payload structure and
+     * only process events for known athletes (checked via owner_id lookup in
+     * runnerRepository). The {@link WebhookRateLimitFilter} provides per-IP flood
+     * protection, and the runner lookup ensures only events for registered athletes
+     * trigger activity processing.</p>
      */
     @PostMapping
-    public ResponseEntity<String> handleEvent(
-            @RequestParam(value = "verify_token", required = false) String token,
-            @RequestBody Map<String, Object> event) {
-        
-        if (verifyToken != null && !verifyToken.equals(token)) {
-            log.warn("Strava webhook event forged or missing token. verify_token param mismatch.");
-            return ResponseEntity.status(401).body("UNAUTHORIZED");
-        }
-
-        log.debug("Strava webhook event: {}", event);
+    public ResponseEntity<String> handleEvent(@RequestBody Map<String, Object> event) {
 
         String objectType = str(event.get("object_type"));
         String aspectType = str(event.get("aspect_type"));
         Long ownerId = lng(event.get("owner_id"));
         Long objectId = lng(event.get("object_id"));
 
-        if (ownerId == null) {
-            return ResponseEntity.ok("EVENT_RECEIVED");
+        if (objectType == null || aspectType == null || ownerId == null) {
+            log.warn("Strava webhook event rejected: missing required fields (object_type, aspect_type, owner_id).");
+            return ResponseEntity.badRequest().body("MISSING_REQUIRED_FIELDS");
         }
+
+        log.info("Strava webhook event: object_type={}, aspect_type={}, owner_id={}, object_id={}",
+                objectType, aspectType, ownerId, objectId);
 
         // Handle deauthorization
         if ("athlete".equals(objectType) && "update".equals(aspectType)) {

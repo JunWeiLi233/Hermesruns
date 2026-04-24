@@ -430,6 +430,18 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m12.5 7.5 4 4" />
         </>
       );
+    case 'sleep':
+      return titled(
+        <>
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </>
+      );
+    case 'stress':
+      return titled(
+        <>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </>
+      );
     case 'arrow_back':
       return titled(
         <>

@@ -2,12 +2,15 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,15 +22,15 @@ class MarathonRouteExtractionServiceTests {
 
     @Test
     void extractRoutePathReturnsRouteParametersAndOrderedPixelPoints() throws Exception {
-        GeminiRouteParameterClient geminiRouteParameterClient = mock(GeminiRouteParameterClient.class);
-        when(geminiRouteParameterClient.extractRouteParameters("C:\\maps\\boston-course.png"))
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+        when(qwenRouteParameterClient.extractRouteParameters("C:\\maps\\boston-course.png", "Boston Marathon", "Boston", "USA", 42.195))
                 .thenReturn(new RouteParametersDTO(
                         "#22AA66",
                         List.of("start line", "bridge turn", "park loop", "finish chute")
                 ));
 
         RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
-                geminiRouteParameterClient,
+                qwenRouteParameterClient,
                 new ObjectMapper(),
                 new FakeProcess("""
                         {"points":[[12,34],[56,78],[90,123]],"pointCount":3,"maskPixelCount":456,"skeletonPixelCount":78}
@@ -36,7 +39,7 @@ class MarathonRouteExtractionServiceTests {
         ReflectionTestUtils.setField(service, "pythonExecutable", "python-custom");
         ReflectionTestUtils.setField(service, "pythonScriptPath", "backend/src/main/resources/python/extract_route_path.py");
 
-        RoutePathExtractionResultDTO result = service.extractRoutePath("C:\\maps\\boston-course.png");
+        RoutePathExtractionResultDTO result = service.extractRoutePath("C:\\maps\\boston-course.png", "Boston Marathon", "Boston", "USA", 42.195);
 
         assertThat(service.command())
                 .containsExactly(
@@ -63,15 +66,15 @@ class MarathonRouteExtractionServiceTests {
 
     @Test
     void extractRoutePathRaisesHelpfulErrorWhenPythonCliFails() throws Exception {
-        GeminiRouteParameterClient geminiRouteParameterClient = mock(GeminiRouteParameterClient.class);
-        when(geminiRouteParameterClient.extractRouteParameters("C:\\maps\\broken-course.png"))
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+        when(qwenRouteParameterClient.extractRouteParameters("C:\\maps\\broken-course.png", null, null, null, null))
                 .thenReturn(new RouteParametersDTO(
                         "#CC3311",
                         List.of("start", "turn one", "turn two", "finish")
                 ));
 
         RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
-                geminiRouteParameterClient,
+                qwenRouteParameterClient,
                 new ObjectMapper(),
                 new FakeProcess("", "mask generation failed", 2)
         );
@@ -81,16 +84,44 @@ class MarathonRouteExtractionServiceTests {
                 .hasMessageContaining("mask generation failed");
     }
 
+    @Test
+    void resolvePythonExecutablePrefersRepoRootVirtualEnvWhenPresent(@TempDir Path tempDir) throws Exception {
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new FakeProcess("{}", "", 0)
+        );
+
+        Path backendDir = tempDir.resolve("backend");
+        Path repoVenvPython = tempDir.resolve(".venv").resolve("Scripts").resolve("python.exe");
+        Files.createDirectories(repoVenvPython.getParent());
+        Files.createDirectories(backendDir);
+        Files.writeString(repoVenvPython, "python");
+        ReflectionTestUtils.setField(service, "pythonExecutable", "python");
+
+        String originalUserDir = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", backendDir.toString());
+            String resolved = ReflectionTestUtils.invokeMethod(service, "resolvePythonExecutable");
+            assertThat(resolved).isNotEqualTo("python");
+            assertThat(Path.of(resolved).getFileName().toString()).isEqualToIgnoringCase("python.exe");
+            assertThat(resolved).contains(".venv");
+        } finally {
+            System.setProperty("user.dir", originalUserDir);
+        }
+    }
+
     private static final class RecordingMarathonRouteExtractionService extends MarathonRouteExtractionService {
         private final Process process;
         private List<String> command;
 
         private RecordingMarathonRouteExtractionService(
-                GeminiRouteParameterClient geminiRouteParameterClient,
+                QwenRouteParameterClient qwenRouteParameterClient,
                 ObjectMapper objectMapper,
                 Process process
         ) {
-            super(geminiRouteParameterClient, objectMapper);
+            super(qwenRouteParameterClient, objectMapper);
             this.process = process;
         }
 

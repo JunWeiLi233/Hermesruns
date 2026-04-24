@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 @Service
 public class AdminBackgroundJobService {
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final int MAX_SUMMARY_LENGTH = 240;
 
     private final AdminBackgroundJobRepository adminBackgroundJobRepository;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -25,7 +26,7 @@ public class AdminBackgroundJobService {
         AdminBackgroundJob job = new AdminBackgroundJob();
         job.setJobType(type);
         job.setTriggerSource(triggerSource);
-        job.setSummary(summary);
+        job.setSummary(truncateSummary(summary));
         if (actor != null) {
             job.setCreatedByRunnerId(actor.getId());
             job.setCreatedByEmail(actor.getEmail());
@@ -46,7 +47,12 @@ public class AdminBackgroundJobService {
         job.setFinishedAt(LocalDateTime.now());
         job.setSuccessCount(successCount);
         job.setFailureCount(failureCount);
-        job.setSummary(summary);
+        job.setSummary(truncateSummary(summary));
+        job.setDetailsJson(writeJson(details));
+        adminBackgroundJobRepository.save(job);
+    }
+
+    public void updateDetails(AdminBackgroundJob job, Map<String, Object> details) {
         job.setDetailsJson(writeJson(details));
         adminBackgroundJobRepository.save(job);
     }
@@ -62,6 +68,13 @@ public class AdminBackgroundJobService {
         } catch (Exception ex) {
             return "{}";
         }
+    }
+
+    private String truncateSummary(String summary) {
+        if (summary == null || summary.length() <= MAX_SUMMARY_LENGTH) {
+            return summary;
+        }
+        return summary.substring(0, MAX_SUMMARY_LENGTH - 3) + "...";
     }
 
     @PreDestroy

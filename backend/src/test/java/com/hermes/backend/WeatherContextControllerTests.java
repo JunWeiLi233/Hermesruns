@@ -19,8 +19,10 @@ class WeatherContextControllerTests {
     void getContextRejectsMissingAuthorization() {
         AuthService authService = mock(AuthService.class);
         AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
-        WeatherContextController controller = controller(authService, acclimatizationService);
+        WeatherContextController controller = controller(authService, acclimatizationService, fitnessService, activityRepository);
 
         ResponseEntity<?> response = controller.getContext(null);
 
@@ -32,6 +34,8 @@ class WeatherContextControllerTests {
     void getContextReturnsWeatherContextPayloadForAuthenticatedRunner() {
         AuthService authService = mock(AuthService.class);
         AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         Runner runner = runner();
         AcclimatizationService.WeatherContextResponse payload = new AcclimatizationService.WeatherContextResponse(
                 true,
@@ -50,7 +54,7 @@ class WeatherContextControllerTests {
         );
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(acclimatizationService.buildContext(runner)).thenReturn(payload);
-        WeatherContextController controller = controller(authService, acclimatizationService);
+        WeatherContextController controller = controller(authService, acclimatizationService, fitnessService, activityRepository);
 
         ResponseEntity<?> response = controller.getContext("Bearer runner-token");
 
@@ -63,11 +67,13 @@ class WeatherContextControllerTests {
     void getContextReturnsBadRequestWhenServiceRejectsRunnerContext() {
         AuthService authService = mock(AuthService.class);
         AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(acclimatizationService.buildContext(runner))
                 .thenThrow(new IllegalArgumentException("No recent run GPS points found."));
-        WeatherContextController controller = controller(authService, acclimatizationService);
+        WeatherContextController controller = controller(authService, acclimatizationService, fitnessService, activityRepository);
 
         ResponseEntity<?> response = controller.getContext("Bearer runner-token");
 
@@ -78,10 +84,12 @@ class WeatherContextControllerTests {
     void getContextReturnsServerErrorMapWhenServiceFailsUnexpectedly() {
         AuthService authService = mock(AuthService.class);
         AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(acclimatizationService.buildContext(runner)).thenThrow(new IllegalStateException("boom"));
-        WeatherContextController controller = controller(authService, acclimatizationService);
+        WeatherContextController controller = controller(authService, acclimatizationService, fitnessService, activityRepository);
 
         ResponseEntity<?> response = controller.getContext("Bearer runner-token");
 
@@ -90,9 +98,11 @@ class WeatherContextControllerTests {
 
     private WeatherContextController controller(
             AuthService authService,
-            AcclimatizationService acclimatizationService
+            AcclimatizationService acclimatizationService,
+            WeatherAdjustedFitnessService fitnessService,
+            ActivityRepository activityRepository
     ) {
-        return new WeatherContextController(authService, acclimatizationService);
+        return new WeatherContextController(authService, acclimatizationService, fitnessService, activityRepository);
     }
 
     private Runner runner() {

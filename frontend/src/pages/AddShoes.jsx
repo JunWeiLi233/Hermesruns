@@ -7,9 +7,10 @@ import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
-import ShoeBrandLogo, { getShoeBrandLogoBackgroundStyle } from '../components/ShoeBrandLogo';
+import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import shoeCatalog from '../data/shoeCatalog';
+import { buildSeriesCatalog } from '../utils/addShoeCatalog.js';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 
@@ -18,6 +19,13 @@ const EXTRA_BRAND_KEYS = ['lining', 'anta', 'brooks', 'hoka'];
 
 function normalizeBrandKey(brand) {
   return (brand || '').toString().trim().toLowerCase().replace(/[\s!.,'"-]+/g, '');
+}
+
+function matchesBrandKey(brand, targetKey, lang = 'zh-CN') {
+  const normalizedBrand = normalizeBrandKey(brand);
+  const normalizedTarget = normalizeBrandKey(targetKey);
+  const localizedTarget = normalizeBrandKey(localizeShoeBrand(targetKey, lang));
+  return normalizedBrand === normalizedTarget || normalizedBrand === localizedTarget;
 }
 
 function shoeHealth(current, max) {
@@ -159,11 +167,12 @@ export default function AddShoes() {
       setLoadState('loading');
       try {
         const [catalogData, shoesData] = await Promise.all([apiJson('/api/shoe-catalog').catch(() => shoeCatalog), apiJson('/api/shoes')]);
-        setCatalog(Array.isArray(catalogData) ? catalogData : mergeCatalog(catalogData));
+        const mergedCatalog = Array.isArray(catalogData) ? catalogData : mergeCatalog(catalogData);
+        setCatalog(buildSeriesCatalog(mergedCatalog));
         setShoes(Array.isArray(shoesData) ? shoesData : []);
         setLoadState('ready');
       } catch {
-        setCatalog(shoeCatalog);
+        setCatalog(buildSeriesCatalog(shoeCatalog));
         setShoes([]);
         setLoadState('error');
       }
@@ -183,10 +192,11 @@ export default function AddShoes() {
   const browserBrands = useMemo(() => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)), [catalog]);
   const extraBrands = useMemo(
     () => EXTRA_BRAND_KEYS
-      .map((key) => browserBrands.find((brand) => normalizeBrandKey(brand.brand) === key))
+      .map((key) => browserBrands.find((brand) => matchesBrandKey(brand.brand, key)))
       .filter(Boolean),
     [browserBrands],
   );
+  const browserBrand = useMemo(() => browserBrands.find((brand) => brand.brand === browserBrandKey) || browserBrands[0] || null, [browserBrands, browserBrandKey]);
 
   useEffect(() => {
     if (!browserBrands.length) return;
@@ -201,8 +211,6 @@ export default function AddShoes() {
       setShowExtraBrands(true);
     }
   }, [browserBrand, extraBrands]);
-
-  const browserBrand = useMemo(() => browserBrands.find((brand) => brand.brand === browserBrandKey) || browserBrands[0] || null, [browserBrands, browserBrandKey]);
   const browserBrandsToShow = useMemo(() => {
     const items = browserBrands.slice(0, 8);
     if (browserBrand && !items.some((item) => item.brand === browserBrand.brand)) return [browserBrand, ...items.slice(0, 7)];
@@ -320,14 +328,14 @@ export default function AddShoes() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} aria-label={item.label}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
           ))}
         </nav>
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} aria-label={t('profile.dashboard_start_workout')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>
@@ -338,7 +346,7 @@ export default function AddShoes() {
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
             <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
-              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>HERMES</button>
+              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')} aria-label={t('profile.dashboard_nav_dashboard')}>HERMES</button>
               <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/shoes')}>
                 {t('profile.dashboard_nav_shoes')}
               </button>
@@ -403,7 +411,7 @@ export default function AddShoes() {
                     <h2>{browserTitle}</h2>
                     <p>{t('shoes.browser_copy')}</p>
                   </div>
-                  <button type="button" className="add-shoes-secondary-btn add-shoes-stage-back" onClick={() => navigate('/shoes')}>
+                  <button type="button" className="add-shoes-secondary-btn add-shoes-stage-back" onClick={() => navigate('/shoes')} aria-label={t('shoes.add_page_back')}>
                     <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
                     <span>{t('shoes.add_page_back')}</span>
                   </button>
@@ -422,7 +430,7 @@ export default function AddShoes() {
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">1</span><div><h2>{t('shoes.add_page_step_brand_title')}</h2><p>{t('shoes.add_page_step_brand_copy')}</p></div></div>
                   <div className="add-shoes-brand-deck">
                     {featuredBrand ? (
-                      <button type="button" className="add-shoes-brand-deck-feature is-active" onClick={() => handleBrandPick(featuredBrand)} style={getShoeBrandLogoBackgroundStyle(featuredBrand.brand)}>
+                      <button type="button" className="add-shoes-brand-deck-feature is-active" onClick={() => handleBrandPick(featuredBrand)} aria-pressed="true" aria-label={t('shoes.add_page_step_brand_title')}>
                         <span className="add-shoes-brand-deck-flag">{t('shoes.browser_kicker')}</span>
                         <div className="add-shoes-brand-deck-feature-copy">
                           <strong>{localizeShoeBrand(featuredBrand.brand, lang)}</strong>
@@ -435,7 +443,7 @@ export default function AddShoes() {
                       {secondaryBrands.map((brand) => {
                         const isActive = browserBrand?.brand === brand.brand;
                         return (
-                          <button key={brand.brand} type="button" className={cx('add-shoes-brand-deck-card', isActive && 'is-active')} onClick={() => handleBrandPick(brand)} style={getShoeBrandLogoBackgroundStyle(brand.brand)}>
+                          <button key={brand.brand} type="button" className={cx('add-shoes-brand-deck-card', isActive && 'is-active')} onClick={() => handleBrandPick(brand)} aria-pressed={isActive ? 'true' : 'false'}>
                             <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
                             <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
                           </button>
@@ -464,7 +472,7 @@ export default function AddShoes() {
                                 type="button"
                                 className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
                                 onClick={() => handleBrandPick(brand)}
-                                style={getShoeBrandLogoBackgroundStyle(brand.brand)}
+                                aria-pressed={isActive ? 'true' : 'false'}
                               >
                                 <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
                                 <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>

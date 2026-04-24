@@ -25,6 +25,7 @@ public class ActivityImportService {
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final AcclimatizationService acclimatizationService;
 
     private static final int MAX_ZIP_ENTRIES = 200;
     private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry
@@ -37,12 +38,14 @@ public class ActivityImportService {
             ActivityRepository activityRepository,
             List<ActivityFileParser> fileParsers,
             ActivityPointRepository activityPointRepository,
-            ApplicationEventPublisher applicationEventPublisher
+            ApplicationEventPublisher applicationEventPublisher,
+            AcclimatizationService acclimatizationService
     ) {
         this.activityRepository = activityRepository;
         this.fileParsers = fileParsers;
         this.activityPointRepository = activityPointRepository;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.acclimatizationService = acclimatizationService;
     }
 
     @Transactional
@@ -177,6 +180,16 @@ public class ActivityImportService {
         activity.setCreatedAt(LocalDateTime.now());
         activity.setAverageHeartRate(parsedActivity.averageHeartRate());
         activity.setMaxHeartRate(parsedActivity.maxHeartRate());
+
+        // Weather adjustment
+        try {
+            Integer penalty = acclimatizationService.calculatePenaltyForActivity(activity);
+            activity.setPacePenaltySecPerKm(penalty);
+            activity.setWeatherAdjusted(penalty != null && penalty > 0);
+        } catch (Exception e) {
+            System.err.println("Weather adjustment calculation failed during import: " + e.getMessage());
+        }
+
         // Persist the Activity first so we can bulk-insert ActivityPoint rows
         // without keeping the entire points list inside the Activity's JPA collection.
         Activity savedActivity = activityRepository.save(activity);
