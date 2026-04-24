@@ -31,6 +31,8 @@ const PredictionDetail = React.lazy(() => import('./pages/PredictionDetail'));
 const MuscleTraining = React.lazy(() => import('./pages/MuscleTraining'));
 const Rewards = React.lazy(() => import('./pages/Rewards'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+const GarminImportSettings = React.lazy(() => import('./pages/GarminImportSettings'));
+const ImportDataSettings = React.lazy(() => import('./pages/ImportDataSettings'));
 const LegalPage = React.lazy(() => import('./pages/LegalPage'));
 const WorkflowBuilder = React.lazy(() => import('./pages/WorkflowBuilder'));
 
@@ -109,6 +111,8 @@ function App() {
                 <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
                 <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
                 <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
+                <Route path="/settings/garmin-import" element={<UserOnlyRoute><GarminImportSettings /></UserOnlyRoute>} />
+                <Route path="/settings/import-data" element={<UserOnlyRoute><ImportDataSettings /></UserOnlyRoute>} />
                 <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
                 <Route path="/shoes/add" element={<UserOnlyRoute><AddShoes /></UserOnlyRoute>} />
                 <Route path="/add-shoes" element={<Navigate to="/shoes/add" replace />} />

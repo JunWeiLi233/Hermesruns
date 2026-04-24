@@ -17,6 +17,10 @@ public class ShoeImageAsset {
     @Column(nullable = false, unique = true, length = 256)
     private String identityKey;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "runner_id")
+    private Runner runner;
+
     private String brand;
     private String model;
 
@@ -47,6 +51,8 @@ public class ShoeImageAsset {
     public Long getId() { return id; }
     public String getIdentityKey() { return identityKey; }
     public void setIdentityKey(String identityKey) { this.identityKey = identityKey; }
+    public Runner getRunner() { return runner; }
+    public void setRunner(Runner runner) { this.runner = runner; }
     public String getBrand() { return brand; }
     public void setBrand(String brand) { this.brand = brand; }
     public String getModel() { return model; }

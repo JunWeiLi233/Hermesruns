@@ -2,7 +2,14 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, apiJson } from '../api';
-import { markStravaAutoSyncTriggered, shouldTriggerStravaAutoSync } from '../utils/stravaAutoSync';
+import {
+  STRAVA_SYNC_FINISHED_EVENT,
+  clearStravaOauthPendingFlag,
+  hasStravaOauthPendingFlag,
+  markStravaAutoSyncTriggered,
+  markStravaOauthPendingFlag,
+  shouldTriggerStravaAutoSync,
+} from '../utils/stravaAutoSync';
 
 // BUG(strava-sign-in): Strava OAuth can still break in some setups (localhost webhooks, token refresh,
 // encryption key changes, or stale sessions). Re-test /api/auth/strava/* and /api/strava/sync after auth changes.
@@ -49,6 +56,7 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null);
   /** False while JWT exists but role has not been confirmed by the server yet. */
   const [authHydrated, setAuthHydrated] = useState(() => !initialToken);
+  const [stravaOauthPending, setStravaOauthPending] = useState(false);
 
   // OAuth / magic-link: token in URL hash or query (backend redirect)
   useEffect(() => {
@@ -70,6 +78,10 @@ export function AuthProvider({ children }) {
     if (incomingEmail) {
       localStorage.setItem('hermes_email', incomingEmail);
       setEmail(incomingEmail);
+    }
+    if (incomingSource === 'strava') {
+      markStravaOauthPendingFlag({});
+      setStravaOauthPending(true);
     }
 
     if (incomingToken || incomingEmail || incomingSource) {
@@ -120,6 +132,58 @@ export function AuthProvider({ children }) {
     });
   }, [authHydrated, token]);
 
+  useEffect(() => {
+    if (!token || !authHydrated || !(stravaOauthPending || hasStravaOauthPendingFlag({}))) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId = null;
+    let sawActiveSync = false;
+    const deadlineMs = Date.now() + (90 * 1000);
+
+    async function pollStravaSyncCompletion() {
+      try {
+        const syncStatus = await apiJson('/api/auth/strava/sync-status');
+        if (cancelled) return;
+
+        if (syncStatus?.active) {
+          sawActiveSync = true;
+        }
+
+        const finished = syncStatus?.status === 'COMPLETED'
+          || syncStatus?.status === 'FAILED'
+          || (sawActiveSync && !syncStatus?.active);
+
+        if (finished) {
+          clearStravaOauthPendingFlag({});
+          setStravaOauthPending(false);
+          window.dispatchEvent(new CustomEvent(STRAVA_SYNC_FINISHED_EVENT, { detail: syncStatus }));
+          return;
+        }
+      } catch {
+        if (cancelled) return;
+      }
+
+      if (Date.now() >= deadlineMs) {
+        clearStravaOauthPendingFlag({});
+        setStravaOauthPending(false);
+        return;
+      }
+
+      timeoutId = window.setTimeout(pollStravaSyncCompletion, 2000);
+    }
+
+    pollStravaSyncCompletion();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId != null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [authHydrated, stravaOauthPending, token]);
+
   const login = useCallback((newToken, newEmail) => {
     // Commit token before callers run navigate(); otherwise route guards still see the old (empty) session.
     flushSync(() => {
@@ -143,6 +207,7 @@ export function AuthProvider({ children }) {
     setEmail(null);
     setRole(null);
     setAuthHydrated(true);
+    setStravaOauthPending(false);
     navigate('/login');
   }, [navigate]);
 

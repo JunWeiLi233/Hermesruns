@@ -38,6 +38,18 @@ assert.match(
 );
 
 assert.match(
+  dashboardSource,
+  /await Promise\.all\(\[loadCourseMaps\(\), loadQueues\(\)\]\)[\s\S]*await loadCourseMapDetail\(raceId, \{ forceFetch: true, fallbackItem: sourceItem \}\)/,
+  'Dashboard should refresh the selected course-map detail after a pipeline job completes so the pending preview panel does not stay stale.'
+);
+
+assert.match(
+  dashboardSource,
+  /course_maps_status_running_refresh|course_maps_refreshing_preview/,
+  'Dashboard should expose a visible refresh-state string while the selected course-map preview is being reloaded after a pipeline run.'
+);
+
+assert.match(
   previewSource,
   /previewImageUrl[\s\S]*sourceImageUrl/,
   'Admin course-map preview rendering should prefer the backend-provided previewImageUrl before falling back to raw source aliases.'

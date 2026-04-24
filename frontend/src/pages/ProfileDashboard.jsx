@@ -18,7 +18,11 @@ import {
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { buildRecentShoeSignal } from '../utils/shoeRotation';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
+import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../utils/vdot';
+import { calculateStreaks, getDaysSinceLastRun } from '../utils/streakUtils';
+import StreakProtection from '../components/StreakProtection';
+import ComebackMessage from '../components/ComebackMessage';
 
 const DASHBOARD_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCduh8I3MMazSPbifhs59F6YdwIOS-ZRvW7t_n3qJKHxcqDJP3fep7cglrfaXiwrYYPwPxFtz_ExFJggZD-Cy5WZbURvgfE6h4Bvc2M_XU19LaXiqyfdCoyiRn0Aoln4WxGCgqJqtK1Kn2Mlp-KiHvYvqqeidejVqd75xj0rXOXokd_ePH6X6P2LEuMuuZNA5N5gVErlHBg3f0Qdi_d5PaePI6Fzw8BoDHmloQLsQl4agd74Hb85CXqnA1DUwAI-P6P3oPHBwKS50k8';
 const PR_SNAPSHOT_VERSION = 1;
@@ -86,12 +90,12 @@ function startOfIsoWeek(date) {
 
 function formatPaceDisplay(secondsPerKm, lang) {
   if (!Number.isFinite(secondsPerKm) || secondsPerKm <= 0) return '--';
-  return `${formatPaceSeconds(secondsPerKm)} ${lang === 'zh-CN' ? '/公里' : '/km'}`;
+  return `${formatPaceSeconds(secondsPerKm)} ${lang === 'zh-CN' ? '/\u516c\u91cc' : '/km'}`;
 }
 
 function formatElevationDisplay(totalMeters, lang) {
   if (!Number.isFinite(totalMeters) || totalMeters <= 0) return '--';
-  return `${Math.round(totalMeters)} ${lang === 'zh-CN' ? '米' : 'm'}`;
+  return `${Math.round(totalMeters)} ${lang === 'zh-CN' ? '\u7c73' : 'm'}`;
 }
 
 function getDisplayName(profile, fallback) {
@@ -150,7 +154,7 @@ function buildWeekBars(runs, lang) {
   const todayIndex = Math.max(0, Math.min(6, Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - weekStart) / 86400000)));
 
   return dayNames.map((label, index) => ({
-    key: `${label}-${index}`,
+    key: label,
     index,
     label,
     actual: actual[index],
@@ -262,7 +266,7 @@ function buildSessionMetric(run, lang, unit, t) {
     };
   }
 
-  const elevation = Number(run?.elevationGainMeters || run?.totalElevationGainMeters || 0);
+  const elevation = Number(run?.elevationGainMeters ?? run?.totalElevationGainMeters ?? run?.totalElevationGain ?? 0);
   if (elevation > 0) {
     return {
       value: `${Math.round(elevation)} m`,
@@ -393,10 +397,10 @@ function formatCelebrationValue(entry, lang, unit, t) {
     return formatDistance(entry.record?.primaryValue || 0, 1, lang, unit);
   }
   if (entry.type === 'pace') {
-    return `${formatPaceSeconds(entry.record?.primaryValue || 0)} ${lang === 'zh-CN' ? '/公里' : '/km'}`;
+    return `${formatPaceSeconds(entry.record?.primaryValue || 0)} ${lang === 'zh-CN' ? '/\u516c\u91cc' : '/km'}`;
   }
   if (entry.type === 'elevation') {
-    return `${Math.round(Number(entry.record?.primaryValue || 0))} ${lang === 'zh-CN' ? '米爬升' : 'm gain'}`;
+    return `${Math.round(Number(entry.record?.primaryValue || 0))} ${lang === 'zh-CN' ? '\u7c73\u722c\u5347' : 'm gain'}`;
   }
   return t('profile.pr_modal_value_fallback');
 }
@@ -428,6 +432,7 @@ export default function ProfileDashboard() {
   const [loadState, setLoadState] = useState('loading');
   const [banner, setBanner] = useState(null);
   const [prCelebration, setPrCelebration] = useState(null);
+  const [dismissedComeback, setDismissedComeback] = useState(false);
   const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
@@ -443,13 +448,21 @@ export default function ProfileDashboard() {
     async function loadDashboard() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData, shoesData] = await Promise.all([
+        const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
           apiJson('/api/shoes'),
         ]);
 
         if (cancelled) return;
+
+        if (profileResult.status !== 'fulfilled') {
+          throw profileResult.reason || new Error('profile_load_failed');
+        }
+
+        const profileData = profileResult.value;
+        const activitiesData = activitiesResult.status === 'fulfilled' ? activitiesResult.value : [];
+        const shoesData = shoesResult.status === 'fulfilled' ? shoesResult.value : [];
 
         const list = Array.isArray(activitiesData) ? activitiesData : [];
         list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
@@ -528,6 +541,42 @@ export default function ProfileDashboard() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    const query = new URLSearchParams(window.location.search);
+    const redirectedFromStrava = query.get('source') === 'strava';
+    const pendingStravaHydration = redirectedFromStrava || consumeStravaOauthPendingFlag({});
+
+    if (!pendingStravaHydration) {
+      return;
+    }
+
+    setBanner((current) => current ?? {
+      tone: 'info',
+      message: t('profile.strava_sync_processing'),
+    });
+
+    if (redirectedFromStrava) {
+      query.delete('source');
+      const nextQuery = query.toString();
+      window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
+    }
+  }, [isAuthenticated, t]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    function handleStravaSyncFinished() {
+      window.location.reload();
+    }
+
+    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    return () => {
+      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
     const params = new URLSearchParams(window.location.search);
     const checkout = parseCheckoutBannerQuery(window.location.search);
     const linkingNotice = parseProfileLinkingQuery(window.location.search, {
@@ -574,12 +623,18 @@ export default function ProfileDashboard() {
 
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
-  const profileVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
-  const profileVdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
+
+  const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
+  const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
+  const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
+
+  const streak = useMemo(() => calculateStreaks(runs), [runs]);
+  const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
 
   const racePredictions = useMemo(() => {
-    if (profileVdot <= 0) return [];
-    return buildOrderedRacePredictions(profileVdot, runs).map((d) => {
+    const vdotValue = profileVdot.representativeVdot;
+    if (vdotValue <= 0) return [];
+    return buildOrderedRacePredictions(vdotValue, runs).map((d) => {
       const timeMin = d.timeMin;
       if (!timeMin || timeMin <= 0) return null;
       const totalSec = Math.round(timeMin * 60);
@@ -626,13 +681,13 @@ export default function ProfileDashboard() {
     ? formatDistance(coachState.volumeKm7d, 1, lang, unit)
     : '--';
   const recentSessions = runs.slice(0, 3);
+  const featuredSession = recentSessions[0] || null;
+  const featuredSessionMetric = featuredSession ? buildSessionMetric(featuredSession, lang, unit, t) : null;
   const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
   const weeklyProjectedTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.projected || 0), 0);
   const weeklyCompletion = weeklyProjectedTotal > 0
     ? Math.max(0, Math.min(100, Math.round((weeklyActualTotal / weeklyProjectedTotal) * 100)))
     : 0;
-  const featuredSession = recentSessions[0] || null;
-  const featuredSessionMetric = featuredSession ? buildSessionMetric(featuredSession, lang, unit, t) : null;
   const stamina = useMemo(
     () => coachState?.stamina || buildStaminaFallback(readiness, heroPace, restingHrValue),
     [coachState?.stamina, heroPace, readiness, restingHrValue],
@@ -689,7 +744,7 @@ export default function ProfileDashboard() {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
+    { key: 'weather_engine', label: lang === 'zh-CN' ? '\u5929\u6c14\u5f15\u64ce' : 'Weather', route: '/weather', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
@@ -815,6 +870,10 @@ export default function ProfileDashboard() {
           </section>
         )}
 
+        {!dismissedComeback && daysOff >= 3 && (
+          <ComebackMessage daysOff={daysOff} onDismiss={() => setDismissedComeback(true)} />
+        )}
+
         {loadState === 'loading' && (
           <section className="runner-dashboard-loading-card">
             <strong>{t('runs.loading')}</strong>
@@ -827,12 +886,46 @@ export default function ProfileDashboard() {
           </section>
         )}
 
-        {loadState === 'ready' && (
+        {loadState === 'ready' && runs.length === 0 && (
+          <section className="runner-dashboard-empty-state">
+            <div className="runner-dashboard-empty-hero">
+              <span className="material-symbols-outlined runner-dashboard-empty-icon" aria-hidden="true">directions_run</span>
+              <h2>{t('profile.dashboard_empty_title')}</h2>
+              <p>{t('profile.dashboard_empty_copy')}</p>
+            </div>
+            <div className="runner-dashboard-empty-actions">
+              <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--primary" onClick={() => navigate('/profile?linking=strava')}>
+                <span className="material-symbols-outlined" aria-hidden="true">sync</span>
+                {t('profile.dashboard_empty_cta_strava')}
+              </button>
+              <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--secondary" onClick={() => navigate('/today-run')}>
+                <span className="material-symbols-outlined" aria-hidden="true">today</span>
+                {t('profile.dashboard_empty_cta_today')}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {loadState === 'ready' && runs.length > 0 && (
           <>
             <section className="runner-dashboard-grid">
+              <StreakProtection current={streak.current} best={streak.best} />
+
               <article className="runner-dashboard-readiness-card">
                 <span className="runner-dashboard-card-kicker">{t('profile.dashboard_readiness_status')}</span>
                 <h2>{readiness.label}</h2>
+                <div className="runner-dashboard-vdot-overview">
+                  <div className="runner-dashboard-vdot-hero">
+                    <strong>{profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'}</strong>
+                    <span>{t('profile.vo2_unit_short')}</span>
+                  </div>
+                  {hasWeatherAdjustments && (
+                    <div className="runner-dashboard-vdot-adjusted">
+                      <span>{t('analysis.vdot_weather_adjusted')}</span>
+                      <strong>{profileVdot.adjustedVdot.toFixed(1)}</strong>
+                    </div>
+                  )}
+                </div>
                 <div className="runner-dashboard-readiness-meter" aria-hidden="true">
                   <div className="runner-dashboard-readiness-meter-fill" style={{ width: `${readiness.score}%` }} />
                 </div>
@@ -879,13 +972,11 @@ export default function ProfileDashboard() {
                 <div className="runner-dashboard-bar-chart">
                   {activeWeeklyBar ? (
                     <div
-                      className={`runner-dashboard-bar-tooltip${activeWeeklyBar.index <= 1 ? ' is-left' : activeWeeklyBar.index >= 5 ? ' is-right' : ''}`}
+                      className="runner-dashboard-bar-tooltip"
                       role="status"
                       aria-live="polite"
                       style={{
-                        ...(activeWeeklyBar.index > 1 && activeWeeklyBar.index < 5
-                          ? { left: `${((activeWeeklyBar.index + 0.5) / weeklyBars.length) * 100}%` }
-                          : {}),
+                        left: `clamp(84px, ${((activeWeeklyBar.index + 0.5) / weeklyBars.length) * 100}%, calc(100% - 84px))`,
                         top: `clamp(6px, calc(${activeWeeklyBar.actualAnchorTopPct}% - 86px), 112px)`,
                       }}
                     >
@@ -917,7 +1008,7 @@ export default function ProfileDashboard() {
                 </div>
               </article>
 
-              <article className="runner-dashboard-sessions-card">
+              <article className="runner-dashboard-sessions-slot bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
                 <div className="runner-dashboard-section-head">
                   <div>
                     <span className="runner-dashboard-card-kicker">{t('profile.dashboard_timeline')}</span>
@@ -957,6 +1048,7 @@ export default function ProfileDashboard() {
                   {t('profile.dashboard_view_full_history')}
                 </button>
               </article>
+
             </section>
 
             <section className="runner-dashboard-progression-atlas" aria-label={t('profile.dashboard_progression_title')}>
@@ -1131,7 +1223,7 @@ export default function ProfileDashboard() {
                             <strong>{formatDistance(activeProgressionPoint.cumulativeDistance, 1, lang, unit)}</strong>
                             <span>{activeProgressionPoint.label}</span>
                             <small>
-                              {formatDistance(activeProgressionPoint.distanceKm, 1, lang, unit)} · {activeProgressionPoint.sessions} {t('profile.dashboard_progression_sessions')}
+                              {formatDistance(activeProgressionPoint.distanceKm, 1, lang, unit)} 闂?{activeProgressionPoint.sessions} {t('profile.dashboard_progression_sessions')}
                             </small>
                           </div>
                         ) : null}
@@ -1205,10 +1297,10 @@ export default function ProfileDashboard() {
                       <span className="runner-dashboard-race-phase-tag">{racePrepPhase?.label}</span>
                       <p>
                         <small>{t('profile.dashboard_race_prep_advice')}</small>
-                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '优先保证睡眠，适当通过短促冲刺维持神经兴奋性。' : 'Prioritize sleep and maintain neuro-muscular pop with short strides.')}
-                        {racePrepPhase?.key === 'peak' && (lang === 'zh-CN' ? '进入最高跑量周，注意核心肌群的力量补充。' : 'Peak volume weeks—ensure core strength maintenance.')}
-                        {racePrepPhase?.key === 'specific' && (lang === 'zh-CN' ? '磨炼比赛配速的体感，优化补给策略。' : 'Refine race-pace feel and practice fueling strategies.')}
-                        {racePrepPhase?.key === 'base' && (lang === 'zh-CN' ? '稳步提升有氧耐力，重点在于低心率慢跑。' : 'Build aerobic base with steady, low-HR volume.')}
+                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '\u964d\u4f4e\u8d1f\u8377\uff0c\u4fdd\u6301\u7761\u7720\uff0c\u7528\u77ed\u52a0\u901f\u4fdd\u7559\u795e\u7ecf\u808c\u8089\u72b6\u6001' : 'Prioritize sleep and maintain neuro-muscular pop with short strides.')}
+                        {racePrepPhase?.key === 'peak' && (lang === 'zh-CN' ? '\u9ad8\u5cf0\u5468\u4fdd\u6301\u89c4\u5f8b\u6062\u590d\uff0c\u4e0d\u8981\u8ffd\u52a0\u8fc7\u91cf\u5f3a\u5ea6' : 'Peak volume weeks require consistent recovery and core strength maintenance.')}
+                        {racePrepPhase?.key === 'specific' && (lang === 'zh-CN' ? '\u6253\u78e8\u6bd4\u8d5b\u914d\u901f\u4f53\u611f\uff0c\u7ec3\u4e60\u8865\u7ed9\u7b56\u7565' : 'Refine race-pace feel and practice fueling strategies.')}
+                        {racePrepPhase?.key === 'base' && (lang === 'zh-CN' ? '\u7528\u7a33\u5b9a\u4f4e\u5fc3\u7387\u8dd1\u91cf\u6253\u597d\u6709\u6c27\u57fa\u7840' : 'Build aerobic base with steady, low-HR volume.')}
                       </p>
                     </div>
                   </>
@@ -1235,7 +1327,7 @@ export default function ProfileDashboard() {
                   <div className="runner-dashboard-feature-head">
                     <span className="runner-dashboard-card-kicker">{t('profile.dashboard_fitness_kicker')}</span>
                     <span className="runner-dashboard-feature-eyebrow">
-                      {profileVdot > 0 ? `${profileVdot.toFixed(1)} ${t('profile.vo2_unit_short')}` : '--'}
+                      {profileVdot.representativeVdot > 0 ? `${profileVdot.representativeVdot.toFixed(1)} ${t('profile.vo2_unit_short')}` : '--'}
                     </span>
                   </div>
                   <div className="runner-dashboard-fitness-strip-predictions">
@@ -1348,7 +1440,7 @@ export default function ProfileDashboard() {
                 <div className="runner-dashboard-feature-copy">
                   <h3>{formatDistance(weeklyActualTotal, 1, lang, unit)}</h3>
                   <p>
-                    {t('profile.dashboard_actual')} {weeklyCompletion}% · {t('profile.dashboard_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
+                    {t('profile.dashboard_actual')} {weeklyCompletion}% 闂?{t('profile.dashboard_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
                   </p>
                 </div>
                 <div className="runner-dashboard-feature-mini-bars" aria-hidden="true">
@@ -1361,12 +1453,12 @@ export default function ProfileDashboard() {
                 </div>
                 <div className="runner-dashboard-feature-chip-row">
                   <span>
-                    {t('profile.dashboard_vo2_est')}: {profileVdot > 0 ? profileVdot.toFixed(1) : '--'}
-                    {profileVdot > 0 && profileVdotTrend.hasData && (
-                      <span className={`runner-dashboard-vdot-trend runner-dashboard-vdot-trend--${profileVdotTrend.direction}`}>
-                        {profileVdotTrend.direction === 'improving' && <>&#x2191; {profileVdotTrend.delta > 0 ? `+${profileVdotTrend.delta.toFixed(1)}` : profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_improving')}</>}
-                        {profileVdotTrend.direction === 'declining' && <>&#x2193; {profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_declining')}</>}
-                        {profileVdotTrend.direction === 'maintaining' && <>{t('profile.vdot_trend_maintaining')}</>}
+                    {t('profile.dashboard_vo2_est')}: {profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'}
+                    {profileVdot.representativeVdot > 0 && vdotTrend.hasData && (
+                      <span className={`runner-dashboard-vdot-trend runner-dashboard-vdot-trend--${vdotTrend.direction}`}>
+                        {vdotTrend.direction === 'improving' && <>&#x2191; {vdotTrend.delta > 0 ? `+${vdotTrend.delta.toFixed(1)}` : vdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_improving')}</>}
+                        {vdotTrend.direction === 'declining' && <>&#x2193; {vdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_declining')}</>}
+                        {vdotTrend.direction === 'maintaining' && <>{t('profile.vdot_trend_maintaining')}</>}
                       </span>
                     )}
                   </span>
@@ -1374,7 +1466,8 @@ export default function ProfileDashboard() {
                 </div>
               </article>
 
-              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--sessions">
+              {runs.length > 3 && (
+                <article className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
                 <div className="runner-dashboard-feature-head">
                   <span className="runner-dashboard-card-kicker">{t('profile.dashboard_recent_sessions')}</span>
                   <span className="runner-dashboard-feature-eyebrow">{featuredSession ? formatRunDate(featuredSession, lang) : '--'}</span>
@@ -1383,7 +1476,7 @@ export default function ProfileDashboard() {
                   <h3>{featuredSession?.name || t('profile.dashboard_session_fallback')}</h3>
                   <p>
                     {featuredSessionMetric
-                      ? `${featuredSessionMetric.label} · ${featuredSessionMetric.value}`
+                      ? `${featuredSessionMetric.label} 闂?${featuredSessionMetric.value}`
                       : t('profile.dashboard_no_sessions')}
                   </p>
                 </div>
@@ -1413,7 +1506,8 @@ export default function ProfileDashboard() {
                 <button type="button" className="runner-dashboard-feature-link" onClick={() => navigate('/runs')}>
                   {t('profile.dashboard_view_full_history')}
                 </button>
-              </article>
+                </article>
+              )}
             </section>
 
             <section className="runner-dashboard-metric-strip">
@@ -1421,12 +1515,19 @@ export default function ProfileDashboard() {
                 <span>01</span>
                 <div>
                   <label>{t('profile.dashboard_vo2_est')}</label>
-                  <strong>{profileVdot > 0 ? profileVdot.toFixed(1) : '--'} <em>{t('profile.vo2_unit_short')}</em></strong>
-                  {profileVdot > 0 && profileVdotTrend.hasData && (
-                    <span className={`runner-dashboard-vdot-trend runner-dashboard-vdot-trend--${profileVdotTrend.direction}`}>
-                      {profileVdotTrend.direction === 'improving' && <>&#x2191; {profileVdotTrend.delta > 0 ? `+${profileVdotTrend.delta.toFixed(1)}` : profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_improving')}</>}
-                      {profileVdotTrend.direction === 'declining' && <>&#x2193; {profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_declining')}</>}
-                      {profileVdotTrend.direction === 'maintaining' && <>{t('profile.vdot_trend_maintaining')}</>}
+                  <div className="runner-dashboard-mini-metric-vdot">
+                    <strong>{profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'} <em>{t('profile.vo2_unit_short')}</em></strong>
+                    {hasWeatherAdjustments && (
+                      <span className="runner-dashboard-mini-metric-adjusted" title={t('analysis.vdot_weather_adjusted')}>
+                        ({profileVdot.adjustedVdot.toFixed(1)})
+                      </span>
+                    )}
+                  </div>
+                  {profileVdot.representativeVdot > 0 && vdotTrend.hasData && (
+                    <span className={`runner-dashboard-vdot-trend runner-dashboard-vdot-trend--${vdotTrend.direction}`}>
+                      {vdotTrend.direction === 'improving' && <>&#x2191; {vdotTrend.delta > 0 ? `+${vdotTrend.delta.toFixed(1)}` : vdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_improving')}</>}
+                      {vdotTrend.direction === 'declining' && <>&#x2193; {vdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_declining')}</>}
+                      {vdotTrend.direction === 'maintaining' && <>{t('profile.vdot_trend_maintaining')}</>}
                     </span>
                   )}
                 </div>

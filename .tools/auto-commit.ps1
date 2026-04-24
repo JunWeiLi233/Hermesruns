@@ -120,6 +120,7 @@ function Get-PathPolicy {
         '^entities\.json$',
         '^ALLOW_LIST_TERMINAL_COMMANDS\.txt$',
         '^frontend/VISUAL_QA_LIGHT_SYSTEM\.md$',
+        '^course-map-images/',
         '^task-images/',
         '^images/',
         '^\.tools/mempalace/',
@@ -175,13 +176,14 @@ function Get-PathPolicy {
 
     $publishableRegexes = @(
         '^README\.md$',
+        '^docs/architecture/',
         '^\.gitignore$',
         '^design\.md$',
         '^DESIGN_VERSIONS\.md$',
         '^TICKET\.md$',
         '^frontend/(src|public|package\.json|package-lock\.json|vite\.config.*|eslint\.config.*|scripts/)',
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',
-        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.mjs|auto-hermes-tech-debt\.mjs)$'
+        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.mjs|auto-hermes-tech-debt\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$'
     )
 
     foreach ($pattern in $publishableRegexes) {
@@ -349,6 +351,38 @@ function Test-SecurityGate {
     return $true
 }
 
+function Invoke-ArchitectureDiagramRefresh {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$ChangedFiles
+    )
+
+    if (-not $ChangedFiles -or $ChangedFiles.Count -eq 0) {
+        return
+    }
+
+    $refreshScript = Join-Path $repoRoot '.tools\refresh-architecture-diagrams.mjs'
+    if (-not (Test-Path $refreshScript)) {
+        return
+    }
+
+    $nodeArgs = @($refreshScript, '--json')
+    foreach ($file in $ChangedFiles) {
+        $nodeArgs += '--changed-file'
+        $nodeArgs += $file
+    }
+
+    $refreshJson = & 'C:\Program Files\nodejs\node.exe' @nodeArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Architecture diagram refresh failed.'
+    }
+
+    $refreshResult = $refreshJson | ConvertFrom-Json
+    if ($refreshResult.refreshed -and $refreshResult.outputs.Count -gt 0) {
+        Invoke-Git -Args (@('add', '--') + @($refreshResult.outputs | ForEach-Object { [string]$_ })) | Out-Null
+    }
+}
+
 $repoRoot = (First-Line (Invoke-Git -Args @('rev-parse', '--show-toplevel'))).Trim()
 Set-Location $repoRoot
 $branch = (First-Line (Invoke-Git -Args @('rev-parse', '--abbrev-ref', 'HEAD'))).Trim()
@@ -379,6 +413,9 @@ if ($Paths.Count -gt 0) {
     }
     Invoke-Git -Args (@('add', '--') + $Paths) | Out-Null
 }
+
+$preRefreshStaged = @(Invoke-Git -Args @('diff', '--cached', '--name-only') | Where-Object { $_.Trim() -ne '' } | ForEach-Object { Normalize-RepoPath -Path $_ })
+Invoke-ArchitectureDiagramRefresh -ChangedFiles $preRefreshStaged
 
 $staged = @(Invoke-Git -Args @('diff', '--cached', '--name-only') | Where-Object { $_.Trim() -ne '' })
 if ($staged.Count -eq 0) {

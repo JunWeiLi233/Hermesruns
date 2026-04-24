@@ -43,6 +43,11 @@ function resolvePreviewImageUrl(preview) {
         : '';
 }
 
+function resolvePreviewSummary(preview) {
+  if (!preview || typeof preview !== 'object') return '';
+  return typeof preview.summary === 'string' ? preview.summary.trim() : '';
+}
+
 function normalizeFallbackCenter(rawCenter) {
   if (!rawCenter || typeof rawCenter !== 'object') return null;
   const lat = asFiniteNumber(rawCenter.lat ?? rawCenter.latitude);
@@ -63,6 +68,8 @@ export default function AdminCourseMapPreview({
   variant = 'panel',
   forceLiveMap = false,
   fallbackCenter = null,
+  allowImageFallback = true,
+  unalignedLabel = '',
 }) {
   const mapHostRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -82,9 +89,14 @@ export default function AdminCourseMapPreview({
   const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
   const hasAlignedRoute = polylinePoints.length > 1;
   const hasAlignedOverlay = Boolean(imageUrl) && Boolean(overlayBounds) && hasAlignedRoute;
+  const hasRenderableAlignment = hasAlignedOverlay || hasAlignedRoute;
   const hasFallbackCenter = Boolean(fallbackLatLng);
-  const shouldRenderMap = !mapFailed && (hasAlignedOverlay || hasAlignedRoute || (forceLiveMap && hasFallbackCenter));
+  const shouldRenderMap = !mapFailed && (hasRenderableAlignment || (forceLiveMap && hasFallbackCenter));
   const canRenderImage = Boolean(imageUrl) && !imageFailed;
+  const shouldAllowImageFallback = allowImageFallback || hasRenderableAlignment;
+  const previewSummary = useMemo(() => resolvePreviewSummary(preview), [preview]);
+  const showPreviewSummary = Boolean(previewSummary) && !hasRenderableAlignment;
+  const fallbackLabel = previewSummary || (preview && unalignedLabel ? unalignedLabel : emptyLabel);
 
   useEffect(() => {
     setMapReady(false);
@@ -201,7 +213,7 @@ export default function AdminCourseMapPreview({
     return (
       <div className={`admin-review-preview admin-review-preview--map${isCardVariant ? ' admin-review-preview--card' : ''}`}>
         <div className="admin-review-preview__image-layer">
-          {!mapReady && canRenderImage ? (
+          {!mapReady && shouldAllowImageFallback && canRenderImage ? (
             <img
               src={imageUrl}
               alt={title}
@@ -218,11 +230,16 @@ export default function AdminCourseMapPreview({
           />
         </div>
         {!mapReady && !canRenderImage ? <div className="admin-review-preview__map-wash" aria-hidden="true" /> : null}
+        {showPreviewSummary ? (
+          <div className="admin-review-preview__summary-overlay">
+            <p>{previewSummary}</p>
+          </div>
+        ) : null}
       </div>
     );
   }
 
-  if (canRenderImage) {
+  if (allowImageFallback && canRenderImage) {
     return (
       <div className={`admin-review-preview${isCardVariant ? ' admin-review-preview--card' : ''}`}>
         <img
@@ -231,13 +248,18 @@ export default function AdminCourseMapPreview({
           className={`admin-review-preview__image${isCardVariant ? ' admin-review-preview__image--card' : ''}`}
           onError={() => setImageFailed(true)}
         />
+        {showPreviewSummary ? (
+          <div className="admin-review-preview__summary-overlay">
+            <p>{previewSummary}</p>
+          </div>
+        ) : null}
       </div>
     );
   }
 
   return (
     <div className={`admin-review-preview${isCardVariant ? ' admin-review-preview--card' : ''}`}>
-      <div className="admin-review-preview__empty">{emptyLabel}</div>
+      <div className="admin-review-preview__empty">{fallbackLabel}</div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ package com.hermes.backend;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -74,11 +75,11 @@ public class ShoeQueryNormalizationService {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
                 + aiModel + ":generateContent?key=" + aiApiKey;
 
-        ResponseEntity<Map> response = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 url,
                 HttpMethod.POST,
                 new HttpEntity<>(request, headers),
-                Map.class
+            new ParameterizedTypeReference<Map<String, Object>>() {}
         );
 
         String text = extractResponseText(response.getBody());

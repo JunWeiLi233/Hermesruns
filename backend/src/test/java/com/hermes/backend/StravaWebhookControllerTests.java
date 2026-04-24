@@ -49,29 +49,40 @@ class StravaWebhookControllerTests {
         assertThat(response.getBody()).isEqualTo(Map.of("hub.challenge", "challenge-123"));
     }
 
-    @Test
-    void handleEventRejectsWrongToken() {
+@Test
+    void handleEventRejectsMissingRequiredFields() {
         StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(OAuthController.class));
 
-        ResponseEntity<String> response = controller.handleEvent("wrong-token", Map.of(
-                "object_type", "activity",
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
+                "object_type", "activity"
+        ));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isEqualTo("MISSING_REQUIRED_FIELDS");
+    }
+
+    @Test
+    void handleEventRejectsMissingObjectType() {
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(OAuthController.class));
+
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "aspect_type", "create",
                 "owner_id", 321L
         ));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getBody()).isEqualTo("UNAUTHORIZED");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isEqualTo("MISSING_REQUIRED_FIELDS");
     }
 
     @Test
-    void handleEventReturnsReceivedWhenOwnerIdIsMissing() {
+    void handleEventReturnsReceivedWhenObjectIdIsNullForActivity() {
         OAuthController oAuthController = mock(OAuthController.class);
         StravaWebhookController controller = createController(mock(RunnerRepository.class), oAuthController);
 
-        ResponseEntity<String> response = controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "object_type", "activity",
                 "aspect_type", "create",
-                "object_id", 99999L
+                "owner_id", 321L
         ));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -86,7 +97,7 @@ class StravaWebhookControllerTests {
         OAuthController oAuthController = mock(OAuthController.class);
         StravaWebhookController controller = createController(runnerRepository, oAuthController);
 
-        ResponseEntity<String> response = controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "object_type", "segment",
                 "aspect_type", "create",
                 "owner_id", 321L,
@@ -105,7 +116,7 @@ class StravaWebhookControllerTests {
         OAuthController oAuthController = mock(OAuthController.class);
         StravaWebhookController controller = createController(mock(RunnerRepository.class), oAuthController);
 
-        ResponseEntity<String> response = assertDoesNotThrow(() -> controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = assertDoesNotThrow(() -> controller.handleEvent(Map.of(
                 "object_type", "athlete",
                 "aspect_type", "update",
                 "owner_id", 321L,
@@ -127,7 +138,7 @@ class StravaWebhookControllerTests {
         when(oAuthController.syncStravaActivityById(runner, 98765L)).thenReturn(OAuthController.SingleActivitySyncResult.SUCCESS);
         StravaWebhookController controller = createController(runnerRepository, oAuthController);
 
-        ResponseEntity<String> response = controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "object_type", "activity",
                 "aspect_type", "create",
                 "owner_id", 321L,
@@ -149,7 +160,7 @@ class StravaWebhookControllerTests {
         when(oAuthController.syncStravaActivityById(runner, 98765L)).thenReturn(OAuthController.SingleActivitySyncResult.SUCCESS);
         StravaWebhookController controller = createController(runnerRepository, oAuthController);
 
-        ResponseEntity<String> response = controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "object_type", "activity",
                 "aspect_type", "update",
                 "owner_id", "321",
@@ -170,7 +181,7 @@ class StravaWebhookControllerTests {
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.of(runner));
         StravaWebhookController controller = createController(runnerRepository, oAuthController);
 
-        ResponseEntity<String> response = controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "object_type", "activity",
                 "aspect_type", "delete",
                 "owner_id", 321L,
@@ -190,7 +201,7 @@ class StravaWebhookControllerTests {
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.empty());
         StravaWebhookController controller = createController(runnerRepository, oAuthController);
 
-        ResponseEntity<String> response = controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "object_type", "activity",
                 "aspect_type", "update",
                 "owner_id", 321L,
@@ -215,7 +226,7 @@ class StravaWebhookControllerTests {
                 .thenReturn(OAuthController.SingleActivitySyncResult.SUCCESS);
         StravaWebhookController controller = createController(runnerRepository, oAuthController);
 
-        ResponseEntity<String> response = controller.handleEvent(VALID_TOKEN, Map.of(
+        ResponseEntity<String> response = controller.handleEvent(Map.of(
                 "object_type", "activity",
                 "aspect_type", "create",
                 "owner_id", 321L,

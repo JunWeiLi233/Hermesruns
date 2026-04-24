@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
@@ -12,7 +11,7 @@ import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import { formatStravaSyncLabel } from '../utils/stravaAutoSync';
+import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
 const BATCH_SIZE = 10;
 const ROUTE_PREVIEW_CONCURRENCY = 2;
@@ -62,17 +61,31 @@ function buildRoutePreviewModel(points) {
   };
 }
 
-function RoutePreviewThumb({ points, provider, runName }) {
-  const preview = buildRoutePreviewModel(points);
+function normalizeRoutePreview(preview) {
+  if (!preview || typeof preview !== 'object' || !preview.path) return null;
+  const startX = Array.isArray(preview.start) ? Number(preview.start[0]) : Number(preview.startX);
+  const startY = Array.isArray(preview.start) ? Number(preview.start[1]) : Number(preview.startY);
+  const finishX = Array.isArray(preview.finish) ? Number(preview.finish[0]) : Number(preview.finishX);
+  const finishY = Array.isArray(preview.finish) ? Number(preview.finish[1]) : Number(preview.finishY);
+  if (![startX, startY, finishX, finishY].every(Number.isFinite)) return null;
+  return {
+    path: preview.path,
+    start: [startX, startY],
+    finish: [finishX, finishY],
+  };
+}
+
+function RoutePreviewThumb({ preview, provider, runName }) {
+  const normalizedPreview = normalizeRoutePreview(preview);
 
   return (
-    <div className={`recent-runs-thumb${preview ? ' is-route-preview' : ''}`}>
-      {preview ? (
+    <div className={`recent-runs-thumb${normalizedPreview ? ' is-route-preview' : ''}`}>
+      {normalizedPreview ? (
         <svg className="recent-runs-thumb-route-svg" viewBox="0 0 100 100" aria-hidden="true">
-          <path className="recent-runs-thumb-route-shadow" d={preview.path} />
-          <path className="recent-runs-thumb-route-line" d={preview.path} />
-          <circle className="recent-runs-thumb-route-start" cx={preview.start[0]} cy={preview.start[1]} r="3.2" />
-          <circle className="recent-runs-thumb-route-finish" cx={preview.finish[0]} cy={preview.finish[1]} r="3.6" />
+          <path className="recent-runs-thumb-route-shadow" d={normalizedPreview.path} />
+          <path className="recent-runs-thumb-route-line" d={normalizedPreview.path} />
+          <circle className="recent-runs-thumb-route-start" cx={normalizedPreview.start[0]} cy={normalizedPreview.start[1]} r="3.2" />
+          <circle className="recent-runs-thumb-route-finish" cx={normalizedPreview.finish[0]} cy={normalizedPreview.finish[1]} r="3.6" />
         </svg>
       ) : (
         <div className="recent-runs-thumb-route-empty" aria-hidden="true">
@@ -109,7 +122,7 @@ export default function Runs() {
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const [importStatus, setImportStatus] = useState('');
-  const [routePreviewPoints, setRoutePreviewPoints] = useState({});
+  const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
   const routePreviewInflightRef = useRef(new Set());
 
   useEffect(() => {
@@ -119,6 +132,19 @@ export default function Runs() {
     }
     loadRuns();
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    function handleStravaSyncFinished() {
+      loadRuns();
+    }
+
+    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    return () => {
+      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    };
+  }, [isAuthenticated]);
 
   async function loadRuns() {
     try {
@@ -272,7 +298,7 @@ export default function Runs() {
   }, [filteredRuns, runsSort]);
 
   const visibleRuns = sortedRuns.slice(0, visibleCount);
-  const routePreviewRuns = visibleRuns;
+  const routePreviewRuns = visibleRuns.filter((run) => !run.routePreview);
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
   const monthNames = t('runs.months').split(',');
@@ -341,7 +367,7 @@ export default function Runs() {
     let cancelled = false;
     const pendingRuns = routePreviewRuns.filter((run) => (
       run?.id
-      && !(run.id in routePreviewPoints)
+      && !(run.id in routePreviewFallbacks)
       && !routePreviewInflightRef.current.has(run.id)
     ));
     if (pendingRuns.length === 0) return undefined;
@@ -357,7 +383,7 @@ export default function Runs() {
               const response = await apiFetch(`/api/activities/${run.id}/points`);
               if (!response.ok) {
                 if (!cancelled) {
-                  setRoutePreviewPoints((current) => ({ ...current, [run.id]: [] }));
+                  setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: null }));
                 }
                 continue;
               }
@@ -367,12 +393,13 @@ export default function Runs() {
                   .map((point) => [Number(point.latitude), Number(point.longitude)])
                   .filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude))
                 : [];
+              const preview = buildRoutePreviewModel(points);
               if (!cancelled) {
-                setRoutePreviewPoints((current) => ({ ...current, [run.id]: points }));
+                setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: preview }));
               }
             } catch {
               if (!cancelled) {
-                setRoutePreviewPoints((current) => ({ ...current, [run.id]: [] }));
+                setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: null }));
               }
             } finally {
               routePreviewInflightRef.current.delete(run.id);
@@ -387,7 +414,7 @@ export default function Runs() {
     return () => {
       cancelled = true;
     };
-  }, [routePreviewPoints, routePreviewRuns]);
+  }, [routePreviewFallbacks, routePreviewRuns]);
 
   function renderSecondaryFilterRow() {
     if (activeMode === 'year') {
@@ -748,9 +775,10 @@ export default function Runs() {
           {loadState === 'ready' && visibleRuns.map((run, index) => {
             const provider = run.provider || t('runs.manual_import');
             const runName = run.name || t('runs.default_run_name');
+            const preview = run.routePreview || routePreviewFallbacks[run.id] || null;
             return (
               <article key={run.id || `${runName}-${index}`} className="recent-runs-card" onClick={() => openRun(run)}>
-                <RoutePreviewThumb points={routePreviewPoints[run.id] || []} provider={provider} runName={runName} />
+                <RoutePreviewThumb preview={preview} provider={provider} runName={runName} />
                 <div className="recent-runs-card-body">
                   <div className="recent-runs-card-top">
                     <div>

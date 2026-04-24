@@ -23,6 +23,11 @@ import static org.mockito.Mockito.when;
 
 class ShoeQueryNormalizationServiceTests {
 
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        private static Class<HttpEntity<Map<String, Object>>> httpEntityMapClass() {
+                return (Class) HttpEntity.class;
+        }
+
     @Test
     void normalizeReturnsCanonicalMetadataFromGemini() throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
@@ -62,8 +67,7 @@ class ShoeQueryNormalizationServiceTests {
         assertEquals("White/Red", metadata.colorway());
         assertEquals("Li-Ning Feidian 3.0 Elite White Red", metadata.searchString());
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<HttpEntity<Map<String, Object>>> entityCaptor = ArgumentCaptor.forClass((Class) HttpEntity.class);
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> entityCaptor = ArgumentCaptor.forClass(httpEntityMapClass());
         verify(restTemplate).exchange(
                 eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=test-key"),
                 eq(HttpMethod.POST),

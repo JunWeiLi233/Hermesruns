@@ -20,22 +20,27 @@ public class SpaForwardingController {
         "/",
         "/login",
         "/signup",
+        "/forgot-password",
         "/terms",
         "/privacy",
         "/admin",
         "/dashboard",
+        "/dashboard/{section:[^.]+}",
+        "/dashboard/{section:[^.]+}/{detail:[^.]+}",
         "/profile",
         "/runs",
         "/heatmap",
         "/run",
         "/run/{id}",
         "/analysis",
+        "/weather",
         "/weather-engine",
         "/analysis/{insightKey}",
         "/prediction/{distKey}",
         "/today-run",
         "/rewards",
         "/settings",
+        "/settings/{section:[^.]+}",
         "/shoes",
         "/shoes/add",
         "/add-shoes",
@@ -43,7 +48,8 @@ public class SpaForwardingController {
         "/races",
         "/races/details/{raceId}",
         "/schedule",
-        "/muscle-training"
+        "/muscle-training",
+        "/workflows"
     }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> forward() throws IOException {
         try (InputStream in = getClass().getResourceAsStream("/static/index.html")) {

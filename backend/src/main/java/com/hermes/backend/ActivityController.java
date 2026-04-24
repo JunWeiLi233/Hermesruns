@@ -17,6 +17,7 @@ public class ActivityController {
     private static final int POINTS_BATCH_SIZE = 500;
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
     private static final int ROUTE_PREVIEW_POINT_LIMIT = 40;
+    private static final int MAX_ROUTE_PREVIEW_PATH_LENGTH = 255;
 
     private final AuthService authService;
     private final ActivityRepository activityRepository;
@@ -188,7 +189,7 @@ public class ActivityController {
 
         List<Object[]> rows = activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(activity.getId());
         if (rows.isEmpty()) {
-            return ResponseEntity.ok(new PostRunAnalytics(List.of(), List.of(), null, null, null, null, null));
+            return ResponseEntity.ok(new PostRunAnalytics(List.of(), List.of(), null, null, null, null, null, null));
         }
 
         List<SamplePoint> pts = new ArrayList<>(rows.size());
@@ -458,7 +459,44 @@ public class ActivityController {
         double innerWidth = width - (padding * 2.0);
         double innerHeight = height - (padding * 2.0);
         int stride = Math.max(1, samples.size() / ROUTE_PREVIEW_POINT_LIMIT);
+        while (stride < samples.size()) {
+            List<PreviewPoint> normalized = buildNormalizedPreviewPoints(
+                    samples,
+                    stride,
+                    minLatitude,
+                    latitudeSpan,
+                    minLongitude,
+                    longitudeSpan,
+                    padding,
+                    innerWidth,
+                    innerHeight
+            );
+            if (normalized.size() < 2) {
+                return null;
+            }
 
+            String path = buildPreviewPath(normalized);
+            if (path.length() <= MAX_ROUTE_PREVIEW_PATH_LENGTH || stride >= samples.size() - 1) {
+                PreviewPoint start = normalized.get(0);
+                PreviewPoint finish = normalized.get(normalized.size() - 1);
+                return new RoutePreview(path, start.x(), start.y(), finish.x(), finish.y());
+            }
+            stride += 1;
+        }
+        return null;
+    }
+
+    private List<PreviewPoint> buildNormalizedPreviewPoints(
+            List<PreviewSample> samples,
+            int stride,
+            double minLatitude,
+            double latitudeSpan,
+            double minLongitude,
+            double longitudeSpan,
+            double padding,
+            double innerWidth,
+            double innerHeight
+    ) {
         List<PreviewPoint> normalized = new ArrayList<>();
         for (int index = 0; index < samples.size(); index += stride) {
             normalized.add(normalizePreviewPoint(samples.get(index), minLatitude, latitudeSpan, minLongitude, longitudeSpan, padding, innerWidth, innerHeight));
@@ -467,10 +505,10 @@ public class ActivityController {
         if (normalized.isEmpty() || !samePreviewPoint(normalized.get(normalized.size() - 1), lastPoint)) {
             normalized.add(lastPoint);
         }
-        if (normalized.size() < 2) {
-            return null;
-        }
+        return normalized;
+    }
 
+    private String buildPreviewPath(List<PreviewPoint> normalized) {
         StringBuilder path = new StringBuilder();
         for (int index = 0; index < normalized.size(); index++) {
             PreviewPoint point = normalized.get(index);
@@ -483,10 +521,7 @@ public class ActivityController {
                     .append(' ')
                     .append(formatPreviewCoordinate(point.y()));
         }
-
-        PreviewPoint start = normalized.get(0);
-        PreviewPoint finish = normalized.get(normalized.size() - 1);
-        return new RoutePreview(path.toString(), start.x(), start.y(), finish.x(), finish.y());
+        return path.toString();
     }
 
     private PreviewPoint normalizePreviewPoint(

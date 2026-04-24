@@ -12,7 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -139,7 +138,7 @@ class ShoeCatalogControllerTests {
                 eq("catalog_model"),
                 eq("9"),
                 eq("Created shoe catalog model"),
-                any(Map.class)
+                org.mockito.ArgumentMatchers.<Map<String, Object>>any()
         );
     }
 

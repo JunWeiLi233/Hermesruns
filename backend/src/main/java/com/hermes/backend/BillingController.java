@@ -45,6 +45,7 @@ public class BillingController {
     private final String stripeWebhookSecret;
     private final String stripePriceProMonthly;
     private final String publicBaseUrl;
+    @SuppressWarnings("unused")
     private final String priceDisplayLabel;
     private final SystemConfigService systemConfigService;
 
@@ -80,10 +81,15 @@ public class BillingController {
 
     /**
      * Public config for the SPA (no secrets). When checkoutConfigured is false, hide pay buttons.
+     * Requires valid authentication.
      */
     @GetMapping("/config")
-    public Map<String, Object> billingConfig() {
-        return (Map<String, Object>) systemConfigService.getPublicConfigStatus().get("billing");
+    public ResponseEntity<Map<String, Object>> billingConfig(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
+        if (runnerOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok((Map<String, Object>) systemConfigService.getPublicConfigStatus().get("billing"));
     }
 
     /**
