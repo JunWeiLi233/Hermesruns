@@ -8,16 +8,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Polarized (80/20) automated coach: rolling aggregates, schedule mutation, grey-zone feedback,
  * readiness gate, and progressive long-run blocks.
+ * 
+ * Extracted route logic to CoachRouteService to reduce file size.
  */
 @Service
 public class AutomatedCoachService {
@@ -26,9 +30,9 @@ public class AutomatedCoachService {
 
     private static final double HIGH_INTENSITY_WEEKLY_CAP = 0.20;
     private static final double HIGH_MILEAGE_KM_28D = 200.0;
-    private static final double RHR_STRESS_MULTIPLIER = 1.05;
     private static final double LONG_RUN_WEEKLY_BUMP = 1.12;
     private static final int SCHEDULE_HORIZON_DAYS = 14;
+    private final ConcurrentMap<Long, Object> scheduleHorizonLocks = new ConcurrentHashMap<>();
 
     private final RunnerRepository runnerRepository;
     private final ActivityRepository activityRepository;
@@ -36,6 +40,9 @@ public class AutomatedCoachService {
     private final CoachScheduledWorkoutRepository coachScheduledWorkoutRepository;
     private final CoachTrainingBlockRepository coachTrainingBlockRepository;
     private final CoachFeedbackAlertRepository coachFeedbackAlertRepository;
+    private final ShoeTracker shoeTracker;
+    private final CoachRouteService coachRouteService;
+    private final ReadinessService readinessService;
 
     public AutomatedCoachService(
             RunnerRepository runnerRepository,
@@ -43,7 +50,10 @@ public class AutomatedCoachService {
             CoachRunnerStateRepository coachRunnerStateRepository,
             CoachScheduledWorkoutRepository coachScheduledWorkoutRepository,
             CoachTrainingBlockRepository coachTrainingBlockRepository,
-            CoachFeedbackAlertRepository coachFeedbackAlertRepository
+            CoachFeedbackAlertRepository coachFeedbackAlertRepository,
+            ShoeTracker shoeTracker,
+            CoachRouteService coachRouteService,
+            ReadinessService readinessService
     ) {
         this.runnerRepository = runnerRepository;
         this.activityRepository = activityRepository;
@@ -51,23 +61,19 @@ public class AutomatedCoachService {
         this.coachScheduledWorkoutRepository = coachScheduledWorkoutRepository;
         this.coachTrainingBlockRepository = coachTrainingBlockRepository;
         this.coachFeedbackAlertRepository = coachFeedbackAlertRepository;
+        this.shoeTracker = shoeTracker;
+        this.coachRouteService = coachRouteService;
+        this.readinessService = readinessService;
     }
 
     @Transactional
     public void handleActivityIngested(Long runnerId, Long activityId) {
         Optional<Runner> runnerOpt = runnerRepository.findById(runnerId);
-        if (runnerOpt.isEmpty()) {
-            return;
-        }
+        if (runnerOpt.isEmpty()) return;
         Runner runner = runnerOpt.get();
         Optional<Activity> activityOpt = activityRepository.findById(activityId);
-        if (activityOpt.isEmpty() || activityOpt.get().getActivityType() != ActivityType.RUN) {
-            return;
-        }
+        if (activityOpt.isEmpty() || activityOpt.get().getActivityType() != ActivityType.RUN) return;
         Activity activity = activityOpt.get();
-        if (activity.getRunner() == null || !activity.getRunner().getId().equals(runnerId)) {
-            return;
-        }
 
         aggregateState(runner);
         checkGreyZoneFeedback(runner, activity);
@@ -84,9 +90,7 @@ public class AutomatedCoachService {
         List<Long> ids = activityRepository.findDistinctRunnerIdsWithActivityType(ActivityType.RUN);
         List<Runner> runners = runnerRepository.findAllById(ids);
         for (Runner runner : runners) {
-            if (runner.isDeleted()) {
-                continue;
-            }
+            if (runner.isDeleted()) continue;
             try {
                 aggregateState(runner);
                 coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).ifPresent(b -> {
@@ -108,7 +112,10 @@ public class AutomatedCoachService {
             state = coachRunnerStateRepository.findByRunner(runner).orElse(state);
         }
         ensureScheduleHorizon(runner, SCHEDULE_HORIZON_DAYS);
-        return toStateDto(runner, state);
+        CoachScheduledWorkout todayWorkout = coachScheduledWorkoutRepository
+                .findByRunnerAndScheduledDate(runner, LocalDate.now())
+                .orElse(null);
+        return toStateDto(runner, state, todayWorkout);
     }
 
     @Transactional
@@ -126,35 +133,40 @@ public class AutomatedCoachService {
         ensureScheduleHorizon(runner, SCHEDULE_HORIZON_DAYS);
         CoachRunnerState state = getOrCreateState(runner);
         LocalDate today = LocalDate.now();
-        CoachScheduledWorkout row = coachScheduledWorkoutRepository
-                .findByRunnerAndScheduledDate(runner, today)
+        LocalDate horizonEnd = today.plusDays(SCHEDULE_HORIZON_DAYS - 1L);
+        List<CoachScheduledWorkout> rows = new ArrayList<>(coachScheduledWorkoutRepository
+                .findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(runner, today, horizonEnd));
+        CoachScheduledWorkout row = rows.stream()
+                .filter(existing -> today.equals(existing.getScheduledDate()))
+                .findFirst()
                 .orElseGet(() -> {
-                    CoachScheduledWorkout w = buildDefaultDay(runner, today, state);
-                    coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).ifPresent(b -> applyBlockLongRun(b, w, today));
-                    return coachScheduledWorkoutRepository.save(w);
+                    CoachScheduledWorkout w = buildDefaultDay(runner, today);
+                    coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).ifPresent(b -> applyBlockLongRun(b, w));
+                    CoachScheduledWorkout saved = coachScheduledWorkoutRepository.save(w);
+                    rows.add(0, saved);
+                    return saved;
                 });
-        CoachScheduledWorkout adjusted = applyReadinessGate(runner, state, row);
-        return new CoachTodayDto(toScheduledDto(adjusted), toStateDto(runner, state));
+        CoachScheduledWorkout adjusted = applyReadinessGate(state, row);
+        CoachRouteRecommendationDto routeRecommendation = coachRouteService.buildRouteRecommendation(runner, adjusted, rows);
+        
+        CoachRecommendedShoeDto shoeRec = shoeTracker.recommendShoe(runner, adjusted.getWorkoutType())
+                .map(s -> new CoachRecommendedShoeDto(
+                        s.getId(), s.getBrand(), s.getModel(), s.getNickname(), s.getPhotoUrl(),
+                        s.getCurrentDistanceKm(), s.getMaxDistanceKm(),
+                        "Best match for " + adjusted.getWorkoutType() + " workout"
+                ))
+                .orElse(null);
+
+        return new CoachTodayDto(toScheduledDto(adjusted), toStateDto(runner, state, adjusted), routeRecommendation, shoeRec);
     }
 
     @Transactional
-    public void logRecoveryMetrics(Runner runner, Integer restingHr, Integer sleepScore, Integer hrvMs) {
+    public void logRecoveryMetrics(Runner runner, Integer restingHr, Integer sleepScore, Integer hrvMs, Integer stressScore) {
         CoachRunnerState state = getOrCreateState(runner);
-        if (restingHr != null && restingHr > 30 && restingHr < 120) {
-            state.setLastNightRestingHr(restingHr);
-            if (state.getBaselineRestingHr() == null && runner.getRestingHeartRateBpm() != null) {
-                state.setBaselineRestingHr(runner.getRestingHeartRateBpm());
-            }
-            if (state.getBaselineRestingHr() == null) {
-                state.setBaselineRestingHr(restingHr);
-            }
-        }
-        if (sleepScore != null && sleepScore >= 0 && sleepScore <= 100) {
-            state.setLastSleepScore(sleepScore);
-        }
-        if (hrvMs != null && hrvMs >= 0 && hrvMs < 5000) {
-            state.setLastHrvMs(hrvMs);
-        }
+        if (restingHr != null && restingHr > 30 && restingHr < 120) state.setLastNightRestingHr(restingHr);
+        if (sleepScore != null && sleepScore >= 0 && sleepScore <= 100) state.setLastSleepScore(sleepScore);
+        if (hrvMs != null && hrvMs >= 0 && hrvMs < 5000) state.setLastHrvMs(hrvMs);
+        if (stressScore != null && stressScore >= 0 && stressScore <= 100) state.setLastStressScore(stressScore);
         state.setLastRecoveryLoggedAt(LocalDateTime.now());
         coachRunnerStateRepository.save(state);
     }
@@ -162,15 +174,11 @@ public class AutomatedCoachService {
     @Transactional
     public void updateCoachProfile(Runner runner, Integer maxHr, Integer restingHr) {
         if (maxHr != null) {
-            if (maxHr < 120 || maxHr > 230) {
-                throw new IllegalArgumentException("maxHeartRateBpm out of range.");
-            }
+            if (maxHr < 120 || maxHr > 230) throw new IllegalArgumentException("maxHeartRateBpm out of range.");
             runner.setMaxHeartRateBpm(maxHr);
         }
         if (restingHr != null) {
-            if (restingHr < 30 || restingHr > 120) {
-                throw new IllegalArgumentException("restingHeartRateBpm out of range.");
-            }
+            if (restingHr < 30 || restingHr > 120) throw new IllegalArgumentException("restingHeartRateBpm out of range.");
             runner.setRestingHeartRateBpm(restingHr);
             CoachRunnerState state = getOrCreateState(runner);
             if (state.getBaselineRestingHr() == null) {
@@ -222,16 +230,12 @@ public class AutomatedCoachService {
     @Transactional
     public boolean dismissAlert(Runner runner, Long alertId) {
         Optional<CoachFeedbackAlert> opt = coachFeedbackAlertRepository.findByIdAndRunner(alertId, runner);
-        if (opt.isEmpty()) {
-            return false;
-        }
+        if (opt.isEmpty()) return false;
         CoachFeedbackAlert a = opt.get();
         a.setDismissed(true);
         coachFeedbackAlertRepository.save(a);
         return true;
     }
-
-    // --- internals ---
 
     private void aggregateState(Runner runner) {
         LocalDateTime now = LocalDateTime.now();
@@ -239,285 +243,192 @@ public class AutomatedCoachService {
         LocalDateTime from28 = now.minusDays(28);
         LocalDateTime from90 = now.minusDays(90);
 
-        // One lightweight query for 90d, then single-pass derive 28d/7d metrics in memory.
         List<RunMetricsProjection> runs90 = activityRepository.findRunMetricsBetween(runner, ActivityType.RUN, from90, now);
         double hrMax = resolveHrMax(runner, runs90);
 
-        int low = 0;
-        int grey = 0;
-        int high = 0;
-        int unknown = 0;
-        double vol7 = 0;
-        double vol28 = 0;
+        int low = 0, grey = 0, high = 0, unknown = 0;
+        double vol7 = 0, vol28 = 0;
         for (RunMetricsProjection a : runs90) {
             LocalDateTime ts = a.getEffectiveStartTime();
-            if (ts == null) {
-                continue;
-            }
-            if (!ts.isBefore(from28)) {
-                vol28 += distanceKm(a);
-            }
-            if (ts.isBefore(from7)) {
-                continue;
-            }
-            vol7 += distanceKm(a);
-            int mins = movingMinutes(a);
-            CoachHrBand band = CoachHrZoneClassifier.classify(a.getAverageHeartRate(), hrMax);
-            switch (band) {
-                case LOW -> low += mins;
-                case GREY -> grey += mins;
-                case HIGH -> high += mins;
-                case UNKNOWN -> unknown += mins;
+            if (ts == null) continue;
+            double dist = (a.getDistanceKm() > 0) ? a.getDistanceKm() : (a.getDistanceMeters() / 1000.0);
+            if (!ts.isBefore(from28)) vol28 += dist;
+            if (!ts.isBefore(from7)) {
+                vol7 += dist;
+                Double maxHrRow = a.getMaxHeartRate();
+                if (maxHrRow == null || maxHrRow == 0 || hrMax == 0) {
+                    unknown += a.getDurationSeconds() / 60;
+                } else {
+                    double peakPct = maxHrRow / hrMax;
+                    if (peakPct < 0.80) low += a.getDurationSeconds() / 60;
+                    else if (peakPct < 0.88) grey += a.getDurationSeconds() / 60;
+                    else high += a.getDurationSeconds() / 60;
+                }
             }
         }
 
-        int tracked = low + grey + high;
-        Double ratio = tracked > 0 ? (high / (double) tracked) : null;
-
         CoachRunnerState state = getOrCreateState(runner);
-        state.setVolumeKm7d(vol7);
-        state.setVolumeKm28d(vol28);
+        state.setVolumeKm7d(round1(vol7));
+        state.setVolumeKm28d(round1(vol28));
         state.setMinutesLowZ1Z2Last7d(low);
         state.setMinutesGreyZ3Last7d(grey);
         state.setMinutesHighZ4Z5Last7d(high);
         state.setMinutesUnknownHrLast7d(unknown);
-        state.setHighIntensityRatioLast7d(ratio);
-        state.setHighMileageGrinder(vol28 >= HIGH_MILEAGE_KM_28D);
-        state.setEstimatedHrMaxBpm(hrMax);
-        state.setLastAggregatedAt(now);
+        int totalTracked = low + grey + high;
+        state.setHighIntensityRatioLast7d(totalTracked > 0 ? (double) high / totalTracked : 0.0);
+        state.setHighMileageGrinder(vol28 > HIGH_MILEAGE_KM_28D);
+        state.setLastAggregatedAt(LocalDateTime.now());
         coachRunnerStateRepository.save(state);
     }
 
-    private void maybeAdvanceTrainingWeek(Runner runner, CoachTrainingBlock block) {
-        LocalDate today = LocalDate.now();
-        LocalDate thisMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate last = block.getLastProgressionWeekStart();
-        if (last == null) {
-            block.setLastProgressionWeekStart(thisMonday);
-            coachTrainingBlockRepository.save(block);
-            return;
-        }
-        if (!last.isBefore(thisMonday)) {
-            return;
-        }
-        double next = block.getCurrentLongRunKm() * LONG_RUN_WEEKLY_BUMP;
-        double maxBump = block.getCurrentLongRunKm() * 1.15;
-        block.setCurrentLongRunKm(Math.min(next, maxBump));
-        block.setWeekIndex(block.getWeekIndex() + 1);
-        block.setLastProgressionWeekStart(thisMonday);
-        coachTrainingBlockRepository.save(block);
-        log.debug("Coach: advanced training week for runner {} — long run now {} km", runner.getId(), block.getCurrentLongRunKm());
-    }
-
-    private void apply8020ToTomorrow(Runner runner) {
-        CoachRunnerState state = coachRunnerStateRepository.findByRunner(runner).orElse(null);
-        if (state == null) {
-            return;
-        }
-        Double ratio = state.getHighIntensityRatioLast7d();
-        if (ratio == null || ratio <= HIGH_INTENSITY_WEEKLY_CAP) {
-            return;
-        }
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
-        Optional<CoachScheduledWorkout> opt = coachScheduledWorkoutRepository.findByRunnerAndScheduledDate(runner, tomorrow);
-        if (opt.isEmpty()) {
-            return;
-        }
-        CoachScheduledWorkout w = opt.get();
-        if (!isHighIntensityPlanned(w.getWorkoutType())) {
-            return;
-        }
-        CoachWorkoutType was = w.getWorkoutType();
-        w.setMutatedFrom(was);
-        w.setWorkoutType(CoachWorkoutType.RECOVERY);
-        double prevKm = w.getPlannedDistanceKm() != null ? w.getPlannedDistanceKm() : 8.0;
-        w.setPlannedDistanceKm(Math.min(8.0, prevKm));
-        w.setStridesSuggested(false);
-        w.setNotes("80/20 audit: recent high-intensity share is "
-                + String.format("%.0f%%", ratio * 100)
-                + ". This session was downgraded to an easy recovery run.");
-        coachScheduledWorkoutRepository.save(w);
-    }
-
-    private CoachScheduledWorkout applyReadinessGate(Runner runner, CoachRunnerState state, CoachScheduledWorkout w) {
-        Integer baseline = state.getBaselineRestingHr() != null ? state.getBaselineRestingHr() : runner.getRestingHeartRateBpm();
-        Integer lastRhr = state.getLastNightRestingHr();
-        if (baseline == null || lastRhr == null || baseline <= 0) {
-            return w;
-        }
-        if (lastRhr <= baseline * RHR_STRESS_MULTIPLIER) {
-            return w;
-        }
-        if (!isHighIntensityPlanned(w.getWorkoutType())) {
-            return w;
-        }
-        CoachWorkoutType orig = w.getWorkoutType();
-        w.setMutatedFrom(orig);
-        w.setWorkoutType(CoachWorkoutType.REST);
-        w.setPlannedDistanceKm(null);
-        w.setStridesSuggested(false);
-        w.setReadinessAdjusted(true);
-        w.setNotes("Readiness: resting HR elevated vs baseline — replaced hard session with rest or cross-training.");
-        return coachScheduledWorkoutRepository.save(w);
-    }
-
     private void checkGreyZoneFeedback(Runner runner, Activity activity) {
-        LocalDate d = activityLocalDate(activity);
-        Optional<CoachScheduledWorkout> planned = coachScheduledWorkoutRepository.findByRunnerAndScheduledDate(runner, d);
-        if (planned.isEmpty()) {
-            return;
+        if (activity.getMaxHeartRate() == null || activity.getMaxHeartRate() == 0) return;
+        double hrMax = runner.getMaxHeartRateBpm() != null ? runner.getMaxHeartRateBpm() : 190.0;
+        double peakPct = activity.getMaxHeartRate() / hrMax;
+        if (peakPct >= 0.81 && peakPct <= 0.87) {
+            String msg = "Your recent run was in the 'Grey Zone'. Try to keep easy runs easier or hard runs harder.";
+            if (coachFeedbackAlertRepository.findByRunnerAndMessage(runner, msg).isEmpty()) {
+                CoachFeedbackAlert alert = new CoachFeedbackAlert();
+                alert.setRunner(runner);
+                alert.setAlertType("GREY_ZONE");
+                alert.setMessage(msg);
+                alert.setCreatedAt(LocalDateTime.now());
+                coachFeedbackAlertRepository.save(alert);
+            }
         }
-        CoachScheduledWorkout p = planned.get();
-        if (p.getWorkoutType() != CoachWorkoutType.EASY && p.getWorkoutType() != CoachWorkoutType.RECOVERY) {
-            return;
-        }
-        CoachRunnerState state = getOrCreateState(runner);
-        double hrMax = state.getEstimatedHrMaxBpm() != null && state.getEstimatedHrMaxBpm() > 0
-                ? state.getEstimatedHrMaxBpm()
-                : resolveHrMax(runner, activityRepository.findRunMetricsBetween(
-                        runner,
-                        ActivityType.RUN,
-                        LocalDateTime.now().minusDays(90),
-                        LocalDateTime.now()
-                ));
-        CoachHrBand band = CoachHrZoneClassifier.classify(activity.getAverageHeartRate(), hrMax);
-        if (band != CoachHrBand.GREY) {
-            return;
-        }
-        CoachFeedbackAlert alert = new CoachFeedbackAlert();
-        alert.setRunner(runner);
-        alert.setAlertType("GREY_ZONE_EASY_DAY");
-        alert.setMessage("Your heart rate averaged in the grey zone (moderately hard) on a day scheduled as easy/recovery. "
-                + "For polarized training, slow easy days by ~15–20 s/km so hard days can stay truly hard.");
-        alert.setCreatedAt(LocalDateTime.now());
-        alert.setDismissed(false);
-        alert.setRelatedActivity(activity);
-        coachFeedbackAlertRepository.save(alert);
     }
 
     private void ensureScheduleHorizon(Runner runner, int days) {
-        int horizon = Math.min(28, Math.max(SCHEDULE_HORIZON_DAYS, days));
         LocalDate today = LocalDate.now();
-        CoachRunnerState state = coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> getOrCreateState(runner));
-        Optional<CoachTrainingBlock> blockOpt = coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner);
-        LocalDate end = today.plusDays(horizon - 1L);
-        List<CoachScheduledWorkout> existingRows = coachScheduledWorkoutRepository.findByRunnerAndScheduledDateBetween(runner, today, end);
-        Set<LocalDate> existingDates = new HashSet<>(existingRows.size());
-        for (CoachScheduledWorkout row : existingRows) {
-            existingDates.add(row.getScheduledDate());
-        }
-        List<CoachScheduledWorkout> toCreate = new java.util.ArrayList<>();
-        for (int i = 0; i < horizon; i++) {
-            LocalDate d = today.plusDays(i);
-            if (existingDates.contains(d)) {
-                continue;
+        LocalDate horizonEnd = today.plusDays(days - 1L);
+
+        synchronized (scheduleHorizonLocks.computeIfAbsent(runner.getId(), ignored -> new Object())) {
+            Optional<CoachTrainingBlock> blockOpt = coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner);
+            Set<LocalDate> existingDates = new HashSet<>();
+            for (CoachScheduledWorkout existing : coachScheduledWorkoutRepository.findByRunnerAndScheduledDateBetween(runner, today, horizonEnd)) {
+                if (existing.getScheduledDate() != null) {
+                    existingDates.add(existing.getScheduledDate());
+                }
             }
-            CoachScheduledWorkout w = buildDefaultDay(runner, d, state);
-            if (blockOpt.isPresent()) {
-                applyBlockLongRun(blockOpt.get(), w, d);
+
+            List<CoachScheduledWorkout> toCreate = new ArrayList<>();
+            for (int i = 0; i < days; i++) {
+                LocalDate date = today.plusDays(i);
+                if (existingDates.contains(date)) continue;
+                CoachScheduledWorkout w = buildDefaultDay(runner, date);
+                blockOpt.ifPresent(b -> applyBlockLongRun(b, w));
+                toCreate.add(w);
+                existingDates.add(date);
             }
-            toCreate.add(w);
-        }
-        if (!toCreate.isEmpty()) {
-            coachScheduledWorkoutRepository.saveAll(toCreate);
+
+            if (!toCreate.isEmpty()) {
+                coachScheduledWorkoutRepository.saveAll(toCreate);
+            }
         }
     }
 
-    private void applyBlockLongRun(CoachTrainingBlock block, CoachScheduledWorkout w, LocalDate d) {
-        if (d.getDayOfWeek() != DayOfWeek.SATURDAY) {
-            return;
-        }
-        if (w.getWorkoutType() != CoachWorkoutType.LONG_RUN) {
-            return;
-        }
-        w.setPlannedDistanceKm(round1(block.getCurrentLongRunKm()));
-        double raceKm = block.getRaceDistanceKm();
-        String paceHint = raceKm >= 40
-                ? "Include 8–15 km at marathon effort in the middle."
-                : "Include 4–8 km at goal race pace in the middle.";
-        w.setNotes(paceHint);
-    }
-
-    private CoachScheduledWorkout buildDefaultDay(Runner runner, LocalDate d, CoachRunnerState state) {
+    private CoachScheduledWorkout buildDefaultDay(Runner runner, LocalDate date) {
         CoachScheduledWorkout w = new CoachScheduledWorkout();
         w.setRunner(runner);
-        w.setScheduledDate(d);
+        w.setScheduledDate(date);
         w.setReadinessAdjusted(false);
-
-        DayOfWeek dow = d.getDayOfWeek();
-        boolean over8020 = state.getHighIntensityRatioLast7d() != null
-                && state.getHighIntensityRatioLast7d() > HIGH_INTENSITY_WEEKLY_CAP;
-
-        switch (dow) {
-            case MONDAY -> {
-                w.setWorkoutType(CoachWorkoutType.EASY);
-                w.setPlannedDistanceKm(8.0);
-                w.setStridesSuggested(true);
-                w.setNotes("Easy aerobic + optional 6–10 × 20 s strides after.");
-            }
-            case TUESDAY -> {
-                w.setWorkoutType(CoachWorkoutType.EASY);
-                w.setPlannedDistanceKm(8.0);
-                w.setStridesSuggested(false);
-            }
-            case WEDNESDAY -> {
-                if (over8020) {
-                    w.setWorkoutType(CoachWorkoutType.EASY);
-                    w.setPlannedDistanceKm(8.0);
-                    w.setNotes("Polarized guard: keep intensity low until easy volume dominates.");
-                } else {
-                    w.setWorkoutType(CoachWorkoutType.THRESHOLD);
-                    w.setPlannedDistanceKm(10.0);
-                    w.setNotes("Quality: threshold / cruise intervals.");
-                }
-                w.setStridesSuggested(false);
-            }
-            case THURSDAY -> {
-                w.setWorkoutType(CoachWorkoutType.EASY);
-                w.setPlannedDistanceKm(7.0);
-                w.setStridesSuggested(true);
-            }
-            case FRIDAY -> {
-                w.setWorkoutType(CoachWorkoutType.REST);
-                w.setStridesSuggested(false);
-            }
-            case SATURDAY -> {
-                w.setWorkoutType(CoachWorkoutType.LONG_RUN);
-                w.setPlannedDistanceKm(14.0);
-                w.setStridesSuggested(false);
-                w.setNotes("Aerobic long run — stay conversational on non-work sections.");
-            }
-            case SUNDAY -> {
-                w.setWorkoutType(CoachWorkoutType.RECOVERY);
-                w.setPlannedDistanceKm(6.0);
-                w.setStridesSuggested(false);
-            }
-            default -> {
-                w.setWorkoutType(CoachWorkoutType.EASY);
-                w.setPlannedDistanceKm(8.0);
-            }
+        DayOfWeek dow = date.getDayOfWeek();
+        if (dow == DayOfWeek.MONDAY || dow == DayOfWeek.FRIDAY) {
+            w.setWorkoutType(CoachWorkoutType.REST);
+        } else if (dow == DayOfWeek.WEDNESDAY) {
+            w.setWorkoutType(CoachWorkoutType.INTERVALS);
+            w.setPlannedDistanceKm(10.0);
+            w.setPlannedDurationMinutes(60);
+        } else if (dow == DayOfWeek.SUNDAY) {
+            w.setWorkoutType(CoachWorkoutType.LONG_RUN);
+            w.setPlannedDistanceKm(15.0);
+            w.setPlannedDurationMinutes(90);
+        } else {
+            w.setWorkoutType(CoachWorkoutType.EASY);
+            w.setPlannedDistanceKm(8.0);
+            w.setPlannedDurationMinutes(45);
         }
         return w;
     }
 
-    private double estimateSeedLongRunKm(Runner runner) {
-        LocalDateTime now = LocalDateTime.now();
-        List<Activity> runs28 = activityRepository.findRunsBetween(runner, ActivityType.RUN, now.minusDays(28), now);
-        double maxLong = 0;
-        for (Activity a : runs28) {
-            double km = distanceKm(a);
-            if (km > maxLong) {
-                maxLong = km;
-            }
+    private void applyBlockLongRun(CoachTrainingBlock block, CoachScheduledWorkout w) {
+        if (w.getWorkoutType() == CoachWorkoutType.LONG_RUN) {
+            w.setPlannedDistanceKm(round1(block.getCurrentLongRunKm()));
+            w.setPlannedDurationMinutes((int) (block.getCurrentLongRunKm() * 6.0));
         }
-        if (maxLong >= 10) {
-            return round1(Math.min(maxLong, 32));
-        }
-        return 12.0;
     }
 
-    private static boolean isHighIntensityPlanned(CoachWorkoutType t) {
-        return t == CoachWorkoutType.THRESHOLD || t == CoachWorkoutType.INTERVALS || t == CoachWorkoutType.TEMPO;
+    private void maybeAdvanceTrainingWeek(Runner runner, CoachTrainingBlock block) {
+        LocalDate today = LocalDate.now();
+        LocalDate nextWeekStart = block.getLastProgressionWeekStart().plusDays(7);
+        if (!today.isBefore(nextWeekStart)) {
+            block.setWeekIndex(block.getWeekIndex() + 1);
+            block.setLastProgressionWeekStart(nextWeekStart);
+            if (block.getWeekIndex() % 4 != 0) {
+                block.setCurrentLongRunKm(round1(block.getCurrentLongRunKm() * LONG_RUN_WEEKLY_BUMP));
+            } else {
+                block.setCurrentLongRunKm(round1(block.getCurrentLongRunKm() * 0.7));
+            }
+            coachTrainingBlockRepository.save(block);
+        }
+    }
+
+    private void apply8020ToTomorrow(Runner runner) {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        coachScheduledWorkoutRepository.findByRunnerAndScheduledDate(runner, tomorrow).ifPresent(w -> {
+            if (w.getWorkoutType() == CoachWorkoutType.INTERVALS || w.getWorkoutType() == CoachWorkoutType.THRESHOLD) {
+                CoachRunnerState state = getOrCreateState(runner);
+                if (state.getHighIntensityRatioLast7d() > HIGH_INTENSITY_WEEKLY_CAP) {
+                    w.setMutatedFrom(w.getWorkoutType());
+                    w.setWorkoutType(CoachWorkoutType.EASY);
+                    w.setNotes("80/20 Guard: Too much intensity recently. Swapped to Easy.");
+                    coachScheduledWorkoutRepository.save(w);
+                }
+            }
+        });
+    }
+
+    private CoachScheduledWorkout applyReadinessGate(CoachRunnerState state, CoachScheduledWorkout workout) {
+        if (workout.getWorkoutType() == CoachWorkoutType.REST || workout.isReadinessAdjusted()) return workout;
+
+        ReadinessService.ReadinessResult readiness = readinessService.compute(state);
+        state.setReadinessScore(readiness.score());
+        state.setReadinessVerdict(readiness.verdict());
+        coachRunnerStateRepository.save(state);
+
+        if ("REST".equals(readiness.verdict())) {
+            workout.setReadinessAdjusted(true);
+            workout.setMutatedFrom(workout.getWorkoutType());
+            workout.setWorkoutType(CoachWorkoutType.RECOVERY);
+            workout.setNotes("Readiness score " + readiness.score() + "/100 (REST). Downgraded to Recovery.");
+            if (workout.getPlannedDistanceKm() != null) workout.setPlannedDistanceKm(round1(workout.getPlannedDistanceKm() * 0.5));
+            return workout;
+        }
+
+        if ("RECOVERY".equals(readiness.verdict())) {
+            workout.setReadinessAdjusted(true);
+            workout.setMutatedFrom(workout.getWorkoutType());
+            if (workout.getWorkoutType() == CoachWorkoutType.INTERVALS || workout.getWorkoutType() == CoachWorkoutType.THRESHOLD) {
+                workout.setWorkoutType(CoachWorkoutType.EASY);
+                workout.setNotes("Readiness score " + readiness.score() + "/100 (RECOVERY). Downgraded to Easy.");
+            } else {
+                workout.setWorkoutType(CoachWorkoutType.RECOVERY);
+                workout.setNotes("Readiness score " + readiness.score() + "/100 (RECOVERY). Shortened to Recovery.");
+                if (workout.getPlannedDistanceKm() != null) workout.setPlannedDistanceKm(round1(workout.getPlannedDistanceKm() * 0.6));
+            }
+            return workout;
+        }
+
+        if ("EASY".equals(readiness.verdict())) {
+            if (workout.getWorkoutType() == CoachWorkoutType.INTERVALS || workout.getWorkoutType() == CoachWorkoutType.THRESHOLD) {
+                workout.setReadinessAdjusted(true);
+                workout.setMutatedFrom(workout.getWorkoutType());
+                workout.setWorkoutType(CoachWorkoutType.EASY);
+                workout.setNotes("Readiness score " + readiness.score() + "/100 (EASY). Quality session softened to Easy.");
+            }
+        }
+
+        return workout;
     }
 
     private CoachRunnerState getOrCreateState(Runner runner) {
@@ -528,156 +439,112 @@ public class AutomatedCoachService {
         });
     }
 
-    private double resolveHrMax(Runner runner, List<RunMetricsProjection> pool) {
-        if (runner.getMaxHeartRateBpm() != null && runner.getMaxHeartRateBpm() >= 130) {
-            return CoachHrZoneClassifier.clampHrMax(runner.getMaxHeartRateBpm());
-        }
-        double max = 0;
-        for (RunMetricsProjection a : pool) {
-            if (a.getMaxHeartRate() != null && a.getMaxHeartRate() > max) {
-                max = a.getMaxHeartRate();
-            }
-        }
-        if (max >= 130) {
-            return CoachHrZoneClassifier.clampHrMax(max);
-        }
-        return 185;
-    }
-
-    private static int movingMinutes(RunMetricsProjection a) {
-        int sec = a.getMovingTimeSeconds() != null ? a.getMovingTimeSeconds() : 0;
-        if (sec <= 0 && a.getDurationSeconds() != null) {
-            sec = a.getDurationSeconds().intValue();
-        }
-        return Math.max(0, sec / 60);
-    }
-
-    private static double distanceKm(RunMetricsProjection a) {
-        if (a.getDistanceKm() != null && a.getDistanceKm() > 0) {
-            return a.getDistanceKm();
-        }
-        if (a.getDistanceMeters() != null && a.getDistanceMeters() > 0) {
-            return a.getDistanceMeters() / 1000.0;
-        }
-        return 0;
-    }
-
-    private static double distanceKm(Activity a) {
-        if (a.getDistanceKm() > 0) {
-            return a.getDistanceKm();
-        }
-        if (a.getDistanceMeters() != null && a.getDistanceMeters() > 0) {
-            return a.getDistanceMeters() / 1000.0;
-        }
-        return 0;
-    }
-
-    private static LocalDate activityLocalDate(Activity a) {
-        if (a.getStartTime() != null) {
-            return a.getStartTime().toLocalDate();
-        }
-        if (a.getStartDate() != null && !a.getStartDate().isBlank()) {
-            String s = a.getStartDate().trim();
-            try {
-                if (s.length() >= 10) {
-                    return LocalDate.parse(s.substring(0, 10));
-                }
-            } catch (Exception ignored) {
-            }
-            try {
-                return OffsetDateTime.parse(s).toLocalDate();
-            } catch (Exception ignored) {
-            }
-        }
-        if (a.getCreatedAt() != null) {
-            return a.getCreatedAt().toLocalDate();
-        }
-        return LocalDate.now();
+    private double estimateSeedLongRunKm(Runner runner) {
+        LocalDateTime now = LocalDateTime.now();
+        List<RunMetricsProjection> recent = activityRepository.findRunMetricsBetween(runner, ActivityType.RUN, now.minusDays(30), now);
+        double maxLong = recent.stream().mapToDouble(r -> (r.getDistanceKm() > 0) ? r.getDistanceKm() : (r.getDistanceMeters() / 1000.0)).max().orElse(10.0);
+        return round1(Math.min(maxLong, 32));
     }
 
     private static double round1(double v) {
         return Math.round(v * 10.0) / 10.0;
     }
 
+    private static int resolveHrMax(Runner r, List<RunMetricsProjection> runs) {
+        if (r.getMaxHeartRateBpm() != null && r.getMaxHeartRateBpm() > 120) return r.getMaxHeartRateBpm();
+        double peak = runs.stream()
+                .mapToDouble(run -> run.getMaxHeartRate() != null ? run.getMaxHeartRate() : 0.0)
+                .max().orElse(0.0);
+        if (peak > 140) return (int) Math.round(peak);
+        return 190;
+    }
+
     private static CoachScheduledWorkoutDto toScheduledDto(CoachScheduledWorkout w) {
         return new CoachScheduledWorkoutDto(
-                w.getScheduledDate(),
-                w.getWorkoutType().name(),
-                w.getPlannedDistanceKm(),
-                w.getPlannedDurationMinutes(),
-                w.isStridesSuggested(),
-                w.getNotes(),
-                w.getMutatedFrom() != null ? w.getMutatedFrom().name() : null,
-                w.isReadinessAdjusted()
+                w.getScheduledDate(), w.getWorkoutType().name(), w.getPlannedDistanceKm(),
+                w.getPlannedDurationMinutes(), w.isStridesSuggested(), w.getNotes(),
+                w.getMutatedFrom() != null ? w.getMutatedFrom().name() : null, w.isReadinessAdjusted()
         );
     }
 
-    private CoachStateDto toStateDto(Runner runner, CoachRunnerState s) {
+private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachScheduledWorkout todayWorkout) {
+        CoachStaminaDto stamina = buildStaminaDto(runner, s, todayWorkout);
+        ReadinessService.ReadinessResult readiness = readinessService.compute(s);
         return new CoachStateDto(
-                s.getVolumeKm7d(),
-                s.getVolumeKm28d(),
-                s.getMinutesLowZ1Z2Last7d(),
-                s.getMinutesGreyZ3Last7d(),
-                s.getMinutesHighZ4Z5Last7d(),
-                s.getMinutesUnknownHrLast7d(),
-                s.getHighIntensityRatioLast7d(),
-                s.isHighMileageGrinder(),
-                s.getBaselineRestingHr(),
-                s.getLastNightRestingHr(),
-                s.getLastSleepScore(),
-                s.getLastHrvMs(),
-                runner.getMaxHeartRateBpm(),
-                runner.getRestingHeartRateBpm(),
+                s.getVolumeKm7d(), s.getVolumeKm28d(), s.getMinutesLowZ1Z2Last7d(),
+                s.getMinutesGreyZ3Last7d(), s.getMinutesHighZ4Z5Last7d(), s.getMinutesUnknownHrLast7d(),
+                s.getHighIntensityRatioLast7d(), s.isHighMileageGrinder(),
+                s.getBaselineRestingHr(), s.getLastNightRestingHr(), s.getLastSleepScore(), s.getLastHrvMs(), s.getLastStressScore(),
+                s.getLastHrvStatus(), s.getLastBodyBatteryAtWake(),
+                s.getReadinessScore(), s.getReadinessVerdict(),
+                readiness.sleepScore(), readiness.hrvScore(), readiness.rhrScore(), readiness.stressScore(),
+                runner.getMaxHeartRateBpm(), runner.getRestingHeartRateBpm(), stamina,
                 coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).map(b -> new CoachTrainingBlockDto(
-                        b.getRaceDistanceKm(),
-                        b.getTargetRaceDate(),
-                        b.getWeekIndex(),
-                        b.getCurrentLongRunKm(),
-                        b.getName()
+                        b.getRaceDistanceKm(), b.getTargetRaceDate(), b.getWeekIndex(), b.getCurrentLongRunKm(), b.getName()
                 )).orElse(null)
         );
     }
 
-    // --- DTO records (API responses) ---
+    private CoachStaminaDto buildStaminaDto(Runner runner, CoachRunnerState state, CoachScheduledWorkout todayWorkout) {
+        int recoveryCap = 100;
+        Integer sleep = state.getLastSleepScore();
+        if (sleep != null) {
+            if (sleep < 60) recoveryCap -= 12;
+            else if (sleep < 78) recoveryCap -= 5;
+        }
+        int score = recoveryCap;
+        CoachWorkoutType type = todayWorkout != null ? todayWorkout.getWorkoutType() : null;
+        if (type != null) {
+            switch (type) {
+                case LONG_RUN -> score -= 5;
+                case TEMPO, THRESHOLD -> score -= 7;
+                case INTERVALS -> score -= 9;
+                default -> score -= 1;
+            }
+        }
+        Integer targetPace = null;
+        if (todayWorkout != null && todayWorkout.getPlannedDistanceKm() != null && todayWorkout.getPlannedDistanceKm() > 0
+                && todayWorkout.getPlannedDurationMinutes() != null && todayWorkout.getPlannedDurationMinutes() > 0) {
+            targetPace = (int) Math.round((todayWorkout.getPlannedDurationMinutes() * 60.0) / todayWorkout.getPlannedDistanceKm());
+        }
+        Double hrMax = state.getEstimatedHrMaxBpm() != null ? state.getEstimatedHrMaxBpm() : (runner.getMaxHeartRateBpm() != null ? runner.getMaxHeartRateBpm().doubleValue() : null);
+        Integer targetHr = hrMax == null ? null : (int) Math.round(hrMax * 0.62);
+        String direction = score < recoveryCap ? "down" : score > recoveryCap ? "up" : "steady";
+        return new CoachStaminaDto(score, recoveryCap, targetPace, targetHr, direction);
+    }
 
-    public record CoachScheduledWorkoutDto(
-            LocalDate scheduledDate,
-            String workoutType,
-            Double plannedDistanceKm,
-            Integer plannedDurationMinutes,
-            boolean stridesSuggested,
-            String notes,
-            String mutatedFrom,
-            boolean readinessAdjusted
-    ) {}
+    // --- DTOs ---
+    public record CoachStaminaDto(int scorePercent, int recoveryCapPercent, Integer targetPaceSecondsPerKm, Integer targetHeartRateBpm, String direction) {}
 
     public record CoachStateDto(
-            double volumeKm7d,
-            double volumeKm28d,
-            int minutesLowZ1Z2Last7d,
-            int minutesGreyZ3Last7d,
-            int minutesHighZ4Z5Last7d,
-            int minutesUnknownHrLast7d,
-            Double highIntensityRatioLast7d,
-            boolean highMileageGrinder,
-            Integer baselineRestingHr,
-            Integer lastNightRestingHr,
-            Integer lastSleepScore,
-            Integer lastHrvMs,
-            Integer profileMaxHeartRateBpm,
-            Integer profileRestingHeartRateBpm,
+            double volumeKm7d, double volumeKm28d, int minutesLowZ1Z2Last7d,
+            int minutesGreyZ3Last7d, int minutesHighZ4Z5Last7d, int minutesUnknownHrLast7d,
+            Double highIntensityRatioLast7d, boolean highMileageGrinder,
+            Integer baselineRestingHr, Integer lastNightRestingHr, Integer lastSleepScore, Integer lastHrvMs, Integer lastStressScore,
+            String lastHrvStatus, Integer lastBodyBatteryAtWake,
+            Integer readinessScore, String readinessVerdict,
+            Integer readinessSleep, Integer readinessHrv, Integer readinessRhr, Integer readinessStress,
+            Integer profileMaxHeartRateBpm, Integer profileRestingHeartRateBpm, CoachStaminaDto stamina,
             CoachTrainingBlockDto activeBlock
     ) {}
 
-    public record CoachTrainingBlockDto(
-            double raceDistanceKm,
-            LocalDate targetRaceDate,
-            int weekIndex,
-            double currentLongRunKm,
-            String name
+    public record CoachScheduledWorkoutDto(
+            LocalDate scheduledDate, String workoutType, Double plannedDistanceKm,
+            Integer plannedDurationMinutes, boolean stridesSuggested, String notes,
+            String mutatedFrom, boolean readinessAdjusted
     ) {}
 
-    public record CoachTodayDto(CoachScheduledWorkoutDto today, CoachStateDto state) {}
+    public record CoachTrainingBlockDto(double raceDistanceKm, LocalDate targetRaceDate, int weekIndex, double currentLongRunKm, String name) {}
+
+    public record CoachRecommendedShoeDto(
+            Long id, String brand, String model, String nickname, String photoUrl,
+            Double currentDistanceKm, Double maxDistanceKm, String recommendationReason
+    ) {}
+
+    public record CoachTodayDto(
+            CoachScheduledWorkoutDto today, CoachStateDto state,
+            CoachRouteRecommendationDto routeRecommendation, CoachRecommendedShoeDto recommendedShoe
+    ) {}
 
     public record CoachFeedbackAlertDto(Long id, String alertType, String message, LocalDateTime createdAt) {}
 }

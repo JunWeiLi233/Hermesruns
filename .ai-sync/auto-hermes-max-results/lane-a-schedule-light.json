@@ -1,0 +1,28 @@
+{
+  "laneId": "lane-a-schedule-light",
+  "parentRunId": "ahm-20260415185418",
+  "correlationId": "ahm-20260415185418:lane-a-schedule-light",
+  "goal": "Extend schedule-plan-* light-mode block from body.theme-light to body:is(.theme-light, .theme-high-contrast-light)",
+  "ownedFiles": ["frontend/src/styles/style.css"],
+  "changedFiles": ["frontend/src/styles/style.css"],
+  "completedRounds": [
+    {
+      "task": "Replace all body.theme-light .schedule-plan-* selectors with body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-* (67 selector lines upgraded)",
+      "surface": "/schedule",
+      "changedFiles": ["frontend/src/styles/style.css"],
+      "verification": "lint: 136 pre-existing errors in unrelated JS/JSX files — zero errors in style.css or schedule-plan selectors; build: clean in 1.18s",
+      "runtimeProof": "verify-frontend-runtime-sync.mjs returned PASS — live asset updated 2026-04-15T19:00:36.322Z"
+    }
+  ],
+  "verification": "npm run lint: 0 new errors introduced. All 136 lint errors are pre-existing in JS/JSX files (Vo2MaxDetail.jsx, etc.). No style.css errors. Build passed cleanly in 1.18s.",
+  "runtimeProof": "verify-frontend-runtime-sync.mjs PASS — backend/target/classes/static/assets/index-BGsgTHe-.css updated 2026-04-15T19:00:36.322Z",
+  "risks": [
+    "The body.theme-high-contrast-light .schedule-plan-* override block (lines ~36499-36585) remains as a specificity override on top of the widened :is() baseline. This is correct and intentional — high-contrast values differ from light-mode values and the override block must stay."
+  ],
+  "mustPreserve": [
+    "today-run-plan-* selectors changed by Explorer round must not be regressed",
+    "body.theme-high-contrast-light .schedule-plan-* override block at lines 36499-36585 must remain intact as it provides higher-specificity overrides for distinct high-contrast values"
+  ],
+  "mergeNotes": "Pure CSS selector extension — 67 schedule-plan-* selector lines changed from body.theme-light to body:is(.theme-light, .theme-high-contrast-light). No JS changed, no functional behavior changed. The existing body.theme-high-contrast-light .schedule-plan-* override block at lines 36499-36585 was intentionally left in place to provide high-contrast-specific value overrides.",
+  "status": "approved"
+}

@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": true,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "executing",
+  "startedAt": "2026-04-20T04:11:05.429Z",
+  "completedAt": null,
+  "runId": "ahm-20260420041105",
+  "parentGoal": "[Market Opportunity] Smart Shoe Rotation Tracker on Shoe Tracker",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260420041105.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260420041105-progress.json"
+}

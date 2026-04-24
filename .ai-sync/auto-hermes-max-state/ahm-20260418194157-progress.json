@@ -1,0 +1,49 @@
+{
+  "runId": "ahm-20260418194157",
+  "parentGoal": "Harden public auth trust and improve global UX/accessibility.",
+  "generatedAt": "2026-04-18T19:41:57.881Z",
+  "mode": "ralph-style-parallel",
+  "active": true,
+  "currentPhase": "executing",
+  "iteration": 1,
+  "maxIterations": 10,
+  "lanes": [
+    {
+      "laneId": "keyboard-accessibility",
+      "goal": "Make race detail and analysis drill-down interactions fully keyboard-accessible",
+      "status": "pending-launch",
+      "ownedFiles": [
+        "frontend/src/pages/Analysis.jsx",
+        "frontend/src/pages/RacesDetail.jsx"
+      ],
+      "completedRounds": 0,
+      "verification": null,
+      "runtimeProof": null,
+      "architectApproved": false
+    },
+    {
+      "laneId": "footer-consolidation",
+      "goal": "Consolidate signed-in vs public footer treatments",
+      "status": "pending-launch",
+      "ownedFiles": [
+        "frontend/src/components/FooterNavLinks.jsx",
+        "frontend/src/pages/Landing.jsx"
+      ],
+      "completedRounds": 0,
+      "verification": null,
+      "runtimeProof": null,
+      "architectApproved": false
+    }
+  ],
+  "gates": {
+    "ownership": "pending",
+    "contract": "pending",
+    "verification": "pending",
+    "runtimeTruth": "pending",
+    "regression": "pending",
+    "arbitration": "pending",
+    "review": "pending",
+    "evidence": "pending",
+    "deslop": "pending"
+  }
+}

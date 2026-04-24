@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_runner_strava_athlete_id", columnList = "stravaAthleteId"),
                 @Index(name = "idx_runner_deleted_role", columnList = "deleted, role"),
                 @Index(name = "idx_runner_email_verif_token", columnList = "emailVerificationTokenHash"),
-                @Index(name = "idx_runner_pw_reset_token", columnList = "passwordResetTokenHash")
+                @Index(name = "idx_runner_pw_reset_token", columnList = "passwordResetTokenHash"),
+                @Index(name = "idx_runner_garmin_sync", columnList = "garminWellnessSyncEnabled, deleted")
         }
 )
 public class Runner {
@@ -60,6 +61,20 @@ public class Runner {
     private String stravaRefreshToken;
 
     private Long stravaTokenExpiresAt;
+
+    private String garminConnectEmail;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String garminConnectPasswordEncrypted;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String garminConnectTokenEncrypted;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean garminWellnessSyncEnabled = false;
+
+    private LocalDateTime garminWellnessLastSyncedAt;
 
     private LocalDateTime createdAt;
 
@@ -199,6 +214,21 @@ public class Runner {
         this.stravaTokenExpiresAt = stravaTokenExpiresAt;
     }
 
+    public String getGarminConnectEmail() { return garminConnectEmail; }
+    public void setGarminConnectEmail(String garminConnectEmail) { this.garminConnectEmail = garminConnectEmail; }
+
+    public String getGarminConnectPasswordEncrypted() { return garminConnectPasswordEncrypted; }
+    public void setGarminConnectPasswordEncrypted(String garminConnectPasswordEncrypted) { this.garminConnectPasswordEncrypted = garminConnectPasswordEncrypted; }
+
+    public String getGarminConnectTokenEncrypted() { return garminConnectTokenEncrypted; }
+    public void setGarminConnectTokenEncrypted(String garminConnectTokenEncrypted) { this.garminConnectTokenEncrypted = garminConnectTokenEncrypted; }
+
+    public boolean isGarminWellnessSyncEnabled() { return garminWellnessSyncEnabled; }
+    public void setGarminWellnessSyncEnabled(boolean garminWellnessSyncEnabled) { this.garminWellnessSyncEnabled = garminWellnessSyncEnabled; }
+
+    public LocalDateTime getGarminWellnessLastSyncedAt() { return garminWellnessLastSyncedAt; }
+    public void setGarminWellnessLastSyncedAt(LocalDateTime garminWellnessLastSyncedAt) { this.garminWellnessLastSyncedAt = garminWellnessLastSyncedAt; }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -238,6 +268,12 @@ public class Runner {
     private int aiMonthlyScansUsed = 0;
 
     private LocalDate aiMonthlyResetDate;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int aiDailyScansUsed = 0;
+
+    private LocalDate aiDailyResetDate;
 
     /** False until the user completes email verification (password sign-up only). OAuth users are verified by the provider. */
     @Column(nullable = false)
@@ -290,6 +326,12 @@ public class Runner {
 
     public LocalDate getAiMonthlyResetDate() { return aiMonthlyResetDate; }
     public void setAiMonthlyResetDate(LocalDate aiMonthlyResetDate) { this.aiMonthlyResetDate = aiMonthlyResetDate; }
+
+    public int getAiDailyScansUsed() { return aiDailyScansUsed; }
+    public void setAiDailyScansUsed(int aiDailyScansUsed) { this.aiDailyScansUsed = aiDailyScansUsed; }
+
+    public LocalDate getAiDailyResetDate() { return aiDailyResetDate; }
+    public void setAiDailyResetDate(LocalDate aiDailyResetDate) { this.aiDailyResetDate = aiDailyResetDate; }
 
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }

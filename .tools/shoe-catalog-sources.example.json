@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "brand": "Nike",
+      "url": ".tools/fixtures/nike-pegasus-41.html",
+      "type": "daily",
+      "modelZh": "飞马 41",
+      "modelEn": "Pegasus 41"
+    },
+    {
+      "brand": "ASICS",
+      "url": ".tools/fixtures/asics-gel-nimbus-26.html",
+      "type": "daily",
+      "modelZh": "Gel-Nimbus 26",
+      "modelEn": "Gel-Nimbus 26"
+    }
+  ]
+}

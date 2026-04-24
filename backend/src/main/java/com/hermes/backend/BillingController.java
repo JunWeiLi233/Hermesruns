@@ -45,6 +45,7 @@ public class BillingController {
     private final String stripeWebhookSecret;
     private final String stripePriceProMonthly;
     private final String publicBaseUrl;
+    @SuppressWarnings("unused")
     private final String priceDisplayLabel;
     private final SystemConfigService systemConfigService;
 
@@ -80,16 +81,15 @@ public class BillingController {
 
     /**
      * Public config for the SPA (no secrets). When checkoutConfigured is false, hide pay buttons.
+     * Requires valid authentication.
      */
     @GetMapping("/config")
-    public Map<String, Object> billingConfig() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("checkoutConfigured", systemConfigService.isCheckoutFullyConfigured());
-        m.put("provider", "stripe");
-        if (priceDisplayLabel != null && !priceDisplayLabel.isBlank()) {
-            m.put("priceLabel", priceDisplayLabel.trim());
+    public ResponseEntity<Map<String, Object>> billingConfig(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
+        if (runnerOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return m;
+        return ResponseEntity.ok((Map<String, Object>) systemConfigService.getPublicConfigStatus().get("billing"));
     }
 
     /**
@@ -272,13 +272,13 @@ public class BillingController {
 
     private static String trimTrailingSlash(String url) {
         if (url == null) {
-            return "http://localhost:8080";
+            return "";
         }
         String u = url.trim();
         while (u.endsWith("/")) {
             u = u.substring(0, u.length() - 1);
         }
-        return u.isEmpty() ? "http://localhost:8080" : u;
+        return u.isEmpty() ? "" : u;
     }
 
     private static ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {

@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": true,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "executing",
+  "startedAt": "2026-04-20T02:07:05.037Z",
+  "completedAt": null,
+  "runId": "ahm-20260420020705",
+  "parentGoal": "[Market Opportunity] ACWR Injury Warning System on Workload Ratio",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260420020705.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260420020705-progress.json"
+}

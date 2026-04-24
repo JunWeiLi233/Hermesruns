@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Formatting utilities for Hermes running analytics.
  */
 
@@ -60,7 +60,7 @@ export function formatLongDate(value, lang) {
 
 /**
  * Format a distance in km with unit label.
- * e.g. "5.0 km" or "5.0 鍏噷"
+ * e.g. "5.0 km" or "5.0 公里"
  */
 export function formatDistanceValue(km, unit = 'km', digits = 1) {
   const value = Number(km || 0);
@@ -81,17 +81,16 @@ export function formatDistance(km, digits = 1, lang, unit = 'km') {
 
 /**
  * Format pace from distance and time.
- * e.g. "5:30 /km" or "5:30 /鍏噷"
+ * e.g. "5:30 /km" or "5:30 /公里"
  */
 export function formatPace(distanceKm, movingTimeSeconds, lang) {
+  const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/公里';
   if (!distanceKm || !movingTimeSeconds) {
-    const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/鍏噷';
     return `0:00 ${suffix}`;
   }
   const paceSeconds = Math.round(movingTimeSeconds / distanceKm);
   const minutes = Math.floor(paceSeconds / 60);
   const seconds = paceSeconds % 60;
-  const suffix = (lang || 'zh-CN') === 'en' ? '/km' : '/鍏噷';
   return `${minutes}:${String(seconds).padStart(2, '0')} ${suffix}`;
 }
 

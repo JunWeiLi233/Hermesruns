@@ -1,0 +1,36 @@
+{
+  "laneId": "keyboard-accessibility",
+  "parentRunId": "ahm-20260418195722",
+  "correlationId": "ahm-20260418195722:keyboard-accessibility",
+  "goal": "Make race detail and analysis drill-down interactions fully keyboard-accessible",
+  "parentGoal": "Harden public auth trust and improve global UX/accessibility.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/Analysis.jsx",
+    "frontend/src/pages/RacesDetail.jsx"
+  ],
+  "mustPreserve": [],
+  "verify": "",
+  "mergeNotes": "",
+  "priority": 1,
+  "effort": "medium",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "isolation": "worktree",
+  "queueWritebackMode": "deferred-to-parent",
+  "contextLedgerWritebackMode": "deferred-to-parent",
+  "allowedStatuses": [
+    "approved",
+    "must-fix",
+    "blocked"
+  ],
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\keyboard-accessibility.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\keyboard-accessibility-activity.json",
+  "requiresVerification": true,
+  "requiresArchitectReview": true,
+  "requiresDeslopPass": true,
+  "requiresRegressionReverification": true,
+  "command": "/auto-hermes scope=\"Make race detail and analysis drill-down interactions fully keyboard-accessible\" mode=loop owned=\"frontend/src/pages/Analysis.jsx|frontend/src/pages/RacesDetail.jsx\" isolation=\"worktree\""
+}

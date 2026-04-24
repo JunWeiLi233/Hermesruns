@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-04-18T19:57:22.443Z",
+  "taskStatement": "Fix slow loading on races/details/:raceId page",
+  "desiredOutcome": "Harden public auth trust and improve global UX/accessibility.",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "Forgot Password",
+    "problemClass": "unknown",
+    "touchesFrontend": true,
+    "touchesBackend": false,
+    "isCrossStack": false
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "frontend/src/pages/ForgotPassword.jsx"
+  ],
+  "lanesPlanned": 2
+}

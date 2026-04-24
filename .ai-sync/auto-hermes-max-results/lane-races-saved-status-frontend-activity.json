@@ -1,0 +1,23 @@
+{
+  "laneId": "lane-races-saved-status-frontend",
+  "parentRunId": "ahm-20260416112154",
+  "correlationId": "ahm-20260416112154:lane-races-saved-status-frontend",
+  "status": "approved",
+  "events": [
+    {
+      "at": "2026-04-16T07:24:29.0407562-04:00",
+      "type": "context",
+      "message": "Loaded Hermes lane instructions, refreshed the required session scaffolding, and inspected RacesDetail.jsx plus the current race-detail context capsule."
+    },
+    {
+      "at": "2026-04-16T07:24:29.0407562-04:00",
+      "type": "edit",
+      "message": "Replaced the background /api/races hydration dependency with a dedicated /api/races/saved-status?name=... request and kept profile/activity hydration isolated from saved-state lookup."
+    },
+    {
+      "at": "2026-04-16T07:24:29.0407562-04:00",
+      "type": "verify",
+      "message": "Ran `cd frontend && npm run lint` and received exit code 0."
+    }
+  ]
+}

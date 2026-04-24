@@ -101,7 +101,7 @@ public class StravaAutoSyncScheduler {
                     failures.add(failureRecord(runner, "Missing access token"));
                     continue;
                 }
-                oAuthController.fetchAndSaveStravaActivities(accessToken, runner.getId(), true);
+                oAuthController.fetchAndSaveStravaActivities(accessToken, runner.getId(), true, "scheduled_recent_sync");
                 synced++;
             } catch (Exception e) {
                 log.warn("Strava auto-sync: failed for runner {}: {}", runner.getId(), e.getMessage());

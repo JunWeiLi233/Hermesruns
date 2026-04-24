@@ -21,9 +21,48 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     long countByRunnerAndActivityType(Runner runner, ActivityType activityType);
 
+    boolean existsByRunnerAndActivityTypeIsNull(Runner runner);
+
     List<Activity> findByRunnerOrderByIdDesc(Runner runner);
 
     List<Activity> findByRunnerAndActivityTypeOrderByIdDesc(Runner runner, ActivityType activityType);
+
+    @Query(value = """
+            select a.id
+            from activities a
+            where a.runner_id = :runnerId
+              and a.activity_type = :activityType
+            order by coalesce(a.start_time, a.created_at) desc, a.id desc
+            limit :limitValue
+            """, nativeQuery = true)
+    List<Long> findRecentIdsByRunnerAndActivityType(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType,
+            @Param("limitValue") int limitValue
+    );
+
+    @Query("""
+            SELECT
+              a.id AS id,
+              a.name AS name,
+              a.distanceKm AS distanceKm,
+              a.distanceMeters AS distanceMeters,
+              a.movingTimeSeconds AS movingTimeSeconds,
+              a.startDate AS startDate,
+              a.startTime AS startTime,
+              a.averageHeartRate AS averageHeartRate,
+              a.maxHeartRate AS maxHeartRate,
+              a.averageCadence AS averageCadence,
+              a.maxSpeedMps AS maxSpeedMps
+            FROM Activity a
+            WHERE a.runner = :runner
+              AND a.activityType = :type
+            ORDER BY COALESCE(a.startTime, a.createdAt) DESC, a.id DESC
+            """)
+    List<AnalysisActivitySummaryProjection> findAnalysisSummariesByRunnerAndActivityType(
+            @Param("runner") Runner runner,
+            @Param("type") ActivityType type
+    );
 
     @Query("SELECT COALESCE(SUM(CASE WHEN a.distanceKm > 0 THEN a.distanceKm " +
            "WHEN a.distanceMeters IS NOT NULL THEN a.distanceMeters / 1000.0 " +
@@ -84,4 +123,18 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Query("SELECT AVG(CASE WHEN a.distanceKm > 0 THEN (a.movingTimeSeconds * 1.0 / a.distanceKm) ELSE null END) " +
             "FROM Activity a WHERE a.shoe = :shoe AND a.activityType = :type AND a.distanceKm > 0 AND a.movingTimeSeconds > 0")
     Double findAveragePaceSecondsPerKmByShoe(@Param("shoe") Shoe shoe, @Param("type") ActivityType type);
+
+    interface AnalysisActivitySummaryProjection {
+        Long getId();
+        String getName();
+        Double getDistanceKm();
+        Double getDistanceMeters();
+        Integer getMovingTimeSeconds();
+        String getStartDate();
+        LocalDateTime getStartTime();
+        Double getAverageHeartRate();
+        Double getMaxHeartRate();
+        Double getAverageCadence();
+        Double getMaxSpeedMps();
+    }
 }

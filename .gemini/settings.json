@@ -1,0 +1,11 @@
+{
+  "$schema": "https://geminicli.dev/schemas/settings.json",
+  "coreTools": {
+    "shell": { "requireApproval": "afterPlan" },
+    "editFile": { "requireApproval": "never" },
+    "readFile": { "requireApproval": "never" },
+    "listDir": { "requireApproval": "never" },
+    "glob": { "requireApproval": "never" },
+    "grep": { "requireApproval": "never" }
+  }
+}

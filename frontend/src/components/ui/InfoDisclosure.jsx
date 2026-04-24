@@ -21,9 +21,11 @@ export default function InfoDisclosure({ children, className = '', title }) {
         <span aria-hidden="true">i</span>
       </button>
       <div id={panelId} className="info-disclosure-panel" hidden={!open}>
-        <div className="info-disclosure-panel__inner">
-          {children}
-        </div>
+        {open ? (
+          <div className="info-disclosure-panel__inner">
+            {children}
+          </div>
+        ) : null}
       </div>
     </div>
   );
