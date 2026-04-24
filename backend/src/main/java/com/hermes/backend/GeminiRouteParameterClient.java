@@ -9,6 +9,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -22,8 +23,17 @@ import java.util.Map;
 
 @Service
 public class GeminiRouteParameterClient {
-    private static final String ROUTE_PARAMETER_PROMPT = """
-            Analyze this marathon course map. Ignore sponsor logos, elevation charts, and text unless the text is needed to identify where the main race route passes.
+    private static final long[] GEMINI_RETRY_DELAYS_MS = {0L, 400L, 1200L};
+    private static final String ROUTE_PARAMETER_PROMPT_TEMPLATE = """
+            Analyze this road-race course map for the target event.
+            Race context:
+            - raceName: %s
+            - city: %s
+            - country: %s
+            - targetDistanceKm: %s
+            Ignore sponsor logos, elevation charts, and decorative text unless that text is needed to identify where the target race route passes.
+            If the map shows multiple courses, choose the official route that best matches the target event and targetDistanceKm.
+            Ignore shorter side events, companion races, relay/community variants, or alternate promotional routes that do not match the target race.
             Identify the main race route line and return only the JSON object described by the provided schema.
             Requirements:
             - routeHexColor must be the dominant hex color of the main race route line in #RRGGBB form.
@@ -75,6 +85,17 @@ public class GeminiRouteParameterClient {
 
     @SuppressWarnings("unchecked")
     public RouteParametersDTO extractRouteParameters(String imageFilePath) {
+        return extractRouteParameters(imageFilePath, null, null, null, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public RouteParametersDTO extractRouteParameters(
+            String imageFilePath,
+            String raceName,
+            String city,
+            String country,
+            Double distanceKm
+    ) {
         if (!systemConfigService.isAiConfigured() || aiApiKey == null || aiApiKey.isBlank()) {
             throw new IllegalStateException("AI route extraction is not configured.");
         }
@@ -101,7 +122,7 @@ public class GeminiRouteParameterClient {
                                         "mime_type", detectMimeType(imagePath),
                                         "data", Base64.getEncoder().encodeToString(imageBytes)
                                 )),
-                                Map.of("text", ROUTE_PARAMETER_PROMPT)
+                                Map.of("text", buildRouteParameterPrompt(raceName, city, country, distanceKm))
                         )
                 )),
                 "generationConfig", Map.of(
@@ -115,12 +136,8 @@ public class GeminiRouteParameterClient {
 
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
                 + aiModel + ":generateContent?key=" + aiApiKey;
-        ResponseEntity<Map> response = restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                new HttpEntity<>(request, headers),
-                Map.class
-        );
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        ResponseEntity<Map> response = exchangeWithTransientGeminiRetry(url, entity);
 
         String text = extractResponseText(response.getBody());
         if (text == null || text.isBlank()) {
@@ -128,6 +145,15 @@ public class GeminiRouteParameterClient {
         }
 
         return parseRouteParameters(text);
+    }
+
+    private String buildRouteParameterPrompt(String raceName, String city, String country, Double distanceKm) {
+        return ROUTE_PARAMETER_PROMPT_TEMPLATE.formatted(
+                safePromptValue(raceName),
+                safePromptValue(city),
+                safePromptValue(country),
+                formatDistanceKm(distanceKm)
+        );
     }
 
     @SuppressWarnings("unchecked")
@@ -212,6 +238,14 @@ public class GeminiRouteParameterClient {
         return "#" + trimmed.toUpperCase(Locale.ROOT);
     }
 
+    private String safePromptValue(String value) {
+        return value == null || value.isBlank() ? "unknown" : value.trim();
+    }
+
+    private String formatDistanceKm(Double distanceKm) {
+        return distanceKm == null ? "unknown" : String.format(Locale.ROOT, "%.3f", distanceKm);
+    }
+
     private String detectMimeType(Path imagePath) {
         String filename = imagePath.getFileName() == null ? "" : imagePath.getFileName().toString().toLowerCase(Locale.ROOT);
         if (filename.endsWith(".png")) {
@@ -237,5 +271,37 @@ public class GeminiRouteParameterClient {
         } catch (IOException ignored) {
         }
         return "application/octet-stream";
+    }
+
+    private ResponseEntity<Map> exchangeWithTransientGeminiRetry(String url, HttpEntity<Map<String, Object>> entity) {
+        HttpStatusCodeException lastFailure = null;
+        for (long delayMs : GEMINI_RETRY_DELAYS_MS) {
+            if (delayMs > 0) {
+                sleepBeforeRetry(delayMs);
+            }
+            try {
+                return restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+            } catch (HttpStatusCodeException ex) {
+                lastFailure = ex;
+                if (!isTransientGeminiFailure(ex)) {
+                    throw ex;
+                }
+            }
+        }
+        throw lastFailure == null ? new IllegalStateException("Gemini route parameter request failed.") : lastFailure;
+    }
+
+    private boolean isTransientGeminiFailure(HttpStatusCodeException ex) {
+        int status = ex.getStatusCode().value();
+        return status == 429 || ex.getStatusCode().is5xxServerError();
+    }
+
+    private void sleepBeforeRetry(long delayMs) {
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Gemini route parameter retry was interrupted.", interruptedException);
+        }
     }
 }

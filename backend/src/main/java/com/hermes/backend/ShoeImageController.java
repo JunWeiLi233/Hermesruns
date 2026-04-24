@@ -20,6 +20,7 @@ public class ShoeImageController {
     private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> QUERY_ONLY_FIELDS = Set.of("query");
     private static final Set<String> PHOTO_ONLY_FIELDS = Set.of("photoUrl");
+    private static final Set<String> RENDER_SOURCE_FIELDS = Set.of("url");
     private static final long MAX_RENDER_SOURCE_BYTES = 8L * 1024L * 1024L;
 
     private final AuthService authService;
@@ -416,6 +417,26 @@ public class ShoeImageController {
     public ResponseEntity<?> renderSource(
             @RequestParam("url") String url,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return renderSourceInternal(url, authHeader);
+    }
+
+    @PostMapping("/render-source")
+    public ResponseEntity<?> renderSourcePost(
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        final String url;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, RENDER_SOURCE_FIELDS);
+            url = RequestBodyValidator.optionalString(body, "url", MAX_PHOTO_REFERENCE_LENGTH);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+        return renderSourceInternal(url, authHeader);
+    }
+
+    private ResponseEntity<?> renderSourceInternal(
+            String url,
+            String authHeader) {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 

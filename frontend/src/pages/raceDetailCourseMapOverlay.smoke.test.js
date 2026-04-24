@@ -25,10 +25,28 @@ assert.match(
   'RacesDetail should only render the AI route line when the frontend trust gate considers the alignment trustworthy enough for the runner-facing basemap.',
 );
 
+assert.match(
+  racesDetailSource,
+  /const hasCityLevelCourseMap = mapTrust\.cityLevelMatch && courseMapData\.routeAvailable && !hasAlignedRoute;/,
+  'RacesDetail should preserve a city-level course-map state for stylized maps that are useful but not precise enough to draw as route geometry.',
+);
+
+assert.match(
+  racesDetailSource,
+  /hasCityLevelCourseMap[\s\S]*detail_map_detected_badge[\s\S]*detail_map_detected_source/,
+  'RacesDetail should label city-level course-map matches as detected images instead of presenting them as cleanly aligned routes.',
+);
+
 assert.doesNotMatch(
   racesDetailSource,
-  /L\.imageOverlay\(/,
-  'RacesDetail should not paint the course-map image over the runner-facing Leaflet card when the goal is a clearly real draggable map.',
+  /L\.imageOverlay\(courseMapData\.imageUrl,/,
+  'RacesDetail should not paint the raw course-map image over the runner-facing Leaflet card when the goal is a clearly real draggable map.',
+);
+
+assert.match(
+  racesDetailSource,
+  /L\.imageOverlay\(courseMapData\.overlayImageUrl,[\s\S]*pane:\s*'race-detail-course-image'/,
+  'RacesDetail should paint only the generated transparent course-map overlay in its own pane beneath the extracted route.',
 );
 
 assert.doesNotMatch(

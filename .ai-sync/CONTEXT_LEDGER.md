@@ -753,3 +753,73 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Preserve: Keep the high-level coordination and persistence logic in `RaceCourseMapService.java`.
 - Next Risk: Service dependency depth increased, requiring more constructor injection.
 - Rollback Target: working tree before 2026-04-20 Race Course Map Refactor round
+
+### Auth & Transport Security Hardening
+- Goal: Prevent user enumeration and enforce secure transport (HTTPS) by default.
+- Changed: Prevented timing-based user enumeration in `AuthService.java` by always performing a password hash comparison (using a `DUMMY_HASH`) even when an email is not found. Sanitized login error messages in `LoginController.java` to a generic "Invalid credentials" to avoid triggering security heuristic detectors. Enabled `Strict-Transport-Security` (HSTS) by default in `SecurityHeadersFilter.java` and `application.properties`.
+- Preserve: Keep the `EMAIL_NOT_VERIFIED` logic but ensure it only triggers after a successful password match.
+- Next Risk: HSTS in local development without HTTPS may cause browser warnings if not configured correctly.
+- Rollback Target: working tree before 2026-04-20 Auth Security round
+
+### Generated Asset RLS Hardening
+- Goal: Add ownership metadata to generated assets (GPX and shoe images) to enable Row-Level Security.
+- Changed: Added `Runner` relationship to `GeneratedRaceGpxAsset.java` and `ShoeImageAsset.java`. Updated `ShoeImageAssetService` and `GeneratedRaceGpxPersistenceService` to persist the authenticated `Runner` who triggers asset generation. Updated `AdminRouteExtractionController` to pass the `Runner` context through the marathon pipeline.
+- Preserve: Keep the assets as shared catalog items by default; ownership metadata is for future fine-grained RLS.
+- Next Risk: Orphaned assets if the associated runner is deleted (currently handled by DB cascade or manual cleanup).
+- Rollback Target: working tree before 2026-04-21 Asset RLS round
+
+### Streak Protection & Comeback Messaging
+- Goal: Implement encouraging comeback messages for returning runners and provide clear streak visualization.
+- Changed: Centralized streak calculation logic in `frontend/src/utils/streakUtils.js` (fixing a bug where one-day gaps wiped best streaks). Implemented `StreakProtection.jsx` and `ComebackMessage.jsx` components. Integrated them into `ProfileDashboard.jsx` bento grid. Added comprehensive bilingual (en/zh-CN) translations for all new coaching copy. Updated `rewardBadges.jsx` to use the unified streak logic.
+- Preserve: Keep the "no guilt" coaching voice for comeback messaging.
+- Next Risk: Complexity in streak calculation if multiple runs per day are handled inconsistently (currently deduplicated by date).
+- Rollback Target: working tree before 2026-04-21 Streak Messaging round
+
+### Auto-Commit & Security Gate Advancement
+- Goal: Enable AI workflow sharing and enforce strict PII/secret scanning before commits.
+- Changed: Updated `.tools/auto-commit.ps1` to allow committing shared AI agent files (`.ai-sync`, `.codex`, `.claude`, `.gemini`, `AGENTS.md`, etc.). Integrated a new `runSecretAndPiiHunter` into `.tools/auto-hermes-security.mjs` that scans for API keys, high-entropy strings, and configured PII literals (e.g., "Junwei"). Modified the commit script to automatically block commits if critical security findings are detected. Improved auto-push functionality to GitHub.
+- Preserve: Keep local auth files and session logs strictly ignored.
+- Next Risk: Security tool false positives on high-entropy non-secret strings (hashes, etc.).
+- Rollback Target: working tree before 2026-04-21 Commit Gate round
+
+### Admin Route Security Audit
+- Goal: Verify that all administrative endpoints are properly protected against unauthorized access.
+- Changed: Performed a static analysis of all `Admin*Controller` classes. Confirmed that every public endpoint in `AdminShoePortalController`, `AdminUserPortalController`, `AdminRacePortalController`, `AdminAuditPortalController`, and `AdminPortalController` utilizes `adminService.requireAdmin()`. Verified that `AdminController` and `AdminRouteExtractionController` also enforce strict `ADMIN` role checks.
+- Preserve: Consistently use `AdminPortalService.requireAdmin()` for all new admin surfaces to ensure centralized policy enforcement.
+- Next Risk: Potential for new, un-prefixed admin routes to be added without proper guards.
+- Rollback Target: N/A (Security audit only)
+
+### Daily Coaching Decision Engine
+- Goal: Implement a clear daily recommendation engine based on wearable wellness data (HRV, Sleep, Stress).
+- Changed: Updated `CoachRunnerState.java` and `AutomatedCoachService.java` to persist and serve `lastStressScore` from Garmin wellness sync. Refactored `getTodayRunRecommendation` in `todayRun.js` to incorporate sleep and stress signals into the daily "Should I run?" logic. Enhanced `TodayRun.jsx` with a new "Wellness Signals" card and an updated "Readiness Score" model that weighs recovery metrics. Added `sleep` and `stress` icons to `AppIcon.jsx` and updated bilingual translations.
+- Preserve: Keep the balance between physical load (ACWR) and physiological recovery (Garmin signals).
+- Next Risk: Over-correction if wearable data is noisy or inaccurate (e.g., forgotten watch).
+- Rollback Target: working tree before 2026-04-21 Coaching Engine round
+
+### Garmin Wellness Data Auto-Sync Pipeline
+- Goal: Automate the synchronization of wearable wellness data (HRV, Sleep, Stress) from Garmin Connect.
+- Changed: Finalized `GarminWellnessImportService.java` by fixing field name mismatches between the Python downloader (snake_case) and Java map reading (camelCase). Verified that the 5 wellness entity tables (`DailyWellnessSummary`, `DailySleepData`, `DailyHRVData`, `DailyStressData`, `BodyCompositionData`) and their repositories are fully integrated. Confirmed `GarminWellnessSyncScheduler.java` correctly triggers an automated sync every 30 minutes for eligible runners and updates `CoachRunnerState` with the latest physiological signals.
+- Preserve: Maintain the 14-day and 90-day lookback windows for initial vs. incremental syncs.
+- Next Risk: Garmin SSO session expiration requiring occasional re-authentication (currently handled by login retry logic in the Python script).
+- Rollback Target: working tree before 2026-04-21 Garmin Wellness round
+
+### Garmin Wellness Pipeline & Readiness Score
+- Goal: Fully automate wearable recovery signals and implement a visual coaching readiness gate.
+- Changed: Finalized `GarminWellnessImportService.java` with snake_case mapping for the Python integration. Verified 5 wellness entity tables and automated 30-minute sync scheduler. Implemented a composite 0-100 **Readiness Score** in the backend (weighing sleep, HRV, RHR delta, and stress) and surfaced it via a kinetic "Confidence" battery on Today's Run and Profile. Hardened `AdminSecurityFilter.java` to intercept any path containing "/admin/" or "/api/dev/" for centralized protection.
+- Preserve: Keep the 25% equal weighting for the 4 primary recovery signals in the readiness model.
+- Next Risk: Potential for "red-flag" wellness signals to conflict with high-motivation "green-flag" ACWR data (handled by recovery-priority recommendations).
+- Rollback Target: working tree before 2026-04-21 Wellness & Readiness round
+
+### Unified Search-First Add Shoe UX (REVERTED)
+- Goal: Simplify the "Add Shoe" experience.
+- Result: Design reverted to the previous multi-step wizard per user request. Refactored `AddShoes.jsx` restored from commit `dc41ba5^`. Obsolete search-centric CSS removed from `style.css`.
+- Preserve: New 2026 shoe catalog entries are kept as they are data-level improvements.
+- Next Risk: UX remains slightly more complex but maintains the established brand-browsing mental model.
+- Rollback Target: N/A (Restored to previous stable design)
+
+### Wearable Wellness Interpretation Layer
+- Goal: Turn raw recovery data into human-readable "Coach Voice" insights.
+- Changed: Created `wellnessInterpretation.js` utility to translate raw Garmin signals (Sleep, HRV, Stress, RHR) into semantic coaching sentences. Integrated this layer into `TodayRun.jsx` within a new "Wellness Insights" section in the morning briefing. Added comprehensive bilingual (en/zh-CN) translations for all recovery scenarios. Enhanced `TodayRun.jsx` with a new `chat_bubble_outline` icon path for interpretations.
+- Preserve: Maintain the direct, supportive, and data-backed coaching voice.
+- Next Risk: Insight fatigue if too many sentences are shown at once (currently limited to 1 per signal type).
+- Rollback Target: working tree before 2026-04-21 Wellness Interpretation round

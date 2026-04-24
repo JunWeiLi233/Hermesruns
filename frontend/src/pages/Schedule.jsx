@@ -48,11 +48,15 @@ function formatScheduleTargetDate(dateValue, lang) {
   if (!dateValue) return null;
   const date = new Date(`${dateValue}T00:00:00`);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+  return date.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
     month: 'short',
     day: 'numeric',
-  }).format(date);
+  });
 }
+
+
+
+
 
 function getScheduleCountdownLabel(countdownDays, s) {
   if (!Number.isFinite(countdownDays)) return null;
@@ -405,7 +409,7 @@ export default function Schedule() {
 
   const heroKicker = targetBlock.name
     ? `${targetBlock.name}: ${s('phase_label', { week: targetBlock.weekIndex || 1 })}`
-    : s('default_phase');
+    : s('phase_label', { week: 1 });
   const heroTitle = targetBlock.hasActiveBlock
     ? targetBlock.isMarathonBlock
       ? s('hero_title_marathon')
@@ -784,7 +788,7 @@ export default function Schedule() {
                     
                     <h3>{nextSessionTitle}</h3>
                     <p>{nextSessionCopy}</p>
-                    <button type="button" onClick={() => navigate('/today-run')}>
+                    <button type="button" aria-label={s('view_drills')} onClick={() => navigate('/today-run')}>
                       {s('view_drills')}
                       <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
                     </button>
@@ -804,8 +808,8 @@ export default function Schedule() {
                   ) : (
                     <div className="schedule-plan-route-empty-panel">
                       <div className="schedule-plan-route-empty-badges">
-                        {routeFallbackBadges.map((badge, index) => (
-                          <span key={`${badge}-${index}`} className="schedule-plan-route-empty-badge">{badge}</span>
+                        {routeFallbackBadges.map((badge) => (
+                          <span key={badge} className="schedule-plan-route-empty-badge">{badge}</span>
                         ))}
                       </div>
                       <div className="schedule-plan-route-empty-copy">

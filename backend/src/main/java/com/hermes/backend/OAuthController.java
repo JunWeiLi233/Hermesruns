@@ -59,6 +59,7 @@ public class OAuthController {
     private final AiUsageService aiUsageService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final AutomatedCoachService automatedCoachService;
+    private final AcclimatizationService acclimatizationService;
     private final RestTemplate restTemplate;
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
     private static final long STRAVA_LINK_REQUEST_TTL_MS = 10 * 60 * 1000L;
@@ -105,7 +106,8 @@ public class OAuthController {
                            RestTemplate restTemplate,
                            SystemConfigService systemConfigService,
                            ApplicationEventPublisher applicationEventPublisher,
-                           AutomatedCoachService automatedCoachService) {
+                           AutomatedCoachService automatedCoachService,
+                           AcclimatizationService acclimatizationService) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
@@ -116,6 +118,7 @@ public class OAuthController {
         this.systemConfigService = systemConfigService;
         this.applicationEventPublisher = applicationEventPublisher;
         this.automatedCoachService = automatedCoachService;
+        this.acclimatizationService = acclimatizationService;
     }
 
     @PreDestroy
@@ -173,7 +176,11 @@ public class OAuthController {
     @GetMapping("/auth/strava/start")
     public RedirectView startStravaAuth(@RequestParam(required = false) String state) {
         if (!isStravaConfigured()) {
-            return errorRedirect("Strava sign-in is not configured.", state);
+            return errorRedirectCode(
+                    "STRAVA_NOT_CONFIGURED",
+                    "Strava sign-in is not configured.",
+                    state
+            );
         }
         return new RedirectView(buildStravaAuthUrl(state));
     }
@@ -755,6 +762,15 @@ public class OAuthController {
         activity.setAverageWatts(doubleValue(activityData.get("average_watts")));
         activity.setMaxSpeedMps(doubleValue(activityData.get("max_speed")));
         activity.setSufferScore(intValue(activityData.get("suffer_score")));
+
+        // Weather adjustment
+        try {
+            Integer penalty = acclimatizationService.calculatePenaltyForActivity(activity);
+            activity.setPacePenaltySecPerKm(penalty);
+            activity.setWeatherAdjusted(penalty != null && penalty > 0);
+        } catch (Exception e) {
+            System.err.println("Weather adjustment calculation failed during sync: " + e.getMessage());
+        }
 
         Activity saved = activityRepository.save(activity);
 

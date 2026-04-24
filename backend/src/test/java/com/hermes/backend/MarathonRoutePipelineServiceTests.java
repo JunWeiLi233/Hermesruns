@@ -5,11 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MarathonRoutePipelineServiceTests {
@@ -28,11 +30,13 @@ class MarathonRoutePipelineServiceTests {
 
     @Test
     void testRunPipeline_Success() {
+        when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
+
         // Mocking Step 1 & 2
         RouteParametersDTO routeParams = new RouteParametersDTO("#FF0000", Collections.emptyList());
         RoutePathExtractionResultDTO extractionResult = new RoutePathExtractionResultDTO(
                 routeParams, Collections.emptyList(), 0, 0, 0);
-        when(extractionService.extractRoutePath(any())).thenReturn(extractionResult);
+        when(extractionService.extractRoutePath(any(), any(), any(), any(), any())).thenReturn(extractionResult);
 
         // Mocking Step 3
         MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult georefResult =
@@ -44,15 +48,30 @@ class MarathonRoutePipelineServiceTests {
         MarathonRouteMatchAndExportService.MarathonRouteMatchAndExportResult matchExportResult =
                 new MarathonRouteMatchAndExportService.MarathonRouteMatchAndExportResult(
                         Collections.emptyList(), "<gpx></gpx>", null, "Success");
-        when(matchAndExportService.matchExportAndPersist(any(), any(), any(), any(), any(), any(), any()))
+        when(matchAndExportService.matchExportAndPersist(any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(matchExportResult);
 
         MarathonRoutePipelineService.PipelineResult result = pipelineService.runPipeline(
+                new Runner(),
                 "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 42.195, "path/to/img.png");
 
         assertNotNull(result);
         assertEquals(extractionResult, result.extractionResult());
         assertEquals(georefResult, result.georefResult());
         assertEquals(matchExportResult, result.matchExportResult());
+    }
+
+    @Test
+    void testRunPipeline_FailsFastWhenGeoreferencingIsDisabled() {
+        when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(false);
+
+        assertThatThrownBy(() -> pipelineService.runPipeline(
+                new Runner(),
+                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 42.195, "path/to/img.png"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("disabled");
+
+        verify(extractionService, never()).extractRoutePath(any(), any(), any(), any(), any());
+        verify(matchAndExportService, never()).matchExportAndPersist(any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

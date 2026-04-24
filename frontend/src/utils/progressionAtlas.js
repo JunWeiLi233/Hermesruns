@@ -7,6 +7,10 @@ function resolveRunDistanceKm(run) {
   return meters > 0 ? meters / 1000 : 0;
 }
 
+function resolveRunElevationMeters(run) {
+  return Number(run?.elevationGainMeters ?? run?.totalElevationGainMeters ?? run?.totalElevationGain ?? 0);
+}
+
 function startOfDay(date) {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
@@ -154,7 +158,7 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date()) {
   const totalDistanceKm = filteredAsc.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
   const totalMovingSeconds = filteredAsc.reduce((sum, run) => sum + Number(run?.movingTimeSeconds || 0), 0);
   const totalElevationMeters = filteredAsc.reduce(
-    (sum, run) => sum + Number(run?.elevationGainMeters || run?.totalElevationGainMeters || 0),
+    (sum, run) => sum + resolveRunElevationMeters(run),
     0,
   );
   const sessionCount = filteredAsc.length;
