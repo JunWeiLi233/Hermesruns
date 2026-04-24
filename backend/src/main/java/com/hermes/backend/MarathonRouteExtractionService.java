@@ -14,24 +14,34 @@ import java.util.List;
 
 @Service
 public class MarathonRouteExtractionService {
-    private final GeminiRouteParameterClient geminiRouteParameterClient;
+    private final QwenRouteParameterClient qwenRouteParameterClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.route-extraction.python-command:python}")
+    @Value("${app.route-extraction.python-command:}")
     private String pythonExecutable;
 
     @Value("${app.route-extraction.python-script:}")
     private String pythonScriptPath;
 
     public MarathonRouteExtractionService(
-            GeminiRouteParameterClient geminiRouteParameterClient,
+            QwenRouteParameterClient qwenRouteParameterClient,
             ObjectMapper objectMapper
     ) {
-        this.geminiRouteParameterClient = geminiRouteParameterClient;
+        this.qwenRouteParameterClient = qwenRouteParameterClient;
         this.objectMapper = objectMapper;
     }
 
     public RoutePathExtractionResultDTO extractRoutePath(String imageFilePathOrDataUrl) {
+        return extractRoutePath(imageFilePathOrDataUrl, null, null, null, null);
+    }
+
+    public RoutePathExtractionResultDTO extractRoutePath(
+            String imageFilePathOrDataUrl,
+            String raceName,
+            String city,
+            String country,
+            Double distanceKm
+    ) {
         if (imageFilePathOrDataUrl == null || imageFilePathOrDataUrl.isBlank()) {
             throw new IllegalArgumentException("Route image file path or data URL is required.");
         }
@@ -49,7 +59,13 @@ public class MarathonRouteExtractionService {
         }
 
         try {
-            RouteParametersDTO routeParameters = geminiRouteParameterClient.extractRouteParameters(actualFilePath);
+            RouteParametersDTO routeParameters = qwenRouteParameterClient.extractRouteParameters(
+                    actualFilePath,
+                    raceName,
+                    city,
+                    country,
+                    distanceKm
+            );
             List<String> command = buildPythonCommand(actualFilePath, routeParameters);
 
             Process process;
@@ -126,13 +142,17 @@ public class MarathonRouteExtractionService {
     }
 
     private String resolvePythonExecutable() {
-        if (pythonExecutable != null && !pythonExecutable.isBlank()) {
+        if (pythonExecutable != null && !pythonExecutable.isBlank() && !"python".equalsIgnoreCase(pythonExecutable.trim())) {
             return pythonExecutable.trim();
         }
 
+        Path workingDirectory = Path.of("").toAbsolutePath().normalize();
+        Path parentDirectory = workingDirectory.getParent();
         List<Path> candidates = List.of(
                 Path.of(".venv", "Scripts", "python.exe"),
                 Path.of(".venv", "bin", "python"),
+                parentDirectory == null ? Path.of("_missing_parent_python_") : parentDirectory.resolve(Path.of(".venv", "Scripts", "python.exe")),
+                parentDirectory == null ? Path.of("_missing_parent_python_bin_") : parentDirectory.resolve(Path.of(".venv", "bin", "python")),
                 Path.of("backend", ".venv", "Scripts", "python.exe"),
                 Path.of("backend", ".venv", "bin", "python")
         );

@@ -34,8 +34,11 @@ public class AcclimatizationService {
     }
 
     public WeatherContextResponse buildContext(Runner runner) {
-        LocalDate today = LocalDate.now();
-        LocalDate lookbackStart = today.minusDays(14);
+        return buildContextForDate(runner, LocalDate.now());
+    }
+
+    public WeatherContextResponse buildContextForDate(Runner runner, LocalDate targetDate) {
+        LocalDate lookbackStart = targetDate.minusDays(14);
         LocalDateTime lookbackStartDateTime = lookbackStart.atStartOfDay();
 
         List<Object[]> latestLatLng = activityPointRepository.findLatestLatLngByRunnerAndType(runner.getId(), ActivityType.RUN.name());
@@ -47,24 +50,24 @@ public class AcclimatizationService {
         double lon = ((Number) latestLatLng.get(0)[1]).doubleValue();
 
         List<Activity> recentRuns = activityRepository.findRunsBetween(
-                runner, ActivityType.RUN, lookbackStartDateTime, today.plusDays(1).atStartOfDay()
+                runner, ActivityType.RUN, lookbackStartDateTime, targetDate.plusDays(1).atStartOfDay()
         );
 
         Set<LocalDate> runDates = new HashSet<>();
         for (Activity activity : recentRuns) {
             LocalDate d = resolveActivityDate(activity);
-            if (d != null && !d.isBefore(lookbackStart) && !d.isAfter(today)) {
+            if (d != null && !d.isBefore(lookbackStart) && !d.isAfter(targetDate)) {
                 runDates.add(d);
             }
         }
 
-        DewPointSeries series = fetchDewPointSeries(lat, lon, lookbackStart, today);
+        DewPointSeries series = fetchDewPointSeries(lat, lon, lookbackStart, targetDate);
         if (series == null || series.dailyDewPointC().isEmpty()) {
             return WeatherContextResponse.unavailable("Weather provider returned no dew point data.");
         }
 
         double baselineDewPoint = computeBaseline(series.dailyDewPointC(), runDates);
-        double currentDewPoint = series.dailyDewPointC().getOrDefault(today, baselineDewPoint);
+        double currentDewPoint = series.dailyDewPointC().getOrDefault(targetDate, baselineDewPoint);
 
         double shockDelta = currentDewPoint - baselineDewPoint;
         boolean shockEvent = shockDelta >= SHOCK_DELTA_THRESHOLD_C;
@@ -74,7 +77,7 @@ public class AcclimatizationService {
                 Math.round((currentDewPoint - PENALTY_TRIGGER_DEW_POINT_C) * BASE_PENALTY_SEC_PER_KM_PER_DEGREE)
         );
 
-        AcclimatizationProgress progress = computeProgress(series.dailyDewPointC(), today);
+        AcclimatizationProgress progress = computeProgress(series.dailyDewPointC(), targetDate);
         int adjustedPenalty = (int) Math.round(fullPenalty * progress.penaltyFactor());
 
         String message = null;
@@ -99,6 +102,16 @@ public class AcclimatizationService {
                 progress.status(),
                 message
         );
+    }
+
+    public Integer calculatePenaltyForActivity(Activity activity) {
+        if (activity.getRunner() == null) return 0;
+        LocalDate runDate = resolveActivityDate(activity);
+        if (runDate == null) return 0;
+
+        // Use buildContextForDate to get the penalty
+        WeatherContextResponse context = buildContextForDate(activity.getRunner(), runDate);
+        return context.available() ? context.pacePenaltySecPerKm() : 0;
     }
 
     private DewPointSeries fetchDewPointSeries(double lat, double lon, LocalDate start, LocalDate end) {

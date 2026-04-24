@@ -2,10 +2,13 @@ package com.hermes.backend;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -24,6 +27,10 @@ public class GeneratedRaceGpxAsset {
 
     @Column(nullable = false, unique = true, length = 128)
     private String raceId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "runner_id")
+    private Runner runner;
 
     private String raceName;
     private String city;
@@ -48,6 +55,14 @@ public class GeneratedRaceGpxAsset {
 
     public Long getId() {
         return id;
+    }
+
+    public Runner getRunner() {
+        return runner;
+    }
+
+    public void setRunner(Runner runner) {
+        this.runner = runner;
     }
 
     public String getRaceId() {

@@ -75,7 +75,8 @@ class AutomatedCoachServiceTests {
                 blockRepository,
                 mock(CoachFeedbackAlertRepository.class),
                 mock(ShoeTracker.class),
-                mock(CoachRouteService.class)
+                mock(CoachRouteService.class),
+                mock(ReadinessService.class)
         );
     }
 

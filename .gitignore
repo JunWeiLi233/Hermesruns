@@ -77,8 +77,19 @@ backend/probe.java
 
 # Images (local reference screenshots / design assets)
 images/
-task-images/*
-!task-images/.gitkeep
+# Legacy local task-image folder; renamed storage lives in course-map-images/.
+task-images/
+course-map-images/*
+!course-map-images/.gitignore
+
+# Local Qwen model checkpoints / caches (too large for git)
+Qwen*/
+Qwen2.5-VL-*/
+Qwen-VL-*/
+qwen-models/
+.qwen/
+models/qwen*/
+models/Qwen*/
 
 # Cloned repos
 /run/
@@ -180,8 +191,16 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 
 # Workflow core
 .codex/
+!.codex/
+.codex/*
+!.codex/skills/
 .claude/
 .gemini/
+.codex/skills/*
+!.codex/skills/architecture-diagram-generator/
+!.codex/skills/architecture-diagram-generator/SKILL.md
+!.codex/skills/architecture-diagram-generator/assets/
+!.codex/skills/architecture-diagram-generator/assets/template.html
 .cursor/
 .opencode/
 .opencode.json

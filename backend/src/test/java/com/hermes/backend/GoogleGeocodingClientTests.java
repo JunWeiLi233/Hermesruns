@@ -26,9 +26,7 @@ class GoogleGeocodingClientTests {
     void geocodeAnchorPointsBuildsOrderedContextualQueriesAndReturnsFourResults() {
         RestTemplate restTemplate = mock(RestTemplate.class);
 
-        @SuppressWarnings("unchecked")
         String[] urlHolder = new String[4];
-        @SuppressWarnings("unchecked")
         int[] invocationCount = new int[1];
         when(restTemplate.exchange(any(String.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
                 .thenAnswer(invocation -> {
@@ -102,24 +100,22 @@ class GoogleGeocodingClientTests {
     void geocodeAnchorPointsRaisesHelpfulErrorWhenGoogleReturnsNoStableMatch() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         when(restTemplate.exchange(any(String.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
-                .thenReturn(
-                        ResponseEntity.ok(Map.of(
-                                "status", "OK",
-                                "results", List.of(Map.of(
-                                        "formatted_address", "Address 1",
-                                        "geometry", Map.of(
-                                                "location", Map.of(
-                                                        "lat", 42.30,
-                                                        "lng", -71.10
-                                                )
+                .thenReturn(ResponseEntity.ok(Map.of(
+                        "status", "OK",
+                        "results", List.of(Map.of(
+                                "formatted_address", "Address 1",
+                                "geometry", Map.of(
+                                        "location", Map.of(
+                                                "lat", 42.30,
+                                                "lng", -71.10
                                         )
-                                ))
-                        )),
-                        ResponseEntity.ok(Map.of(
-                                "status", "ZERO_RESULTS",
-                                "results", List.of()
+                                )
                         ))
-                );
+                )))
+                .thenReturn(ResponseEntity.ok(Map.of(
+                        "status", "ZERO_RESULTS",
+                        "results", List.of()
+                )));
 
         GoogleGeocodingClient client = new GoogleGeocodingClient(restTemplate);
         ReflectionTestUtils.setField(client, "apiKey", "test-key");

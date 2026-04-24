@@ -1,0 +1,16 @@
+{
+  "mode": "autonomous",
+  "safety_brakes": {
+    "destructive_actions": "require_human",
+    "irreversible_changes": "require_human",
+    "everything_else": "auto_proceed"
+  },
+  "human_requests": [],
+  "priority_overrides": [],
+  "reversal_requests": [],
+  "agent_writeback": {
+    "last_action": "",
+    "next_action": "",
+    "risk_level": "low"
+  }
+}

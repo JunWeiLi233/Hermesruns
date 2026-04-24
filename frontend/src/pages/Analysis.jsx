@@ -15,7 +15,7 @@ import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { computeVdotTrend } from '../utils/vdot';
-import { buildAnalysisSnapshot } from '../utils/analysisInsights';
+import { buildAnalysisSnapshot, normalizeAnalysisList } from '../utils/analysisInsights';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -55,6 +55,7 @@ export default function Analysis() {
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
+  const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -100,16 +101,17 @@ export default function Analysis() {
 
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const bestVdot = snapshot.bestVdot;
-  const vo2Bars = snapshot.vo2Bars;
+  const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
   const trainingLoad = snapshot.trainingLoad;
   const loadZone = snapshot.loadZone;
   const polarized = snapshot.polarized;
   const injury = snapshot.injury;
-  const predictionRows = snapshot.predictionRows;
-  const trainingZones = snapshot.trainingZones;
+  const predictionRows = normalizeAnalysisList(snapshot.predictionRows);
+  const trainingZones = normalizeAnalysisList(snapshot.trainingZones);
   const marathonRow = snapshot.marathonRow;
   const marathonDelta = snapshot.marathonDeltaSeconds;
   const hasRuns = runs.length > 0;
+
   const injuryKicker = t('analysis.stitch_injury_signal');
   const injuryTitle = t('analysis.stitch_injury_title');
   const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
@@ -295,8 +297,18 @@ export default function Analysis() {
                     {hoveredVo2Bar ? (
                       <div className="analysis-overview-vo2-tooltip" aria-hidden="true">
                         <span>{hoveredVo2Bar.label}</span>
-                        <strong>{hoveredVo2Bar.value != null ? hoveredVo2Bar.value.toFixed(1) : '--'}</strong>
-                        <small>VO2max</small>
+                        <div className="analysis-overview-vo2-tooltip-values">
+                          <div className="analysis-overview-vo2-tooltip-row">
+                            <strong>{hoveredVo2Bar.value != null ? hoveredVo2Bar.value.toFixed(1) : '--'}</strong>
+                            <small>VO2max</small>
+                          </div>
+                          {hoveredVo2Bar.hasAdjustment && (
+                            <div className="analysis-overview-vo2-tooltip-row is-adjusted">
+                              <strong>{hoveredVo2Bar.adjustedValue.toFixed(1)}</strong>
+                              <small>{t('analysis.vdot_weather_adjusted')}</small>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : null}
                     {vo2Bars.map((bar) => (
@@ -305,21 +317,41 @@ export default function Analysis() {
                         className="analysis-overview-vo2-bar-col"
                         tabIndex={0}
                         role="img"
-                        aria-label={`${bar.label}: VO2max ${bar.value != null ? bar.value.toFixed(1) : '--'}`}
+                        aria-label={`${bar.label}: VO2max ${bar.value != null ? bar.value.toFixed(1) : '--'}${bar.hasAdjustment ? `, Adjusted ${bar.adjustedValue.toFixed(1)}` : ''}`}
                         onPointerEnter={() => setHoveredVo2BarKey(bar.key)}
                         onPointerLeave={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
                         onFocus={() => setHoveredVo2BarKey(bar.key)}
                         onBlur={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
                       >
-                        <div
-                          className={cx('analysis-overview-vo2-bar', bar.current && 'is-current', hoveredVo2BarKey === bar.key && 'is-hovered')}
-                          style={{ height: `${bar.height}%` }}
-                        >
-                          {bar.current && bar.value != null ? <span className="analysis-overview-vo2-tag">{bar.value.toFixed(1)}</span> : null}
+                        <div className="analysis-overview-vo2-bar-stack">
+                          {bar.hasAdjustment && (
+                            <div
+                              className="analysis-overview-vo2-bar is-adjusted"
+                              style={{ height: `${bar.adjustedHeight}%` }}
+                            />
+                          )}
+                          <div
+                            className={cx('analysis-overview-vo2-bar', bar.current && 'is-current', hoveredVo2BarKey === bar.key && 'is-hovered')}
+                            style={{ height: `${bar.height}%` }}
+                          >
+                            {bar.current && bar.value != null ? <span className="analysis-overview-vo2-tag">{bar.value.toFixed(1)}</span> : null}
+                          </div>
                         </div>
                         <span className={cx('analysis-overview-vo2-label', bar.current && 'is-current')}>{bar.label}</span>
                       </div>
                     ))}
+                  </div>
+                  <div className="analysis-overview-vo2-legend">
+                    <div className="analysis-overview-vo2-legend-item">
+                      <span className="analysis-overview-vo2-legend-dot" />
+                      <span>{t('analysis.vdot_raw')}</span>
+                    </div>
+                    {hasWeatherAdjustments && (
+                      <div className="analysis-overview-vo2-legend-item">
+                        <span className="analysis-overview-vo2-legend-dot is-adjusted" />
+                        <span>{t('analysis.vdot_weather_adjusted')}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="analysis-overview-vo2-link-row">
                     <span>{t('analysis.vo2_detail_cta')}</span>
@@ -418,7 +450,7 @@ export default function Analysis() {
                   <strong className={cx('analysis-overview-risk-level', `is-${injury.level}`)}>{injuryLevelLabel}</strong>
                   <div className="analysis-overview-risk-labels">
                     <span>{lang === 'en' ? 'Low risk' : '低风险'}</span>
-                    <span>{lang === 'en' ? 'Moderate risk' : '中风险'}</span>
+                    <span>{lang === 'en' ? 'Moderate risk' : '中等风险'}</span>
                     <span>{lang === 'en' ? 'High risk' : '高风险'}</span>
                   </div>
                   <div className="analysis-overview-risk-meter">
