@@ -108,6 +108,7 @@ class ShoeImageControllerTests {
         assertTrue(
                 error.contains("must be a valid URL.")
                         || error.contains("must be an image.")
+                        || error.contains("must be an image or PDF.")
                         || error.contains("scheme is not allowed."),
                 error
         );

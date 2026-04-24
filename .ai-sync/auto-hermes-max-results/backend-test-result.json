@@ -1,0 +1,46 @@
+{
+  "laneId": "backend-test",
+  "parentRunId": "auto-hermes-max-001",
+  "correlationId": "backend-test-001",
+  "goal": "Add focused unit tests for AiUsageService.tryConsumeQuota, ApiRateLimiter.evictStaleWindows, RaceOfficialImageService tracking-host filter",
+  "ownedFiles": [
+    "backend/src/test/java/com/hermes/backend/AiUsageServiceTests.java",
+    "backend/src/test/java/com/hermes/backend/ApiRateLimiterTests.java",
+    "backend/src/test/java/com/hermes/backend/RaceOfficialImageFilterTests.java"
+  ],
+  "changedFiles": [
+    "backend/src/test/java/com/hermes/backend/AiUsageServiceTests.java",
+    "backend/src/test/java/com/hermes/backend/ApiRateLimiterTests.java",
+    "backend/src/test/java/com/hermes/backend/RaceOfficialImageFilterTests.java"
+  ],
+  "completedRounds": [
+    {
+      "task": "Write AiUsageServiceTests — tryConsumeQuota atomic quota reservation",
+      "verification": "6/6 tests pass: null return on success, counter incremented, user-limit error when exhausted, project-limit error at project cap, daily window reset on date change, concurrent calls never over-consume beyond per-runner limit",
+      "outcome": "PASS"
+    },
+    {
+      "task": "Write ApiRateLimiterTests — evictStaleWindows memory-cap eviction",
+      "verification": "8/8 tests pass: within-limit allowed, over-limit blocked, counter resets after window expiry, stale entries evicted, fresh entries kept, allow still enforces limit after eviction, null/blank key handled, count stays 0 after evicting all backdated keys",
+      "outcome": "PASS"
+    },
+    {
+      "task": "Write RaceOfficialImageFilterTests — tracking-host URL filter",
+      "verification": "14/14 tests pass: all 4 reject-host patterns (tr.line.me, google-analytics.com, googletagmanager.com, doubleclick.net) rejected, all 4 reject-path patterns (_next/image, tag.gif, pixel, beacon) rejected, normal CDN image and og:image pass through, fallback to later valid image when first is a tracker, null/empty pageUrl returns null",
+      "outcome": "PASS"
+    }
+  ],
+  "verification": "backend compile PASS (./mvnw -q -DskipTests compile), all 3 new test classes PASS (28 tests, 0 failures, 0 errors)",
+  "runtimeProof": "cd backend && ./mvnw test -Dtest=AiUsageServiceTests,ApiRateLimiterTests,RaceOfficialImageFilterTests → Tests run: 28, Failures: 0, Errors: 0, Skipped: 0 → BUILD SUCCESS",
+  "risks": [],
+  "mustPreserve": [
+    "isRejectedResolvedImage is private — RaceOfficialImageFilterTests tests it via resolveOfficialImage; do not extract or change that private method's signature without updating both test files",
+    "evictStaleWindows is private — ApiRateLimiterTests invokes it via reflection; if the method is renamed, tests must be updated"
+  ],
+  "mergeNotes": [
+    "context-ledger: backend-test surface — added unit tests for AiUsageService.tryConsumeQuota (atomic quota reserve, 6 cases), ApiRateLimiter.evictStaleWindows (memory-cap eviction, 8 cases), RaceOfficialImageService tracking-host filter (14 cases); all 3 test classes pass as of this round",
+    "No source files modified — test-only addition, zero regression risk to existing behavior",
+    "RaceOfficialImageServiceTests.java (pre-existing) tests integration-level HTML parsing; RaceOfficialImageFilterTests.java is a separate complementary file covering only the reject-host/reject-path filter logic"
+  ],
+  "status": "approved"
+}

@@ -84,7 +84,7 @@ public class LoginController {
         if (runnerOptional.isEmpty()) {
             rateLimiter.recordFailure(ip);
             log.warn("Auth login failed ip={} email={}", ip, email);
-            return error(HttpStatus.UNAUTHORIZED, "Invalid email or password.");
+            return error(HttpStatus.UNAUTHORIZED, "Invalid credentials.");
         }
 
         rateLimiter.recordSuccess(ip);

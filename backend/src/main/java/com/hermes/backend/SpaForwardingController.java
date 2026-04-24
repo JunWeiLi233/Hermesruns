@@ -12,15 +12,44 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class SpaForwardingController {
-
     /**
      * Serve index.html for all frontend routes so React Router
      * can handle client-side routing.
      */
     @GetMapping(value = {
-        "/", "/login", "/signup", "/admin", "/dashboard",
-        "/profile", "/runs", "/run", "/run/{id}", "/analysis", "/shoes", "/shoe-catalog", "/races",
-        "/prediction/{distKey}", "/today-run", "/muscle-training"
+        "/",
+        "/login",
+        "/signup",
+        "/forgot-password",
+        "/terms",
+        "/privacy",
+        "/admin",
+        "/dashboard",
+        "/dashboard/{section:[^.]+}",
+        "/dashboard/{section:[^.]+}/{detail:[^.]+}",
+        "/profile",
+        "/runs",
+        "/heatmap",
+        "/run",
+        "/run/{id}",
+        "/analysis",
+        "/weather",
+        "/weather-engine",
+        "/analysis/{insightKey}",
+        "/prediction/{distKey}",
+        "/today-run",
+        "/rewards",
+        "/settings",
+        "/settings/{section:[^.]+}",
+        "/shoes",
+        "/shoes/add",
+        "/add-shoes",
+        "/shoe-catalog",
+        "/races",
+        "/races/details/{raceId}",
+        "/schedule",
+        "/muscle-training",
+        "/workflows"
     }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> forward() throws IOException {
         try (InputStream in = getClass().getResourceAsStream("/static/index.html")) {

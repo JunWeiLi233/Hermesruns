@@ -1,0 +1,17 @@
+{
+  "laneId": "lane-2-signup",
+  "goal": "Align /signup panel and confirmation states",
+  "parentGoal": "Refresh all public auth pages",
+  "mode": "single-round",
+  "ownedFiles": [
+    "frontend/src/pages/Signup.jsx"
+  ],
+  "mustPreserve": [
+    "email signup flow",
+    "verification flow"
+  ],
+  "verify": "cd frontend && npm run lint",
+  "mergeNotes": "",
+  "status": "pending-launch",
+  "command": "/auto-hermes scope=\"Align /signup panel and confirmation states\" mode=single-round"
+}

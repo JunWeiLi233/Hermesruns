@@ -1,11 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch, apiJson } from '../api';
+import AppIcon from '../components/AppIcon';
+import HermesLogo from '../components/HermesLogo';
+import SettingsAtlasLayout from '../components/SettingsAtlasLayout';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
-import { apiJson, apiFetch } from '../api';
-import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import { formatStravaSyncLabel, stravaSyncTone } from '../utils/stravaAutoSync';
+
+const MANTRA_STORAGE_KEY = 'hermes.settings.mantra';
+const DIGEST_STORAGE_KEY = 'hermes.settings.digest';
+
+function resolveDisplayName(profile, fallback) {
+  const raw = profile?.displayName?.trim()
+    || profile?.email?.split('@')[0]
+    || fallback;
+  return raw.replace(/^./, (char) => char.toUpperCase());
+}
 
 export default function Settings() {
   const { isAuthenticated, logout } = useAuth();
@@ -14,98 +29,104 @@ export default function Settings() {
   const { unit, setUnit } = useUnit();
   const navigate = useNavigate();
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [displayName, setDisplayName] = useState('');
+  const [mantra, setMantra] = useState('');
+  const [digestEnabled, setDigestEnabled] = useState(false);
+  const [stravaStatus, setStravaStatus] = useState(null);
+  const [loadState, setLoadState] = useState('loading');
   const [nameSaving, setNameSaving] = useState(false);
   const [nameMsg, setNameMsg] = useState('');
-  const [settingsActionAck, setSettingsActionAck] = useState('');
-  const [stravaStatus, setStravaStatus] = useState(null);
   const [stravaLinking, setStravaLinking] = useState(false);
-  const appearanceRef = useRef(null);
-  const displayNameRef = useRef(null);
-  const initialPrefSnapshotRef = useRef(null);
-  const currentThemeLabel = t(`profile.theme_${theme.replace('-', '_')}`);
-  const currentLanguageLabel = lang === 'zh-CN' ? '中文' : 'English';
-  const currentUnitLabel = unit === 'mile' ? 'mi' : 'km';
-  const connectedServicesLabel = stravaStatus?.linked ? 'Strava' : t('settings.strava_not_connected');
-  const accountStatusItems = [
-    {
-      label: lang === 'zh-CN' ? '显示名称' : 'Display name',
-      tone: displayName.trim() ? 'ready' : 'action',
-      value: displayName.trim() || (lang === 'zh-CN' ? '待填写' : 'Needs name'),
-    },
-    {
-      label: t('profile.theme_title'),
-      tone: 'ready',
-      value: currentThemeLabel,
-    },
-    {
-      label: lang === 'zh-CN' ? 'Strava 新鲜度' : 'Strava freshness',
-      tone: stravaStatus?.linked ? 'ready' : 'warning',
-      value: stravaStatus?.linked
-        ? (lang === 'zh-CN' ? '已连接，可同步' : 'Linked and ready')
-        : (lang === 'zh-CN' ? '未连接' : 'Not linked'),
-    },
-  ];
-  const nextAccountAction = !displayName.trim()
-    ? (lang === 'zh-CN' ? '先补全显示名称，这样排行榜、奖励和分享视图会更完整。' : 'Start by filling in a display name so rewards, ranking, and sharing views feel complete.')
-    : !stravaStatus?.linked
-      ? (lang === 'zh-CN' ? '下一步建议连接 Strava，让同步和近期活动状态自动更新。' : 'Next best step: connect Strava so sync and recent activity stay fresh automatically.')
-      : (lang === 'zh-CN' ? '账号状态良好，接下来更适合检查主题、语言和距离单位是否符合你的日常使用。' : 'Account status looks healthy. Next, make sure theme, language, and distance unit match your daily setup.');
 
-  const nextAccountActionButton = !displayName.trim()
-    ? {
-      label: lang === 'zh-CN' ? '填写显示名称' : 'Fill display name',
-      onClick: () => displayNameRef.current?.focus(),
+  useEffect(() => {
+    try {
+      setMantra(window.localStorage.getItem(MANTRA_STORAGE_KEY) || '');
+      setDigestEnabled(window.localStorage.getItem(DIGEST_STORAGE_KEY) === '1');
+    } catch {
+      setMantra('');
+      setDigestEnabled(false);
     }
-    : !stravaStatus?.linked
-      ? {
-        label: stravaLinking ? t('profile.strava_link_connecting') : t('settings.strava_connect'),
-        onClick: connectStrava,
-      }
-      : {
-        label: lang === 'zh-CN' ? '检查显示偏好' : 'Review preferences',
-        onClick: () => appearanceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-      };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    apiJson('/api/profile/me').then(data => {
-      setProfile(data);
-      setDisplayName(data?.displayName || '');
-    }).catch(() => {});
-    apiJson('/api/auth/strava/status').then(data => {
-      setStravaStatus(data);
-    }).catch(() => setStravaStatus(null));
+
+    let cancelled = false;
+
+    async function loadSettings() {
+      setLoadState('loading');
+      try {
+        const [profileData, stravaData] = await Promise.all([
+          apiJson('/api/profile/me'),
+          apiJson('/api/auth/strava/status').catch(() => null),
+        ]);
+
+        if (cancelled) return;
+
+        setProfile(profileData);
+        setDisplayName(profileData?.displayName || '');
+        setStravaStatus(stravaData);
+        setLoadState('ready');
+      } catch {
+        if (!cancelled) {
+          setLoadState('error');
+        }
+      }
+    }
+
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    const currentSnapshot = `${theme}|${lang}|${unit}`;
-    if (initialPrefSnapshotRef.current == null) {
-      initialPrefSnapshotRef.current = currentSnapshot;
-      return;
-    }
-    if (initialPrefSnapshotRef.current !== currentSnapshot) {
-      initialPrefSnapshotRef.current = currentSnapshot;
-      setSettingsActionAck(lang === 'zh-CN' ? '偏好已更新，接下来只需要确认它们适合你的日常使用。' : 'Preferences updated. Next, just confirm they still match your daily setup.');
-    }
-  }, [lang, theme, unit]);
+  const displayNameResolved = resolveDisplayName(profile, t('profile.default_name'));
+  const initials = displayNameResolved.slice(0, 1).toUpperCase();
 
-  useEffect(() => {
-    if (settingsActionAck) {
-      const timer = setTimeout(() => {
-        setSettingsActionAck('');
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [settingsActionAck]);
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+  }), [lang, t]);
 
-  async function saveDisplayName(e) {
-    e.preventDefault();
-    if (!displayName.trim()) return;
+  const themeCards = useMemo(() => ([
+    { value: 'midnight', label: t('settings.stitch_theme_pulse'), icon: 'dark_mode' },
+    { value: 'light', label: t('settings.stitch_theme_glitter'), icon: 'light_mode' },
+  ]), [t]);
+  const activeThemeLabel = themeCards.find((card) => card.value === theme)?.label || '';
+  const languageLabel = lang === 'zh-CN' ? '\u4e2d\u6587' : 'English (US)';
+  const stravaLabel = formatStravaSyncLabel(stravaStatus, t);
+  const digestLabel = digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest');
+  const resolvedLanguageLabel = languageLabel;
+  const garminStatusLabel = t('settings.stitch_garmin_ready');
+  const garminLane = {
+    eyebrow: t('profile.garmin_connect_status'),
+    title: t('profile.garmin_connect_title'),
+    summary: t('profile.garmin_connect_hint'),
+    status: garminStatusLabel,
+    tone: 'ready',
+    limitLabel: t('profile.garmin_connect_limit_label'),
+    limitValue: 50,
+    manualLabel: t('profile.watch_import_files'),
+    manualValue: t('settings.stitch_manual_import_hint'),
+    credentialsNote: t('profile.garmin_connect_credentials_note'),
+    primaryAction: t('profile.garmin_connect_import'),
+  };
+  const completionScore = Math.round(([
+    displayName.trim(),
+    mantra.trim(),
+    stravaStatus?.linked,
+    digestEnabled,
+  ].filter(Boolean).length / 4) * 100);
+  const ecosystemCount = [stravaStatus?.linked, true, true].filter(Boolean).length;
+  const heroBadge = stravaStatus?.linked ? t('settings.stitch_live_sync_badge') : t('settings.stitch_local_mode_badge');
+
+  async function saveProfile(event) {
+    event.preventDefault();
     setNameSaving(true);
     setNameMsg('');
     try {
@@ -114,8 +135,13 @@ export default function Settings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: displayName.trim() }),
       });
+      try {
+        window.localStorage.setItem(MANTRA_STORAGE_KEY, mantra);
+      } catch {
+        // Ignore local-storage failures and still keep remote display-name save.
+      }
+      setProfile((current) => ({ ...(current || {}), displayName: displayName.trim() }));
       setNameMsg(t('settings.name_saved'));
-      setSettingsActionAck(lang === 'zh-CN' ? '显示名称已保存，奖励、分享和账户摘要现在会使用新的名称。' : 'Display name saved. Rewards, sharing, and account summaries will now use the updated name.');
     } catch {
       setNameMsg(t('settings.name_error'));
     } finally {
@@ -126,177 +152,237 @@ export default function Settings() {
   async function connectStrava() {
     setStravaLinking(true);
     try {
-      const data = await apiJson('/api/auth/strava/link-url');
-      if (data?.url) window.location.href = data.url;
+      const data = await apiJson('/api/auth/strava/link-url', { method: 'POST' });
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
     } catch {
       setStravaLinking(false);
     }
+    setStravaLinking(false);
   }
 
   async function disconnectStrava() {
     try {
       await apiFetch('/api/auth/strava/unlink', { method: 'DELETE' });
-      setStravaStatus(prev => ({ ...prev, linked: false }));
-    } catch { /* ignored */ }
+      setStravaStatus((current) => ({ ...(current || {}), linked: false, stravaEmail: '' }));
+    } catch {
+      setNameMsg(t('settings.stitch_strava_disconnect_error'));
+    }
+  }
+
+  function toggleDigest() {
+    const next = !digestEnabled;
+    setDigestEnabled(next);
+    try {
+      window.localStorage.setItem(DIGEST_STORAGE_KEY, next ? '1' : '0');
+    } catch {
+      // Ignore storage failures.
+    }
+  }
+
+  function cycleTheme() {
+    const currentIndex = themeCards.findIndex((card) => card.value === theme);
+    const nextCard = themeCards[(currentIndex + 1 + themeCards.length) % themeCards.length];
+    setTheme(nextCard?.value || themeCards[0]?.value || theme);
+  }
+
+  function toggleUnitPreference() {
+    setUnit(unit === 'km' ? 'mile' : 'km');
+  }
+
+  function toggleLanguagePreference() {
+    setLang(lang === 'zh-CN' ? 'en' : 'zh-CN');
+  }
+
+  const quickControls = [
+    {
+      key: 'theme',
+      icon: 'dark_mode',
+      label: t('settings.stitch_quick_cycle_theme'),
+      value: activeThemeLabel,
+      action: cycleTheme,
+    },
+    {
+      key: 'unit',
+      icon: 'straighten',
+      label: t('settings.stitch_quick_toggle_units'),
+      value: unit === 'km' ? t('settings.stitch_metric_label') : t('settings.stitch_imperial_label'),
+      action: toggleUnitPreference,
+    },
+    {
+      key: 'language',
+      icon: 'translate',
+      label: t('settings.stitch_quick_toggle_language'),
+      value: resolvedLanguageLabel,
+      action: toggleLanguagePreference,
+    },
+    {
+      key: 'digest',
+      icon: 'newsmode',
+      label: t('settings.stitch_quick_toggle_digest'),
+      value: digestEnabled ? t('settings.stitch_enabled') : t('settings.stitch_review'),
+      action: toggleDigest,
+    },
+  ];
+
+  const syncHealthItems = [
+    {
+      key: 'strava',
+      label: 'Strava',
+      value: stravaLinking ? t('profile.strava_link_connecting') : stravaLabel,
+      tone: stravaLinking ? 'active' : stravaSyncTone(stravaStatus),
+    },
+    {
+      key: 'garmin',
+      label: 'Garmin Connect',
+      value: garminStatusLabel,
+      tone: 'ready',
+    },
+    {
+      key: 'manual',
+      label: t('profile.watch_import_files'),
+      value: t('settings.stitch_manual_import_ready'),
+      tone: 'ready',
+    },
+    {
+      key: 'garmin-wellness',
+      label: t('profile.garmin_wellness_title'),
+      value: t('profile.garmin_wellness_disabled'),
+      tone: 'muted',
+    },
+  ];
+
+  const setupChecklist = [
+    { key: 'name', label: t('settings.stitch_check_display_name'), done: Boolean(displayName.trim()) },
+    { key: 'identity', label: t('settings.stitch_check_identity_note'), done: Boolean(mantra.trim()) },
+    { key: 'strava', label: t('settings.stitch_check_strava'), done: Boolean(stravaStatus?.linked) },
+    { key: 'digest', label: t('settings.stitch_check_digest'), done: Boolean(digestEnabled) },
+  ];
+
+  if (loadState === 'loading') {
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('settings.stitch_loading')}</div></div>;
+  }
+
+  if (loadState === 'error') {
+    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('settings.stitch_load_error')}</div></div>;
   }
 
   return (
-    <AuthenticatedPageChrome bodyClassName="settings-page" profile={profile ? { displayName: profile.displayName, email: profile.email } : null}>
-      <main className="dashboard-container settings-container">
-        <section className="settings-hero">
-          <span className="settings-hero__eyebrow">{t('settings.eyebrow')}</span>
-          <h1 className="settings-hero__title">{t('settings.heading')}</h1>
-          <p className="settings-hero__copy">{t('settings.copy')}</p>
-          <div className="hero-chip-row settings-summary-row">
-            <span className="hero-chip">{t('settings.language_title')}: {currentLanguageLabel}</span>
-            <span className="hero-chip">{t('settings.distance_unit_title')}: {currentUnitLabel}</span>
-            <span className="hero-chip">{t('profile.theme_title')}: {currentThemeLabel}</span>
-            <span className={`hero-chip${stravaStatus?.linked ? ' hero-chip--success' : ''}`}>
-              {t('settings.connected_title')}: {connectedServicesLabel}
+    <div className={`runner-shell-page runner-dashboard-page settings-control-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
+          <div className="runner-dashboard-brand-copy">
+            <HermesLogo dark />
+            <span>{t('analysis.stitch_brand_subtitle')}</span>
+          </div>
+          <button
+            type="button"
+            className="runner-dashboard-sidebar-toggle"
+            onClick={() => setIsSidebarCollapsed((current) => !current)}
+            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
+            aria-pressed={isSidebarCollapsed}
+          >
+            <span className="runner-dashboard-toggle-glyph" aria-hidden="true">
+              {isSidebarCollapsed ? '>' : '<'}
             </span>
-          </div>
-          <div className="status-chip-row settings-status-row">
-            {accountStatusItems.map((item) => (
-              <article key={item.label} className={`status-chip status-chip--${item.tone}`}>
-                <span className="status-chip__label">{item.label}</span>
-                <strong className="status-chip__value">{item.value}</strong>
-              </article>
-            ))}
-          </div>
-          <div className="settings-next-action-row">
-            <p className="settings-next-action-helper">{nextAccountAction}</p>
-            <button type="button" className="btn-primary btn-inline-md" onClick={nextAccountActionButton.onClick}>
-              {nextAccountActionButton.label}
+          </button>
+        </div>
+
+        <nav className="runner-shell-side-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className="runner-shell-side-link"
+              onClick={() => navigate(item.route)}
+            >
+              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+              <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
+          ))}
+        </nav>
+
+        <div className="runner-shell-sidebar-footer">
+          <button
+            type="button"
+            className="runner-shell-workout-btn runner-dashboard-workout-btn"
+            onClick={() => navigate('/today-run')}
+            aria-label={t('profile.dashboard_start_workout')}
+          >
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+            <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
+          </button>
+        </div>
+      </aside>
+
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar settings-control-topbar">
+          <div className="runner-shell-topbar-left">
+            <div className="runner-shell-topnav">
+              <span className="runner-shell-topnav-link is-active">{t('settings.heading')}</span>
+            </div>
           </div>
-          {settingsActionAck && (
-            <div className="settings-next-action-feedback status-chip status-chip--ready">
-              <span className="status-chip__label">{lang === 'zh-CN' ? '刚完成' : 'Completed now'}</span>
-              <strong className="status-chip__value">{lang === 'zh-CN' ? '当前推荐动作已生效' : 'Recommended action applied'}</strong>
-              <span className="status-chip__helper">{settingsActionAck}</span>
-            </div>
-          )}
-        </section>
-
-        <div className="settings-grid">
-          {/* Appearance */}
-          <section ref={appearanceRef} className="card settings-section">
-            <h2 className="settings-section__title">{t('settings.appearance_title')}</h2>
-            <div className="settings-row">
-              <div className="settings-copy">
-                <strong>{t('profile.theme_title')}</strong>
-                <p>{t('profile.theme_hint')}</p>
-              </div>
-              <select className="theme-select" value={theme} onChange={e => setTheme(e.target.value)}>
-                <option value="light">{t('profile.theme_light')}</option>
-                <option value="midnight">{t('profile.theme_midnight')}</option>
-                <option value="high-contrast">{t('profile.theme_high_contrast')}</option>
-                <option value="high-contrast-light">{t('profile.theme_high_contrast_light')}</option>
-              </select>
-            </div>
-            <div className="settings-row">
-              <div className="settings-copy">
-                <strong>{t('settings.language_title')}</strong>
-                <p>{t('settings.language_hint')}</p>
-              </div>
-              <select className="theme-select" value={lang} onChange={e => setLang(e.target.value)}>
-                <option value="zh-CN">中文</option>
-                <option value="en">English</option>
-              </select>
-            </div>
-          </section>
-
-          {/* Units */}
-          <section className="card settings-section">
-            <h2 className="settings-section__title">{t('settings.units_title')}</h2>
-            <div className="settings-row">
-              <div className="settings-copy">
-                <strong>{t('settings.distance_unit_title')}</strong>
-                <p>{t('settings.distance_unit_hint')}</p>
-              </div>
-              <div className="settings-unit-toggle">
-                <button
-                  type="button"
-                  className={`settings-unit-btn${unit === 'km' ? ' active' : ''}`}
-                  onClick={() => setUnit('km')}
-                >
-                  km
-                </button>
-                <button
-                  type="button"
-                  className={`settings-unit-btn${unit === 'mile' ? ' active' : ''}`}
-                  onClick={() => setUnit('mile')}
-                >
-                  mi
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* Account */}
-          <section className="card settings-section">
-            <h2 className="settings-section__title">{t('settings.account_title')}</h2>
-            <form className="settings-name-form" onSubmit={saveDisplayName}>
-              <div className="settings-copy">
-                <strong>{t('settings.display_name_title')}</strong>
-                <p>{t('settings.display_name_hint')}</p>
-              </div>
-              <div className="settings-name-row">
-                <input
-                  ref={displayNameRef}
-                  className="settings-name-input"
-                  type="text"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder={t('settings.display_name_placeholder')}
-                  maxLength={60}
-                />
-                <button type="submit" className="btn-primary" disabled={nameSaving}>
-                  {nameSaving ? t('settings.saving') : t('settings.save')}
-                </button>
-              </div>
-              {nameMsg && <p className="settings-msg">{nameMsg}</p>}
-            </form>
-          </section>
-
-          {/* Connected Services */}
-          <section className="card settings-section">
-            <h2 className="settings-section__title">{t('settings.connected_title')}</h2>
-            <div className="settings-row settings-row--service">
-              <div className="settings-copy">
-                <strong>{t('settings.strava_title')}</strong>
-                <p>{stravaStatus?.linked
-                  ? t('settings.strava_connected', { email: stravaStatus.stravaEmail || '' })
-                  : t('settings.strava_not_connected')}
-                </p>
-              </div>
-              {stravaStatus?.linked ? (
-                <button type="button" className="btn-secondary" onClick={disconnectStrava}>
-                  {t('settings.strava_disconnect')}
-                </button>
-              ) : (
-                <button type="button" className="btn-primary" onClick={connectStrava} disabled={stravaLinking}>
-                  {stravaLinking ? t('profile.strava_link_connecting') : t('settings.strava_connect')}
-                </button>
-              )}
-            </div>
-          </section>
-
-          {/* Danger zone */}
-          <section className="card settings-section settings-section--danger">
-            <h2 className="settings-section__title">{t('settings.danger_title')}</h2>
-            <div className="settings-row">
-              <div className="settings-copy">
-                <strong>{t('settings.logout_title')}</strong>
-                <p>{t('settings.logout_hint')}</p>
-              </div>
-              <button type="button" className="btn-secondary" onClick={() => { logout(); navigate('/login'); }}>
-                {t('settings.logout_btn')}
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn is-active" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+                <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+              </button>
+              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayNameResolved}>
+                {initials}
               </button>
             </div>
-          </section>
-        </div>
+          </div>
+        </header>
+
+        <SettingsAtlasLayout
+          t={t}
+          navigate={navigate}
+          initials={initials}
+          displayNameResolved={displayNameResolved}
+          mantra={mantra}
+          activeThemeLabel={activeThemeLabel}
+          resolvedLanguageLabel={resolvedLanguageLabel}
+          resolvedUnitLabel={unit === 'km' ? t('settings.stitch_metric_label') : t('settings.stitch_imperial_label')}
+          heroBadge={heroBadge}
+          completionScore={completionScore}
+          ecosystemCount={ecosystemCount}
+          digestLabel={digestLabel}
+          digestEnabled={digestEnabled}
+          stravaStatus={stravaStatus}
+          stravaLabel={stravaLabel}
+          stravaLinking={stravaLinking}
+          connectStrava={connectStrava}
+          disconnectStrava={disconnectStrava}
+          toggleDigest={toggleDigest}
+          logout={logout}
+          saveProfile={saveProfile}
+          nameSaving={nameSaving}
+          nameMsg={nameMsg}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          setMantra={setMantra}
+          themeCards={themeCards}
+          theme={theme}
+          setTheme={setTheme}
+          unit={unit}
+          setUnit={setUnit}
+          lang={lang}
+          setLang={setLang}
+          quickControls={quickControls}
+          syncHealthItems={syncHealthItems}
+          garminLane={garminLane}
+          setupChecklist={setupChecklist}
+        />
+
       </main>
-    </AuthenticatedPageChrome>
+    </div>
   );
 }
+
+
+
+
+

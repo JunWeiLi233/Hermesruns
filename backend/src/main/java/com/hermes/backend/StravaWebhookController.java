@@ -31,6 +31,7 @@ import java.util.concurrent.Executors;
 @RestController
 @RequestMapping("/api/strava/webhook")
 public class StravaWebhookController {
+    private static final long[] WEBHOOK_RETRY_DELAYS_MS = {0L, 1500L, 5000L};
 
     private static final Logger log = LoggerFactory.getLogger(StravaWebhookController.class);
 
@@ -79,24 +80,33 @@ public class StravaWebhookController {
     /**
      * Strava event callback — receives activity create/update/delete/deauthorize events.
      * Must return 200 within 2 seconds (Strava requirement), so processing is async.
+     *
+     * <p>Strava does not send a verify_token on POST event callbacks (only on GET
+     * subscription validation). Instead, we validate the event payload structure and
+     * only process events for known athletes (checked via owner_id lookup in
+     * runnerRepository). The {@link WebhookRateLimitFilter} provides per-IP flood
+     * protection, and the runner lookup ensures only events for registered athletes
+     * trigger activity processing.</p>
      */
     @PostMapping
     public ResponseEntity<String> handleEvent(@RequestBody Map<String, Object> event) {
-        log.debug("Strava webhook event: {}", event);
 
         String objectType = str(event.get("object_type"));
         String aspectType = str(event.get("aspect_type"));
         Long ownerId = lng(event.get("owner_id"));
         Long objectId = lng(event.get("object_id"));
 
-        if (ownerId == null) {
-            return ResponseEntity.ok("EVENT_RECEIVED");
+        if (objectType == null || aspectType == null || ownerId == null) {
+            log.warn("Strava webhook event rejected: missing required fields (object_type, aspect_type, owner_id).");
+            return ResponseEntity.badRequest().body("MISSING_REQUIRED_FIELDS");
         }
+
+        log.info("Strava webhook event: object_type={}, aspect_type={}, owner_id={}, object_id={}",
+                objectType, aspectType, ownerId, objectId);
 
         // Handle deauthorization
         if ("athlete".equals(objectType) && "update".equals(aspectType)) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> updates = (Map<String, Object>) event.get("updates");
+            Map<String, Object> updates = map(event.get("updates"));
             if (updates != null && "true".equals(str(updates.get("authorized"))) == false) {
                 log.info("Strava deauthorization for athlete {}", ownerId);
                 // Don't delete data — just log it. User can re-connect.
@@ -124,7 +134,7 @@ public class StravaWebhookController {
                     if ("create".equals(aspectType) || "update".equals(aspectType)) {
                         log.info("Strava webhook: syncing activity {} for runner {} ({})",
                                 stravaActivityId, runner.getId(), aspectType);
-                        oAuthController.syncStravaActivityById(runner, stravaActivityId);
+                        retryWebhookSyncBurst(runner, stravaActivityId);
                     } else if ("delete".equals(aspectType)) {
                         log.info("Strava webhook: deleting activity {} for runner {}",
                                 stravaActivityId, runner.getId());
@@ -135,8 +145,34 @@ public class StravaWebhookController {
         );
     }
 
+    private void retryWebhookSyncBurst(Runner runner, long stravaActivityId) {
+        for (int attempt = 0; attempt < WEBHOOK_RETRY_DELAYS_MS.length; attempt += 1) {
+            long delayMs = WEBHOOK_RETRY_DELAYS_MS[attempt];
+            if (delayMs > 0) {
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+
+            OAuthController.SingleActivitySyncResult result = oAuthController.syncStravaActivityById(runner, stravaActivityId);
+            if (result == OAuthController.SingleActivitySyncResult.SUCCESS
+                    || result == OAuthController.SingleActivitySyncResult.ALREADY_RUNNING
+                    || result == OAuthController.SingleActivitySyncResult.PERMANENT_FAILURE) {
+                return;
+            }
+        }
+    }
+
     private static String str(Object v) {
         return v == null ? null : String.valueOf(v);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> map(Object v) {
+        return v instanceof Map<?, ?> ? (Map<String, Object>) v : null;
     }
 
     private static Long lng(Object v) {
@@ -146,4 +182,5 @@ public class StravaWebhookController {
         }
         return null;
     }
+
 }

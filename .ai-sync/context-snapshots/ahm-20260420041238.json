@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-04-20T04:12:38.927Z",
+  "taskStatement": "finish helper smoke",
+  "desiredOutcome": "[Market Opportunity] Smart Shoe Rotation Tracker on Shoe Tracker",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "Shoe Tracker",
+    "problemClass": "unknown",
+    "touchesFrontend": true,
+    "touchesBackend": true,
+    "isCrossStack": true
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "frontend/src/components/ShoeRecommendation.vue",
+    "backend/src/main/java/com/hermes/inventory/ShoeTracker.java"
+  ],
+  "lanesPlanned": 2
+}

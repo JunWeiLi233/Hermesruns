@@ -1,4 +1,4 @@
-import { formatPace } from './format';
+import { formatPace, formatDistance } from './format';
 import { estimateCurrentVdot, computeTrainingPaces } from './vdot';
 
 function hrToVo2Fraction(avgHr, hrMax) {
@@ -303,12 +303,26 @@ function buildReasons(recommendation, t, metrics) {
   return reasons;
 }
 
-export function getTodayRunRecommendation({ runs, t, lang }) {
+export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery, coachPayload }) {
   const totalKm = runs.reduce((s, r) => s + resolveRunDistanceKm(r), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
   const now = new Date();
   const nowMs = now.getTime();
   const msPerDay = 24 * 60 * 60 * 1000;
+
+  // Identify next race
+  const upcomingRaces = (Array.isArray(races) ? races : [])
+    .filter((race) => {
+      const date = new Date(race?.eventDate);
+      return !Number.isNaN(date.getTime()) && date.getTime() >= now.setHours(0, 0, 0, 0) && race?.registrationStatus !== 'CANCELED';
+    })
+    .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+
+  const nextRace = upcomingRaces[0] || null;
+  const daysToRace = nextRace
+    ? Math.max(0, Math.round((new Date(nextRace.eventDate).getTime() - new Date().setHours(0, 0, 0, 0)) / msPerDay))
+    : null;
+
   const recent7 = runs.filter((run) => {
     const date = new Date(run.startTime || run.startDate);
     return !Number.isNaN(date.getTime()) && (now - date) / msPerDay <= 7;
@@ -329,13 +343,17 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
   const recoveryState = computeRecoveryState(runs, bestVdot);
   const trainingLoad = computeTrainingLoadSnapshot(runs, bestVdot);
 
-  const safeFormatPace = (seconds) => {
+  const penalty = weatherContext?.available ? (weatherContext.pacePenaltySecPerKm || 0) : 0;
+
+  const safeFormatPace = (seconds, applyPenalty = true) => {
     if (!Number.isFinite(seconds) || seconds <= 0) return null;
-    return formatPace(1, seconds, lang);
+    const s = applyPenalty ? seconds + penalty : seconds;
+    return formatPace(1, s, lang);
   };
-  const formatPaceRange = (range, fallback) => {
+
+  const formatPaceRange = (range, fallback, applyPenalty = true) => {
     if (!Array.isArray(range) || range.length === 0) return fallback;
-    const values = range.map(safeFormatPace).filter(Boolean);
+    const values = range.map((s) => safeFormatPace(s, applyPenalty)).filter(Boolean);
     if (values.length === 0) return fallback;
     if (values.length === 1) return values[0];
     return `${values[0]} - ${values[1]}`;
@@ -344,26 +362,113 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
   const easyPace = formatPaceRange(trainingPaces?.easy, t('profile.today_run_pace_easy'));
   const thresholdPace = formatPaceRange(trainingPaces?.threshold, t('profile.today_run_pace_quality'));
   const intervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'));
+
+  const normalEasyPace = formatPaceRange(trainingPaces?.easy, t('profile.today_run_pace_easy'), false);
+  const normalThresholdPace = formatPaceRange(trainingPaces?.threshold, t('profile.today_run_pace_quality'), false);
+  const normalIntervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'), false);
+
   const recoveryHours = recoveryState.recoveryHoursLeft || 0;
   const acwr = trainingLoad?.acwr ?? null;
   const micro = computeMicrocycleSnapshot(runs, nowMs);
 
+  // Dynamic Recalibration: Detect missed sessions in the last 3 days
+  const d3 = 3 * 24 * 60 * 60 * 1000;
+  const recent3 = runs.filter((run) => (nowMs - resolveRunTimeMs(run)) <= d3);
+  const hasGapInLast3 = recent3.length === 0 && runs.length > 0;
+
+  const sleep = coachPayload?.state?.lastSleepScore;
+  const stress = coachPayload?.state?.lastStressScore;
+
   let recommendation;
-  if (!runs.length) {
+
+  // 0. Manual Downshift Override
+  if (forceRecovery) {
+    recommendation = {
+      type: t('profile.today_run_type_recovery'),
+      title: t('today_run.downshift_active_title'),
+      distance: t('profile.today_run_distance_recovery'),
+      pace: easyPace,
+      normalPace: normalEasyPace,
+      purpose: t('today_run.downshift_active_copy'),
+    };
+  } else if (daysToRace === 0) {    recommendation = {
+      type: t('profile.today_run_type_quality'),
+      title: t('today_run.race_day_title', { race: nextRace.name }),
+      distance: formatDistance(Number(nextRace.distanceKm || 42.195), 1, lang),
+      pace: t('today_run.race_day_pace'),
+      normalPace: t('today_run.race_day_pace'),
+      purpose: t('today_run.race_day_purpose'),
+    };
+  } else if (daysToRace !== null && daysToRace <= 3) {
+    // Sharp Taper (1-3 days before race)
+    recommendation = {
+      type: t('profile.today_run_type_recovery'),
+      title: t('today_run.taper_sharp_title'),
+      distance: '2-4 km',
+      pace: easyPace,
+      normalPace: normalEasyPace,
+      purpose: t('today_run.taper_sharp_purpose', { days: daysToRace }),
+    };
+  } else if (daysToRace !== null && daysToRace <= 7) {
+    // Taper Week
+    recommendation = {
+      type: t('profile.today_run_type_easy'),
+      title: t('today_run.taper_week_title'),
+      distance: '5-7 km',
+      pace: easyPace,
+      normalPace: normalEasyPace,
+      purpose: t('today_run.taper_week_purpose'),
+    };
+  } else if (!runs.length) {
     recommendation = {
       type: t('profile.today_run_type_restart'),
       title: t('profile.today_run_title_restart'),
       distance: t('profile.today_run_distance_restart'),
       pace: t('profile.today_run_pace_restart'),
+      normalPace: t('profile.today_run_pace_restart'),
       purpose: t('profile.today_run_purpose_restart'),
     };
-  } else if (recoveryState.hasData && recoveryHours > 30) {
+  } else if ((sleep != null && sleep < 50) || (stress != null && stress > 75)) {
+    const isSleepIssue = sleep != null && sleep < 50;
+    const isStressIssue = stress != null && stress > 75;
+    let fallbackPurpose = '';
+    if (isSleepIssue && isStressIssue) fallbackPurpose = 'Garmin wellness sync shows poor sleep and high stress. Prioritize recovery today.';
+    else if (isSleepIssue) fallbackPurpose = 'Garmin wellness sync shows poor sleep. Prioritize recovery today.';
+    else fallbackPurpose = 'Garmin wellness sync shows high stress. Prioritize recovery today.';
+
+    let purpose = t('today_run.wellness_alert_purpose');
+    if (!purpose || purpose === 'today_run.wellness_alert_purpose') purpose = fallbackPurpose;
+
+    let title = t('today_run.wellness_alert_title');
+    if (!title || title === 'today_run.wellness_alert_title') title = 'Wellness Alert';
+
+    recommendation = {
+      type: t('profile.today_run_type_recovery'),
+      title,
+      distance: t('profile.today_run_distance_recovery'),
+      pace: easyPace,
+      normalPace: normalEasyPace,
+      purpose,
+    };
+  } else if (recoveryState.hasData && recoveryHours > 24) {
+    // High Debt: Downgrade intensity regardless of other signals
     recommendation = {
       type: t('profile.today_run_type_recovery'),
       title: t('profile.today_run_title_recovery'),
       distance: t('profile.today_run_distance_recovery'),
       pace: easyPace,
-      purpose: t('profile.today_run_purpose_recovery_analysis', { hours: recoveryHours }),
+      normalPace: normalEasyPace,
+      purpose: t('today_run.recalibration_recovery_debt', { hours: recoveryHours }),
+    };
+  } else if (hasGapInLast3 && bestVdot > 0) {
+    // Missed sessions: Don't jump straight to Quality
+    recommendation = {
+      type: t('profile.today_run_type_base'),
+      title: t('today_run.recalibration_gap_title'),
+      distance: '6-8 km',
+      pace: easyPace,
+      normalPace: normalEasyPace,
+      purpose: t('today_run.recalibration_gap_purpose'),
     };
   } else if (micro.hoursSinceHard !== null && micro.hoursSinceHard < 36) {
     recommendation = {
@@ -373,6 +478,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
         distance: micro.km14 >= 20 ? '6-8 km' : '4-6 km',
       }),
       pace: easyPace,
+      normalPace: normalEasyPace,
       purpose: t('profile.today_run_purpose_recovery_analysis', {
         hours: Math.max(0, Math.round(36 - micro.hoursSinceHard)),
       }),
@@ -383,6 +489,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_load_high'),
       distance: t('profile.today_run_distance_load_high'),
       pace: easyPace,
+      normalPace: normalEasyPace,
       purpose: t('profile.today_run_purpose_load_high', { acwr: acwr.toFixed(2) }),
     };
   } else if (
@@ -397,6 +504,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_quality'),
       distance: t('profile.today_run_distance_quality_analysis'),
       pace: thresholdPace,
+      normalPace: normalThresholdPace,
       purpose: t('profile.today_run_purpose_quality_analysis', { vdot: bestVdot.toFixed(1) }),
     };
   } else if (daysSinceLastRun !== null && daysSinceLastRun >= 2) {
@@ -407,6 +515,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
         distance: recent14Km >= 30 ? '8-10 km' : '6-8 km',
       }),
       pace: easyPace,
+      normalPace: normalEasyPace,
       purpose: t('profile.today_run_purpose_comeback'),
     };
   } else if (
@@ -420,6 +529,7 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
       title: t('profile.today_run_title_threshold'),
       distance: t('profile.today_run_distance_threshold'),
       pace: thresholdPace,
+      normalPace: normalThresholdPace,
       purpose: t('profile.today_run_purpose_threshold'),
     };
   } else {
@@ -430,12 +540,12 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
         distance: recent14Km >= 20 ? '7-9 km' : '5-7 km',
       }),
       pace: bestVdot > 0 ? easyPace : intervalPace,
+      normalPace: bestVdot > 0 ? normalEasyPace : normalIntervalPace,
       purpose: bestVdot > 0
         ? t('profile.today_run_purpose_base_analysis', { vdot: bestVdot.toFixed(1) })
         : t('profile.today_run_purpose_base'),
     };
   }
-
   const tone = getRecommendationTone(recommendation.type, t);
   const metrics = {
     bestVdot,
@@ -452,6 +562,10 @@ export function getTodayRunRecommendation({ runs, t, lang }) {
     easyPace,
     thresholdPace,
     intervalPace,
+    normalEasyPace,
+    normalThresholdPace,
+    normalIntervalPace,
+    weatherPenalty: penalty,
   };
 
   return {

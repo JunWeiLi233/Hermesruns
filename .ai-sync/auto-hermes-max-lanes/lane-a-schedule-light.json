@@ -1,0 +1,23 @@
+{
+  "laneId": "lane-a-schedule-light",
+  "parentRunId": "ahm-20260415212942",
+  "correlationId": "ahm-20260415212942:lane-a-schedule-light",
+  "goal": "Extend schedule-plan-* light-mode block in style.css from body.theme-light to body:is(.theme-light, .theme-high-contrast-light) — same pattern applied to today-run by Explorer",
+  "parentGoal": "Extend light-mode theme coverage and fix pre-existing lint errors on analysis surface",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/styles/style.css"
+  ],
+  "mustPreserve": [],
+  "verify": "",
+  "mergeNotes": "",
+  "priority": 1,
+  "effort": "small",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-a-schedule-light.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-a-schedule-light-activity.json",
+  "command": "/auto-hermes scope=\"Extend schedule-plan-* light-mode block in style.css from body.theme-light to body:is(.theme-light, .theme-high-contrast-light) — same pattern applied to today-run by Explorer\" mode=loop owned=\"frontend/src/styles/style.css\""
+}

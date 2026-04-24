@@ -244,11 +244,26 @@ public class H2ToPostgresMigrator {
     }
 
     private static void resetSequence(Connection pg, String table) throws SQLException {
+        // Whitelist table names to prevent injection
+        String safeTable = switch (table) {
+            case "runner" -> "runner";
+            case "activities" -> "activities";
+            case "activity_points" -> "activity_points";
+            default -> throw new IllegalArgumentException("Unsupported table for sequence reset: " + table);
+        };
+
+        String sql = "SELECT COALESCE(MAX(id), 0) + 1 FROM " + safeTable;
         try (Statement statement = pg.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT COALESCE(MAX(id), 0) + 1 FROM " + table)) {
+             ResultSet resultSet = statement.executeQuery(sql)) {
             if (resultSet.next()) {
                 long nextId = resultSet.getLong(1);
-                execute(pg, "SELECT setval(pg_get_serial_sequence('" + table + "', 'id'), " + nextId + ", false)");
+                // Postgres specific: setval(pg_get_serial_sequence('table', 'id'), val, false)
+                // We must be careful even with whitelisted names here.
+                try (PreparedStatement ps = pg.prepareStatement("SELECT setval(pg_get_serial_sequence(?, 'id'), ?, false)")) {
+                    ps.setString(1, safeTable);
+                    ps.setLong(2, nextId);
+                    ps.executeQuery();
+                }
             }
         }
     }
@@ -270,14 +285,22 @@ public class H2ToPostgresMigrator {
     }
 
     private static void printCount(Connection connection, String table) throws SQLException {
+        // Whitelist table names to prevent injection
+        String safeTable = switch (table) {
+            case "runner" -> "runner";
+            case "activities" -> "activities";
+            case "activity_points" -> "activity_points";
+            default -> throw new IllegalArgumentException("Unsupported table for count: " + table);
+        };
+
+        String sql = "SELECT COUNT(*) AS row_count FROM " + safeTable;
         try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS row_count FROM " + table)) {
+             ResultSet resultSet = statement.executeQuery(sql)) {
             if (resultSet.next()) {
                 System.out.println("  " + table + ": " + resultSet.getLong("row_count"));
             }
         }
     }
-
     private static void execute(Connection connection, String sql) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);

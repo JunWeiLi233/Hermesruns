@@ -30,6 +30,7 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
   const primaryNavItems = [
     { to: '/runs', label: t('runs.heading') },
     { to: '/analysis', label: t('profile.analysis_title') },
+    { to: '/schedule', label: t('profile.dashboard_nav_schedule') },
     { to: '/shoes', label: t('shoes.heading') },
     { to: '/races', label: t('races.nav_label') },
     { to: '/muscle-training', label: t('muscle_training.nav_label') },
@@ -59,7 +60,7 @@ export default function TopNav({ showProfile = false, profile, backLink, rightCo
     } : null,
     profile?.onImportData ? {
       key: 'import-data',
-      label: t('profile.garmin_menu_entry') || t('profile.garmin_connect_import') || 'Garmin Import',
+      label: t('profile.garmin_connect_import'),
       onClick: profile.onImportData,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
