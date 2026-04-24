@@ -1,74 +1,49 @@
-# Market Intelligence: Running Coaching Apps
+# Market Intelligence: Self-Hosted Running Analytics
 
-**Synthesized**: 2026-04-20
-**Scope**: Running coaching apps (personal coach intelligence for runners)
-**Overall Score**: 8.2/10
+Generated: 2026-04-24
 
-## Executive Summary
+## TAM
 
-The fitness apps market is valued at $12.12B (2025), growing at 13.4% CAGR. The running coaching sub-segment has a clear differentiation gap: **no single competitor combines VDOT methodology, ACWR injury prevention, daily coaching voice, and shoe rotation intelligence**. Strava dominates social ($79.99/yr) but lacks coaching depth. Runna ($119.99/yr) pushes adaptive plans but aggressively pushes pace with no load management. Runalyze offers VDOT for free but has no mobile app and no coaching. Hermes is uniquely positioned to own the "intelligent daily coach" position that runners explicitly say they'd pay for.
+**$12.12B** global fitness apps market (2025), projected to **$33.58B by 2033** at **13.4% CAGR**.
+[Source](https://www.grandviewresearch.com/industry-analysis/fitness-app-market)
 
-## Market Size & Growth
+## SAM
 
-| Metric | Value | Source |
-|--------|-------|--------|
-| Fitness apps TAM (2025) | $12.12B | Grand View Research |
-| Fitness apps TAM (2033) | $33.58B | Grand View Research |
-| CAGR (2026-2033) | 13.40% | Grand View Research |
-| Running sub-segment (est.) | $1-2B | Exercise & weight loss share (53.69%) |
-| North America share | 39.82% | Grand View Research |
-| Fitness app downloads (2023) | 858M | Business of Apps |
+**~$2.5B** — running-specific analytics and coaching platforms (exercise & activity tracking sub-segment).
 
-## Competitive Landscape
+## SOM
 
-| Competitor | Price | Coaching Depth | Injury Prevention | VDOT | Shoe Tracking | Daily Verdict |
-|------------|-------|----------------|-------------------|------|---------------|---------------|
-| **Hermes** | Free (future: freemium) | ✅ Deep | ✅ ACWR | ✅ Transparent | ✅ Rotation + health | ✅ Run/rest/easy |
-| Strava | $79.99/yr | ❌ Shallow | ❌ None | ❌ None | ❌ Manual only | ❌ None |
-| Runna | $119.99/yr | ✅ Plans | ❌ None | ❌ None | ❌ None | ⚠️ Plan-only |
-| Nike Run Club | Free | ⚠️ Generic | ❌ None | ❌ None | ❌ None | ❌ None |
-| TrainingPeaks | $239.88/yr | ✅ TSS-based | ⚠️ Indirect | ❌ None | ❌ None | ⚠️ PMC only |
-| Runalyze | Free | ⚠️ Data-only | ❌ None | ✅ Yes | ❌ None | ❌ None |
-| Garmin Connect | Device-locked | ✅ Garmin Coach | ⚠️ Body Battery | ❌ None | ⚠️ Device-only | ✅ Readiness |
+**~$75-125M** — self-hosted running analytics niche (3-5% of running app market).
 
-## Top User Pain Points
+## Top 3 Competitors
 
-1. **No daily run/rest recommendation** — "No running app tells you to actually rest"
-2. **Aggressive pacing without load management** — "Runna keeps pushing my paces up even when I'm clearly overtrained"
-3. **Race predictions feel dishonest** — "Race predictors always say I can run faster than I actually can"
-4. **Shoe tracking is buried or absent** — "I have to manually log shoe miles and no app tells me when to swap"
+| Competitor | Threat | Price | Gap vs Hermes |
+|---|---|---|---|
+| **Strava** | High — 120M+ users, IPO-bound | $79.99/yr or $11.99/mo | No VDOT, no injury prediction, no self-hosted, no daily recs |
+| **Runalyze** | Medium — closest feature overlap | Free / €2.50-5.50/mo | SaaS-only, no injury prediction, no adaptive training |
+| **TrainingPeaks** | Medium — coaching gold standard | $134.99/yr Premium | No running-specific physiology, no self-hosted |
 
-## Pricing Opportunity
+## Key Market Signals
 
-- Strava: $79.99/yr for analytics-only
-- Runna: $119.99/yr without injury prevention
-- TrainingPeaks: $239.88/yr for complex coaching
-- **Gap**: No app offers VDOT + ACWR + daily coaching at any price point
-- **Willingness to pay**: $5-15/mo for genuine coaching intelligence (Reddit signals)
+- **Strava IPO** (filed Feb 2026) validates premium fitness analytics willingness-to-pay
+- **Subscription fatigue** — users resent paying $80/yr Strava + $120/yr TrainingPeaks + $200/yr Whoop simultaneously
+- *"Self-hosted Strava alternative"* is an explicitly requested product on r/selfhosted (748K subs)
+- **Garmin Connect+ paywall backlash** confirms demand for non-subscription analytics
+- **AI coaching is the dominant innovation vector** — Runna raised $9M, Strava launched Instant Workouts
 
-## Scored Opportunities
+## Scored Opportunities (>= 6/10)
 
-| Opportunity | Score | Tier |
-|-------------|-------|------|
-| ACWR Injury Warning System | 8.5/10 | T1 |
-| Coach-Voice Weekly Summary | 8.5/10 | T1 |
-| Programmatic SEO (Goal-Time Plans) | 8.0/10 | T2 |
-| Smart Shoe Rotation Tracker | 7.5/10 | T2 |
-| Streak Protection & Comeback | 7.0/10 | T2 |
-| Freemium Monetization | 6.5/10 | T3 |
-
-## Key Threats
-
-- **Strava adds coaching depth** (medium severity) — mitigated by first-mover advantage on VDOT + ACWR
-- **Subscription fatigue** (medium severity) — mitigated by strong free-tier value (daily coaching is free)
-- **Runna improves load management** (low severity) — mitigated by methodology transparency
-
-## Research Status
-
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Market Analyst | ✅ Complete | Grand View Research verified |
-| Competitor Hunter | ✅ Complete | 6 direct competitors profiled |
-| Pricing Engineer | ✅ Complete | Actual pricing pages fetched |
-| Social Signal | ⚠️ Partial | Reddit blocked automated scraping; frequency estimates based on pattern recognition |
-| Trend Validator | ⚠️ Partial | Funding verified from Grand View Research; trend signals verified |
+| Score | Opportunity | Effort |
+|---|---|---|
+| **10** | Self-hosted deployment as core differentiator | Already done |
+| **9** | One-command Docker setup for non-technical users | Medium |
+| **9** | VDOT science + daily training recommendations | Already done |
+| **8** | SEO content: "Strava alternative", "self-hosted fitness" | Medium |
+| **8** | Predictive injury risk scoring | Partially done |
+| **7** | Privacy-first positioning & copy | Low |
+| **7** | Shoe tracking with alerts & recommendations | Low |
+| **7** | 3-tier pricing (Free / $8/mo Pro / $12/mo Team) | Low |
+| **6** | Free VDOT calculator as SEO lead magnet | Low |
+| **6** | Apple Watch & COROS integration | Medium |
+| **6** | Cross-training load unification | High |
+| **6** | White-label for coaching businesses | Medium |

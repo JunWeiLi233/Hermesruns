@@ -624,6 +624,8 @@ export default function Dashboard() {
   const [courseMapDetail, setCourseMapDetail] = useState(null);
   const [courseMapLoadState, setCourseMapLoadState] = useState('idle');
   const [courseMapAction, setCourseMapAction] = useState({ raceId: null, type: '' });
+  const [courseMapScanTimeline, setCourseMapScanTimeline] = useState([]);
+  const [courseMapTimelineLoadState, setCourseMapTimelineLoadState] = useState('idle');
   const courseMapUploadInputRef = useRef(null);
   const courseMapDetailRequestRef = useRef(0);
   const activeTab = useMemo(() => getDashboardSectionFromPathname(location.pathname), [location.pathname]);
@@ -840,6 +842,19 @@ export default function Dashboard() {
     loadUsers,
   ]);
 
+  const loadCourseMapScanTimeline = useCallback(async (raceId) => {
+    if (!raceId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    setCourseMapTimelineLoadState('loading');
+    try {
+      const data = await apiJson(`/api/admin/race-course-maps/${raceId}/scan-timeline`);
+      setCourseMapScanTimeline(Array.isArray(data) ? data : []);
+      setCourseMapTimelineLoadState('ready');
+    } catch {
+      setCourseMapScanTimeline([]);
+      setCourseMapTimelineLoadState('error');
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab !== 'courseMaps') return;
     const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapQueueItems?.[0]);
@@ -852,6 +867,13 @@ export default function Dashboard() {
     const nextItem = courseMapQueueItems.find((item) => getCourseMapRaceId(item) === nextId) || null;
     loadCourseMapDetail(nextId, nextItem);
   }, [activeTab, courseMapQueueItems, loadCourseMapDetail, selectedCourseMapId]);
+
+  useEffect(() => {
+    if (activeTab !== 'courseMaps') { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapQueueItems?.[0]);
+    if (!nextId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    loadCourseMapScanTimeline(nextId);
+  }, [activeTab, courseMapQueueItems, loadCourseMapScanTimeline, selectedCourseMapId]);
 
   useEffect(() => {
     if (activeTab !== 'jobs' || selectedJobId == null) {
@@ -2994,6 +3016,48 @@ export default function Dashboard() {
                               </div>
                             </div>
                           </section>
+                        </div>
+
+                        <div className="admin-jobs-detail__timeline-shell admin-track-hub-workspace-stack">
+                          <div className="admin-jobs-detail__section-head">
+                            <span className="section-intro-kicker">{t('dashboard.course_maps_scan_timeline_label')}</span>
+                            <strong>{t('dashboard.course_maps_scan_timeline_title')}</strong>
+                            {courseMapTimelineLoadState === 'loading' && <span>{t('dashboard.course_maps_timeline_loading')}</span>}
+                            {courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 && (
+                              <span>{courseMapScanTimeline.length} {t('dashboard.course_maps_timeline_steps')}</span>
+                            )}
+                          </div>
+                          {courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 ? (
+                            <ol className="admin-jobs-detail__timeline">
+                              {courseMapScanTimeline.map((step, index) => {
+                                const tone = getDashboardJobTimelineTone(step.status);
+                                return (
+                                  <li className={`is-${tone}`} key={`scan-${step.stage || index}-${index}`}>
+                                    <span className="admin-jobs-detail__timeline-dot" aria-hidden="true" />
+                                    <div className="admin-jobs-detail__timeline-main">
+                                      <div className="admin-jobs-detail__timeline-meta">
+                                        <strong>{step.stage}</strong>
+                                        <span>{step.status}</span>
+                                        <small>{step.at ? new Date(step.at).toLocaleTimeString() : ''}</small>
+                                      </div>
+                                      {step.message && <p>{step.message}</p>}
+                                      {step.details && typeof step.details === 'object' && (
+                                        <div className="admin-jobs-detail__timeline-details">
+                                          {Object.entries(step.details).slice(0, 4).map(([key, value]) => (
+                                            <span key={key}>{key}: {formatDashboardJobValue(value)}</span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          ) : courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length === 0 ? (
+                            <div className="admin-jobs-detail__json-empty">{t('dashboard.course_maps_timeline_no_steps')}</div>
+                          ) : courseMapTimelineLoadState === 'error' ? (
+                            <div className="admin-jobs-detail__json-empty">{t('dashboard.course_maps_timeline_load_error')}</div>
+                          ) : null}
                         </div>
 
                         {courseMapLoadState === 'error' && (

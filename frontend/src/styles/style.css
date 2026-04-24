@@ -20611,6 +20611,158 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
     cursor: pointer;
 }
 
+/* ── Progression info modal ── */
+
+.runner-progression-info-shell {
+    background:
+        radial-gradient(circle at top left, rgba(240, 117, 97, 0.18), transparent 30%),
+        rgba(8, 8, 8, 0.76);
+    backdrop-filter: blur(20px);
+}
+
+.runner-progression-info-card {
+    width: min(34rem, calc(100vw - 2rem));
+    border: 0;
+    border-radius: 1.9rem;
+    overflow: hidden;
+    background:
+        linear-gradient(145deg, rgba(240, 117, 97, 0.14), rgba(28, 27, 27, 0.98) 34%),
+        rgba(18, 18, 18, 0.98);
+    box-shadow: 0 32px 72px rgba(0, 0, 0, 0.42);
+}
+
+.runner-progression-info-card .modal-header {
+    align-items: flex-start;
+    padding: 1.4rem 1.4rem 0;
+    border: 0;
+}
+
+.runner-progression-info-card .modal-header h3 {
+    font-family: "Manrope", sans-serif;
+    font-size: 0.76rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(255, 180, 167, 0.88);
+}
+
+.runner-progression-info-card .modal-close {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(229, 226, 225, 0.84);
+}
+
+.runner-progression-info-card .modal-form {
+    padding: 0 1.4rem 1.4rem;
+}
+
+.runner-progression-info-body {
+    display: grid;
+    gap: 1rem;
+}
+
+.runner-progression-info-hero {
+    padding: 1.2rem 1.3rem;
+    border-radius: 1.5rem;
+    background:
+        linear-gradient(135deg, rgba(255, 236, 229, 0.96), rgba(255, 217, 206, 0.88));
+    color: #28110d;
+}
+
+.runner-progression-info-kicker {
+    display: block;
+    margin-bottom: 0.55rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.runner-progression-info-hero h4 {
+    margin: 0 0 0.55rem;
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+}
+
+.runner-progression-info-hero p {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.65;
+}
+
+body.theme-light .runner-pr-modal-shell {
+    background:
+        radial-gradient(circle at top left, rgba(240, 117, 97, 0.18), transparent 30%),
+        rgba(245, 246, 247, 0.76);
+    backdrop-filter: blur(20px);
+}
+
+body.theme-light .runner-pr-modal-card {
+    background:
+        linear-gradient(145deg, rgba(240, 117, 97, 0.08), rgba(245, 246, 247, 0.98) 34%),
+        rgba(255, 255, 255, 0.98);
+    box-shadow: 0 32px 72px rgba(44, 47, 48, 0.08);
+}
+
+body.theme-light .runner-pr-modal-card .modal-header h3 {
+    color: rgba(160, 57, 42, 0.88);
+}
+
+body.theme-light .runner-pr-modal-card .modal-close {
+    background: rgba(44, 47, 48, 0.06);
+    color: rgba(44, 47, 48, 0.84);
+}
+
+body.theme-light .runner-pr-modal-entry {
+    background: rgba(245, 246, 247, 0.92);
+}
+
+body.theme-light .runner-pr-modal-entry-label {
+    color: rgba(160, 57, 42, 0.76);
+}
+
+body.theme-light .runner-pr-modal-entry strong {
+    color: #2c2f30;
+}
+
+body.theme-light .runner-pr-modal-entry-meta {
+    color: rgba(44, 47, 48, 0.56);
+}
+
+/* ── Progression info modal light ── */
+
+body.theme-light .runner-progression-info-shell {
+    background:
+        radial-gradient(circle at top left, rgba(240, 117, 97, 0.14), transparent 30%),
+        rgba(245, 246, 247, 0.76);
+    backdrop-filter: blur(20px);
+}
+
+body.theme-light .runner-progression-info-card {
+    background:
+        linear-gradient(145deg, rgba(240, 117, 97, 0.06), rgba(245, 246, 247, 0.98) 34%),
+        rgba(255, 255, 255, 0.98);
+    box-shadow: 0 32px 72px rgba(44, 47, 48, 0.08);
+}
+
+body.theme-light .runner-progression-info-card .modal-header h3 {
+    color: rgba(160, 57, 42, 0.88);
+}
+
+body.theme-light .runner-progression-info-card .modal-close {
+    background: rgba(44, 47, 48, 0.06);
+    color: rgba(44, 47, 48, 0.84);
+}
+
+body.theme-light .runner-progression-info-hero {
+    background:
+        linear-gradient(135deg, rgba(255, 236, 229, 0.98), rgba(255, 217, 206, 0.92));
+}
+
 .runner-dashboard-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -21129,12 +21281,41 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
 }
 
 .runner-dashboard-progression-heading h3 {
+    position: relative;
     margin: 0 0 0.5rem;
     font-family: "Manrope", sans-serif;
     font-size: clamp(2rem, 4vw, 3rem);
     line-height: 0.96;
     letter-spacing: -0.06em;
 }
+
+.runner-dashboard-progression-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    margin-left: 0.4rem;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: baseline;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(229, 226, 225, 0.68);
+    transition: background var(--transition), color var(--transition);
+}
+
+.runner-dashboard-progression-info-icon:hover,
+.runner-dashboard-progression-info-icon:focus-visible {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    outline: none;
+}
+
+
+
+
 
 .runner-dashboard-progression-heading p {
     max-width: 44rem;
@@ -42042,6 +42223,19 @@ body.theme-light .runner-dashboard-feature-session-pill strong,
 body.theme-light .runner-dashboard-mini-metric strong {
   color: var(--text-strong);
 }
+
+body.theme-light .runner-dashboard-progression-info-icon {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-muted);
+}
+
+body.theme-light .runner-dashboard-progression-info-icon:hover,
+body.theme-light .runner-dashboard-progression-info-icon:focus-visible {
+    background: rgba(0, 0, 0, 0.12);
+    color: var(--text-strong);
+}
+
+
 
 body.theme-light .runner-dashboard-readiness-score,
 body.theme-light .runner-dashboard-progression-heading p,

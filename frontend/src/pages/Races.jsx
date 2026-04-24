@@ -557,10 +557,10 @@ export default function Races() {
                 <p>{heroSummary}</p>
 
                 <div className="race-center-hero-actions">
-                  <button type="button" className="race-center-primary-btn" onClick={() => navigate('/schedule')}>
+                  <button type="button" className="race-center-primary-btn" onClick={() => navigate('/schedule')} aria-label={t('races.stitch_view_training_plan')}>
                     {t('races.stitch_view_training_plan')}
                   </button>
-                  <button type="button" className="race-center-secondary-btn" onClick={() => (nextRace ? openEditModal(nextRace) : openCreateModal())}>
+                  <button type="button" className="race-center-secondary-btn" onClick={() => (nextRace ? openEditModal(nextRace) : openCreateModal())} aria-label={nextRace ? t('races.stitch_race_details') : t('races.add_button')}>
                     {nextRace ? t('races.stitch_race_details') : t('races.add_button')}
                   </button>
                 </div>
@@ -597,7 +597,7 @@ export default function Races() {
             <section className="race-center-section">
               <div className="race-center-section-head race-center-section-head--split">
                 <h2>{t('races.stitch_discovery_title')}</h2>
-                <button type="button" className="race-center-inline-link" onClick={() => document.getElementById('race-center-calendar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                <button type="button" className="race-center-inline-link" onClick={() => document.getElementById('race-center-calendar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} aria-label={t('races.stitch_explore_calendar')}>
                   {t('races.stitch_explore_calendar')}
                 </button>
               </div>
@@ -608,6 +608,7 @@ export default function Races() {
                   value={catalogQuery}
                   onChange={(event) => setCatalogQuery(event.target.value)}
                   placeholder={t('races.catalog_search_placeholder')}
+                  aria-label={t('races.catalog_search_placeholder')}
                 />
                 <div className="race-center-country-filter">
                   <div
@@ -624,6 +625,7 @@ export default function Races() {
                         type="button"
                         className={`race-center-country-chip${selectedCountry === country.key ? ' is-active' : ''}`}
                         onClick={() => setSelectedCountry(country.key)}
+                        aria-label={country.label}
                       >
                         {country.label}
                       </button>
@@ -635,6 +637,7 @@ export default function Races() {
                       className="race-center-country-toggle"
                       onClick={() => setIsCountryStripExpanded((current) => !current)}
                       aria-expanded={isCountryStripExpanded}
+                      aria-label={getCountryToggleLabel(isCountryStripExpanded, t)}
                     >
                       <span>{getCountryToggleLabel(isCountryStripExpanded, t)}</span>
                       <AppIcon
@@ -677,7 +680,7 @@ export default function Races() {
                           <span>{t('races.typical_month', { month: race.month })}</span>
                           <span>{t(`races.discovery_meta_${race.visual.meta.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}</span>
                         </div>
-                        <button type="button" className="race-center-inline-action" onClick={() => addCatalogRace(race)}>
+                        <button type="button" className="race-center-inline-action" onClick={() => addCatalogRace(race)} aria-label={t('races.add_from_catalog')}>
                           {t('races.add_from_catalog')}
                         </button>
                       </div>
@@ -691,7 +694,7 @@ export default function Races() {
               <div className="race-center-calendar-card">
                 <div className="race-center-calendar-head">
                   <h3>{t('races.stitch_selected_calendar')}</h3>
-                  <button type="button" className="race-center-inline-link" onClick={openCreateModal}>
+                  <button type="button" className="race-center-inline-link" onClick={openCreateModal} aria-label={t('races.add_button')}>
                     {t('races.add_button')}
                   </button>
                 </div>
@@ -790,15 +793,15 @@ export default function Races() {
           </label>
 
           {editingRace ? (
-            <button type="button" className="btn-secondary race-center-modal-delete" onClick={() => handleDeleteRace(editingRace)}>
+            <button type="button" className="btn-secondary race-center-modal-delete" onClick={() => handleDeleteRace(editingRace)} aria-label={t('races.delete_button')}>
               {t('races.delete_button')}
             </button>
           ) : null}
 
           {formStatus ? <div className="modal-status">{formStatus}</div> : null}
           <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setModalOpen(false)}>{t('profile.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button">{editingRace ? t('races.save_button') : t('races.create_button')}</button>
+            <button type="button" className="btn-secondary modal-button" onClick={() => setModalOpen(false)} aria-label={t('profile.cancel')}>{t('profile.cancel')}</button>
+            <button type="submit" className="btn-primary modal-button" aria-label={editingRace ? t('races.save_button') : t('races.create_button')}>{editingRace ? t('races.save_button') : t('races.create_button')}</button>
           </div>
         </form>
       </Modal>

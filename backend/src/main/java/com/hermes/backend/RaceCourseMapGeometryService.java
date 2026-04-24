@@ -21,60 +21,42 @@ public class RaceCourseMapGeometryService {
             RaceCourseMapService.PromptRaceType raceType
     ) {
         if (routePoints.size() < minimumRoutePoints) {
-            return new AlignmentPlausibilityVerdict(
-                    false,
-                    "route has only %d route points; need at least %d".formatted(routePoints.size(), minimumRoutePoints)
-            );
+            return invalid("route has only %d route points; need at least %d".formatted(routePoints.size(), minimumRoutePoints));
         }
         if (latitude != null && longitude != null) {
             double centroidDistanceKm = routeCentroidDistanceKm(routePoints, latitude, longitude);
             double maxCentroidDistance = 50.0;
             if (centroidDistanceKm > maxCentroidDistance) {
-                return new AlignmentPlausibilityVerdict(
-                        false,
-                        "route centroid is %.1f km from the race location, which is too far".formatted(centroidDistanceKm)
-                );
+                return invalid("route centroid is %.1f km from the race location, which is too far".formatted(centroidDistanceKm));
             }
         }
         if (distanceKm != null && distanceKm > 0) {
             double routeDistanceKm = polylineDistanceKm(routePoints);
             RaceCourseMapService.AlignmentRatioWindow ratioWindow = new RaceCourseMapService.AlignmentRatioWindow(0.30, 3.0);
             if (routeDistanceKm < distanceKm * ratioWindow.minRatio() || routeDistanceKm > distanceKm * ratioWindow.maxRatio()) {
-                return new AlignmentPlausibilityVerdict(
-                        false,
-                        "route length %.1f km falls outside the coarse expected range for a %.1f km race".formatted(routeDistanceKm, distanceKm)
-                );
+                return invalid("route length %.1f km falls outside the coarse expected range for a %.1f km race".formatted(routeDistanceKm, distanceKm));
             }
             if (minimumRoutePoints >= MIN_ALIGNMENT_ROUTE_POINTS) {
                 RaceCourseMapService.AlignmentRatioWindow expectedWindow = expectedDistanceRatioWindow(distanceKm, routePoints.size());
                 if (routeDistanceKm < distanceKm * expectedWindow.minRatio() || routeDistanceKm > distanceKm * expectedWindow.maxRatio()) {
-                    return new AlignmentPlausibilityVerdict(
-                            false,
-                            "route length %.1f km falls outside the expected range for a %.1f km race".formatted(routeDistanceKm, distanceKm)
-                    );
+                    return invalid("route length %.1f km falls outside the expected range for a %.1f km race".formatted(routeDistanceKm, distanceKm));
                 }
             }
             double largestSegmentRatio = largestSegmentRatio(routePoints, routeDistanceKm);
             double maxLargestSegmentRatio = maxLargestSegmentRatio(routePoints.size(), minimumRoutePoints);
             if (largestSegmentRatio > maxLargestSegmentRatio) {
-                return new AlignmentPlausibilityVerdict(
-                        false,
-                        "one segment covers %.0f%% of the full route, which is too large".formatted(largestSegmentRatio * 100.0)
-                );
+                return invalid("one segment covers %.0f%% of the full route, which is too large".formatted(largestSegmentRatio * 100.0));
             }
         }
         RaceCourseMapService.RouteGeometryDiagnosis diagnosis = diagnoseRouteGeometry(routePoints, raceType, distanceKm);
         if (diagnosis.selfIntersectionCount() > diagnosis.allowedSelfIntersections()) {
-            return new AlignmentPlausibilityVerdict(
-                    false,
-                    "route crosses itself %d times, exceeding the %d allowed for %s".formatted(
-                            diagnosis.selfIntersectionCount(),
-                            diagnosis.allowedSelfIntersections(),
-                            raceType.promptValue()
-                    )
-            );
+            return invalid("route crosses itself %d times, exceeding the %d allowed for %s".formatted(
+                    diagnosis.selfIntersectionCount(),
+                    diagnosis.allowedSelfIntersections(),
+                    raceType.promptValue()
+            ));
         }
-        return new AlignmentPlausibilityVerdict(true, "alignment passed plausibility checks");
+        return valid("alignment passed plausibility checks");
     }
 
     public boolean isAlignmentPlausible(
@@ -434,6 +416,14 @@ public class RaceCourseMapGeometryService {
             return new RoutePoint(lat, lng, null);
         }
         return routePoints.get(routePoints.size() - 1);
+    }
+
+    public static AlignmentPlausibilityVerdict invalid(String reason) {
+        return new AlignmentPlausibilityVerdict(false, reason);
+    }
+
+    public static AlignmentPlausibilityVerdict valid(String reason) {
+        return new AlignmentPlausibilityVerdict(true, reason);
     }
 
     public record AlignmentPlausibilityVerdict(boolean plausible, String reason) {}

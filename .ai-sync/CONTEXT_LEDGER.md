@@ -177,12 +177,26 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Next Risk: Future audit cleanup could collapse the page back into the generic `DataTable` treatment, remove the status inference mapping and leave the terminal badges empty, or replace the dedicated audit terminal classes with shared table styles that lose the reference-driven hierarchy. If audit payload fields change, the trace/summary row formatting should be checked before assuming the terminal layout still reads clearly.
 - Rollback Target: `DV-2026-04-19-12`
 
-### AdminLogin
-- Goal: 
-- Changed: 
-- Preserve: 
-- Next Risk: 
-- Rollback Target: working tree before this round
+### StravaWebhookSecurity
+- Goal: Reject unauthenticated forged Strava webhook events by verifying owner_id maps to a known registered runner before processing.
+- Changed: Added synchronous `runnerRepository.findByStravaAthleteId(ownerId)` check in `StravaWebhookController.handleEvent()` that returns 403 UNKNOWN_OWNER for forged owner_ids before any async processing or resource consumption. The WebhookRateLimitFilter and async runner lookup remain as secondary boundaries.
+- Preserve: Keep the synchronous owner_id check as the primary auth gate. Keep WebhookRateLimitFilter as secondary. Keep identical response body for all password-reset paths.
+- Next Risk: If the webhook endpoint is refactored to add different auth mechanisms, ensure at least one gate remains. The 150ms timing delay in password reset may need adjustment if sendResetLink latency changes significantly.
+- Rollback Target: working tree before 2026-04-24 auto-hermes-max security round
+
+### PasswordResetEnumeration
+- Goal: Prevent user enumeration via timing differential in password reset endpoint.
+- Changed: Added 150ms Thread.sleep to the not-found path in `LoginController.requestPasswordReset()` to mask the observable latency from `sendResetLink()` on the found path. The response body was already identical for all paths.
+- Preserve: Keep the same generic response body for all paths. Keep the timing normalization delay active.
+- Next Risk: If email send latency changes significantly (e.g., switching providers), the fixed 150ms delay may not mask it. Consider making it configurable or adaptive.
+- Rollback Target: working tree before 2026-04-24 auto-hermes-max security round
+
+### AiShoeScanService
+- Goal: Reduce ShoeImageController size by extracting AI provider communication into a focused service.
+- Changed: Created `AiShoeScanService` with `callGemini` and `callClaude` methods + `SHOE_PROMPT` constant. Updated `ShoeImageController` to inject and delegate. Controller reduced from 652 to ~555 lines.
+- Preserve: Keep `AiShoeScanService.callAi(base64, mediaType)` as the single entry point. Keep `shoeprovider` routing inside the service, not the controller.
+- Next Risk: If new AI providers are added, they should go into `AiShoeScanService`, not back into the controller.
+- Rollback Target: working tree before 2026-04-24 auto-hermes-max tech-debt round
 
 ### dashboard
 - Goal: Keep `/dashboard/jobs` as a route-driven operator page while making it read like a true jobs command deck instead of a generic filter row plus table.
