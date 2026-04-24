@@ -1,0 +1,41 @@
+{
+  "laneId": "lane-shoes-rotation-trust",
+  "goal": "Strengthen /shoes so the recommendation strip explains today's shoe pick with concrete rotation evidence and shows a clear owned fallback when Hermes cannot confidently recommend a pair.",
+  "ownedFiles": [
+    "frontend/src/pages/Shoes.jsx"
+  ],
+  "changedFiles": [
+    "frontend/src/pages/Shoes.jsx",
+    ".ai-sync/auto-hermes-max-results/lane-shoes-rotation-trust.activity.json",
+    ".ai-sync/auto-hermes-max-results/lane-shoes-rotation-trust.json"
+  ],
+  "completedRounds": [
+    {
+      "task": "Rewrite the existing rotation signal section to use owned-fallback logic and explain the pick with last worn, recent tagged usage, and mileage left.",
+      "verification": "cd frontend && npm run lint (passed)",
+      "changedFiles": [
+        "frontend/src/pages/Shoes.jsx"
+      ]
+    }
+  ],
+  "verification": [
+    {
+      "command": "cd frontend && npm run lint",
+      "result": "passed"
+    }
+  ],
+  "runtimeProof": "not-run (per lane brief, parent coordinator handles frontend build/runtime sync before any live claim)",
+  "risks": [
+    "The fallback state is intentionally route-local and string-local inside Shoes.jsx because shared translation files were out of scope for this lane.",
+    "No build or browser runtime proof was run in this lane; only lint verification was requested and completed."
+  ],
+  "mustPreserve": [
+    "Keep the recommendation strip route-local to frontend/src/pages/Shoes.jsx unless the parent coordinator explicitly widens scope.",
+    "Keep the current premium Hermes shell language and avoid generic bordered dashboard treatment in the strip.",
+    "Keep the fallback grounded in owned shoe data and recent tagged-run evidence rather than restoring the old vague external recommendation path."
+  ],
+  "mergeNotes": "Changed the /shoes rotation strip to call buildRecentShoeSignal with preferOwnedFallback, suppress the old external recommend fallback, compute route-local evidence from recent tagged runs plus all-time shoe usage, and rewrite the strip copy/meta to surface last worn, recent usage, and mileage left. No shared CSS, translations, backend files, or util files were edited.",
+  "status": "approved",
+  "parentRunId": "ahm-20260416110626",
+  "correlationId": "ahm-20260416110626:lane-shoes-rotation-trust"
+}

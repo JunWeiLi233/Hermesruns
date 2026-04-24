@@ -1,0 +1,307 @@
+{
+  "report": "Pricing Engineer",
+  "generated": "2026-04-24",
+  "marketSegment": "Self-hosted running analytics and coaching platforms",
+  "competitorPricing": [
+    {
+      "competitor": "Strava",
+      "model": "Freemium/Subscription",
+      "tiers": [
+        {
+          "name": "Free",
+          "price": "$0/month",
+          "features": [
+            "Record and share activities",
+            "Basic stats (pace, distance, elevation)",
+            "Segment leaderboards",
+            "Community feeds"
+          ],
+          "sourceUrl": "https://www.strava.com/pricing"
+        },
+        {
+          "name": "Premium",
+          "price": "$11.99/month or $79.99/year",
+          "features": [
+            "Route planning & turn-by-turn",
+            "Live segments",
+            "Training plans",
+            "Personalized coaching (Suffer Score, Relative Effort)",
+            "Advanced performance analysis",
+            "Beacon safety feature",
+            "All Free features"
+          ],
+          "sourceUrl": "https://www.strava.com/pricing"
+        },
+        {
+          "name": "Family Plan",
+          "price": "$139.99/year",
+          "features": [
+            "All Premium features for up to 3 members",
+            "Shared billing"
+          ],
+          "sourceUrl": "https://www.strava.com/pricing"
+        },
+        {
+          "name": "Strava + Runna",
+          "price": "$149.99/year",
+          "features": [
+            "Strava Premium",
+            "Runna training plans"
+          ],
+          "sourceUrl": "https://www.strava.com/pricing"
+        }
+      ]
+    },
+    {
+      "competitor": "TrainingPeaks",
+      "model": "Freemium/Subscription + Coaching Marketplace",
+      "tiers": [
+        {
+          "name": "Free",
+          "price": "$0/month",
+          "features": [
+            "Basic workout calendar",
+            "Manual activity entry",
+            "Basic library access"
+          ],
+          "sourceUrl": "https://www.trainingpeaks.com/pricing/"
+        },
+        {
+          "name": "Premium (Monthly)",
+          "price": "$19.95/month",
+          "features": [
+            "Sync planned workouts to device",
+            "Weekly fitness summary",
+            "Planning tools",
+            "Analyze workouts & track fitness",
+            "Strength training tools",
+            "TrainingPeaks Virtual indoor training",
+            "Peak Performances tracking",
+            "Coach communication"
+          ],
+          "sourceUrl": "https://www.trainingpeaks.com/pricing/"
+        },
+        {
+          "name": "Premium (Annual)",
+          "price": "$134.99/year ($11.25/month)",
+          "features": [
+            "All Premium features",
+            "44% savings vs monthly"
+          ],
+          "sourceUrl": "https://www.trainingpeaks.com/pricing/"
+        }
+      ]
+    },
+    {
+      "competitor": "Runalyze",
+      "model": "Freemium/Subscription",
+      "tiers": [
+        {
+          "name": "Free",
+          "price": "€0",
+          "features": [
+            "Automatic sync",
+            "Performance monitor",
+            "Effective VO2max",
+            "Performance curves",
+            "Individual sports, tags, equipment",
+            "Colored tracks",
+            "Progression graph"
+          ],
+          "sourceUrl": "https://runalyze.com/pricing"
+        },
+        {
+          "name": "Supporter",
+          "price": "€2.50/month or €27.50/year",
+          "features": [
+            "Ad-free",
+            "Beta features early access",
+            "Supporting RUNALYZE",
+            "3% merchandise discount"
+          ],
+          "sourceUrl": "https://runalyze.com/pricing"
+        },
+        {
+          "name": "Early Premium",
+          "price": "€5.50/month or €60/year",
+          "features": [
+            "Quality sessions analysis",
+            "Best segments analysis",
+            "Moving average mileage analysis",
+            "Geo explorer: tiles counter",
+            "Recurring routes",
+            "Personal route map",
+            "Streaks view",
+            "Historic HRV values",
+            "Poster generator",
+            "Map layers",
+            "5% merchandise discount",
+            "All Supporter features"
+          ],
+          "sourceUrl": "https://runalyze.com/pricing"
+        }
+      ]
+    },
+    {
+      "competitor": "VeloViewer",
+      "model": "Freemium/Subscription",
+      "tiers": [
+        {
+          "name": "Free",
+          "price": "$0 (limited to 25 activities, 250 segments)",
+          "features": [
+            "One-off sync of 25 most recent activities",
+            "250 segments from those activities",
+            "Access to all feature interfaces with limited data",
+            "Public leaderboard access (100 Climbs, Everesting, etc.)"
+          ],
+          "sourceUrl": "https://blog.veloviewer.com/veloviewer-free-vs-pro/"
+        },
+        {
+          "name": "PRO",
+          "price": "£10/year (~$15)",
+          "features": [
+            "Full Strava history sync",
+            "Filterable lists, maps, charts of all activities",
+            "Filterable segment lists and maps",
+            "Activity Wheel for all past adventures",
+            "All core VeloViewer features unlocked"
+          ],
+          "sourceUrl": "https://blog.veloviewer.com/veloviewer-free-vs-pro/"
+        },
+        {
+          "name": "PRO+",
+          "price": "£20/year (~$30)",
+          "features": [
+            "All PRO features",
+            "Unlimited segment placing checks",
+            "Unlimited new segment scanning",
+            "Early access to beta functionality"
+          ],
+          "sourceUrl": "https://blog.veloviewer.com/veloviewer-free-vs-pro/"
+        }
+      ]
+    },
+    {
+      "competitor": "Intervals.icu",
+      "model": "Freemium/Subscription",
+      "tiers": [
+        {
+          "name": "Free",
+          "price": "$0 forever",
+          "features": [
+            "Fitness, fatigue & form tracking",
+            "Activity analysis & interval detection",
+            "Training calendar & workout builder",
+            "Power curve & HR analytics",
+            "Multisport support",
+            "Device & platform integrations",
+            "Custom charts"
+          ],
+          "sourceUrl": "https://intervals.icu"
+        },
+        {
+          "name": "Supporter",
+          "price": "$4/month",
+          "features": [
+            "Advanced weather analysis",
+            "Annual training plan builder",
+            "Import full Strava history",
+            "Route matching, auto-flag commutes",
+            "Custom activity summary",
+            "Completely custom zones",
+            "Upload CSV activity stream data",
+            "Teams and coaching organizations",
+            "Bulk configure athletes",
+            "Early access to beta features",
+            "Priority feature requests"
+          ],
+          "sourceUrl": "https://intervals.icu"
+        }
+      ]
+    },
+    {
+      "competitor": "TrainerRoad",
+      "model": "Subscription-only",
+      "tiers": [
+        {
+          "name": "Monthly",
+          "price": "$21.99/month",
+          "features": [
+            "AI-powered training plans",
+            "Structured workouts",
+            "FTP detection by AI",
+            "Fatigue prevention",
+            "Machine learning optimization",
+            "Daily training recommendations",
+            "Interactive training calendar",
+            "Ride analysis tools",
+            "Group workouts",
+            "Indoor & outdoor training"
+          ],
+          "sourceUrl": "https://www.trainerroad.com/pricing"
+        },
+        {
+          "name": "Annual",
+          "price": "$209.99/year ($17.45/month)",
+          "features": [
+            "All Monthly features",
+            "20% savings vs monthly"
+          ],
+          "sourceUrl": "https://www.trainerroad.com/pricing"
+        }
+      ]
+    }
+  ],
+  "recommendedPricing": {
+    "current": "Free tier + Pro subscription at $5-10/month",
+    "suggested": "Freemium 3-tier model: Free (core tracking, limited history) → Pro at $8/month or $79/year (full analytics, VDOT science, daily training recs, injury prediction) → Family/Team at $12/month or $119/year (multiple athletes, coach view)",
+    "rationale": "Strava's $11.99/mo sets the ceiling for general fitness platforms. Runalyze (€5.50/mo premium) and Intervals.icu ($4/mo supporter) prove that analytics-heavy platforms succeed with lower price points. At $8/mo Hermes undercuts Strava by 33% while offering superior running-specific analytics (VDOT, injury prediction) — justifying the premium over Intervals.icu's $4/mo. Annual pricing at $79/year matches the psychological anchor of 'under $100/year' that VeloViewer uses. A Family/Team tier creates expansion revenue without new feature development.",
+    "ltvEstimate": "At $8/mo with 24-month average retention: ~$192 LTV per Pro user. At $79/yr annual: ~$158 LTV at 2yr. For self-hosted instances, add $0-5/mo hosting surcharge or a one-time license fee alternative ($199 lifetime)."
+  },
+  "monetizationOpportunities": [
+    {
+      "opportunity": "Self-hosted license fee — one-time charge for installing on own infrastructure",
+      "potentialRevenue": "$199-499 one-time per instance",
+      "effort": "Low"
+    },
+    {
+      "opportunity": "Team/Club plan — group billing for running clubs with coach dashboard",
+      "potentialRevenue": "$12-15/month per club or $99-149/year",
+      "effort": "Medium"
+    },
+    {
+      "opportunity": "Premium shoe wear analytics — deep shoe mileage tracking, replacement alerts, brand recommendations (affiliate)",
+      "potentialRevenue": "$2-5/month add-on + affiliate commissions (~5-10% per shoe sale)",
+      "effort": "Low"
+    },
+    {
+      "opportunity": "Training plan marketplace — one-time purchase plans from coaches (similar to TrainingPeaks coaching marketplace)",
+      "potentialRevenue": "$10-50 per plan, 70% creator / 30% platform split",
+      "effort": "Medium"
+    },
+    {
+      "opportunity": "Physio/clinic integration — injury prediction reports for healthcare providers",
+      "potentialRevenue": "$20-50/month per provider",
+      "effort": "High"
+    },
+    {
+      "opportunity": "API access for third-party developers",
+      "potentialRevenue": "$10-25/month per API key, tiered by rate limits",
+      "effort": "Medium"
+    },
+    {
+      "opportunity": "White-label for coaching businesses — branded instance for coaches to give to their athletes",
+      "potentialRevenue": "$29-49/month per coach (up to 50 athletes included)",
+      "effort": "Medium"
+    }
+  ],
+  "sources": [
+    "https://www.strava.com/pricing",
+    "https://www.trainingpeaks.com/pricing/",
+    "https://runalyze.com/pricing",
+    "https://blog.veloviewer.com/veloviewer-free-vs-pro/",
+    "https://intervals.icu",
+    "https://www.trainerroad.com/pricing"
+  ]
+}

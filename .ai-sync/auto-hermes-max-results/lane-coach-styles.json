@@ -1,0 +1,25 @@
+﻿{
+    "laneId":  "lane-coach-styles",
+    "goal":  "Add Garmin Coach-inspired visual treatment for the coach-insight surface with a coach-system hierarchy while preserving Hermes deep-dark editorial styling and other analysis detail variants.",
+    "ownedFiles":  [
+                       "frontend/src/styles/style.css"
+                   ],
+    "changedFiles":  [
+                         "frontend/src/styles/style.css"
+                     ],
+    "verification":  "git diff --check passed; scoped CSS readback confirms page-scoped coach styling and responsive overrides only under .analysis-insight-detail-page.",
+    "runtimeProof":  "not run; stylesheet-only lane, no JSX/runtime changes.",
+    "risks":  [
+                  "If the page markup does not include .analysis-insight-detail-page, the new coach treatment will not activate.",
+                  "The existing shared analysis-insight selectors remain untouched, but downstream markup should expose the expected analysis-insight class hooks."
+              ],
+    "mustPreserve":  [
+                         "Existing injury, load, and intensity detail layouts",
+                         "Hermes deep-dark editorial design language",
+                         "Shared analysis shell behavior and non-coach insight routes"
+                     ],
+    "mergeNotes":  "Expected class hooks from the page lane: .analysis-insight-detail-page, .analysis-insight-intro-card, .analysis-insight-summary-grid, .analysis-insight-metric-grid, .analysis-insight-signal-grid, .analysis-insight-panel, .analysis-insight-run-row.",
+    "status":  "approved",
+    "parentRunId":  "not-provided-in-thread",
+    "correlationId":  "lane-coach-styles-20260412-01"
+}

@@ -1,0 +1,192 @@
+{
+  "generated": "2026-04-24",
+  "marketSegment": "Self-hosted running analytics and coaching platforms",
+  "tam": {
+    "value": "$12.12B (2025), projected $33.58B by 2033",
+    "cagr": "13.4%",
+    "source": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market"
+  },
+  "sam": {
+    "value": "~$2.5B (running-specific analytics and coaching)",
+    "source": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market"
+  },
+  "som": {
+    "value": "~$75-125M (self-hosted niche)",
+    "source": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market"
+  },
+  "topCompetitors": [
+    {
+      "name": "Strava",
+      "threat": "High",
+      "position": "Dominant social fitness network (120M+ users), IPO-bound. Lacks VDOT science, injury prediction, self-hosted.",
+      "pricing": "$79.99/yr or $11.99/mo"
+    },
+    {
+      "name": "Runalyze",
+      "threat": "Medium",
+      "position": "Closest feature competitor — Effective VO2max, shoe tracking, race prediction. SaaS-only, no injury prediction or daily recs.",
+      "pricing": "Free / Supporter €2.50/mo / Premium €5.50/mo"
+    },
+    {
+      "name": "TrainingPeaks",
+      "threat": "Medium",
+      "position": "Gold standard for coach-athlete workflow. No running-specific physiology models, no self-hosted.",
+      "pricing": "$134.99/yr Premium"
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "opp-1",
+      "title": "Self-hosted deployment as core differentiator",
+      "score": 10,
+      "rationale": "Zero competitors offer self-hosted deployment. Privacy concerns rising (Strava oversharing campaign, Garmin Connect+ backlash). r/selfhosted has 748K subscribers explicitly wanting fitness analytics. This is Hermes' strongest moat.",
+      "effort": "Already implemented — maintain and document",
+      "sourceUrls": [
+        "https://press.strava.com/articles/in-a-world-of-digital-oversharing-strava-is-remembering-users-that-some",
+        "https://www.reddit.com/r/selfhosted/about.json"
+      ]
+    },
+    {
+      "id": "opp-2",
+      "title": "One-command Docker deployment for non-technical users",
+      "score": 9,
+      "rationale": "Social signal shows non-technical users want self-hosted fitness analytics but are blocked by Docker/Linux expertise. Lowering this barrier expands SOM significantly.",
+      "effort": "Medium — compose file, documentation, guided setup",
+      "sourceUrls": [
+        "https://www.reddit.com/r/Garmin/comments/1k9dmf5/garmin_grafana_made_easy_install_with_one_command/"
+      ]
+    },
+    {
+      "id": "opp-3",
+      "title": "VDOT science + daily training recommendations as premium differentiator",
+      "score": 9,
+      "rationale": "No competitor implements Jack Daniels' VDOT model for automated daily training. Users want science-backed, actionable guidance — not just raw data. This is a clear positioning gap.",
+      "effort": "Already implemented — refine UI and onboarding",
+      "sourceUrls": [
+        "https://en.wikipedia.org/wiki/VO2_max",
+        "https://www.runnersworld.com/gear/a60891571/can-your-garmin-watch-replace-a-coach/"
+      ]
+    },
+    {
+      "id": "opp-4",
+      "title": "SEO content strategy targeting 'Strava alternative' and 'self-hosted fitness' keywords",
+      "score": 8,
+      "rationale": "'Strava alternative' has 27K monthly searches with low competition for open-source/self-hosted variants. 'Self-hosted fitness tracker' (1.6K/mo, low difficulty). Creating comparison guides and free tools could drive significant organic traffic.",
+      "effort": "Medium — blog posts, free VDOT calculator, comparison pages",
+      "sourceUrls": [
+        "https://alternativeto.net/software/strava/"
+      ]
+    },
+    {
+      "id": "opp-5",
+      "title": "Predictive injury risk scoring (training load + HRV + biomechanics)",
+      "score": 8,
+      "rationale": "No competitor offers predictive injury analytics — only reactive tracking (Final Surge PAIR) or readiness scores (WHOOP, Garmin). ACWR + cadence drift + cardiac drift modeling is unique. Users actively want injury prevention signals.",
+      "effort": "Already partially implemented — promote and validate",
+      "sourceUrls": [
+        "https://www.whoop.com/thelocker/heart-rate-variability-hrv/",
+        "https://www.reddit.com/r/running/about.json"
+      ]
+    },
+    {
+      "id": "opp-6",
+      "title": "Go-to-market as 'privacy-first running analytics'",
+      "score": 7,
+      "rationale": "Data sovereignty sentiment is surging (Garmin 'don't become Fitbit' post has 2K+ upvotes). Strava's own privacy campaigns confirm user concern. 'Privacy focused fitness tracker' has 900 monthly searches with low SEO difficulty. Position as the self-hosted, no-spyware alternative.",
+      "effort": "Low — positioning and landing page copy",
+      "sourceUrls": [
+        "https://www.reddit.com/r/Garmin/comments/1lt4j03/garmin_dont_become_like_fitbit_we_didnt_buy_your/",
+        "https://press.strava.com/articles/in-a-world-of-digital-oversharing-strava-is-remembering-users-that-some"
+      ]
+    },
+    {
+      "id": "opp-7",
+      "title": "Shoe tracking with predictive mileage alerts and brand recommendations",
+      "score": 7,
+      "rationale": "Runalyze tracks shoe mileage but lacks proactive replacement alerts. Shoe-health correlation with performance is unique. Low effort to enhance existing feature. Potential for affiliate revenue.",
+      "effort": "Low — enhance existing shoe tracking",
+      "sourceUrls": [
+        "https://runalyze.com/pricing"
+      ]
+    },
+    {
+      "id": "opp-8",
+      "title": "3-tier pricing: Free → Pro $8/mo ($79/yr) → Team $12/mo",
+      "score": 7,
+      "rationale": "Strava at $11.99/mo sets ceiling. Runalyze at €5.50/mo proves analytics-heavy platforms succeed at lower tiers. $8/mo undercuts Strava by 33% while justifying premium over Intervals.icu ($4/mo). Annual $79/yr matches 'under $100' psychological anchor. Team tier creates expansion revenue.",
+      "effort": "Low — pricing config change",
+      "sourceUrls": [
+        "https://www.strava.com/pricing",
+        "https://runalyze.com/pricing",
+        "https://intervals.icu"
+      ]
+    },
+    {
+      "id": "opp-9",
+      "title": "Free interactive VDOT calculator as SEO lead magnet",
+      "score": 6,
+      "rationale": "'VDOT training calculator' has 4.8K monthly searches with medium difficulty. A free, embeddable tool would attract high-intent traffic, earn backlinks, and showcase Hermes' science accuracy. Tool-based SEO is a proven link-building strategy.",
+      "effort": "Low — single-page tool widget",
+      "sourceUrls": [
+        "https://www.runnersworld.com/races-places/a20855451/how-many-miles-is-a-5k/"
+      ]
+    },
+    {
+      "id": "opp-10",
+      "title": "Integration with Apple Watch and COROS beyond Garmin",
+      "score": 6,
+      "rationale": "Wearables market growing at 12.1% CAGR ($92.9B). COROS is 3rd in GPS watches and growing fast. Apple Watch has largest smartwatch base. Vendor-agnostic import is a strong differentiator from Garmin Connect (Garmin-only). Currently Hermes syncs best with Garmin.",
+      "effort": "Medium — API integrations",
+      "sourceUrls": [
+        "https://www.grandviewresearch.com/industry-analysis/wearable-technology-market"
+      ]
+    },
+    {
+      "id": "opp-11",
+      "title": "Cross-training load unification across sports",
+      "score": 6,
+      "rationale": "Racket sports +67%, strength +29%, HIIT +45% growth. No platform unifies running + strength + other sports into one body-load score. Users currently wear Whoop + Garmin simultaneously.",
+      "effort": "High — new modeling",
+      "sourceUrls": [
+        "https://www.wareable.com/garmin/garmin-2025-connect-fitness-report-key-takeaways"
+      ]
+    },
+    {
+      "id": "opp-12",
+      "title": "White-label for coaching businesses (branded Hermes instances)",
+      "score": 6,
+      "rationale": "Coaches pay $50-200+/mo for athletic platforms. Self-hosted white-label instance with 50 athletes included at $29-49/mo could capture coaching market. TrainingPeaks lacks self-hosted. Final Surge lacks VDOT science.",
+      "effort": "Medium — multi-tenant architecture, billing",
+      "sourceUrls": [
+        "https://www.trainingpeaks.com/pricing/",
+        "https://www.finalsurge.com/pricing"
+      ]
+    },
+    {
+      "id": "opp-13",
+      "title": "Programmatic SEO for race-specific training pages",
+      "score": 5,
+      "rationale": "City + marathon training content (e.g., 'Boston Marathon training with analytics') targets race-seasonal search traffic. Low effort per page with template approach. Limited by domain authority.",
+      "effort": "Low — template pages",
+      "sourceUrls": []
+    },
+    {
+      "id": "opp-14",
+      "title": "Training plan marketplace with coach-created plans",
+      "score": 5,
+      "rationale": "Additional revenue stream via 70/30 creator split. TrainingPeaks model validated. Requires critical mass of coach users first. Low priority until user base grows.",
+      "effort": "High — marketplace infrastructure",
+      "sourceUrls": [
+        "https://www.trainingpeaks.com/pricing/"
+      ]
+    },
+    {
+      "id": "opp-15",
+      "title": "Physio/clinic integration for injury prediction reports",
+      "score": 4,
+      "rationale": "B2B revenue opportunity but requires HIPAA compliance, clinical validation, and sales team. High effort for uncertain return at current stage.",
+      "effort": "High — compliance, validation, sales",
+      "sourceUrls": []
+    }
+  ]
+}

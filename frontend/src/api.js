@@ -35,7 +35,13 @@ export async function apiJson(url, options = {}) {
   const contentType = response.headers.get('content-type') || '';
   const data = contentType.includes('application/json') ? await response.json() : {};
   if (!response.ok) {
-    throw new Error(data.error || data.message || 'Request failed');
+    const error = new Error(data.error || data.message || 'Request failed');
+    error.status = response.status;
+    const retryAfter = response.headers.get('retry-after');
+    if (retryAfter) {
+      error.retryAfter = retryAfter;
+    }
+    throw error;
   }
   return data;
 }

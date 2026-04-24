@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-04-24T00:00:00.000Z",
+  "iteration": 1,
+  "maxIterations": 3,
+  "parentGoal": "Security fixes + backend tech debt batch",
+  "lanes": [
+    {
+      "id": "lane-1-strava-webhook",
+      "scope": "Fix Strava webhook to reject unauthenticated forged activity events",
+      "files": ["backend/src/main/java/com/hermes/backend/StravaWebhookController.java"],
+      "status": "pending",
+      "priority": 1,
+      "effort": "medium"
+    },
+    {
+      "id": "lane-2-password-reset",
+      "scope": "Fix password reset endpoint to prevent user enumeration",
+      "files": ["backend/src/main/java/com/hermes/backend/LoginController.java"],
+      "status": "pending",
+      "priority": 2,
+      "effort": "small"
+    },
+    {
+      "id": "lane-3-tech-debt",
+      "scope": "Batch backend tech debt: Activity tests, ShoeImageController split, AdminPortalService deps",
+      "files": [
+        "backend/src/main/java/com/hermes/backend/Activity.java",
+        "backend/src/test/java/com/hermes/backend/ActivityTests.java",
+        "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+        "backend/src/main/java/com/hermes/backend/AdminPortalService.java"
+      ],
+      "status": "pending",
+      "priority": 3,
+      "effort": "medium"
+    }
+  ]
+}

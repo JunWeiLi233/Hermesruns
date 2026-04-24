@@ -1,0 +1,11 @@
+{
+  "mode": "auto-hermes",
+  "active": true,
+  "currentPhase": "grounding",
+  "startedAt": "2026-04-18T17:19:10.269Z",
+  "completedAt": "",
+  "runId": "ah-20260418171908",
+  "status": "dry-run-complete",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ah-20260418171908.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-state/ah-20260418171908-progress.json"
+}

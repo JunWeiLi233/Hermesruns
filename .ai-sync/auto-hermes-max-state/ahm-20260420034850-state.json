@@ -1,0 +1,13 @@
+{
+  "mode": "auto-hermes-max",
+  "active": true,
+  "iteration": 1,
+  "maxIterations": 10,
+  "currentPhase": "executing",
+  "startedAt": "2026-04-20T03:48:50.583Z",
+  "completedAt": null,
+  "runId": "ahm-20260420034850",
+  "parentGoal": "[Market Opportunity] Coach-Voice Weekly Summary on Weekly Summary",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ahm-20260420034850.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-max-state/ahm-20260420034850-progress.json"
+}

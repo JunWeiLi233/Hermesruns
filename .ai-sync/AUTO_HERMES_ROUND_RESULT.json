@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-04-19T01:09:50.916Z",
+  "key": "profile-fix-profile-empty-state",
+  "task": "Fix Profile empty state",
+  "surface": "Profile",
+  "verdict": "must-fix",
+  "review": "ralph-gate-must-fix",
+  "verify": "`cd frontend && npm run lint && npm run build`",
+  "verifyResult": "pass",
+  "runtimeProof": "source changed, live website not synced yet",
+  "ralphGate": {
+    "pass": false,
+    "summary": "Missing required Ralph completion evidence: architect approval, deslop pass, post-deslop regression verification.",
+    "failures": [
+      "architect approval",
+      "deslop pass",
+      "post-deslop regression verification"
+    ],
+    "gates": {
+      "verification": "pass",
+      "architectReview": "missing",
+      "deslop": "missing",
+      "regression": "missing"
+    },
+    "raw": {
+      "verify": "`cd frontend && npm run lint && npm run build`",
+      "verifyResult": "pass",
+      "architectVerdict": "",
+      "deslopPass": "",
+      "regressionPass": ""
+    }
+  }
+}

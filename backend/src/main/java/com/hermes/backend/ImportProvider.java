@@ -4,5 +4,7 @@ public enum ImportProvider {
     STRAVA,
     GARMIN,
     COROS,
-    HUAWEI
+    HUAWEI,
+    APPLE_HEALTH,
+    GOOGLE_HEALTH
 }

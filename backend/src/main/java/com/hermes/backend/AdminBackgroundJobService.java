@@ -1,11 +1,14 @@
 package com.hermes.backend;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.type.TypeFactory;
 
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -13,6 +16,7 @@ import java.util.concurrent.Executors;
 @Service
 public class AdminBackgroundJobService {
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final int MAX_SUMMARY_LENGTH = 240;
 
     private final AdminBackgroundJobRepository adminBackgroundJobRepository;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -25,7 +29,7 @@ public class AdminBackgroundJobService {
         AdminBackgroundJob job = new AdminBackgroundJob();
         job.setJobType(type);
         job.setTriggerSource(triggerSource);
-        job.setSummary(summary);
+        job.setSummary(truncateSummary(summary));
         if (actor != null) {
             job.setCreatedByRunnerId(actor.getId());
             job.setCreatedByEmail(actor.getEmail());
@@ -46,7 +50,12 @@ public class AdminBackgroundJobService {
         job.setFinishedAt(LocalDateTime.now());
         job.setSuccessCount(successCount);
         job.setFailureCount(failureCount);
-        job.setSummary(summary);
+        job.setSummary(truncateSummary(summary));
+        job.setDetailsJson(writeJson(details));
+        adminBackgroundJobRepository.save(job);
+    }
+
+    public void updateDetails(AdminBackgroundJob job, Map<String, Object> details) {
         job.setDetailsJson(writeJson(details));
         adminBackgroundJobRepository.save(job);
     }
@@ -56,12 +65,39 @@ public class AdminBackgroundJobService {
         executor.submit(task);
     }
 
+    public List<CourseMapScanStep> getCourseMapScanTimeline(String raceId) {
+        List<AdminBackgroundJob> recent = adminBackgroundJobRepository.findTop5ByJobTypeInOrderByCreatedAtDesc(
+                List.of("COURSE_MAP_PREVIEW_REANALYZE", "COURSE_MAP_PREVIEW_UPLOAD"));
+        for (AdminBackgroundJob job : recent) {
+            if (job.getDetailsJson() == null || job.getDetailsJson().isBlank()) continue;
+            try {
+                Map<String, Object> details = JSON.readValue(job.getDetailsJson(), TypeFactory.defaultInstance().constructMapType(LinkedHashMap.class, String.class, Object.class));
+                Object raceIdValue = details.get("raceId");
+                if (raceIdValue != null && raceId.equals(String.valueOf(raceIdValue))) {
+                    Object steps = details.get("qwenScanSteps");
+                    if (steps instanceof List<?> rawSteps && !rawSteps.isEmpty()) {
+                        return JSON.convertValue(rawSteps, TypeFactory.defaultInstance().constructCollectionType(List.class, CourseMapScanStep.class));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return List.of();
+    }
+
     private String writeJson(Map<String, Object> details) {
         try {
             return JSON.writeValueAsString(details == null ? Map.of() : new LinkedHashMap<>(details));
         } catch (Exception ex) {
             return "{}";
         }
+    }
+
+    private String truncateSummary(String summary) {
+        if (summary == null || summary.length() <= MAX_SUMMARY_LENGTH) {
+            return summary;
+        }
+        return summary.substring(0, MAX_SUMMARY_LENGTH - 3) + "...";
     }
 
     @PreDestroy

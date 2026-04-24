@@ -21,6 +21,7 @@ public class ImportController {
     private final ActivityImportService activityImportService;
 
     private static final long MAX_UPLOAD_BYTES = 20L * 1024L * 1024L; // 20MB
+    private static final int MAX_BATCH_FILES = 50;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("gpx", "tcx", "fit", "zip");
 
     public ImportController(AuthService authService, ActivityImportService activityImportService) {
@@ -57,7 +58,6 @@ public class ImportController {
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
             throw new IllegalArgumentException("Unsupported upload file type.");
         }
-        // Provider-specific validation (if needed) happens in ActivityImportService.
     }
 
     @PostMapping(path = "/files", consumes = "multipart/form-data")
@@ -124,42 +124,66 @@ public class ImportController {
             return error(HttpStatus.BAD_REQUEST, "Please choose at least one GPX, TCX, FIT, or ZIP file.");
         }
 
+        long totalFiles = g.stream().filter(f -> f != null && !f.isEmpty()).count()
+                + c.stream().filter(f -> f != null && !f.isEmpty()).count()
+                + h.stream().filter(f -> f != null && !f.isEmpty()).count();
+        if (totalFiles > MAX_BATCH_FILES) {
+            return error(HttpStatus.BAD_REQUEST,
+                    "Batch limit is " + MAX_BATCH_FILES + " files. Please split your import into smaller batches.");
+        }
+
         ImportResult aggregate = ImportResult.empty("IMPORT", "Batch import completed.");
-        List<String> errors = new ArrayList<>();
 
         for (MultipartFile file : g) {
             if (file == null || file.isEmpty()) continue;
+            String filename = safeFilename(file);
             try {
                 validateUploadFile(file, "GARMIN");
                 aggregate = aggregate.merge(activityImportService.importFile(runner, ImportProvider.GARMIN, file));
             } catch (IllegalArgumentException ex) {
-                errors.add(ex.getMessage());
+                aggregate = aggregate.withRejection(filename, ex.getMessage());
+            } catch (Exception ex) {
+                aggregate = aggregate.withRejection(filename, "Import failed.");
             }
         }
         for (MultipartFile file : c) {
             if (file == null || file.isEmpty()) continue;
+            String filename = safeFilename(file);
             try {
                 validateUploadFile(file, "COROS");
                 aggregate = aggregate.merge(activityImportService.importFile(runner, ImportProvider.COROS, file));
             } catch (IllegalArgumentException ex) {
-                errors.add(ex.getMessage());
+                aggregate = aggregate.withRejection(filename, ex.getMessage());
+            } catch (Exception ex) {
+                aggregate = aggregate.withRejection(filename, "Import failed.");
             }
         }
         for (MultipartFile file : h) {
             if (file == null || file.isEmpty()) continue;
+            String filename = safeFilename(file);
             try {
                 validateUploadFile(file, "HUAWEI");
                 aggregate = aggregate.merge(activityImportService.importFile(runner, ImportProvider.HUAWEI, file));
             } catch (IllegalArgumentException ex) {
-                errors.add(ex.getMessage());
+                aggregate = aggregate.withRejection(filename, ex.getMessage());
+            } catch (Exception ex) {
+                aggregate = aggregate.withRejection(filename, "Import failed.");
             }
         }
 
-        if (aggregate.importedActivities() == 0 && !errors.isEmpty()) {
-            return error(HttpStatus.BAD_REQUEST, errors.get(0));
+        if (aggregate.importedActivities() == 0 && !aggregate.rejectedFiles().isEmpty()) {
+            return error(HttpStatus.BAD_REQUEST, aggregate.rejectedFiles().get(0));
         }
 
         return ResponseEntity.ok(aggregate);
+    }
+
+    private static String safeFilename(MultipartFile file) {
+        String name = file.getOriginalFilename();
+        if (name == null || name.isBlank()) return "unknown";
+        name = name.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        return slash >= 0 ? name.substring(slash + 1) : name;
     }
 
     private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {

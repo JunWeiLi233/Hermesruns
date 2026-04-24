@@ -1,0 +1,236 @@
+{
+  "report": "Social Signal",
+  "generatedAt": "2026-04-24T00:00:00.000Z",
+  "status": "complete",
+  "subreddits": [
+    {
+      "name": "r/advancedrunning",
+      "size": "473,123 subscribers",
+      "sentiment": "Positive toward deep analytics and training tools; negative toward generic cookie-cutter plans",
+      "commonComplaints": [
+        "Training tools lack customization for individual physiology",
+        "Existing platforms don't handle heat/humidity adjustments well",
+        "Race predictors overestimate capability",
+        "Limited statistical analysis of training data"
+      ],
+      "commonRequests": [
+        "Custom pace calculators with HR zone integration",
+        "Heat-adjusted pace tools",
+        "Data-driven training plan analysis",
+        "Race equivalency calculators across conditions",
+        "Marathon cutoff time prediction models"
+      ],
+      "sourceUrl": "https://www.reddit.com/r/advancedrunning/about.json"
+    },
+    {
+      "name": "r/running",
+      "size": "4,207,447 subscribers",
+      "sentiment": "Mixed; enthusiastic about tracking but frustrated with paywalls and shallow analytics",
+      "commonComplaints": [
+        "No app tells you when to rest based on HRV and load",
+        "Race predictors feel dishonest — over-predict leading to blow-ups",
+        "Shoe mileage tracking is manual with no replacement alerts",
+        "Apps push paces even when overtrained"
+      ],
+      "commonRequests": [
+        "Daily run/rest/skip recommendations based on fatigue",
+        "Adaptive plans that adjust when you miss days",
+        "Injury prevention signals from training data",
+        "Actionable insights not just raw numbers"
+      ],
+      "sourceUrl": "https://www.reddit.com/r/running/about.json"
+    },
+    {
+      "name": "r/Strava",
+      "size": "195,298 subscribers",
+      "sentiment": "Negative toward subscription direction; positive toward third-party analytics tools",
+      "commonComplaints": [
+        "Subscription is getting harder to justify at $80/yr",
+        "Premium features like Relative Effort and Fitness charts feel vague and not actionable",
+        "Aggressive trial pop-ups pushing premium",
+        "Race predictor is wildly inaccurate",
+        "Goal tracking is lacking — no flexibility or day-off calculation",
+        "Route builder inferior to dedicated tools like Komoot/Gaia",
+        "AI route recommendations are untrustworthy (e.g. routing through water)"
+      ],
+      "commonRequests": [
+        "Self-hosted data export and analysis tools",
+        "Year-in-review stats without premium subscription",
+        "GPX export/fix tools for activities",
+        "AI-powered training insights (several users built their own)",
+        "Better goal tracking with day-off planning",
+        "Browser-based analysis tools for Strava data"
+      ],
+      "sourceUrl": "https://www.reddit.com/r/Strava/about.json"
+    },
+    {
+      "name": "r/Garmin",
+      "size": "659,055 subscribers",
+      "sentiment": "Strongly negative toward potential paywalls; positive toward self-hosted data visualization",
+      "commonComplaints": [
+        "Fear of core features moving behind paywall (Connect+)",
+        "Poor software quality after 7 years (glitchy, sluggish)",
+        "Sleep tracking is unreliable and should be priority fix",
+        "Expensive hardware with diminishing value ($500-800 watches)",
+        "Missing key data types like menstrual cycle tracking",
+        "Daily Suggested Workouts trust is low",
+        "BMI metric inclusion feels tone-deaf",
+        "Garmin resting on laurels — stagnating innovation",
+        "Nutrition tracking inferior to dedicated apps like MFP"
+      ],
+      "commonRequests": [
+        "Full access to watch-collected data without subscription",
+        "Self-hosted analytics solutions (Garmin Grafana projects have 40+ resolved issues, thousands of users)",
+        "One-command Docker install for self-hosted dashboards",
+        "Historical data backfilling for trend analysis",
+        "Better training algorithm transparency"
+      ],
+      "sourceUrl": "https://www.reddit.com/r/Garmin/about.json"
+    },
+    {
+      "name": "r/selfhosted",
+      "size": "748,432 subscribers",
+      "sentiment": "Positive toward any self-hosted fitness/running solution; privacy-driven",
+      "commonComplaints": [
+        "Big corporate data hoarding pushes users away from SaaS",
+        "No unified self-hosted fitness data platform exists",
+        "Setup complexity is a barrier (Docker/Linux knowledge required)"
+      ],
+      "commonRequests": [
+        "Self-hosted alternative to Strava with full analytics",
+        "Simple Docker deployment for fitness dashboards",
+        "Open-source fitness data aggregation platform",
+        "Privacy-preserving training analytics"
+      ],
+      "sourceUrl": "https://www.reddit.com/r/selfhosted/about.json"
+    }
+  ],
+  "trendingTopics": [
+    {
+      "topic": "Subscription fatigue — users frustrated with Strava premium ($80/yr) and fear Garmin will follow Fitbit with paywalls",
+      "platform": "Reddit (r/Strava, r/Garmin)",
+      "volume": "High",
+      "sourceUrl": "https://www.reddit.com/r/Strava/comments/1qd2d69/is_it_just_me_or_is_the_strava_subscription/"
+    },
+    {
+      "topic": "Self-hosted fitness dashboards — multiple projects (Garmin Grafana, year-in-review tools) gaining traction",
+      "platform": "Reddit (r/Garmin, r/selfhosted, r/Strava)",
+      "volume": "High",
+      "sourceUrl": "https://www.reddit.com/r/Garmin/comments/1k6pqnd/guide_to_selfhost_and_visualize_your_garmin_data/"
+    },
+    {
+      "topic": "One-command Docker analytics installs for non-technical users",
+      "platform": "Reddit r/Garmin",
+      "volume": "Medium",
+      "sourceUrl": "https://www.reddit.com/r/Garmin/comments/1k9dmf5/garmin_grafana_made_easy_install_with_one_command/"
+    },
+    {
+      "topic": "DIY third-party analytics tools — users building browser-based Strava analyzers, GPT chat with fitness data, Google Sheets sync",
+      "platform": "Reddit r/Strava",
+      "volume": "High",
+      "sourceUrl": "https://www.reddit.com/r/Strava/comments/1osci4z/built_a_free_alternative_to_stravas_year_in/"
+    },
+    {
+      "topic": "AI-powered adaptive running coaches — users building their own because platforms won't",
+      "platform": "Reddit r/Strava",
+      "volume": "Medium",
+      "sourceUrl": "https://www.reddit.com/r/Strava/comments/1lwwm59/i_built_an_aipowered_adaptive_running_coach_that/"
+    },
+    {
+      "topic": "Data-driven marathon analysis — heat-adjusted paces, BQ cutoff predictions, mileage-vs-finish-time correlations",
+      "platform": "Reddit r/advancedrunning",
+      "volume": "Medium",
+      "sourceUrl": "https://www.reddit.com/r/advancedrunning/about.json"
+    },
+    {
+      "topic": "Strava goal tracking inadequacy — users building replacements for flexible mileage goals with rest-day planning",
+      "platform": "Reddit r/Strava",
+      "volume": "Medium",
+      "sourceUrl": "https://www.reddit.com/r/Strava/comments/1qu4gbl/i_got_annoyed_with_stravas_goal_tracking_so_i/"
+    },
+    {
+      "topic": "Data sovereignty — 'We own our data' sentiment growing strongly (Garmin 'don't become Fitbit' post)",
+      "platform": "Reddit r/Garmin",
+      "volume": "High",
+      "sourceUrl": "https://www.reddit.com/r/Garmin/comments/1lt4j03/garmin_dont_become_like_fitbit_we_didnt_buy_your/"
+    },
+    {
+      "topic": "Stagnation complaints — 'Garmin resting on laurels' and 'Strava developments are garbage'",
+      "platform": "Reddit r/Garmin, r/Strava",
+      "volume": "Medium",
+      "sourceUrl": "https://www.reddit.com/r/Strava/comments/1sig9d8/strava_developments_and_features_that_are_newish/"
+    }
+  ],
+  "communityPainPoints": [
+    {
+      "painPoint": "Paid analytics features are vague and not actionable — Strava's Relative Effort and Fitness charts don't tell users what to do",
+      "frequency": "Very high — multiple threads weekly",
+      "hermesSolution": "Hermes provides actionable daily guidance (run/rest/skip/recovery) with clear reasoning tied to training load, HRV, and fatigue metrics"
+    },
+    {
+      "painPoint": "Paywall fear — users spent $300-800 on hardware but face features being locked behind monthly subscriptions",
+      "frequency": "High — trending",
+      "hermesSolution": "Hermes is self-hosted — no subscription, full data ownership, all analytics accessible without recurring payments"
+    },
+    {
+      "painPoint": "No self-hosted fitness analytics platform exists as a unified alternative to Strava/Garmin Connect",
+      "frequency": "High — multiple DIY projects show unmet demand",
+      "hermesSolution": "Hermes is a comprehensive self-hosted running analytics platform with coaching intelligence, filling this exact gap"
+    },
+    {
+      "painPoint": "Existing DIY solutions require Docker/Linux expertise — non-technical users locked out",
+      "frequency": "Medium — recurring barrier",
+      "hermesSolution": "Hermes prioritizes simple deployment experience with clear documentation, lowering the technical barrier"
+    },
+    {
+      "painPoint": "Race predictors are inaccurate — overestimate capability, don't account for conditions or fatigue",
+      "frequency": "Medium — persistent complaint",
+      "hermesSolution": "Hermes uses ACWR-informed modeling and real-time fatigue data for honest, adaptive race predictions"
+    },
+    {
+      "painPoint": "Goal tracking is inflexible — no day-off calculation, no pacing adjustments for life interruptions",
+      "frequency": "Medium — multiple DIY workarounds",
+      "hermesSolution": "Hermes dynamically adjusts training plans when days are missed, with intelligent catch-up recommendations"
+    },
+    {
+      "painPoint": "Training algorithms are black boxes — users don't trust Garmin DSW, Strava fitness score, or AI routes",
+      "frequency": "Medium — trust deficit",
+      "hermesSolution": "Hermes uses transparent, explainable metrics with clear reasoning for every recommendation"
+    },
+    {
+      "painPoint": "Third-party tools violate Strava API terms or have server limits — users want local/offline solutions",
+      "frequency": "Medium — recurring in analysis tool posts",
+      "hermesSolution": "Hermes is fully self-hosted with local data processing — no API limits, no terms-of-service risk, works offline"
+    }
+  ],
+  "willingnessToPay": {
+    "indicated": true,
+    "pricePoints": ["$5-15/mo", "$60-120/yr", "One-time self-hosted license"],
+    "notes": "r/Strava thread 'Is it just me or is the Strava subscription getting harder to justify?' shows users questioning $80/yr for vague analytics. r/Garmin 'don't become Fitbit' post with 2K+ upvotes shows strong rejection of subscription. r/running users indicate willingness to pay $5-15/mo for genuine coaching intelligence. Self-hosted model directly addresses the subscription fatigue trend. r/selfhosted community (748K) represents a built-in audience for a self-hosted fitness analytics platform."
+  },
+  "sources": [
+    "https://www.reddit.com/r/advancedrunning/about.json",
+    "https://www.reddit.com/r/running/about.json",
+    "https://www.reddit.com/r/Strava/about.json",
+    "https://www.reddit.com/r/Garmin/about.json",
+    "https://www.reddit.com/r/selfhosted/about.json",
+    "https://www.reddit.com/r/Garmin/comments/1lt4j03/garmin_dont_become_like_fitbit_we_didnt_buy_your/",
+    "https://www.reddit.com/r/Garmin/comments/1k6pqnd/guide_to_selfhost_and_visualize_your_garmin_data/",
+    "https://www.reddit.com/r/Garmin/comments/1k9dmf5/garmin_grafana_made_easy_install_with_one_command/",
+    "https://www.reddit.com/r/Garmin/comments/1ncqj5l/thoughts_on_gramin_grafana_an_interactive_open/",
+    "https://www.reddit.com/r/Garmin/comments/1ko09tp/garmin_is_getting_too_expensive_for_too_little/",
+    "https://www.reddit.com/r/Garmin/comments/1mnb33z/my_garmin_review_or_rant_after_7_years_poor/",
+    "https://www.reddit.com/r/Garmin/comments/1k7u5up/does_anybody_else_think_the_folks_at_garmin_are/",
+    "https://www.reddit.com/r/Strava/comments/1qd2d69/is_it_just_me_or_is_the_strava_subscription/",
+    "https://www.reddit.com/r/Strava/comments/1osci4z/built_a_free_alternative_to_stravas_year_in/",
+    "https://www.reddit.com/r/Strava/comments/1qu4gbl/i_got_annoyed_with_stravas_goal_tracking_so_i/",
+    "https://www.reddit.com/r/Strava/comments/1lwwm59/i_built_an_aipowered_adaptive_running_coach_that/",
+    "https://www.reddit.com/r/Strava/comments/1sig9d8/strava_developments_and_features_that_are_newish/",
+    "https://www.reddit.com/r/Strava/comments/1qw8l3b/strava_race_predictor_is_wildly_off/",
+    "https://www.reddit.com/r/Strava/comments/1qfbao9/gpxfix_a_new_free_tool_for_fixing_strava/",
+    "https://www.reddit.com/r/Strava/comments/1rjq8li/i_wanted_my_strava_data_accessible_from_the/",
+    "https://www.reddit.com/r/Strava/comments/1rrnfhs/i_fixed_stravas_missing_treadmill_elevation_data/",
+    "https://www.reddit.com/r/advancedrunning/search.json?q=analytics+tool+platform+training+data&restrict_sr=1&sort=top&t=year",
+    "https://www.reddit.com/r/selfhosted/search.json?q=fitness+tracking+running+self+hosted+alternative&restrict_sr=1&sort=top&t=year"
+  ]
+}
