@@ -3,29 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useUnit } from '../contexts/UnitContext';
 import { apiJson, apiFetch } from '../api';
-import { formatDuration, formatPaceSeconds, formatDistance } from '../utils/format';
-import {
-  computeTrainingPaces,
-  predictRaceTimeCalibrated,
-  RACE_DISTANCES,
-  estimateCurrentVdot,
-  collectAllVdotEntries,
-  computeRollingRepresentativeSeries,
-  VDOT_LOOKBACK_MS,
-  danielsRunningVo2CostMlKgMin,
-} from '../utils/vdot';
+import { formatDuration, formatPaceSeconds } from '../utils/format';
+import { calculateVdot, computeTrainingPaces, predictRaceTime, RACE_DISTANCES } from '../utils/vdot';
+import TopNav from '../components/TopNav';
 import Modal from '../components/Modal';
-import InfoDisclosure from '../components/ui/InfoDisclosure';
-import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
-import ImportDataGuide from '../components/ImportDataGuide';
-import RunLevelMedal from '../components/RunLevelMedal';
-import ProfileDistributionCharts from '../components/ProfileDistributionCharts';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ScatterController, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Bar, Scatter, Doughnut, Line } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ScatterController, ArcElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, ArcElement, Title, Tooltip, Legend, Filler);
 
 const KM_TO_MILE = 1.60934;
 
@@ -49,17 +36,13 @@ function classifyZone(vo2Fraction) {
 function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
   const hrPct = Math.min(1.0, avgHr / hrMax);
-  // Swain (1994) running rule-of-thumb:
-  // %HRmax = 0.64 * %VO2max + 37  =>  %VO2max = (%HRmax - 37) / 0.64
-  // Convert fraction: %VO2max/100. With %HRmax = hrPct*100:
-  // vo2Fraction = (hrPct*100 - 37) / 64
-  return Math.max(0, (hrPct * 100 - 37) / 64);
+  return Math.max(0, 1.67 * hrPct - 0.67);
 }
 
 function paceToVo2Fraction(paceSecPerKm, vdot) {
   if (!paceSecPerKm || paceSecPerKm <= 0 || !vdot || vdot <= 0) return null;
   const v = (1000 / paceSecPerKm) * 60;
-  const vo2 = danielsRunningVo2CostMlKgMin(v);
+  const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
   return vo2 / vdot;
 }
 
@@ -210,157 +193,28 @@ const acwrZoneBandsPlugin = {
   },
 };
 
-function average(values) {
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function computeInjuryRiskInsight(runs, trainingLoadData, lang) {
-  const now = Date.now();
-  const recentStart = now - 14 * 24 * 60 * 60 * 1000;
-  const baselineStart = now - 42 * 24 * 60 * 60 * 1000;
-
-  const eligible = runs
-    .map((run) => {
-      const start = new Date(run.startTime || run.startDate || 0).getTime();
-      const distanceKm = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
-      const durationSec = Number(run.movingTimeSeconds || run.durationSeconds || 0);
-      const averageHeartRate = Number(run.averageHeartRate || 0);
-      const averageCadence = Number(run.averageCadence || 0);
-      if (Number.isNaN(start) || start < baselineStart || distanceKm < 4 || durationSec < 20 * 60) return null;
-      const paceSecPerKm = durationSec / Math.max(distanceKm, 0.001);
-      const aerobicCost = averageHeartRate > 0 ? averageHeartRate * (paceSecPerKm / 300) : null;
-      return {
-        start,
-        distanceKm,
-        durationSec,
-        paceSecPerKm,
-        averageHeartRate: averageHeartRate > 0 ? averageHeartRate : null,
-        averageCadence: averageCadence > 0 ? averageCadence : null,
-        aerobicCost,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.start - b.start);
-
-  const baseline = eligible.filter((run) => run.start >= baselineStart && run.start < recentStart);
-  const recent = eligible.filter((run) => run.start >= recentStart);
-
-  const baselineCadence = baseline.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
-  const recentCadence = recent.filter((run) => run.averageCadence != null).map((run) => run.averageCadence);
-  const baselineCost = baseline.filter((run) => run.aerobicCost != null).map((run) => run.aerobicCost);
-  const recentCost = recent.filter((run) => run.aerobicCost != null).map((run) => run.aerobicCost);
-
-  const cadenceBaseline = average(baselineCadence);
-  const cadenceRecent = average(recentCadence);
-  const cadenceDeltaPct = cadenceBaseline > 0 ? ((cadenceRecent - cadenceBaseline) / cadenceBaseline) * 100 : 0;
-
-  const costBaseline = average(baselineCost);
-  const costRecent = average(recentCost);
-  const costDeltaPct = costBaseline > 0 ? ((costRecent - costBaseline) / costBaseline) * 100 : 0;
-
-  let recentHardRuns = 0;
-  for (const run of eligible.filter((entry) => entry.start >= now - 7 * 24 * 60 * 60 * 1000)) {
-    const durationMin = run.durationSec / 60;
-    const paceLoad = Math.max(0.55, Math.min(1.15, 300 / Math.max(run.paceSecPerKm, 1)));
-    if (computeEffortScore(paceLoad, durationMin) >= 85) recentHardRuns += 1;
-  }
-
-  let score = 6;
-  const reasons = [];
-
-  if (trainingLoadData?.lastAcwr != null) {
-    if (trainingLoadData.lastAcwr >= 1.35) {
-      score += 28;
-      reasons.push({ key: 'load', tone: 'high', value: trainingLoadData.lastAcwr.toFixed(2) });
-    } else if (trainingLoadData.lastAcwr >= 1.18) {
-      score += 16;
-      reasons.push({ key: 'load', tone: 'mid', value: trainingLoadData.lastAcwr.toFixed(2) });
-    }
-  }
-
-  if (baselineCadence.length >= 3 && recentCadence.length >= 2) {
-    if (cadenceDeltaPct <= -2.0) {
-      score += 24;
-      reasons.push({ key: 'cadence', tone: 'high', value: `${cadenceDeltaPct.toFixed(1)}%` });
-    } else if (cadenceDeltaPct <= -1.0) {
-      score += 12;
-      reasons.push({ key: 'cadence', tone: 'mid', value: `${cadenceDeltaPct.toFixed(1)}%` });
-    }
-  }
-
-  if (baselineCost.length >= 3 && recentCost.length >= 2) {
-    if (costDeltaPct >= 4.5) {
-      score += 26;
-      reasons.push({ key: 'drift', tone: 'high', value: `+${costDeltaPct.toFixed(1)}%` });
-    } else if (costDeltaPct >= 2.0) {
-      score += 14;
-      reasons.push({ key: 'drift', tone: 'mid', value: `+${costDeltaPct.toFixed(1)}%` });
-    }
-  }
-
-  if (recentHardRuns >= 3) {
-    score += 12;
-    reasons.push({ key: 'stacking', tone: 'mid', value: String(recentHardRuns) });
-  }
-
-  score = Math.max(0, Math.min(100, Math.round(score)));
-
-  let level = 'low';
-  if (score >= 72) level = 'high';
-  else if (score >= 46) level = 'moderate';
-
-  const confidenceParts = [
-    baselineCadence.length >= 3 && recentCadence.length >= 2,
-    baselineCost.length >= 3 && recentCost.length >= 2,
-    trainingLoadData?.lastAcwr != null,
-  ].filter(Boolean).length;
-
-  return {
-    score,
-    level,
-    reasons,
-    enoughData: recent.length >= 3,
-    mandatoryCrossTraining: level === 'high',
-    metrics: {
-      cadenceRecent,
-      cadenceBaseline,
-      cadenceDeltaPct,
-      costRecent,
-      costBaseline,
-      costDeltaPct,
-      acwr: trainingLoadData?.lastAcwr ?? null,
-      recentHardRuns,
-    },
-    confidence: confidenceParts >= 3 ? 'high' : confidenceParts === 2 ? 'medium' : 'low',
-    gctAvailable: false,
-    locale: lang,
-  };
-}
-
 export default function Analysis() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
-  const { isDark } = useTheme();
-  const { unit, isMile } = useUnit();
+  const { theme, setTheme, isDark } = useTheme();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [unit, setUnit] = useState('km');
 
   // Modals
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [polarizedMode, setPolarizedMode] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState('');
-  const [fitExportFiles, setFitExportFiles] = useState(null);
+  const [garminFiles, setGarminFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
-  const [huaweiFiles, setHuaweiFiles] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
     loadData();
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated]);
 
   async function loadData() {
     try {
@@ -375,10 +229,34 @@ export default function Analysis() {
     } catch { /* ignored */ }
   }
 
-  const vdotEstimate = useMemo(() => estimateCurrentVdot(runs), [runs]);
-  const bestVdot = vdotEstimate.representativeVdot;
-  const bestRun = vdotEstimate.bestRun;
-  const allVdots = useMemo(() => collectAllVdotEntries(runs), [runs]);
+  // VDOT calculation from runs
+  const { bestVdot, bestRun, allVdots } = useMemo(() => {
+    let best = 0, bestR = null;
+    const vdots = [];
+    const now = Date.now();
+    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+
+    runs.forEach(run => {
+      const km = Number(run.distanceKm || 0);
+      const sec = Number(run.movingTimeSeconds || 0);
+      if (km < 1.5 || sec <= 0) return;
+
+      const distM = km * 1000;
+      const timeMin = sec / 60;
+      const v = calculateVdot(distM, timeMin);
+      if (v <= 0 || v > 85) return;
+
+      const runDate = new Date(run.startTime || run.startDate || 0);
+      vdots.push({ vdot: v, date: runDate, run });
+
+      if ((now - runDate.getTime()) <= ninetyDays && v > best) {
+        best = v;
+        bestR = run;
+      }
+    });
+
+    return { bestVdot: best, bestRun: bestR, allVdots: vdots };
+  }, [runs]);
 
   // Training paces
   const paces = useMemo(() => {
@@ -390,19 +268,18 @@ export default function Analysis() {
   const predictions = useMemo(() => {
     if (bestVdot <= 0) return [];
     return RACE_DISTANCES.map(rd => {
-      const timeMin = predictRaceTimeCalibrated(bestVdot, rd.meters, runs);
+      const timeMin = predictRaceTime(bestVdot, rd.meters);
       return { ...rd, timeMin };
     });
-  }, [bestVdot, runs]);
-
-  // Hero insight band stats
-  const totalKm = useMemo(() => runs.reduce((s, r) => s + (r.distanceKm || (r.distanceMeters ? r.distanceMeters / 1000 : 0)), 0), [runs]);
-  const totalSec = useMemo(() => runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0), [runs]);
-  const totalRunsCount = runs.length;
-  const unitTotalKm = isMile ? totalKm / KM_TO_MILE : totalKm;
-  const unitLabel = isMile ? 'mile' : 'km';
+  }, [bestVdot]);
 
   // Summary stats
+  const { totalKm, totalSec } = useMemo(() => {
+    let km = 0, sec = 0;
+    runs.forEach(r => { km += Number(r.distanceKm || 0); sec += Number(r.movingTimeSeconds || 0); });
+    return { totalKm: km, totalSec: sec };
+  }, [runs]);
+
   // Recovery state (matches old analysis.html logic)
   const recoveryState = useMemo(() => {
     return computeRecoveryState(runs, bestVdot);
@@ -447,15 +324,6 @@ export default function Analysis() {
     return formatPaceSeconds(val);
   }
 
-  const distributionT = useMemo(() => {
-    return (key, replacements) => {
-      if (typeof key === 'string' && key.startsWith('profile.')) {
-        return t(`analysis.${key.slice('profile.'.length)}`, replacements);
-      }
-      return t(key, replacements);
-    };
-  }, [t]);
-
   // Pace chart data
   const paceChartData = useMemo(() => {
     if (!paces) return null;
@@ -479,7 +347,7 @@ export default function Analysis() {
       datasets: [{
         label: t('analysis.chart_label_pace'),
         data: values,
-        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#dc2626'],
+        backgroundColor: ['#166534', '#0369a1', '#ca8a04', '#FF5A1F', '#b91c1c'],
         borderRadius: 4,
       }],
     };
@@ -492,95 +360,89 @@ export default function Analysis() {
 
     const scatterData = sorted.map(v => ({ x: v.date.getTime(), y: Math.round(v.vdot * 10) / 10 }));
 
-    const rolling = computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
-    const peakData = rolling.map((p) => ({ x: p.x, y: p.y }));
+    const windowMs = 90 * 24 * 60 * 60 * 1000;
+    const peakData = sorted.map(run => {
+      const windowStart = run.date.getTime() - windowMs;
+      let peak = 0;
+      for (const r of sorted) {
+        if (r.date.getTime() > run.date.getTime()) break;
+        if (r.date.getTime() >= windowStart && r.vdot > peak) peak = r.vdot;
+      }
+      return { x: run.date.getTime(), y: Math.round(peak * 10) / 10 };
+    });
 
     return {
       datasets: [
         {
-          label: t('profile.vo2_chart_per_run'),
+          label: t('analysis.progress_all_runs') || 'All Runs',
           data: scatterData,
-          backgroundColor: 'rgba(13, 148, 136, 0.35)',
-          borderColor: 'rgba(13, 148, 136, 0.55)',
-          pointRadius: 3,
-          pointHoverRadius: 6,
+          backgroundColor: 'rgba(255, 107, 44, 0.3)',
+          borderColor: 'rgba(255, 107, 44, 0.5)',
+          pointRadius: 4,
+          pointHoverRadius: 7,
           showLine: false,
           order: 2,
         },
         {
-          label: t('profile.vo2_chart_trend'),
+          label: t('analysis.progress_fitness') || '90-Day Peak',
           data: peakData,
           type: 'line',
-          borderColor: '#0f766e',
-          backgroundColor: 'rgba(13, 148, 136, 0.06)',
-          borderWidth: 2,
+          borderColor: '#ea4f1f',
+          backgroundColor: 'rgba(234, 79, 31, 0.08)',
+          borderWidth: 2.5,
           pointRadius: 0,
-          pointHoverRadius: 4,
+          pointHoverRadius: 5,
           fill: true,
-          tension: 0.35,
+          tension: 0.3,
           order: 1,
         },
       ],
     };
   }, [allVdots, t]);
 
-  // Prediction history — rolling 90-day representative VDOT, sampled monthly
-  const predictionHistoryData = useMemo(() => {
-    if (!allVdots.length || allVdots.length < 3) return null;
+  // Race prediction trend over time
+  const racePredictionChartData = useMemo(() => {
+    if (allVdots.length < 2) return null;
     const sorted = [...allVdots].sort((a, b) => a.date - b.date);
-    const rolling = computeRollingRepresentativeSeries(sorted, VDOT_LOOKBACK_MS);
-    if (rolling.length < 2) return null;
+    const windowMs = 90 * 24 * 60 * 60 * 1000;
 
-    const samples = [];
-    let lastMonth = -1;
-    rolling.forEach((pt) => {
-      const d = new Date(pt.x);
-      const m = d.getFullYear() * 12 + d.getMonth();
-      if (m !== lastMonth) {
-        lastMonth = m;
-        samples.push({ date: pt.x, vdot: pt.y });
+    // Same rolling 90-day peak VDOT used by progress chart
+    const peakPoints = sorted.map(run => {
+      const windowStart = run.date.getTime() - windowMs;
+      let peak = 0;
+      for (const r of sorted) {
+        if (r.date.getTime() > run.date.getTime()) break;
+        if (r.date.getTime() >= windowStart && r.vdot > peak) peak = r.vdot;
       }
+      return { ts: run.date.getTime(), vdot: peak };
     });
-    const lastPt = rolling[rolling.length - 1];
-    if (samples.length === 0 || samples[samples.length - 1].date !== lastPt.x) {
-      samples.push({ date: lastPt.x, vdot: lastPt.y });
-    }
 
-    if (samples.length < 2) return null;
+    const palette = [
+      { border: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+      { border: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+      { border: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+      { border: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+    ];
 
-    const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#dc2626'];
-    return RACE_DISTANCES.map((rd, i) => {
-      const data = samples.map(s => {
-        const timeMin = predictRaceTimeCalibrated(s.vdot, rd.meters, runs);
-        return { x: s.date, y: timeMin ? Math.round(timeMin * 60) : null };
-      });
-      const latest = data[data.length - 1]?.y || 0;
-      const earliest = data[0]?.y || 0;
-      const improved = earliest > 0 && latest > 0 && latest < earliest;
-      const diffSec = earliest - latest;
-      return {
-        key: rd.key,
+    return {
+      datasets: RACE_DISTANCES.map((rd, i) => ({
         label: lang === 'en' ? rd.labelEn : rd.labelZh,
-        color: colors[i],
-        latestFormatted: latest > 0 ? formatDuration(latest) : '--',
-        improved,
-        diffFormatted: diffSec > 0 ? formatDuration(Math.abs(diffSec)) : null,
-        chartData: {
-          datasets: [{
-            data,
-            borderColor: colors[i],
-            backgroundColor: colors[i] + '25',
-            borderWidth: 3,
-            pointRadius: 4,
-            pointBackgroundColor: colors[i],
-            pointHoverRadius: 7,
-            tension: 0.35,
-            fill: true,
-          }],
-        },
-      };
-    });
-  }, [allVdots, lang, runs]);
+        data: peakPoints
+          .map(p => {
+            const mins = p.vdot > 0 ? predictRaceTime(p.vdot, rd.meters) : null;
+            return mins != null ? { x: p.ts, y: Math.round(mins * 60) } : null;
+          })
+          .filter(Boolean),
+        borderColor: palette[i].border,
+        backgroundColor: palette[i].bg,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        tension: 0.3,
+        fill: false,
+      })),
+    };
+  }, [allVdots, lang]);
 
   // ── Training Load (EWMA) & ACWR ──
   const trainingLoadData = useMemo(() => {
@@ -637,27 +499,21 @@ export default function Analysis() {
     }
     if (allDates.length < 7) return null;
 
-    // EWMA: acute 7d, chronic 28d (ACWR); CTL-style 42d for long-horizon fitness vs short fatigue
+    // EWMA: λ_acute = 2/(7+1) = 0.25, λ_chronic = 2/(28+1) ≈ 0.069
     const lambdaA = 2 / 8;
     const lambdaC = 2 / 29;
-    const lambdaCtl42 = 2 / 43;
 
     let ewmaA = dailyLoads[allDates[0]] || 0;
     let ewmaC = ewmaA;
-    let ewmaCtl = ewmaA;
 
     const acute = [], chronic = [], acwr = [];
 
     for (let i = 0; i < allDates.length; i++) {
       const load = dailyLoads[allDates[i]] || 0;
-      if (i === 0) {
-        ewmaA = load;
-        ewmaC = load;
-        ewmaCtl = load;
-      } else {
+      if (i === 0) { ewmaA = load; ewmaC = load; }
+      else {
         ewmaA = load * lambdaA + (1 - lambdaA) * ewmaA;
         ewmaC = load * lambdaC + (1 - lambdaC) * ewmaC;
-        ewmaCtl = load * lambdaCtl42 + (1 - lambdaCtl42) * ewmaCtl;
       }
 
       const ts = new Date(allDates[i]).getTime();
@@ -668,18 +524,12 @@ export default function Analysis() {
       acwr.push({ x: ts, y: ratio !== null ? Math.round(ratio * 100) / 100 : null });
     }
 
-    const lastAtl = acute[acute.length - 1]?.y || 0;
-    const lastCtl42 = Math.round(ewmaCtl * 10) / 10;
-    const formBalance = Math.round((lastCtl42 - lastAtl) * 10) / 10;
-
     return {
       acute, chronic,
       acwr: acwr.filter(p => p.y !== null),
-      lastAcute: lastAtl,
+      lastAcute: acute[acute.length - 1]?.y || 0,
       lastChronic: chronic[chronic.length - 1]?.y || 0,
       lastAcwr: acwr[acwr.length - 1]?.y ?? null,
-      lastCtl42,
-      formBalance,
     };
   }, [runs, bestVdot]);
 
@@ -687,10 +537,6 @@ export default function Analysis() {
     if (!trainingLoadData) return getAcwrZone(null);
     return getAcwrZone(trainingLoadData.lastAcwr);
   }, [trainingLoadData]);
-
-  const injuryInsight = useMemo(() => {
-    return computeInjuryRiskInsight(runs, trainingLoadData, lang);
-  }, [runs, trainingLoadData, lang]);
 
   const loadChartData = useMemo(() => {
     if (!trainingLoadData) return null;
@@ -730,69 +576,14 @@ export default function Analysis() {
     };
   }, [trainingLoadData]);
 
-  // 80/20 Polarized Training Data (Rolling 28 Days)
-  const polarizedData = useMemo(() => {
-    if (!runs || runs.length === 0) return null;
-    let easySec = 0, modSec = 0, hardSec = 0;
-    let totalSec = 0;
-    const lookbackMs = 28 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    
-    let estimatedHRmax = 0;
-    for (const r of runs) {
-      if (r.maxHeartRate && r.maxHeartRate > estimatedHRmax) estimatedHRmax = r.maxHeartRate;
-    }
-    
-    for (const run of runs) {
-      const t = new Date(run.startTime || run.startDate).getTime();
-      if (isNaN(t) || now - t > lookbackMs) continue;
-      
-      const duration = Number(run.movingTimeSeconds || 0);
-      if (duration <= 0) continue;
-      
-      const distKm = run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0);
-      const paceSecPerKm = distKm > 0 ? (duration / distKm) : 0;
-      let vo2Frac;
-      const avgHr = run.averageHeartRate;
-      
-      if (avgHr > 0 && estimatedHRmax > 100) {
-        const hrFrac = hrToVo2Fraction(avgHr, estimatedHRmax);
-        if (hrFrac !== null && hrFrac > 0) vo2Frac = hrFrac;
-      }
-      if (!vo2Frac) {
-        const paceFrac = paceToVo2Fraction(paceSecPerKm, bestVdot);
-        vo2Frac = (paceFrac && paceFrac > 0) ? paceFrac : 0.65;
-      }
-      vo2Frac = Math.max(0.40, Math.min(1.20, vo2Frac));
-      const zone = classifyZone(vo2Frac);
-      
-      totalSec += duration;
-      if (zone.key === 'recovery' || zone.key === 'easy') easySec += duration;
-      else if (zone.key === 'marathon') modSec += duration;
-      else hardSec += duration;
-    }
-    
-    if (totalSec === 0) return null;
-    
-    const easyPct = Math.round((easySec / totalSec) * 100);
-    const modPct = Math.round((modSec / totalSec) * 100);
-    const hardPct = Math.round((hardSec / totalSec) * 100);
-    
-    const deviation = Math.abs(easyPct - 80) + Math.abs(hardPct - 20) + modPct;
-    const score = Math.max(1, Math.min(100, Math.round(100 - (deviation * 1.2))));
-    
-    return { easyPct, modPct, hardPct, score, totalSec, easySec, modSec, hardSec };
-  }, [runs, bestVdot]);
-
   // Import handler
   async function handleImport(e) {
     e.preventDefault();
     const formData = new FormData();
-    if (fitExportFiles) for (const f of fitExportFiles) formData.append('exports', f);
-    if (corosFiles) for (const f of corosFiles) formData.append('coros', f);
-    if (huaweiFiles) for (const f of huaweiFiles) formData.append('huawei', f);
+    if (garminFiles) for (const f of garminFiles) formData.append('files', f);
+    if (corosFiles) for (const f of corosFiles) formData.append('files', f);
     try {
-      await apiFetch('/api/import/batch', { method: 'POST', body: formData });
+      await apiFetch('/api/import/files', { method: 'POST', body: formData });
       setImportModalOpen(false);
       loadData();
     } catch { /* ignored */ }
@@ -814,59 +605,6 @@ export default function Analysis() {
   const textColor = isDark ? '#e2e8f0' : '#1a2b4c';
   const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
 
-  /** Same VO₂max / VDOT scatter + trend as Profile — Daniels estimate (ml·kg⁻¹·min⁻¹ scale on axis). */
-  const vo2ProgressScatterOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'nearest', intersect: false },
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top',
-        labels: { usePointStyle: true, padding: 10, font: { size: 10 }, color: textColor },
-      },
-      tooltip: {
-        callbacks: {
-          title: (items) => {
-            if (!items.length) return '';
-            return new Date(items[0].parsed.x).toLocaleDateString(lang, {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-            });
-          },
-          label: (ctx) => {
-            const v = ctx.parsed.y;
-            if (v == null) return '';
-            const name = ctx.dataset.label || '';
-            return `${name}: ${typeof v === 'number' ? v.toFixed(1) : v} ${t('profile.vo2_unit_short')}`;
-          },
-        },
-      },
-    },
-    scales: {
-      x: {
-        type: 'linear',
-        grid: { display: false },
-        ticks: {
-          color: textColor,
-          maxTicksLimit: 8,
-          callback: (value) => new Date(value).toLocaleDateString(lang, { month: 'short', year: '2-digit' }),
-        },
-      },
-      y: {
-        grid: { color: gridColor },
-        ticks: { color: textColor },
-        title: {
-          display: true,
-          text: t('profile.vo2_chart_y_title'),
-          color: textColor,
-          font: { size: 10 },
-        },
-      },
-    },
-  }), [textColor, gridColor, lang, t]);
-
   // Doughnut chart for run level
   const doughnutData = useMemo(() => ({
     datasets: [{
@@ -878,20 +616,26 @@ export default function Analysis() {
 
   const doughnutOptions = useMemo(() => ({
     cutout: '85%',
-    responsive: true,
-    maintainAspectRatio: false,
     plugins: { tooltip: { enabled: false }, legend: { display: false } },
     animation: { animateScale: true },
   }), []);
 
+  const isMile = unit === 'mile';
+
   return (
-    <AuthenticatedPageChrome
-      profile={profile}
-      menuActions={{
-        onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
-        onImportData: () => setImportModalOpen(true),
-      }}
-    >
+    <div className="dashboard-body">
+      <LanguageSwitcher />
+      <TopNav
+        showProfile
+        profile={{
+          displayName: profile?.displayName,
+          email: profile?.email,
+          onSettings: () => setSettingsModalOpen(true),
+          onChangeName: () => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); },
+          onImportData: () => setImportModalOpen(true),
+        }}
+        backLink={{ to: '/profile', label: 'HERMES' }}
+      />
 
       <main className="dashboard-container analysis-container">
         {/* Page Header */}
@@ -900,245 +644,21 @@ export default function Analysis() {
             <span className="analysis-back-icon">&lsaquo;</span>
             <span>{t('analysis.back_to_profile')}</span>
           </Link>
-          <div className="page-intro-stack">
-            <span className="page-intro-kicker">{t('analysis.eyebrow')}</span>
-            <h1 className="analysis-title">{t('analysis.heading')}</h1>
-            <p className="page-intro-text">{t('analysis.hero_copy')}</p>
-          </div>
-          <div className="page-intro-actions">
-            <button type="button" className="btn-primary" onClick={() => setImportModalOpen(true)}>
-              {t('analysis.open_import')}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => navigate('/runs')}>
-              {t('analysis.open_runs')}
-            </button>
-          </div>
+          <h1 className="analysis-title">{t('analysis.heading')}</h1>
         </section>
 
-        {/* Insight summary band */}
-        {totalRunsCount > 0 && (
-          <section className="analysis-insight-band">
-            <div className="analysis-insight-metric">
-              <span className="analysis-insight-label">{t('analysis.total_runs_label')}</span>
-              <strong className="analysis-insight-value">{totalRunsCount}</strong>
+        {/* Summary */}
+        <section className="card summary-wide analysis-summary-card">
+          <div className="analysis-summary-row">
+            <div className="analysis-summary-copy">
+              <p><strong>{t('analysis.weekly_mileage')}</strong> <span>{isMile ? (totalKm / KM_TO_MILE).toFixed(1) : totalKm.toFixed(1)}</span> <span className="unit-text">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span></p>
+              <p><strong>{t('analysis.avg_pace')}</strong> <span>{totalKm > 0 ? fmtPace(totalSec / totalKm) : '--:--'}</span> <span className="unit-pace">{t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}</span></p>
+              <p><strong>{t('analysis.current_vdot_label')}</strong> <span>{bestVdot > 0 ? bestVdot.toFixed(1) : '--'}</span></p>
             </div>
-            <div className="analysis-insight-metric">
-              <span className="analysis-insight-label">{t(isMile ? 'analysis.unit_distance_mile' : 'analysis.unit_distance_km')}</span>
-              <strong className="analysis-insight-value">{formatDistance(totalKm, 1, lang, unitLabel)}</strong>
+            <div className="unit-toggle">
+              <button type="button" className={unit === 'km' ? 'active' : ''} onClick={() => setUnit('km')}>{t('analysis.unit_km_button')}</button>
+              <button type="button" className={unit === 'mile' ? 'active' : ''} onClick={() => setUnit('mile')}>{t('analysis.unit_mile_button')}</button>
             </div>
-            {totalKm > 0 && (
-              <div className="analysis-insight-metric">
-                <span className="analysis-insight-label">{t('analysis.avg_pace_label')}</span>
-                <strong className="analysis-insight-value">
-                  {formatDuration(totalSec / unitTotalKm)}&nbsp;
-                  <span className="analysis-insight-unit">/{isMile ? 'mi' : 'km'}</span>
-                </strong>
-              </div>
-            )}
-            {bestVdot > 0 && (
-              <div className="analysis-insight-metric analysis-insight-metric--accent">
-                <span className="analysis-insight-label">{t('analysis.vo2max_label')}</span>
-                <strong className="analysis-insight-value">{bestVdot.toFixed(1)}</strong>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Run Level — medal centered in doughnut hole */}
-        <section className="card analysis-card-center">
-          <h3>{t('analysis.run_level')}</h3>
-          <div
-            className="analysis-run-level-donut-wrap"
-            title={rank ? t(`analysis.rank_${rank.key}`) : undefined}
-          >
-            <div className="analysis-run-level-donut-chart">
-              <Doughnut data={doughnutData} options={doughnutOptions} />
-            </div>
-            <div
-              className={`analysis-run-level-medal-inner${rank ? '' : ' analysis-run-level-medal-inner--muted'}`}
-              aria-hidden="true"
-            >
-              {rank ? (
-                <RunLevelMedal rankKey={rank.key} accentColor={rank.color} size={76} variant="discOnly" />
-              ) : (
-                <RunLevelMedal rankKey="waiting" accentColor="#94a3b8" size={64} variant="discOnly" />
-              )}
-            </div>
-          </div>
-          {rank ? (
-            <>
-              <p className="analysis-level-copy" style={{ color: rank.color, textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', margin: '8px 0 0' }}>
-                {t(`analysis.rank_${rank.key}`)} Lv. {runLevel}
-              </p>
-              <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.next_rank_progress', { percent: rankPct })}</p>
-            </>
-          ) : (
-            <>
-              <p className="analysis-level-copy" style={{ color: textColor, textAlign: 'center' }}>{t('analysis.run_level_waiting')}</p>
-              <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.run_level_prompt')}</p>
-            </>
-          )}
-        </section>
-
-        {/* 80/20 Polarized Mode Toggle and View */}
-        <section className="card analysis-polarized-card" style={{ marginTop: 24 }}>
-          <div className="polarized-header">
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.polar_title')}</h2>
-            <label className="polarized-toggle">
-              <input 
-                type="checkbox" 
-                checked={polarizedMode} 
-                onChange={(e) => setPolarizedMode(e.target.checked)} 
-              />
-              <span className="polarized-slider"></span>
-              <span className="polarized-toggle-label">{t('analysis.polar_toggle')}</span>
-            </label>
-          </div>
-          
-          {polarizedMode && polarizedData && (
-            <div className="polarized-body">
-              <div className="polarized-score-circle">
-                <span className="polarized-score-value" style={{ color: polarizedData.score >= 80 ? '#22c55e' : polarizedData.score >= 50 ? '#f59e0b' : '#ef4444' }}>{polarizedData.score}</span>
-                <span className="polarized-score-label">{t('analysis.polar_score')}</span>
-              </div>
-              
-              <div className="polarized-visual-container">
-                <div className="polarized-bar">
-                  <div className="polarized-segment easy" style={{ width: `${polarizedData.easyPct}%` }}></div>
-                  <div className="polarized-segment moderate" style={{ width: `${polarizedData.modPct}%` }}></div>
-                  <div className="polarized-segment hard" style={{ width: `${polarizedData.hardPct}%` }}></div>
-                  <div className="polarized-target-marker" style={{ left: '80%' }}></div>
-                </div>
-                <div className="polarized-labels">
-                  <span className="polar-label easy" style={{ width: `${polarizedData.easyPct}%`, minWidth: '40px' }}>{polarizedData.easyPct}% {t('analysis.polar_easy')}</span>
-                  {polarizedData.modPct > 0 && <span className="polar-label moderate" style={{ width: `${polarizedData.modPct}%` }}>{polarizedData.modPct}%</span>}
-                  <span className="polar-label hard" style={{ flex: 1, minWidth: '40px', paddingRight: 4 }}>{polarizedData.hardPct}% {t('analysis.polar_hard')}</span>
-                </div>
-              </div>
-              
-              <p className="polarized-feedback">
-                {polarizedData.score >= 80 ? t('analysis.polar_excellent') : 
-                 polarizedData.score >= 60 ? t('analysis.polar_good') : 
-                 t('analysis.polar_needs_work')}
-              </p>
-            </div>
-          )}
-          {polarizedMode && !polarizedData && (
-            <p className="analysis-muted" style={{ marginTop: 14 }}>{t('analysis.polar_no_data')}</p>
-          )}
-        </section>
-
-        <section className="card profile-distribution-strip" style={{ marginTop: 24 }}>
-          <ProfileDistributionCharts runs={runs} isMile={isMile} t={distributionT} />
-        </section>
-
-        <section className="card injury-ai-card" style={{ marginTop: 24 }}>
-          <div className="injury-ai-head">
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.injury_heading')}</h2>
-              <p className="analysis-muted" style={{ marginTop: 6 }}>{t('analysis.injury_copy')}</p>
-            </div>
-            <div className={`injury-ai-score injury-ai-score-${injuryInsight.level}`}>
-              <span>{injuryInsight.score}</span>
-              <small>{t('analysis.injury_score')}</small>
-            </div>
-          </div>
-
-          {!injuryInsight.enoughData ? (
-            <p className="analysis-muted" style={{ marginTop: 14 }}>{t('analysis.injury_not_enough')}</p>
-          ) : (
-            <>
-              <div className={`injury-ai-banner injury-ai-banner-${injuryInsight.level}`}>
-                <strong>
-                  {injuryInsight.level === 'high'
-                    ? t('analysis.injury_high_title')
-                    : injuryInsight.level === 'moderate'
-                      ? t('analysis.injury_moderate_title')
-                      : t('analysis.injury_low_title')}
-                </strong>
-                <span>
-                  {injuryInsight.mandatoryCrossTraining
-                    ? t('analysis.injury_action_mandatory')
-                    : injuryInsight.level === 'moderate'
-                      ? t('analysis.injury_action_caution')
-                      : t('analysis.injury_action_clear')}
-                </span>
-              </div>
-
-              <div className="injury-ai-signal-grid">
-                <article className="injury-ai-signal">
-                  <span className="injury-ai-signal-label">{t('analysis.injury_signal_cadence')}</span>
-                  <strong>{injuryInsight.metrics.cadenceRecent ? `${Math.round(injuryInsight.metrics.cadenceRecent)} spm` : '--'}</strong>
-                  <small>
-                    {injuryInsight.metrics.cadenceBaseline
-                      ? t('analysis.injury_vs_baseline', { value: `${injuryInsight.metrics.cadenceDeltaPct > 0 ? '+' : ''}${injuryInsight.metrics.cadenceDeltaPct.toFixed(1)}%` })
-                      : t('analysis.injury_signal_missing')}
-                  </small>
-                </article>
-                <article className="injury-ai-signal">
-                  <span className="injury-ai-signal-label">{t('analysis.injury_signal_drift')}</span>
-                  <strong>{injuryInsight.metrics.costRecent ? `${injuryInsight.metrics.costRecent.toFixed(1)}` : '--'}</strong>
-                  <small>
-                    {injuryInsight.metrics.costBaseline
-                      ? t('analysis.injury_vs_baseline', { value: `${injuryInsight.metrics.costDeltaPct > 0 ? '+' : ''}${injuryInsight.metrics.costDeltaPct.toFixed(1)}%` })
-                      : t('analysis.injury_signal_missing')}
-                  </small>
-                </article>
-                <article className="injury-ai-signal">
-                  <span className="injury-ai-signal-label">ACWR</span>
-                  <strong>{injuryInsight.metrics.acwr != null ? injuryInsight.metrics.acwr.toFixed(2) : '--'}</strong>
-                  <small>{t(`analysis.acwr_${acwrZone.key}`)}</small>
-                </article>
-                <article className="injury-ai-signal">
-                  <span className="injury-ai-signal-label">{t('analysis.injury_signal_stack')}</span>
-                  <strong>{injuryInsight.metrics.recentHardRuns}</strong>
-                  <small>{t('analysis.injury_signal_stack_sub')}</small>
-                </article>
-              </div>
-
-              <div className="injury-ai-graph">
-                <div className="injury-ai-graph-row">
-                  <span>{t('analysis.injury_signal_cadence')}</span>
-                  <div className="injury-ai-graph-track">
-                    <span className="injury-ai-graph-bar injury-ai-graph-bar-baseline" style={{ width: '100%' }} />
-                    <span
-                      className="injury-ai-graph-bar injury-ai-graph-bar-current"
-                      style={{ width: `${injuryInsight.metrics.cadenceBaseline > 0 ? Math.max(12, (injuryInsight.metrics.cadenceRecent / injuryInsight.metrics.cadenceBaseline) * 100) : 12}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="injury-ai-graph-row">
-                  <span>{t('analysis.injury_signal_drift')}</span>
-                  <div className="injury-ai-graph-track">
-                    <span className="injury-ai-graph-bar injury-ai-graph-bar-baseline" style={{ width: '100%' }} />
-                    <span
-                      className="injury-ai-graph-bar injury-ai-graph-bar-risk"
-                      style={{ width: `${injuryInsight.metrics.costBaseline > 0 ? Math.max(12, (injuryInsight.metrics.costRecent / injuryInsight.metrics.costBaseline) * 100) : 12}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="injury-ai-footer">
-                <p>{injuryInsight.gctAvailable ? t('analysis.injury_gct_live') : t('analysis.injury_gct_missing')}</p>
-                <p>{t(`analysis.injury_confidence_${injuryInsight.confidence}`)}</p>
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* VO₂max progress — same chart as Profile (per-run estimate + 90-day trend) */}
-        <section className="card progress-card analysis-vo2-progress-card" style={{ marginTop: 24 }}>
-          <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('profile.vo2_chart_heading')}</h2>
-          <p className="analysis-muted" style={{ marginTop: 6 }}>{t('analysis.progress_copy')}</p>
-          <div className="progress-chart-shell analysis-vo2-chart-shell" style={{ position: 'relative', height: 280, marginTop: 18 }}>
-            {progressChartData ? (
-              <Scatter data={progressChartData} options={vo2ProgressScatterOptions} />
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
-                {t('analysis.vdot_no_data')}
-              </div>
-            )}
           </div>
         </section>
 
@@ -1146,12 +666,7 @@ export default function Analysis() {
         <section className="card analysis-vdot-card">
           <div className="analysis-vdot-header">
             <div>
-              <div className="inline-info-heading">
-                <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.vdot_auto_heading')}</h2>
-                <InfoDisclosure className="history-copy-toggle analysis-vdot-disclosure">
-                  <p>{t('analysis.vdot_glossary')}</p>
-                </InfoDisclosure>
-              </div>
+              <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.vdot_auto_heading')}</h2>
               <p className="analysis-vdot-copy analysis-muted">{t('analysis.vdot_auto_copy')}</p>
             </div>
             {bestVdot > 0 && (
@@ -1164,35 +679,13 @@ export default function Analysis() {
             </div>
           )}
           {bestVdot <= 0 && <div className="vdot-no-data">{t('analysis.vdot_no_data')}</div>}
-
-          {paceChartData && (
-            <div style={{ marginTop: 20, height: 200 }}>
-              <Bar data={paceChartData} options={{
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: (ctx) => `${formatPaceSeconds(ctx.parsed.y)} ${t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}`,
-                    },
-                  },
-                },
-                scales: {
-                  y: {
-                    reverse: true,
-                    ticks: { color: textColor, callback: (value) => formatPaceSeconds(value) },
-                    grid: { color: gridColor },
-                  },
-                  x: { ticks: { color: textColor }, grid: { display: false } },
-                },
-              }} />
-            </div>
-          )}
         </section>
 
-        {/* Recovery + Training Paces side by side */}
-        <div className="analysis-grid" style={{ marginTop: 24 }}>
-          <section className="card">
+        {/* Grid: Recovery + Run Level | Training Paces */}
+        <div className="analysis-grid">
+          <div className="analysis-column">
+            {/* Recovery */}
+            <section className="card">
               <h3 style={{ margin: '0 0 10px' }}>{t('analysis.recovery')}</h3>
               <div style={{ textAlign: 'center', marginBottom: 8 }}>
                 <div style={{ fontSize: '2.4rem', fontWeight: 800, lineHeight: 1.1, color: recoveryState.hasData ? recoveryColor : '#64748b' }}>
@@ -1235,32 +728,81 @@ export default function Analysis() {
                   );
                 })}
               </div>
-          </section>
+            </section>
 
-          <section className="card">
-          <h3>
-            <span>{t('analysis.pace_zones')}</span>
-            <span className="pace-unit-note" style={{ marginLeft: 8 }}>({t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')})</span>
-          </h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 15 }}>
-            <tbody>
-              {[
-                { key: 'easy', label: t('analysis.pace_easy_label'), color: '#22c55e', range: paces?.easy },
-                { key: 'marathon', label: t('analysis.pace_marathon_label'), color: '#3b82f6', range: paces?.marathon },
-                { key: 'threshold', label: t('analysis.pace_threshold_label'), color: '#f59e0b', range: paces?.threshold },
-                { key: 'interval', label: t('analysis.pace_interval_label'), color: '#ef4444', range: paces?.interval },
-                { key: 'repetition', label: t('analysis.pace_repetition_label'), color: '#dc2626', range: paces?.repetition },
-              ].map(({ key, label, color, range }) => (
-                <tr key={key} style={{ borderBottom: '1px solid var(--border-color, #eee)' }}>
-                  <td style={{ padding: '12px 0', borderLeft: `4px solid ${color}`, paddingLeft: 12, color, fontWeight: 600 }}>{label}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 'bold', color }}>
-                    {range ? (range.length === 2 ? `${fmtPace(range[0])} - ${fmtPace(range[1])}` : fmtPace(range[0])) : '--:--'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </section>
+            {/* Run Level — Doughnut Chart */}
+            <section className="card analysis-card-center">
+              <h3>{t('analysis.run_level')}</h3>
+              <div className="analysis-chart-shell analysis-chart-shell-large" style={{ width: 180, margin: '15px auto' }}>
+                <Doughnut data={doughnutData} options={doughnutOptions} />
+              </div>
+              {rank ? (
+                <>
+                  <p className="analysis-level-copy" style={{ color: rank.color, textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', margin: '8px 0 0' }}>
+                    {t(`analysis.rank_${rank.key}`)} Lv. {runLevel}
+                  </p>
+                  <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.next_rank_progress', { percent: rankPct })}</p>
+                </>
+              ) : (
+                <>
+                  <p className="analysis-level-copy" style={{ color: textColor, textAlign: 'center' }}>{t('analysis.run_level_waiting')}</p>
+                  <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 5, textAlign: 'center' }}>{t('analysis.run_level_prompt')}</p>
+                </>
+              )}
+            </section>
+          </div>
+
+          <div className="analysis-column">
+            {/* Training Paces */}
+            <section className="card">
+              <h3>
+                <span>{t('analysis.pace_zones')}</span>
+                <span className="pace-unit-note" style={{ marginLeft: 8 }}>({t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')})</span>
+              </h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 15 }}>
+                <tbody>
+                  {[
+                    { key: 'easy', label: t('analysis.pace_easy_label'), color: '#166534', range: paces?.easy },
+                    { key: 'marathon', label: t('analysis.pace_marathon_label'), color: '#0369a1', range: paces?.marathon },
+                    { key: 'threshold', label: t('analysis.pace_threshold_label'), color: '#ca8a04', range: paces?.threshold },
+                    { key: 'interval', label: t('analysis.pace_interval_label'), color: '#FF5A1F', range: paces?.interval },
+                    { key: 'repetition', label: t('analysis.pace_repetition_label'), color: '#b91c1c', range: paces?.repetition },
+                  ].map(({ key, label, color, range }) => (
+                    <tr key={key} style={{ borderBottom: '1px solid var(--border-color, #eee)' }}>
+                      <td style={{ padding: '12px 0' }}>{label}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 'bold', color }}>
+                        {range ? (range.length === 2 ? `${fmtPace(range[0])} - ${fmtPace(range[1])}` : fmtPace(range[0])) : '--:--'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {paceChartData && (
+                <div style={{ marginTop: 20, height: 200 }}>
+                  <Bar data={paceChartData} options={{
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          label: (ctx) => `${formatPaceSeconds(ctx.parsed.y)} ${t(isMile ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}`,
+                        },
+                      },
+                    },
+                    scales: {
+                      y: {
+                        reverse: true,
+                        ticks: { color: textColor, callback: (value) => formatPaceSeconds(value) },
+                        grid: { color: gridColor },
+                      },
+                      x: { ticks: { color: textColor }, grid: { display: false } },
+                    },
+                  }} />
+                </div>
+              )}
+            </section>
+          </div>
         </div>
 
         {/* Race Predictions */}
@@ -1291,66 +833,124 @@ export default function Analysis() {
           </section>
         )}
 
-        {/* Prediction History — 4 mini charts */}
-        {predictionHistoryData && predictionHistoryData.length > 0 && (
-          <section className="card" style={{ marginTop: 25 }}>
-            <h3 style={{ margin: '0 0 4px' }}>{t('analysis.pred_history_heading')}</h3>
-            <p className="analysis-muted" style={{ margin: '0 0 20px', fontSize: '0.85rem' }}>{t('analysis.pred_history_copy')}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
-              {predictionHistoryData.map(item => (
-                <div key={item.key} onClick={() => navigate(`/prediction/${item.key}`)} style={{ border: `2px solid ${item.color}22`, borderRadius: 14, padding: '18px 16px 12px', background: `${item.color}08`, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 4px 16px ${item.color}30`; }} onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: item.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
-                      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-strong, #1e293b)', marginTop: 2 }}>{item.latestFormatted}</div>
-                    </div>
-                    {item.diffFormatted && (
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.78rem', color: item.improved ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                          {item.improved ? '\u25BC' : '\u25B2'} {item.diffFormatted}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted, #94a3b8)' }}>{t('analysis.pred_history_since_start')}</div>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ height: 120 }}>
-                    <Line data={item.chartData} options={{
-                      responsive: true, maintainAspectRatio: false,
-                      plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                          callbacks: {
-                            title: (items) => {
-                              if (!items.length) return '';
-                              return new Date(items[0].parsed.x).toLocaleDateString(lang, { year: 'numeric', month: 'short' });
-                            },
-                            label: (ctx) => ctx.parsed.y ? formatDuration(ctx.parsed.y) : '--',
-                          },
+        {/* Race Prediction Trend Chart */}
+        {racePredictionChartData && (
+          <section className="card progress-card" style={{ marginTop: 25 }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem' }}>{t('analysis.race_predictions')}{lang === 'en' ? ' — Trend Over Time' : ' — 预测趋势'}</h3>
+            <p className="analysis-muted" style={{ margin: '0 0 18px', fontSize: '0.85rem' }}>
+              {lang === 'en'
+                ? 'How your predicted race times have improved over time (based on 90-day peak fitness). Lower is faster.'
+                : '根据90天最佳体能预测的比赛成绩走势。越低越快。'}
+            </p>
+            <div style={{ position: 'relative', height: 300 }}>
+              <Line
+                data={racePredictionChartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: 'top',
+                      labels: { usePointStyle: true, padding: 16, color: textColor },
+                    },
+                    tooltip: {
+                      callbacks: {
+                        title: items => {
+                          if (!items.length) return '';
+                          return new Date(items[0].parsed.x).toLocaleDateString(lang, { year: 'numeric', month: 'short', day: 'numeric' });
+                        },
+                        label: ctx => {
+                          const totalSec = ctx.parsed.y;
+                          const h = Math.floor(totalSec / 3600);
+                          const m = Math.floor((totalSec % 3600) / 60);
+                          const s = totalSec % 60;
+                          const fmt = h > 0
+                            ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+                            : `${m}:${String(s).padStart(2, '0')}`;
+                          return `${ctx.dataset.label}: ${fmt}`;
                         },
                       },
-                      scales: {
-                        x: {
-                          type: 'linear',
-                          display: false,
-                        },
-                        y: {
-                          reverse: true,
-                          grid: { color: gridColor, drawBorder: false },
-                          ticks: {
-                            color: textColor,
-                            font: { size: 10 },
-                            maxTicksLimit: 4,
-                            callback: (v) => formatDuration(v),
-                          },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      type: 'linear',
+                      grid: { display: false },
+                      ticks: {
+                        color: textColor,
+                        maxTicksLimit: 8,
+                        callback: v => new Date(v).toLocaleDateString(lang, { month: 'short', year: '2-digit' }),
+                      },
+                    },
+                    y: {
+                      reverse: true,
+                      grid: { color: gridColor },
+                      ticks: {
+                        color: textColor,
+                        maxTicksLimit: 6,
+                        callback: v => {
+                          const h = Math.floor(v / 3600);
+                          const m = Math.floor((v % 3600) / 60);
+                          return h > 0 ? `${h}h ${m}m` : `${m}m`;
                         },
                       },
-                    }} />
-                  </div>
-                </div>
-              ))}
+                    },
+                  },
+                }}
+              />
             </div>
           </section>
         )}
+
+        {/* Progress Chart — Scatter + Line */}
+        <section className="card progress-card" style={{ marginTop: 25 }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('analysis.progress_heading')}</h2>
+          <p className="analysis-muted" style={{ marginTop: 6 }}>{t('analysis.progress_copy')}</p>
+          <div className="progress-chart-shell" style={{ position: 'relative', height: 280, marginTop: 18 }}>
+            {progressChartData ? (
+              <Scatter data={progressChartData} options={{
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16, color: textColor } },
+                  tooltip: {
+                    callbacks: {
+                      title: (items) => {
+                        if (!items.length) return '';
+                        const d = new Date(items[0].parsed.x);
+                        return d.toLocaleDateString(lang, { year: 'numeric', month: 'short', day: 'numeric' });
+                      },
+                      label: (ctx) => `VDOT: ${ctx.parsed.y.toFixed(1)}`,
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    type: 'linear',
+                    grid: { display: false },
+                    ticks: {
+                      color: textColor,
+                      maxTicksLimit: 8,
+                      callback: (value) => {
+                        const d = new Date(value);
+                        return d.toLocaleDateString(lang, { month: 'short', year: '2-digit' });
+                      },
+                    },
+                  },
+                  y: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor },
+                    title: { display: true, text: 'VDOT', color: textColor },
+                  },
+                },
+              }} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                {t('analysis.vdot_no_data')}
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Training Load & ACWR */}
         {trainingLoadData && loadChartData && acwrChartData && (
@@ -1384,22 +984,6 @@ export default function Analysis() {
                 </span>
               </div>
             </div>
-
-            <div className="tl-stats-row" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
-              <div className="tl-stat">
-                <span className="tl-stat-label">{t('analysis.form_ctl')}</span>
-                <span className="tl-stat-value" style={{ color: '#0d9488' }}>{trainingLoadData.lastCtl42.toFixed(0)}</span>
-                <span className="tl-stat-sub">{t('analysis.form_ctl_sub')}</span>
-              </div>
-              <div className="tl-stat">
-                <span className="tl-stat-label">{t('analysis.form_balance')}</span>
-                <span className="tl-stat-value" style={{ color: trainingLoadData.formBalance >= 0 ? '#16a34a' : '#dc2626' }}>
-                  {trainingLoadData.formBalance > 0 ? '+' : ''}{trainingLoadData.formBalance.toFixed(0)}
-                </span>
-                <span className="tl-stat-sub">{t(trainingLoadData.formBalance >= 0 ? 'analysis.form_balance_hint_fresh' : 'analysis.form_balance_hint_fatigue')}</span>
-              </div>
-            </div>
-            <p className="analysis-muted" style={{ margin: '10px 0 0', fontSize: '0.82rem', lineHeight: 1.45 }}>{t('analysis.form_row_note_body')}</p>
 
             {/* Acute vs Chronic load chart */}
             <div style={{ position: 'relative', height: 250, marginTop: 18 }}>
@@ -1489,19 +1073,18 @@ export default function Analysis() {
       {/* Import Modal */}
       <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
         <form onSubmit={handleImport}>
-          <ImportDataGuide />
           <p className="modal-help">{t('profile.import_hint')}</p>
           <div className="import-source-grid">
             <section className="import-source-card">
               <div className="import-source-header">
                 <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
+                  <span className="import-source-title">{t('profile.garmin_source_title')}</span>
+                  <span className="import-source-hint">{t('profile.garmin_source_hint')}</span>
                 </div>
-                <span className="import-source-tag">FIT/GPX</span>
+                <span className="import-source-tag">GARMIN</span>
               </div>
-              <label className="modal-label">{t('profile.fit_export_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setFitExportFiles(e.target.files)} />
+              <label className="modal-label">{t('profile.garmin_file_label')}</label>
+              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setGarminFiles(e.target.files)} />
             </section>
             <section className="import-source-card">
               <div className="import-source-header">
@@ -1514,19 +1097,7 @@ export default function Analysis() {
               <label className="modal-label">{t('profile.coros_file_label')}</label>
               <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setCorosFiles(e.target.files)} />
             </section>
-            <section className="import-source-card">
-              <div className="import-source-header">
-                <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.huawei_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.huawei_source_hint')}</span>
-                </div>
-                <span className="import-source-tag">HUAWEI</span>
-              </div>
-              <label className="modal-label">{t('profile.huawei_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={e => setHuaweiFiles(e.target.files)} />
-            </section>
           </div>
-          <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
           <div className="modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => setImportModalOpen(false)}>{t('profile.cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('profile.upload_file')}</button>
@@ -1534,6 +1105,21 @@ export default function Analysis() {
         </form>
       </Modal>
 
-    </AuthenticatedPageChrome>
+      {/* Settings Modal */}
+      <Modal isOpen={settingsModalOpen} onClose={() => setSettingsModalOpen(false)} title={t('profile.settings_modal_title')}>
+        <div className="settings-row">
+          <div className="settings-copy">
+            <strong>{t('profile.theme_title')}</strong>
+            <p>{t('profile.theme_hint')}</p>
+          </div>
+          <select className="theme-select" value={theme} onChange={e => setTheme(e.target.value)}>
+            <option value="light">{t('profile.theme_light')}</option>
+            <option value="midnight">{t('profile.theme_midnight')}</option>
+            <option value="high-contrast">{t('profile.theme_high_contrast')}</option>
+            <option value="high-contrast-light">{t('profile.theme_high_contrast_light')}</option>
+          </select>
+        </div>
+      </Modal>
+    </div>
   );
 }
