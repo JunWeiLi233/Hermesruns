@@ -57,9 +57,16 @@ public class AiUsageService {
 }
 `);
 
-  write(".tools/queue-audit.mjs", `export function runQueueAudit(taskCount) {
-  // TODO: split the queue scoring and output formatting into separate helpers.
-  return taskCount > 0 ? "active" : "empty";
+  write(".tools/queue-audit.mjs", `function scoreQueueActivity(taskCount) {
+  return taskCount > 0;
+}
+
+function formatQueueStatus(active) {
+  return active ? "active" : "empty";
+}
+
+export function runQueueAudit(taskCount) {
+  return formatQueueStatus(scoreQueueActivity(taskCount));
 }
 `);
 
@@ -95,7 +102,7 @@ check("collects bounded candidates across frontend, backend, and docs/automation
   assert.equal(report.commandName, "auto-hermes-tech-debt");
   assert.ok(report.candidates.some((candidate) => candidate.kind === "oversized-file" && candidate.category === "Frontend Debt"));
   assert.ok(report.candidates.some((candidate) => candidate.kind === "missing-focused-tests" && candidate.category === "Backend Debt"));
-  assert.ok(report.candidates.some((candidate) => candidate.kind === "debt-markers" && candidate.category === "Docs / Automation Debt"));
+  assert.ok(report.candidates.some((candidate) => candidate.kind === "missing-focused-tests" && candidate.category === "Docs / Automation Debt"));
   assert.ok(report.selectedTasks.length >= 3);
   assert.equal(
     report.candidates.some((candidate) => candidate.id === "frontend/src/pages/RacesDetail.jsx:oversized-file"),

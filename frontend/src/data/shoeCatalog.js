@@ -59,17 +59,22 @@ const shoeCatalog = [
     model('Invincible', '缓震', 'daily'),
     model('Free', '薄底通勤', 'daily'),
     model('Rival Fly', '综训', 'daily'),
+    model('Structure', '稳定', 'stability'),
+    model('Winflo', '缓震', 'daily'),
+    model('Wildhorse', '越野', 'trail'),
   ]),
   brand('Adidas', '⚫', [
     model('Boston', '综训', 'daily'),
     model('Evo', '综训/竞速', 'speed'),
     model('Adizero EVO SL', '速度', 'speed'),
     model('SL', '综训', 'daily'),
+    model('Hyperboost', '缓震', 'daily'),
     model('Pro', '竞速', 'race'),
     model('Takumi Sen', '薄底竞速', 'race'),
     model('Adios', '综训', 'daily'),
     model('Prime', '厚底竞速', 'race'),
     model('Supernova', '缓震', 'daily'),
+    model('Terrex', '越野', 'trail'),
   ]),
   brand('Saucony', '🔴', [
     model('菁华', '薄底综训', 'speed'),
@@ -89,6 +94,7 @@ const shoeCatalog = [
     model('啡鹏', '竞速', 'race'),
     model('全速', '竞速', 'race'),
     model('啡翼', '竞速', 'race'),
+    model('Peregrine', '越野', 'trail'),
   ]),
   brand('Brooks', '🔷', [
     model('甘油', '缓震', 'daily'),
@@ -97,6 +103,11 @@ const shoeCatalog = [
     model('甘油 GTS', '稳定', 'stability'),
     model('旋风', '综训', 'daily'),
     model('烈风', '竞速', 'race'),
+    model('Cascadia', '越野', 'trail'),
+    model('Caldera', '越野', 'trail'),
+    model('Hyperion', '竞速', 'speed'),
+    model('Launch', '综训', 'speed'),
+    model('Adrenaline GTS', '支撑', 'stability'),
   ]),
   brand('New Balance', '🟡', [
     model('1080', '缓震', 'daily'),
@@ -112,6 +123,7 @@ const shoeCatalog = [
     model('Vongo', '支撑', 'stability'),
     model('860', '支撑', 'stability'),
     model('Prism', '支撑', 'stability'),
+    model('Hierro', '越野', 'trail'),
   ]),
   brand('361°', '🔵', [
     model('赤焰', '缓震', 'daily'),
@@ -161,6 +173,7 @@ const shoeCatalog = [
     model('Kayano', '支撑', 'stability'),
     model('GT-2000', '支撑', 'stability'),
     model('GT-1000', '支撑', 'stability'),
+    model('Trabuco', '越野', 'trail'),
   ]),
   brand('特步', '🔵', [
     model('160X', '竞速', 'race'),
@@ -217,6 +230,9 @@ const shoeCatalog = [
     model('Rocket X', '竞速', 'race'),
     model('Speedgoat 7', '越野', 'trail'),
     model('Speedgoat', '越野', 'trail'),
+    model('Challenger', '越野路跑', 'trail'),
+    model('Torrent', '越野', 'trail'),
+    model('Tecton X', '越野竞速', 'trail'),
   ]),
   brand('Mizuno', '🟣', [
     model('Wave Rider', '综训', 'daily'),
@@ -225,6 +241,8 @@ const shoeCatalog = [
     model('Wave Horizon', '支撑', 'stability'),
     model('Wave Rebellion Pro', '竞速', 'race'),
     model('Wave Rebellion Flash', '综训', 'daily'),
+    model('Wave Daichi', '越野', 'trail'),
+    model('Wave Mujin', '越野', 'trail'),
   ]),
   brand('Altra', '🟤', [
     model('Torin', '缓震', 'daily'),
@@ -249,6 +267,39 @@ const shoeCatalog = [
     model('GOrun MaxRoad', '缓震', 'daily'),
     model('GOrun Speed Elite Hyper', '竞速', 'race'),
     model('GOrun Razor', '薄底', 'speed'),
+  ]),
+  brand('Salomon', '🟢', [
+    model('Glide Max', '路跑缓震', 'daily'),
+    model('Ultra Glide', '越野长距', 'trail'),
+    model('Speedcross', '越野泥地', 'trail'),
+    model('S/LAB', '越野竞速', 'trail'),
+    model('Genesis', '越野综训', 'trail'),
+    model('Pulsar', '越野', 'trail'),
+    model('Sense', '越野', 'trail'),
+  ]),
+  brand('Inov-8', '🟤', [
+    model('Trailfly', '越野', 'trail'),
+    model('Mudclaw', '越野泥地', 'trail'),
+    model('Roclite', '全地形', 'trail'),
+    model('Parkclaw', '越野', 'trail'),
+  ]),
+  brand('Norda', '⚪', [
+    model('001', '越野', 'trail'),
+    model('002', '越野', 'trail'),
+    model('005', '越野', 'trail'),
+  ]),
+  brand('Topo Athletic', '🔶', [
+    model('Pursuit', '路跑缓震', 'daily'),
+    model('Cyclones', '路跑速度', 'speed'),
+    model('Mountain Racer', '越野竞速', 'trail'),
+    model('Ultraventure', '越野长距', 'trail'),
+    model('Storm', '越野防水', 'trail'),
+  ]),
+  brand('Merrell', '🟢', [
+    model('Agility Peak', '越野', 'trail'),
+    model('Long Sky', '越野', 'trail'),
+    model('M Tangent', '越野竞速', 'trail'),
+    model('Skyfire', '越野', 'trail'),
   ]),
 ];
 
