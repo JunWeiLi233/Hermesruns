@@ -25,6 +25,7 @@ public class ActivityImportService {
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final AcclimatizationService acclimatizationService;
 
     private static final int MAX_ZIP_ENTRIES = 200;
     private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry
@@ -37,12 +38,14 @@ public class ActivityImportService {
             ActivityRepository activityRepository,
             List<ActivityFileParser> fileParsers,
             ActivityPointRepository activityPointRepository,
-            ApplicationEventPublisher applicationEventPublisher
+            ApplicationEventPublisher applicationEventPublisher,
+            AcclimatizationService acclimatizationService
     ) {
         this.activityRepository = activityRepository;
         this.fileParsers = fileParsers;
         this.activityPointRepository = activityPointRepository;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.acclimatizationService = acclimatizationService;
     }
 
     @Transactional
@@ -125,7 +128,8 @@ public class ActivityImportService {
                 aggregate.importedPoints(),
                 aggregate.skippedDuplicates(),
                 aggregate.skippedNonRuns(),
-                message
+                message,
+                aggregate.rejectedFiles() != null ? aggregate.rejectedFiles() : List.of()
         );
     }
 
@@ -138,7 +142,7 @@ public class ActivityImportService {
 
         String checksum = sha256(fileBytes);
         if (activityRepository.existsByRunnerAndProviderAndSourceChecksum(runner, provider, checksum)) {
-            return new ImportResult(provider.name(), 0, 0, 1, 0, "This activity file was already imported.");
+            return new ImportResult(provider.name(), 0, 0, 1, 0, "This activity file was already imported.", List.of());
         }
 
         ParsedActivityData parsedActivity = parser.parse(fileName, fileBytes);
@@ -155,7 +159,8 @@ public class ActivityImportService {
                     0,
                     0,
                     1,
-                    "Only running activities can be imported into Recent Runs. This file was skipped."
+                    "Only running activities can be imported into Recent Runs. This file was skipped.",
+                    List.of()
             );
         }
 
@@ -175,6 +180,16 @@ public class ActivityImportService {
         activity.setCreatedAt(LocalDateTime.now());
         activity.setAverageHeartRate(parsedActivity.averageHeartRate());
         activity.setMaxHeartRate(parsedActivity.maxHeartRate());
+
+        // Weather adjustment
+        try {
+            Integer penalty = acclimatizationService.calculatePenaltyForActivity(activity);
+            activity.setPacePenaltySecPerKm(penalty);
+            activity.setWeatherAdjusted(penalty != null && penalty > 0);
+        } catch (Exception e) {
+            System.err.println("Weather adjustment calculation failed during import: " + e.getMessage());
+        }
+
         // Persist the Activity first so we can bulk-insert ActivityPoint rows
         // without keeping the entire points list inside the Activity's JPA collection.
         Activity savedActivity = activityRepository.save(activity);
@@ -228,7 +243,8 @@ public class ActivityImportService {
                 keptPoints,
                 0,
                 0,
-                "Import completed successfully."
+                "Import completed successfully.",
+                List.of()
         );
     }
 

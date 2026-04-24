@@ -38,6 +38,9 @@ class MuscleTrainingControllerTests {
     private RunnerRepository runnerRepository;
 
     @Autowired
+    private ShoeRepository shoeRepository;
+
+    @Autowired
     private ActivityRepository activityRepository;
 
     @Autowired
@@ -60,6 +63,7 @@ class MuscleTrainingControllerTests {
 
     @BeforeEach
     void clearData() {
+        shoeRepository.deleteAll();
         coachScheduledWorkoutRepository.deleteAll();
         coachTrainingBlockRepository.deleteAll();
         coachRunnerStateRepository.deleteAll();
@@ -238,11 +242,11 @@ class MuscleTrainingControllerTests {
     void todayCheckInEndpointsRoundTripAndClear() throws Exception {
         Runner runner = createRunner("muscle-checkin@test.local");
 
-        mockMvc.perform(get("/api/training/muscle/check-in/today")
+        mockMvc.perform(get("/api/training/muscle/today")
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(put("/api/training/muscle/check-in/today")
+        mockMvc.perform(put("/api/training/muscle/today")
                         .header("Authorization", bearer(runner))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -257,17 +261,17 @@ class MuscleTrainingControllerTests {
                 .andExpect(jsonPath("$.distanceKm").value(8.0))
                 .andExpect(jsonPath("$.durationMinutes").value(48));
 
-        mockMvc.perform(get("/api/training/muscle/check-in/today")
+        mockMvc.perform(get("/api/training/muscle/today")
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runType").value("EASY"))
                 .andExpect(jsonPath("$.entryState").value("PLANNED"));
 
-        mockMvc.perform(delete("/api/training/muscle/check-in/today")
+        mockMvc.perform(delete("/api/training/muscle/today")
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/training/muscle/check-in/today")
+        mockMvc.perform(get("/api/training/muscle/today")
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isNoContent());
     }
@@ -294,7 +298,7 @@ class MuscleTrainingControllerTests {
                 .andExpect(jsonPath("$.days[0].run.planSource").value("COACH_SCHEDULE"))
                 .andExpect(jsonPath("$.days[0].run.workoutType").value("REST"));
 
-        mockMvc.perform(put("/api/training/muscle/check-in/today")
+        mockMvc.perform(put("/api/training/muscle/today")
                         .header("Authorization", bearer(runner))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -314,7 +318,7 @@ class MuscleTrainingControllerTests {
                 .andExpect(jsonPath("$.days[0].run.workoutType").value("EASY"))
                 .andExpect(jsonPath("$.days[0].run.plannedDistanceKm").value(8.0));
 
-        mockMvc.perform(delete("/api/training/muscle/check-in/today")
+        mockMvc.perform(delete("/api/training/muscle/today")
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isNoContent());
 
@@ -341,7 +345,7 @@ class MuscleTrainingControllerTests {
                 CoachWorkoutType.RECOVERY
         ));
 
-        mockMvc.perform(put("/api/training/muscle/check-in/today")
+        mockMvc.perform(put("/api/training/muscle/today")
                         .header("Authorization", bearer(runner))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -358,7 +362,7 @@ class MuscleTrainingControllerTests {
                 .andExpect(jsonPath("$.days[0].strength").doesNotExist())
                 .andExpect(jsonPath("$.days[0].noStrengthReasonCode").value("SKIP_KEY_RUN_DAY"));
 
-        mockMvc.perform(put("/api/training/muscle/check-in/today")
+        mockMvc.perform(put("/api/training/muscle/today")
                         .header("Authorization", bearer(runner))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -395,7 +399,7 @@ class MuscleTrainingControllerTests {
                 CoachWorkoutType.RECOVERY
         ));
 
-        mockMvc.perform(put("/api/training/muscle/check-in/today")
+        mockMvc.perform(put("/api/training/muscle/today")
                         .header("Authorization", bearer(runner))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -418,7 +422,7 @@ class MuscleTrainingControllerTests {
     void invalidTodayCheckInValuesReturnBadRequest() throws Exception {
         Runner runner = createRunner("muscle-checkin-invalid@test.local");
 
-        mockMvc.perform(put("/api/training/muscle/check-in/today")
+        mockMvc.perform(put("/api/training/muscle/today")
                         .header("Authorization", bearer(runner))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(

@@ -19,15 +19,24 @@ public class RaceController {
     private final AuthService authService;
     private final RaceEventRepository raceEventRepository;
     private final ActivityRepository activityRepository;
+    private final RaceOfficialImageService raceOfficialImageService;
+    private final RaceElevationProfileService raceElevationProfileService;
+    private final RaceCourseMapService raceCourseMapService;
 
     public RaceController(
             AuthService authService,
             RaceEventRepository raceEventRepository,
-            ActivityRepository activityRepository
+            ActivityRepository activityRepository,
+            RaceOfficialImageService raceOfficialImageService,
+            RaceElevationProfileService raceElevationProfileService,
+            RaceCourseMapService raceCourseMapService
     ) {
         this.authService = authService;
         this.raceEventRepository = raceEventRepository;
         this.activityRepository = activityRepository;
+        this.raceOfficialImageService = raceOfficialImageService;
+        this.raceElevationProfileService = raceElevationProfileService;
+        this.raceCourseMapService = raceCourseMapService;
     }
 
     @GetMapping
@@ -46,6 +55,34 @@ public class RaceController {
                 .toList();
 
         return ResponseEntity.ok(races);
+    }
+
+    @GetMapping("/saved-status")
+    public ResponseEntity<?> savedStatus(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("name") String name
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        try {
+            if (name == null || name.trim().isBlank()) {
+                return error(HttpStatus.BAD_REQUEST, "Race name is required.");
+            }
+            String normalizedName = name.trim();
+            InputSanitizer.rejectControlAndHtmlChars(normalizedName, "name");
+
+            Optional<RaceEvent> raceOptional =
+                    raceEventRepository.findFirstByRunnerAndNameIgnoreCaseOrderByEventDateAsc(runnerOptional.get(), normalizedName);
+            return ResponseEntity.ok(new SavedRaceStatusResponse(
+                    raceOptional.isPresent(),
+                    raceOptional.map(RaceEvent::getId).orElse(null)
+            ));
+        } catch (IllegalArgumentException error) {
+            return error(HttpStatus.BAD_REQUEST, error.getMessage());
+        }
     }
 
     @PostMapping
@@ -116,6 +153,100 @@ public class RaceController {
 
         raceEventRepository.delete(raceOptional.get());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/official-image")
+    public ResponseEntity<?> officialImage(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("website") String website
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        try {
+            String imageUrl = raceOfficialImageService.resolveOfficialImage(website);
+            return ResponseEntity.ok(Map.of("imageUrl", imageUrl == null ? "" : imageUrl));
+        } catch (IllegalArgumentException error) {
+            return error(HttpStatus.BAD_REQUEST, error.getMessage());
+        } catch (Exception error) {
+            return ResponseEntity.ok(Map.of("imageUrl", ""));
+        }
+    }
+
+    @GetMapping("/elevation-profile")
+    public ResponseEntity<?> elevationProfile(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("name") String name,
+            @RequestParam(value = "city", required = false) String city,
+            @RequestParam(value = "country", required = false) String country,
+            @RequestParam(value = "website", required = false) String website
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        try {
+            if (name == null || name.trim().isBlank()) {
+                return error(HttpStatus.BAD_REQUEST, "Race name is required.");
+            }
+            InputSanitizer.rejectControlAndHtmlChars(name, "name");
+            InputSanitizer.rejectControlAndHtmlChars(city, "city");
+            InputSanitizer.rejectControlAndHtmlChars(country, "country");
+            RaceElevationProfileService.RaceElevationProfileResult result =
+                    raceElevationProfileService.resolveProfile(name, city, country, website);
+            return ResponseEntity.ok(Map.of(
+                    "imageUrl", result.imageUrl() == null ? "" : result.imageUrl(),
+                    "source", result.source() == null ? "" : result.source(),
+                    "localizedFallbackUsed", result.localizedFallbackUsed(),
+                    "profileSamples", result.profileSamples() == null ? List.of() : result.profileSamples()
+            ));
+        } catch (IllegalArgumentException error) {
+            return error(HttpStatus.BAD_REQUEST, error.getMessage());
+        } catch (Exception error) {
+            return ResponseEntity.ok(Map.of(
+                    "imageUrl", "",
+                    "source", "",
+                    "localizedFallbackUsed", false,
+                    "profileSamples", List.of()
+            ));
+        }
+    }
+
+    @GetMapping("/course-map")
+    public ResponseEntity<?> courseMap(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(value = "raceId", required = false) String raceId,
+            @RequestParam("name") String name,
+            @RequestParam(value = "city", required = false) String city,
+            @RequestParam(value = "country", required = false) String country,
+            @RequestParam(value = "website", required = false) String website,
+            @RequestParam(value = "lat", required = false) Double lat,
+            @RequestParam(value = "lng", required = false) Double lng,
+            @RequestParam(value = "distanceKm", required = false) Double distanceKm
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        try {
+            if (name == null || name.trim().isBlank()) {
+                return error(HttpStatus.BAD_REQUEST, "Race name is required.");
+            }
+            InputSanitizer.rejectControlAndHtmlChars(name, "name");
+            InputSanitizer.rejectControlAndHtmlChars(city, "city");
+            InputSanitizer.rejectControlAndHtmlChars(country, "country");
+            RaceCourseMapResult result =
+                    raceId == null || raceId.isBlank()
+                            ? raceCourseMapService.resolveCourseMap(name, city, country, website, lat, lng, distanceKm)
+                            : raceCourseMapService.resolveCourseMapWithStorage(raceId, name, city, country, website, lat, lng, distanceKm);
+            Map<String, Object> payload = toRunnerCourseMapPayload(result);
+            return ResponseEntity.ok(payload);
+        } catch (IllegalArgumentException error) {
+            return error(HttpStatus.BAD_REQUEST, error.getMessage());
+        } catch (Exception error) {
+            return ResponseEntity.ok(emptyCourseMapPayload());
+        }
     }
 
     private void applyRequest(RaceEvent raceEvent, RaceEventRequest request) {
@@ -296,6 +427,68 @@ public class RaceController {
         return ResponseEntity.status(status).body(response);
     }
 
+    private Map<String, Object> emptyCourseMapPayload() {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("imageUrl", "");
+        payload.put("previewImageUrl", "");
+        payload.put("overlayImageUrl", "");
+        payload.put("source", "");
+        payload.put("routeAvailable", false);
+        payload.put("confidence", 0);
+        payload.put("summary", "");
+        payload.put("viewportBounds", null);
+        payload.put("routePoints", List.of());
+        payload.put("elevationSamples", List.of());
+        payload.put("totalClimbMeters", null);
+        payload.put("aiAssisted", false);
+        return payload;
+    }
+
+    private Map<String, Object> toRunnerCourseMapPayload(RaceCourseMapResult result) {
+        Map<String, Object> payload = new HashMap<>();
+        boolean routeAvailable = hasVerifiedRoute(result);
+        boolean cityLevelReference = hasCityLevelReference(result);
+        boolean courseMapAvailable = routeAvailable || cityLevelReference;
+        String imageUrl = result == null || result.imageUrl() == null ? "" : result.imageUrl();
+        String previewImageUrl = imageUrl.isBlank()
+                ? ""
+                : raceCourseMapService.materializePreviewImageUrl(imageUrl);
+        String overlayImageUrl = routeAvailable && result != null && result.overlayBounds() != null && !imageUrl.isBlank()
+                ? raceCourseMapService.materializeTransparentOverlayImageUrl(imageUrl)
+                : "";
+        payload.put("imageUrl", imageUrl);
+        payload.put("previewImageUrl", previewImageUrl == null || previewImageUrl.isBlank() ? imageUrl : previewImageUrl);
+        payload.put("overlayImageUrl", overlayImageUrl == null ? "" : overlayImageUrl);
+        payload.put("source", result == null || result.source() == null ? "" : result.source());
+        payload.put("routeAvailable", courseMapAvailable);
+        payload.put("cityLevelReference", cityLevelReference);
+        payload.put("confidence", courseMapAvailable && result != null ? result.confidence() : 0);
+        payload.put("summary", result == null || result.summary() == null ? "" : result.summary());
+        payload.put("viewportBounds", courseMapAvailable && result != null ? result.overlayBounds() : null);
+        payload.put("routePoints", routeAvailable && result != null && result.routePoints() != null ? result.routePoints() : List.of());
+        payload.put("elevationSamples", routeAvailable && result != null && result.elevationSamples() != null ? result.elevationSamples() : List.of());
+        payload.put("totalClimbMeters", routeAvailable && result != null ? result.totalClimbMeters() : null);
+        payload.put("aiAssisted", courseMapAvailable && result != null && result.aiAssisted());
+        return payload;
+    }
+
+    private boolean hasVerifiedRoute(RaceCourseMapResult result) {
+        return result != null
+                && result.courseMapDetected()
+                && result.routePoints() != null
+                && !result.routePoints().isEmpty();
+    }
+
+    private boolean hasCityLevelReference(RaceCourseMapResult result) {
+        if (result == null || !result.courseMapDetected() || result.overlayBounds() == null) return false;
+        if (result.routePoints() != null && !result.routePoints().isEmpty()) return false;
+        String summary = result.summary() == null ? "" : result.summary().toLowerCase(java.util.Locale.ROOT);
+        return result.confidence() >= 58
+                && result.aiAssisted()
+                && summary.contains("city-level course-map match")
+                && summary.contains("not a distance-accurate route overlay");
+    }
+
     private record ValidationResult(boolean valid, String message) {
     }
 
@@ -341,6 +534,12 @@ public class RaceController {
             boolean completed,
             long countdownDays,
             LinkedActivitySummary matchedActivity
+    ) {
+    }
+
+    public record SavedRaceStatusResponse(
+            boolean saved,
+            Long raceId
     ) {
     }
 }

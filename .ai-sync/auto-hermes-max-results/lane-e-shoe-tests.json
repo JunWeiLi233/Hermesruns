@@ -1,0 +1,28 @@
+{
+  "laneId": "lane-e-shoe-tests",
+  "parentRunId": "ahm-20260416-030200",
+  "correlationId": "ahm-20260416-030200:lane-e-shoe-tests",
+  "goal": "Add ShoeControllerTests.java coverage",
+  "ownedFiles": ["backend/src/test/java/com/hermes/backend/ShoeControllerTests.java"],
+  "changedFiles": [
+    "backend/src/test/java/com/hermes/backend/ShoeControllerTests.java",
+    "TASKS.md"
+  ],
+  "completedRounds": [
+    {
+      "task": "Create ShoeControllerTests.java with 28 mock-based tests covering all 7 endpoints",
+      "verification": "File created; Bash unavailable in session — mvnw test -Dtest=ShoeControllerTests must be run to confirm PASS",
+      "changedFiles": [
+        "backend/src/test/java/com/hermes/backend/ShoeControllerTests.java"
+      ]
+    }
+  ],
+  "verification": "Bash tool unavailable in this session. Verification commands to run:\n  cd backend && ./mvnw test -Dtest=ShoeControllerTests 2>&1 | tail -10\n  cd backend && ./mvnw -q -DskipTests compile 2>&1",
+  "runtimeProof": "tests cover auth/validation/contract behavior; Bash execution blocked — must be confirmed by parent coordinator or human",
+  "risks": [
+    "mvnw test -Dtest=ShoeControllerTests could not be executed due to Bash tool permission denial; test file was written with correct patterns matching the ShoeCatalogControllerTests reference and verified against ActivityRepository method signatures via Grep"
+  ],
+  "mustPreserve": ["ShoeController.java must not be modified — it was not touched"],
+  "mergeNotes": "New test file only. No production code changed. No contract changes. Safe to merge once test run passes.",
+  "status": "pending-verification"
+}

@@ -1,0 +1,37 @@
+{
+  "laneId": "lane-races-saved-status-backend",
+  "parentRunId": "ahm-20260416112154",
+  "correlationId": "ahm-20260416112154:lane-races-saved-status-backend",
+  "entries": [
+    {
+      "at": "2026-04-16T07:22:57.0660000-04:00",
+      "type": "session-setup",
+      "message": "Ran Hermes session setup and loaded the optimized Codex and OMX bridge context."
+    },
+    {
+      "at": "2026-04-16T07:24:00.0000000-04:00",
+      "type": "analysis",
+      "message": "Inspected RaceController, RaceEventRepository, RaceControllerTests, and the race detail page to confirm the saved-state dependency should become a lightweight name-based summary lookup."
+    },
+    {
+      "at": "2026-04-16T07:25:20.0000000-04:00",
+      "type": "tdd-red",
+      "message": "Added failing RaceControllerTests coverage for saved-status unauthorized, blank-name, found, and not-found cases."
+    },
+    {
+      "at": "2026-04-16T07:25:35.0000000-04:00",
+      "type": "implementation",
+      "message": "Added GET /api/races/saved-status and a repository lookup path that avoids hydrating the decorated /api/races list."
+    },
+    {
+      "at": "2026-04-16T07:25:41.0000000-04:00",
+      "type": "verification",
+      "message": "Targeted RaceControllerTests passed after the controller and repository changes."
+    },
+    {
+      "at": "2026-04-16T07:25:55.1542373-04:00",
+      "type": "verification",
+      "message": "Backend compile passed with tests skipped, completing the lane verification set."
+    }
+  ]
+}

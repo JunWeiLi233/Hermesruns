@@ -68,6 +68,15 @@ public class Activity {
     private Double averageWatts;
     private Double maxSpeedMps;
     private Integer sufferScore;
+    private String routePreviewPath;
+    private Double routePreviewStartX;
+    private Double routePreviewStartY;
+    private Double routePreviewFinishX;
+    private Double routePreviewFinishY;
+
+    // --- WEATHER ADJUSTMENT ---
+    private Integer pacePenaltySecPerKm;
+    private Boolean weatherAdjusted;
 
     @ManyToOne
     @JoinColumn(name = "shoe_id")
@@ -170,6 +179,27 @@ public class Activity {
 
     public Integer getSufferScore() { return sufferScore; }
     public void setSufferScore(Integer sufferScore) { this.sufferScore = sufferScore; }
+
+    public String getRoutePreviewPath() { return routePreviewPath; }
+    public void setRoutePreviewPath(String routePreviewPath) { this.routePreviewPath = routePreviewPath; }
+
+    public Double getRoutePreviewStartX() { return routePreviewStartX; }
+    public void setRoutePreviewStartX(Double routePreviewStartX) { this.routePreviewStartX = routePreviewStartX; }
+
+    public Double getRoutePreviewStartY() { return routePreviewStartY; }
+    public void setRoutePreviewStartY(Double routePreviewStartY) { this.routePreviewStartY = routePreviewStartY; }
+
+    public Double getRoutePreviewFinishX() { return routePreviewFinishX; }
+    public void setRoutePreviewFinishX(Double routePreviewFinishX) { this.routePreviewFinishX = routePreviewFinishX; }
+
+    public Double getRoutePreviewFinishY() { return routePreviewFinishY; }
+    public void setRoutePreviewFinishY(Double routePreviewFinishY) { this.routePreviewFinishY = routePreviewFinishY; }
+
+    public Integer getPacePenaltySecPerKm() { return pacePenaltySecPerKm; }
+    public void setPacePenaltySecPerKm(Integer pacePenaltySecPerKm) { this.pacePenaltySecPerKm = pacePenaltySecPerKm; }
+
+    public Boolean getWeatherAdjusted() { return weatherAdjusted; }
+    public void setWeatherAdjusted(Boolean weatherAdjusted) { this.weatherAdjusted = weatherAdjusted; }
 
     @JsonIgnore
     public Shoe getShoe() { return shoe; }

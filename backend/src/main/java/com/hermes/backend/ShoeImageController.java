@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +20,8 @@ public class ShoeImageController {
     private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> QUERY_ONLY_FIELDS = Set.of("query");
     private static final Set<String> PHOTO_ONLY_FIELDS = Set.of("photoUrl");
+    private static final Set<String> RENDER_SOURCE_FIELDS = Set.of("url");
+    private static final long MAX_RENDER_SOURCE_BYTES = 8L * 1024L * 1024L;
 
     private final AuthService authService;
     private final AiUsageService aiUsageService;
@@ -410,6 +413,77 @@ public class ShoeImageController {
         return ResponseEntity.ok(Map.of("photoUrl", shoe.getPhotoUrl() != null ? shoe.getPhotoUrl() : ""));
     }
 
+    @GetMapping("/render-source")
+    public ResponseEntity<?> renderSource(
+            @RequestParam("url") String url,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return renderSourceInternal(url, authHeader);
+    }
+
+    @PostMapping("/render-source")
+    public ResponseEntity<?> renderSourcePost(
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        final String url;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, RENDER_SOURCE_FIELDS);
+            url = RequestBodyValidator.optionalString(body, "url", MAX_PHOTO_REFERENCE_LENGTH);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+        return renderSourceInternal(url, authHeader);
+    }
+
+    private ResponseEntity<?> renderSourceInternal(
+            String url,
+            String authHeader) {
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        final String safeUrl;
+        try {
+            safeUrl = SafeUrlValidator.validateHttpUrlOrNull(url, MAX_PHOTO_REFERENCE_LENGTH, "url");
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+        if (safeUrl == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "url is required."));
+        }
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.ALL));
+            headers.set("User-Agent", "Hermes/1.0");
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                    safeUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    byte[].class
+            );
+
+            MediaType contentType = response.getHeaders().getContentType();
+            byte[] body = response.getBody();
+            if (contentType == null || !contentType.toString().toLowerCase(Locale.ROOT).startsWith("image/")) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", "Remote resource is not an image."));
+            }
+            if (body == null || body.length == 0) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Remote image was empty."));
+            }
+            if (body.length > MAX_RENDER_SOURCE_BYTES) {
+                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("error", "Remote image is too large."));
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(contentType)
+                    .cacheControl(CacheControl.maxAge(Duration.ofHours(6)).cachePrivate())
+                    .body(body);
+        } catch (HttpStatusCodeException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", "Could not fetch remote image."));
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", "Could not prepare remote image."));
+        }
+    }
+
     /**
      * Multi-strategy shoe image search — returns multiple candidates.
      * Searches across JD, Tmall, brand site, and generic queries.
@@ -629,9 +703,9 @@ public class ShoeImageController {
                     .body(Map.of("error", "AI API key not configured. Set APP_AI_API_KEY environment variable."));
         }
 
-        // Check AI usage quota
+        // Check and atomically reserve AI usage quota
         Runner runner = user.get();
-        String quotaError = aiUsageService.checkQuota(runner);
+        String quotaError = aiUsageService.tryConsumeQuota(runner);
         if (quotaError != null) {
             Map<String, Object> errorBody = new LinkedHashMap<>();
             errorBody.put("error", quotaError);
@@ -671,7 +745,6 @@ public class ShoeImageController {
             int end = text.lastIndexOf(']');
             if (start >= 0 && end > start) {
                 String jsonArray = text.substring(start, end + 1);
-                aiUsageService.recordUsage(runner);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("raw", jsonArray);
                 result.putAll(aiUsageService.getUsageStatus(runner));

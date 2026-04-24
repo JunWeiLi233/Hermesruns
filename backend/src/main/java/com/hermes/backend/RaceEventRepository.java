@@ -8,5 +8,7 @@ import java.util.Optional;
 public interface RaceEventRepository extends JpaRepository<RaceEvent, Long> {
     List<RaceEvent> findByRunnerOrderByEventDateAsc(Runner runner);
 
+    Optional<RaceEvent> findFirstByRunnerAndNameIgnoreCaseOrderByEventDateAsc(Runner runner, String name);
+
     Optional<RaceEvent> findByIdAndRunner(Long id, Runner runner);
 }

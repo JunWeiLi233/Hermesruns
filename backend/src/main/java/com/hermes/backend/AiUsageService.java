@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -10,209 +11,149 @@ import java.util.Map;
 @Service
 public class AiUsageService {
 
-    public static final String PHASE_NEW_USER = "NEW_USER";
-    public static final String PHASE_REGULAR_USER = "REGULAR_USER";
-
-    private static final int NEW_USER_TRIAL_SCANS = 1;
-    private static final int USER_FREE_SCANS = 3;
-    private static final int PRO_MONTHLY_LIMIT = 50;
-
     private final RunnerRepository runnerRepository;
+    private final int perRunnerDailyLimit;
+    private final int projectDailyLimit;
+    private final int projectDailyReserve;
 
-    public AiUsageService(RunnerRepository runnerRepository) {
+    public AiUsageService(
+            RunnerRepository runnerRepository,
+            @Value("${app.ai.free-tier.per-runner-daily-limit:5}") int perRunnerDailyLimit,
+            @Value("${app.ai.free-tier.project-daily-limit:200}") int projectDailyLimit,
+            @Value("${app.ai.free-tier.project-daily-reserve:20}") int projectDailyReserve) {
         this.runnerRepository = runnerRepository;
+        this.perRunnerDailyLimit = Math.max(1, perRunnerDailyLimit);
+        this.projectDailyLimit = Math.max(1, projectDailyLimit);
+        this.projectDailyReserve = Math.max(0, Math.min(projectDailyReserve, this.projectDailyLimit - 1));
     }
 
     /**
      * Call for every new account (email signup, Google/Strava first save).
      */
     public void initNewUser(Runner runner) {
-        runner.setAiExperiencePhase(PHASE_NEW_USER);
-        runner.setAiFreeScansRemaining(0);
+        runner.setSubscriptionTier("FREE");
+        runner.setProExpiresAt(null);
         runner.setAiWelcomeScansRemaining(0);
+        runner.setAiExperiencePhase(null);
+        runner.setAiFreeScansRemaining(0);
         runner.setAiDailyLastUsedDate(null);
+        runner.setAiMonthlyScansUsed(0);
+        runner.setAiMonthlyResetDate(null);
+        runner.setAiDailyScansUsed(0);
+        runner.setAiDailyResetDate(LocalDate.now());
     }
 
     /**
-     * Check if a runner can perform an AI scan right now.
-     * Returns null if allowed, or an error code if blocked.
+     * Returns null when a scan is allowed, or a stable error code if blocked.
+     * <p>
+     * This method performs an atomic check-and-reserve: if the runner has quota remaining,
+     * it immediately increments the counter and persists before returning, preventing
+     * concurrent over-quota scans from the TOCTOU race between checkQuota and recordUsage.
+     * </p>
      */
     public String checkQuota(Runner runner) {
-        if ("ADMIN".equals(runner.getRole())) {
-            return null;
+        normalizeDailyWindow(runner);
+
+        if (runner.getAiDailyScansUsed() >= perRunnerDailyLimit) {
+            return "AI_FREE_TIER_USER_LIMIT";
         }
 
-        if (isPro(runner)) {
-            resetMonthlyIfNeeded(runner);
-            if (runner.getAiMonthlyScansUsed() >= PRO_MONTHLY_LIMIT) {
-                return "PRO_MONTHLY_LIMIT";
-            }
-            return null;
+        if (getProjectDailyUsage() >= getEffectiveProjectDailyLimit()) {
+            return "AI_FREE_TIER_PROJECT_LIMIT";
         }
 
-        migrateLegacyAiQuotaIfNeeded(runner);
-
-        if (PHASE_NEW_USER.equals(runner.getAiExperiencePhase())) {
-            return null;
-        }
-        if (PHASE_REGULAR_USER.equals(runner.getAiExperiencePhase()) && runner.getAiFreeScansRemaining() > 0) {
-            return null;
-        }
-        return "AI_FREE_QUOTA_EXCEEDED";
+        return null;
     }
 
     /**
-     * Record a successful AI scan usage.
+     * Atomic check-and-consume: tries to reserve one scan slot for the runner.
+     * Returns null on success (slot reserved and persisted), or an error code if blocked.
+     * This prevents the check-then-act race where multiple threads pass checkQuota
+     * before any thread calls recordUsage.
+     */
+    public synchronized String tryConsumeQuota(Runner runner) {
+        normalizeDailyWindow(runner);
+
+        if (runner.getAiDailyScansUsed() >= perRunnerDailyLimit) {
+            return perRunnerDailyLimit > 0 ? "AI_FREE_TIER_USER_LIMIT" : "AI_FREE_TIER_USER_LIMIT";
+        }
+
+        if (getProjectDailyUsage() >= getEffectiveProjectDailyLimit()) {
+            return "AI_FREE_TIER_PROJECT_LIMIT";
+        }
+
+        runner.setAiDailyScansUsed(runner.getAiDailyScansUsed() + 1);
+        runner.setAiDailyLastUsedDate(LocalDate.now());
+        runnerRepository.save(runner);
+        return null;
+    }
+
+    /**
+     * Record one successful AI scan against the shared Gemini free-tier budget.
      */
     public void recordUsage(Runner runner) {
-        if ("ADMIN".equals(runner.getRole())) {
-            return;
-        }
-
-        if (isPro(runner)) {
-            resetMonthlyIfNeeded(runner);
-            runner.setAiMonthlyScansUsed(runner.getAiMonthlyScansUsed() + 1);
-            runnerRepository.save(runner);
-            return;
-        }
-
-        migrateLegacyAiQuotaIfNeeded(runner);
-
-        if (PHASE_NEW_USER.equals(runner.getAiExperiencePhase())) {
-            runner.setAiExperiencePhase(PHASE_REGULAR_USER);
-            runner.setAiFreeScansRemaining(USER_FREE_SCANS);
-        } else if (PHASE_REGULAR_USER.equals(runner.getAiExperiencePhase()) && runner.getAiFreeScansRemaining() > 0) {
-            runner.setAiFreeScansRemaining(runner.getAiFreeScansRemaining() - 1);
-        }
-
+        normalizeDailyWindow(runner);
+        runner.setAiDailyScansUsed(runner.getAiDailyScansUsed() + 1);
+        runner.setAiDailyLastUsedDate(LocalDate.now());
         runnerRepository.save(runner);
     }
 
     /**
-     * Get usage status info for the frontend.
+     * Frontend status for the shoe scan UI.
      */
     public Map<String, Object> getUsageStatus(Runner runner) {
+        normalizeDailyWindow(runner);
+
+        long projectDailyUsed = getProjectDailyUsage();
+        int effectiveProjectDailyLimit = getEffectiveProjectDailyLimit();
+        int runnerRemaining = Math.max(0, perRunnerDailyLimit - runner.getAiDailyScansUsed());
+        int projectRemaining = (int) Math.max(0, effectiveProjectDailyLimit - projectDailyUsed);
+
         Map<String, Object> status = new LinkedHashMap<>();
-        boolean pro = isPro(runner);
-        boolean admin = "ADMIN".equals(runner.getRole());
-
-        status.put("tier", pro ? "PRO" : "FREE");
-        status.put("admin", admin);
-
-        if (admin) {
-            status.put("unlimited", true);
-            status.put("scansRemaining", -1);
-            status.put("experiencePhase", null);
-            return status;
-        }
-
-        if (pro) {
-            resetMonthlyIfNeeded(runner);
-            int remaining = Math.max(0, PRO_MONTHLY_LIMIT - runner.getAiMonthlyScansUsed());
-            status.put("unlimited", false);
-            status.put("scansRemaining", remaining);
-            status.put("monthlyLimit", PRO_MONTHLY_LIMIT);
-            status.put("monthlyUsed", runner.getAiMonthlyScansUsed());
-            status.put("proExpiresAt", runner.getProExpiresAt() != null ? runner.getProExpiresAt().toString() : null);
-            status.put("experiencePhase", null);
-        } else {
-            migrateLegacyAiQuotaIfNeeded(runner);
-            String phase = runner.getAiExperiencePhase();
-            status.put("unlimited", false);
-            status.put("experiencePhase", phase);
-            if (PHASE_NEW_USER.equals(phase)) {
-                status.put("scansRemaining", NEW_USER_TRIAL_SCANS);
-                status.put("quotaType", "new_user");
-                status.put("userFreeTotal", USER_FREE_SCANS);
-            } else {
-                int freeLeft = runner.getAiFreeScansRemaining();
-                status.put("scansRemaining", freeLeft);
-                status.put("quotaType", "user_free");
-                status.put("userFreeTotal", USER_FREE_SCANS);
-            }
-        }
-
+        status.put("tier", "FREE");
+        status.put("admin", "ADMIN".equals(runner.getRole()));
+        status.put("unlimited", false);
+        status.put("quotaType", "free_tier_daily");
+        status.put("scansRemaining", Math.max(0, Math.min(runnerRemaining, projectRemaining)));
+        status.put("dailyLimit", perRunnerDailyLimit);
+        status.put("dailyUsed", runner.getAiDailyScansUsed());
+        status.put("projectDailyLimit", effectiveProjectDailyLimit);
+        status.put("projectDailyUsed", projectDailyUsed);
+        status.put("projectDailyReserve", projectDailyReserve);
+        status.put("resetsAt", LocalDate.now().plusDays(1).atStartOfDay().toString());
         return status;
     }
 
-    /**
-     * Grant Pro subscription to a runner.
-     */
     public void grantPro(Runner runner, int months) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime currentExpiry = runner.getProExpiresAt();
+        LocalDateTime extensionStart = currentExpiry != null && currentExpiry.isAfter(now) ? currentExpiry : now;
 
-        LocalDateTime base = (currentExpiry != null && currentExpiry.isAfter(now)) ? currentExpiry : now;
         runner.setSubscriptionTier("PRO");
-        runner.setProExpiresAt(base.plusMonths(months));
-        runner.setAiMonthlyScansUsed(0);
-        runner.setAiMonthlyResetDate(LocalDate.now().plusMonths(1).withDayOfMonth(1));
+        runner.setProExpiresAt(extensionStart.plusMonths(Math.max(1, months)));
         runnerRepository.save(runner);
     }
 
-    /**
-     * Revoke Pro subscription.
-     */
     public void revokePro(Runner runner) {
         runner.setSubscriptionTier("FREE");
         runner.setProExpiresAt(null);
-        runner.setAiMonthlyScansUsed(0);
-        runner.setAiMonthlyResetDate(null);
-        runner.setAiExperiencePhase(PHASE_REGULAR_USER);
-        runner.setAiFreeScansRemaining(0);
         runnerRepository.save(runner);
     }
 
-    /**
-     * Maps pre-phase rows (welcome + daily limits) onto REGULAR_USER + {@link #USER_FREE_SCANS} pool.
-     */
-    void migrateLegacyAiQuotaIfNeeded(Runner runner) {
-        if (runner.getAiExperiencePhase() != null) {
-            return;
-        }
+    private void normalizeDailyWindow(Runner runner) {
         LocalDate today = LocalDate.now();
-        int welcome = runner.getAiWelcomeScansRemaining();
-        boolean dailyUsedToday = today.equals(runner.getAiDailyLastUsedDate());
-
-        int free;
-        if (welcome > 0) {
-            free = Math.min(USER_FREE_SCANS, welcome);
-        } else if (!dailyUsedToday) {
-            free = 1;
-        } else {
-            free = 0;
-        }
-
-        runner.setAiExperiencePhase(PHASE_REGULAR_USER);
-        runner.setAiFreeScansRemaining(free);
-        runner.setAiWelcomeScansRemaining(0);
-        runner.setAiDailyLastUsedDate(null);
-        runnerRepository.save(runner);
-    }
-
-    private boolean isPro(Runner runner) {
-        if (!"PRO".equals(runner.getSubscriptionTier())) {
-            return false;
-        }
-        if (runner.getProExpiresAt() == null) {
-            return false;
-        }
-        if (runner.getProExpiresAt().isBefore(LocalDateTime.now())) {
-            runner.setSubscriptionTier("FREE");
-            runner.setProExpiresAt(null);
-            runnerRepository.save(runner);
-            return false;
-        }
-        return true;
-    }
-
-    private void resetMonthlyIfNeeded(Runner runner) {
-        LocalDate today = LocalDate.now();
-        LocalDate resetDate = runner.getAiMonthlyResetDate();
-        if (resetDate == null || !today.isBefore(resetDate)) {
-            runner.setAiMonthlyScansUsed(0);
-            runner.setAiMonthlyResetDate(today.plusMonths(1).withDayOfMonth(1));
+        if (!today.equals(runner.getAiDailyResetDate())) {
+            runner.setAiDailyResetDate(today);
+            runner.setAiDailyScansUsed(0);
             runnerRepository.save(runner);
         }
+    }
+
+    private long getProjectDailyUsage() {
+        return runnerRepository.sumAiDailyScansUsedForDate(LocalDate.now());
+    }
+
+    private int getEffectiveProjectDailyLimit() {
+        return Math.max(1, projectDailyLimit - projectDailyReserve);
     }
 }

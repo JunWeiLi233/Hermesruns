@@ -1,3 +1,5 @@
+import { calculateStreaks } from './streakUtils';
+
 function startOfWeek(date) {
   const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   copy.setDate(copy.getDate() - copy.getDay());
@@ -6,21 +8,7 @@ function startOfWeek(date) {
 }
 
 export function getConsecutiveRunDayStreak(runs) {
-  const sortedDays = [...new Set(
-    runs
-      .map((run) => new Date(run.startTime || run.startDate || 0))
-      .filter((date) => !Number.isNaN(date.getTime()))
-      .map((date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()),
-  )].sort((a, b) => b - a);
-
-  if (sortedDays.length === 0) return 0;
-  let streak = 1;
-  for (let i = 1; i < sortedDays.length; i += 1) {
-    const diffDays = Math.round((sortedDays[i - 1] - sortedDays[i]) / 86400000);
-    if (diffDays === 1) streak += 1;
-    else break;
-  }
-  return streak;
+  return calculateStreaks(runs).current;
 }
 
 export function getConsecutiveRunWeekStreak(runs) {
@@ -32,6 +20,14 @@ export function getConsecutiveRunWeekStreak(runs) {
   )].sort((a, b) => b - a);
 
   if (sortedWeeks.length === 0) return 0;
+
+  // Check if the current streak is still alive (run this week or last week)
+  const currentWeek = startOfWeek(new Date()).getTime();
+  const lastRunWeek = sortedWeeks[0];
+  const diffWeeksFromCurrent = Math.round((currentWeek - lastRunWeek) / (7 * 86400000));
+
+  if (diffWeeksFromCurrent > 1) return 0;
+
   let streak = 1;
   for (let i = 1; i < sortedWeeks.length; i += 1) {
     const diffWeeks = Math.round((sortedWeeks[i - 1] - sortedWeeks[i]) / (7 * 86400000));

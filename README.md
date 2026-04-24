@@ -8,17 +8,25 @@
 
 ## English
 
-A local-first running analytics platform — **React** frontend, **Spring Boot** backend.
+A local-first runner coach platform with a **React** frontend and **Spring Boot** backend.
 
-Import runs from Strava, Garmin Connect, and COROS. Visualize routes on a heatmap, track VDOT progress, manage shoes and races, and get Daniels' training paces — all on your own machine.
+Hermes combines running analytics, daily training guidance, heatmaps, race planning, shoe management, import pipelines, public auth surfaces, and admin tooling in one app you can run on your own machine.
 
----
+Current website highlights:
+- editorial public landing page with sign-in, sign-up, and Strava start flows
+- shared signed-in runner shell across profile, analysis, runs, shoes, races, schedule, rewards, settings, and today-run
+- route heatmap, VDOT and training-load analysis, race predictions, and deeper drill-down pages
+- Today Run coaching with readiness, weather, workout blueprint, and shoe guidance
+- shoes inventory plus guided add-shoes, catalog browse, and AI-assisted photo scan/import flows
+- settings control room with theme, language, units, weekly brief toggle, Strava status, Garmin Connect import, and batch file import
+
+Supported inputs include Strava sync, Garmin Connect pull, and manual FIT/GPX/TCX/ZIP imports including COROS and Huawei Health export workflows.
 
 ### Architecture
 
 ```
-frontend/          React 19 + Vite — dev server on :3000, builds to backend static
-backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built frontend
+frontend/          React 19 + Vite 8 — dev server on :3000, proxies API calls to :8080
+backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built frontend SPA
 ```
 
 | Layer | Stack |
@@ -27,27 +35,86 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | Backend | Spring Boot 4, Spring Data JPA, Hibernate |
 | Database | H2 (default, zero-config) or PostgreSQL |
 | Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0 |
-| File Import | Garmin FIT, GPX, TCX, ZIP |
+| File Import | Garmin FIT, GPX, TCX, ZIP, COROS exports, Huawei Health exports |
 | Garmin Connect | Direct account import via GarminDB / garth |
+| UI posture | Kinetic Editorial design language with `light` and `midnight` runtime themes |
 
-### Frontend Pages
+<!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS START -->
+### Live Architecture Diagrams
 
-| Route | Page | Features |
+#### AI Agents Workflow
+
+![Hermes AI agents workflow](docs/architecture/ai-agents-workflow.svg)
+
+Source artifact: [docs/architecture/ai-agents-workflow.html](docs/architecture/ai-agents-workflow.html)
+
+#### SaaS Architecture
+
+![Hermes SaaS architecture](docs/architecture/saas-architecture.svg)
+
+Source artifact: [docs/architecture/saas-architecture.html](docs/architecture/saas-architecture.html)
+<!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS END -->
+
+### AI-Agent Workflow (Shared) / AI 智能体工作流（共享）
+
+This repository includes a specialized AI-agent workflow driven by **Gemini CLI** and **Claude Code**.
+本仓库包含一套专用的 AI 智能体工作流，由 **Gemini CLI** 和 **Claude Code** 驱动。
+
+#### 1. Setup / 设置
+1.  **Install Agents / 安装智能体**:
+    *   `npm install -g @google/gemini-cli`
+    *   `npm install -g @anthropic-ai/claude-code`
+2.  **Configure Secrets / 配置密钥**:
+    *   Copy `Hermes.local.env.example.ps1` to `Hermes.local.env.ps1`.
+    *   将 `Hermes.local.env.example.ps1` 复制并重命名为 `Hermes.local.env.ps1`。
+    *   Fill in your `GEMINI_API_KEY` and `ANTHROPIC_API_KEY`.
+    *   填写你的 `GEMINI_API_KEY` 和 `ANTHROPIC_API_KEY`。
+
+#### 2. Command Dictionary / 命令字典
+
+| Command / 命令 | Description (EN) | 描述 (CN) |
+| :--- | :--- | :--- |
+| `/auto-hermes` | Standard development loop: picks a task, implements, and verifies. | 标准开发循环：领取任务、实现并验证。 |
+| `/auto-hermes-max` | Advanced parallel round: launches multiple agents with a mandatory merge gate. | 高级并行轮次：启动多个智能体并经过强制合并闸门。 |
+| `/auto-hermes-tech-debt`| Runs a codebase-wide audit to identify and log technical debt tasks. | 全局技术债审计：识别并记录技术债任务。 |
+
+#### 3. Where to go? / 开发指南
+- **`TASKS.md`**: The shared **Queue**. Check here to see what the agents are working on or to add new tasks.
+  **`TASKS.md`**: 共享**任务队列**。在此查看智能体正在处理的任务或添加新任务。
+- **`CONTEXT_LEDGER.md`**: The **Audit Log**. Read this to understand the recent architectural changes and context.
+  **`CONTEXT_LEDGER.md`**: **审计日志**。通过此文件了解最近的架构变更和开发上下文。
+- **`AGENTS.md`**: **Persona definitions**. Defines how the "Coach-voice" and engineering standards are enforced.
+  **`AGENTS.md`**: **人格定义**。定义了如何执行“教练口吻”和工程标准。
+
+### Web Routes
+
+| Route | Surface | What it does now |
 |---|---|---|
-| `/login` | Login | Email/password, Strava OAuth, Google OAuth |
-| `/signup` | Signup | Registration with OAuth |
+| `/` | Landing | Editorial public homepage with sign-in, sign-up, and Strava start actions |
+| `/login` | Login | Email/password login plus Strava and Google OAuth, with verification-aware auth flow |
+| `/signup` | Signup | Email/password sign-up plus OAuth entry points and email verification flow |
+| `/terms` | Terms | Public legal page |
+| `/privacy` | Privacy | Public legal page |
 | `/admin` | Admin Login | System administrator sign-in |
 | `/dashboard` | Admin Dashboard | Premium admin portal with ops status strip, quick-actions panel, KPI grid, runner management, shoe image verification, job queues, and audit log |
-| `/profile` | Profile | Activity heatmap, hero metric strip, weekly flash cards, daily steps, personal records, VO₂max trend, file import, Garmin Connect import |
-| `/runs` | Run History | Filterable list (all/year/month/day) with sort controls (recent / longest / fastest), pagination, sticky reset |
-| `/run/:id` | Run Detail | Route map, performance metrics, route intelligence |
-| `/analysis` | Deep Analytics | Summary insight band, VDOT scoring, VO₂max glossary disclosure, training paces, race predictions, training load (ACWR), recovery analysis |
-| `/today-run` | Today's Run | Personalized session plan, coach guidance (polarized training), inline weather-readiness strip for heat/acclimatization |
-| `/shoes` | Shoe Inventory | Health-summary row, owned-brand filters, sticky locker reset, mileage tracking, AI photo scanning, catalog browser |
-| `/races` | Race Center | Interactive world map (Leaflet), 60+ race catalog, NYRR 9+1 progress, race targets, training advice |
+| `/profile` | Runner Hub | Signed-in dashboard with readiness, metrics, records, imports, and links into the rest of the runner shell |
+| `/runs` | Run History | Filterable run log with sorting, pagination, previews, and drill-down into run detail |
+| `/run` and `/run/:id` | Run Detail | Route map, performance metrics, and route intelligence |
+| `/analysis` | Analysis Overview | Quick-glance analytics entrypoint with insight cards and import/empty-state handling |
+| `/analysis/vo2max` | VO₂ Max Detail | VO₂ trend drill-down in the shared runner shell |
+| `/analysis/:insightKey` | Analysis Insight Detail | Deeper drill-down routes such as injury risk, intensity, coach insight, and load balance |
+| `/prediction/:distKey` | Prediction Detail | Distance-specific prediction breakdown with supporting evidence |
+| `/heatmap` | Heatmap | Full-screen running heatmap with sampled GPS rendering and live totals |
+| `/today-run` | Today Run | Daily coaching surface with readiness, weather, workout blueprint, and shoe guidance |
+| `/shoes` | Shoes | Inventory command surface with rotation insight, filters, and scan/import actions |
+| `/shoes/add` | Add Shoes | Guided add-shoes flow inside the shared runner shell |
+| `/add-shoes` | Redirect | Legacy shortcut redirecting to `/shoes/add` |
+| `/shoe-catalog` | Shoe Catalog | Catalog browser within the shoes family |
+| `/races` | Race Center | Race planning dashboard with discovery, countdowns, personal-best evidence, and saved-race calendar |
+| `/schedule` | Schedule | Weekly planning surface for upcoming training |
 | `/muscle-training` | Muscle Training | Anatomical SVG muscle figure, session planning, training log |
 | `/rewards` | Rewards | Achievement badges, progression surface |
-| `/settings` | Settings | Language, distance unit, theme, display name, connected services (Strava), account controls |
+| `/settings` | Settings | Runner control room for identity, theme, language, units, weekly brief, Strava, Garmin import, and batch file import |
 
 ---
 
@@ -192,7 +259,7 @@ Opens `http://localhost:8080` — the backend serves the pre-built React app.
 .\start_hermes_postgres.ps1
 ```
 
-**`start_hermes_postgres.ps1` is the single file where you configure everything** — PostgreSQL credentials, Strava API keys, Google OAuth secrets, and admin account.
+`start_hermes_postgres.ps1` is the main launcher for PostgreSQL, OAuth, and admin bootstrapping. It loads local secrets from `Hermes.local.env.ps1`; Stripe billing and email verification are configured separately in the sections below.
 
 #### Frontend Development
 
@@ -211,7 +278,7 @@ cd frontend
 npm run build
 ```
 
-Output goes to `backend/src/main/resources/static/` — the backend serves it directly.
+The build writes to `backend/src/main/resources/static/` and, when the backend runtime output exists, syncs the live bundle into `backend/target/classes/static/`.
 
 ---
 
@@ -387,29 +454,6 @@ Supports `GPX`, `TCX`, `FIT`, and `ZIP` files with automatic folder watching.
 - **Restart the backend** after changing any values in `start_hermes_postgres.ps1`.
 - **Never commit secrets.** Use environment variables or the startup script.
 - **Use a strong `APP_DATA_ENCRYPTION_KEY`** — it protects stored Strava tokens.
-
----
-
-### AI Development Workflow
-
-This repo uses **Claude Code** and **Codex** as AI coding agents guided by `CLAUDE.md` / `AGENTS.md` and `TASKS.md`.
-
-#### How tasks work
-- Active tasks live in `TASKS.md → ## Active Tasks`. Agents work through them one at a time.
-- Completed tasks are deleted from Active and logged in `## Daily Log` (one line per task).
-- Suggested follow-up tasks sit in `## Suggested Next Tasks` and are promoted automatically in loop mode.
-
-#### When agents push
-Agents commit and push to `origin main` only when **all** of the following are true:
-1. `## Active Tasks` is empty — no unchecked tasks remain
-2. `## Suggested Next Tasks` is empty or no further tasks are promotable
-3. Frontend lint passes (`cd frontend && npm run lint`)
-4. Backend compiles cleanly (`cd backend && ./mvnw -DskipTests compile`)
-
-Agents **never** push partial work, broken builds, or AI-workflow-only changes (those files are gitignored).
-
-#### Codebase index
-Run `node .tools/generate-codex.js` to regenerate `.ai-codex/` — compact index files (routes, pages, schema, components, lib exports) that agents use instead of scanning source files every session. Regenerated automatically on each Claude Code session start.
 
 ---
 
@@ -739,29 +783,6 @@ pip install -r .tools/requirements-garmin.txt
 
 ---
 
-### AI 开发工作流
-
-本项目使用 **Claude Code** 和 **Codex** 作为 AI 编码助手，由 `CLAUDE.md` / `AGENTS.md` 和 `TASKS.md` 驱动。
-
-#### 任务机制
-- 待完成任务在 `TASKS.md → ## Active Tasks`，每次只处理一个。
-- 任务完成后从 Active 删除，并在 `## Daily Log` 写入一行记录。
-- 待提升的后续任务在 `## Suggested Next Tasks`，循环模式下自动提升。
-
-#### 何时 push
-AI agent 在以下**所有**条件满足时才提交并推送到 `origin main`：
-1. `## Active Tasks` 为空 — 无未完成任务
-2. `## Suggested Next Tasks` 为空或无可提升任务
-3. 前端 lint 通过（`cd frontend && npm run lint`）
-4. 后端编译通过（`cd backend && ./mvnw -DskipTests compile`）
-
-不会推送：部分完成的功能、编译失败的代码、仅涉及 AI 工作流文件的变更（这些文件已加入 .gitignore）。
-
-#### 代码索引
-运行 `node .tools/generate-codex.js` 生成 `.ai-codex/` 紧凑索引（路由、页面、数据库、组件、工具函数），供 AI agent 直接查阅而无需逐文件扫描。每次 Claude Code 会话启动时自动刷新。
-
----
-
 ### 常见问题
 
 **`ERR_CONNECTION_REFUSED`** — 运行 `.\start_hermes.bat` 启动后端。
@@ -771,3 +792,62 @@ AI agent 在以下**所有**条件满足时才提交并推送到 `origin main`�
 **OAuth 回调失败** — 确认后端运行在 `localhost:8080`，回调地址完全匹配。
 
 **前端修改未生效** — 在 `frontend/` 中运行 `npm run build`，然后刷新页面。
+
+---
+
+### Regression Checklist — Page-Break and Data-Loss Scenarios
+
+Run this manually after any change to auth, import, upload, or third-party integration flows.
+
+#### 1. Expired session during active use
+
+**Trigger**: In browser DevTools (Network tab), block or stub any API call to return `401` while on a page with edits in progress (e.g. open the import modal in Settings, then force a `401` on the batch endpoint).
+
+**Expected behavior**:
+- App redirects to `/login?return=<current-path>&reason=expired`
+- Login page shows the "session expired" notice (not a blank page)
+- After re-login, app navigates back to the original route
+
+**Failure indicator**: Blank page, hard redirect to `/login` with no notice, or loss of the return path.
+
+#### 2. Partial batch import (one valid + one invalid file)
+
+**Trigger**: Upload a valid `.gpx` file and an oversized or zero-byte file in the same import batch.
+
+**Expected behavior**:
+- Response returns `200` with `importedActivities >= 1` and `rejectedFiles` listing the bad file with a reason
+- Settings import modal stays open and shows "X file(s) were skipped" with the rejected filenames
+- Modal does NOT close as if everything succeeded
+
+**Failure indicator**: Modal closes after any `200`, or rejected files silently disappear.
+
+#### 3. Weather provider outage
+
+**Trigger**: Block the `api.open-meteo.com` fetch (via DevTools or host-file block) and open any page with the weather bar.
+
+**Expected behavior**:
+- Weather bar shows the error/empty state (e.g. "Weather unavailable") rather than a blank area
+- The rest of the page loads and functions normally
+
+**Failure indicator**: Blank strip, JS error in console causing page crash, or infinite loading spinner.
+
+#### 4. Malformed analytics response
+
+**Trigger**: Stub `GET /api/activities/{id}/analytics` to return `500` or invalid JSON, then open a Run Detail page.
+
+**Expected behavior**:
+- Run Detail page renders (hero, map, performance metrics visible)
+- An inline error card appears above the analytics sections with a "Reload" action
+- No blank white sections, no uncaught JS exceptions
+
+**Failure indicator**: Blank analytics panels with no explanation, or a white-screen crash.
+
+#### 5. Batch file count cap
+
+**Trigger**: Submit more than 50 files in a single import batch request.
+
+**Expected behavior**:
+- Backend returns `400` with a JSON body containing `error` explaining the limit
+- Frontend shows the error in the import modal without closing it
+
+**Failure indicator**: Server accepts the request, or frontend shows a generic "Import failed" without the limit explanation.

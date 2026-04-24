@@ -1,0 +1,12 @@
+{
+  "name": "hermes-team-bundle",
+  "version": "0.1.0",
+  "purpose": "Portable Claude bundle for Hermes workflows",
+  "includes": [
+    "skills",
+    "hooks",
+    "commands",
+    "agents"
+  ],
+  "notes": "Copy into another repo's .claude/plugins/ folder and wire the needed hooks/commands explicitly."
+}

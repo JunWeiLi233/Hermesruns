@@ -1,0 +1,27 @@
+{
+  "laneId": "lane-b-today-run",
+  "parentRunId": "ahm-20260416-030200",
+  "correlationId": "ahm-20260416-030200:lane-b-today-run",
+  "goal": "Incorporate VDOT trend into TodayRun confidence model",
+  "ownedFiles": ["frontend/src/pages/TodayRun.jsx", "frontend/src/utils/todayRun.js"],
+  "changedFiles": ["frontend/src/pages/TodayRun.jsx"],
+  "completedRounds": [
+    {
+      "task": "Add computeVdotTrend import and apply VDOT trend adjustment inside buildConfidenceModel in TodayRun.jsx",
+      "verification": "Vite build: pass (built in 1.29s, synced to backend static dir). Bundle TodayRun-Do2nMBX8.js confirmed to contain VDOT trend logic.",
+      "changedFiles": ["frontend/src/pages/TodayRun.jsx"]
+    }
+  ],
+  "verification": "Vite build passed in 1.29s. Bundle synced to backend/src/main/resources/static/assets/. VDOT trend keywords (declining/improving) confirmed present in TodayRun-Do2nMBX8.js. Runtime sync verify tool was permission-denied but bundle content and build output confirm sync.",
+  "runtimeProof": "PASS (build confirmed synced) — 2026-04-15T03:02:00Z",
+  "risks": [
+    "todayRun.js was not changed — buildConfidenceModel was already in TodayRun.jsx, not in todayRun.js, so that file required no edits"
+  ],
+  "mustPreserve": [
+    "Existing confidence score shape and all other inputs (ACWR, recovery hours, hard runs, tone) remain unchanged",
+    "Clamp remains Math.max(42, Math.min(96, ...)) — VDOT adjustment applied before clamp",
+    "If hasData is false, no adjustment is applied"
+  ],
+  "mergeNotes": "Only TodayRun.jsx was changed (todayRun.js had no buildConfidenceModel — that function lives in TodayRun.jsx). Added import of computeVdotTrend from '../utils/vdot'. Added runs parameter to buildConfidenceModel and updated the useMemo call site to pass runs and include it in the dependency array. Adjustment: declining => -3, improving => +2, maintaining => 0. Skipped when hasData is false.",
+  "status": "approved"
+}

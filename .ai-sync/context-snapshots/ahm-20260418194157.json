@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-04-18T19:41:57.881Z",
+  "taskStatement": "Harden public auth trust and improve global UX/accessibility.",
+  "desiredOutcome": "Harden public auth trust and improve global UX/accessibility.",
+  "knownFacts": {
+    "controllerDecision": "continue-self-loop",
+    "surface": "Login",
+    "problemClass": "unknown",
+    "touchesFrontend": true,
+    "touchesBackend": false,
+    "isCrossStack": false
+  },
+  "constraints": {
+    "maxLanes": 5,
+    "maxIterations": 10,
+    "disjointFileOwnership": true,
+    "requiresVerification": true,
+    "requiresArchitectReview": true
+  },
+  "unknowns": [],
+  "likelyTouchpoints": [
+    "frontend/src/pages/Login.jsx",
+    "frontend/src/pages/Signup.jsx",
+    "frontend/src/i18n/translations.js",
+    "frontend/src/styles/style.css"
+  ],
+  "lanesPlanned": 2
+}

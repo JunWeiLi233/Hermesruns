@@ -1,0 +1,110 @@
+{
+  "synthesizedAt": "2026-04-20T03:20:00.000Z",
+  "scope": "running coaching apps",
+  "executiveSummary": "The global fitness apps market ($12.12B in 2025, 13.4% CAGR) is growing rapidly, but the running coaching sub-segment has a clear differentiation gap: no single competitor combines VDOT methodology, ACWR injury prevention, daily coaching voice, and shoe rotation intelligence. Strava dominates social but lacks coaching depth. Runna leads in adaptive plans but aggressively pushes paces without load management. Runalyze offers VDOT but has no mobile app or daily coaching. Hermes is uniquely positioned to own the 'intelligent daily coach' position that runners explicitly say they'd pay for.",
+  "marketScore": {
+    "overall": 8.2,
+    "marketSize": 7,
+    "competitiveGap": 9,
+    "userPain": 9,
+    "trendAlignment": 8,
+    "hermesFit": 8
+  },
+  "opportunities": [
+    {
+      "title": "Coach-Voice Weekly Summary",
+      "description": "Weekly summary that synthesizes VDOT trend, ACWR state, and goal progress into a plain-language coach verdict. Directly replaces the runner's need to check 3+ screens to understand their week.",
+      "score": 8.5,
+      "confidence": "high",
+      "evidence": ["Runna lacks VDOT and ACWR", "Reddit runners want 'tell me what to do'", "Strava provides no coaching voice"],
+      "recommendedTier": "1",
+      "suggestedFiles": ["frontend/src/pages/WeeklySummary.vue", "backend/src/main/java/com/hermes/coach/WeeklyVerdict.java"],
+      "doneWhen": "Weekly view shows a coach-voice summary: 'Your fitness is trending up (+2 VDOT this month). Your ACWR is in the sweet spot. You're on track for your 10K goal.'",
+      "verify": "Unit: summary generates correct verdict from input data; E2E: navigate to weekly summary, see verdict text"
+    },
+    {
+      "title": "ACWR Injury Warning System",
+      "description": "Prominent ACWR state indicator with plain-language injury risk explanation on Today's Run and Profile. Directly addresses the #1 Reddit complaint about running apps.",
+      "score": 8.5,
+      "confidence": "high",
+      "evidence": ["Reddit: 'No app tells you to rest'", "Runna aggressively pushes pace with no load management", "TrainingPeaks has TSS but no simple daily verdict"],
+      "recommendedTier": "1",
+      "suggestedFiles": ["frontend/src/components/ACWRIndicator.vue", "backend/src/main/java/com/hermes/analytics/WorkloadRatio.java"],
+      "doneWhen": "Daily view shows ACWR state (green/yellow/red) with plain-language explanation like 'Your training load spiked 30% — consider an easy day'",
+      "verify": "Unit tests for ACWR calculation; E2E: ACWR indicator renders on today screen with correct color state"
+    },
+    {
+      "title": "Smart Shoe Rotation Tracker",
+      "description": "Intelligent shoe recommendation for each run based on mileage, type, and rotation health. No competitor does this — Strava requires manual logging, Runna ignores shoes entirely.",
+      "score": 7.5,
+      "confidence": "high",
+      "evidence": ["Reddit: 'I have to manually log shoe miles'", "No running app offers rotation advice", "Hermes already has shoe data from Strava sync"],
+      "recommendedTier": "2",
+      "suggestedFiles": ["frontend/src/components/ShoeRecommendation.vue", "backend/src/main/java/com/hermes/inventory/ShoeTracker.java"],
+      "doneWhen": "Today view shows recommended shoe for today's workout based on shoe mileage and workout type; shoe page shows mileage per shoe with replacement alert",
+      "verify": "E2E: add shoe, log runs, see mileage accumulate, see recommendation"
+    },
+    {
+      "title": "Streak Protection & Comeback Messaging",
+      "description": "After 3+ days off, app shows encouraging comeback message instead of guilt. Streak counter shows current and best streak. Directly serves The Enthusiast persona.",
+      "score": 7.0,
+      "confidence": "medium",
+      "evidence": ["PRODUCT.md Enthusiast persona: 'Feeling like they failed when they miss a week'", "NRC uses guilt-based coaching that pushes pace after missed days", "Reddit runners report demotivation after breaks"],
+      "recommendedTier": "2",
+      "suggestedFiles": ["frontend/src/components/StreakProtection.vue", "frontend/src/components/ComebackMessage.vue"],
+      "doneWhen": "After 3+ days off, app shows encouraging comeback message; streak counter shows current streak and best streak; no guilt messaging",
+      "verify": "E2E: simulate 4-day gap, verify comeback message appears; verify streak reset behavior"
+    },
+    {
+      "title": "Programmatic SEO for Goal-Time Marathon Plans",
+      "description": "Landing pages for specific marathon goal times (sub-3, sub-4) capturing high-intent Builder/Competitor search traffic. High SEO gap — few competitors rank for 'sub-3 marathon plan'.",
+      "score": 8.0,
+      "confidence": "medium",
+      "evidence": ["Google Trends: 'marathon training plan' is high volume", "Minimal competition for 'sub-3 marathon plan' keyword", "Hermes HAS the VDOT prediction to back goal-time claims"],
+      "recommendedTier": "2",
+      "suggestedFiles": ["frontend/src/App.jsx", "frontend/src/pages/GoalTimePlan.jsx (New)"],
+      "doneWhen": "Landing pages for specific marathon goal times are generated",
+      "verify": "cd frontend && npm run build"
+    },
+    {
+      "title": "Freemium Monetization with Coaching Paywall",
+      "description": "Free tier shows VDOT, basic tracking, and daily run/rest; paywall gates weekly summary, ACWR deep dive, and advanced race predictions. Tier structure aligns with 'worth paying for' willingness signals.",
+      "score": 6.5,
+      "confidence": "medium",
+      "evidence": ["Reddit willingness: $5-15/mo", "Strava charges $80/yr for analytics-only", "Runna charges $120/yr without injury prevention"],
+      "recommendedTier": "3",
+      "suggestedFiles": ["frontend/src/components/PaywallGate.vue", "backend/src/main/java/com/hermes/subscription/TierManager.java"],
+      "doneWhen": "Free tier shows VDOT and basic tracking; paywall gates daily coaching, ACWR, weekly summary behind subscription; pricing page live at /pricing",
+      "verify": "E2E: free user sees basic data; clicking coaching features shows paywall; subscriber sees full experience"
+    }
+  ],
+  "threats": [
+    {
+      "threat": "Strava adds VDOT or ACWR features",
+      "severity": "medium",
+      "mitigation": "Hermes ships first and iterates faster; Strava's engineering is known to move slowly on coaching features"
+    },
+    {
+      "threat": "Subscription fatigue limits conversion",
+      "severity": "medium",
+      "mitigation": "Strong free tier with daily coaching value; paywall only advanced weekly/monthly insights"
+    },
+    {
+      "threat": "Runna improves load management",
+      "severity": "low",
+      "mitigation": "Hermes has methodology-first positioning (VDOT transparent, ACWR transparent) vs Runna's black-box AI"
+    },
+    {
+      "threat": "Apple/Fitness+ enters running coaching",
+      "severity": "low",
+      "mitigation": "Apple targets casual users; Hermes targets committed runners who need data-driven coaching"
+    }
+  ],
+  "researchStatus": {
+    "marketAnalyst": "complete",
+    "competitorHunter": "complete",
+    "pricingEngineer": "complete",
+    "socialSignal": "partial",
+    "trendValidator": "partial"
+  }
+}

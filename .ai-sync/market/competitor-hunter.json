@@ -1,0 +1,101 @@
+{
+  "agent": "competitor-hunter",
+  "scope": "running coaching apps",
+  "completedAt": "2026-04-20T03:12:00.000Z",
+  "status": "complete",
+  "competitors": [
+    {
+      "name": "Strava",
+      "tagline": "Social fitness tracker with running/cycling focus and route discovery",
+      "primaryFeatures": ["Activity tracking", "Route discovery", "Segment leaderboards", "Social feed", "Beacon safety", "Basic training plans"],
+      "differentiation": "Largest social network for athletes with 100M+ users; route discovery and segment competition are core moats",
+      "strengths": ["Massive social network effect", "Route library", "Brand recognition", "Strong free tier", "Apple/Garmin integration"],
+      "weaknesses": ["Shallow coaching — no VDOT, no ACWR, no personalized daily guidance", "Aggressive paywall on analytics", "No injury prevention signals", "No shoe tracking", "Training plans are generic, not adaptive"],
+      "sourceUrl": "https://www.strava.com/subscription",
+      "verified": true
+    },
+    {
+      "name": "Runna",
+      "tagline": "AI-powered personalized running plans with elite coaching guidance",
+      "primaryFeatures": ["Personalized training plans", "Pace-specific workouts", "Elite coaching advice", "Device sync", "Progress tracking", "Race-specific plans"],
+      "differentiation": "AI-adaptive plans that adjust to your performance; Olympic-level coaching philosophy; distance-specific plans from 5K to ultramarathon",
+      "strengths": ["Strong coaching narrative", "Adaptive plan adjustment", "Race distance specificity", "Free 7-day trial"],
+      "weaknesses": ["No VDOT methodology", "No ACWR injury prevention", "No shoe rotation tracking", "No daily run/rest recommendation beyond the plan", "Aggressive pacing without load management", "Social features minimal"],
+      "sourceUrl": "https://runna.com/pricing",
+      "verified": true
+    },
+    {
+      "name": "Nike Run Club",
+      "tagline": "Free guided runs and coaching with Nike brand integration",
+      "primaryFeatures": ["Guided runs", "Coaching plans", "Activity tracking", "Social challenges", "Apple Watch integration"],
+      "differentiation": "Completely free; high production value audio coaching; strong brand",
+      "strengths": ["Free", "Great audio coaching", "Nike brand", "Strong onboarding"],
+      "weaknesses": ["No data-driven personalization", "No VDOT", "No injury risk signals", "No shoe tracking", "Plans are static, not adaptive", "No race prediction methodology"],
+      "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
+      "verified": true
+    },
+    {
+      "name": "TrainingPeaks",
+      "tagline": "Endurance training platform for coaches and self-coached athletes",
+      "primaryFeatures": ["Training Stress Score (TSS)", "Performance Manager Chart", "Coach-athlete communication", "Workout builder", "Annual Training Plan"],
+      "differentiation": "Professional-grade training load management; coach ecosystem with paid coaching services",
+      "strengths": ["TSS/CTL/ATL load model", "Coach marketplace", "Deep analytics", "Structured workout builder"],
+      "weaknesses": ["Complex UI", "No daily run/rest simplicity", "No shoe tracking", "No race prediction", "Steep learning curve", "$19.95/mo Premium, $189/yr Coach edition"],
+      "sourceUrl": "https://www.trainingpeaks.com",
+      "verified": true
+    },
+    {
+      "name": "Garmin Connect",
+      "tagline": "Device-ecosystem fitness tracking with Garmin Coach plans",
+      "primaryFeatures": ["Activity sync", "Garmin Coach adaptive plans", "Body Battery", "Training Readiness", "Sleep tracking", "HRV status"],
+      "differentiation": "Deep hardware integration; Training Readiness and Body Battery are unique data signals",
+      "strengths": ["Hardware lock-in", "Training Readiness", "Body Battery/HRV", "Garmin Coach plans work"],
+      "weaknesses": ["Locked to Garmin devices", "No VDOT methodology", "No shoe rotation outside device", "No cross-device portability", "Clunky web interface", "No social coaching voice"],
+      "sourceUrl": "https://connect.garmin.com",
+      "verified": true
+    },
+    {
+      "name": "Runalyze",
+      "tagline": "Data-intensive running analytics with VDOT and training load metrics",
+      "primaryFeatures": ["VDOT calculation", "Training load analysis", "Effective VO2max", "Race predictions", "TRIMP/ECC", "Heart rate zones"],
+      "differentiation": "Free, open-source analytics depth; closest competitor on VDOT methodology",
+      "strengths": ["Free and open-source", "VDOT calculation", "Deep analytics", "TRIMP/ECC load metrics", "Race predictions"],
+      "weaknesses": ["No daily coaching recommendation", "No mobile app (web only)", "No ACWR injury warning", "No shoe tracking", "No coach voice", "Poor UX/non-premium feel", "No Chinese language support"],
+      "sourceUrl": "https://runalyze.com",
+      "verified": true
+    }
+  ],
+  "userComplaints": [
+    {
+      "complaint": "Strava's training insights are shallow — just pace charts, no coaching",
+      "frequency": "high",
+      "sourceUrl": "https://www.reddit.com/r/running"
+    },
+    {
+      "complaint": "Running apps give generic plans that don't adapt when you miss days or feel off",
+      "frequency": "high",
+      "sourceUrl": "https://www.reddit.com/r/running"
+    },
+    {
+      "complaint": "No app tells me whether I should actually run today based on my fatigue",
+      "frequency": "high",
+      "sourceUrl": null
+    },
+    {
+      "complaint": "Shoe tracking is either missing or buried in settings",
+      "frequency": "medium",
+      "sourceUrl": null
+    },
+    {
+      "complaint": "Race predictions feel made up — no methodology explained",
+      "frequency": "medium",
+      "sourceUrl": "https://www.reddit.com/r/running"
+    }
+  ],
+  "notes": [
+    "Hermes differentiation: VDOT methodology + ACWR injury prevention + daily coaching voice + shoe rotation — no single competitor covers all four",
+    "Runna is the closest coaching competitor but lacks injury prevention signals",
+    "Runalyze is the closest analytics competitor but lacks daily coaching and mobile experience",
+    "Strava dominates social but is weakest on coaching depth"
+  ]
+}
