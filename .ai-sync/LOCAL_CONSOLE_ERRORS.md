@@ -2,8 +2,28 @@
 
 Local-only Hermes console error ledger captured from `localhost:8080`.
 
-- Last Updated: 2026-04-20T23:03:07.655521900Z
+- Last Updated: 2026-04-24T18:52:05.302114800Z
 - Open Entries: 16
+
+## " onmouseover="alert('xss')"
+
+- Severity: error
+- Kind: console.error
+- Count: 3
+- Route: (unknown route)
+- First Seen: 2026-04-20T04:12:24.235132900Z
+- Last Seen: 2026-04-24T18:52:05.302114800Z
+- Fingerprint: `58e81ab4bc43ce6931b93bf227195e05b9740843`
+
+## <script>alert('xss')</script>
+
+- Severity: error
+- Kind: console.error
+- Count: 3
+- Route: (unknown route)
+- First Seen: 2026-04-20T04:12:24.232132200Z
+- Last Seen: 2026-04-24T18:52:05.245900700Z
+- Fingerprint: `4a9d6484e06a059a47168fcee59103962b84d445`
 
 ## Failed to load resource: https://aucklandmarathon.co.nz/assets/Uploads/Auckland-Marathon-FB.jpg
 
@@ -124,26 +144,6 @@ Local-only Hermes console error ledger captured from `localhost:8080`.
 - First Seen: 2026-04-20T11:16:28.497091300Z
 - Last Seen: 2026-04-20T11:16:28.497091300Z
 - Fingerprint: `1816d1296fc90c390760bf91114dc01774785a88`
-
-## " onmouseover="alert('xss')"
-
-- Severity: error
-- Kind: console.error
-- Count: 2
-- Route: (unknown route)
-- First Seen: 2026-04-20T04:12:24.235132900Z
-- Last Seen: 2026-04-20T04:18:29.436951800Z
-- Fingerprint: `58e81ab4bc43ce6931b93bf227195e05b9740843`
-
-## <script>alert('xss')</script>
-
-- Severity: error
-- Kind: console.error
-- Count: 2
-- Route: (unknown route)
-- First Seen: 2026-04-20T04:12:24.232132200Z
-- Last Seen: 2026-04-20T04:18:29.433952200Z
-- Fingerprint: `4a9d6484e06a059a47168fcee59103962b84d445`
 
 ## Failed to load resource: https://aucklandmarathon.co.nz/assets/Uploads/Auckland-Marathon-FB.jpg
 

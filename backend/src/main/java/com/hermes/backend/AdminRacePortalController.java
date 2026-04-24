@@ -229,6 +229,14 @@ public class AdminRacePortalController {
         }
     }
 
+    @GetMapping("/{raceId}/scan-timeline")
+    public ResponseEntity<?> getRaceCourseMapScanTimeline(@PathVariable String raceId,
+                                                          @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        return ResponseEntity.ok(adminBackgroundJobService.getCourseMapScanTimeline(raceId));
+    }
+
     @DeleteMapping("/{raceId}/pending")
     public ResponseEntity<?> clearPendingRaceCourseMap(@PathVariable String raceId,
                                                        @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {

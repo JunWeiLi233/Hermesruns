@@ -347,7 +347,7 @@ export default function AddShoes() {
           <div className="runner-shell-topbar-left">
             <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
               <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')} aria-label={t('profile.dashboard_nav_dashboard')}>HERMES</button>
-              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/shoes')}>
+              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/shoes')} aria-label={t('profile.dashboard_nav_shoes')}>
                 {t('profile.dashboard_nav_shoes')}
               </button>
               <span className="runner-shell-topnav-link is-section is-active">{t('shoes.add_page_title')}</span>
@@ -443,7 +443,7 @@ export default function AddShoes() {
                       {secondaryBrands.map((brand) => {
                         const isActive = browserBrand?.brand === brand.brand;
                         return (
-                          <button key={brand.brand} type="button" className={cx('add-shoes-brand-deck-card', isActive && 'is-active')} onClick={() => handleBrandPick(brand)} aria-pressed={isActive ? 'true' : 'false'}>
+                          <button key={brand.brand} type="button" className={cx('add-shoes-brand-deck-card', isActive && 'is-active')} onClick={() => handleBrandPick(brand)} aria-pressed={isActive ? 'true' : 'false'} aria-label={localizeShoeBrand(brand.brand, lang)}>
                             <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
                             <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
                           </button>
@@ -458,6 +458,7 @@ export default function AddShoes() {
                         className={cx('add-shoes-brand-expand-btn', showExtraBrands && 'is-open')}
                         onClick={() => setShowExtraBrands((current) => !current)}
                         aria-expanded={showExtraBrands}
+                        aria-label={showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}
                       >
                         <span>{showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}</span>
                         <AppIcon name={showExtraBrands ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
@@ -473,6 +474,7 @@ export default function AddShoes() {
                                 className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
                                 onClick={() => handleBrandPick(brand)}
                                 aria-pressed={isActive ? 'true' : 'false'}
+                                aria-label={localizeShoeBrand(brand.brand, lang)}
                               >
                                 <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
                                 <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
@@ -489,12 +491,12 @@ export default function AddShoes() {
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>{t('shoes.add_page_step_model_title')}</h2><p>{t('shoes.add_page_step_model_copy')}</p></div></div>
                   <div className="add-shoes-model-board-top">
                     <div className="add-shoes-filter-row">
-                      {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => setBrowserCategory(categoryKey)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
-                      {browserTypeOptions.slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => setBrowserType(typeKey)}>{typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
+                      {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => setBrowserCategory(categoryKey)} aria-label={getCatalogCategoryLabel(categoryKey, lang)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
+                      {browserTypeOptions.slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => setBrowserType(typeKey)} aria-label={typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}>{typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
                     </div>
                     <div className="add-shoes-search-row">
                       <span className="add-shoes-search-icon" aria-hidden="true"><AppIcon name="search" /></span>
-                      <input type="text" value={modelQuery} onChange={(event) => setModelQuery(event.target.value)} placeholder={browserModelPlaceholder} />
+                      <input type="text" value={modelQuery} onChange={(event) => setModelQuery(event.target.value)} placeholder={browserModelPlaceholder} aria-label={browserModelPlaceholder} />
                     </div>
                   </div>
                   <div className="add-shoes-model-board-shell">
@@ -510,7 +512,7 @@ export default function AddShoes() {
                         const cardKey = `${browserBrand?.brand || 'brand'}:${model.model}:${index}`;
                         const isActive = selectedModelKey === `${browserBrand?.brand || ''}:${model.model}`;
                         return (
-                          <button key={cardKey} type="button" className={cx('add-shoes-model-card', isActive && 'is-active')} onClick={() => handleModelPick(model)}>
+                          <button key={cardKey} type="button" className={cx('add-shoes-model-card', isActive && 'is-active')} onClick={() => handleModelPick(model)} aria-label={getCatalogModelLabel(model, lang)}>
                             <span className="add-shoes-model-art"><ShoeBrandLogo brand={browserBrand?.brand || model.brand} fallbackEmoji={browserBrand?.logo} /></span>
                             <strong>{getCatalogModelLabel(model, lang)}</strong>
                             <span>{getCatalogCategoryLabel(model.category || model.type, lang)}</span>
@@ -543,8 +545,8 @@ export default function AddShoes() {
                       <label className="add-shoes-toggle"><input type="checkbox" checked={formPrimary} onChange={(event) => setFormPrimary(event.target.checked)} /><span>{t('shoes.set_primary')}</span></label>
                       {submitState === 'error' ? <p className="add-shoes-form-error">{t('shoes.add_page_error')}</p> : null}
                       <div className="add-shoes-form-actions">
-                        <button type="button" className="add-shoes-secondary-btn" onClick={() => navigate('/shoes')}>{t('shoes.cancel')}</button>
-                        <button type="submit" className="add-shoes-primary-btn" disabled={!formBrand.trim() || !formModel.trim() || submitState === 'saving'}><AppIcon name="add" className="runner-dashboard-side-link-icon" /><span>{submitState === 'saving' ? t('shoes.add_page_saving') : t('shoes.add_page_complete_setup')}</span></button>
+                        <button type="button" className="add-shoes-secondary-btn" onClick={() => navigate('/shoes')} aria-label={t('shoes.cancel')}>{t('shoes.cancel')}</button>
+                        <button type="submit" className="add-shoes-primary-btn" disabled={!formBrand.trim() || !formModel.trim() || submitState === 'saving'} aria-label={submitState === 'saving' ? t('shoes.add_page_saving') : t('shoes.add_page_complete_setup')}><AppIcon name="add" className="runner-dashboard-side-link-icon" /><span>{submitState === 'saving' ? t('shoes.add_page_saving') : t('shoes.add_page_complete_setup')}</span></button>
                       </div>
                     </form>
                   </div>

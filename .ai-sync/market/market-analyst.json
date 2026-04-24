@@ -1,30 +1,87 @@
 {
-  "agent": "market-analyst",
-  "scope": "running coaching apps",
-  "completedAt": "2026-04-20T03:10:00.000Z",
-  "status": "complete",
-  "marketSize": {
-    "value": "$12.12B (2025, fitness apps total)",
-    "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
-    "verified": true
-  },
+  "report": "Market Analyst",
   "tam": {
-    "value": "$33.58B by 2033 (fitness apps total)",
+    "description": "Total Addressable Market — the global fitness apps market, encompassing all exercise & weight loss, diet & nutrition, and activity tracking applications across iOS, Android, and wearable platforms. Also overlaps with the broader sports analytics market (player performance analysis, injury prediction, training optimization) and wearable technology (fitness trackers, smartwatches). Hermes operates at the intersection of running-specific fitness apps, VDOT-based performance analytics, and self-hosted coaching platforms.",
+    "estimatedValue": "$12.12 billion (2025), projected to $33.58 billion by 2033",
     "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
-    "verified": true
+    "growthRate": "13.40% CAGR (2026-2033)",
+    "growthSourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market"
   },
-  "growthRate": {
-    "value": "13.40% CAGR 2026-2033",
-    "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
-    "verified": true
+  "sam": {
+    "description": "Serviceable Addressable Market — running-specific fitness apps and performance analytics platforms. Running is the dominant segment within exercise & activity tracking apps. The exercise & weight loss segment alone held 53.69% of the fitness apps market (~$6.5B). Running apps (Strava, Nike Run Club, Runna, etc.) represent an estimated 20-25% of fitness app revenue when factoring in dedicated running analytics, coaching features, and wearable integration. The sports analytics sub-segment for injury prediction, VDOT/pace analysis, and training load management further defines this addressable space.",
+    "estimatedValue": "~$2.5 billion (2025)",
+    "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market"
   },
-  "notes": [
-    "Running-specific apps are a sub-segment of the broader fitness app market",
-    "Exercise & weight loss segment held 53.69% revenue share in 2025",
-    "North America led with 39.82% revenue share in 2025",
-    "Asia Pacific is the fastest growing region",
-    "Runna raised $9.09M in venture capital (noted in Grand View Research report)",
-    "858 million fitness app downloads in 2023 (Business of Apps)",
-    "The running coaching sub-segment is estimated at $1-2B based on exercise & weight loss share"
+  "som": {
+    "description": "Serviceable Obtainable Market — self-hosted running analytics and coaching platforms. This niche addresses running coaches, clubs, teams, and privacy-conscious individuals who need full data ownership, on-premises deployment, and customizable VDOT-based analytics. Self-hosted fitness/analytics software is a small fraction (~3-5%) of the total running app market, dominated by cloud SaaS (Strava, TrainingPeaks, Final Surge). Key differentiators: data sovereignty, no subscription lock-in, white-label potential for coaching businesses, and integration with local hardware/medical systems.",
+    "estimatedValue": "~$75-125 million (2025)",
+    "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market"
+  },
+  "keyTrends": [
+    {
+      "trend": "AI-Powered Personalized Coaching — Apps like Runna and PUSH use AI to generate adaptive training plans with real-time feedback. Over 75% of elite sports franchises now leverage real-time analytics for performance optimization.",
+      "impact": "High",
+      "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/fitness-app-market"
+    },
+    {
+      "trend": "Predictive Health & Injury Risk Analytics — Sports analytics market growing at 18.5% CAGR, with injury risk prediction as a key application. Teams use wearable data + ML models to forecast injuries before they occur.",
+      "impact": "High",
+      "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/sports-analytics-market"
+    },
+    {
+      "trend": "Self-Hosted & Privacy-First Fitness Software — Growing demand for data sovereignty among coaching businesses, sports organizations, and privacy-conscious runners. GDPR/CCPA compliance drives interest in on-premises deployment over cloud-only SaaS.",
+      "impact": "Medium",
+      "sourceUrl": "https://www.marketsandmarkets.com/Market-Reports/sports-analytics-market-35276513.html"
+    },
+    {
+      "trend": "Wearable Integration & Biometric Tracking — Wearable tech market at $92.9B (2025), growing 12.1% CAGR. Smartwatches, HR monitors, and advanced sensors (Polar, Garmin, WHOOP) generate rich data streams that feed into analytics platforms like Hermes.",
+      "impact": "High",
+      "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/wearable-technology-market"
+    },
+    {
+      "trend": "VDOT & Jack Daniels' Running Formula Adoption — Scientific training methodologies (VDOT, heart-rate zone training, lactate threshold) are becoming standard in premium running apps. Coaches seek platforms that implement these models correctly.",
+      "impact": "Medium",
+      "sourceUrl": "https://www.grandviewresearch.com/industry-analysis/sports-analytics-market"
+    },
+    {
+      "trend": "Cloud-Native Analytics with Hybrid Deployment Options — Sports analytics market shifting to cloud (38.1% share in 2025) but hybrid/on-premises deployment remains critical for organizations with data compliance needs.",
+      "impact": "Medium",
+      "sourceUrl": "https://www.marketsandmarkets.com/Market-Reports/sports-analytics-market-35276513.html"
+    }
+  ],
+  "marketRisks": [
+    {
+      "risk": "Dominance of free/cheap cloud competitors — Strava, Nike Run Club, Garmin Connect offer powerful free tiers. Self-hosted platforms struggle to compete on price and network effects.",
+      "severity": "High",
+      "mitigation": "Focus on unique value props: full data ownership, VDOT science accuracy, no vendor lock-in, white-label coaching tools. Target B2B (coaching businesses, clubs) rather than mass consumer."
+    },
+    {
+      "risk": "Small addressable market for self-hosted — Most runners and coaches prefer convenience of cloud SaaS. Self-hosted requires technical expertise to deploy and maintain.",
+      "severity": "High",
+      "mitigation": "Provide turnkey Docker-based deployment, one-click setup, and managed hosting option. Target technically-savvy early adopters and build from there."
+    },
+    {
+      "risk": "Rapid AI commoditization — AI coaching features are becoming table stakes. Major players (Strava, Runna) have massive data advantages for training ML models.",
+      "severity": "Medium",
+      "mitigation": "Double down on scientifically validated models (VDOT, Daniels formula) that general-purpose AI may not implement correctly. Partner with coaching experts for domain authority."
+    },
+    {
+      "risk": "Fragmented wearable ecosystem — Supporting all devices (Garmin, Polar, Apple Watch, Coros, Suunto, Zwift) is complex and expensive. API changes can break integrations.",
+      "severity": "Medium",
+      "mitigation": "Prioritize most popular protocols (ANT+, BLE, FIT file import). Build adapter architecture for swappable device integrations. Support manual data entry as fallback."
+    },
+    {
+      "risk": "Open-source alternatives — Projects like Golden Cheetah, TrainingPeaks alternatives, and self-hosted fitness dashboards exist, though none with VDOT-specific focus.",
+      "severity": "Low",
+      "mitigation": "Differentiate with modern UI/UX, VDOT science rigor, automated daily recommendations, injury prediction, and shoe tracking — features OSS alternatives lack."
+    }
+  ],
+  "sources": [
+    "https://www.grandviewresearch.com/industry-analysis/fitness-app-market",
+    "https://www.grandviewresearch.com/industry-analysis/sports-analytics-market",
+    "https://www.grandviewresearch.com/industry-analysis/wearable-technology-market",
+    "https://www.marketsandmarkets.com/Market-Reports/sports-analytics-market-35276513.html",
+    "https://www.statista.com/outlook/hmo/digital-health/worldwide",
+    "https://www.statista.com/outlook/hmo/digital-health/digital-fitness-well-being/worldwide"
   ]
 }

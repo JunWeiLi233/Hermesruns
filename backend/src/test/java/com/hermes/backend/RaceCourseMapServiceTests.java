@@ -2637,12 +2637,6 @@ class RaceCourseMapServiceTests {
         return output.toByteArray();
     }
 
-    private BufferedImage decodeDataUrlImage(String dataUrl) throws Exception {
-        int commaIndex = dataUrl.indexOf(',');
-        byte[] imageBytes = Base64.getDecoder().decode(dataUrl.substring(commaIndex + 1));
-        return ImageIO.read(new ByteArrayInputStream(imageBytes));
-    }
-
     private byte[] samplePdf() throws Exception {
         return samplePdf(1);
     }
@@ -3039,7 +3033,7 @@ class RaceCourseMapServiceTests {
     private QwenCourseMapAlignmentClient buildTestQwenAlignmentClient(RestTemplate restTemplate) {
         QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
         when(qwenClient.analyzeCandidate(any(), any(), any())).thenAnswer(invocation -> {
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key",
                     HttpMethod.POST,
                     HttpEntity.EMPTY,

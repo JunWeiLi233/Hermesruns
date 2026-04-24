@@ -3,7 +3,6 @@ package com.hermes.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -351,11 +350,9 @@ class RaceCourseMapAiServiceTests {
 
     @Test
     void buildAlignmentPromptRequestsDenseFullMarathonCheckpointsWithBostonCorridorHints() {
-        RaceCourseMapAiService service = new RaceCourseMapAiService(mock(RestTemplate.class), new ObjectMapper(), new RaceCourseMapGeometryService());
+        RaceCourseMapPromptBuilder promptBuilder = new RaceCourseMapPromptBuilder();
 
-        String prompt = ReflectionTestUtils.invokeMethod(
-                service,
-                "buildAlignmentPrompt",
+        String prompt = promptBuilder.buildAlignmentPrompt(
                 "Boston Marathon",
                 "Boston",
                 "United States",
@@ -377,11 +374,9 @@ class RaceCourseMapAiServiceTests {
 
     @Test
     void buildAlignmentPromptScansAnyRouteBearingCourseMapPictureWithoutWeakeningAccuracy() {
-        RaceCourseMapAiService service = new RaceCourseMapAiService(mock(RestTemplate.class), new ObjectMapper(), new RaceCourseMapGeometryService());
+        RaceCourseMapPromptBuilder promptBuilder = new RaceCourseMapPromptBuilder();
 
-        String prompt = ReflectionTestUtils.invokeMethod(
-                service,
-                "buildAlignmentPrompt",
+        String prompt = promptBuilder.buildAlignmentPrompt(
                 "Chicago Marathon",
                 "Chicago",
                 "United States",

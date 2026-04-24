@@ -118,6 +118,43 @@ class QwenCourseMapAlignmentClientTests {
     }
 
     @Test
+    void analyzeCandidateRecordsJsonParseFailureStep() {
+        CourseMapScanWatcher watcher = new CourseMapScanWatcher();
+        RecordingQwenCourseMapAlignmentClient client = new RecordingQwenCourseMapAlignmentClient(
+                new ObjectMapper(),
+                watcher,
+                new FakeProcess("not valid json at all", "", 0)
+        );
+
+        try (CourseMapScanWatcher.ScanScope ignored = watcher.watch("parse-failure-test", "reanalyze")) {
+            assertThatThrownBy(() -> client.analyzeCandidate(new byte[] {1, 2, 3}, "image/png", "prompt"))
+                    .isInstanceOf(IllegalStateException.class);
+
+            assertThat(watcher.currentSteps())
+                    .extracting(CourseMapScanStep::stage)
+                    .contains("qwen.process_completed", "qwen.output_read_failed");
+        }
+    }
+
+    @Test
+    void analyzeCandidateDoesNotLeakStepsAcrossSeparateWatcherScopes() {
+        CourseMapScanWatcher watcher = new CourseMapScanWatcher();
+
+        try (CourseMapScanWatcher.ScanScope ignored = watcher.watch("first-race", "upload")) {
+            watcher.record("test.first_step", "running", "first race");
+        }
+
+        try (CourseMapScanWatcher.ScanScope ignored = watcher.watch("second-race", "reanalyze")) {
+            watcher.record("test.second_step", "running", "second race");
+            assertThat(watcher.currentSteps())
+                    .extracting(CourseMapScanStep::stage)
+                    .containsExactly("watcher.started", "test.second_step");
+        }
+
+        assertThat(watcher.currentSteps()).isEmpty();
+    }
+
+    @Test
     void courseMapAlignmentDefaultsToLongVisionTimeout() {
         QwenCourseMapAlignmentClient client = new QwenCourseMapAlignmentClient(new ObjectMapper());
 
