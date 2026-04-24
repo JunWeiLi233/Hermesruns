@@ -1,0 +1,22 @@
+{
+  "laneId": "lane-review-add-shoes-reference",
+  "parentRunId": "ahm-20260413035611",
+  "correlationId": "ahm-20260413035611:lane-review-add-shoes-reference",
+  "goal": "Extract the mimic scope and implementation-critical layout/hierarchy details from the provided add-gear reference versus the current AddShoes page without editing code.",
+  "parentGoal": "Redesign the Add Shoes page to match the provided PULSE add-gear reference while preserving Hermes add-shoes behavior and shoe-flow wiring.",
+  "mode": "single-round",
+  "ownedFiles": [
+    ".ai-sync/auto-hermes-max-results/lane-review-add-shoes-reference.json"
+  ],
+  "mustPreserve": [
+    "Review only, no code edits."
+  ],
+  "verify": "Review frontend/src/pages/AddShoes.jsx, frontend/src/styles/style.css, design.md, and the provided HTML reference",
+  "mergeNotes": "Coordinator should keep the strongest structure and hierarchy findings only.",
+  "priority": 1,
+  "effort": "medium",
+  "dependsOn": [],
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-review-add-shoes-reference.json",
+  "command": "/auto-hermes scope=\"Extract the mimic scope and implementation-critical layout/hierarchy details from the provided add-gear reference versus the current AddShoes page without editing code.\" mode=single-round"
+}

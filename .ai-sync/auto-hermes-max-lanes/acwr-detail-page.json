@@ -1,0 +1,24 @@
+{
+  "laneId": "acwr-detail-page",
+  "parentRunId": "ahm-20260418053508",
+  "correlationId": "ahm-20260418053508:acwr-detail-page",
+  "goal": "Add Acute:Chronic Workload Ratio (ACWR) detail page.",
+  "parentGoal": "Enhance Today's Run recommendation with race-aware coaching and add Tier 1/2 feature gaps (ACWR detail, Runs search).",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/AnalysisInsightDetail.jsx",
+    "frontend/src/utils/analysisInsights.js"
+  ],
+  "mustPreserve": [],
+  "verify": "",
+  "mergeNotes": "",
+  "priority": 2,
+  "effort": "medium",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\acwr-detail-page.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\acwr-detail-page-activity.json",
+  "command": "/auto-hermes scope=\"Add Acute:Chronic Workload Ratio (ACWR) detail page.\" mode=loop owned=\"frontend/src/pages/AnalysisInsightDetail.jsx|frontend/src/utils/analysisInsights.js\""
+}

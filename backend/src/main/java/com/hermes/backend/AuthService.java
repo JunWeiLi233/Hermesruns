@@ -34,17 +34,22 @@ public class AuthService {
                 .filter(runner -> !runner.isDeleted());
     }
 
+    private static final String DUMMY_HASH = "pbkdf2$120000$MTIzNDU2Nzg5MDEyMzQ1Ng==$MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=";
+
     public Optional<Runner> authenticate(String email, String rawPassword) {
         Optional<Runner> runnerOptional = findByEmail(email);
-        if (runnerOptional.isEmpty()) {
+
+        String passwordToMatch = runnerOptional.isPresent()
+                ? runnerOptional.get().getPassword()
+                : DUMMY_HASH;
+
+        boolean matches = passwordHasher.matches(rawPassword, passwordToMatch);
+
+        if (runnerOptional.isEmpty() || !matches) {
             return Optional.empty();
         }
 
         Runner runner = runnerOptional.get();
-        if (!passwordHasher.matches(rawPassword, runner.getPassword())) {
-            return Optional.empty();
-        }
-
         if (passwordHasher.needsMigration(runner.getPassword())) {
             runner.setPassword(passwordHasher.hash(rawPassword));
             runnerRepository.save(runner);

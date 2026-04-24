@@ -1,0 +1,11 @@
+{
+  "mode": "auto-hermes",
+  "active": true,
+  "currentPhase": "complete",
+  "startedAt": "2026-04-18T17:19:09.777Z",
+  "completedAt": "",
+  "runId": "ah-20260418171909",
+  "status": "max-rounds-reached",
+  "contextSnapshotPath": ".ai-sync/context-snapshots/ah-20260418171909.json",
+  "progressLedgerPath": ".ai-sync/auto-hermes-state/ah-20260418171909-progress.json"
+}

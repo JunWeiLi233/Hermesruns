@@ -1,0 +1,26 @@
+{
+  "iteration": 1,
+  "parentGoal": "Split oversized MuscleTrainingPlannerService.java",
+  "lanes": [
+    {
+      "id": "lane-logic-extraction",
+      "scope": "Extract DTOs, Profile, Check-In, and Metrics logic.",
+      "files": [
+        "backend/src/main/java/com/hermes/backend/MuscleTrainingProfileService.java",
+        "backend/src/main/java/com/hermes/backend/MuscleTrainingCheckInService.java",
+        "backend/src/main/java/com/hermes/backend/MuscleTrainingMetricsService.java",
+        "backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "lane-session-extraction",
+      "scope": "Extract Session definitions and exercise templates.",
+      "files": [
+        "backend/src/main/java/com/hermes/backend/MuscleTrainingSessionService.java",
+        "backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java"
+      ],
+      "status": "planned"
+    }
+  ]
+}

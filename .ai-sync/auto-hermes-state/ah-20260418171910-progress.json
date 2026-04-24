@@ -1,0 +1,23 @@
+{
+  "runId": "ah-20260418171910",
+  "mode": "ralph-style-single-lane",
+  "generatedAt": "2026-04-18T17:19:10.580Z",
+  "active": false,
+  "currentPhase": "complete",
+  "iteration": 1,
+  "maxIterations": 2,
+  "workUnit": null,
+  "gates": {
+    "verification": "pending",
+    "runtimeTruth": "pending",
+    "architectReview": "pending",
+    "deslop": "pending",
+    "regressionReverification": "pending",
+    "writeback": "pending"
+  },
+  "supervisor": {
+    "decision": "continue",
+    "stop": false,
+    "repeatedNoCandidateAuditRounds": 1
+  }
+}

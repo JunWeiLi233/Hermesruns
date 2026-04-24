@@ -1,0 +1,27 @@
+{
+  "laneId": "lane-races-saved-status-frontend",
+  "parentRunId": "ahm-20260416112154",
+  "correlationId": "ahm-20260416112154:lane-races-saved-status-frontend",
+  "goal": "Switch `RacesDetail.jsx` to the new saved-status summary path so the checklist/CTA no longer hydrate from the full `/api/races` response.",
+  "parentGoal": "Add a race-detail saved-status summary path so `/races/details/:raceId` does not hydrate checklist state from the full decorated `/api/races` payload.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/pages/RacesDetail.jsx"
+  ],
+  "mustPreserve": [
+    "Preserve the current race-detail layout, checklist copy, and CTA behavior.",
+    "Keep the nonblocking hydration pattern intact.",
+    "Consume only the minimal saved-status contract instead of the decorated race list."
+  ],
+  "verify": "cd frontend && npm run lint",
+  "mergeNotes": "",
+  "priority": 2,
+  "effort": "small",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-races-saved-status-frontend.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-races-saved-status-frontend-activity.json",
+  "command": "/auto-hermes scope=\"Switch `RacesDetail.jsx` to the new saved-status summary path so the checklist/CTA no longer hydrate from the full `/api/races` response.\" mode=loop owned=\"frontend/src/pages/RacesDetail.jsx\""
+}

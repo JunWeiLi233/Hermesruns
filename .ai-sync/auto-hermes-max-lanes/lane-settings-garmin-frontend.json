@@ -1,0 +1,29 @@
+{
+  "laneId": "lane-settings-garmin-frontend",
+  "parentRunId": "ahm-20260416150646",
+  "correlationId": "ahm-20260416150646:lane-settings-garmin-frontend",
+  "goal": "Implement a dual-mode Garmin Connect redesign on the Settings page and Garmin import modal so the import lane feels premium, trustworthy, and more actionable.",
+  "parentGoal": "Redesign Garmin Connect in the Settings page so it feels like a premium Hermes import lane instead of a generic service row.",
+  "mode": "loop",
+  "stopCondition": "owned-scope-exhausted",
+  "ownedFiles": [
+    "frontend/src/components/SettingsAtlasLayout.jsx",
+    "frontend/src/pages/Settings.jsx",
+    "frontend/src/styles/style.css"
+  ],
+  "mustPreserve": [
+    "Preserve the real Garmin import behavior, status flow, and manual-import escape hatch.",
+    "Keep the surrounding Settings command-center structure intact.",
+    "Stay dual-mode safe and inside Hermes Kinetic Editorial design language."
+  ],
+  "verify": "cd frontend && npm run lint,cd frontend && node scripts/run-vite-build.mjs",
+  "mergeNotes": "",
+  "priority": 2,
+  "effort": "medium",
+  "dependsOn": [],
+  "dependencyState": "parallel-ready",
+  "status": "pending-launch",
+  "resultFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-settings-garmin-frontend.json",
+  "activityLogFile": "C:\\Users\\Junwei\\Downloads\\Hermes\\.ai-sync\\auto-hermes-max-results\\lane-settings-garmin-frontend-activity.json",
+  "command": "/auto-hermes scope=\"Implement a dual-mode Garmin Connect redesign on the Settings page and Garmin import modal so the import lane feels premium, trustworthy, and more actionable.\" mode=loop owned=\"frontend/src/components/SettingsAtlasLayout.jsx|frontend/src/pages/Settings.jsx|frontend/src/styles/style.css\""
+}

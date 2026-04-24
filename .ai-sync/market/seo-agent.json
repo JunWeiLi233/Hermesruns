@@ -1,0 +1,40 @@
+{
+  "scope": "AI personal running coach apps",
+  "triggerReason": "Market segment involves training plans, tools, and consumer guides",
+  "intentClusters": [
+    "Adaptive marathon training plans",
+    "AI coach for Garmin/Strava sync",
+    "AI vs Human coach comparisons",
+    "Injury-prone runner coaching"
+  ],
+  "competitorContentGaps": [
+    "Platform-specific data migration guides",
+    "Niche persona content (ultramarathon, masters, post-pregnancy)",
+    "Messaging-based (WhatsApp/Telegram) coaching visibility",
+    "Programmatic SEO for specific race dates/locations"
+  ],
+  "pageTypeOpportunities": [
+    "Goal-time specific landing pages (e.g., 'Sub-3 Marathon Plan')",
+    "Integration-specific tool pages ('Garmin Coach Alternative')",
+    "Comparison articles (Hermes vs Runna vs TrainAsONE)"
+  ],
+  "opportunities": [
+    {
+      "name": "Programmatic Race Pages",
+      "potential": "High",
+      "description": "Generate dynamic SEO pages for every major city marathon in 2025/2026."
+    },
+    {
+      "name": "WhatsApp Interface Hook",
+      "potential": "High",
+      "description": "Capture 'casual/messaging first' runners underserved by complex apps."
+    },
+    {
+      "name": "Injury Prevention Authority",
+      "potential": "Medium-High",
+      "description": "SEO content focusing on 'safe adaptation' to counter 'aggressive' competitor plans."
+    }
+  ],
+  "dataCaveats": "Keyword volumes based on current search trends; competitive saturation varies by persona.",
+  "status": "verified"
+}

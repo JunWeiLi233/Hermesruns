@@ -1,0 +1,88 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd frontend && npm run lint)",
+      "Bash(cd frontend && npm run build)",
+      "Bash(cd backend && ./mvnw test)",
+      "Bash(cd backend && ./mvnw -DskipTests compile)",
+      "Bash(cd backend && ./mvnw package)",
+      "Bash(git diff *)",
+      "Bash(gh issue *)",
+      "Bash(gh pr view *)",
+      "Bash(node .claude/hooks/session-start.js)",
+      "Bash(node .claude/hooks/prompt-log.js)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/hermes-dev/Downloads/Hermes/.claude/settings.json','utf-8'\\)\\); console.log\\('valid JSON'\\)\")",
+      "Bash(./mvnw test:*)",
+      "Edit(/.claude/skills/loop-mode/**)",
+      "Bash(curl -sL https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/src/ui-ux-pro-max/data/__TRACKED_VAR__ -o .claude/skills/ui-ux-pro-max/data/__TRACKED_VAR__)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/SKILL.md\" -o '/Users/hermes-dev/Downloads/Hermes/.claude/skills/ui-ux-pro-max/SKILL.md')",
+      "Edit(/.claude/skills/ui-ux-pro-max/**)",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"running fitness health\" --domain style -n 3)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m mempalace mine .)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m mempalace search \"reward badges implementation\")",
+      "Bash(PYTHONIOENCODING=utf-8 python -m mempalace.mcp_server --help)",
+      "Bash(PYTHONIOENCODING=utf-8 python -m mempalace search \"OAuth authentication flow\")",
+      "Bash(PYTHONIOENCODING=utf-8 python .tools/token_tester/token_tester.py --help)",
+      "Bash(PYTHONIOENCODING=utf-8 python .tools/token_tester/token_tester.py --suite-dir .tools/token_tester/prompts --random-sample --report .tools/token_tester/tmp/suite_random_2026-04-09.md)",
+      "Bash(node_modules/.bin/eslint.cmd src/pages/Profile.jsx --max-warnings 0)",
+      "Bash(node_modules/.bin/eslint.cmd src/pages/Races.jsx src/data/worldRaceCatalog.js --max-warnings 0)",
+      "Bash(node_modules/.bin/eslint.cmd src/pages/Races.jsx --max-warnings 0)",
+      "Bash(node_modules/.bin/eslint src/pages/Races.jsx --max-warnings 0)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)"
+    ]
+  },
+  "model": "claude-sonnet-4-6",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/session-start.js",
+            "timeout": 20,
+            "statusMessage": "Refreshing codebase index..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-commit.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/prompt-log.js",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/lint-on-save.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "autoMemoryEnabled": true
+}
