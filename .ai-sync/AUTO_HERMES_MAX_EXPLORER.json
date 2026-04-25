@@ -1,29 +1,123 @@
 {
-  "completedTask": "[security] Billing config endpoint leaks sensitive configuration data without authentication.",
-  "changedFiles": [
-    "/api/billing/config"
-  ],
-  "verification": "`node .tools/auto-hermes-security.mjs --mode audit --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --json`",
-  "remainingWork": [
+  "generatedAt": "2026-04-24T00:00:00.000Z",
+  "runtime": "codex-live",
+  "mode": "explorer",
+  "status": "complete",
+  "discoveredWork": [
     {
-      "description": "Backend work on [security] Billing config endpoint leaks sensitive configuration data without authentication.",
-      "surface": "[security] Billing config endpoint leaks sensitive configuration data without authentication.",
-      "problemClass": "backend-logic",
+      "priority": 1,
+      "description": "[security] Strava webhook accepts unauthenticated forged activity events (HIGH — runtime-confirmed)",
+      "surface": "StravaWebhookController",
+      "problemClass": "backend-security",
       "estimatedScope": "backend",
-      "effort": "medium"
+      "effort": "medium",
+      "files": ["backend/src/main/java/com/hermes/backend/StravaWebhookController.java"]
+    },
+    {
+      "priority": 2,
+      "description": "[security] Password reset endpoint enables user enumeration (MEDIUM — runtime-confirmed)",
+      "surface": "LoginController",
+      "problemClass": "backend-security",
+      "estimatedScope": "backend",
+      "effort": "small",
+      "files": ["backend/src/main/java/com/hermes/backend/LoginController.java"]
+    },
+    {
+      "priority": 3,
+      "description": "Reduce class scope in Activity.java (God Class: 68 methods, 32 fields)",
+      "surface": "Activity.java",
+      "problemClass": "backend-refactor",
+      "estimatedScope": "backend",
+      "effort": "large",
+      "files": ["backend/src/main/java/com/hermes/backend/Activity.java"]
+    },
+    {
+      "priority": 4,
+      "description": "Reduce dependency count in ActivityController.java (9 deps)",
+      "surface": "ActivityController.java",
+      "problemClass": "backend-refactor",
+      "estimatedScope": "backend",
+      "effort": "medium",
+      "files": ["backend/src/main/java/com/hermes/backend/ActivityController.java"]
+    },
+    {
+      "priority": 5,
+      "description": "Add focused coverage for Activity.java",
+      "surface": "Activity.java tests",
+      "problemClass": "backend-testing",
+      "estimatedScope": "backend",
+      "effort": "small",
+      "files": ["backend/src/main/java/com/hermes/backend/Activity.java", "backend/src/test/java/com/hermes/backend/ActivityTests.java"]
+    },
+    {
+      "priority": 6,
+      "description": "Split oversized ShoeImageController.java (846 lines)",
+      "surface": "ShoeImageController.java",
+      "problemClass": "backend-refactor",
+      "estimatedScope": "backend",
+      "effort": "medium",
+      "files": ["backend/src/main/java/com/hermes/backend/ShoeImageController.java"]
+    },
+    {
+      "priority": 7,
+      "description": "Reduce class scope in ActivityController.java (51 methods remaining)",
+      "surface": "ActivityController.java scope",
+      "problemClass": "backend-refactor",
+      "estimatedScope": "backend",
+      "effort": "medium",
+      "files": ["backend/src/main/java/com/hermes/backend/ActivityController.java"]
+    },
+    {
+      "priority": 8,
+      "description": "Reduce dependency count in AdminPortalService.java (14 deps, reduced to 13)",
+      "surface": "AdminPortalService.java",
+      "problemClass": "backend-refactor",
+      "estimatedScope": "backend",
+      "effort": "medium",
+      "files": ["backend/src/main/java/com/hermes/backend/AdminPortalService.java"]
+    },
+    {
+      "priority": 9,
+      "description": "Split oversized RaceCourseMapAiService.java (599 lines, reduced to 428)",
+      "surface": "RaceCourseMapAiService.java",
+      "problemClass": "backend-refactor",
+      "estimatedScope": "backend",
+      "effort": "medium",
+      "files": ["backend/src/main/java/com/hermes/backend/RaceCourseMapAiService.java"]
     }
   ],
   "parallelismRecommendation": {
-    "suggestedLanes": 1,
-    "rationale": "Single-lane work: no disjoint file ownership for parallel execution.",
+    "suggestedLanes": 3,
+    "rationale": "3 disjoint lanes: (1) HIGH security Strava webhook fix, (2) MEDIUM security password reset fix, (3) focused backend tech debt. Lane 1 and 2 touch different files and can be sequential. Lane 3 is lower priority but can batch small debt items.",
     "proposedScopes": [
       {
-        "goal": "[security] Billing config endpoint leaks sensitive configuration data without authentication. on [security] Billing config endpoint leaks sensitive configuration data without authentication.",
-        "surface": "[security] Billing config endpoint leaks sensitive configuration data without authentication.",
-        "problemClass": "backend-logic",
+        "id": "lane-security-strava",
+        "goal": "Fix Strava webhook unauthenticated forged activity events",
+        "surface": "StravaWebhookController",
+        "problemClass": "backend-security",
+        "ownedFiles": ["backend/src/main/java/com/hermes/backend/StravaWebhookController.java"],
+        "effort": "medium"
+      },
+      {
+        "id": "lane-security-password-reset",
+        "goal": "Fix password reset user enumeration vulnerability",
+        "surface": "LoginController",
+        "problemClass": "backend-security",
+        "ownedFiles": ["backend/src/main/java/com/hermes/backend/LoginController.java"],
+        "effort": "small"
+      },
+      {
+        "id": "lane-tech-debt-batch",
+        "goal": "Batch backend tech debt: Activity tests, ShoeImageController split, AdminPortalService deps",
+        "surface": "backend tech debt",
+        "problemClass": "backend-refactor",
         "ownedFiles": [
-          "/api/billing/config"
-        ]
+          "backend/src/main/java/com/hermes/backend/Activity.java",
+          "backend/src/test/java/com/hermes/backend/ActivityTests.java",
+          "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+          "backend/src/main/java/com/hermes/backend/AdminPortalService.java"
+        ],
+        "effort": "medium"
       }
     ]
   }

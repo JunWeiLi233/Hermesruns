@@ -119,9 +119,9 @@ for /f "tokens=1,2 delims=." %%A in ("%JAVA_VERSION%") do (
   )
 )
 
-if not "%JAVA_MAJOR%"=="17" (
-  echo [Hermes] Java %JAVA_VERSION% was found, but Hermes requires Java 17.
-  echo [Hermes] Install Java 17 or place a JDK under .tools\jdk17 before starting Hermes.
+if %JAVA_MAJOR% LSS 17 (
+  echo [Hermes] Java %JAVA_VERSION% was found, but Hermes requires Java 17 or later.
+  echo [Hermes] Install Java 17, 21, or place a JDK under .tools\jdk17 before starting Hermes.
   exit /b 1
 )
 
@@ -148,7 +148,7 @@ cd /d "%ROOT%\backend"
 echo [Hermes] Igniting Spring Boot...
 :: Memory-optimized JVM flags for small servers (2GB RAM)
 if not defined JAVA_TOOL_OPTIONS (
-  set "JAVA_TOOL_OPTIONS=-Xmx384m -Xms128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m"
+  set "JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=192m"
 )
 if defined MVN_CMD (
   call "%MVN_CMD%" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true org.springframework.boot:spring-boot-maven-plugin:run

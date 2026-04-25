@@ -1,0 +1,3 @@
+import{n as o}from"./chunk-CyzFmspp.js";import{c as e,n,r as a,v as l}from"./I18nContext-BhY2a8Vp.js";var m=o(l(),1),r=a();function p({className:s="",publicOnly:i=!1}){const{t}=n();return(0,r.jsxs)("div",{className:["global-footer-links",s].filter(Boolean).join(" "),children:[(0,r.jsx)(e,{to:"/terms",children:t("landing.stitch_footer_terms")}),(0,r.jsx)(e,{to:"/privacy",children:t("landing.stitch_footer_privacy")}),(0,r.jsx)("a",{href:"mailto:support@hermes.run",children:t("landing.stitch_footer_support")}),!i&&(0,r.jsx)(e,{to:"/settings",children:t("profile.settings")})]})}export{p as t};
+
+//# sourceMappingURL=FooterNavLinks-1QDlVKpi.js.map

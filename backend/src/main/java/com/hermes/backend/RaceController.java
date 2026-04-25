@@ -264,19 +264,19 @@ public class RaceController {
 
     private ValidationResult validateRequest(RaceEventRequest request) {
         if (request == null) {
-            return new ValidationResult(false, "Race payload is required.");
+            return invalid("Race payload is required.");
         }
         if (request.name() == null || request.name().trim().isBlank()) {
-            return new ValidationResult(false, "Race name is required.");
+            return invalid("Race name is required.");
         }
         if (request.eventDate() == null) {
-            return new ValidationResult(false, "Race date is required.");
+            return invalid("Race date is required.");
         }
         if (request.distanceKm() != null && request.distanceKm() <= 0) {
-            return new ValidationResult(false, "Race distance must be positive.");
+            return invalid("Race distance must be positive.");
         }
         if (request.goalTimeSeconds() != null && request.goalTimeSeconds() <= 0) {
-            return new ValidationResult(false, "Goal time must be positive.");
+            return invalid("Goal time must be positive.");
         }
 
         // Basic anti-XSS / injection hardening: reject control chars + HTML delimiters.
@@ -285,14 +285,14 @@ public class RaceController {
             InputSanitizer.rejectControlAndHtmlChars(request.organization(), "organization");
             InputSanitizer.rejectControlAndHtmlChars(request.location(), "location");
             InputSanitizer.rejectControlAndHtmlChars(request.notes(), "notes");
-            if (request.name() != null && request.name().length() > 120) return new ValidationResult(false, "Race name too long.");
-            if (request.organization() != null && request.organization().length() > 80) return new ValidationResult(false, "Organization too long.");
-            if (request.location() != null && request.location().length() > 120) return new ValidationResult(false, "Location too long.");
-            if (request.notes() != null && request.notes().length() > 2000) return new ValidationResult(false, "Notes too long.");
+            if (request.name() != null && request.name().length() > 120) return invalid("Race name too long.");
+            if (request.organization() != null && request.organization().length() > 80) return invalid("Organization too long.");
+            if (request.location() != null && request.location().length() > 120) return invalid("Location too long.");
+            if (request.notes() != null && request.notes().length() > 2000) return invalid("Notes too long.");
         } catch (IllegalArgumentException ex) {
-            return new ValidationResult(false, ex.getMessage());
+            return invalid(ex.getMessage());
         }
-        return new ValidationResult(true, null);
+        return valid();
     }
 
     private RaceEventResponse toResponse(RaceEvent raceEvent, List<Activity> runActivities) {
@@ -487,6 +487,14 @@ public class RaceController {
                 && result.aiAssisted()
                 && summary.contains("city-level course-map match")
                 && summary.contains("not a distance-accurate route overlay");
+    }
+
+    private static ValidationResult invalid(String message) {
+        return new ValidationResult(false, message);
+    }
+
+    private static ValidationResult valid() {
+        return new ValidationResult(true, null);
     }
 
     private record ValidationResult(boolean valid, String message) {
