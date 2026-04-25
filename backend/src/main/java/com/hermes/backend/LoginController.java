@@ -317,6 +317,15 @@ public class LoginController {
                 .filter(r -> !r.isDeleted());
         if (opt.isEmpty()) {
             log.info("Auth password reset requested for non-existent email ip={}", ip);
+            // Normalize timing to prevent email enumeration via response latency.
+            // The found path calls sendResetLink which adds measurable delay from
+            // template rendering + SMTP submission; we mirror that with a delay
+            // so both paths complete in approximately the same wall-clock time.
+            try {
+                Thread.sleep(150L);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
             return ResponseEntity.ok(Map.of("message", generic));
         }
 

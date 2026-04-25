@@ -13,15 +13,6 @@ Use this file as the shared cross-platform coordination layer for Codex, Claude,
 - Keep entries short and overwrite stale claims instead of appending long history.
 
 ## Active Claims
-- Key: add-shoes-expand-extra-brands
-  Task: Add an expandable extra-brand section on /shoes/add so runners can reveal 李宁、安踏、Brooks、and HOKA when they are not visible in the default brand deck
-  Surface: AddShoes
-  Agent: codex
-  Owner: frontend
-  Status: in_progress
-  Started: 2026-04-20T23:00:00-04:00
-  Verify: eslint pending | vite build pending
-  Files: frontend/src/pages/AddShoes.jsx, frontend/src/styles/style.css
 
 - Key: vdot-fitness-race-predictions
   Task: Add VDOT Fitness + Race Predictions strip to Profile page with prominent VDOT number, 30-day trend arrow, and calibrated race time predictions for 5K/10K/half/marathon

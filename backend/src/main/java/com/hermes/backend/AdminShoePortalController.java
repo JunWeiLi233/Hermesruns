@@ -46,7 +46,7 @@ public class AdminShoePortalController {
         if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
         Pageable pageable = adminService.buildPageable(page, size, sortBy, sortDirection, SHOE_SORT_FIELDS);
         Page<Shoe> result = adminService.getShoeRepository().findAll(adminService.shoeFilterSpec(search, queue, includeRetired), pageable);
-        Map<String, ShoeImageAsset> assetMap = adminService.getShoeImageAssetService().loadAssetsForShoes(result.getContent());
+        Map<String, ShoeImageAsset> assetMap = adminService.getShoeAdminAggregateService().loadAssetsForShoes(result.getContent());
         Page<ShoeAdminDto> dtoPage = result.map(shoe -> {
             String identityKey = shoe.getIdentityKey();
             ShoeImageAsset asset = (identityKey == null || identityKey.isBlank()) ? null : assetMap.get(identityKey);
@@ -148,7 +148,7 @@ public class AdminShoePortalController {
             }
         }
 
-        adminService.getShoeIdentityService().applyIdentityKey(shoe);
+        adminService.getShoeAdminAggregateService().applyIdentityKey(shoe);
         Shoe saved = adminService.getShoeRepository().save(shoe);
         adminService.getAdminAuditService().log(adminOptional.get(), "shoe.created", "shoe", String.valueOf(saved.getId()),
                 "Admin created shoe",
@@ -174,7 +174,7 @@ public class AdminShoePortalController {
             String imageUrl = RequestBodyValidator.requiredString(body, "imageUrl", MAX_PHOTO_REFERENCE_LENGTH);
             String source = RequestBodyValidator.optionalSafeText(body, "source", 240);
             String finalUrl = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(imageUrl, MAX_PHOTO_REFERENCE_LENGTH, "imageUrl");
-            ShoeImageAsset asset = adminService.getShoeImageAssetService().upsertPendingForShoe(shoeOptional.get(), finalUrl, source, adminOptional.get().getEmail());
+            ShoeImageAsset asset = adminService.getShoeAdminAggregateService().upsertPendingForShoe(shoeOptional.get(), finalUrl, source, adminOptional.get().getEmail());
             adminService.getAdminAuditService().log(adminOptional.get(), "shoe_image.pending_set", "shoe", String.valueOf(id), "Saved pending shoe image", Map.of("identityKey", asset.getIdentityKey()));
             return ResponseEntity.ok(Map.of(
                     "pendingImageUrl", asset.getPendingImageUrl(),
@@ -200,7 +200,7 @@ public class AdminShoePortalController {
         Optional<Shoe> shoeOptional = adminService.getShoeRepository().findById(id);
         if (shoeOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.NOT_FOUND, "Shoe not found.", "shoe_not_found");
         try {
-            ShoeImageAsset asset = adminService.getShoeImageAssetService().acceptPendingForShoe(shoeOptional.get(), adminOptional.get().getEmail());
+            ShoeImageAsset asset = adminService.getShoeAdminAggregateService().acceptPendingForShoe(shoeOptional.get(), adminOptional.get().getEmail());
             adminService.getAdminAuditService().log(adminOptional.get(), "shoe_image.published", "shoe", String.valueOf(id), "Published live shoe image", Map.of("identityKey", asset.getIdentityKey()));
             return ResponseEntity.ok(Map.of("published", true, "liveImageUrl", asset.getLiveImageUrl()));
         } catch (IllegalArgumentException ex) {
@@ -222,7 +222,7 @@ public class AdminShoePortalController {
         Optional<Shoe> shoeOptional = adminService.getShoeRepository().findById(id);
         if (shoeOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.NOT_FOUND, "Shoe not found.", "shoe_not_found");
         try {
-            adminService.getShoeImageAssetService().clearPendingForShoe(shoeOptional.get());
+            adminService.getShoeAdminAggregateService().clearPendingForShoe(shoeOptional.get());
             adminService.getAdminAuditService().log(adminOptional.get(), "shoe_image.pending_cleared", "shoe", String.valueOf(id), "Cleared pending shoe image");
             return ResponseEntity.ok(Map.of("cleared", true));
         } catch (IllegalArgumentException ex) {

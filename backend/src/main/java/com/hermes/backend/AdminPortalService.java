@@ -26,8 +26,7 @@ public class AdminPortalService {
     private final AuthService authService;
     private final AdminAuditService adminAuditService;
     private final AiUsageService aiUsageService;
-    private final ShoeIdentityService shoeIdentityService;
-    private final ShoeImageAssetService shoeImageAssetService;
+    private final ShoeAdminAggregateService shoeAdminAggregateService;
     private final StravaAutoSyncScheduler stravaAutoSyncScheduler;
     private final RaceCourseMapService raceCourseMapService;
 
@@ -42,8 +41,7 @@ public class AdminPortalService {
             AuthService authService,
             AdminAuditService adminAuditService,
             AiUsageService aiUsageService,
-            ShoeIdentityService shoeIdentityService,
-            ShoeImageAssetService shoeImageAssetService,
+            ShoeAdminAggregateService shoeAdminAggregateService,
             StravaAutoSyncScheduler stravaAutoSyncScheduler,
             RaceCourseMapService raceCourseMapService
     ) {
@@ -57,8 +55,7 @@ public class AdminPortalService {
         this.authService = authService;
         this.adminAuditService = adminAuditService;
         this.aiUsageService = aiUsageService;
-        this.shoeIdentityService = shoeIdentityService;
-        this.shoeImageAssetService = shoeImageAssetService;
+        this.shoeAdminAggregateService = shoeAdminAggregateService;
         this.stravaAutoSyncScheduler = stravaAutoSyncScheduler;
         this.raceCourseMapService = raceCourseMapService;
     }
@@ -73,8 +70,7 @@ public class AdminPortalService {
     public AuthService getAuthService() { return authService; }
     public AdminAuditService getAdminAuditService() { return adminAuditService; }
     public AiUsageService getAiUsageService() { return aiUsageService; }
-    public ShoeIdentityService getShoeIdentityService() { return shoeIdentityService; }
-    public ShoeImageAssetService getShoeImageAssetService() { return shoeImageAssetService; }
+    public ShoeAdminAggregateService getShoeAdminAggregateService() { return shoeAdminAggregateService; }
     public StravaAutoSyncScheduler getStravaAutoSyncScheduler() { return stravaAutoSyncScheduler; }
     public RaceCourseMapService getRaceCourseMapService() { return raceCourseMapService; }
 
@@ -170,27 +166,11 @@ public class AdminPortalService {
     }
 
     public ShoeAdminDto toShoeDto(Shoe shoe) {
-        return toShoeDto(shoe, null);
+        return shoeAdminAggregateService.toShoeDto(shoe);
     }
 
     public ShoeAdminDto toShoeDto(Shoe shoe, ShoeImageAsset asset) {
-        return new ShoeAdminDto(
-                shoe.getId(),
-                shoe.getBrand(),
-                shoe.getModel(),
-                shoe.getNickname(),
-                shoe.getIdentityKey(),
-                shoe.getPhotoUrl(),
-                shoe.isPhotoVerified(),
-                asset == null ? null : asset.getPendingImageUrl(),
-                asset == null ? null : asset.getPendingSource(),
-                asset == null ? null : asset.getLiveImageUrl(),
-                asset == null ? null : asset.getLiveSource(),
-                shoe.isRetired(),
-                shoe.getCreatedAt() == null ? null : shoe.getCreatedAt().toString(),
-                shoe.getRunner() == null ? null : shoe.getRunner().getId(),
-                shoe.getRunner() == null ? null : shoe.getRunner().getEmail()
-        );
+        return shoeAdminAggregateService.toShoeDto(shoe, asset);
     }
 
     public NoteDto toNoteDto(RunnerAdminNote note) {

@@ -434,6 +434,7 @@ export default function ProfileDashboard() {
   const [prCelebration, setPrCelebration] = useState(null);
   const [dismissedComeback, setDismissedComeback] = useState(false);
   const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
 
@@ -1055,8 +1056,17 @@ export default function ProfileDashboard() {
               <div className="runner-dashboard-progression-head">
                 <div className="runner-dashboard-progression-heading">
                   <span className="runner-dashboard-card-kicker">{t('profile.dashboard_progression_kicker')}</span>
-                  <h3>{t('profile.dashboard_progression_title')}</h3>
-                  <p>{t('profile.dashboard_progression_copy')}</p>
+                  <h3>
+                    {t('profile.dashboard_progression_title')}
+                    <span
+                      className="runner-dashboard-progression-info-icon"
+                      onClick={() => setShowInfoModal(true)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowInfoModal(true); } }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={t('profile.dashboard_progression_info')}
+                    >ⓘ</span>
+                  </h3>
                 </div>
                 <div
                   className="runner-dashboard-progression-switcher"
@@ -1223,7 +1233,7 @@ export default function ProfileDashboard() {
                             <strong>{formatDistance(activeProgressionPoint.cumulativeDistance, 1, lang, unit)}</strong>
                             <span>{activeProgressionPoint.label}</span>
                             <small>
-                              {formatDistance(activeProgressionPoint.distanceKm, 1, lang, unit)} 闂?{activeProgressionPoint.sessions} {t('profile.dashboard_progression_sessions')}
+                              {formatDistance(activeProgressionPoint.distanceKm, 1, lang, unit)} | {activeProgressionPoint.sessions} {t('profile.dashboard_progression_sessions')}
                             </small>
                           </div>
                         ) : null}
@@ -1275,6 +1285,22 @@ export default function ProfileDashboard() {
                 </div>
               )}
             </section>
+
+            <Modal
+              isOpen={showInfoModal}
+              onClose={() => setShowInfoModal(false)}
+              title={t('profile.dashboard_progression_info_title')}
+              shellClassName="runner-progression-info-shell"
+              cardClassName="runner-progression-info-card"
+            >
+              <div className="runner-progression-info-body">
+                <div className="runner-progression-info-hero">
+                  <span className="runner-progression-info-kicker">{t('profile.dashboard_progression_kicker')}</span>
+                  <h4>{t('profile.dashboard_progression_info_title')}</h4>
+                  <p>{t('profile.dashboard_progression_copy')}</p>
+                </div>
+              </div>
+            </Modal>
 
             <section className="runner-dashboard-feature-grid" aria-label={t('profile.dashboard_nav_dashboard')}>
               <article className="runner-dashboard-feature-card runner-dashboard-feature-card--race">
@@ -1440,7 +1466,7 @@ export default function ProfileDashboard() {
                 <div className="runner-dashboard-feature-copy">
                   <h3>{formatDistance(weeklyActualTotal, 1, lang, unit)}</h3>
                   <p>
-                    {t('profile.dashboard_actual')} {weeklyCompletion}% 闂?{t('profile.dashboard_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
+                    {t('profile.dashboard_actual')} {weeklyCompletion}% | {t('profile.dashboard_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
                   </p>
                 </div>
                 <div className="runner-dashboard-feature-mini-bars" aria-hidden="true">
@@ -1476,7 +1502,7 @@ export default function ProfileDashboard() {
                   <h3>{featuredSession?.name || t('profile.dashboard_session_fallback')}</h3>
                   <p>
                     {featuredSessionMetric
-                      ? `${featuredSessionMetric.label} 闂?${featuredSessionMetric.value}`
+                      ? `${featuredSessionMetric.label} | ${featuredSessionMetric.value}`
                       : t('profile.dashboard_no_sessions')}
                   </p>
                 </div>
