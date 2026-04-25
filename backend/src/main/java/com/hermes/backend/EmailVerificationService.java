@@ -114,12 +114,12 @@ public class EmailVerificationService {
 
     private static String trimTrailingSlash(String url) {
         if (url == null) {
-            return "http://localhost:8080";
+            return "";
         }
         String u = url.trim();
         while (u.endsWith("/")) {
             u = u.substring(0, u.length() - 1);
         }
-        return u.isEmpty() ? "http://localhost:8080" : u;
+        return u.isEmpty() ? "" : u;
     }
 }

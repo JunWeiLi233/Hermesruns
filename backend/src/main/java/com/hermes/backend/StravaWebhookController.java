@@ -7,7 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.PreDestroy;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -89,7 +91,7 @@ public class StravaWebhookController {
      * trigger activity processing.</p>
      */
     @PostMapping
-    public ResponseEntity<String> handleEvent(@RequestBody Map<String, Object> event) {
+    public ResponseEntity<String> handleEvent(@RequestBody Map<String, Object> event, HttpServletRequest request) {
 
         String objectType = str(event.get("object_type"));
         String aspectType = str(event.get("aspect_type"));
@@ -103,6 +105,16 @@ public class StravaWebhookController {
 
         log.info("Strava webhook event: object_type={}, aspect_type={}, owner_id={}, object_id={}",
                 objectType, aspectType, ownerId, objectId);
+
+        // Verify the owner_id corresponds to a known registered runner.
+        // Forged events with arbitrary owner_ids are rejected synchronously
+        // before any async processing or resource consumption occurs.
+        Optional<Runner> knownRunner = runnerRepository.findByStravaAthleteId(ownerId);
+        if (knownRunner.isEmpty()) {
+            String ip = RequestIpResolver.clientIp(request);
+            log.warn("Strava webhook event rejected: unknown owner_id={} ip={}", ownerId, ip);
+            return ResponseEntity.status(403).body("UNKNOWN_OWNER");
+        }
 
         // Handle deauthorization
         if ("athlete".equals(objectType) && "update".equals(aspectType)) {

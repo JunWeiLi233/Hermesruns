@@ -10,4 +10,5 @@ public interface AdminBackgroundJobRepository extends JpaRepository<AdminBackgro
     Page<AdminBackgroundJob> findByJobTypeContainingIgnoreCaseAndStatusContainingIgnoreCase(String jobType, String status, Pageable pageable);
     List<AdminBackgroundJob> findTop10ByStatusOrderByCreatedAtDesc(String status);
     List<AdminBackgroundJob> findTop10ByStatusInOrderByCreatedAtDesc(List<String> statuses);
+    List<AdminBackgroundJob> findTop5ByJobTypeInOrderByCreatedAtDesc(List<String> jobTypes);
 }

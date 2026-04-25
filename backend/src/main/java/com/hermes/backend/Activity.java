@@ -59,24 +59,8 @@ public class Activity {
 
     private LocalDateTime createdAt;
 
-    // --- PERFORMANCE METRICS ---
-    private Double averageHeartRate;
-    private Double maxHeartRate;
-    private Double totalElevationGain;
-    private Integer calories;
-    private Double averageCadence;
-    private Double averageWatts;
-    private Double maxSpeedMps;
-    private Integer sufferScore;
-    private String routePreviewPath;
-    private Double routePreviewStartX;
-    private Double routePreviewStartY;
-    private Double routePreviewFinishX;
-    private Double routePreviewFinishY;
-
-    // --- WEATHER ADJUSTMENT ---
-    private Integer pacePenaltySecPerKm;
-    private Boolean weatherAdjusted;
+    @Embedded
+    private ActivityMetrics metrics = new ActivityMetrics();
 
     @ManyToOne
     @JoinColumn(name = "shoe_id")
@@ -156,50 +140,51 @@ public class Activity {
     public List<ActivityPoint> getPoints() { return points; }
     public void setPoints(List<ActivityPoint> points) { this.points = points; }
 
-    public Double getAverageHeartRate() { return averageHeartRate; }
-    public void setAverageHeartRate(Double averageHeartRate) { this.averageHeartRate = averageHeartRate; }
+    // --- PERFORMANCE METRICS DELEGATES ---
+    public Double getAverageHeartRate() { return metrics.getAverageHeartRate(); }
+    public void setAverageHeartRate(Double v) { metrics.setAverageHeartRate(v); }
 
-    public Double getMaxHeartRate() { return maxHeartRate; }
-    public void setMaxHeartRate(Double maxHeartRate) { this.maxHeartRate = maxHeartRate; }
+    public Double getMaxHeartRate() { return metrics.getMaxHeartRate(); }
+    public void setMaxHeartRate(Double v) { metrics.setMaxHeartRate(v); }
 
-    public Double getTotalElevationGain() { return totalElevationGain; }
-    public void setTotalElevationGain(Double totalElevationGain) { this.totalElevationGain = totalElevationGain; }
+    public Double getTotalElevationGain() { return metrics.getTotalElevationGain(); }
+    public void setTotalElevationGain(Double v) { metrics.setTotalElevationGain(v); }
 
-    public Integer getCalories() { return calories; }
-    public void setCalories(Integer calories) { this.calories = calories; }
+    public Integer getCalories() { return metrics.getCalories(); }
+    public void setCalories(Integer v) { metrics.setCalories(v); }
 
-    public Double getAverageCadence() { return averageCadence; }
-    public void setAverageCadence(Double averageCadence) { this.averageCadence = averageCadence; }
+    public Double getAverageCadence() { return metrics.getAverageCadence(); }
+    public void setAverageCadence(Double v) { metrics.setAverageCadence(v); }
 
-    public Double getAverageWatts() { return averageWatts; }
-    public void setAverageWatts(Double averageWatts) { this.averageWatts = averageWatts; }
+    public Double getAverageWatts() { return metrics.getAverageWatts(); }
+    public void setAverageWatts(Double v) { metrics.setAverageWatts(v); }
 
-    public Double getMaxSpeedMps() { return maxSpeedMps; }
-    public void setMaxSpeedMps(Double maxSpeedMps) { this.maxSpeedMps = maxSpeedMps; }
+    public Double getMaxSpeedMps() { return metrics.getMaxSpeedMps(); }
+    public void setMaxSpeedMps(Double v) { metrics.setMaxSpeedMps(v); }
 
-    public Integer getSufferScore() { return sufferScore; }
-    public void setSufferScore(Integer sufferScore) { this.sufferScore = sufferScore; }
+    public Integer getSufferScore() { return metrics.getSufferScore(); }
+    public void setSufferScore(Integer v) { metrics.setSufferScore(v); }
 
-    public String getRoutePreviewPath() { return routePreviewPath; }
-    public void setRoutePreviewPath(String routePreviewPath) { this.routePreviewPath = routePreviewPath; }
+    public String getRoutePreviewPath() { return metrics.getRoutePreviewPath(); }
+    public void setRoutePreviewPath(String v) { metrics.setRoutePreviewPath(v); }
 
-    public Double getRoutePreviewStartX() { return routePreviewStartX; }
-    public void setRoutePreviewStartX(Double routePreviewStartX) { this.routePreviewStartX = routePreviewStartX; }
+    public Double getRoutePreviewStartX() { return metrics.getRoutePreviewStartX(); }
+    public void setRoutePreviewStartX(Double v) { metrics.setRoutePreviewStartX(v); }
 
-    public Double getRoutePreviewStartY() { return routePreviewStartY; }
-    public void setRoutePreviewStartY(Double routePreviewStartY) { this.routePreviewStartY = routePreviewStartY; }
+    public Double getRoutePreviewStartY() { return metrics.getRoutePreviewStartY(); }
+    public void setRoutePreviewStartY(Double v) { metrics.setRoutePreviewStartY(v); }
 
-    public Double getRoutePreviewFinishX() { return routePreviewFinishX; }
-    public void setRoutePreviewFinishX(Double routePreviewFinishX) { this.routePreviewFinishX = routePreviewFinishX; }
+    public Double getRoutePreviewFinishX() { return metrics.getRoutePreviewFinishX(); }
+    public void setRoutePreviewFinishX(Double v) { metrics.setRoutePreviewFinishX(v); }
 
-    public Double getRoutePreviewFinishY() { return routePreviewFinishY; }
-    public void setRoutePreviewFinishY(Double routePreviewFinishY) { this.routePreviewFinishY = routePreviewFinishY; }
+    public Double getRoutePreviewFinishY() { return metrics.getRoutePreviewFinishY(); }
+    public void setRoutePreviewFinishY(Double v) { metrics.setRoutePreviewFinishY(v); }
 
-    public Integer getPacePenaltySecPerKm() { return pacePenaltySecPerKm; }
-    public void setPacePenaltySecPerKm(Integer pacePenaltySecPerKm) { this.pacePenaltySecPerKm = pacePenaltySecPerKm; }
+    public Integer getPacePenaltySecPerKm() { return metrics.getPacePenaltySecPerKm(); }
+    public void setPacePenaltySecPerKm(Integer v) { metrics.setPacePenaltySecPerKm(v); }
 
-    public Boolean getWeatherAdjusted() { return weatherAdjusted; }
-    public void setWeatherAdjusted(Boolean weatherAdjusted) { this.weatherAdjusted = weatherAdjusted; }
+    public Boolean getWeatherAdjusted() { return metrics.getWeatherAdjusted(); }
+    public void setWeatherAdjusted(Boolean v) { metrics.setWeatherAdjusted(v); }
 
     @JsonIgnore
     public Shoe getShoe() { return shoe; }

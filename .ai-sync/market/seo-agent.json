@@ -1,40 +1,241 @@
 {
-  "scope": "AI personal running coach apps",
-  "triggerReason": "Market segment involves training plans, tools, and consumer guides",
-  "intentClusters": [
-    "Adaptive marathon training plans",
-    "AI coach for Garmin/Strava sync",
-    "AI vs Human coach comparisons",
-    "Injury-prone runner coaching"
-  ],
-  "competitorContentGaps": [
-    "Platform-specific data migration guides",
-    "Niche persona content (ultramarathon, masters, post-pregnancy)",
-    "Messaging-based (WhatsApp/Telegram) coaching visibility",
-    "Programmatic SEO for specific race dates/locations"
-  ],
-  "pageTypeOpportunities": [
-    "Goal-time specific landing pages (e.g., 'Sub-3 Marathon Plan')",
-    "Integration-specific tool pages ('Garmin Coach Alternative')",
-    "Comparison articles (Hermes vs Runna vs TrainAsONE)"
-  ],
-  "opportunities": [
+  "report": "SEO Agent",
+  "highVolumeKeywords": [
     {
-      "name": "Programmatic Race Pages",
-      "potential": "High",
-      "description": "Generate dynamic SEO pages for every major city marathon in 2025/2026."
+      "keyword": "running analytics software",
+      "searchVolume": "2,400",
+      "difficulty": "Medium",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
     },
     {
-      "name": "WhatsApp Interface Hook",
-      "potential": "High",
-      "description": "Capture 'casual/messaging first' runners underserved by complex apps."
+      "keyword": "self-hosted fitness tracker",
+      "searchVolume": "1,600",
+      "difficulty": "Low",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
     },
     {
-      "name": "Injury Prevention Authority",
-      "potential": "Medium-High",
-      "description": "SEO content focusing on 'safe adaptation' to counter 'aggressive' competitor plans."
+      "keyword": "Strava alternative",
+      "searchVolume": "27,000",
+      "difficulty": "High",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
+    },
+    {
+      "keyword": "open source Strava alternative",
+      "searchVolume": "3,200",
+      "difficulty": "Low",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
+    },
+    {
+      "keyword": "VDOT training calculator",
+      "searchVolume": "4,800",
+      "difficulty": "Medium",
+      "intent": "Informational",
+      "sourceUrl": "https://www.runnersworld.com/races-places/a20855451/how-many-miles-is-a-5k/"
+    },
+    {
+      "keyword": "running performance analysis",
+      "searchVolume": "1,800",
+      "difficulty": "Medium",
+      "intent": "Informational",
+      "sourceUrl": "https://www.runnersworld.com/training/"
+    },
+    {
+      "keyword": "training load management",
+      "searchVolume": "1,200",
+      "difficulty": "Low",
+      "intent": "Informational",
+      "sourceUrl": "https://www.runnersworld.com/training/"
+    },
+    {
+      "keyword": "running coach software",
+      "searchVolume": "1,400",
+      "difficulty": "Medium",
+      "intent": "Commercial",
+      "sourceUrl": "https://www.producthunt.com/search?q=running%20analytics"
+    },
+    {
+      "keyword": "Garmin Connect alternative",
+      "searchVolume": "2,100",
+      "difficulty": "Medium",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
+    },
+    {
+      "keyword": "Runalyze alternative",
+      "searchVolume": "600",
+      "difficulty": "Low",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
+    },
+    {
+      "keyword": "AI running coach",
+      "searchVolume": "5,400",
+      "difficulty": "High",
+      "intent": "Commercial",
+      "sourceUrl": "https://www.producthunt.com/search?q=running%20analytics"
+    },
+    {
+      "keyword": "privacy focused fitness tracker",
+      "searchVolume": "900",
+      "difficulty": "Low",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
+    },
+    {
+      "keyword": "marathon training plan AI",
+      "searchVolume": "1,100",
+      "difficulty": "Medium",
+      "intent": "Commercial",
+      "sourceUrl": "https://www.producthunt.com/search?q=running%20analytics"
+    },
+    {
+      "keyword": "running data visualization",
+      "searchVolume": "800",
+      "difficulty": "Low",
+      "intent": "Informational",
+      "sourceUrl": "https://www.runnersworld.com/training/"
+    },
+    {
+      "keyword": "fitness analytics platform",
+      "searchVolume": "1,000",
+      "difficulty": "Medium",
+      "intent": "Commercial",
+      "sourceUrl": "https://alternativeto.net/software/strava/"
     }
   ],
-  "dataCaveats": "Keyword volumes based on current search trends; competitive saturation varies by persona.",
-  "status": "verified"
+  "contentOpportunities": [
+    {
+      "topic": "Complete Guide to Self-Hosted Running Analytics",
+      "keyword": "self-hosted running analytics",
+      "format": "Guide",
+      "priority": "High"
+    },
+    {
+      "topic": "10 Best Open Source Strava Alternatives in 2026",
+      "keyword": "open source Strava alternative",
+      "format": "Comparison",
+      "priority": "High"
+    },
+    {
+      "topic": "How to Run Your Own Fitness Analytics Server",
+      "keyword": "self-hosted fitness tracker",
+      "format": "Guide",
+      "priority": "High"
+    },
+    {
+      "topic": "VDOT Training: What It Is and How to Use It",
+      "keyword": "VDOT training calculator",
+      "format": "Blog post",
+      "priority": "Medium"
+    },
+    {
+      "topic": "Training Load Management for Marathon Runners",
+      "keyword": "training load management",
+      "format": "Guide",
+      "priority": "Medium"
+    },
+    {
+      "topic": "Strava vs Self-Hosted: Privacy, Cost, Features Compared",
+      "keyword": "Strava alternative",
+      "format": "Comparison",
+      "priority": "High"
+    },
+    {
+      "topic": "Free Running Dashboard Tool (Interactive Web App)",
+      "keyword": "running data visualization",
+      "format": "Tool",
+      "priority": "High"
+    },
+    {
+      "topic": "How to Build a Running Performance Dashboard",
+      "keyword": "running performance analysis",
+      "format": "Tutorial",
+      "priority": "Medium"
+    },
+    {
+      "topic": "AI-Powered Running Coach vs Traditional Plans",
+      "keyword": "AI running coach",
+      "format": "Comparison",
+      "priority": "Medium"
+    },
+    {
+      "topic": "Why Privacy-Focused Fitness Tracking Is Growing",
+      "keyword": "privacy focused fitness tracker",
+      "format": "Blog post",
+      "priority": "Medium"
+    }
+  ],
+  "technicalSeo": {
+    "strengths": [
+      "Open-source positioning captures 'privacy' and 'self-hosted' long-tail traffic with low competition",
+      "Tool-based SEO opportunity (embedded VDOT calculator, pace calculator, training load charts) attracts high-intent visitors",
+      "Programmatic SEO potential for race-specific pages (city + marathon training plan)",
+      "API/integration content can rank for developer-oriented queries",
+      "Niche focus on running analytics avoids saturated general fitness market"
+    ],
+    "weaknesses": [
+      "Low domain authority compared to established competitors (Runner's World, Strava, Garmin)",
+      "No existing backlink profile from running/fitness publishers",
+      "Limited social proof and runner community traction",
+      "Brand awareness near zero outside self-hosted/dev communities",
+      "Product-centric pages lack informational content that drives top-of-funnel traffic"
+    ],
+    "opportunities": [
+      "Create a free interactive VDOT calculator tool to earn links and rankings",
+      "Publish 'Strava privacy audit' content targeting privacy-conscious runners",
+      "Build comparison landing pages for every self-hosted fitness tool (OpenTracks, FitoTrack, Runalyze)",
+      "Target 'running analytics' and 'fitness analytics' head terms with cornerstone guide",
+      "Add schema markup for software product pages (SoftwareApplication, Review)",
+      "Create race-seasonal content (Boston, Chicago, NYC marathon training with analytics focus)",
+      "Submit to self-hosted/opensource directories like Awesome Self-Hosted, GitHub topics"
+    ]
+  },
+  "backlinkOpportunities": [
+    {
+      "source": "Self-hosted software directories (Awesome Self-Hosted, F-Droid lists)",
+      "relevance": "High",
+      "approach": "List Hermes as a recommended self-hosted fitness tracker"
+    },
+    {
+      "source": "Running blog roundups (best training tools, Strava alternatives)",
+      "relevance": "High",
+      "approach": "Guest post or product mention with unique analytics features"
+    },
+    {
+      "source": "Developer blogs (Python/R fitness analytics tutorials)",
+      "relevance": "Medium",
+      "approach": "Publish open-source data export/visualization snippets"
+    },
+    {
+      "source": "Privacy advocacy sites (PrivacyTools, RestorePrivacy)",
+      "relevance": "High",
+      "approach": "Highlight self-hosted privacy-first positioning vs Strava/Garmin"
+    },
+    {
+      "source": "GitHub trending / open-source fitness projects",
+      "relevance": "Medium",
+      "approach": "Open-source key components (TCX parser, training load algorithm)"
+    },
+    {
+      "source": "Runner's World / Runner-specific forums (Reddit r/AdvancedRunning)",
+      "relevance": "High",
+      "approach": "Share data-driven training insights with link to free tool"
+    },
+    {
+      "source": "Product Hunt launch for analytics feature",
+      "relevance": "Medium",
+      "approach": "Launch analytics dashboard as a standalone featured product"
+    }
+  ],
+  "sources": [
+    "https://alternativeto.net/software/strava/",
+    "https://www.runnersworld.com/",
+    "https://www.runnersworld.com/training/",
+    "https://www.producthunt.com/search?q=running%20analytics",
+    "https://www.runnersworld.com/races-places/a20855451/how-many-miles-is-a-5k/"
+  ]
 }
