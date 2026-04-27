@@ -2400,6 +2400,85 @@ body.theme-light .dashboard-body {
     animation: page-enter-soft 0.28s ease-out;
 }
 
+.app-error-boundary {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    background:
+        radial-gradient(circle at 20% 10%, rgba(252, 97, 0, 0.18), transparent 30rem),
+        linear-gradient(135deg, #151312 0%, #25201d 100%);
+    color: #f8f3ec;
+}
+
+.app-error-boundary__panel {
+    width: min(100%, 30rem);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 1.25rem;
+    background: rgba(25, 23, 22, 0.84);
+    box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.32);
+}
+
+.app-error-boundary__eyebrow {
+    margin: 0;
+    color: rgba(252, 184, 88, 0.86);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.app-error-boundary h1,
+.app-error-boundary p {
+    margin: 0;
+}
+
+.app-error-boundary h1 {
+    font-size: clamp(1.75rem, 4vw, 2.65rem);
+    line-height: 1.05;
+}
+
+.app-error-boundary p:not(.app-error-boundary__eyebrow) {
+    color: rgba(248, 243, 236, 0.72);
+    line-height: 1.6;
+}
+
+.app-error-boundary button {
+    min-height: 44px;
+    border: 0;
+    border-radius: 999px;
+    padding: 0 1.25rem;
+    background: #fc6100;
+    color: #fff8f1;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.app-error-boundary button:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.82);
+    outline-offset: 3px;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .app-error-boundary {
+    background:
+        radial-gradient(circle at 20% 10%, rgba(252, 97, 0, 0.14), transparent 30rem),
+        linear-gradient(135deg, #fff9f2 0%, #f0e8df 100%);
+    color: #1f1c19;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .app-error-boundary__panel {
+    border-color: rgba(31, 28, 25, 0.12);
+    background: rgba(255, 255, 255, 0.84);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .app-error-boundary p:not(.app-error-boundary__eyebrow) {
+    color: rgba(31, 28, 25, 0.68);
+}
+
 .top-nav {
     position: sticky;
     top: 0;

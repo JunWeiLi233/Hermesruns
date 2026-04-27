@@ -5,6 +5,7 @@ import { useAuth } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { UnitProvider } from './contexts/UnitContext';
+import AppErrorBoundary from './components/ErrorBoundary';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Login = React.lazy(() => import('./pages/Login'));
@@ -83,51 +84,53 @@ function UserOnlyRoute({ children }) {
 function App() {
   return (
     <I18nProvider>
-      <ThemeProvider>
-        <UnitProvider>
-          <AuthProvider>
-            <Suspense fallback={<div className="route-loading">Loading...</div>}>
-              <ScrollToTop />
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/terms" element={<LegalPage variant="terms" />} />
-                <Route path="/privacy" element={<LegalPage variant="privacy" />} />
-                <Route path="/admin" element={<AdminLogin />} />
-                <Route path="/dashboard/*" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
-                <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
-                <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
-                <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
-                <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
-                <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
-                <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
-                <Route path="/weather" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />
-                <Route path="/weather-engine" element={<Navigate to="/weather" replace />} />
-                <Route path="/analysis/vo2max" element={<UserOnlyRoute><Vo2MaxDetail /></UserOnlyRoute>} />
-                <Route path="/analysis/:insightKey" element={<UserOnlyRoute><AnalysisInsightDetail /></UserOnlyRoute>} />
-                <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
-                <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
-                <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
-                <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
-                <Route path="/settings/garmin-import" element={<UserOnlyRoute><GarminImportSettings /></UserOnlyRoute>} />
-                <Route path="/settings/import-data" element={<UserOnlyRoute><ImportDataSettings /></UserOnlyRoute>} />
-                <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
-                <Route path="/shoes/add" element={<UserOnlyRoute><AddShoes /></UserOnlyRoute>} />
-                <Route path="/add-shoes" element={<Navigate to="/shoes/add" replace />} />
-                <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
-                <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
-                <Route path="/races/details/:raceId" element={<UserOnlyRoute><RacesDetail /></UserOnlyRoute>} />
-                <Route path="/schedule" element={<UserOnlyRoute><Schedule /></UserOnlyRoute>} />
-                <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
-                <Route path="/workflows" element={<UserOnlyRoute><WorkflowBuilder /></UserOnlyRoute>} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
-          </AuthProvider>
-        </UnitProvider>
-      </ThemeProvider>
+      <AppErrorBoundary>
+        <ThemeProvider>
+          <UnitProvider>
+            <AuthProvider>
+              <Suspense fallback={<div className="route-loading">Loading...</div>}>
+                <ScrollToTop />
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/terms" element={<LegalPage variant="terms" />} />
+                  <Route path="/privacy" element={<LegalPage variant="privacy" />} />
+                  <Route path="/admin" element={<AdminLogin />} />
+                  <Route path="/dashboard/*" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
+                  <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
+                  <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
+                  <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+                  <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+                  <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
+                  <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
+                  <Route path="/weather" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />
+                  <Route path="/weather-engine" element={<Navigate to="/weather" replace />} />
+                  <Route path="/analysis/vo2max" element={<UserOnlyRoute><Vo2MaxDetail /></UserOnlyRoute>} />
+                  <Route path="/analysis/:insightKey" element={<UserOnlyRoute><AnalysisInsightDetail /></UserOnlyRoute>} />
+                  <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
+                  <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
+                  <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
+                  <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
+                  <Route path="/settings/garmin-import" element={<UserOnlyRoute><GarminImportSettings /></UserOnlyRoute>} />
+                  <Route path="/settings/import-data" element={<UserOnlyRoute><ImportDataSettings /></UserOnlyRoute>} />
+                  <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
+                  <Route path="/shoes/add" element={<UserOnlyRoute><AddShoes /></UserOnlyRoute>} />
+                  <Route path="/add-shoes" element={<Navigate to="/shoes/add" replace />} />
+                  <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
+                  <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
+                  <Route path="/races/details/:raceId" element={<UserOnlyRoute><RacesDetail /></UserOnlyRoute>} />
+                  <Route path="/schedule" element={<UserOnlyRoute><Schedule /></UserOnlyRoute>} />
+                  <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
+                  <Route path="/workflows" element={<UserOnlyRoute><WorkflowBuilder /></UserOnlyRoute>} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </AuthProvider>
+          </UnitProvider>
+        </ThemeProvider>
+      </AppErrorBoundary>
     </I18nProvider>
   );
 }
