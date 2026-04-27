@@ -6,10 +6,25 @@ export function getCourseMapQueueRaceId(item) {
   return item?.raceId || item?.id || null;
 }
 
+function hasNonEmptyRoutePoints(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return false;
+  const points = Array.isArray(snapshot.routePoints) ? snapshot.routePoints : [];
+  return points.length > 0;
+}
+
 export function hasCourseMapBackendRecord(raceId, items = []) {
   return items.some((item) => {
     if (getCourseMapQueueRaceId(item) !== raceId) return false;
     return Boolean(item?.live || item?.pendingPreview || item?.currentLivePreview || item?.updatedAt);
+  });
+}
+
+export function hasCourseMapRoutePoints(raceId, items = []) {
+  return items.some((item) => {
+    if (getCourseMapQueueRaceId(item) !== raceId) return false;
+    return hasNonEmptyRoutePoints(item?.live)
+      || hasNonEmptyRoutePoints(item?.pendingPreview)
+      || hasNonEmptyRoutePoints(item?.currentLivePreview);
   });
 }
 

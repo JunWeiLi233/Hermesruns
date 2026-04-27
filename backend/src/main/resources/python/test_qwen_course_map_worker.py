@@ -1,4 +1,11 @@
-from qwen_course_map_worker import extract_json_object
+from qwen_course_map_worker import build_image_content, extract_json_object
+
+
+def test_build_image_content_caps_qwen_pixels_by_default():
+    content = build_image_content("course-map.webp")
+
+    assert content["image"] == "course-map.webp"
+    assert content["max_pixels"] <= 1024 * 1024
 
 
 def test_extract_json_object_recovers_truncated_course_map_payload():
