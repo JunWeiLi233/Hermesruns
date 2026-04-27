@@ -157,7 +157,11 @@ public class OAuthController {
     @GetMapping("/auth/google/start")
     public RedirectView startGoogleAuth(@RequestParam(required = false) String state) {
         if (!isGoogleConfigured()) {
-            return errorRedirect("Google sign-in is not configured.", state);
+            return errorRedirectCode(
+                    "GOOGLE_NOT_CONFIGURED",
+                    "Google sign-in is not configured.",
+                    state
+            );
         }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
@@ -210,11 +214,15 @@ public class OAuthController {
             @RequestParam(required = false) String state
     ) {
         if (!isGoogleConfigured()) {
-            return errorRedirect("Google sign-in is not configured.", state);
+            return errorRedirectCode(
+                    "GOOGLE_NOT_CONFIGURED",
+                    "Google sign-in is not configured.",
+                    state
+            );
         }
 
         if (code == null || code.isBlank()) {
-            return errorRedirect("Google sign-in failed.", state);
+            return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
         }
 
         RestTemplate restTemplate = this.restTemplate;
@@ -241,7 +249,7 @@ public class OAuthController {
             Map<String, Object> tokenBody = tokenResponse.getBody();
             String accessToken = tokenBody == null ? null : stringValue(tokenBody.get("access_token"));
             if (accessToken == null || accessToken.isBlank()) {
-                return errorRedirect("Google sign-in failed.", state);
+                return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
             }
 
             HttpHeaders userInfoHeaders = new HttpHeaders();
@@ -258,7 +266,7 @@ public class OAuthController {
             Map<String, Object> infoBody = infoResponse.getBody();
             String googleEmail = authService.normalizeEmail(infoBody == null ? null : stringValue(infoBody.get("email")));
             if (googleEmail == null || googleEmail.isBlank()) {
-                return errorRedirect("Google sign-in failed.", state);
+                return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
             }
 
             Runner runner = runnerRepository.findByEmailIgnoreCase(googleEmail)
@@ -283,7 +291,7 @@ public class OAuthController {
                             + "&email=" + urlEncode(runner.getEmail())
             );
         } catch (Exception exception) {
-            return errorRedirect("Google sign-in failed.", state);
+            return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
         }
     }
 

@@ -2,8 +2,8 @@ package com.hermes.backend;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.type.TypeFactory;
 
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
@@ -66,17 +66,20 @@ public class AdminBackgroundJobService {
     }
 
     public List<CourseMapScanStep> getCourseMapScanTimeline(String raceId) {
+        var typeFactory = JSON.getTypeFactory();
         List<AdminBackgroundJob> recent = adminBackgroundJobRepository.findTop5ByJobTypeInOrderByCreatedAtDesc(
                 List.of("COURSE_MAP_PREVIEW_REANALYZE", "COURSE_MAP_PREVIEW_UPLOAD"));
         for (AdminBackgroundJob job : recent) {
             if (job.getDetailsJson() == null || job.getDetailsJson().isBlank()) continue;
             try {
-                Map<String, Object> details = JSON.readValue(job.getDetailsJson(), TypeFactory.defaultInstance().constructMapType(LinkedHashMap.class, String.class, Object.class));
+                Map<String, Object> details = JSON.readValue(
+                        job.getDetailsJson(),
+                        typeFactory.constructMapType(LinkedHashMap.class, String.class, Object.class));
                 Object raceIdValue = details.get("raceId");
                 if (raceIdValue != null && raceId.equals(String.valueOf(raceIdValue))) {
                     Object steps = details.get("qwenScanSteps");
                     if (steps instanceof List<?> rawSteps && !rawSteps.isEmpty()) {
-                        return JSON.convertValue(rawSteps, TypeFactory.defaultInstance().constructCollectionType(List.class, CourseMapScanStep.class));
+                        return JSON.convertValue(rawSteps, typeFactory.constructCollectionType(List.class, CourseMapScanStep.class));
                     }
                 }
             } catch (Exception ignored) {
