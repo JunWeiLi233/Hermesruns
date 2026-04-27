@@ -3,6 +3,7 @@ package com.hermes.backend;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.type.TypeFactory;
 
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;

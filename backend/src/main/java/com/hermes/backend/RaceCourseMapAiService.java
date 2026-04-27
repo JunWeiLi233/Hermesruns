@@ -129,8 +129,10 @@ public class RaceCourseMapAiService {
         }
         RaceCourseMapService.RouteGeometryDiagnosis diagnosis = geometryService.diagnoseRouteGeometry(alignment.routePoints(), raceType, distanceKm);
         String rescuePrompt = null;
+        String rescueReason = null;
         if (diagnosis.needsCorrectionPrompt()) {
             rescuePrompt = diagnosis.feedbackPrompt();
+            rescueReason = "geometry";
             scanWatcher.record("qwen.rescue_requested", "running", "Route geometry diagnosis requested a corrective Qwen pass.", Map.of(
                     "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
                     "reason", "geometry"
@@ -147,6 +149,7 @@ public class RaceCourseMapAiService {
                     );
             if (!plausibilityVerdict.plausible()) {
                 rescuePrompt = promptBuilder.buildPlausibilityRescuePrompt(plausibilityVerdict, raceType, distanceKm);
+                rescueReason = plausibilityVerdict.reason();
                 scanWatcher.record("qwen.rescue_requested", "running", "Plausibility checks requested a corrective Qwen pass.", Map.of(
                         "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
                         "reason", plausibilityVerdict.reason() == null ? "" : plausibilityVerdict.reason()
@@ -178,15 +181,35 @@ public class RaceCourseMapAiService {
                         promptBuilder.minimumRoutePointCountForRescue(raceType),
                         raceType
                 );
+        double originalScore = scoreAlignmentCandidate(alignment, latitude, longitude, distanceKm, raceType);
+        double correctedScore = scoreAlignmentCandidate(corrected, latitude, longitude, distanceKm, raceType);
         if (!correctedPlausibility.plausible()) {
+            if (isUsableLowerDensityCorrectiveRoute(corrected, correctedPlausibility.reason(), distanceKm)
+                    && correctedScore > originalScore) {
+                scanWatcher.record("qwen.rescue_lower_density_accepted", "completed", "Corrective Qwen pass improved the route but remained below the dense-route point target.", Map.of(
+                        "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                        "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason(),
+                        "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                        "correctedScore", Math.round(correctedScore * 100.0) / 100.0
+                ));
+                return corrected;
+            }
+            if (isUsableLowerDensityCorrectiveRoute(alignment, rescueReason, distanceKm)
+                    && originalScore > correctedScore) {
+                scanWatcher.record("qwen.rescue_original_preserved", "completed", "Corrective Qwen pass regressed, so Hermes kept the lower-density original route.", Map.of(
+                        "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                        "reason", rescueReason == null ? "" : rescueReason,
+                        "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                        "correctedScore", Math.round(correctedScore * 100.0) / 100.0
+                ));
+                return alignment;
+            }
             scanWatcher.record("qwen.rescue_rejected", "failed", "Corrective Qwen pass still failed route plausibility checks.", Map.of(
-                    "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
-                    "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason()
+                "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason()
             ));
             return null;
         }
-        double originalScore = scoreAlignmentCandidate(alignment, latitude, longitude, distanceKm, raceType);
-        double correctedScore = scoreAlignmentCandidate(corrected, latitude, longitude, distanceKm, raceType);
         scanWatcher.record("qwen.rescue_scored", "completed", "Corrective Qwen pass scored against the original alignment.", Map.of(
                 "originalScore", Math.round(originalScore * 100.0) / 100.0,
                 "correctedScore", Math.round(correctedScore * 100.0) / 100.0,
@@ -386,6 +409,20 @@ public class RaceCourseMapAiService {
     private boolean isCollapsedRouteCandidate(double routeDistanceKm, Double distanceKm) {
         if (distanceKm == null || distanceKm <= 0) return false;
         return routeDistanceKm < Math.max(1.0, distanceKm * 0.08);
+    }
+
+    private boolean isUsableLowerDensityCorrectiveRoute(
+            RaceCourseMapService.CourseMapAlignment corrected,
+            String plausibilityReason,
+            Double distanceKm
+    ) {
+        if (corrected == null || !corrected.isCourseMap() || corrected.routePoints() == null) return false;
+        if (plausibilityReason == null || !plausibilityReason.startsWith("route has only ")) return false;
+        if (corrected.routePoints().size() < 6) return false;
+        if (distanceKm == null || distanceKm <= 0) return true;
+        double routeDistanceKm = geometryService.polylineDistanceKm(corrected.routePoints());
+        if (isCollapsedRouteCandidate(routeDistanceKm, distanceKm)) return false;
+        return routeDistanceKm >= 3.0;
     }
 
     private String asTrimmedString(Object value) {

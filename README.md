@@ -1,6 +1,9 @@
-# Hermes Runner Analytics
+# Hermes — Your Personal Running Coach
 
-> [English](#english) | [中文](#中文说明)
+> A local-first runner analytics platform. **React** frontend, **Spring Boot** backend.
+> Combines daily training guidance, VDOT analysis, heatmaps, race planning, shoe management, and AI-powered import pipelines — all running on your own machine.
+
+[English](#english) | [中文说明](#中文)
 
 ---
 
@@ -8,19 +11,52 @@
 
 ## English
 
-A local-first runner coach platform with a **React** frontend and **Spring Boot** backend.
+### What is Hermes?
 
-Hermes combines running analytics, daily training guidance, heatmaps, race planning, shoe management, import pipelines, public auth surfaces, and admin tooling in one app you can run on your own machine.
+Hermes is a **personal running coach** you run locally. It analyzes your running data to answer three questions every runner asks:
 
-Current website highlights:
-- editorial public landing page with sign-in, sign-up, and Strava start flows
-- shared signed-in runner shell across profile, analysis, runs, shoes, races, schedule, rewards, settings, and today-run
-- route heatmap, VDOT and training-load analysis, race predictions, and deeper drill-down pages
-- Today Run coaching with readiness, weather, workout blueprint, and shoe guidance
-- shoes inventory plus guided add-shoes, catalog browse, and AI-assisted photo scan/import flows
-- settings control room with theme, language, units, weekly brief toggle, Strava status, Garmin Connect import, and batch file import
+1. **Should I run today, and how hard?** — Daily readiness, weather, workout blueprint, shoe guidance
+2. **Am I improving?** — VDOT tracking, training load (ACWR), race predictions, recovery estimation
+3. **Which shoes should I use?** — Shoe inventory, mileage tracking, AI-assisted photo scanning
 
-Supported inputs include Strava sync, Garmin Connect pull, and manual FIT/GPX/TCX/ZIP imports including COROS and Huawei Health export workflows.
+Hermes works with data from **Strava**, **Garmin Connect**, **COROS**, and manual file imports (FIT/GPX/TCX/ZIP). All analysis stays on your machine.
+
+**Better than Strava?** Hermes earns its place by being smarter (personalized coaching, not social feeds), more actionable (specific pace ranges, not generic recommendations), and more trustworthy (transparent methodology, no hidden algorithms).
+
+### Quick Start (30 seconds)
+
+```powershell
+.\start_hermes.bat
+```
+
+Opens `http://localhost:8080` — sign up with email and you're in. No database setup, no API keys, no configuration needed.
+
+> **Want the full experience?** See [Production Setup](#production-setup-postgresql--oauth--admin) for PostgreSQL, Strava/Google OAuth, Stripe billing, and email verification.
+
+### Feature Highlights
+
+| Area | What you get |
+|---|---|
+| **Today Run** | Daily coaching: readiness score, weather, personalized workout blueprint, shoe recommendation |
+| **Analysis** | VDOT (VO₂max estimate), training paces, effort scores, ACWR injury risk, recovery time, form tracking |
+| **Heatmap** | Full-screen GPS heatmap of all your runs with live totals |
+| **Runs** | Filterable run log with route maps, performance metrics, and drill-down detail |
+| **Shoes** | Inventory with mileage tracking, rotation insight, AI photo scan import, catalog browser |
+| **Races** | Interactive world map, 60+ race catalog, personal bests, countdowns, race-specific training |
+| **Schedule** | Weekly training planner |
+| **Import** | Strava sync, Garmin Connect pull, manual FIT/GPX/TCX/ZIP (including COROS and Huawei Health) |
+| **Settings** | Theme (light/midnight), language (en/zh-CN), units, connected services, batch import |
+
+### Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, React Router 7, Chart.js, Leaflet, Vite 8 |
+| Backend | Spring Boot 4, Spring Data JPA, Hibernate |
+| Database | H2 (zero-config default) or PostgreSQL |
+| Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0, email/password + verification |
+| AI | Gemini 2.5 Flash (shoe image scanning), Qwen (course-map route extraction) |
+| Payments | Stripe Checkout (Pro subscription) |
 
 ### Architecture
 
@@ -28,16 +64,6 @@ Supported inputs include Strava sync, Garmin Connect pull, and manual FIT/GPX/TC
 frontend/          React 19 + Vite 8 — dev server on :3000, proxies API calls to :8080
 backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built frontend SPA
 ```
-
-| Layer | Stack |
-|---|---|
-| Frontend | React 19, React Router 7, Chart.js, Leaflet, Vite 8 |
-| Backend | Spring Boot 4, Spring Data JPA, Hibernate |
-| Database | H2 (default, zero-config) or PostgreSQL |
-| Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0 |
-| File Import | Garmin FIT, GPX, TCX, ZIP, COROS exports, Huawei Health exports |
-| Garmin Connect | Direct account import via GarminDB / garth |
-| UI posture | Kinetic Editorial design language with `light` and `midnight` runtime themes |
 
 <!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS START -->
 ### Live Architecture Diagrams
@@ -55,288 +81,248 @@ Source artifact: [docs/architecture/ai-agents-workflow.html](docs/architecture/a
 Source artifact: [docs/architecture/saas-architecture.html](docs/architecture/saas-architecture.html)
 <!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS END -->
 
-### AI-Agent Workflow (Shared) / AI 智能体工作流（共享）
+---
 
-This repository includes a specialized AI-agent workflow driven by **Gemini CLI** and **Claude Code**.
-本仓库包含一套专用的 AI 智能体工作流，由 **Gemini CLI** 和 **Claude Code** 驱动。
+### AI-Agent Workflow
 
-#### 1. Setup / 设置
-1.  **Install Agents / 安装智能体**:
-    *   `npm install -g @google/gemini-cli`
-    *   `npm install -g @anthropic-ai/claude-code`
-2.  **Configure Secrets / 配置密钥**:
-    *   Copy `Hermes.local.env.example.ps1` to `Hermes.local.env.ps1`.
-    *   将 `Hermes.local.env.example.ps1` 复制并重命名为 `Hermes.local.env.ps1`。
-    *   Fill in your `GEMINI_API_KEY` and `ANTHROPIC_API_KEY`.
-    *   填写你的 `GEMINI_API_KEY` 和 `ANTHROPIC_API_KEY`。
+Hermes includes an AI-agent workflow driven by **Claude Code** and **Gemini CLI** for autonomous development. The agents pick tasks from a shared queue, implement them with specialist sub-teams, verify, and promote follow-up work.
 
-#### 2. Command Dictionary / 命令字典
+#### Setup
 
-| Command / 命令 | Description (EN) | 描述 (CN) |
-| :--- | :--- | :--- |
-| `/auto-hermes` | Standard development loop: picks a task, implements, and verifies. | 标准开发循环：领取任务、实现并验证。 |
-| `/auto-hermes-max` | Advanced parallel round: launches multiple agents with a mandatory merge gate. | 高级并行轮次：启动多个智能体并经过强制合并闸门。 |
-| `/auto-hermes-tech-debt`| Runs a codebase-wide audit to identify and log technical debt tasks. | 全局技术债审计：识别并记录技术债任务。 |
+1. Install the CLI tools:
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   npm install -g @google/gemini-cli
+   ```
+2. Copy `Hermes.local.env.example.ps1` to `Hermes.local.env.ps1` and fill in your API keys.
 
-#### 3. Where to go? / 开发指南
-- **`TASKS.md`**: The shared **Queue**. Check here to see what the agents are working on or to add new tasks.
-  **`TASKS.md`**: 共享**任务队列**。在此查看智能体正在处理的任务或添加新任务。
-- **`CONTEXT_LEDGER.md`**: The **Audit Log**. Read this to understand the recent architectural changes and context.
-  **`CONTEXT_LEDGER.md`**: **审计日志**。通过此文件了解最近的架构变更和开发上下文。
-- **`AGENTS.md`**: **Persona definitions**. Defines how the "Coach-voice" and engineering standards are enforced.
-  **`AGENTS.md`**: **人格定义**。定义了如何执行“教练口吻”和工程标准。
+#### Claude Code Commands
 
-### Web Routes
+| Command | What it does |
+|---|---|
+| `/auto-hermes` | Standard dev loop — picks a task, implements, verifies |
+| `/auto-hermes-self` | Ralph-style indefinite self-loop — keeps executing until a real stop gate fires |
+| `/auto-hermes-max` | Parallel multi-agent round with merge gate |
+| `/auto-hermes-tech-debt` | Codebase-wide tech debt audit |
+| `/auto-hermes-security` | Security audit across auth, config, runtime, and code surfaces |
+| `/auto-hermes-market` | Parallel market research + SEO lane → verified opportunities |
+| `/auto-hermes-attack` | Resilience/breakage simulation for high-risk surfaces |
+| `/auto-hermes-structure-update` | Structure improvement pass |
+| `/auto-hermes-find-shoe` | Web-research running shoe brands and update the catalog |
+| `/auto-hermes-language` | Polish frontend copy to coach-voice (zh-CN/en sync enforced) |
+| `/auto-hermes-push-main` | Guarded publish to `github.com/520HXC/run` |
+| `/auto-hermes-submit-main` | Backup-first cherry-pick from nested repo |
+| `/auto-ship` | Run TASKS.md queue with shared git policy |
+| `/deploy` | Prepare Hermes for deployment |
+| `/fix-issue` | Fix a GitHub issue |
+| `/pr-review` | Review pull request changes |
+| `/frontend-design` | Apply Hermes UI design standards |
+| `/optimize-context` | Generate minimal working brief before broad execution |
+| `/caveman` | Low-token response mode |
 
-| Route | Surface | What it does now |
-|---|---|---|
-| `/` | Landing | Editorial public homepage with sign-in, sign-up, and Strava start actions |
-| `/login` | Login | Email/password login plus Strava and Google OAuth, with verification-aware auth flow |
-| `/signup` | Signup | Email/password sign-up plus OAuth entry points and email verification flow |
-| `/terms` | Terms | Public legal page |
-| `/privacy` | Privacy | Public legal page |
-| `/admin` | Admin Login | System administrator sign-in |
-| `/dashboard` | Admin Dashboard | Premium admin portal with ops status strip, quick-actions panel, KPI grid, runner management, shoe image verification, job queues, and audit log |
-| `/profile` | Runner Hub | Signed-in dashboard with readiness, metrics, records, imports, and links into the rest of the runner shell |
-| `/runs` | Run History | Filterable run log with sorting, pagination, previews, and drill-down into run detail |
-| `/run` and `/run/:id` | Run Detail | Route map, performance metrics, and route intelligence |
-| `/analysis` | Analysis Overview | Quick-glance analytics entrypoint with insight cards and import/empty-state handling |
-| `/analysis/vo2max` | VO₂ Max Detail | VO₂ trend drill-down in the shared runner shell |
-| `/analysis/:insightKey` | Analysis Insight Detail | Deeper drill-down routes such as injury risk, intensity, coach insight, and load balance |
-| `/prediction/:distKey` | Prediction Detail | Distance-specific prediction breakdown with supporting evidence |
-| `/heatmap` | Heatmap | Full-screen running heatmap with sampled GPS rendering and live totals |
-| `/today-run` | Today Run | Daily coaching surface with readiness, weather, workout blueprint, and shoe guidance |
-| `/shoes` | Shoes | Inventory command surface with rotation insight, filters, and scan/import actions |
-| `/shoes/add` | Add Shoes | Guided add-shoes flow inside the shared runner shell |
-| `/add-shoes` | Redirect | Legacy shortcut redirecting to `/shoes/add` |
-| `/shoe-catalog` | Shoe Catalog | Catalog browser within the shoes family |
-| `/races` | Race Center | Race planning dashboard with discovery, countdowns, personal-best evidence, and saved-race calendar |
-| `/schedule` | Schedule | Weekly planning surface for upcoming training |
-| `/muscle-training` | Muscle Training | Anatomical SVG muscle figure, session planning, training log |
-| `/rewards` | Rewards | Achievement badges, progression surface |
-| `/settings` | Settings | Runner control room for identity, theme, language, units, weekly brief, Strava, Garmin import, and batch file import |
+#### Key Files for AI Agents
+
+| File | Purpose |
+|---|---|
+| `TASKS.md` | Shared task queue — check what agents are working on or add new tasks |
+| `.ai-sync/CONTEXT_LEDGER.md` | Durable surface-level decisions and context capsules |
+| `.ai-sync/AGENT_SYNC.md` | Cross-agent coordination board |
+| `AGENTS.md` | Agent personas, coach-voice rules, engineering standards |
+| `CLAUDE.md` | Project brain — product vision, stack, conventions |
 
 ---
 
-### Analysis — Calculations Explained
+### Web Routes
 
-The Analysis page applies established sports science models. All formulas come from Jack Daniels' *Running Formula* and peer-reviewed physiology research.
+| Route | Page | Description |
+|---|---|---|
+| `/` | Landing | Public homepage with sign-in, sign-up, Strava start |
+| `/login` | Login | Email/password + Strava + Google OAuth |
+| `/signup` | Signup | Email/password + OAuth entry points + email verification |
+| `/terms`, `/privacy` | Legal | Public legal pages |
+| `/admin` | Admin Login | System administrator sign-in |
+| `/dashboard` | Admin Dashboard | Ops status, KPI grid, runner management, job queues, audit log |
+| `/profile` | Runner Hub | Readiness, metrics, records, imports, quick links |
+| `/runs` | Run History | Filterable, sortable, paginated run log |
+| `/run/:id` | Run Detail | Route map, performance metrics, route intelligence |
+| `/analysis` | Analysis | Insight cards, VDOT, training paces, ACWR, recovery |
+| `/analysis/vo2max` | VO₂ Max Detail | Trend drill-down |
+| `/analysis/:insightKey` | Insight Detail | Injury risk, intensity, coach insight, load balance |
+| `/prediction/:distKey` | Prediction Detail | Distance-specific race prediction |
+| `/heatmap` | Heatmap | Full-screen GPS heatmap with live totals |
+| `/today-run` | Today Run | Daily coaching: readiness, weather, workout, shoes |
+| `/shoes` | Shoes | Inventory, rotation insight, filters, scan/import |
+| `/shoes/add` | Add Shoes | Guided add-shoes flow |
+| `/shoe-catalog` | Shoe Catalog | Browse shoe database |
+| `/races` | Race Center | Discovery, countdowns, PBs, saved races |
+| `/schedule` | Schedule | Weekly training planner |
+| `/muscle-training` | Muscle Training | Anatomical figure, session planning, log |
+| `/rewards` | Rewards | Achievement badges, progression |
+| `/settings` | Settings | Theme, language, units, Strava, Garmin, imports |
 
-#### VDOT (Daniels' VO2max Estimate)
+---
 
-VDOT estimates aerobic fitness from a race performance. Given distance (meters) and time (minutes):
+### Analysis — How It Works
+
+All formulas come from Jack Daniels' *Running Formula* and peer-reviewed sports science. Hermes shows its work — every number has a traceable basis.
+
+#### VDOT (Daniels' VO₂max Estimate)
+
+From a race performance (distance in meters, time in minutes):
 
 ```
 velocity     = distance / time                              (m/min)
-VO2          = -4.60 + 0.182258 × v + 0.000104 × v²        (ml/kg/min)
-%VO2max      = 0.8 + 0.1894393 × e^(-0.012778 × t)
-                   + 0.2989558 × e^(-0.1932605 × t)
-VDOT         = VO2 / %VO2max
+VO₂          = -4.60 + 0.182258 × v + 0.000104 × v²        (ml/kg/min)
+%VO₂max      = 0.8 + 0.1894393 × e^(-0.012778 × t) + 0.2989558 × e^(-0.1932605 × t)
+VDOT         = VO₂ / %VO₂max
 ```
 
-The %VO2max curve accounts for the fact that longer efforts use a lower fraction of maximum oxygen uptake.
-
-Hermes also exposes this pipeline explicitly as **estimated VO₂max (ml·kg⁻¹·min⁻¹)** from each run: `VO₂(velocity) = −4.60 + 0.182258·v + 0.000104·v²` with *v* in m/min, then `VO₂max ≈ VO₂(velocity) / %VO₂max(time in minutes)` — the same algebra as headline VDOT, labeled for clarity on the Profile card and charts.
-
-**Headline “current” VDOT in Hermes:** Uses performances from the last **90 days**, **prefers distances ≥3 km** (falls back to ≥1.5 km if you have no longer runs), and takes the **mean of the top three** VDOT values in that pool so one GPS glitch or very short hard segment does not dominate. Scatter charts still plot every qualifying run; the smooth fitness line uses the same **rolling robust** VDOT window.
+**Current VDOT**: Uses performances from the last **90 days**, prefers distances ≥3 km, takes the **mean of the top three** VDOT values.
 
 #### Training Paces (from VDOT)
 
-Each training zone targets a specific %VO2max. The pace for a given fraction is found by reversing the VO2 equation (solving the quadratic):
-
-| Zone | %VO2max | Purpose |
+| Zone | %VO₂max | Purpose |
 |---|---|---|
 | Easy | 54–62% | Aerobic base, recovery |
 | Marathon | 78% | Race-specific endurance |
-| Threshold | 85% | Lactate clearance at steady state |
-| Interval | 96% | VO2max stimulus |
-| Repetition | 111% | Speed and running economy |
+| Threshold | 85% | Lactate clearance |
+| Interval | 96% | VO₂max stimulus |
+| Repetition | 111% | Speed and economy |
 
-#### Effort Score
+#### Training Load — ACWR
 
-Each run gets a load score based on intensity and duration:
-
-```
-intensityRatio = vo2Fraction / 0.85
-effortScore    = (duration_hours) × intensityRatio² × 100
-```
-
-The 0.85 divisor normalizes to lactate threshold — runs at threshold intensity score 100 per hour.
-
-`vo2Fraction` is derived from either heart rate or pace:
-
-- **From HR:** `vo2Fraction = max(0, 1.67 × (avgHR / HRmax) - 0.67)`
-- **From pace:** `vo2Fraction = VO2(pace) / VDOT`, using the Daniels VO2 equation above
-
-#### Training Load — ACWR (Acute:Chronic Workload Ratio)
-
-Tracks injury risk using EWMA (Exponentially Weighted Moving Average):
+EWMA-based injury risk tracking (Gabbett 2016, Hulin et al. 2014, Williams et al. 2017):
 
 ```
-EWMA_today = load_today × λ + (1 - λ) × EWMA_yesterday
-
-Acute  λ = 2 / (7 + 1)  = 0.25      (7-day emphasis)
-Chronic λ = 2 / (28 + 1) = 0.069     (28-day emphasis)
-
+Acute  λ = 2/(7+1) = 0.25   (7-day)
+Chronic λ = 2/(28+1) = 0.069 (28-day)
 ACWR = Acute EWMA / Chronic EWMA
 ```
 
 | ACWR | Zone | Meaning |
 |---|---|---|
-| < 0.80 | Under-training | Fitness declining, not enough stimulus |
-| 0.80–1.30 | Sweet spot | Optimal loading for adaptation |
+| < 0.80 | Under-training | Not enough stimulus |
+| 0.80–1.30 | Sweet spot | Optimal loading |
 | 1.30–1.50 | Warning | Elevated injury risk |
-| > 1.50 | Danger | High injury risk — reduce load |
+| > 1.50 | Danger | Reduce load |
 
-Based on: Gabbett (2016), Hulin et al. (2014), and the EWMA approach by Williams et al. (2017).
+#### Effort Score
 
-#### Training form (42d fitness vs 7d fatigue)
+```
+intensityRatio = vo₂Fraction / 0.85
+effortScore    = duration_hours × intensityRatio² × 100
+```
 
-The Analysis page also tracks a **42-day EWMA** of the same per-day effort scores, subtracts the **7-day acute EWMA**, and shows the difference as a simple “form” style signal (similar in spirit to CTL minus short-term fatigue). This **42d series is not** the same as the **28-day chronic** series used in the ACWR denominator.
+`vo₂Fraction` derived from heart rate or pace. Threshold runs score ~100/hour.
 
 #### Recovery Estimation
 
-Estimates time to full recovery after each run:
-
 ```
-durationFactor = (duration > 90 min) ? 1 + 0.005 × (duration - 90) : 1.0
-adjustedScore  = effortScore × durationFactor
-baseHours      = 0.45 × adjustedScore^0.85
+durationFactor  = (duration > 90 min) ? 1 + 0.005 × (duration - 90) : 1.0
+adjustedScore   = effortScore × durationFactor
+baseHours       = 0.45 × adjustedScore^0.85
 fitnessDiscount = max(0.80, 1.10 - VDOT / 200)
-recoveryHours  = min(96, baseHours × fitnessDiscount)
+recoveryHours   = min(96, baseHours × fitnessDiscount)
 ```
 
-Higher VDOT (fitter runner) → faster recovery. Long runs (> 90 min) carry an additional penalty. Maximum recovery is capped at 96 hours.
+Fitter runner (higher VDOT) → faster recovery. Long runs (>90 min) add penalty. Cap: 96 hours.
 
 #### Daniels' Training Zones
 
-Zones classify each run by its VO2 fraction:
-
-| Zone | VO2 Fraction | Label |
+| Zone | VO₂ Fraction | Label |
 |---|---|---|
 | Recovery | < 59% | Easy recovery jog |
-| Easy | 59–75% | Aerobic base building |
-| Marathon | 75–83% | Marathon-pace work |
+| Easy | 59–75% | Aerobic base |
+| Marathon | 75–83% | Marathon pace |
 | Threshold | 83–92% | Tempo / lactate threshold |
-| Interval | 92–105% | VO2max intervals |
-| Repetition | > 105% | Sprint / economy reps |
+| Interval | 92–105% | VO₂max intervals |
+| Repetition | > 105% | Sprint / economy |
 
 ---
 
-### Before You Start
-
-#### 1. Install Java 17+
-
-Download from: https://adoptium.net (Temurin 17 LTS recommended)
-
-```powershell
-java -version   # should show 17 or higher
-```
-
-#### 2. Install Node.js 18+ (for frontend development)
-
-Download from: https://nodejs.org
-
-```powershell
-node -v   # should show 18 or higher
-```
-
----
-
-### Quick Start
-
-#### Production (H2, zero setup)
-
-```powershell
-.\start_hermes.bat
-```
-
-Opens `http://localhost:8080` — the backend serves the pre-built React app.
-
-#### Production (PostgreSQL + OAuth + Admin)
+### Production Setup (PostgreSQL + OAuth + Admin)
 
 ```powershell
 .\start_hermes_postgres.ps1
 ```
 
-`start_hermes_postgres.ps1` is the main launcher for PostgreSQL, OAuth, and admin bootstrapping. It loads local secrets from `Hermes.local.env.ps1`; Stripe billing and email verification are configured separately in the sections below.
+`start_hermes_postgres.ps1` is the main launcher. It loads secrets from `Hermes.local.env.ps1`.
 
-#### Frontend Development
+#### Core Configuration
 
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-Dev server runs on `http://localhost:3000` with hot reload. API requests proxy to the backend on `:8080`.
-
-#### Build Frontend for Production
-
-```powershell
-cd frontend
-npm run build
-```
-
-The build writes to `backend/src/main/resources/static/` and, when the backend runtime output exists, syncs the live bundle into `backend/target/classes/static/`.
-
----
-
-### Configuration — `start_hermes_postgres.ps1`
-
-| Section | Variables | What it controls |
+| Section | Variables | Purpose |
 |---|---|---|
-| Database | `APP_DB_URL`, `APP_DB_DRIVER`, `APP_DB_USERNAME`, `APP_DB_PASSWORD` | PostgreSQL connection |
+| Database | `APP_DB_URL`, `APP_DB_USERNAME`, `APP_DB_PASSWORD` | PostgreSQL connection |
 | Strava OAuth | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `APP_DATA_ENCRYPTION_KEY` | Strava login + activity sync |
 | Google OAuth | `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET`, `APP_GOOGLE_REDIRECT_URI` | Google login |
 | Admin | `APP_BOOTSTRAP_ADMIN_EMAIL`, `APP_BOOTSTRAP_ADMIN_PASSWORD` | Admin account created on startup |
 
-> PowerShell environment variables are session-scoped — the script handles this for you.
+#### Stripe Billing (optional)
 
-#### Stripe billing (optional)
+Sell **Pro** (AI scan quota) via Stripe Checkout.
 
-Hermes can sell **Pro** (AI scan quota) through **Stripe Checkout**. Users pay on Stripe’s hosted page; a webhook extends Pro in the database.
+1. Create a **Product** with a one-time **Price** in [Stripe Dashboard](https://dashboard.stripe.com/)
+2. Set `STRIPE_PRICE_PRO_MONTHLY` to the Price ID (`price_...`)
+3. Set `STRIPE_SECRET_KEY` (API key) and `STRIPE_WEBHOOK_SECRET` (webhook signing secret)
+4. Set `APP_PUBLIC_BASE_URL` to your site URL (e.g. `https://app.example.com`)
+5. Optionally set `APP_BILLING_PRICE_LABEL` (e.g. `$9/month`)
 
-1. In [Stripe Dashboard](https://dashboard.stripe.com/), create a **Product** with a **one-time Price** (e.g. one month of Pro — use “customer chooses quantity” or a fixed price; Hermes sends **quantity = number of months** in Checkout).
-2. Copy the Price id (`price_...`) into `STRIPE_PRICE_PRO_MONTHLY`.
-3. Create an API key (**Developers → API keys**) → `STRIPE_SECRET_KEY`.
-4. Add endpoint **Developers → Webhooks** → URL `https://YOUR_DOMAIN/api/billing/webhook`, event `checkout.session.completed`, then copy **Signing secret** → `STRIPE_WEBHOOK_SECRET`.
-5. Set **`APP_PUBLIC_BASE_URL`** to the URL users use in the browser (e.g. `https://app.example.com` or `http://localhost:8080`) so Stripe redirects back to `/profile` after payment.
-6. Optionally set **`APP_BILLING_PRICE_LABEL`** (e.g. `$9 / month`) for display on the Profile page only.
+Local testing: `stripe listen --forward-to localhost:8080/api/billing/webhook`
 
-| Variable | Purpose |
-|---|---|
-| `STRIPE_SECRET_KEY` | Secret API key |
-| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret |
-| `STRIPE_PRICE_PRO_MONTHLY` | Stripe Price id for one month (quantity = months in cart) |
-| `APP_PUBLIC_BASE_URL` | Public site URL for Checkout return links |
-| `APP_BILLING_PRICE_LABEL` | Optional UI label for pricing |
+#### Email Verification
 
-Local testing: `stripe listen --forward-to localhost:8080/api/billing/webhook`.
-
-#### Email verification (password sign-up)
-
-Email/password registration sends a **verification link** via SMTP. Until the user opens the link, sign-in returns `EMAIL_NOT_VERIFIED`.
+Email/password sign-up sends a verification link via SMTP. Leave `SPRING_MAIL_HOST` empty on dev to skip verification.
 
 | Variable | Purpose |
 |---|---|
-| `SPRING_MAIL_HOST` | SMTP server (leave empty on dev to **skip** verification and allow immediate login) |
+| `SPRING_MAIL_HOST` | SMTP server (empty = skip verification) |
 | `SPRING_MAIL_PORT` | Usually `587` |
 | `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | SMTP credentials |
-| `APP_MAIL_FROM` | From address (must be allowed by your provider) |
-| `APP_PUBLIC_BASE_URL` | Same as billing — used in the verification link |
+| `APP_MAIL_FROM` | From address |
+| `APP_PUBLIC_BASE_URL` | Used in verification link |
 
-Verification link: `GET /api/auth/verify-email?token=…` → redirects to `/login?verified=1`.
+#### Public Cloud Security Checklist
 
-#### Public cloud checklist (security)
+- **`HERMES_ENV=production`** — Requires `STRAVA_WEBHOOK_VERIFY_TOKEN` set to a long random value
+- **TLS** — Terminate HTTPS at reverse proxy. Set `APP_ENABLE_HSTS=true` only when all traffic is HTTPS
+- **Reverse proxy** — `server.forward-headers-strategy=framework` is set; configure proxy to send `X-Forwarded-*`
+- **CORS** — Set `APP_CORS_ALLOWED_ORIGINS` if frontend is on a different origin
+- **Database** — Use PostgreSQL in production; never expose H2 to the network
+- **Webhooks** — Strava/Garmin rate-limited per IP; Garmin callback restricted to `*.garmin.com`; Stripe uses signature verification
+- **Errors** — Default error pages omit stack traces; use `APP_JPA_DDL_AUTO=validate` + migrations for mature deployments
 
-- **`HERMES_ENV=production`** — If Strava is enabled (`STRAVA_CLIENT_ID` set), Hermes refuses to start until **`STRAVA_WEBHOOK_VERIFY_TOKEN`** is set to a **long random** value (not the default `hermes-strava-webhook`). This reduces trivial spoofing of the Strava subscription handshake.
-- **TLS** — Terminate HTTPS in front of the app (nginx, Traefik, cloud LB). Set **`APP_ENABLE_HSTS=true`** only when every user hits the site over HTTPS.
-- **Reverse proxy** — `server.forward-headers-strategy=framework` is set so redirects and client IP behave correctly behind `X-Forwarded-*` (still configure your proxy to set these headers).
-- **CORS** — If the React app is on another origin, set **`APP_CORS_ALLOWED_ORIGINS`** (comma-separated, e.g. `https://app.example.com`).
-- **Database** — Use **PostgreSQL** in production; do not expose the embedded **H2** file DB to the network.
-- **Webhooks** — Strava/Garmin push endpoints are **rate-limited per IP**; Garmin **callback URLs** are restricted to **HTTPS `*.garmin.com`** to block SSRF. Stripe billing webhooks rely on **signature verification** (not rate-limited, so retries succeed).
-- **Errors** — Default Spring error pages omit stack traces; keep `APP_JPA_DDL_AUTO` off **`update`** for mature deployments if you prefer schema control (e.g. `validate` + migrations).
+---
+
+### Development
+
+#### Prerequisites
+
+- **Java 17+** — [Adoptium Temurin 17 LTS](https://adoptium.net) recommended
+- **Node.js 18+** — [nodejs.org](https://nodejs.org)
+
+#### Frontend Dev
+
+```powershell
+cd frontend
+npm install
+npm run dev        # → http://localhost:3000 (hot reload, proxies API to :8080)
+```
+
+#### Build for Production
+
+```powershell
+cd frontend
+npm run build      # → backend/src/main/resources/static/
+```
+
+#### Backend
+
+```powershell
+cd backend
+./mvnw spring-boot:run    # → http://localhost:8080
+./mvnw test                # run tests
+./mvnw -q -DskipTests compile  # compile check
+```
 
 ---
 
@@ -344,26 +330,20 @@ Verification link: `GET /api/auth/verify-email?token=…` → redirects to `/log
 
 #### H2 (default)
 
-No setup needed. The database file is created automatically at `backend\hermes_db_v2.mv.db`.
+Zero config. Database file created at `backend/hermes_db_v2.mv.db`.
 
 #### PostgreSQL
 
-Install PostgreSQL 15+, create a database named `hermes`, then fill in the credentials in `start_hermes_postgres.ps1` and run it.
-
 ```powershell
 $env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
-$env:APP_DB_DRIVER   = "org.postgresql.Driver"
 $env:APP_DB_USERNAME = "hermes"
-$env:APP_DB_PASSWORD = "<your-postgres-password>"
+$env:APP_DB_PASSWORD = "<your-password>"
 .\start_hermes.bat
 ```
 
-#### Migrating H2 to PostgreSQL
+#### Migrate H2 → PostgreSQL
 
 ```powershell
-$env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
-$env:APP_DB_USERNAME = "hermes"
-$env:APP_DB_PASSWORD = "<your-postgres-password>"
 .\migrate_h2_to_postgres.bat
 ```
 
@@ -371,483 +351,183 @@ $env:APP_DB_PASSWORD = "<your-postgres-password>"
 
 ### Login Options
 
-#### Email (no setup)
-
-1. Open `http://localhost:8080`
-2. Click **Sign Up**, create an account, sign in
-
-#### Admin
-
-Go to `http://localhost:8080/admin`. The admin account is created on startup from values in `start_hermes_postgres.ps1`.
-
-#### Google
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a project, navigate to **APIs & Services > Credentials**
-3. Create **OAuth client ID** (Web application)
-   - Authorized redirect URI: `http://localhost:8080/api/auth/google/callback`
-4. Configure **OAuth consent screen**: add scopes `email`, `profile`, `openid`
-5. Copy Client ID and Client Secret into `start_hermes_postgres.ps1`
-
-#### Strava
-
-1. Go to [Strava API Settings](https://www.strava.com/settings/api)
-2. Create an app — set Authorization Callback Domain to `localhost`
-3. Copy Client ID and Client Secret into `start_hermes_postgres.ps1`
-4. Set `APP_DATA_ENCRYPTION_KEY` to a long random string
-
-After Strava OAuth, Hermes imports only running activities. If `APP_DATA_ENCRYPTION_KEY` is missing, Strava login is disabled.
+| Method | Setup Required |
+|---|---|
+| Email | None — sign up and go |
+| Admin | Set `APP_BOOTSTRAP_ADMIN_EMAIL` / `APP_BOOTSTRAP_ADMIN_PASSWORD` |
+| Google | Google Cloud OAuth app + configure in `start_hermes_postgres.ps1` |
+| Strava | Strava API app + configure in `start_hermes_postgres.ps1` |
 
 ---
 
 ### Garmin Connect Import
 
-Import running activities directly from your Garmin Connect account — no manual file export needed. Uses [GarminDB](https://github.com/tcgoetz/GarminDB)'s `garth` authentication library to pull FIT files from Garmin's servers.
-
-#### Setup
-
-Install Python 3.9+ and the required packages:
+Pull activities directly from your Garmin Connect account — no manual file export.
 
 ```bash
 pip install -r .tools/requirements-garmin.txt
 ```
 
-#### Usage
+Then go to **Profile → Garmin Connect → Import from Garmin**. Credentials are used only for the current session and **not stored**.
 
-1. Open your **Profile** page in Hermes
-2. In **Connected Services**, find the **Garmin Connect** card and click **Import from Garmin**
-3. Enter your Garmin Connect email and password
-4. Choose the number of recent activities to pull (10–200)
-5. Click **Start import** — Hermes downloads FIT files, parses GPS and performance data, and saves running activities
-
-Credentials are used only for the current import session and are **not stored** on the server.
-
-#### How it works
-
-```
-Browser  →  POST /api/garmin/connect/import  →  Java backend
-         →  Python subprocess (garth SSO login → Garmin Connect API)
-         →  Downloads FIT files to temp dir
-         →  Java FIT parser extracts GPS, distance, HR, pace
-         →  Activities + points saved to DB
-         →  Temp files cleaned up
-```
-
-Duplicate activities are detected by Garmin activity ID and skipped automatically. Non-running activities are filtered out.
+Uses [GarminDB](https://github.com/tcgoetz/GarminDB)'s `garth` library for SSO login. Duplicate activities skipped automatically.
 
 ---
 
-### Garmin / COROS File Auto-Import
+### File Auto-Import (Garmin / COROS)
 
-Supports `GPX`, `TCX`, `FIT`, and `ZIP` files with automatic folder watching.
+Supports `GPX`, `TCX`, `FIT`, `ZIP`. Automatic folder watching.
 
-1. Copy `.tools\hermes_sync_config.example.json` to `.tools\hermes_sync_config.json`
+1. Copy `.tools/hermes_sync_config.example.json` to `.tools/hermes_sync_config.json`
 2. Fill in your Hermes email/password
-3. Drop exported files into `imports\garmin` or `imports\coros`
-4. Start Hermes — processed files are moved to `imports\processed\`
+3. Drop files into `imports/garmin` or `imports/coros`
+4. Start Hermes — processed files move to `imports/processed/`
 
 ---
 
 ### Important
 
-- **Keep the terminal open** while using the app.
-- **Restart the backend** after changing any values in `start_hermes_postgres.ps1`.
-- **Never commit secrets.** Use environment variables or the startup script.
-- **Use a strong `APP_DATA_ENCRYPTION_KEY`** — it protects stored Strava tokens.
+- **Keep the terminal open** while using the app
+- **Restart the backend** after configuration changes
+- **Never commit secrets** — use environment variables
+- **Use a strong `APP_DATA_ENCRYPTION_KEY`** — it protects stored Strava tokens
 
 ---
 
 ### Troubleshooting
 
-**`ERR_CONNECTION_REFUSED`** — Start the backend with `.\start_hermes.bat`.
+| Problem | Fix |
+|---|---|
+| `ERR_CONNECTION_REFUSED` | Start the backend: `.\start_hermes.bat` |
+| `java` not found | Install Java 17 from [adoptium.net](https://adoptium.net) |
+| OAuth callback fails | Backend must run on `localhost:8080`, redirect URIs must match exactly |
+| Frontend changes not showing | Run `npm run build` in `frontend/`, then refresh |
 
-**`java` not found** — Install Java 17 from https://adoptium.net.
+---
 
-**OAuth callback fails** — Check that the backend runs on `localhost:8080` and redirect URIs match exactly.
+### Regression Checklist
 
-**Frontend changes not showing** — Run `npm run build` in `frontend/`, then refresh.
+Run after changes to auth, import, upload, or third-party integrations.
+
+1. **Expired session**: Block an API call to return `401` while on a page with active edits → should redirect to `/login?return=<path>&reason=expired` with a visible notice
+2. **Partial batch import**: Upload valid + invalid files together → should return `200` with `rejectedFiles` listed, modal stays open
+3. **Weather outage**: Block `api.open-meteo.com` → weather bar shows "Weather unavailable", rest of page loads normally
+4. **Malformed analytics**: Stub analytics endpoint to return `500` → Run Detail renders with inline error card and "Reload" action
+5. **Batch file cap**: Submit >50 files → backend returns `400` with limit explanation, frontend shows it in the import modal
 
 ---
 
 ---
 
-<a id="中文说明"></a>
+<a id="中文"></a>
 
 ## 中文说明
 
-Hermes 是一个本地运行的跑步分析平台 — **React** 前端，**Spring Boot** 后端。
+Hermes 是一个本地运行的**个人跑步教练**平台 — **React** 前端，**Spring Boot** 后端。
 
-支持从 Strava、Garmin Connect、COROS 导入跑步数据，热力图可视化路线，追踪 VDOT 进步，管理跑鞋与赛事，获取丹尼尔斯训练配速。
+从 Strava、Garmin Connect、COROS 导入跑步数据，热力图可视化路线，追踪 VDOT 进步，管理跑鞋与赛事，获取丹尼尔斯训练配速。所有数据留在你的机器上。
 
-### 架构
-
-```
-frontend/          React 19 + Vite — 开发服务器 :3000，构建输出到后端静态目录
-backend/           Spring Boot 4 + JPA — REST API :8080，同时提供前端静态文件
-```
-
-### 前端页面
-
-| 路由 | 页面 | 功能 |
-|---|---|---|
-| `/login` | 登录 | 邮箱/密码、Strava OAuth、Google OAuth |
-| `/signup` | 注册 | 注册账号 |
-| `/admin` | 管理员登录 | 系统管理员登录 |
-| `/dashboard` | 管理面板 | 高级管理门户，含运维状态条、快捷操作面板、KPI 看板、用户管理、跑鞋图片审核、任务队列和审计日志 |
-| `/profile` | 个人主页 | 热力图、指标摘要条、周快报卡片、每日步数、个人纪录、VO₂max 趋势、数据导入、Garmin Connect 导入 |
-| `/runs` | 跑步历史 | 可筛选列表（全部/年/月/日）、排序控制（最近/最长/最快）、分页、吸附式重置 |
-| `/run/:id` | 跑步详情 | 路线地图、运动指标、路线分析 |
-| `/analysis` | 深度分析 | 摘要洞察栏、VDOT 评分、VO₂max 术语解释、训练配速、比赛预测、训练负荷（ACWR）、恢复分析 |
-| `/today-run` | 今日训练 | 个性化训练计划、教练建议（极化训练）、天气准备度内联展示 |
-| `/shoes` | 跑鞋管理 | 健康摘要栏、按品牌筛选、吸附式重置、里程追踪、AI 图片扫描、跑鞋目录 |
-| `/races` | 赛事中心 | 交互式世界地图（Leaflet）、60+ 赛事目录、NYRR 9+1 进度、比赛目标、训练建议 |
-| `/muscle-training` | 肌肉训练 | 解剖 SVG 肌肉图、训练计划、训练记录 |
-| `/rewards` | 成就奖励 | 成就徽章、进阶激励 |
-| `/settings` | 设置 | 语言、距离单位、主题、显示名称、已连接服务（Strava）、账户操作 |
-
----
-
-### 分析页面 — 计算公式说明
-
-分析页面使用经典运动科学模型，所有公式来源于 Jack Daniels《丹尼尔斯跑步方程式》及运动生理学研究文献。
-
-#### VDOT（丹尼尔斯 VO2max 估算）
-
-通过比赛成绩估算有氧能力。给定距离（米）和时间（分钟）：
-
-```
-速度 v       = 距离 / 时间                                   (米/分)
-VO2          = -4.60 + 0.182258 × v + 0.000104 × v²        (ml/kg/min)
-%VO2max      = 0.8 + 0.1894393 × e^(-0.012778 × t)
-                   + 0.2989558 × e^(-0.1932605 × t)
-VDOT         = VO2 / %VO2max
-```
-
-%VO2max 曲线反映了运动持续时间越长，使用的最大摄氧量比例越低。
-
-#### 训练配速（基于 VDOT）
-
-每个训练区间对应特定的 %VO2max，通过反解 VO2 方程（求解二次方程）得到配速：
-
-| 区间 | %VO2max | 目的 |
-|---|---|---|
-| 轻松跑 | 54–62% | 有氧基础、恢复 |
-| 马拉松配速 | 78% | 比赛专项耐力 |
-| 乳酸阈值 | 85% | 稳态乳酸清除 |
-| 间歇 | 96% | 最大摄氧量刺激 |
-| 重复跑 | 111% | 速度与跑步经济性 |
-
-#### 训练负荷评分
-
-每次跑步根据强度和时间计算负荷得分：
-
-```
-强度比     = VO2比例 / 0.85
-训练负荷   = (持续小时数) × 强度比² × 100
-```
-
-0.85 为乳酸阈值标准化基准 — 在阈值强度下每小时得分为 100。
-
-`VO2比例` 通过心率或配速推算：
-
-- **心率法：** `VO2比例 = max(0, 1.67 × (平均心率 / 最大心率) - 0.67)`
-- **配速法：** `VO2比例 = VO2(配速) / VDOT`
-
-#### 训练负荷 — ACWR（急性/慢性工作负荷比）
-
-使用 EWMA（指数加权移动平均）追踪伤病风险：
-
-```
-EWMA_今天 = 今日负荷 × λ + (1 - λ) × EWMA_昨天
-
-急性 λ = 2 / (7 + 1)  = 0.25      (7天窗口)
-慢性 λ = 2 / (28 + 1) = 0.069     (28天窗口)
-
-ACWR = 急性 EWMA / 慢性 EWMA
-```
-
-| ACWR | 区间 | 含义 |
-|---|---|---|
-| < 0.80 | 训练不足 | 体能下降，刺激不够 |
-| 0.80–1.30 | 最佳区间 | 适应性最优负荷 |
-| 1.30–1.50 | 警告 | 伤病风险升高 |
-| > 1.50 | 危险 | 高伤病风险，应减少负荷 |
-
-参考文献：Gabbett (2016), Hulin et al. (2014), Williams et al. (2017) EWMA 方法。
-
-#### 恢复时间估算
-
-估算每次跑步后的完全恢复时间：
-
-```
-时长系数      = (时长 > 90分钟) ? 1 + 0.005 × (时长 - 90) : 1.0
-调整后得分    = 训练负荷 × 时长系数
-基础恢复小时  = 0.45 × 调整后得分^0.85
-体能折扣      = max(0.80, 1.10 - VDOT / 200)
-恢复小时      = min(96, 基础恢复 × 体能折扣)
-```
-
-VDOT 越高（越强）→ 恢复越快。超过 90 分钟的长跑有额外恢复惩罚。最大恢复上限 96 小时。
-
-#### 丹尼尔斯训练区间
-
-根据 VO2 比例将每次跑步分类：
-
-| 区间 | VO2 比例 | 说明 |
-|---|---|---|
-| 恢复跑 | < 59% | 轻松恢复慢跑 |
-| 轻松跑 | 59–75% | 有氧基础构建 |
-| 马拉松配速 | 75–83% | 马拉松配速训练 |
-| 乳酸阈值 | 83–92% | 节奏跑 / 乳酸阈值 |
-| 间歇 | 92–105% | 最大摄氧量间歇 |
-| 重复跑 | > 105% | 冲刺 / 经济性训练 |
-
----
-
-### 快速启动
-
-#### H2（零配置）
+### 快速开始（30 秒）
 
 ```powershell
 .\start_hermes.bat
 ```
 
-#### PostgreSQL + OAuth + 管理员
+打开 `http://localhost:8080`，邮箱注册即可使用。无需配置数据库、API 密钥。
+
+### 功能亮点
+
+| 模块 | 功能 |
+|---|---|
+| **今日训练** | 每日教练指导：准备度、天气、训练蓝图、跑鞋推荐 |
+| **深度分析** | VDOT（VO₂max 估算）、训练配速、训练负荷（ACWR 伤病风险）、恢复时间 |
+| **热力图** | 全屏 GPS 跑步热力图，实时统计 |
+| **跑步记录** | 可筛选列表，路线地图，运动指标，详情下钻 |
+| **跑鞋管理** | 库存追踪、里程管理、AI 拍照扫描、目录浏览 |
+| **赛事中心** | 交互式世界地图、60+ 赛事目录、个人最佳、倒计时 |
+| **数据导入** | Strava 同步、Garmin Connect 拉取、手动 FIT/GPX/TCX/ZIP 导入 |
+
+### 技术栈
+
+| 层级 | 技术 |
+|---|---|
+| 前端 | React 19, React Router 7, Chart.js, Leaflet, Vite 8 |
+| 后端 | Spring Boot 4, Spring Data JPA, Hibernate |
+| 数据库 | H2（默认零配置）或 PostgreSQL |
+| 认证 | JWT, Google OAuth 2.0, Strava OAuth 2.0, 邮箱+验证 |
+| AI | Gemini 2.5 Flash（跑鞋图片扫描）, Qwen（赛道地图路线提取）|
+| 支付 | Stripe Checkout（Pro 订阅）|
+
+### AI 智能体命令
+
+| 命令 | 功能 |
+|---|---|
+| `/auto-hermes` | 标准开发循环：领取任务、实现、验证 |
+| `/auto-hermes-self` | Ralph 式无限自循环 — 持续执行直到触发真正的停止条件 |
+| `/auto-hermes-max` | 并行多智能体轮次 + 合并闸门 |
+| `/auto-hermes-tech-debt` | 全局技术债审计 |
+| `/auto-hermes-security` | 安全审计（认证、配置、运行时、代码）|
+| `/auto-hermes-market` | 并行市场调研 + SEO 支持通道 |
+| `/auto-hermes-find-shoe` | 网络调研跑鞋品牌并更新目录 |
+| `/auto-hermes-language` | 前端文案润色（中英文同步）|
+| `/auto-hermes-push-main` | 安全发布到 `github.com/520HXC/run` |
+
+### Web 路由
+
+| 路由 | 页面 | 功能 |
+|---|---|---|
+| `/` | 首页 | 公开首页，含登录/注册入口 |
+| `/login` | 登录 | 邮箱/密码、Strava OAuth、Google OAuth |
+| `/signup` | 注册 | 注册账号 + 邮箱验证 |
+| `/admin` | 管理员登录 | 系统管理员登录 |
+| `/dashboard` | 管理面板 | 运维状态、KPI 看板、用户管理、任务队列、审计日志 |
+| `/profile` | 个人主页 | 准备度、指标摘要、个人纪录、数据导入 |
+| `/runs` | 跑步历史 | 可筛选/排序/分页列表 |
+| `/run/:id` | 跑步详情 | 路线地图、运动指标、路线分析 |
+| `/analysis` | 深度分析 | VDOT、训练配速、ACWR、恢复分析 |
+| `/today-run` | 今日训练 | 每日教练：准备度、天气、训练、跑鞋 |
+| `/shoes` | 跑鞋管理 | 库存、里程追踪、AI 扫描、目录 |
+| `/races` | 赛事中心 | 世界地图、60+ 赛事、个人最佳 |
+| `/settings` | 设置 | 主题、语言、单位、已连接服务 |
+
+### 分析公式
+
+所有公式来源于 Jack Daniels《丹尼尔斯跑步方程式》及运动生理学文献。
+
+**VDOT**：通过比赛成绩估算有氧能力。使用最近 **90 天**内表现，优先 ≥3km 距离，取**前三个最佳** VDOT 的均值。
+
+**ACWR**（急性/慢性工作负荷比）：使用 EWMA 追踪伤病风险 — 急性 λ=0.25（7天），慢性 λ=0.069（28天）。ACWR < 0.80 训练不足，0.80-1.30 最佳区间，>1.50 危险。
+
+**恢复时间**：基于训练负荷和 VDOT 估算，上限 96 小时。VDOT 越高恢复越快，超过 90 分钟的长跑有额外惩罚。
+
+### 生产部署
 
 ```powershell
 .\start_hermes_postgres.ps1
 ```
 
-**`start_hermes_postgres.ps1` 是唯一需要编辑的配置文件** — PostgreSQL 密码、Strava API 密钥、Google OAuth 密钥、管理员账号全部在这里配置。
-
-#### 前端开发
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-开发服务器运行在 `http://localhost:3000`，支持热更新。API 请求自动代理到后端 `:8080`。
-
-#### 构建前端
-
-```powershell
-cd frontend
-npm run build
-```
-
----
-
-### 开始之前
-
-#### 1. 安装 Java 17+
-
-下载地址：https://adoptium.net（推荐 Temurin 17 LTS）
-
-#### 2. 安装 Node.js 18+（前端开发用）
-
-下载地址：https://nodejs.org
-
----
-
-### 配置 — `start_hermes_postgres.ps1`
-
-| 配置项 | 环境变量 | 说明 |
-|---|---|---|
-| 数据库 | `APP_DB_URL`, `APP_DB_DRIVER`, `APP_DB_USERNAME`, `APP_DB_PASSWORD` | PostgreSQL 连接信息 |
-| Strava | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `APP_DATA_ENCRYPTION_KEY` | Strava 登录 + 活动同步 |
-| Google | `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET`, `APP_GOOGLE_REDIRECT_URI` | Google 登录 |
-| 管理员 | `APP_BOOTSTRAP_ADMIN_EMAIL`, `APP_BOOTSTRAP_ADMIN_PASSWORD` | 启动时自动创建管理员 |
-
-#### Stripe 收款（可选）
-
-可通过 **Stripe Checkout** 售卖 **Pro**（AI 扫描额度）。用户在 Stripe 托管页付款；Webhook 在数据库中延长 Pro。
-
-1. 在 [Stripe 控制台](https://dashboard.stripe.com/) 创建 **产品** 与 **一次性 Price**（单价对应「1 个月」；结账时 Hermes 会把 **数量** 设为购买月数）。
-2. 将 Price id（`price_...`）写入 `STRIPE_PRICE_PRO_MONTHLY`。
-3. **开发者 → API 密钥** → `STRIPE_SECRET_KEY`。
-4. **开发者 → Webhook** → 地址 `https://你的域名/api/billing/webhook`，事件勾选 `checkout.session.completed`，复制签名密钥 → `STRIPE_WEBHOOK_SECRET`。
-5. 设置 **`APP_PUBLIC_BASE_URL`** 为用户实际访问的站点根 URL（生产示例：`https://app.example.com`），以便支付完成后跳回 `/profile`。
-6. 可选：`APP_BILLING_PRICE_LABEL`（如 `¥39/月`）仅在个人主页展示。
-
-| 环境变量 | 说明 |
-|---|---|
-| `STRIPE_SECRET_KEY` | 密钥 |
-| `STRIPE_WEBHOOK_SECRET` | Webhook 签名密钥 |
-| `STRIPE_PRICE_PRO_MONTHLY` | 单价对应 1 个月的 Price id |
-| `APP_PUBLIC_BASE_URL` | 公网访问的根 URL |
-| `APP_BILLING_PRICE_LABEL` | 可选的界面标价文案 |
-
-本地调试：`stripe listen --forward-to localhost:8080/api/billing/webhook`。
-
-#### 邮箱验证（密码注册）
-
-使用邮箱+密码注册时，系统会发送**验证链接**。未完成验证前登录会返回 `EMAIL_NOT_VERIFIED`。
-
-| 环境变量 | 说明 |
-|---|---|
-| `SPRING_MAIL_HOST` | SMTP 服务器（开发环境可留空，将**跳过**验证、注册后直接可登录） |
-| `SPRING_MAIL_PORT` | 一般为 `587` |
-| `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | SMTP 账号 |
-| `APP_MAIL_FROM` | 发件人（需与邮服策略一致） |
-| `APP_PUBLIC_BASE_URL` | 与收款配置相同，用于邮件内链接 |
-
-验证地址：`GET /api/auth/verify-email?token=…`，成功后跳转到 `/login?verified=1`。
-
-#### 公网部署（安全）
-
-- **`HERMES_ENV=production`** — 若启用 Strava（已配置 `STRAVA_CLIENT_ID`），必须使用 **随机长串** 作为 **`STRAVA_WEBHOOK_VERIFY_TOKEN`**，不能使用默认的 `hermes-strava-webhook`，否则进程会拒绝启动。
-- **HTTPS** — 在反向代理或负载均衡上终结 TLS；仅当全站长期走 HTTPS 时再将 **`APP_ENABLE_HSTS`** 设为 `true`。
-- **反向代理** — 已启用 `forward-headers` 策略，请让代理传入正确的 **`X-Forwarded-*`**。
-- **跨域** — 若前端与 API 不同域，设置 **`APP_CORS_ALLOWED_ORIGINS`**（逗号分隔）。
-- **数据库** — 生产环境用 **PostgreSQL**；勿把 **H2** 暴露到公网。
-- **Webhook** — Strava/Garmin 推送按 **IP 限速**；Garmin 的 **callbackURL** 仅允许 **HTTPS 且 `*.garmin.com`**，降低 SSRF 风险；Stripe 依赖 **签名**，不限速以免重试失败。
-- **建表** — 成熟环境可将 **`APP_JPA_DDL_AUTO`** 从 `update` 改为 `validate` 并配合迁移工具管理表结构。
-
----
+编辑该文件配置 PostgreSQL、Strava/Google OAuth、管理员账号。详细配置说明见上方英文部分。
 
 ### 数据库
 
-#### H2（默认）
-
-无需配置，数据库文件自动生成在 `backend\hermes_db_v2.mv.db`。
-
-#### PostgreSQL
-
-安装 PostgreSQL 15+，创建 `hermes` 数据库，然后在 `start_hermes_postgres.ps1` 中填入凭据并运行。
-
-#### H2 迁移到 PostgreSQL
-
-```powershell
-$env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
-$env:APP_DB_USERNAME = "hermes"
-$env:APP_DB_PASSWORD = "<你的密码>"
-.\migrate_h2_to_postgres.bat
-```
-
----
-
-### 登录方式
-
-| 登录方式 | 配置 |
+| 方案 | 说明 |
 |---|---|
-| 邮箱 | 无需配置 |
-| 管理员 | 在 `start_hermes_postgres.ps1` 中设置账号密码 |
-| Google | Google Cloud OAuth 应用 + `start_hermes_postgres.ps1` 中填入密钥 |
-| Strava | Strava 开发者应用 + `start_hermes_postgres.ps1` 中填入密钥 |
-
----
-
-### Garmin Connect 账号导入
-
-直接从 Garmin Connect 账号拉取跑步活动 — 无需手动导出文件。使用 [GarminDB](https://github.com/tcgoetz/GarminDB) 的 `garth` 认证库通过 Garmin SSO 登录并下载 FIT 文件。
-
-#### 安装
-
-安装 Python 3.9+ 和所需依赖：
-
-```bash
-pip install -r .tools/requirements-garmin.txt
-```
-
-#### 使用方法
-
-1. 打开 Hermes **个人主页**
-2. 在「数据连接」中找到 **Garmin Connect** 卡片，点击「从 Garmin 导入」
-3. 输入 Garmin Connect 邮箱和密码
-4. 选择要拉取的最近活动数量（10–200）
-5. 点击「开始导入」 — Hermes 会下载 FIT 文件、解析 GPS 和运动数据、保存跑步活动
-
-凭据仅用于当前导入会话，**不会存储**在服务器上。重复活动会按 Garmin 活动 ID 自动跳过，非跑步活动会被过滤。
-
----
-
-### Garmin / COROS 文件自动导入
-
-支持 `GPX`、`TCX`、`FIT`、`ZIP` 文件，自动监控文件夹。
-
-1. 复制 `.tools\hermes_sync_config.example.json` 为 `.tools\hermes_sync_config.json`
-2. 填写 Hermes 邮箱/密码
-3. 将文件放入 `imports\garmin` 或 `imports\coros`
-4. 启动 Hermes — 处理后的文件移入 `imports\processed\`
-
----
+| H2（默认）| 零配置，文件自动生成 |
+| PostgreSQL | 安装 PG 15+，创建 `hermes` 数据库，配置连接信息 |
+| 迁移 | `.\migrate_h2_to_postgres.bat` |
 
 ### 注意事项
 
-- **保持终端窗口打开**，关闭则后端停止。
-- **修改配置后需重启后端**。
-- **不要把密钥提交到 Git**。
-- **`APP_DATA_ENCRYPTION_KEY` 请使用强密钥**。
-
----
+- **保持终端窗口打开**，关闭则后端停止
+- **修改配置后需重启后端**
+- **不要把密钥提交到 Git**
+- **`APP_DATA_ENCRYPTION_KEY` 请使用强密钥**
 
 ### 常见问题
 
-**`ERR_CONNECTION_REFUSED`** — 运行 `.\start_hermes.bat` 启动后端。
-
-**`java` 找不到** — 前往 https://adoptium.net 安装 Java 17。
-
-**OAuth 回调失败** — 确认后端运行在 `localhost:8080`，回调地址完全匹配。
-
-**前端修改未生效** — 在 `frontend/` 中运行 `npm run build`，然后刷新页面。
-
----
-
-### Regression Checklist — Page-Break and Data-Loss Scenarios
-
-Run this manually after any change to auth, import, upload, or third-party integration flows.
-
-#### 1. Expired session during active use
-
-**Trigger**: In browser DevTools (Network tab), block or stub any API call to return `401` while on a page with edits in progress (e.g. open the import modal in Settings, then force a `401` on the batch endpoint).
-
-**Expected behavior**:
-- App redirects to `/login?return=<current-path>&reason=expired`
-- Login page shows the "session expired" notice (not a blank page)
-- After re-login, app navigates back to the original route
-
-**Failure indicator**: Blank page, hard redirect to `/login` with no notice, or loss of the return path.
-
-#### 2. Partial batch import (one valid + one invalid file)
-
-**Trigger**: Upload a valid `.gpx` file and an oversized or zero-byte file in the same import batch.
-
-**Expected behavior**:
-- Response returns `200` with `importedActivities >= 1` and `rejectedFiles` listing the bad file with a reason
-- Settings import modal stays open and shows "X file(s) were skipped" with the rejected filenames
-- Modal does NOT close as if everything succeeded
-
-**Failure indicator**: Modal closes after any `200`, or rejected files silently disappear.
-
-#### 3. Weather provider outage
-
-**Trigger**: Block the `api.open-meteo.com` fetch (via DevTools or host-file block) and open any page with the weather bar.
-
-**Expected behavior**:
-- Weather bar shows the error/empty state (e.g. "Weather unavailable") rather than a blank area
-- The rest of the page loads and functions normally
-
-**Failure indicator**: Blank strip, JS error in console causing page crash, or infinite loading spinner.
-
-#### 4. Malformed analytics response
-
-**Trigger**: Stub `GET /api/activities/{id}/analytics` to return `500` or invalid JSON, then open a Run Detail page.
-
-**Expected behavior**:
-- Run Detail page renders (hero, map, performance metrics visible)
-- An inline error card appears above the analytics sections with a "Reload" action
-- No blank white sections, no uncaught JS exceptions
-
-**Failure indicator**: Blank analytics panels with no explanation, or a white-screen crash.
-
-#### 5. Batch file count cap
-
-**Trigger**: Submit more than 50 files in a single import batch request.
-
-**Expected behavior**:
-- Backend returns `400` with a JSON body containing `error` explaining the limit
-- Frontend shows the error in the import modal without closing it
-
-**Failure indicator**: Server accepts the request, or frontend shows a generic "Import failed" without the limit explanation.
+| 问题 | 解决 |
+|---|---|
+| `ERR_CONNECTION_REFUSED` | 运行 `.\start_hermes.bat` |
+| `java` 找不到 | 安装 Java 17：https://adoptium.net |
+| OAuth 回调失败 | 确认后端运行在 `localhost:8080`，回调地址完全匹配 |
+| 前端修改未生效 | 运行 `npm run build`，刷新页面 |
