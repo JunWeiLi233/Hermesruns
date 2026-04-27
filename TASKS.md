@@ -63,6 +63,7 @@ Use this file as the working queue for AI agents.
 ## Active Tasks`
 
 ## Daily Log
+- 2026-04-27: Added app-level React ErrorBoundary with localized fallback and reload action to prevent SPA white-screen on render crashes. Frontend build PASS, lint 0 errors (8 existing warnings), backend compile PASS, runtime HTTP 200 verified.
 - 2026-04-24: Fixed pre-existing RaceCourseMapAiServiceTests regression from prompt builder extraction — replaced `ReflectionTestUtils.invokeMethod("buildAlignmentPrompt")` with direct `RaceCourseMapPromptBuilder.buildAlignmentPrompt()` calls. Backend compile PASS.
 - 2026-04-24: Qwen course-map scan timeline step 4: added 2 focused edge-case tests (JSON parse failure watcher step + cross-scope leakage). QwenCourseMapAlignmentClientTests: 7/7 PASS. Backend compile PASS, frontend build PASS. All 4 steps complete.
 - 2026-04-24: Course-map scan timeline panel: Added dedicated `GET .../race-course-maps/{raceId}/scan-timeline` endpoint + dedicated timeline panel in course-maps dashboard workspace. Qwen observability step 3 complete. Backend compile PASS, frontend build PASS, smoke test PASS.
@@ -86,12 +87,6 @@ Use this file as the working queue for AI agents.
 - 2026-04-21: Market Research Pipeline (rerun): Synthesized 5 research dimensions. Market score 8.4/10. TAM $12.12B growing at 13.4% CAGR. Top competitive gap: no competitor combines daily coaching decisions with recovery data interpretation. Added 5 new opportunities to TASKS.md.
 
 ## Active Tasks
-
-- [ ] [code-review] Add ErrorBoundary to prevent SPA white-screen on render crashes (HIGH)
-  Files: `frontend/src/App.jsx`, `frontend/src/components/ErrorBoundary.jsx` (new)
-  Context: No ErrorBoundary component exists anywhere in the codebase. Any uncaught render error in Dashboard (3960 lines), MuscleTraining (2072 lines), or any other page will white-screen the entire SPA with no recovery path.
-  Done when: An ErrorBoundary component wraps the router in App.jsx (or each lazy-loaded route). Fallback UI shows a localized error message with a "Reload" button. Both locales covered.
-  Verify: `cd frontend && npm run build`
 
 - [ ] [code-review] Fix swallowed exceptions and System.err.println — replace with structured SLF4J logging (HIGH)
   Files: `backend/src/main/java/com/hermes/backend/ActivityImportService.java:237`, `backend/src/main/java/com/hermes/backend/BillingController.java:232,242`, `backend/src/main/java/com/hermes/backend/GarminConnectImportService.java:116`, `backend/src/main/java/com/hermes/backend/ShoeImageController.java:123`, `backend/src/main/java/com/hermes/backend/OAuthController.java`, plus 9 other files
