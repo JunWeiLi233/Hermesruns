@@ -21,6 +21,24 @@ export function parseAuthBannerQuery(search, fallbackMessage) {
     };
   }
 
+  if (error === 'GOOGLE_NOT_CONFIGURED') {
+    return {
+      banner: 'google_not_configured',
+      autoOpen: true,
+      errorMessage: null,
+      shouldClear: true,
+    };
+  }
+
+  if (error && error.startsWith('GOOGLE_')) {
+    return {
+      banner: 'google_failed',
+      autoOpen: true,
+      errorMessage: details || null,
+      shouldClear: true,
+    };
+  }
+
   if (error && error.startsWith('STRAVA_')) {
     return {
       banner: 'strava_failed',
