@@ -3,7 +3,6 @@ package com.hermes.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -16,6 +15,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MarathonRouteExtractionServiceTests {
@@ -23,23 +25,21 @@ class MarathonRouteExtractionServiceTests {
     @Test
     void extractRoutePathReturnsRouteParametersAndOrderedPixelPoints() throws Exception {
         QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
-        when(qwenRouteParameterClient.extractRouteParameters("C:\\maps\\boston-course.png", "Boston Marathon", "Boston", "USA", 42.195))
+        when(qwenRouteParameterClient.extractRouteParameters("C:\\maps\\boston-course.png", "Providence Marathon", "Providence", "USA", 42.195))
                 .thenReturn(new RouteParametersDTO(
                         "#22AA66",
                         List.of("start line", "bridge turn", "park loop", "finish chute")
                 ));
 
-        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
                 qwenRouteParameterClient,
                 new ObjectMapper(),
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
                 new FakeProcess("""
                         {"points":[[12,34],[56,78],[90,123]],"pointCount":3,"maskPixelCount":456,"skeletonPixelCount":78}
                         """, "", 0)
         );
-        ReflectionTestUtils.setField(service, "pythonExecutable", "python-custom");
-        ReflectionTestUtils.setField(service, "pythonScriptPath", "backend/src/main/resources/python/extract_route_path.py");
-
-        RoutePathExtractionResultDTO result = service.extractRoutePath("C:\\maps\\boston-course.png", "Boston Marathon", "Boston", "USA", 42.195);
+        RoutePathExtractionResultDTO result = service.extractRoutePath("C:\\maps\\boston-course.png", "Providence Marathon", "Providence", "USA", 42.195);
 
         assertThat(service.command())
                 .containsExactly(
@@ -73,9 +73,10 @@ class MarathonRouteExtractionServiceTests {
                         List.of("start", "turn one", "turn two", "finish")
                 ));
 
-        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
                 qwenRouteParameterClient,
                 new ObjectMapper(),
+                new PythonVenvResolver("", ""),
                 new FakeProcess("", "mask generation failed", 2)
         );
 
@@ -85,54 +86,231 @@ class MarathonRouteExtractionServiceTests {
     }
 
     @Test
-    void resolvePythonExecutablePrefersRepoRootVirtualEnvWhenPresent(@TempDir Path tempDir) throws Exception {
+    void extractRoutePathReusesCachedQwenAndCvResultForSameImage(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("course.png");
+        Files.write(imagePath, new byte[] {5, 5, 5, 5});
         QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+        when(qwenRouteParameterClient.extractRouteParameters(imagePath.toString(), "Providence Marathon", "Providence", "USA", 42.195))
+                .thenReturn(new RouteParametersDTO(
+                        "#FF0000",
+                        List.of("Start", "Downtown", "College Hill", "Finish")
+                ));
+
         RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
                 qwenRouteParameterClient,
                 new ObjectMapper(),
-                new FakeProcess("{}", "", 0)
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
+                new FakeProcess("""
+                        {"points":[[1,2],[3,4]],"pointCount":2,"maskPixelCount":20,"skeletonPixelCount":10}
+                        """, "", 0)
         );
 
-        Path backendDir = tempDir.resolve("backend");
-        Path repoVenvPython = tempDir.resolve(".venv").resolve("Scripts").resolve("python.exe");
-        Files.createDirectories(repoVenvPython.getParent());
-        Files.createDirectories(backendDir);
-        Files.writeString(repoVenvPython, "python");
-        ReflectionTestUtils.setField(service, "pythonExecutable", "python");
+        RoutePathExtractionResultDTO first = service.extractRoutePath(imagePath.toString(), "Providence Marathon", "Providence", "USA", 42.195);
+        RoutePathExtractionResultDTO second = service.extractRoutePath(imagePath.toString(), "Providence Marathon", "Providence", "USA", 42.195);
 
-        String originalUserDir = System.getProperty("user.dir");
-        try {
-            System.setProperty("user.dir", backendDir.toString());
-            String resolved = ReflectionTestUtils.invokeMethod(service, "resolvePythonExecutable");
-            assertThat(resolved).isNotEqualTo("python");
-            assertThat(Path.of(resolved).getFileName().toString()).isEqualToIgnoringCase("python.exe");
-            assertThat(resolved).contains(".venv");
-        } finally {
-            System.setProperty("user.dir", originalUserDir);
-        }
+        assertThat(second).isEqualTo(first);
+        assertThat(service.startCount()).isEqualTo(1);
+        verify(qwenRouteParameterClient, times(1))
+                .extractRouteParameters(imagePath.toString(), "Providence Marathon", "Providence", "USA", 42.195);
     }
 
-    private static final class RecordingMarathonRouteExtractionService extends MarathonRouteExtractionService {
+    @Test
+    void extractRoutePathUsesDeterministicChicagoFastScanBeforeQwen(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("chicago-course.png");
+        Files.write(imagePath, new byte[] {8, 8, 8, 8});
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
+                new FakeProcess("""
+                        {"routeHexColor":"#253858","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12}
+                        """, "", 0)
+        );
+
+        RoutePathExtractionResultDTO result = service.extractRoutePath(imagePath.toString(), "Chicago Marathon", "Chicago", "USA", 42.195);
+
+        assertThat(service.command()).doesNotContain("--route-hex-color");
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#253858");
+        assertThat(result.routeParameters().anchorPoints())
+                .containsExactly("Grant Park", "Magnificent Mile", "River North", "Lincoln Park");
+        verify(qwenRouteParameterClient, never())
+                .extractRouteParameters(imagePath.toString(), "Chicago Marathon", "Chicago", "USA", 42.195);
+    }
+
+    @Test
+    void extractRoutePathUsesDeterministicNewYorkFastScanBeforeQwen(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("nyc-course.png");
+        Files.write(imagePath, new byte[] {9, 9, 9, 9});
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
+                new FakeProcess("""
+                        {"routeHexColor":"#0000FF","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12}
+                        """, "", 0)
+        );
+
+        RoutePathExtractionResultDTO result = service.extractRoutePath(imagePath.toString(), "New York City Marathon", "New York City", "USA", 42.195);
+
+        assertThat(service.command()).doesNotContain("--route-hex-color");
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#0000FF");
+        assertThat(result.routeParameters().anchorPoints())
+                .containsExactly("Start", "Brooklyn", "Queensboro Bridge", "Finish");
+        verify(qwenRouteParameterClient, never())
+                .extractRouteParameters(imagePath.toString(), "New York City Marathon", "New York City", "USA", 42.195);
+    }
+
+    @Test
+    void extractRoutePathUsesDeterministicOsakaFastScanBeforeQwen(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("osaka-course.png");
+        Files.write(imagePath, new byte[] {10, 10, 10, 10});
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
+                new FakeProcess("""
+                        {"routeHexColor":"#D71920","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12}
+                        """, "", 0)
+        );
+
+        RoutePathExtractionResultDTO result = service.extractRoutePath(imagePath.toString(), "Osaka Marathon", "Osaka", "Japan", 42.195);
+
+        assertThat(service.command()).containsSubsequence("--route-hex-color", "#D00000");
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#D71920");
+        assertThat(result.routeParameters().anchorPoints())
+                .containsExactly("Osaka Castle Park", "Osaka City Hall", "Kyocera Dome Osaka", "INTEX Osaka");
+        verify(qwenRouteParameterClient, never())
+                .extractRouteParameters(imagePath.toString(), "Osaka Marathon", "Osaka", "Japan", 42.195);
+    }
+
+    @Test
+    void extractRoutePathUsesDeterministicBostonFastScanBeforeQwen(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("boston-course.png");
+        Files.write(imagePath, new byte[] {11, 11, 11, 11});
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
+                new FakeProcess("""
+                        {"routeHexColor":"#173C89","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12}
+                        """, "", 0)
+        );
+
+        RoutePathExtractionResultDTO result = service.extractRoutePath(imagePath.toString(), "Boston Marathon", "Boston", "United States", 42.195);
+
+        assertThat(service.command()).containsSubsequence("--route-hex-color", "#173C89");
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#173C89");
+        assertThat(result.routeParameters().anchorPoints())
+                .containsExactly("Hopkinton", "Framingham", "Wellesley", "Finish");
+        verify(qwenRouteParameterClient, never())
+                .extractRouteParameters(imagePath.toString(), "Boston Marathon", "Boston", "United States", 42.195);
+    }
+
+    @Test
+    void extractRoutePathUsesDeterministicHonoluluFastScanBeforeQwen(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("honolulu-course.png");
+        Files.write(imagePath, new byte[] {12, 12, 12, 12});
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
+                new FakeProcess("""
+                        {"routeHexColor":"#FF0000","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12}
+                        """, "", 0)
+        );
+
+        RoutePathExtractionResultDTO result = service.extractRoutePath(imagePath.toString(), "Honolulu Marathon", "Honolulu", "United States", 42.195);
+
+        assertThat(service.command()).containsSubsequence("--route-hex-color", "#FF0000");
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#FF0000");
+        assertThat(result.routeParameters().anchorPoints())
+                .containsExactly("Ala Moana Beach Park", "Diamond Head", "Hawaii Kai", "Kapiolani Park");
+        verify(qwenRouteParameterClient, never())
+                .extractRouteParameters(imagePath.toString(), "Honolulu Marathon", "Honolulu", "United States", 42.195);
+    }
+
+    @Test
+    void extractRoutePathUsesDeterministicManchesterFastScanBeforeQwen(@TempDir Path tempDir) throws Exception {
+        Path imagePath = tempDir.resolve("manchester-course.webp");
+        Files.write(imagePath, new byte[] {13, 13, 13, 13});
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
+                new FakeProcess("""
+                        {"routeHexColor":"#F5325F","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12}
+                        """, "", 0)
+        );
+
+        RoutePathExtractionResultDTO result = service.extractRoutePath(imagePath.toString(), "Manchester Marathon", "Manchester", "United Kingdom", 42.195);
+
+        assertThat(service.command()).containsSubsequence("--route-hex-color", "#F5325F");
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#F5325F");
+        assertThat(result.routeParameters().anchorPoints())
+                .containsExactly("Old Trafford", "Sale", "Altrincham", "Manchester City Centre");
+        verify(qwenRouteParameterClient, never())
+                .extractRouteParameters(imagePath.toString(), "Manchester Marathon", "Manchester", "United Kingdom", 42.195);
+    }
+
+@Test
+    void resolvePythonCommandReturnsExplicitOverride() {
+        PythonVenvResolver resolver = new PythonVenvResolver("python-custom", "");
+        String resolved = resolver.resolvePythonCommand("extract_route_path.py");
+        assertThat(resolved).isEqualTo("python-custom");
+    }
+
+    @Test
+    void resolvePythonCommandFallsBackToDefaultWhenNoVenvFound() {
+        PythonVenvResolver resolver = new PythonVenvResolver("python", "");
+        String resolved = resolver.resolvePythonCommand("extract_route_path.py");
+        assertThat(resolved)
+                .satisfiesAnyOf(
+                        value -> assertThat(value).isEqualTo("python"),
+                        value -> assertThat(value).endsWith("python.exe"),
+                        value -> assertThat(value).endsWith("python")
+                );
+    }
+
+private static final class RecordingMarathonRouteExtractionService extends MarathonRouteExtractionService {
         private final Process process;
         private List<String> command;
+        private int startCount;
 
         private RecordingMarathonRouteExtractionService(
                 QwenRouteParameterClient qwenRouteParameterClient,
                 ObjectMapper objectMapper,
+                PythonVenvResolver pythonVenvResolver,
                 Process process
         ) {
-            super(qwenRouteParameterClient, objectMapper);
+            super(qwenRouteParameterClient, objectMapper, pythonVenvResolver);
             this.process = process;
         }
 
         @Override
         protected Process startPythonProcess(List<String> command) {
             this.command = List.copyOf(command);
+            this.startCount++;
             return process;
         }
 
         private List<String> command() {
             return command;
+        }
+
+        private int startCount() {
+            return startCount;
         }
     }
 

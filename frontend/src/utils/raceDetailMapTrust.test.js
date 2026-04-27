@@ -64,6 +64,11 @@ const oversizedOverlay = deriveRaceMapTrust({
 });
 
 assert.equal(oversizedOverlay.trustedOverlay, false);
+assert.equal(
+  oversizedOverlay.trustedRouteGeometry,
+  true,
+  'A plausible live route should remain drawable on OpenStreetMap even when the source image overlay is too broad to trust.',
+);
 assert.ok(oversizedOverlay.viewportBounds);
 assert.ok(oversizedOverlay.viewportBounds.north < 43.4);
 assert.ok(oversizedOverlay.viewportBounds.south > 41.0);
@@ -104,6 +109,11 @@ const tinyRoute = deriveRaceMapTrust({
 });
 
 assert.equal(tinyRoute.trustedRoute, true);
+assert.equal(
+  tinyRoute.trustedRouteGeometry,
+  false,
+  'A city-level trace that is far too short for a marathon should not be treated as drawable route geometry.',
+);
 assert.equal(tinyRoute.trustedOverlay, false);
 assert.equal(tinyRoute.cityLevelMatch, true);
 assert.ok(tinyRoute.viewportBounds);
@@ -145,10 +155,10 @@ assert.equal(storedCityLevelChicagoReference.trustedRoute, false);
 assert.equal(storedCityLevelChicagoReference.trustedOverlay, false);
 assert.equal(
   storedCityLevelChicagoReference.cityLevelMatch,
-  true,
-  'Stored stylized city-level references should remain visible even when they intentionally have no route geometry.',
+  false,
+  'City-level-only references without live route geometry should not be treated as a city-level course-map match. Only render when actual route geometry exists.',
 );
-assert.ok(storedCityLevelChicagoReference.viewportBounds);
+assert.equal(storedCityLevelChicagoReference.viewportBounds, null);
 
 assert.equal(
   wrongCityOverlay.cityLevelMatch,
