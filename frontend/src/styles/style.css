@@ -21831,6 +21831,24 @@ body.theme-light .runner-progression-info-hero {
     linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
 }
 
+.runner-dashboard-feature-card--muscle {
+  background:
+    radial-gradient(circle at top right, rgba(180, 200, 220, 0.16), transparent 34%),
+    linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
+}
+
+.runner-dashboard-muscle-session-type {
+  font-weight: 700;
+  color: rgba(200, 195, 190, 0.92);
+}
+
+.runner-dashboard-muscle-focus {
+  font-size: 0.78rem;
+  color: rgba(200, 195, 190, 0.64);
+  line-height: 1.5;
+  margin-bottom: 0.6rem;
+}
+
 .runner-dashboard-race-countdown {
   display: flex;
   align-items: baseline;
@@ -22455,6 +22473,20 @@ body.theme-light .runner-dashboard-vdot-trend--declining {
     font-size: 1.2rem;
     font-weight: 800;
     line-height: 1.1;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-feature-card--muscle {
+  background:
+    radial-gradient(circle at top right, rgba(100, 130, 160, 0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 241, 242, 0.98));
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-muscle-session-type {
+  color: rgba(44, 47, 48, 0.86);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-muscle-focus {
+  color: rgba(89, 92, 93, 0.76);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-feature-card--predictions {
