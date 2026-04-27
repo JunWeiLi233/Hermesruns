@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -10,6 +9,7 @@ import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
+import TopbarUserMenu from '../components/TopbarUserMenu';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
@@ -31,6 +31,14 @@ const EVENT_DAY_OVERRIDES = {
   'valencia-marathon': 6,
 };
 const ELEVATION_SAMPLE_INTERVAL_KM = 0.05;
+let leafletModulePromise = null;
+
+function loadLeafletModule() {
+  if (!leafletModulePromise) {
+    leafletModulePromise = import('leaflet').then((module) => module.default || module);
+  }
+  return leafletModulePromise;
+}
 
 function projectedRaceDate(race) {
   const now = new Date();
@@ -393,7 +401,6 @@ export default function RacesDetail() {
   const [elevationProfileSamples, setElevationProfileSamples] = useState([]);
   const [activeElevationPointIndex, setActiveElevationPointIndex] = useState(null);
   const [loadState, setLoadState] = useState('loading');
-  const [loadingActivities, setLoadingActivities] = useState(true);
   const [routeMapReady, setRouteMapReady] = useState(false);
   const [routeMapPainted, setRouteMapPainted] = useState(false);
   const [streetTileFallback, setStreetTileFallback] = useState(null);
@@ -523,24 +530,31 @@ export default function RacesDetail() {
       return;
     }
 
+    let cancelled = false;
+    setLoadState('ready');
+
     (async () => {
       try {
         const [profileData, activities] = await Promise.all([
           apiJson('/api/profile/me').catch(() => null),
           apiJson('/api/activities/analysis').catch(() => []),
         ]);
+        if (cancelled) return;
         const runList = Array.isArray(activities) ? activities : [];
         runList.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
         setProfile(profileData || null);
         setRuns(runList);
-        setLoadingActivities(false);
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to load race detail activities', err);
         setProfile(null);
         setRuns([]);
-        setLoadingActivities(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, navigate, race]);
 
   useEffect(() => {
@@ -603,12 +617,13 @@ export default function RacesDetail() {
   }), [courseMapData.confidence, courseMapData.imageUrl, courseMapData.previewImageUrl, courseMapData.routePoints, courseMapData.viewportBounds, mapCenter, race?.distanceKm]);
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
-  const hasAlignedRoute = mapTrust.trustedOverlay && courseMapData.routeAvailable && routeMapPoints.length > 1;
+  const hasAlignedRoute = mapTrust.trustedRouteGeometry && courseMapData.routeAvailable && routeMapPoints.length > 1;
+  const hasTrustedCourseMapOverlay = hasAlignedRoute && mapTrust.trustedOverlay;
   const courseMapImageOverlayBounds = useMemo(
-    () => (hasAlignedRoute && courseMapData.overlayImageUrl
+    () => (hasTrustedCourseMapOverlay && courseMapData.overlayImageUrl
       ? toLeafletBoundsCorners(courseMapData.viewportBounds)
       : null),
-    [courseMapData.overlayImageUrl, courseMapData.viewportBounds, hasAlignedRoute],
+    [courseMapData.overlayImageUrl, courseMapData.viewportBounds, hasTrustedCourseMapOverlay],
   );
   const hasTransparentCourseMapOverlay = Boolean(courseMapImageOverlayBounds && courseMapData.overlayImageUrl);
   const hasCityLevelCourseMap = mapTrust.cityLevelMatch && courseMapData.routeAvailable && !hasAlignedRoute;
@@ -624,15 +639,6 @@ export default function RacesDetail() {
   const targetDate = useMemo(() => projectedRaceDate(race), [race]);
   const countdown = useMemo(() => buildCountdownParts(targetDate), [targetDate]);
   const bestVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
-  const nearRuns = useMemo(() => {
-    if (!race) return [];
-    const targetKm = Number(race.distanceKm || 0);
-    if (!targetKm) return [];
-    return runs.filter((run) => {
-      const km = Number(run.distanceKm || 0);
-      return km >= targetKm * 0.8 && km <= targetKm * 1.2;
-    });
-  }, [race, runs]);
   const prediction = useMemo(() => {
     if (!race || !raceMeta || !bestVdot || bestVdot <= 0) return null;
     const baseMinutes = predictRaceTimeCalibrated(bestVdot, Math.round(Number(race.distanceKm || 0) * 1000), runs);
@@ -737,14 +743,6 @@ export default function RacesDetail() {
   }, [courseMapData.confidence, hasAlignedRoute, hasCityLevelCourseMap, race, t]);
 
   useEffect(() => {
-    // Show page immediately when basic race data is loaded
-    // Course map loads asynchronously in background
-    if (!loadingActivities) {
-      setLoadState('ready');
-    }
-  }, [loadingActivities]);
-
-  useEffect(() => {
     setRouteMapReady(false);
     setRouteMapPainted(false);
     setStreetTileFallback(null);
@@ -771,7 +769,11 @@ export default function RacesDetail() {
     }
     routeMapHost.innerHTML = '';
 
-    try {
+    (async () => {
+      try {
+      const L = await loadLeafletModule();
+      if (cancelled || !routeMapRef.current) return;
+      if (routeMapRef.current !== routeMapHost || routeMapInstanceRef.current) return;
       const map = L.map(routeMapHost, {
         zoomControl: true,
         attributionControl: true,
@@ -970,11 +972,12 @@ export default function RacesDetail() {
         createdMap = map;
         setRouteMapReady(true);
       }
-    } catch (error) {
-      if (!cancelled) {
-        console.error('Race detail Leaflet map failed to initialize.', error);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Race detail Leaflet map failed to initialize.', error);
+        }
       }
-    }
+    })();
 
     return () => {
       cancelled = true;
@@ -1056,9 +1059,7 @@ export default function RacesDetail() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={displayName} />
             </div>
           </div>
         </header>

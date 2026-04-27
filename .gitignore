@@ -21,9 +21,23 @@ oracleJdk-26/
 # Local PowerShell env (secrets); keep Hermes.local.env.example.ps1 in git
 Hermes.local.env.ps1
 Hermes.local.env.*.ps1
+# Claude Code / DeepSeek local API-key files
+.claude/settings.local.json
+.claude/*.local.json
+.claude/claude-code.local.env.ps1
+.claude/*.local.env.ps1
+deepseek*.env
+deepseek*.key
+deepseek*.token
+claude*.env
+claude*.key
+claude*.token
+.tools/*deepseek*local*.ps1
+.tools/*claude*local*.ps1
 
 # local logs / runtime artifacts
 backend_log.txt
+backend_log_*.txt
 *.pid
 *.seed
 tmp_*
@@ -34,6 +48,8 @@ tmp_*
 
 # local sync config (may contain paths/tokens)
 .tools/hermes_sync_config.json
+.tools/H2ToPostgresMigrator.java
+.tools/H2ToPostgresMigrator*.class
 
 # TLS / credentials (never commit)
 *.pem
@@ -80,7 +96,9 @@ images/
 # Legacy local task-image folder; renamed storage lives in course-map-images/.
 task-images/
 course-map-images/*
+backend/course-map-images/*
 !course-map-images/.gitignore
+!backend/course-map-images/.gitignore
 
 # Local Qwen model checkpoints / caches (too large for git)
 Qwen*/
@@ -90,6 +108,12 @@ qwen-models/
 .qwen/
 models/qwen*/
 models/Qwen*/
+backend/qwen-models/
+backend/.qwen/
+backend/models/qwen*/
+backend/models/Qwen*/
+qwen_*_stdout.txt
+qwen_*_stderr.txt
 
 # Cloned repos
 /run/
@@ -97,6 +121,7 @@ models/Qwen*/
 .worktrees/
 
 # Frontend
+node_modules/
 frontend/node_modules/
 frontend/dist/
 
@@ -193,6 +218,10 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 .codex/
 !.codex/
 .codex/*
+!.codex/commands/
+!.codex/commands/*.md
+!.codex/workflows/
+!.codex/workflows/*.md
 !.codex/skills/
 .claude/
 .gemini/
@@ -203,6 +232,16 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 !.codex/skills/architecture-diagram-generator/assets/template.html
 .cursor/
 .opencode/
+!.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/auto-hermes.mdc
+!.cursor/rules/auto-hermes-max.mdc
+!.opencode/
+.opencode/*
+!.opencode/commands/
+!.opencode/commands/auto-hermes.md
+!.opencode/commands/auto-hermes-max.md
 .opencode.json
 
 # Exclude sensitive parts of workflow core
