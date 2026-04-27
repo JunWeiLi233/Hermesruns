@@ -437,6 +437,7 @@ export default function ProfileDashboard() {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
+  const [musclePlan, setMusclePlan] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -489,11 +490,13 @@ export default function ProfileDashboard() {
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/profile/personal-records').catch(() => null),
           apiJson('/api/races').catch(() => null),
-        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData]) => {
+          apiJson('/api/training/muscle/plan').catch(() => null),
+        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData, musclePlanData]) => {
           if (cancelled) return;
 
           setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
           setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
+          setMusclePlan(musclePlanData && typeof musclePlanData === 'object' && musclePlanData.days ? musclePlanData : null);
 
           if (Array.isArray(racesData)) {
             _setRaces(racesData);
@@ -655,6 +658,29 @@ export default function ProfileDashboard() {
 
   const restingHrValue = coachState?.lastNightRestingHr ?? coachState?.profileRestingHeartRateBpm ?? null;
   const sleepScoreValue = coachState?.lastSleepScore ?? null;
+
+  const strengthSummary = useMemo(() => {
+    if (!musclePlan || !Array.isArray(musclePlan.days)) return null;
+    const days = musclePlan.days;
+    const today = days[0] || null;
+    const strengthDays = days.filter((d) => d && d.strength);
+    const sessionCount = strengthDays.length;
+    const sessionMinutes = musclePlan.profile?.sessionMinutes || musclePlan.weekContext?.sessionMinutes || 30;
+    const focus = musclePlan.weekContext?.currentFocus || '';
+    const todayHasStrength = today && today.strength;
+    const todaySessionType = todayHasStrength ? today.strength.sessionType : null;
+    const todayDuration = todayHasStrength ? (today.strength.durationMinutes ?? sessionMinutes) : null;
+    const todayOptional = todayHasStrength ? today.strength.optional : false;
+    return {
+      sessionCount,
+      sessionMinutes,
+      focus,
+      todayHasStrength,
+      todaySessionType,
+      todayDuration,
+      todayOptional,
+    };
+  }, [musclePlan]);
 
   const raceCountdown = useMemo(() => {
     if (!nextRace?.parsedDate) return null;
@@ -1323,7 +1349,7 @@ export default function ProfileDashboard() {
                       <span className="runner-dashboard-race-phase-tag">{racePrepPhase?.label}</span>
                       <p>
                         <small>{t('profile.dashboard_race_prep_advice')}</small>
-                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '\u964d\u4f4e\u8d1f\u8377\uff0c\u4fdd\u6301\u7761\u7720\uff0c\u7528\u77ed\u52a0\u901f\u4fdd\u7559\u795e\u7ecf\u808c\u8089\u72b6\u6001' : 'Prioritize sleep and maintain neuro-muscular pop with short strides.')}
+                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '\u964d\u4f4e\u8d1f\u8377\uff0c\u4fdd\u6301\u7761\u7720\uff0c\u7528\u77ed\u52a0\u901f\u4fdd\u7559\u795e\u7ecf\u808c\u8089\u72b6\u6001' : 'Prioritize sleep and keep your legs sharp with short stride-outs.')}
                         {racePrepPhase?.key === 'peak' && (lang === 'zh-CN' ? '\u9ad8\u5cf0\u5468\u4fdd\u6301\u89c4\u5f8b\u6062\u590d\uff0c\u4e0d\u8981\u8ffd\u52a0\u8fc7\u91cf\u5f3a\u5ea6' : 'Peak volume weeks require consistent recovery and core strength maintenance.')}
                         {racePrepPhase?.key === 'specific' && (lang === 'zh-CN' ? '\u6253\u78e8\u6bd4\u8d5b\u914d\u901f\u4f53\u611f\uff0c\u7ec3\u4e60\u8865\u7ed9\u7b56\u7565' : 'Refine race-pace feel and practice fueling strategies.')}
                         {racePrepPhase?.key === 'base' && (lang === 'zh-CN' ? '\u7528\u7a33\u5b9a\u4f4e\u5fc3\u7387\u8dd1\u91cf\u6253\u597d\u6709\u6c27\u57fa\u7840' : 'Build aerobic base with steady, low-HR volume.')}
@@ -1491,6 +1517,56 @@ export default function ProfileDashboard() {
                   <span>{t('profile.dashboard_lactate_threshold')}: {thresholdEstimate ?? '--'} bpm</span>
                 </div>
               </article>
+
+              {strengthSummary && (
+                <article className="runner-dashboard-feature-card runner-dashboard-feature-card--muscle">
+                  <div className="runner-dashboard-feature-head">
+                    <span className="runner-dashboard-card-kicker">{t('profile.dashboard_muscle_kicker')}</span>
+                    <span className="runner-dashboard-feature-eyebrow">
+                      {strengthSummary.sessionCount} {lang === 'zh-CN' ? '次/周' : '/ wk'}
+                    </span>
+                  </div>
+                  <div className="runner-dashboard-feature-copy">
+                    <h3>
+                      {strengthSummary.todayHasStrength
+                        ? t('profile.dashboard_muscle_today_session')
+                        : t('profile.dashboard_muscle_no_today')}
+                    </h3>
+                    {strengthSummary.todayHasStrength ? (
+                      <p>
+                        <span className="runner-dashboard-muscle-session-type">
+                          {(() => {
+                            const st = strengthSummary.todaySessionType;
+                            if (st === 'FOUNDATION_STRENGTH') return t('muscle_training.session_type_foundation');
+                            if (st === 'RESILIENCE_CAPACITY') return t('muscle_training.session_type_resilience');
+                            if (st === 'OPTIONAL_ELASTICITY') return t('muscle_training.session_type_elasticity');
+                            return st?.replace(/_/g, ' ') || '';
+                          })()}
+                          {strengthSummary.todayOptional && ` (${lang === 'zh-CN' ? '可选' : 'optional'})`}
+                        </span>
+                        {' · '}
+                        {strengthSummary.todayDuration} {lang === 'zh-CN' ? '分钟' : 'min'}
+                      </p>
+                    ) : (
+                      <p>{t('profile.dashboard_muscle_no_today_hint')}</p>
+                    )}
+                  </div>
+                  {strengthSummary.focus && (
+                    <p className="runner-dashboard-muscle-focus">
+                      {t('profile.dashboard_muscle_focus', { focus: strengthSummary.focus })}
+                    </p>
+                  )}
+                  <div className="runner-dashboard-feature-actions">
+                    <button
+                      type="button"
+                      className="runner-dashboard-feature-secondary"
+                      onClick={() => navigate('/muscle-training')}
+                    >
+                      {t('profile.dashboard_muscle_view_plan')}
+                    </button>
+                  </div>
+                </article>
+              )}
 
               {runs.length > 3 && (
                 <article className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
