@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -6,6 +7,8 @@ from pathlib import Path
 import torch
 from qwen_vl_utils import process_vision_info
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
+
+DEFAULT_IMAGE_MAX_PIXELS = 1024 * 1024
 
 
 def _normalize_cache_dir(cache_dir: str | None) -> str | None:
@@ -26,8 +29,28 @@ def _load_bundle(model_id: str, device_map: str, cache_dir: str | None):
         kwargs["cache_dir"] = normalized_cache_dir
 
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_id, **kwargs)
+    model.eval()
     processor = AutoProcessor.from_pretrained(model_id, cache_dir=normalized_cache_dir)
     return model, processor
+
+
+def _resolve_image_max_pixels() -> int:
+    raw_value = os.environ.get("HERMES_QWEN_IMAGE_MAX_PIXELS", "").strip()
+    if not raw_value:
+        return DEFAULT_IMAGE_MAX_PIXELS
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return DEFAULT_IMAGE_MAX_PIXELS
+    return parsed if parsed > 0 else DEFAULT_IMAGE_MAX_PIXELS
+
+
+def build_image_content(image_path: str) -> dict:
+    return {
+        "type": "image",
+        "image": image_path,
+        "max_pixels": _resolve_image_max_pixels(),
+    }
 
 
 def _response_text(model, processor, image_path: Path, prompt: str, max_new_tokens: int) -> str:
@@ -35,7 +58,7 @@ def _response_text(model, processor, image_path: Path, prompt: str, max_new_toke
         {
             "role": "user",
             "content": [
-                {"type": "image", "image": str(image_path.resolve())},
+                build_image_content(str(image_path.resolve())),
                 {"type": "text", "text": prompt},
             ],
         }
@@ -54,7 +77,8 @@ def _response_text(model, processor, image_path: Path, prompt: str, max_new_toke
     target_device = "cuda" if torch.cuda.is_available() else "cpu"
     inputs = inputs.to(target_device)
 
-    generated_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
+    with torch.inference_mode():
+        generated_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
     trimmed_ids = [
         output_ids[len(input_ids):]
         for input_ids, output_ids in zip(inputs.input_ids, generated_ids)

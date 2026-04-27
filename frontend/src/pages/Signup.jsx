@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
-import { getBackendBaseUrl, apiFetch } from '../api';
+import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
@@ -91,6 +91,10 @@ export default function Signup() {
   const [pwRules, setPwRules] = useState({ minLength: 10 });
   const [doneInfo, setDoneInfo] = useState(null);
   const [banner, setBanner] = useState(null);
+  const [authProviders, setAuthProviders] = useState(null);
+
+  const stravaConfigured = authProviders?.stravaConfigured === true;
+  const googleConfigured = authProviders?.googleConfigured === true;
 
   useEffect(() => {
     (async () => {
@@ -108,6 +112,21 @@ export default function Signup() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    apiJson('/api/auth/providers')
+      .then((res) => {
+        if (!cancelled) setAuthProviders(res || {});
+      })
+      .catch(() => {
+        if (!cancelled) setAuthProviders({ googleConfigured: false, stravaConfigured: false });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const bannerState = parseSignupStatusQuery(window.location.search, {
       stravaConfirmationFallback: t('profile.strava_link_confirmation_required'),
     });
@@ -122,6 +141,10 @@ export default function Signup() {
         setError(t('common.strava_not_configured'));
       } else if (bannerState.banner === 'strava_failed') {
         setError(bannerState.errorMessage || t('common.strava_login_failed'));
+      } else if (bannerState.banner === 'google_not_configured') {
+        setError(t('common.google_not_configured'));
+      } else if (bannerState.banner === 'google_failed') {
+        setError(bannerState.errorMessage || t('common.google_login_failed'));
       } else {
         setError(bannerState.errorMessage || t('profile.strava_link_confirmation_required'));
       }
@@ -196,6 +219,12 @@ export default function Signup() {
   }
 
   function startOAuth(provider) {
+    if (provider === 'strava' && !stravaConfigured) {
+      return;
+    }
+    if (provider === 'google' && !googleConfigured) {
+      return;
+    }
     const baseUrl = getBackendBaseUrl();
     window.location.href = `${baseUrl}/api/auth/${provider}/start?state=signup`;
   }
@@ -258,10 +287,19 @@ export default function Signup() {
 
         <section className="signup-flow-panel-wrap">
           <div className="signup-flow-panel">
-            <button type="button" className="signup-flow-strava" onClick={() => startOAuth('strava')}>
+            <button
+              type="button"
+              className="signup-flow-strava"
+              disabled={!stravaConfigured}
+              onClick={() => startOAuth('strava')}
+            >
               <AppIcon name="directions_run" className="signup-flow-strava-icon" />
-              <span>{s('strava_cta')}</span>
+              <span>{stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}</span>
             </button>
+
+            {!stravaConfigured && (
+              <p className="auth-flow-status-note">{t('common.strava_not_configured')}</p>
+            )}
 
             <div className="signup-flow-divider">
               <span />
@@ -278,6 +316,12 @@ export default function Signup() {
               )}
               {banner === 'strava_failed' && (
                 <div className="error-alert is-visible" role="alert">{t('common.strava_login_failed')}</div>
+              )}
+              {banner === 'google_not_configured' && (
+                <div className="error-alert is-visible" role="alert">{t('common.google_not_configured')}</div>
+              )}
+              {banner === 'google_failed' && (
+                <div className="error-alert is-visible" role="alert">{t('common.google_login_failed')}</div>
               )}
               {error && <div className="error-alert is-visible" role="alert">{error}</div>}
 
@@ -345,11 +389,16 @@ export default function Signup() {
               <button
                 type="button"
                 className="signup-flow-google"
+                disabled={!googleConfigured}
                 onClick={() => startOAuth('google')}
               >
                 <span className="auth-flow-google-g" aria-hidden="true">G</span>
-                <span>{t('signup.google')}</span>
+                <span>{t(googleConfigured ? 'signup.google' : 'common.google_not_configured')}</span>
               </button>
+
+              {!googleConfigured && (
+                <p className="auth-flow-status-note">{t('common.google_not_configured')}</p>
+              )}
             </form>
 
             <p className="signup-flow-legal">

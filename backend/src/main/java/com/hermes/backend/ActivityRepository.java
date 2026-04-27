@@ -50,10 +50,10 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.movingTimeSeconds AS movingTimeSeconds,
               a.startDate AS startDate,
               a.startTime AS startTime,
-              a.averageHeartRate AS averageHeartRate,
-              a.maxHeartRate AS maxHeartRate,
-              a.averageCadence AS averageCadence,
-              a.maxSpeedMps AS maxSpeedMps
+              a.metrics.averageHeartRate AS averageHeartRate,
+              a.metrics.maxHeartRate AS maxHeartRate,
+              a.metrics.averageCadence AS averageCadence,
+              a.metrics.maxSpeedMps AS maxSpeedMps
             FROM Activity a
             WHERE a.runner = :runner
               AND a.activityType = :type
@@ -97,8 +97,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     @Query("""
             SELECT
-              a.averageHeartRate AS averageHeartRate,
-              a.maxHeartRate AS maxHeartRate,
+              a.metrics.averageHeartRate AS averageHeartRate,
+              a.metrics.maxHeartRate AS maxHeartRate,
               a.movingTimeSeconds AS movingTimeSeconds,
               a.durationSeconds AS durationSeconds,
               a.distanceKm AS distanceKm,

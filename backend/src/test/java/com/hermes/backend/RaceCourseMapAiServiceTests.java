@@ -349,6 +349,126 @@ class RaceCourseMapAiServiceTests {
     }
 
     @Test
+    void analyzeCandidateReturnsLowerDensityCorrectiveRouteForServiceSpecificPlausibility() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
+        when(qwenClient.analyzeCandidate(any(), eq("image/png"), any())).thenReturn(
+                """
+                {
+                  "isCourseMap": true,
+                  "confidence": 90,
+                  "summary": "Detected a collapsed Tokyo finish-area route.",
+                  "overlayBounds": { "north": 35.75, "south": 35.55, "east": 139.85, "west": 139.55 },
+                  "routePoints": [
+                    { "lat": 35.6895, "lng": 139.6917, "label": "Start" },
+                    { "lat": 35.6895, "lng": 139.6917 },
+                    { "lat": 35.6895, "lng": 139.6917, "label": "Finish" }
+                  ]
+                }
+                """,
+                """
+                {
+                  "isCourseMap": true,
+                  "confidence": 90,
+                  "summary": "Recovered a lower-density Tokyo Marathon route.",
+                  "overlayBounds": { "north": 35.75, "south": 35.55, "east": 139.85, "west": 139.55 },
+                  "routePoints": [
+                    { "lat": 35.4000, "lng": 139.6500, "label": "Start" },
+                    { "lat": 35.4550, "lng": 139.6500 },
+                    { "lat": 35.5100, "lng": 139.6500 },
+                    { "lat": 35.5650, "lng": 139.6500 },
+                    { "lat": 35.6200, "lng": 139.6500 },
+                    { "lat": 35.6750, "lng": 139.6500 },
+                    { "lat": 35.7300, "lng": 139.6500 },
+                    { "lat": 35.7800, "lng": 139.6500, "label": "Finish" }
+                  ]
+                }
+                """
+        );
+
+        RaceCourseMapAiService service = new RaceCourseMapAiService(restTemplate, new ObjectMapper(), geometryService, qwenClient);
+
+        RaceCourseMapService.CourseMapAlignment alignment = service.analyzeCandidate(
+                "https://cdn.example.com/tokyo-course-map.webp",
+                samplePngBytes(),
+                "Tokyo Marathon",
+                "Tokyo",
+                "Japan",
+                35.6762,
+                139.6503,
+                42.195,
+                false,
+                RaceCourseMapService.PromptRaceType.POINT_TO_POINT,
+                "image/png"
+        );
+
+        assertThat(alignment).isNotNull();
+        assertThat(alignment.summary()).contains("lower-density Tokyo Marathon route");
+        assertThat(alignment.routePoints()).hasSize(8);
+        verify(qwenClient, times(2)).analyzeCandidate(any(), eq("image/png"), any());
+    }
+
+    @Test
+    void analyzeCandidatePreservesLowerDensityOriginalRouteWhenCorrectiveRouteRegresses() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
+        when(qwenClient.analyzeCandidate(any(), eq("image/png"), any())).thenReturn(
+                """
+                {
+                  "isCourseMap": true,
+                  "confidence": 90,
+                  "summary": "Recovered a lower-density Tokyo Marathon route.",
+                  "overlayBounds": { "north": 35.75, "south": 35.55, "east": 139.85, "west": 139.55 },
+                  "routePoints": [
+                    { "lat": 35.4000, "lng": 139.6500, "label": "Start" },
+                    { "lat": 35.4550, "lng": 139.6500 },
+                    { "lat": 35.5100, "lng": 139.6500 },
+                    { "lat": 35.5650, "lng": 139.6500 },
+                    { "lat": 35.6200, "lng": 139.6500 },
+                    { "lat": 35.6750, "lng": 139.6500 },
+                    { "lat": 35.7300, "lng": 139.6500 },
+                    { "lat": 35.7800, "lng": 139.6500, "label": "Finish" }
+                  ]
+                }
+                """,
+                """
+                {
+                  "isCourseMap": true,
+                  "confidence": 70,
+                  "summary": "Regressed to a single city-center point.",
+                  "overlayBounds": { "north": 35.75, "south": 35.55, "east": 139.85, "west": 139.55 },
+                  "routePoints": [
+                    { "lat": 35.6895, "lng": 139.6917, "label": "Start" }
+                  ]
+                }
+                """
+        );
+
+        RaceCourseMapAiService service = new RaceCourseMapAiService(restTemplate, new ObjectMapper(), geometryService, qwenClient);
+
+        RaceCourseMapService.CourseMapAlignment alignment = service.analyzeCandidate(
+                "https://cdn.example.com/tokyo-course-map.webp",
+                samplePngBytes(),
+                "Tokyo Marathon",
+                "Tokyo",
+                "Japan",
+                35.6762,
+                139.6503,
+                42.195,
+                false,
+                RaceCourseMapService.PromptRaceType.POINT_TO_POINT,
+                "image/png"
+        );
+
+        assertThat(alignment).isNotNull();
+        assertThat(alignment.summary()).contains("lower-density Tokyo Marathon route");
+        assertThat(alignment.routePoints()).hasSize(8);
+        verify(qwenClient, times(2)).analyzeCandidate(any(), eq("image/png"), any());
+    }
+
+    @Test
     void buildAlignmentPromptRequestsDenseFullMarathonCheckpointsWithBostonCorridorHints() {
         RaceCourseMapPromptBuilder promptBuilder = new RaceCourseMapPromptBuilder();
 

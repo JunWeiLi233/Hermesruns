@@ -1,6 +1,9 @@
 const translations = {
   "zh-CN": {
     "common": {
+      "app_crashed_title": "页面暂时出了点问题",
+      "app_crashed_body": "请刷新页面重试。如果问题持续出现，请稍后再回来。",
+      "reload": "重新加载",
       "lang_zh": "中文",
       "lang_en": "English",
       "logo_mark": "跑",
@@ -2788,6 +2791,9 @@ const translations = {
   },
   "en": {
     "common": {
+      "app_crashed_title": "Something went wrong",
+      "app_crashed_body": "Reload the page and try again. If this keeps happening, come back in a moment.",
+      "reload": "Reload",
       "lang_zh": "中文",
       "lang_en": "English",
       "logo_mark": "RUN",
