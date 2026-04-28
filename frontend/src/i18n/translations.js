@@ -2802,6 +2802,13 @@ const translations = {
       "status_day_4_9": "适应建立中",
       "status_day_10_14": "趋于稳定",
       "open_today_run": "打开今日训练"
+    },
+    "pro": {
+      "badge": "专业版",
+      "quota_remaining": "剩余 {remaining}/{limit} 次免费扫描",
+      "quota_exhausted": "本月的 {limit} 次免费扫描已用完，升级专业版解锁无限 AI 跑鞋识别。",
+      "upgrade_cta": "升级专业版",
+      "status_active": "有效期至 {date}"
     }
   },
   "en": {
@@ -5629,6 +5636,13 @@ const translations = {
       "status_day_4_9": "Adapting",
       "status_day_10_14": "Stabilized",
       "open_today_run": "Open today's run"
+    },
+    "pro": {
+      "badge": "PRO",
+      "quota_remaining": "{remaining} of {limit} free scans left this month",
+      "quota_exhausted": "You've used your {limit} free scans this month. Go Pro for unlimited AI shoe recognition.",
+      "upgrade_cta": "Go Pro",
+      "status_active": "Active until {date}"
     }
   }
 };

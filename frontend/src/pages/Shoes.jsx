@@ -1337,6 +1337,17 @@ export default function Shoes() {
                     <button type="button" className="shoe-inventory-action-btn" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
                       {t('shoes.scan_image')}
                     </button>
+                    {aiQuota && !aiQuota.admin && (
+                      aiQuota.tier === 'PRO' || aiQuota.unlimited ? (
+                        <span className="shoe-inventory-pro-badge">{t('pro.badge')}</span>
+                      ) : (
+                        <span className="shoe-inventory-quota-badge">
+                          {aiQuota.scansRemaining > 0
+                            ? t('pro.quota_remaining', { remaining: aiQuota.scansRemaining, limit: aiQuota.monthlyLimit || aiQuota.userFreeTotal || 3 })
+                            : t('pro.quota_exhausted', { limit: aiQuota.monthlyLimit || aiQuota.userFreeTotal || 3 })}
+                        </span>
+                      )
+                    )}
                     {isFiltered && <button type="button" className="shoe-inventory-action-btn is-muted" onClick={resetLocker}>{t('shoes.stitch_reset')}</button>}
                   </div>
                 </div>
@@ -1721,9 +1732,16 @@ export default function Shoes() {
                 </label>
                 {scanStatus === 'processing' && <div className="shoe-scan-modal-status">{t('shoes.scan_processing')}</div>}
                 {scanStatus === 'quota_exceeded' && (
-                  <div className="shoe-scan-modal-status is-warn">
-                    <strong>{t('shoes.ai_quota_exceeded')}</strong>
-                    {aiQuota?.tier !== 'PRO' && <span>{t('shoes.ai_upgrade_hint')}</span>}
+                  <div className="shoe-scan-modal-upgrade-card">
+                    <span className="shoe-scan-modal-upgrade-kicker">{t('pro.badge')}</span>
+                    <h4>{t('pro.quota_exhausted', { limit: aiQuota?.monthlyLimit || aiQuota?.userFreeTotal || 3 })}</h4>
+                    <button
+                      type="button"
+                      className="shoe-scan-modal-upgrade-cta"
+                      onClick={() => { setScanOpen(false); navigate('/profile'); }}
+                    >
+                      {t('pro.upgrade_cta')}
+                    </button>
                   </div>
                 )}
                 {scanStatus === 'rate_limited' && <div className="shoe-scan-modal-status is-warn">{t('shoes.scan_rate_limited')}</div>}
@@ -1804,6 +1822,21 @@ export default function Shoes() {
                   ))}
                   {scannedShoes.length === 0 && <p className="shoe-scan-empty">{t('shoes.empty')}</p>}
                 </div>
+                {aiQuota && !aiQuota.admin && !aiQuota.unlimited && aiQuota.scansRemaining >= 0 && (
+                  <div className="shoe-scan-modal-quota-after">
+                    <span className="shoe-scan-modal-quota-after-icon" aria-hidden="true">&#9889;</span>
+                    <span>
+                      {aiQuota.scansRemaining > 0
+                        ? t('pro.quota_remaining', { remaining: aiQuota.scansRemaining, limit: aiQuota.monthlyLimit || aiQuota.userFreeTotal || 3 })
+                        : t('pro.quota_exhausted', { limit: aiQuota.monthlyLimit || aiQuota.userFreeTotal || 3 })}
+                    </span>
+                    {aiQuota.scansRemaining <= 0 && (
+                      <button type="button" className="shoe-scan-modal-upgrade-cta" onClick={() => { setScanOpen(false); navigate('/profile'); }}>
+                        {t('pro.upgrade_cta')}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="shoe-scan-modal-actions">
                   <button type="button" className="shoe-scan-modal-secondary" onClick={() => { setScanStatus(''); setScannedShoes([]); }}>{t('shoes.back')}</button>
                   <button type="button" className="shoe-scan-modal-primary" onClick={handleAddScanned} disabled={scannedShoes.length === 0}>{t('shoes.confirm_add_all')}</button>

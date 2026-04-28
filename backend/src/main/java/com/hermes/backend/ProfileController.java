@@ -24,6 +24,7 @@ public class ProfileController {
     private final ActivityPointRepository activityPointRepository;
     private final ActivityNormalizationService activityNormalizationService;
     private final PersonalRecordService personalRecordService;
+    private final QuotaService quotaService;
 
     public ProfileController(
             AuthService authService,
@@ -31,7 +32,8 @@ public class ProfileController {
             ActivityRepository activityRepository,
             ActivityPointRepository activityPointRepository,
             ActivityNormalizationService activityNormalizationService,
-            PersonalRecordService personalRecordService
+            PersonalRecordService personalRecordService,
+            QuotaService quotaService
     ) {
         this.authService = authService;
         this.runnerRepository = runnerRepository;
@@ -39,6 +41,7 @@ public class ProfileController {
         this.activityPointRepository = activityPointRepository;
         this.activityNormalizationService = activityNormalizationService;
         this.personalRecordService = personalRecordService;
+        this.quotaService = quotaService;
     }
 
     @GetMapping("/me")
@@ -51,6 +54,17 @@ public class ProfileController {
         }
 
         return ResponseEntity.ok(toProfileResponse(runnerOptional.get()));
+    }
+
+    @GetMapping("/quota")
+    public ResponseEntity<?> getQuota(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        return ResponseEntity.ok(quotaService.getQuotaStatus(runnerOptional.get()));
     }
 
     @PatchMapping("/me/name")

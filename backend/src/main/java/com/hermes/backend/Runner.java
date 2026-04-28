@@ -275,6 +275,13 @@ public class Runner {
 
     private LocalDate aiDailyResetDate;
 
+    /** Monthly shoe-scan counter for feature quota gating (free users). Reset on the 1st of each month. */
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int shoeScanCount = 0;
+
+    private LocalDate shoeScanCountReset;
+
     /** False until the user completes email verification (password sign-up only). OAuth users are verified by the provider. */
     @Column(nullable = false)
     @ColumnDefault("true")
@@ -332,6 +339,12 @@ public class Runner {
 
     public LocalDate getAiDailyResetDate() { return aiDailyResetDate; }
     public void setAiDailyResetDate(LocalDate aiDailyResetDate) { this.aiDailyResetDate = aiDailyResetDate; }
+
+    public int getShoeScanCount() { return shoeScanCount; }
+    public void setShoeScanCount(int shoeScanCount) { this.shoeScanCount = shoeScanCount; }
+
+    public LocalDate getShoeScanCountReset() { return shoeScanCountReset; }
+    public void setShoeScanCountReset(LocalDate shoeScanCountReset) { this.shoeScanCountReset = shoeScanCountReset; }
 
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }

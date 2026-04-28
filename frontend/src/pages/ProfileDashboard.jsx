@@ -438,6 +438,7 @@ export default function ProfileDashboard() {
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
   const [musclePlan, setMusclePlan] = useState(null);
+  const [subscriptionState, setSubscriptionState] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -491,12 +492,16 @@ export default function ProfileDashboard() {
           apiJson('/api/profile/personal-records').catch(() => null),
           apiJson('/api/races').catch(() => null),
           apiJson('/api/training/muscle/plan').catch(() => null),
-        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData, musclePlanData]) => {
+          apiJson('/api/profile/quota').catch(() => null),
+        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData, musclePlanData, quotaData]) => {
           if (cancelled) return;
 
           setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
           setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
           setMusclePlan(musclePlanData && typeof musclePlanData === 'object' && musclePlanData.days ? musclePlanData : null);
+          if (quotaData && typeof quotaData === 'object' && !quotaData.admin) {
+            setSubscriptionState(quotaData);
+          }
 
           if (Array.isArray(racesData)) {
             _setRaces(racesData);
@@ -899,6 +904,40 @@ export default function ProfileDashboard() {
 
         {!dismissedComeback && daysOff >= 3 && (
           <ComebackMessage daysOff={daysOff} onDismiss={() => setDismissedComeback(true)} />
+        )}
+
+        {subscriptionState && !subscriptionState.pro && subscriptionState.shoeScan && (
+          <section className="runner-dashboard-pro-quota-card">
+            <div className="runner-dashboard-pro-quota-body">
+              <span className="runner-dashboard-pro-quota-kicker">{t('pro.badge')}</span>
+              <div className="runner-dashboard-pro-quota-copy">
+                <h4>{t('pro.quota_remaining', { remaining: subscriptionState.shoeScan.remaining, limit: subscriptionState.shoeScan.limit })}</h4>
+                {subscriptionState.shoeScan.remaining <= 1 && (
+                  <p>{t('pro.quota_exhausted', { limit: subscriptionState.shoeScan.limit })}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="runner-dashboard-pro-quota-cta"
+                onClick={() => navigate('/profile?checkout=true')}
+              >
+                <span>{t('pro.upgrade_cta')}</span>
+              </button>
+            </div>
+          </section>
+        )}
+
+        {subscriptionState && subscriptionState.pro && (
+          <section className="runner-dashboard-pro-card">
+            <div className="runner-dashboard-pro-body">
+              <span className="runner-dashboard-pro-badge">{t('pro.badge')}</span>
+              <span className="runner-dashboard-pro-expiry">
+                {subscriptionState.expiresAt
+                  ? t('pro.status_active', { date: formatDate(subscriptionState.expiresAt, lang === 'zh-CN' ? 'zh-CN' : 'en-US') })
+                  : t('pro.status_active', { date: '--' })}
+              </span>
+            </div>
+          </section>
         )}
 
         {loadState === 'loading' && (

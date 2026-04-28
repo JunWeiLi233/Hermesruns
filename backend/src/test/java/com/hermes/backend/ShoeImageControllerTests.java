@@ -24,17 +24,23 @@ class ShoeImageControllerTests {
         AuthService authService = mock(AuthService.class);
         ShoeRepository shoeRepository = mock(ShoeRepository.class);
         AiUsageService aiUsageService = mock(AiUsageService.class);
+        QuotaService quotaService = mock(QuotaService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         ApiRateLimiter apiRateLimiter = mock(ApiRateLimiter.class);
+        BingImageScraper bingImageScraper = mock(BingImageScraper.class);
+        AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
 
         ShoeImageController controller = new ShoeImageController(
                 authService,
                 shoeRepository,
                 aiUsageService,
+                quotaService,
                 restTemplate,
                 systemConfigService,
-                apiRateLimiter
+                apiRateLimiter,
+                bingImageScraper,
+                aiShoeScanService
         );
 
         Runner runner = new Runner();
@@ -71,17 +77,23 @@ class ShoeImageControllerTests {
         AuthService authService = mock(AuthService.class);
         ShoeRepository shoeRepository = mock(ShoeRepository.class);
         AiUsageService aiUsageService = mock(AiUsageService.class);
+        QuotaService quotaService = mock(QuotaService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         ApiRateLimiter apiRateLimiter = mock(ApiRateLimiter.class);
+        BingImageScraper bingImageScraper = mock(BingImageScraper.class);
+        AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
 
         ShoeImageController controller = new ShoeImageController(
                 authService,
                 shoeRepository,
                 aiUsageService,
+                quotaService,
                 restTemplate,
                 systemConfigService,
-                apiRateLimiter
+                apiRateLimiter,
+                bingImageScraper,
+                aiShoeScanService
         );
 
         Runner runner = new Runner();
