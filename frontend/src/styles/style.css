@@ -48690,6 +48690,28 @@ body.theme-light .admin-shoe-card:hover {
   grid-column: 1 / -1;
 }
 
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__section-head {
+  align-items: flex-start;
+}
+
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__section-head strong,
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__section-head span,
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__timeline-main,
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__timeline-details span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__timeline-details span {
+  white-space: normal;
+}
+
 .admin-command-shell--coursemaps .admin-track-hub-stage__header,
 .admin-command-shell--coursemaps .admin-track-hub-map-stage,
 .admin-command-shell--coursemaps .admin-coursemap-publish-layout {
@@ -49822,8 +49844,29 @@ body.theme-light .admin-shoe-card:hover {
   background: rgba(255, 255, 255, 0.86);
 }
 
+.admin-review-preview__map .leaflet-pane[class*="admin-review-preview__tile-pane"] {
+  z-index: 180;
+}
+
+.admin-review-preview__map .leaflet-pane[class*="admin-review-preview__source-pane"] {
+  z-index: 260;
+}
+
+.admin-review-preview__map .leaflet-pane[class*="admin-review-preview__route-shadow-pane"] {
+  z-index: 420;
+}
+
+.admin-review-preview__map .leaflet-pane[class*="admin-review-preview__route-pane"] {
+  z-index: 430;
+}
+
+.admin-review-preview__map .leaflet-pane[class*="admin-review-preview__marker-pane"] {
+  z-index: 440;
+}
+
 .admin-review-preview__map-overlay {
-  filter: saturate(1.04);
+  filter: saturate(0.92) contrast(0.96);
+  mix-blend-mode: multiply;
 }
 
 .admin-review-preview__map-wash {
@@ -51003,6 +51046,141 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-load-callout.is-dan
 
 @media (max-width: 600px) {
   .password-rules-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ── Password strength checker (signup form top card) ── */
+.pwd-strength-card {
+  padding: 14px 16px 12px;
+  border-radius: 10px;
+  background: rgba(27, 25, 24, 0.56);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pwd-strength-card--hidden {
+  opacity: 0.38;
+}
+
+.pwd-strength-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pwd-strength-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: rgba(239, 231, 221, 0.36);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+.pwd-strength-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: rgba(239, 231, 221, 0.28);
+  padding: 2px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pwd-strength-badge--weak   { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+.pwd-strength-badge--fair   { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+.pwd-strength-badge--strong { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+
+.pwd-strength-bar-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.pwd-strength-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease, background 0.35s ease;
+  width: 0%;
+}
+
+.pwd-strength-bar-fill--weak   { width: 33.3%; background: #ef4444; }
+.pwd-strength-bar-fill--fair   { width: 66.6%; background: #f59e0b; }
+.pwd-strength-bar-fill--strong { width: 100%;  background: #22c55e; }
+
+.pwd-strength-rules {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 10px;
+}
+
+.pwd-strength-rule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "Inter", var(--font-body);
+  font-size: 0.7rem;
+  color: rgba(239, 231, 221, 0.34);
+  transition: color 0.2s ease;
+}
+
+.pwd-strength-rule.is-met {
+  color: rgba(158, 220, 164, 0.78);
+}
+
+.pwd-strength-rule .rule-icon {
+  width: 13px !important;
+  height: 13px !important;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.pwd-strength-rule.is-met .rule-icon {
+  color: #4ade80;
+}
+
+/* ── Light-theme overrides ── */
+body.theme-light .pwd-strength-card {
+  background: rgba(255, 255, 255, 0.64);
+}
+
+body.theme-light .pwd-strength-label {
+  color: rgba(12, 12, 12, 0.56);
+}
+
+body.theme-light .pwd-strength-badge {
+  color: rgba(12, 12, 12, 0.36);
+}
+
+body.theme-light .pwd-strength-badge--weak   { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+body.theme-light .pwd-strength-badge--fair   { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+body.theme-light .pwd-strength-badge--strong { background: rgba(34, 197, 94, 0.1); color: #16a34a; }
+
+body.theme-light .pwd-strength-bar-track {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+body.theme-light .pwd-strength-rule {
+  color: rgba(12, 12, 12, 0.44);
+}
+
+body.theme-light .pwd-strength-rule.is-met {
+  color: rgba(22, 163, 74, 0.82);
+}
+
+body.theme-light .pwd-strength-rule.is-met .rule-icon {
+  color: #16a34a;
+}
+
+@media (max-width: 480px) {
+  .pwd-strength-rules {
     grid-template-columns: 1fr;
   }
 }
