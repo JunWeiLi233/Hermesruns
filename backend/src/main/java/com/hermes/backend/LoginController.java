@@ -108,15 +108,7 @@ public class LoginController {
     // ==========================================
     @GetMapping("/password-rules")
     public Map<String, Object> passwordRules() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("minLength", PasswordStrengthChecker.MIN_LENGTH);
-        m.put("requireUppercase", true);
-        m.put("requireLowercase", true);
-        m.put("requireDigit", true);
-        m.put("requireSpecial", true);
-        m.put("specialCharsHint", "!@#$%^&*()_+-=[]{}|;:,.<>?/~`\"'");
-        m.put("ruleIds", List.of("MIN_LENGTH", "UPPERCASE", "LOWERCASE", "DIGIT", "SPECIAL", "NOT_COMMON"));
-        return m;
+        return PasswordStrengthChecker.getRules();
     }
 
     @GetMapping("/verify-email")
