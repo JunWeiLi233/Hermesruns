@@ -16,7 +16,6 @@ import {
   PROGRESSION_TIMEFRAMES,
 } from '../utils/progressionAtlas';
 import { getTodayRunRecommendation } from '../utils/todayRun';
-import { buildRecentShoeSignal } from '../utils/shoeRotation';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
 import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../utils/vdot';
@@ -424,7 +423,6 @@ export default function ProfileDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [shoes, setShoes] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [races, _setRaces] = useState([]);
@@ -439,6 +437,7 @@ export default function ProfileDashboard() {
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
   const [musclePlan, setMusclePlan] = useState(null);
   const [subscriptionState, setSubscriptionState] = useState(null);
+  const [brandMsgIndex, setBrandMsgIndex] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -451,10 +450,9 @@ export default function ProfileDashboard() {
     async function loadDashboard() {
       setLoadState('loading');
       try {
-        const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
+        const [profileResult, activitiesResult] = await Promise.allSettled([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
-          apiJson('/api/shoes'),
         ]);
 
         if (cancelled) return;
@@ -465,14 +463,12 @@ export default function ProfileDashboard() {
 
         const profileData = profileResult.value;
         const activitiesData = activitiesResult.status === 'fulfilled' ? activitiesResult.value : [];
-        const shoesData = shoesResult.status === 'fulfilled' ? shoesResult.value : [];
 
         const list = Array.isArray(activitiesData) ? activitiesData : [];
         list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
 
         setProfile(profileData);
         setRuns(list);
-        setShoes(Array.isArray(shoesData) ? shoesData : []);
         setLoadState('ready');
 
         const query = new URLSearchParams(window.location.search);
@@ -616,6 +612,13 @@ export default function ProfileDashboard() {
     }
   }, [isAuthenticated, t]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBrandMsgIndex((prev) => (prev + 1) % 3);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const currentDateLine = useMemo(() => {
     const now = new Date();
@@ -627,15 +630,14 @@ export default function ProfileDashboard() {
   }, [lang]);
 
   const todayBundle = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
-  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
-  const shoeRecommendation = shoeSignal?.recommendation;
-
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
 
   const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
+  const totalRuns = runs.length;
+  const totalDistanceKm = useMemo(() => runs.reduce((sum, r) => sum + resolveRunDistanceKm(r), 0), [runs]);
 
   const streak = useMemo(() => calculateStreaks(runs), [runs]);
   const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
@@ -894,6 +896,49 @@ export default function ProfileDashboard() {
           <h1>{`${t('profile.dashboard_greeting')}, ${displayName}.`}</h1>
           <p>{currentDateLine} | {t('profile.dashboard_window_active')}</p>
         </section>
+
+        {loadState === 'ready' && (
+          <section className="runner-dashboard-brand-carousel">
+            <div className="runner-dashboard-brand-inner">
+              <div className="runner-dashboard-brand-copy-carousel">
+                {[
+                  t('profile.brand_carousel_1'),
+                  t('profile.brand_carousel_2'),
+                  t('profile.brand_carousel_3'),
+                ].map((msg, i) => (
+                  <p key={i} className={`runner-dashboard-brand-msg${brandMsgIndex === i ? ' is-active' : ''}`}>
+                    {msg}
+                  </p>
+                ))}
+              </div>
+              <div className="runner-dashboard-brand-real-stats">
+                {totalRuns > 0 ? (
+                  <>
+                    <div>
+                      <strong>{totalRuns}</strong>
+                      <span>{lang === 'zh-CN' ? '次跑步记录' : 'runs'}</span>
+                    </div>
+                    <div>
+                      <strong>{formatDistance(totalDistanceKm, 1, lang, unit)}</strong>
+                      <span>{lang === 'zh-CN' ? '总距离' : 'total distance'}</span>
+                    </div>
+                    <div>
+                      <strong>{profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'}</strong>
+                      <span>{t('profile.vo2_unit_short')}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="runner-dashboard-brand-stats-empty">{t('profile.brand_carousel_subtitle')}</p>
+                )}
+              </div>
+              <div className="runner-dashboard-brand-dots" aria-hidden="true">
+                <span className={brandMsgIndex === 0 ? 'is-active' : ''} />
+                <span className={brandMsgIndex === 1 ? 'is-active' : ''} />
+                <span className={brandMsgIndex === 2 ? 'is-active' : ''} />
+              </div>
+            </div>
+          </section>
+        )}
 
         {banner && (
           <section className={`runner-dashboard-banner tone-${banner.tone || 'info'}`}>
@@ -1507,12 +1552,6 @@ export default function ProfileDashboard() {
                     <strong>{heroLoad}</strong>
                   </div>
                 </div>
-                {shoeRecommendation && (
-                  <div className="runner-dashboard-feature-gear">
-                    <label>{t('profile.dashboard_recommended_gear')}</label>
-                    <strong>{shoeRecommendation.brand} {shoeRecommendation.model}</strong>
-                  </div>
-                )}
                 <div className="runner-dashboard-feature-actions">
                   <button type="button" className="runner-dashboard-feature-primary" onClick={() => navigate('/today-run')}>
                     {t('profile.dashboard_start_workout')}
