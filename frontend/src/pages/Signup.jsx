@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
+import { fetchPasswordRules, getFailedPasswordRuleIds, getDisplayPasswordRuleIds } from '../utils/passwordRules';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
@@ -63,18 +64,6 @@ function formatLocalCopy(template, vars = {}) {
   return String(template || '').replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
 }
 
-function checkPasswordClient(password, minLength) {
-  const failed = [];
-  if (!password || password.length < minLength) failed.push('MIN_LENGTH');
-  if (!/[A-Z]/.test(password)) failed.push('UPPERCASE');
-  if (!/[a-z]/.test(password)) failed.push('LOWERCASE');
-  if (!/\d/.test(password)) failed.push('DIGIT');
-  if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?/~`"'\\]/.test(password)) failed.push('SPECIAL');
-  const common = ['password', 'password123', '12345678', '123456789', 'qwerty', 'admin', 'letmein'];
-  if (common.includes(password.toLowerCase())) failed.push('NOT_COMMON');
-  return failed;
-}
-
 export default function Signup() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -88,7 +77,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [failedRules, setFailedRules] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [pwRules, setPwRules] = useState({ minLength: 10 });
+  const [pwRules, setPwRules] = useState(null);
   const [doneInfo, setDoneInfo] = useState(null);
   const [banner, setBanner] = useState(null);
   const [authProviders, setAuthProviders] = useState(null);
@@ -97,18 +86,7 @@ export default function Signup() {
   const googleConfigured = authProviders?.googleConfigured === true;
 
   useEffect(() => {
-    (async () => {
-      try {
-        const baseUrl = getBackendBaseUrl();
-        const res = await fetch(`${baseUrl}/api/auth/password-rules`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.minLength) setPwRules(data);
-        }
-      } catch {
-        // Ignore password rule fetch failures and keep the local fallback.
-      }
-    })();
+    fetchPasswordRules().then(setPwRules);
   }, []);
 
   useEffect(() => {
@@ -156,13 +134,22 @@ export default function Signup() {
   }, [setSearchParams, t]);
 
   const clientFailed = useMemo(
-    () => checkPasswordClient(password, pwRules.minLength || 10),
-    [password, pwRules.minLength],
+    () => getFailedPasswordRuleIds(password, pwRules || {}),
+    [password, pwRules],
   );
   const displayFailed = failedRules.length > 0 ? failedRules : clientFailed;
 
+  const strengthScore = useMemo(() => {
+    if (!password) return null;
+    const allRules = ['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'];
+    const passed = allRules.filter((r) => !clientFailed.includes(r)).length;
+    if (passed <= 2) return 'weak';
+    if (passed === 3) return 'fair';
+    return 'strong';
+  }, [password, clientFailed]);
+
   const ruleLabels = {
-    MIN_LENGTH: () => t('signup.password_rule_min', { n: pwRules.minLength || 10 }),
+    MIN_LENGTH: () => t('signup.password_rule_min', { n: pwRules?.minLength || 10 }),
     UPPERCASE: () => t('signup.password_rule_upper'),
     LOWERCASE: () => t('signup.password_rule_lower'),
     DIGIT: () => t('signup.password_rule_digit'),
@@ -180,7 +167,7 @@ export default function Signup() {
       return;
     }
 
-    const failed = checkPasswordClient(password, pwRules.minLength || 10);
+    const failed = getFailedPasswordRuleIds(password, pwRules || {});
     if (failed.length > 0) {
       setFailedRules(failed);
       setError(t('signup.password_rules_title'));
@@ -325,6 +312,31 @@ export default function Signup() {
               )}
               {error && <div className="error-alert is-visible" role="alert">{error}</div>}
 
+              <div className={`pwd-strength-card${!password ? ' pwd-strength-card--hidden' : ''}`}>
+                <div className="pwd-strength-header">
+                  <span className="pwd-strength-label">{t('signup.password_strength')}</span>
+                  {strengthScore && (
+                    <span className={`pwd-strength-badge pwd-strength-badge--${strengthScore}`}>
+                      {t(`signup.password_strength_${strengthScore}`)}
+                    </span>
+                  )}
+                </div>
+                <div className="pwd-strength-bar-track">
+                  <div className={`pwd-strength-bar-fill${strengthScore ? ` pwd-strength-bar-fill--${strengthScore}` : ''}`} />
+                </div>
+                <ul className="pwd-strength-rules">
+                  {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'].map((id) => {
+                    const isMet = !clientFailed.includes(id) && password.length > 0;
+                    return (
+                      <li key={id} className={`pwd-strength-rule${isMet ? ' is-met' : ''}`}>
+                        <AppIcon name={isMet ? 'check' : 'close'} className="rule-icon" />
+                        <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
               <div className="signup-flow-field">
                 <label htmlFor="email">{t('signup.email_label')}</label>
                 <input
@@ -343,7 +355,7 @@ export default function Signup() {
                 
                 <div className="password-rules-display">
                   <ul className="password-rules-list">
-                    {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'].map((id) => {
+                    {getDisplayPasswordRuleIds(pwRules || {}).map((id) => {
                       const isPassed = !displayFailed.includes(id) && password.length > 0;
                       return (
                         <li key={id} className={`password-rule-item${isPassed ? ' is-passed' : ''}`}>
