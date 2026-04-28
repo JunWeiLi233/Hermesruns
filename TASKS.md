@@ -64,6 +64,7 @@ Use this file as the working queue for AI agents.
 
 ## Daily Log
 - 2026-04-27: Added app-level React ErrorBoundary with localized fallback and reload action to prevent SPA white-screen on render crashes. Frontend build PASS, lint 0 errors (8 existing warnings), backend compile PASS, runtime HTTP 200 verified.
+- 2026-04-27: [Explorer] Added Spring Security defense-in-depth for admin routes via JwtAuthenticationFilter + hasRole("ADMIN") rule. Restricted CORS allowedHeaders from wildcard to explicit Authorization, Content-Type. Backend compile PASS.
 - 2026-04-24: Fixed pre-existing RaceCourseMapAiServiceTests regression from prompt builder extraction — replaced `ReflectionTestUtils.invokeMethod("buildAlignmentPrompt")` with direct `RaceCourseMapPromptBuilder.buildAlignmentPrompt()` calls. Backend compile PASS.
 - 2026-04-24: Qwen course-map scan timeline step 4: added 2 focused edge-case tests (JSON parse failure watcher step + cross-scope leakage). QwenCourseMapAlignmentClientTests: 7/7 PASS. Backend compile PASS, frontend build PASS. All 4 steps complete.
 - 2026-04-24: Course-map scan timeline panel: Added dedicated `GET .../race-course-maps/{raceId}/scan-timeline` endpoint + dedicated timeline panel in course-maps dashboard workspace. Qwen observability step 3 complete. Backend compile PASS, frontend build PASS, smoke test PASS.
@@ -88,53 +89,18 @@ Use this file as the working queue for AI agents.
 
 ## Active Tasks
 
-- [ ] [code-review] Fix swallowed exceptions and System.err.println — replace with structured SLF4J logging (HIGH)
-  Files: `backend/src/main/java/com/hermes/backend/ActivityImportService.java:237`, `backend/src/main/java/com/hermes/backend/BillingController.java:232,242`, `backend/src/main/java/com/hermes/backend/GarminConnectImportService.java:116`, `backend/src/main/java/com/hermes/backend/ShoeImageController.java:123`, `backend/src/main/java/com/hermes/backend/OAuthController.java`, plus 9 other files
-  Context: 4 empty catch blocks silently discard exceptions (ActivityImportService, BillingController x2, GarminConnectImportService). ShoeImageController catches Exception and returns HTTP 200 (masks failure as success). 39 instances of System.err.println / System.out.println across 10+ files instead of SLF4J log.warn/log.error.
-  Done when: Every empty catch block either re-throws, logs with full stack trace via SLF4J, or is replaced with a documented safe fallback. All System.err/out replaced with structured logging.
-  Verify: `cd backend && ./mvnw -q -DskipTests compile`
-
-- [ ] [code-review] Resolve config drift: two application.properties with diverging settings (HIGH)
-  Files: `backend/src/main/resources/application.properties`, `Main/backend/src/main/resources/application.properties`
-  Context: Primary app config (122 lines) has full feature set. Stale copy in Main/ (96 lines) is missing coach config, Garmin wellness, route extraction, and AI free-tier settings. Main/ copy also has hardcoded `strava.webhook.verify-token=hermes-strava-webhook` default where primary uses empty string.
-  Done when: Only one application.properties remains active. All feature configs (coach, Garmin, route extraction, AI) are present in the canonical file. Remove or sync the stale copy.
-  Verify: `cd backend && ./mvnw -q -DskipTests compile` and confirm no missing property warnings at startup.
-
-- [ ] [code-review] Break up OAuthController 1348-line god class into focused services (HIGH)
-  Files: `backend/src/main/java/com/hermes/backend/OAuthController.java`
-  Context: 1348 lines, 34 methods, 15 fields, 11 constructor params, 18 injected dependencies. Monolithic OAuth handler mixes Strava token lifecycle, activity sync, acclimatization, weather adjustment, and onboarding in one class. 16 System.err.println calls instead of structured logging.
-  Done when: OAuthController is split into focused services (e.g., StravaTokenService, StravaSyncService, OAuthOnboardingService) with each under 400 lines and 8 constructor params.
-  Verify: `cd backend && ./mvnw -q -DskipTests compile`
-
-- [ ] [code-review] Add @Transactional and batch saves to eliminate N+1 write patterns (HIGH)
-  Files: `backend/src/main/java/com/hermes/backend/LoginController.java:460-467`, `backend/src/main/java/com/hermes/backend/ShoeImageController.java:165,210,253`
-  Context: LoginController.getAllRunners() saves each runner individually in a loop without @Transactional — partial failure corrupts data. ShoeImageController has 3 separate N+1 save loops (adminSetPhoto, adminVerifyPhoto, adminUnverifyPhoto) saving shoes one at a time without batch or transaction.
-  Done when: All multi-entity save loops use saveAll() in a single batch wrapped in @Transactional. Partial failure is atomic.
-  Verify: `cd backend && ./mvnw -q -DskipTests compile`
-
-- [ ] [code-review] Add JPA indexes on Shoe (brand,model) and identity_key for query performance (HIGH)
-  Files: `backend/src/main/java/com/hermes/backend/Shoe.java`
-  Context: `findByBrandIgnoreCaseAndModelIgnoreCase` is called in 4+ code paths (AdminShoePortalController, ShoeImageController, ShoeCatalogController) with no index on (brand,model). `findByIdentityKey` lookups lack a standalone index on identity_key (only composite with runner_id). Moderate-to-large shoe tables will cause full scans.
-  Done when: Shoe.java has @Table(indexes = {...}) covering (brand,model) and identity_key. Hibernate DDL auto-update confirms indexes created.
-  Verify: `cd backend && ./mvnw -q -DskipTests compile`
-
-- [ ] [code-review] Extract repeated Python venv resolution logic into shared utility (HIGH)
-  Files: `backend/src/main/java/com/hermes/backend/QwenAnchorPixelClient.java:215`, `backend/src/main/java/com/hermes/backend/QwenCourseMapAlignmentClient.java`, `backend/src/main/java/com/hermes/backend/QwenRouteParameterClient.java`, `backend/src/main/java/com/hermes/backend/MarathonRouteExtractionService.java`
-  Context: Identical 7-line Python venv resolution logic copy-pasted across 4 files. Any venv path change requires editing 4 locations. Bug fixes in one copy won't propagate to others.
-  Done when: A single PythonVenvResolver utility class handles venv path resolution. All 4 clients delegate to it. Original files retain identical behavior.
-  Verify: `cd backend && ./mvnw -q -DskipTests compile` and confirm existing Qwen/Gemini tests pass.
-
 - [ ] [code-review] Add loading, error, and empty states to Workflow Builder + a11y for canvas controls (MEDIUM)
   Files: `frontend/src/pages/WorkflowBuilder.jsx`, `frontend/src/components/workflow/WorkflowCanvas.jsx`, `frontend/src/components/workflow/InputNode.jsx`, `frontend/src/components/workflow/OutputNode.jsx`, `frontend/src/components/workflow/TransformNode.jsx`, `frontend/src/components/workflow/AgentNode.jsx`
   Context: WorkflowBuilder.jsx has zero loading/error/empty state feedback — if WorkflowCanvas fails or has no data, user sees a blank page. Workflow nodes and canvas have zero aria-* attributes — drag-and-drop canvas operations are completely inaccessible to keyboard/screen reader users. Inline ternary `lang === 'zh-CN' ? '天气' : 'Weather'` bypasses the t() i18n system.
   Done when: WorkflowBuilder shows loading spinner, error message with retry, and empty state with CTA. WorkflowCanvas and all node types have aria-labels for their interactive regions. Bilingual labels use t() keys consistently.
   Verify: `cd frontend && npm run build`
 
-- [ ] [code-review] Add filter-chain auth rules to SecurityConfig and restrict CORS headers (MEDIUM)
-  Files: `backend/src/main/java/com/hermes/backend/SecurityConfig.java`, `backend/src/main/java/com/hermes/backend/AppCorsConfig.java`
+- [x] [code-review] Add filter-chain auth rules to SecurityConfig and restrict CORS headers (MEDIUM)
+  Files: `backend/src/main/java/com/hermes/backend/SecurityConfig.java`, `backend/src/main/java/com/hermes/backend/AppCorsConfig.java`, `backend/src/main/java/com/hermes/backend/JwtAuthenticationFilter.java`
   Context: SecurityConfig.java uses `.anyRequest().permitAll()` with zero Spring Security-level guard rules — auth enforcement relies solely on controller-level JWT checks, missing defense-in-depth. AppCorsConfig.java uses `.allowedHeaders("*")` which is overly permissive.
   Done when: SecurityConfig adds filter-chain rules requiring authenticated principal for `/api/admin/**` paths. CORS restricts allowedHeaders to Authorization, Content-Type, and any other headers actually used.
   Verify: `cd backend && ./mvnw -q -DskipTests compile`
+  Note: Created JwtAuthenticationFilter (OncePerRequestFilter) to bridge Hermes JWT tokens into Spring Security SecurityContext with ROLE_ADMIN authority. Added `.hasRole("ADMIN")` rule for `/api/admin/**` as defense-in-depth alongside existing AdminSecurityFilter. Added `/api/auth/admin-login` exclusion. Restricted CORS allowedHeaders from "*" to "Authorization, Content-Type". Backend compile PASS.
 
 - [ ] [code-review] Create batch API endpoint to reduce chatty page-load requests (MEDIUM)
   Files: `frontend/src/pages/ProfileDashboard.jsx:452-491`, `frontend/src/pages/TodayRun.jsx:308-313`, `backend/src/main/java/com/hermes/backend/ProfileController.java` (new endpoint)

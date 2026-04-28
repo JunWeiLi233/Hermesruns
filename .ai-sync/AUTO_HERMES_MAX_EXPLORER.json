@@ -1,123 +1,66 @@
 {
-  "generatedAt": "2026-04-24T00:00:00.000Z",
-  "runtime": "codex-live",
+  "generatedAt": "2026-04-27T12:00:00.000Z",
+  "runtime": "claude-live",
   "mode": "explorer",
-  "status": "complete",
-  "discoveredWork": [
+  "completedTask": "[code-review] Add filter-chain auth rules to SecurityConfig and restrict CORS headers (MEDIUM)",
+  "changedFiles": [
+    "backend/src/main/java/com/hermes/backend/JwtAuthenticationFilter.java",
+    "backend/src/main/java/com/hermes/backend/SecurityConfig.java",
+    "backend/src/main/java/com/hermes/backend/AppCorsConfig.java"
+  ],
+  "verification": "cd backend && ./mvnw -q -DskipTests compile — PASS. Frontend lint 0 errors (7 pre-existing warnings).",
+  "remainingWork": [
     {
-      "priority": 1,
-      "description": "[security] Strava webhook accepts unauthenticated forged activity events (HIGH — runtime-confirmed)",
-      "surface": "StravaWebhookController",
-      "problemClass": "backend-security",
-      "estimatedScope": "backend",
+      "description": "Create batch API endpoint to reduce chatty page-load requests (TodayRun 6 requests, ProfileDashboard 7 requests → 2 batch calls). Backend-first then frontend integration.",
+      "surface": "ProfileDashboard.jsx, TodayRun.jsx, new backend endpoint",
+      "estimatedScope": "backend + frontend",
       "effort": "medium",
-      "files": ["backend/src/main/java/com/hermes/backend/StravaWebhookController.java"]
+      "tier": 1
     },
     {
-      "priority": 2,
-      "description": "[security] Password reset endpoint enables user enumeration (MEDIUM — runtime-confirmed)",
-      "surface": "LoginController",
-      "problemClass": "backend-security",
-      "estimatedScope": "backend",
+      "description": "Add React.memo, lazy-loading, and list virtualization across top-5 page components for frontend performance",
+      "surface": "Dashboard.jsx, Shoes.jsx, Races.jsx, Runs.jsx, ShoeBrandLogo.jsx",
+      "estimatedScope": "frontend",
+      "effort": "medium",
+      "tier": 1
+    },
+    {
+      "description": "Create .env.example documenting all 40+ environment variables with descriptions, defaults, and REQUIRED/OPTIONAL tags",
+      "surface": ".env.example (new), docs/setup.md",
+      "estimatedScope": "docs",
       "effort": "small",
-      "files": ["backend/src/main/java/com/hermes/backend/LoginController.java"]
+      "tier": 2
     },
     {
-      "priority": 3,
-      "description": "Reduce class scope in Activity.java (God Class: 68 methods, 32 fields)",
-      "surface": "Activity.java",
-      "problemClass": "backend-refactor",
-      "estimatedScope": "backend",
-      "effort": "large",
-      "files": ["backend/src/main/java/com/hermes/backend/Activity.java"]
-    },
-    {
-      "priority": 4,
-      "description": "Reduce dependency count in ActivityController.java (9 deps)",
-      "surface": "ActivityController.java",
-      "problemClass": "backend-refactor",
-      "estimatedScope": "backend",
+      "description": "Deduplicate password strength validation — make backend canonical source via /api/auth/password-rules API",
+      "surface": "Signup.jsx, PasswordStrengthChecker.java, AuthController.java",
+      "estimatedScope": "backend + frontend",
       "effort": "medium",
-      "files": ["backend/src/main/java/com/hermes/backend/ActivityController.java"]
+      "tier": 2
     },
     {
-      "priority": 5,
-      "description": "Add focused coverage for Activity.java",
-      "surface": "Activity.java tests",
-      "problemClass": "backend-testing",
-      "estimatedScope": "backend",
+      "description": "Remove hard borders from admin portal components per No-Line Rule (carried from previous Explorer round)",
+      "surface": "admin portal CSS",
+      "estimatedScope": "frontend",
       "effort": "small",
-      "files": ["backend/src/main/java/com/hermes/backend/Activity.java", "backend/src/test/java/com/hermes/backend/ActivityTests.java"]
-    },
-    {
-      "priority": 6,
-      "description": "Split oversized ShoeImageController.java (846 lines)",
-      "surface": "ShoeImageController.java",
-      "problemClass": "backend-refactor",
-      "estimatedScope": "backend",
-      "effort": "medium",
-      "files": ["backend/src/main/java/com/hermes/backend/ShoeImageController.java"]
-    },
-    {
-      "priority": 7,
-      "description": "Reduce class scope in ActivityController.java (51 methods remaining)",
-      "surface": "ActivityController.java scope",
-      "problemClass": "backend-refactor",
-      "estimatedScope": "backend",
-      "effort": "medium",
-      "files": ["backend/src/main/java/com/hermes/backend/ActivityController.java"]
-    },
-    {
-      "priority": 8,
-      "description": "Reduce dependency count in AdminPortalService.java (14 deps, reduced to 13)",
-      "surface": "AdminPortalService.java",
-      "problemClass": "backend-refactor",
-      "estimatedScope": "backend",
-      "effort": "medium",
-      "files": ["backend/src/main/java/com/hermes/backend/AdminPortalService.java"]
-    },
-    {
-      "priority": 9,
-      "description": "Split oversized RaceCourseMapAiService.java (599 lines, reduced to 428)",
-      "surface": "RaceCourseMapAiService.java",
-      "problemClass": "backend-refactor",
-      "estimatedScope": "backend",
-      "effort": "medium",
-      "files": ["backend/src/main/java/com/hermes/backend/RaceCourseMapAiService.java"]
+      "tier": 5
     }
   ],
   "parallelismRecommendation": {
-    "suggestedLanes": 3,
-    "rationale": "3 disjoint lanes: (1) HIGH security Strava webhook fix, (2) MEDIUM security password reset fix, (3) focused backend tech debt. Lane 1 and 2 touch different files and can be sequential. Lane 3 is lower priority but can batch small debt items.",
+    "suggestedLanes": 2,
+    "rationale": "Two non-overlapping lanes with clean file ownership separation: Lane A (Tier 2): .env.example + docs/setup.md — new files only, zero collision risk. Lane B (Tier 2): password strength dedup backend API contract (PasswordStrengthChecker + AuthController) — no frontend overlap. The highest-value remaining task (Batch API, Tier 1) needs sequential backend-then-frontend coordination so it does not split cleanly.",
     "proposedScopes": [
       {
-        "id": "lane-security-strava",
-        "goal": "Fix Strava webhook unauthenticated forged activity events",
-        "surface": "StravaWebhookController",
-        "problemClass": "backend-security",
-        "ownedFiles": ["backend/src/main/java/com/hermes/backend/StravaWebhookController.java"],
-        "effort": "medium"
+        "laneId": "lane-a",
+        "goal": "Create .env.example documenting all 40+ environment variables from application.properties with descriptions, defaults, and REQUIRED/OPTIONAL tags",
+        "ownedFiles": [".env.example", "docs/setup.md"],
+        "tier": 2
       },
       {
-        "id": "lane-security-password-reset",
-        "goal": "Fix password reset user enumeration vulnerability",
-        "surface": "LoginController",
-        "problemClass": "backend-security",
-        "ownedFiles": ["backend/src/main/java/com/hermes/backend/LoginController.java"],
-        "effort": "small"
-      },
-      {
-        "id": "lane-tech-debt-batch",
-        "goal": "Batch backend tech debt: Activity tests, ShoeImageController split, AdminPortalService deps",
-        "surface": "backend tech debt",
-        "problemClass": "backend-refactor",
-        "ownedFiles": [
-          "backend/src/main/java/com/hermes/backend/Activity.java",
-          "backend/src/test/java/com/hermes/backend/ActivityTests.java",
-          "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
-          "backend/src/main/java/com/hermes/backend/AdminPortalService.java"
-        ],
-        "effort": "medium"
+        "laneId": "lane-b",
+        "goal": "Add /api/auth/password-rules endpoint to PasswordStrengthChecker so the backend is the canonical password policy source",
+        "ownedFiles": ["backend/src/main/java/com/hermes/backend/PasswordStrengthChecker.java", "backend/src/main/java/com/hermes/backend/AuthController.java"],
+        "tier": 2
       }
     ]
   }
