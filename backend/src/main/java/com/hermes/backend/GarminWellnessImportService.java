@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import java.util.concurrent.Executors;
 
 @Service
 public class GarminWellnessImportService {
+    private static final Logger logger = LoggerFactory.getLogger(GarminWellnessImportService.class);
 
     private final DailyWellnessSummaryRepository wellnessSummaryRepository;
     private final DailySleepDataRepository sleepDataRepository;
@@ -241,7 +244,7 @@ public class GarminWellnessImportService {
 
                     daysPersisted++;
                 } catch (Exception e) {
-                    System.err.println("[Hermes] Garmin wellness import skipped day: " + safeMessage(e));
+                    logger.warn("[Hermes] Garmin wellness import skipped day: {}", safeMessage(e), e);
                 }
             }
 
@@ -348,7 +351,7 @@ public class GarminWellnessImportService {
         int exitCode = process.waitFor();
 
         if (stderr.length > 0) {
-            System.err.println("[Hermes] Garmin wellness download stderr: " + new String(stderr, StandardCharsets.UTF_8).trim());
+            logger.warn("[Hermes] Garmin wellness download stderr: {}", new String(stderr, StandardCharsets.UTF_8).trim());
         }
 
         if (exitCode != 0 || stdout.length == 0) {
