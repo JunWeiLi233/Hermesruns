@@ -3,6 +3,7 @@ package com.hermes.backend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -119,6 +120,7 @@ public class ShoeImageController {
      * with the same brand+model across all users.
      */
     @PutMapping("/admin/{id}/photo")
+    @Transactional
     public ResponseEntity<?> adminSetPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -154,9 +156,9 @@ public class ShoeImageController {
             for (Shoe s : matching) {
                 s.setPhotoUrl(finalUrl);
                 s.setPhotoVerified(false);
-                shoeRepository.save(s);
-                count++;
             }
+            shoeRepository.saveAll(matching);
+            count = matching.size();
         } else {
             shoe.setPhotoUrl(finalUrl);
             shoe.setPhotoVerified(false);
@@ -174,6 +176,7 @@ public class ShoeImageController {
      * Admin: mark the current product image as verified for this shoe model (all same brand+model rows).
      */
     @PutMapping("/admin/{id}/verify-photo")
+    @Transactional
     public ResponseEntity<?> adminVerifyPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -195,13 +198,17 @@ public class ShoeImageController {
         int count = 0;
         if (brand != null && model != null) {
             List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            List<Shoe> toSave = new ArrayList<>();
             for (Shoe s : matching) {
                 String pu = s.getPhotoUrl();
                 if (pu != null && pu.trim().equals(canonicalUrl)) {
                     s.setPhotoVerified(true);
-                    shoeRepository.save(s);
+                    toSave.add(s);
                     count++;
                 }
+            }
+            if (!toSave.isEmpty()) {
+                shoeRepository.saveAll(toSave);
             }
         } else {
             shoe.setPhotoVerified(true);
@@ -217,6 +224,7 @@ public class ShoeImageController {
      * (all same brand+model rows that share the same image URL).
      */
     @PutMapping("/admin/{id}/unverify-photo")
+    @Transactional
     public ResponseEntity<?> adminUnverifyPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -238,13 +246,17 @@ public class ShoeImageController {
         int count = 0;
         if (brand != null && model != null) {
             List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            List<Shoe> toSave = new ArrayList<>();
             for (Shoe s : matching) {
                 String pu = s.getPhotoUrl();
                 if (pu != null && pu.trim().equals(canonicalUrl)) {
                     s.setPhotoVerified(false);
-                    shoeRepository.save(s);
+                    toSave.add(s);
                     count++;
                 }
+            }
+            if (!toSave.isEmpty()) {
+                shoeRepository.saveAll(toSave);
             }
         } else {
             shoe.setPhotoVerified(false);
