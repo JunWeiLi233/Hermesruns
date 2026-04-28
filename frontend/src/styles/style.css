@@ -5776,6 +5776,7 @@ body.theme-midnight .analysis-primary-fill-card {
 .admin-jobs-detail__timeline-shell {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .admin-jobs-detail__section-head {
@@ -5839,6 +5840,7 @@ body.theme-midnight .analysis-primary-fill-card {
   position: relative;
   display: grid;
   gap: 14px;
+  min-width: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -5849,6 +5851,7 @@ body.theme-midnight .analysis-primary-fill-card {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 12px;
+  min-width: 0;
   padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
@@ -5888,6 +5891,7 @@ body.theme-midnight .analysis-primary-fill-card {
 .admin-jobs-detail__timeline-main p {
   margin: 0;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .admin-jobs-detail__timeline-meta {
@@ -5895,14 +5899,19 @@ body.theme-midnight .analysis-primary-fill-card {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .admin-jobs-detail__timeline-meta strong {
   color: var(--text-strong);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .admin-jobs-detail__timeline-meta span {
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
@@ -5911,16 +5920,21 @@ body.theme-midnight .analysis-primary-fill-card {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .admin-jobs-detail__timeline-details {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .admin-jobs-detail__timeline-details span {
+  display: inline-flex;
+  flex: 1 1 180px;
   max-width: 100%;
+  min-width: 0;
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
@@ -51716,4 +51730,248 @@ body:is(.theme-light, .theme-high-contrast-light) .import-data-page-metric {
   .import-data-command-actions .modal-button {
     width: 100%;
   }
+}
+
+/* ── Premium / Pro feature gating ────────────────────────────── */
+
+.runner-dashboard-pro-card {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(252, 126, 105, .08), rgba(160, 57, 42, .04));
+  border: 1px solid rgba(160, 57, 42, .14);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.runner-dashboard-pro-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.runner-dashboard-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--brand-accent), #fc7e69);
+  color: #fff;
+  line-height: 1.5;
+}
+
+.runner-dashboard-pro-expiry {
+  font-size: .84rem;
+  color: var(--text-muted);
+}
+
+/* Free-user quota card */
+.runner-dashboard-pro-quota-card {
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(245, 246, 247, .92));
+  border: 1px solid rgba(171, 173, 174, .18);
+  box-shadow: var(--shadow-card);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.runner-dashboard-pro-quota-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.runner-dashboard-pro-quota-kicker {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(160, 57, 42, .08);
+  width: fit-content;
+}
+
+.runner-dashboard-pro-quota-copy h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--text-strong);
+  letter-spacing: -.01em;
+}
+
+.runner-dashboard-pro-quota-copy p {
+  margin: 6px 0 0;
+  font-size: .84rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.runner-dashboard-pro-quota-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 8px 18px;
+  border-radius: 24px;
+  font-family: var(--font-display);
+  font-size: .88rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-accent), #fc7e69);
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.runner-dashboard-pro-quota-cta:hover {
+  opacity: .9;
+}
+
+/* Shoes page quota badges */
+.shoe-inventory-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--brand-accent), #fc7e69);
+  color: #fff;
+  line-height: 1.4;
+}
+
+.shoe-inventory-quota-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 650;
+  color: var(--brand-accent);
+  background: rgba(160, 57, 42, .07);
+  border: 1px solid rgba(160, 57, 42, .14);
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Scan modal inline upgrade card */
+.shoe-scan-modal-upgrade-card {
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(252, 126, 105, .07), rgba(160, 57, 42, .03));
+  border: 1px solid rgba(160, 57, 42, .16);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.shoe-scan-modal-upgrade-kicker {
+  display: inline-block;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+  width: fit-content;
+}
+
+.shoe-scan-modal-upgrade-card h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1.5;
+  letter-spacing: -.01em;
+}
+
+.shoe-scan-modal-upgrade-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-family: var(--font-display);
+  font-size: .82rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-accent), #fc7e69);
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.shoe-scan-modal-upgrade-cta:hover {
+  opacity: .9;
+}
+
+/* Quota remaining after scan */
+.shoe-scan-modal-quota-after {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(160, 57, 42, .05);
+  border: 1px solid rgba(160, 57, 42, .1);
+  font-size: .82rem;
+  color: var(--text-strong);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.shoe-scan-modal-quota-after-icon {
+  font-size: .9rem;
+  flex-shrink: 0;
+}
+
+.shoe-scan-modal-quota-after .shoe-scan-modal-upgrade-cta {
+  margin-left: auto;
+}
+
+/* Dark-mode adapt for premium cards */
+[data-theme="midnight"] .runner-dashboard-pro-quota-card,
+.theme-midnight .runner-dashboard-pro-quota-card {
+  background: linear-gradient(180deg, rgba(30, 33, 35, .96), rgba(24, 27, 29, .92));
+  border-color: rgba(160, 57, 42, .18);
+}
+
+[data-theme="midnight"] .runner-dashboard-pro-quota-copy h4,
+.theme-midnight .runner-dashboard-pro-quota-copy h4 {
+  color: var(--text-strong);
+}
+
+[data-theme="midnight"] .shoe-scan-modal-upgrade-card,
+.theme-midnight .shoe-scan-modal-upgrade-card {
+  background: linear-gradient(135deg, rgba(252, 126, 105, .06), rgba(160, 57, 42, .02));
+  border-color: rgba(160, 57, 42, .18);
+}
+
+[data-theme="midnight"] .shoe-inventory-quota-badge,
+.theme-midnight .shoe-inventory-quota-badge {
+  background: rgba(160, 57, 42, .1);
+  border-color: rgba(160, 57, 42, .2);
+}
+
+[data-theme="midnight"] .shoe-scan-modal-quota-after,
+.theme-midnight .shoe-scan-modal-quota-after {
+  background: rgba(160, 57, 42, .08);
+  border-color: rgba(160, 57, 42, .14);
 }

@@ -24,6 +24,7 @@ public class ShoeImageController {
 
     private final AuthService authService;
     private final AiUsageService aiUsageService;
+    private final QuotaService quotaService;
     private final RestTemplate restTemplate;
     private final SystemConfigService systemConfigService;
     private final ApiRateLimiter apiRateLimiter;
@@ -38,6 +39,7 @@ public class ShoeImageController {
             AuthService authService,
             ShoeRepository shoeRepository,
             AiUsageService aiUsageService,
+            QuotaService quotaService,
             RestTemplate restTemplate,
             SystemConfigService systemConfigService,
             ApiRateLimiter apiRateLimiter,
@@ -46,6 +48,7 @@ public class ShoeImageController {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
         this.aiUsageService = aiUsageService;
+        this.quotaService = quotaService;
         this.restTemplate = restTemplate;
         this.systemConfigService = systemConfigService;
         this.apiRateLimiter = apiRateLimiter;
@@ -510,14 +513,27 @@ public class ShoeImageController {
                     .body(Map.of("error", "AI API key not configured. Set APP_AI_API_KEY environment variable."));
         }
 
-        // Check and atomically reserve AI usage quota
         Runner runner = user.get();
-        String quotaError = aiUsageService.tryConsumeQuota(runner);
-        if (quotaError != null) {
-            Map<String, Object> errorBody = new LinkedHashMap<>();
-            errorBody.put("error", quotaError);
-            errorBody.putAll(aiUsageService.getUsageStatus(runner));
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
+
+        // Feature-gating quota check: Pro users skip all quota checks entirely.
+        if (!quotaService.isPro(runner)) {
+            // Step 1: Check feature quota (premium feature gating for free users)
+            if (!quotaService.canUseFeature(runner, "shoe-scan")) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(quotaService.quotaExceededError(runner, "shoe-scan"));
+            }
+
+            // Step 2: Check and atomically reserve AI daily usage quota
+            String aiQuotaError = aiUsageService.tryConsumeQuota(runner);
+            if (aiQuotaError != null) {
+                Map<String, Object> errorBody = new LinkedHashMap<>();
+                errorBody.put("error", aiQuotaError);
+                errorBody.putAll(aiUsageService.getUsageStatus(runner));
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
+            }
+
+            // Consume the feature quota now that we know the scan will proceed
+            quotaService.consumeFeature(runner, "shoe-scan");
         }
 
         try {
