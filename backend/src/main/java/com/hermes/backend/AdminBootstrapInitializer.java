@@ -1,12 +1,16 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class AdminBootstrapInitializer {
+    private static final Logger logger = LoggerFactory.getLogger(AdminBootstrapInitializer.class);
     @Value("${APP_BOOTSTRAP_ADMIN_EMAIL:}")
     private String bootstrapAdminEmail;
 
@@ -14,6 +18,7 @@ public class AdminBootstrapInitializer {
     private String bootstrapAdminPassword;
 
     @Bean
+    @ConditionalOnMissingBean(name = "bootstrapAdminRunner")
     ApplicationRunner bootstrapAdminRunner(RunnerRepository runnerRepository, AuthService authService) {
         return args -> {
             String normalizedEmail = authService.normalizeEmail(bootstrapAdminEmail);
@@ -22,7 +27,7 @@ public class AdminBootstrapInitializer {
             }
 
             if (bootstrapAdminPassword == null || bootstrapAdminPassword.isBlank()) {
-                System.out.println("[Hermes] APP_BOOTSTRAP_ADMIN_EMAIL is set, but APP_BOOTSTRAP_ADMIN_PASSWORD is missing.");
+                logger.warn("[Hermes] APP_BOOTSTRAP_ADMIN_EMAIL is set, but APP_BOOTSTRAP_ADMIN_PASSWORD is missing.");
                 return;
             }
 
@@ -35,7 +40,7 @@ public class AdminBootstrapInitializer {
             authService.storePassword(admin, bootstrapAdminPassword);
             runnerRepository.save(admin);
 
-            System.out.println("[Hermes] Bootstrap admin account is ready for " + normalizedEmail);
+            logger.info("[Hermes] Bootstrap admin account is ready for {}", normalizedEmail);
         };
     }
 }

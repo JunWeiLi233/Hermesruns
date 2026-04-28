@@ -10,12 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -105,15 +108,7 @@ public class LoginController {
     // ==========================================
     @GetMapping("/password-rules")
     public Map<String, Object> passwordRules() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("minLength", PasswordStrengthChecker.MIN_LENGTH);
-        m.put("requireUppercase", true);
-        m.put("requireLowercase", true);
-        m.put("requireDigit", true);
-        m.put("requireSpecial", true);
-        m.put("specialCharsHint", "!@#$%^&*()_+-=[]{}|;:,.<>?/~`\"'");
-        m.put("ruleIds", List.of("MIN_LENGTH", "UPPERCASE", "LOWERCASE", "DIGIT", "SPECIAL", "NOT_COMMON"));
-        return m;
+        return PasswordStrengthChecker.getRules();
     }
 
     @GetMapping("/verify-email")
@@ -445,6 +440,7 @@ public class LoginController {
     // 3. ADMIN ENDPOINT: SECURE GET ALL RUNNERS
     // ==========================================
     @GetMapping("/runners")
+    @Transactional
     public ResponseEntity<?> getAllRunners(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
@@ -453,17 +449,21 @@ public class LoginController {
                 .filter(authService::isAdmin);
 
         if (adminOptional.isEmpty()) {
-            System.out.println("🚨 INTRUSION ATTEMPT: Non-admin tried to access the database!");
+            log.warn("INTRUSION ATTEMPT: Non-admin tried to access the database!");
             return error(HttpStatus.FORBIDDEN, "Admin privileges required.");
         }
 
         List<Runner> activeRunners = runnerRepository.findByDeletedFalseOrderByIdAsc();
+        List<Runner> toSave = new ArrayList<>();
         for (Runner r : activeRunners) {
             String currentRole = r.getRole();
             if (currentRole == null || currentRole.equalsIgnoreCase("null") || currentRole.trim().isEmpty()) {
                 r.setRole("USER");
-                runnerRepository.save(r);
+                toSave.add(r);
             }
+        }
+        if (!toSave.isEmpty()) {
+            runnerRepository.saveAll(toSave);
         }
 
         // Convert to summary list for clean API response

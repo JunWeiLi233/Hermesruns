@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -38,8 +39,15 @@ public class QwenCourseMapAlignmentClient {
     @Value("${app.route-extraction.qwen.alignment-timeout-seconds:720}")
     private long alignmentTimeoutSeconds;
 
+    private PythonVenvResolver venvResolver;
+
     public QwenCourseMapAlignmentClient(ObjectMapper objectMapper) {
         this(objectMapper, new CourseMapScanWatcher());
+    }
+
+    @PostConstruct
+    private void initVenvResolver() {
+        this.venvResolver = new PythonVenvResolver(pythonExecutable, pythonScriptPath);
     }
 
     @Autowired
@@ -161,7 +169,7 @@ public class QwenCourseMapAlignmentClient {
 
     private List<String> buildPythonCommand(Path imagePath, Path promptFile) {
         List<String> command = new ArrayList<>();
-        command.add(resolvePythonExecutable());
+        command.add(venvResolver.resolvePythonCommand("analyze_course_map_alignment_qwen.py"));
         command.add(resolvePythonScriptPath());
         command.add("--image");
         command.add(imagePath.toAbsolutePath().toString());
@@ -180,29 +188,6 @@ public class QwenCourseMapAlignmentClient {
 
     private String normalizeJson(String stdout) throws IOException {
         return objectMapper.writeValueAsString(objectMapper.readTree(stdout));
-    }
-
-    private String resolvePythonExecutable() {
-        if (pythonExecutable != null && !pythonExecutable.isBlank() && !"python".equalsIgnoreCase(pythonExecutable.trim())) {
-            return pythonExecutable.trim();
-        }
-
-        Path workingDirectory = Path.of("").toAbsolutePath().normalize();
-        Path parentDirectory = workingDirectory.getParent();
-        List<Path> candidates = List.of(
-                Path.of(".venv", "Scripts", "python.exe"),
-                Path.of(".venv", "bin", "python"),
-                parentDirectory == null ? Path.of("_missing_parent_python_") : parentDirectory.resolve(Path.of(".venv", "Scripts", "python.exe")),
-                parentDirectory == null ? Path.of("_missing_parent_python_bin_") : parentDirectory.resolve(Path.of(".venv", "bin", "python")),
-                Path.of("backend", ".venv", "Scripts", "python.exe"),
-                Path.of("backend", ".venv", "bin", "python")
-        );
-        for (Path candidate : candidates) {
-            if (Files.exists(candidate)) {
-                return candidate.toAbsolutePath().toString();
-            }
-        }
-        return "python";
     }
 
     private String resolvePythonScriptPath() {

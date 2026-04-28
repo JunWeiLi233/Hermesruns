@@ -408,6 +408,12 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M15.7 10.2c1 1.2 1.5 2.6 1.5 4.5 0 1.7-1 2.8-2.5 2.8-1.8 0-2.8-1.1-2.8-3.2 0-2 1-3.3 2.2-4.4" />
         </>
       );
+    case 'check':
+      return titled(
+        <>
+          <path d="M5 13l4 4L19 7" />
+        </>
+      );
     case 'close':
       return titled(
         <>
