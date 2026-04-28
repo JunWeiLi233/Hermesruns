@@ -22798,6 +22798,126 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   background: #f07561;
 }
 
+/* Profile Dashboard Brand Carousel */
+.runner-dashboard-brand-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #121212 100%);
+  padding: clamp(28px, 5vw, 44px) clamp(24px, 5vw, 40px);
+  margin-bottom: 28px;
+}
+
+.runner-dashboard-brand-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.runner-dashboard-brand-copy-carousel {
+  position: relative;
+  min-height: clamp(48px, 6vw, 68px);
+  display: flex;
+  align-items: center;
+}
+
+.runner-dashboard-brand-msg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  margin: 0;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.25rem, 2.2vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.35;
+  color: #f7f4ef;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+
+.runner-dashboard-brand-msg.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.runner-dashboard-brand-real-stats {
+  display: flex;
+  gap: 34px;
+  flex-wrap: wrap;
+}
+
+.runner-dashboard-brand-real-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.runner-dashboard-brand-real-stats strong {
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: #ffffff;
+}
+
+.runner-dashboard-brand-real-stats span {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 236, 0.48);
+}
+
+.runner-dashboard-brand-stats-empty {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 236, 0.34);
+}
+
+.runner-dashboard-brand-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.runner-dashboard-brand-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 241, 230, 0.2);
+  transition: background 0.4s ease;
+}
+
+.runner-dashboard-brand-dots .is-active {
+  background: #f07561;
+}
+
+@media (max-width: 720px) {
+  .runner-dashboard-brand-carousel {
+    border-radius: 16px;
+    padding: 24px 20px;
+  }
+
+  .runner-dashboard-brand-inner {
+    gap: 18px;
+  }
+
+  .runner-dashboard-brand-real-stats {
+    gap: 22px;
+  }
+
+  .runner-dashboard-brand-real-stats strong {
+    font-size: 1.4rem;
+  }
+}
+
 .auth-flow-formside {
   display: flex;
   flex-direction: column;
