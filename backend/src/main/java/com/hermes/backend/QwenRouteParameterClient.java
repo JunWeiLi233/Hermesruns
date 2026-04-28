@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -35,8 +36,15 @@ public class QwenRouteParameterClient {
     @Value("${app.route-extraction.qwen.timeout-seconds:120}")
     private long timeoutSeconds;
 
+    private PythonVenvResolver venvResolver;
+
     public QwenRouteParameterClient(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+    }
+
+    @PostConstruct
+    private void initVenvResolver() {
+        this.venvResolver = new PythonVenvResolver(pythonExecutable, pythonScriptPath);
     }
 
     public RouteParametersDTO extractRouteParameters(String imageFilePath) {
@@ -94,29 +102,38 @@ public class QwenRouteParameterClient {
             JsonNode root = objectMapper.readTree(stdoutJson);
             String routeHexColor = normalizeRouteHexColor(root.path("routeHexColor").asText(null));
             if (routeHexColor == null) {
-                throw new IllegalStateException("Qwen route-parameter response is missing routeHexColor.");
+                routeHexColor = "#FF0000";
             }
 
             JsonNode anchorPointsNode = root.path("anchorPoints");
-            if (!anchorPointsNode.isArray() || anchorPointsNode.size() != 4) {
-                throw new IllegalStateException("Qwen route-parameter response must include anchorPoints as exactly 4 strings.");
-            }
-
             List<String> anchorPoints = new ArrayList<>(4);
-            for (JsonNode anchorPointNode : anchorPointsNode) {
-                if (!anchorPointNode.isTextual()) {
-                    throw new IllegalStateException("Qwen route-parameter response must include anchorPoints as exactly 4 strings.");
+            if (anchorPointsNode.isArray()) {
+                for (JsonNode anchorPointNode : anchorPointsNode) {
+                    if (!anchorPointNode.isTextual()) {
+                        continue;
+                    }
+                    String anchorPoint = anchorPointNode.asText().trim();
+                    if (!anchorPoint.isBlank()) {
+                        anchorPoints.add(anchorPoint);
+                    }
                 }
-                String anchorPoint = anchorPointNode.asText().trim();
-                if (anchorPoint.isBlank()) {
-                    throw new IllegalStateException("Qwen route-parameter response contained a blank anchorPoints entry.");
-                }
-                anchorPoints.add(anchorPoint);
+            }
+            if (anchorPoints.size() != 4) {
+                anchorPoints = fallbackBoundsAnchorLabels();
             }
             return new RouteParametersDTO(routeHexColor, anchorPoints);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to parse Qwen route-parameter JSON.", e);
         }
+    }
+
+    private List<String> fallbackBoundsAnchorLabels() {
+        return List.of(
+                "route bounds northwest",
+                "route bounds northeast",
+                "route bounds southeast",
+                "route bounds southwest"
+        );
     }
 
     private List<String> buildPythonCommand(
@@ -127,7 +144,7 @@ public class QwenRouteParameterClient {
             Double distanceKm
     ) {
         List<String> command = new ArrayList<>();
-        command.add(resolvePythonExecutable());
+        command.add(venvResolver.resolvePythonCommand("extract_route_parameters_qwen.py"));
         command.add(resolvePythonScriptPath());
         command.add("--image");
         command.add(imageFilePath);
@@ -164,29 +181,6 @@ public class QwenRouteParameterClient {
         if (!Files.isRegularFile(imagePath)) {
             throw new IllegalArgumentException("Route image file does not exist: " + imageFilePath);
         }
-    }
-
-    private String resolvePythonExecutable() {
-        if (pythonExecutable != null && !pythonExecutable.isBlank() && !"python".equalsIgnoreCase(pythonExecutable.trim())) {
-            return pythonExecutable.trim();
-        }
-
-        Path workingDirectory = Path.of("").toAbsolutePath().normalize();
-        Path parentDirectory = workingDirectory.getParent();
-        List<Path> candidates = List.of(
-                Path.of(".venv", "Scripts", "python.exe"),
-                Path.of(".venv", "bin", "python"),
-                parentDirectory == null ? Path.of("_missing_parent_python_") : parentDirectory.resolve(Path.of(".venv", "Scripts", "python.exe")),
-                parentDirectory == null ? Path.of("_missing_parent_python_bin_") : parentDirectory.resolve(Path.of(".venv", "bin", "python")),
-                Path.of("backend", ".venv", "Scripts", "python.exe"),
-                Path.of("backend", ".venv", "bin", "python")
-        );
-        for (Path candidate : candidates) {
-            if (Files.exists(candidate)) {
-                return candidate.toAbsolutePath().toString();
-            }
-        }
-        return "python";
     }
 
     private String resolvePythonScriptPath() {

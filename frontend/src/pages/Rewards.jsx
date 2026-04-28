@@ -47,7 +47,6 @@ export default function Rewards() {
   const totalCount = allRewards.length;
   const earnedCount = earnedRewards.length;
   const heroProgress = totalCount > 0 ? earnedCount / totalCount : 0;
-  const nextReward = upcomingRewards[0] || null;
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
 
   const navItems = useMemo(() => getRunnerShellNavItems({
@@ -56,15 +55,28 @@ export default function Rewards() {
   }), [lang, t]);
 
   if (loadState === 'error') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading"><p className="rewards-load-eyebrow">{t('rewards.error_eyebrow')}</p><p className="rewards-load-title">{t('rewards.error_title')}</p><p className="rewards-load-detail">{t('rewards.load_error')}</p><button className="rewards-load-retry" onClick={() => window.location.reload()}>{t('rewards.retry')}</button></div></div>;
+    return (
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">
+          <p className="rewards-load-eyebrow">{t('rewards.error_eyebrow')}</p>
+          <p className="rewards-load-title">{t('rewards.error_title')}</p>
+          <p className="rewards-load-detail">{t('rewards.load_error')}</p>
+          <button className="rewards-load-retry" onClick={() => window.location.reload()}>{t('rewards.retry')}</button>
+        </div>
+      </div>
+    );
   }
 
   if (loadState === 'loading') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('rewards.loading')}</div></div>;
+    return (
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">{t('rewards.loading')}</div>
+      </div>
+    );
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page rewards-progress-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -122,148 +134,81 @@ export default function Rewards() {
         </header>
 
         <div className="runner-shell-canvas">
-          <section className="analysis-overview-grid analysis-overview-grid--hero rewards-progress-grid">
-            <article className="analysis-overview-card rewards-progress-hero">
-              <div className="rewards-progress-band">
-                <span>{t('rewards.eyebrow')}</span>
-                <strong>{t('rewards.heading')}</strong>
+          {/* ===== Hero ===== */}
+          <section className="rewards-editorial-hero">
+            <span className="rewards-editorial-hero-kicker">{t('rewards.editorial_kicker')}</span>
+            <span className="rewards-editorial-hero-number">{earnedCount}</span>
+            <span className="rewards-editorial-hero-sub">
+              {t('rewards.hero_of_total', { earned: String(earnedCount), total: String(totalCount || 0) })}
+            </span>
+            <div className="rewards-editorial-hero-progress">
+              <div className="rewards-editorial-hero-bar" role="progressbar" aria-valuenow={earnedCount} aria-valuemax={totalCount || 1}>
+                <span style={{ width: `${Math.round(heroProgress * 100)}%` }} />
               </div>
-              <div className="rewards-progress-hero-body">
-                <div className="rewards-progress-copy">
-                  <span className="analysis-overview-card-kicker">{t('rewards.hero_kicker')}</span>
-                  <h2>{earnedCount}<small>/{totalCount || 0}</small></h2>
-                  <p>{t('rewards.page_copy')}</p>
-                </div>
-                <div className="rewards-progress-progress-shell">
-                  <div className="rewards-progress-progress-row">
-                    <span>{t('rewards.badges_earned_label')}</span>
-                    <strong>{Math.round(heroProgress * 100)}%</strong>
-                  </div>
-                  <div className="rewards-progress-progress-bar" role="progressbar" aria-valuenow={earnedCount} aria-valuemax={totalCount || 1}>
-                    <span style={{ width: `${Math.round(heroProgress * 100)}%` }} />
-                  </div>
-                  <div className="rewards-progress-progress-grid">
-                    <div className="rewards-progress-progress-kpi">
-                      <span>{t('rewards.earned_title')}</span>
-                      <strong>{earnedCount}</strong>
-                    </div>
-                    <div className="rewards-progress-progress-kpi">
-                      <span>{t('rewards.upcoming_title')}</span>
-                      <strong>{upcomingRewards.length}</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            <div className="analysis-overview-side-stack">
-              <article className="analysis-overview-card rewards-progress-sidecard">
-                <span className="analysis-overview-card-kicker">{t('rewards.upcoming_title')}</span>
-                {nextReward ? (
-                  <>
-                    <strong>{nextReward.title}</strong>
-                    <p>{nextReward.hint}</p>
-                    <div className="rewards-progress-progress-bar rewards-progress-progress-bar--compact" role="progressbar" aria-valuenow={Math.round(nextReward.progress * 100)} aria-valuemax={100}>
-                      <span style={{ width: `${Math.round(nextReward.progress * 100)}%` }} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <strong>{t('rewards.empty_focus_title')}</strong>
-                    <p>{t('rewards.earned_empty')}</p>
-                  </>
-                )}
-              </article>
-
-              <article className="analysis-overview-card rewards-progress-sidecard">
-                <span className="analysis-overview-card-kicker">{t('rewards.earned_title')}</span>
-                <strong>{earnedRewards[0]?.title || t('rewards.empty_focus_title')}</strong>
-                <p>{earnedRewards[0]?.subtitle || t('rewards.empty_focus_copy')}</p>
-              </article>
+              <span className="rewards-editorial-hero-pct">{Math.round(heroProgress * 100)}%</span>
             </div>
           </section>
 
-          <section className="analysis-overview-grid analysis-overview-grid--summary rewards-progress-summary-grid">
-            <article className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--intensity">
-              <span className="analysis-overview-card-kicker">{t('rewards.earned_title')}</span>
-              <strong>{earnedCount}</strong>
-              <p>{t('rewards.earned_summary')}</p>
-            </article>
-            <article className="analysis-overview-card analysis-overview-card--metric">
-              <span className="analysis-overview-card-kicker">{t('rewards.upcoming_title')}</span>
-              <strong>{upcomingRewards.length}</strong>
-              <p>{t('rewards.upcoming_subtitle')}</p>
-            </article>
-            <article className="analysis-overview-card analysis-overview-card--metric">
-              <span className="analysis-overview-card-kicker">{t('rewards.hero_kicker')}</span>
-              <strong>{totalCount}</strong>
-              <p>{t('rewards.catalog_copy')}</p>
-            </article>
-          </section>
-
-          <section className="analysis-overview-card rewards-progress-section-card">
-            <div className="analysis-overview-table-head rewards-progress-section-head">
-              <div>
-                <span className="analysis-overview-card-kicker">{t('rewards.earned_title')}</span>
-                <h2>{t('rewards.heading')}</h2>
-              </div>
-              <span className="analysis-overview-confidence-pill">{earnedCount}/{totalCount || 0}</span>
+          {/* ===== Earned Rewards ===== */}
+          <section className="rewards-editorial-section">
+            <div className="rewards-editorial-section-header">
+              <h2 className="rewards-editorial-section-title">{t('rewards.earned_title')}</h2>
+              <span className="rewards-editorial-section-count">{earnedCount}</span>
             </div>
             {earnedRewards.length > 0 ? (
-              <div className="rewards-progress-card-grid">
+              <div className="rewards-editorial-grid">
                 {earnedRewards.map((reward) => (
-                  <article key={reward.id} className="rewards-progress-card rewards-progress-card--earned">
-                    <div className="rewards-progress-card-icon">
+                  <article key={reward.id} className="rewards-editorial-card rewards-editorial-card--earned">
+                    <div className="rewards-editorial-card-icon">
                       <RewardGlyph icon={reward.icon} />
                     </div>
-                    <div className="rewards-progress-card-copy">
-                      <h3>{reward.title}</h3>
-                      <p>{reward.subtitle}</p>
+                    <div className="rewards-editorial-card-body">
+                      <h3 className="rewards-editorial-card-title">{reward.title}</h3>
+                      <p className="rewards-editorial-card-sub">{reward.subtitle}</p>
                     </div>
-                    <span className="rewards-progress-pill">{t('profile.rewards_earned')}</span>
+                    <span className="rewards-editorial-card-pill">{t('rewards.earned_badge')}</span>
                   </article>
                 ))}
               </div>
             ) : (
-              <div className="prediction-detail-empty">
-                <strong>{t('rewards.empty_focus_title')}</strong>
-                <p>{t('rewards.earned_empty')}</p>
-                <button type="button" className="rewards-empty-cta" onClick={() => navigate('/runs')}>{t('rewards.next_cta')}</button>
+              <div className="rewards-editorial-empty">
+                <p className="rewards-editorial-empty-msg">{t('rewards.earned_empty_coach')}</p>
+                <button type="button" className="rewards-editorial-empty-cta" onClick={() => navigate('/runs')}>
+                  {t('rewards.next_cta')}
+                </button>
               </div>
             )}
           </section>
 
-          <section className="analysis-overview-card rewards-progress-section-card">
-            <div className="analysis-overview-table-head rewards-progress-section-head">
-              <div>
-                <span className="analysis-overview-card-kicker">{t('rewards.upcoming_title')}</span>
-                <h2>{t('rewards.upcoming_subtitle')}</h2>
-              </div>
-              <span className="analysis-overview-confidence-pill">{upcomingRewards.length}</span>
+          {/* ===== Upcoming Rewards ===== */}
+          <section className="rewards-editorial-section">
+            <div className="rewards-editorial-section-header">
+              <h2 className="rewards-editorial-section-title">{t('rewards.upcoming_title')}</h2>
+              <span className="rewards-editorial-section-count rewards-editorial-section-count--muted">{upcomingRewards.length}</span>
             </div>
             {upcomingRewards.length > 0 ? (
-              <div className="rewards-progress-card-grid rewards-progress-card-grid--upcoming">
+              <div className="rewards-editorial-grid">
                 {upcomingRewards.map((reward) => (
-                  <article key={reward.id} className="rewards-progress-card rewards-progress-card--upcoming">
-                    <div className="rewards-progress-card-icon">
+                  <article key={reward.id} className="rewards-editorial-card rewards-editorial-card--upcoming">
+                    <div className="rewards-editorial-card-icon rewards-editorial-card-icon--muted">
                       <RewardGlyph icon={reward.icon} />
                     </div>
-                    <div className="rewards-progress-card-copy">
-                      <h3>{reward.title}</h3>
-                      <p>{reward.hint}</p>
-                      <div className="rewards-progress-progress-bar rewards-progress-progress-bar--compact" role="progressbar" aria-valuenow={Math.round(reward.progress * 100)} aria-valuemax={100}>
-                        <span style={{ width: `${Math.round(reward.progress * 100)}%` }} />
+                    <div className="rewards-editorial-card-body">
+                      <h3 className="rewards-editorial-card-title">{reward.title}</h3>
+                      <p className="rewards-editorial-card-sub">{reward.hint}</p>
+                      <div className="rewards-editorial-card-progress">
+                        <div className="rewards-editorial-card-progress-bar" role="progressbar" aria-valuenow={Math.round(reward.progress * 100)} aria-valuemax={100}>
+                          <span className="rewards-editorial-card-progress-fill" style={{ width: `${Math.round(reward.progress * 100)}%` }} />
+                        </div>
+                        <span className="rewards-editorial-card-progress-pct">{Math.round(reward.progress * 100)}%</span>
                       </div>
-                      <span className="rewards-progress-progress-note">{Math.round(reward.progress * 100)}%</span>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
-              <div className="prediction-detail-empty">
-                <strong>{t('rewards.empty_focus_title')}</strong>
-                <p>{t('rewards.empty_focus_copy')}</p>
-                <button type="button" className="rewards-empty-cta" onClick={() => navigate('/runs')}>{t('rewards.next_cta')}</button>
+              <div className="rewards-editorial-empty">
+                <p className="rewards-editorial-empty-msg rewards-editorial-empty-msg--success">{t('rewards.all_earned')}</p>
               </div>
             )}
           </section>

@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -36,8 +37,15 @@ public class QwenAnchorPixelClient {
     @Value("${app.route-extraction.qwen.timeout-seconds:120}")
     private long timeoutSeconds;
 
+    private PythonVenvResolver venvResolver;
+
     public QwenAnchorPixelClient(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+    }
+
+    @PostConstruct
+    private void initVenvResolver() {
+        this.venvResolver = new PythonVenvResolver(pythonExecutable, pythonScriptPath);
     }
 
     public List<RouteAnchorPixelPointDTO> extractAnchorPixels(String imageReference, RouteParametersDTO routeParameters) {
@@ -135,7 +143,7 @@ public class QwenAnchorPixelClient {
 
     private List<String> buildPythonCommand(String imageFilePath, List<String> anchorLabels) {
         List<String> command = new ArrayList<>();
-        command.add(resolvePythonExecutable());
+        command.add(venvResolver.resolvePythonCommand("extract_anchor_pixels_qwen.py"));
         command.add(resolvePythonScriptPath());
         command.add("--image");
         command.add(imageFilePath);
@@ -203,29 +211,6 @@ public class QwenAnchorPixelClient {
         Path tempFile = Files.createTempFile("hermes-qwen-anchor-", extension);
         Files.write(tempFile, decodedBytes);
         return tempFile.toAbsolutePath().toString();
-    }
-
-    private String resolvePythonExecutable() {
-        if (pythonExecutable != null && !pythonExecutable.isBlank() && !"python".equalsIgnoreCase(pythonExecutable.trim())) {
-            return pythonExecutable.trim();
-        }
-
-        Path workingDirectory = Path.of("").toAbsolutePath().normalize();
-        Path parentDirectory = workingDirectory.getParent();
-        List<Path> candidates = List.of(
-                Path.of(".venv", "Scripts", "python.exe"),
-                Path.of(".venv", "bin", "python"),
-                parentDirectory == null ? Path.of("_missing_parent_python_") : parentDirectory.resolve(Path.of(".venv", "Scripts", "python.exe")),
-                parentDirectory == null ? Path.of("_missing_parent_python_bin_") : parentDirectory.resolve(Path.of(".venv", "bin", "python")),
-                Path.of("backend", ".venv", "Scripts", "python.exe"),
-                Path.of("backend", ".venv", "bin", "python")
-        );
-        for (Path candidate : candidates) {
-            if (Files.exists(candidate)) {
-                return candidate.toAbsolutePath().toString();
-            }
-        }
-        return "python";
     }
 
     private String resolvePythonScriptPath() {

@@ -1,8 +1,10 @@
 package com.hermes.backend;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -17,6 +19,22 @@ public final class PasswordStrengthChecker {
             "iloveyou", "trustno1", "abc123", "master", "login", "passw0rd", "hermes");
 
     private PasswordStrengthChecker() {
+    }
+
+    /**
+     * Canonical password rules for the frontend to consume.
+     * This is the single source of truth — every other surface derives from here.
+     */
+    public static Map<String, Object> getRules() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("minLength", MIN_LENGTH);
+        m.put("requireUppercase", true);
+        m.put("requireLowercase", true);
+        m.put("requireDigit", true);
+        m.put("requireSpecial", true);
+        m.put("specialCharsHint", "!@#$%^&*()_+-=[]{}|;:,.<>?/~`\"'\\");
+        m.put("ruleIds", List.of("MIN_LENGTH", "UPPERCASE", "LOWERCASE", "DIGIT", "SPECIAL", "NOT_COMMON"));
+        return m;
     }
 
     public record Result(boolean ok, List<String> failedRuleIds) {

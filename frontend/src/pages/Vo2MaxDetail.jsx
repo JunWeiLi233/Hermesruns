@@ -123,6 +123,8 @@ function buildChartModel(entries, rollingSeries, lang) {
     };
   });
 
+  const barWidth = Math.min(14, Math.max(4, plotWidth / Math.max(1, entries.length) * 0.55));
+
   return {
     width,
     height,
@@ -130,6 +132,7 @@ function buildChartModel(entries, rollingSeries, lang) {
     padRight,
     padTop,
     padBottom,
+    barWidth,
     points,
     trendPoints,
     trendPath,
@@ -312,10 +315,50 @@ export default function Vo2MaxDetail() {
                  <div className="analysis-vo2-chart-shell">
                     <svg viewBox={`0 0 ${chart.width} ${chart.height}`} style={{ cursor: 'crosshair' }} onPointerMove={handleChartPointerMove} onPointerLeave={handleChartPointerLeave}>
                       <rect x="0" y="0" width={chart.width} height={chart.height} fill="transparent" />
+                      {/* Y-axis gridlines */}
                       <g>
-                        {chart.trendAreaPath && <path d={chart.trendAreaPath} fill="rgba(240, 117, 97, 0.1)" />}
-                        {chart.trendPath && <path d={chart.trendPath} fill="none" stroke="#f07561" strokeWidth="3" />}
-                        {scrubber && <circle cx={scrubber.cx} cy={scrubber.cy} r="6" fill="#f07561" />}
+                        {chart.yTicks.map((tick) => (
+                          <g key={`y-${tick.value}`}>
+                            <line x1={chart.padLeft} y1={tick.y} x2={chart.width - chart.padRight} y2={tick.y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                            <text x={chart.padLeft - 8} y={tick.y + 4} textAnchor="end" fill="rgba(243,237,232,0.42)" fontSize="11" fontFamily="Manrope, sans-serif">{tick.value}</text>
+                          </g>
+                        ))}
+                      </g>
+                      {/* Baseline */}
+                      <line x1={chart.padLeft} y1={chart.height - chart.padBottom} x2={chart.width - chart.padRight} y2={chart.height - chart.padBottom} stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
+                      {/* Bars */}
+                      <g>
+                        {chart.points.map((point, i) => (
+                          <rect
+                            key={`vo2bar-${i}`}
+                            x={point.cx - chart.barWidth / 2}
+                            y={point.cy}
+                            width={chart.barWidth}
+                            height={Math.max(1, chart.height - chart.padBottom - point.cy)}
+                            fill="rgba(240, 117, 97, 0.45)"
+                            rx="1.5"
+                          />
+                        ))}
+                      </g>
+                      {/* Trend area and line */}
+                      <g>
+                        {chart.trendAreaPath && <path d={chart.trendAreaPath} fill="rgba(240, 117, 97, 0.10)" />}
+                        {chart.trendPath && <path d={chart.trendPath} fill="none" stroke="#f07561" strokeWidth="2.5" />}
+                      </g>
+                      {/* Scrubber */}
+                      {scrubber && (
+                        <g>
+                          <line x1={chart.padLeft} y1={scrubber.cy} x2={chart.width - chart.padRight} y2={scrubber.cy} stroke="rgba(240,117,97,0.20)" strokeWidth="1" strokeDasharray="4 3" />
+                          <circle cx={scrubber.cx} cy={scrubber.cy} r="5" fill="#f07561" stroke="#1f1c1c" strokeWidth="2" />
+                          <rect x={scrubber.cx - 36} y={scrubber.cy - 32} width="72" height="22" rx="4" fill="rgba(31,28,28,0.92)" stroke="rgba(240,117,97,0.35)" strokeWidth="1" />
+                          <text x={scrubber.cx} y={scrubber.cy - 17} textAnchor="middle" fill="#f3ede8" fontSize="12" fontWeight="700" fontFamily="Manrope, sans-serif">{scrubber.point.vo2max.toFixed(1)}</text>
+                        </g>
+                      )}
+                      {/* X-axis labels */}
+                      <g>
+                        {chart.xTicks.map((tick, i) => (
+                          <text key={`x-${i}`} x={tick.x} y={chart.height - 12} textAnchor="middle" fill="rgba(243,237,232,0.42)" fontSize="11" fontFamily="Manrope, sans-serif">{tick.label}</text>
+                        ))}
                       </g>
                     </svg>
                  </div>

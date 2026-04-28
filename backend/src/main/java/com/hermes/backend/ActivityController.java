@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/activities")
 public class ActivityController {
+    private static final Logger logger = LoggerFactory.getLogger(ActivityController.class);
     private static final int POINTS_BATCH_SIZE = 500;
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
     private static final int ROUTE_PREVIEW_POINT_LIMIT = ActivityAnalyticsHelper.ROUTE_PREVIEW_POINT_LIMIT;
@@ -155,7 +158,7 @@ public class ActivityController {
                 cacheRoutePreviewIfMissing(activity, cached);
                 return ResponseEntity.ok(cached);
             } catch (Exception e) {
-                System.err.println("Failed to fetch Strava stream for activity " + stravaId + ": " + e.getMessage());
+                logger.warn("Failed to fetch Strava stream for activity {}: {}", stravaId, e.getMessage(), e);
             }
         }
 
