@@ -5,6 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import { formatDuration, formatLongDate, formatPace, formatPaceSeconds } from '../utils/format';
 import { formatShoeDisplayName } from '../utils/shoeNames';
+import AppIcon from '../components/AppIcon';
 import 'leaflet/dist/leaflet.css';
 
 function readSelectedRunFromSession(expectedId) {
