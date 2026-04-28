@@ -453,7 +453,7 @@ public class LoginController {
                 .filter(authService::isAdmin);
 
         if (adminOptional.isEmpty()) {
-            System.out.println("🚨 INTRUSION ATTEMPT: Non-admin tried to access the database!");
+            log.warn("INTRUSION ATTEMPT: Non-admin tried to access the database!");
             return error(HttpStatus.FORBIDDEN, "Admin privileges required.");
         }
 

@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
@@ -47,6 +49,7 @@ import java.util.concurrent.ConcurrentMap;
 @RestController
 @RequestMapping("/api")
 public class OAuthController {
+    private static final Logger logger = LoggerFactory.getLogger(OAuthController.class);
     private static final int STRAVA_POINTS_BATCH_SIZE = 500;
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
 
@@ -302,7 +305,7 @@ public class OAuthController {
             @RequestParam(required = false) String state
     ) {
         if (!isStravaConfigured()) {
-            System.err.println("[Hermes] Strava OAuth callback hit but Strava is not configured.");
+            logger.warn("[Hermes] Strava OAuth callback hit but Strava is not configured.");
             return errorRedirectCode(
                     "STRAVA_NOT_CONFIGURED",
                     "Strava OAuth is not configured on this server.",
@@ -311,7 +314,7 @@ public class OAuthController {
         }
 
         if (error != null && !error.isBlank()) {
-            System.err.println("[Hermes] Strava OAuth callback returned error: " + error);
+            logger.warn("[Hermes] Strava OAuth callback returned error: {}", error);
             return errorRedirectCode(
                     "STRAVA_OAUTH_ERROR",
                     "Strava returned an error.",
@@ -320,7 +323,7 @@ public class OAuthController {
         }
 
         if (code == null || code.isBlank()) {
-            System.err.println("[Hermes] Strava OAuth callback missing authorization code.");
+            logger.warn("[Hermes] Strava OAuth callback missing authorization code.");
             return errorRedirectCode(
                     "STRAVA_MISSING_CODE",
                     "Strava callback is missing the authorization code.",
@@ -460,8 +463,7 @@ public class OAuthController {
                             + "&email=" + urlEncode(runner.getEmail())
             );
         } catch (Exception exception) {
-            System.err.println("[Hermes] Strava OAuth callback failed: "
-                    + exception.getClass().getSimpleName() + " - " + exception.getMessage());
+            logger.error("[Hermes] Strava OAuth callback failed: {} - {}", exception.getClass().getSimpleName(), exception.getMessage(), exception);
             return errorRedirectCode(
                     "STRAVA_OAUTH_FAILED",
                     exception.getClass().getSimpleName() + ": " + safeMessage(exception),
@@ -485,7 +487,7 @@ public class OAuthController {
             accessToken = resolveRunnerStravaAccessToken(runner);
         } catch (Exception ex) {
             // Token/cipher mismatch should not bubble up as 500 in client-triggered sync.
-            System.err.println("Strava sync skipped for runner " + runner.getId() + ": " + ex.getMessage());
+            logger.warn("Strava sync skipped for runner {}: {}", runner.getId(), ex.getMessage(), ex);
             return ResponseEntity.ok("Strava token is invalid; please relink your Strava account.");
         }
         if (accessToken == null || accessToken.isBlank()) {
@@ -513,7 +515,7 @@ public class OAuthController {
         try {
             accessToken = resolveRunnerStravaAccessToken(runner);
         } catch (Exception ex) {
-            System.err.println("Strava catch-up skipped for runner " + runner.getId() + ": " + ex.getMessage());
+            logger.warn("Strava catch-up skipped for runner {}: {}", runner.getId(), ex.getMessage(), ex);
             return ResponseEntity.ok(Map.of(
                     "started", false,
                     "status", "RELINK_REQUIRED",
@@ -777,7 +779,7 @@ public class OAuthController {
             activity.setPacePenaltySecPerKm(penalty);
             activity.setWeatherAdjusted(penalty != null && penalty > 0);
         } catch (Exception e) {
-            System.err.println("Weather adjustment calculation failed during sync: " + e.getMessage());
+            logger.warn("Weather adjustment calculation failed during sync: {}", e.getMessage(), e);
         }
 
         Activity saved = activityRepository.save(activity);
@@ -870,18 +872,18 @@ public class OAuthController {
                 totalSaved += batch.size();
             }
 
-            System.out.println("GPS cached: " + stravaId + " (" + totalSaved + " pts)");
+            logger.info("GPS cached: {} ({} pts)", stravaId, totalSaved);
             return true;
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             if (e.getStatusCode().value() == 429) {
-                System.err.println("GPS rate limited — remaining GPS will sync on first run view");
+                logger.warn("GPS rate limited — remaining GPS will sync on first run view");
                 return false;
             }
-            System.err.println("GPS fetch skipped for " + stravaId + ": " + e.getMessage());
+            logger.warn("GPS fetch skipped for {}: {}", stravaId, e.getMessage(), e);
             return true;
         } catch (Exception e) {
-            System.err.println("GPS fetch skipped for " + stravaId + ": " + e.getMessage());
+            logger.warn("GPS fetch skipped for {}: {}", stravaId, e.getMessage(), e);
             return true;
         }
     }
@@ -928,11 +930,11 @@ public class OAuthController {
                 return SingleActivitySyncResult.RETRYABLE_FAILURE;
             }
             tracker.markFailed("Unable to sync Strava activity right now.");
-            System.err.println("Strava webhook sync failed for activity " + stravaActivityId + ": " + exception.getMessage());
+            logger.error("Strava webhook sync failed for activity {}: {}", stravaActivityId, exception.getMessage(), exception);
             return SingleActivitySyncResult.PERMANENT_FAILURE;
         } catch (Exception e) {
             tracker.markFailed("Unable to sync Strava activity right now.");
-            System.err.println("Strava webhook sync failed for activity " + stravaActivityId + ": " + e.getMessage());
+            logger.error("Strava webhook sync failed for activity {}: {}", stravaActivityId, e.getMessage(), e);
             return SingleActivitySyncResult.RETRYABLE_FAILURE;
         }
     }
@@ -1020,7 +1022,7 @@ public class OAuthController {
                 return newAccess;
             }
         } catch (Exception e) {
-            System.err.println("Strava token refresh failed for runner " + runner.getId() + ": " + e.getMessage());
+            logger.warn("Strava token refresh failed for runner {}: {}", runner.getId(), e.getMessage(), e);
         }
         return null;
     }

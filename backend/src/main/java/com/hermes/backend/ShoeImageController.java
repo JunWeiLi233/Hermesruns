@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -12,6 +14,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/shoes")
 public class ShoeImageController {
+    private static final Logger logger = LoggerFactory.getLogger(ShoeImageController.class);
     private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> QUERY_ONLY_FIELDS = Set.of("query");
     private static final Set<String> PHOTO_ONLY_FIELDS = Set.of("photoUrl");
@@ -106,7 +109,7 @@ public class ShoeImageController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
-            System.err.println("Admin image search failed for shoe " + id + ": " + e.getMessage());
+            logger.warn("Admin image search failed for shoe {}: {}", id, e.getMessage(), e);
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
@@ -286,7 +289,7 @@ public class ShoeImageController {
             }
             return ResponseEntity.ok(Map.of("photoUrl", ""));
         } catch (Exception e) {
-            System.err.println("Image search failed: " + e.getMessage());
+            logger.warn("Image search failed: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of("photoUrl", ""));
         }
     }
@@ -323,7 +326,7 @@ public class ShoeImageController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
-            System.err.println("Image search failed: " + e.getMessage());
+            logger.warn("Image search failed: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
@@ -541,11 +544,11 @@ public class ShoeImageController {
             return ResponseEntity.ok(Map.of("shoes", List.of()));
 
         } catch (HttpStatusCodeException e) {
-            System.err.println("AI API error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+            logger.error("AI API error {}: {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "AI service temporarily unavailable. Please try again later."));
         } catch (Exception e) {
-            System.err.println("Shoe image scan failed: " + e.getMessage());
+            logger.error("Shoe image scan failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to analyze image. Please try again."));
         }
