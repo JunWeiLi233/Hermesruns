@@ -5,12 +5,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -23,7 +23,7 @@ class StravaWebhookControllerTests {
 
     @Test
     void validateSubscriptionRejectsWrongVerifyToken() {
-        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(OAuthController.class));
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
 
         ResponseEntity<?> response = controller.validateSubscription("subscribe", "wrong-token", "challenge-123");
 
@@ -32,7 +32,7 @@ class StravaWebhookControllerTests {
 
     @Test
     void validateSubscriptionRejectsWrongMode() {
-        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(OAuthController.class));
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
 
         ResponseEntity<?> response = controller.validateSubscription("ping", VALID_TOKEN, "challenge-123");
 
@@ -41,7 +41,7 @@ class StravaWebhookControllerTests {
 
     @Test
     void validateSubscriptionReturnsHubChallengeForValidRequest() {
-        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(OAuthController.class));
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
 
         ResponseEntity<?> response = controller.validateSubscription("subscribe", VALID_TOKEN, "challenge-123");
 
@@ -49,13 +49,11 @@ class StravaWebhookControllerTests {
         assertThat(response.getBody()).isEqualTo(Map.of("hub.challenge", "challenge-123"));
     }
 
-@Test
+    @Test
     void handleEventRejectsMissingRequiredFields() {
-        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(OAuthController.class));
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
-                "object_type", "activity"
-        ));
+        ResponseEntity<String> response = controller.handleEvent(event("object_type", "activity"), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isEqualTo("MISSING_REQUIRED_FIELDS");
@@ -63,12 +61,12 @@ class StravaWebhookControllerTests {
 
     @Test
     void handleEventRejectsMissingObjectType() {
-        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(OAuthController.class));
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "aspect_type", "create",
                 "owner_id", 321L
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isEqualTo("MISSING_REQUIRED_FIELDS");
@@ -76,171 +74,182 @@ class StravaWebhookControllerTests {
 
     @Test
     void handleEventReturnsReceivedWhenObjectIdIsNullForActivity() {
-        OAuthController oAuthController = mock(OAuthController.class);
-        StravaWebhookController controller = createController(mock(RunnerRepository.class), oAuthController);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), stravaSyncService);
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "object_type", "activity",
                 "aspect_type", "create",
                 "owner_id", 321L
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
-        verify(oAuthController, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
-        verify(oAuthController, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test
     void handleEventIgnoresNonActivityPayloads() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        OAuthController oAuthController = mock(OAuthController.class);
-        StravaWebhookController controller = createController(runnerRepository, oAuthController);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
+        StravaWebhookController controller = createController(runnerRepository, stravaSyncService);
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "object_type", "segment",
                 "aspect_type", "create",
                 "owner_id", 321L,
                 "object_id", 99999L
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
         verify(runnerRepository, never()).findByStravaAthleteId(org.mockito.ArgumentMatchers.anyLong());
-        verify(oAuthController, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
-        verify(oAuthController, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test
     void handleEventIgnoresMalformedAthleteUpdatesPayload() {
-        OAuthController oAuthController = mock(OAuthController.class);
-        StravaWebhookController controller = createController(mock(RunnerRepository.class), oAuthController);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), stravaSyncService);
 
-        ResponseEntity<String> response = assertDoesNotThrow(() -> controller.handleEvent(Map.of(
+        ResponseEntity<String> response = assertDoesNotThrow(() -> controller.handleEvent(event(Map.of(
                 "object_type", "athlete",
                 "aspect_type", "update",
                 "owner_id", 321L,
                 "updates", "not-a-map"
-        )));
+        )), null));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
-        verify(oAuthController, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
-        verify(oAuthController, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test
     void handleEventSyncsMatchingRunnerForActivityCreate() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        OAuthController oAuthController = mock(OAuthController.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
         Runner runner = runner();
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.of(runner));
-        when(oAuthController.syncStravaActivityById(runner, 98765L)).thenReturn(OAuthController.SingleActivitySyncResult.SUCCESS);
-        StravaWebhookController controller = createController(runnerRepository, oAuthController);
+        when(stravaSyncService.syncStravaActivityById(runner, 98765L)).thenReturn(StravaSyncService.SingleActivitySyncResult.SUCCESS);
+        StravaWebhookController controller = createController(runnerRepository, stravaSyncService);
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "object_type", "activity",
                 "aspect_type", "create",
                 "owner_id", 321L,
                 "object_id", 98765L
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
-        verify(oAuthController, timeout(1000)).syncStravaActivityById(runner, 98765L);
-        verify(oAuthController, never()).deleteStravaActivity(runner, 98765L);
+        verify(stravaSyncService, timeout(1000)).syncStravaActivityById(runner, 98765L);
+        verify(stravaSyncService, never()).deleteStravaActivity(runner, 98765L);
     }
 
     @Test
     void handleEventSyncsMatchingRunnerForStringIds() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        OAuthController oAuthController = mock(OAuthController.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
         Runner runner = runner();
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.of(runner));
-        when(oAuthController.syncStravaActivityById(runner, 98765L)).thenReturn(OAuthController.SingleActivitySyncResult.SUCCESS);
-        StravaWebhookController controller = createController(runnerRepository, oAuthController);
+        when(stravaSyncService.syncStravaActivityById(runner, 98765L)).thenReturn(StravaSyncService.SingleActivitySyncResult.SUCCESS);
+        StravaWebhookController controller = createController(runnerRepository, stravaSyncService);
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "object_type", "activity",
                 "aspect_type", "update",
                 "owner_id", "321",
                 "object_id", "98765"
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
-        verify(oAuthController, timeout(1000)).syncStravaActivityById(runner, 98765L);
-        verify(oAuthController, never()).deleteStravaActivity(runner, 98765L);
+        verify(stravaSyncService, timeout(1000)).syncStravaActivityById(runner, 98765L);
+        verify(stravaSyncService, never()).deleteStravaActivity(runner, 98765L);
     }
 
     @Test
     void handleEventDeletesMatchingRunnerActivityForDeleteEvent() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        OAuthController oAuthController = mock(OAuthController.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
         Runner runner = runner();
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.of(runner));
-        StravaWebhookController controller = createController(runnerRepository, oAuthController);
+        StravaWebhookController controller = createController(runnerRepository, stravaSyncService);
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "object_type", "activity",
                 "aspect_type", "delete",
                 "owner_id", 321L,
                 "object_id", 98765L
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
-        verify(oAuthController, timeout(1000)).deleteStravaActivity(runner, 98765L);
-        verify(oAuthController, never()).syncStravaActivityById(runner, 98765L);
+        verify(stravaSyncService, timeout(1000)).deleteStravaActivity(runner, 98765L);
+        verify(stravaSyncService, never()).syncStravaActivityById(runner, 98765L);
     }
 
     @Test
     void handleEventReturnsReceivedWhenRunnerIsMissing() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        OAuthController oAuthController = mock(OAuthController.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.empty());
-        StravaWebhookController controller = createController(runnerRepository, oAuthController);
+        StravaWebhookController controller = createController(runnerRepository, stravaSyncService);
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "object_type", "activity",
                 "aspect_type", "update",
                 "owner_id", 321L,
                 "object_id", 98765L
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
-        verify(oAuthController, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
-        verify(oAuthController, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(stravaSyncService, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test
     void handleEventRetriesWebhookSyncBurstOnRetryableFailures() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        OAuthController oAuthController = mock(OAuthController.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
         Runner runner = runner();
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.of(runner));
-        when(oAuthController.syncStravaActivityById(runner, 98765L))
-                .thenReturn(OAuthController.SingleActivitySyncResult.RETRYABLE_FAILURE)
-                .thenReturn(OAuthController.SingleActivitySyncResult.RETRYABLE_FAILURE)
-                .thenReturn(OAuthController.SingleActivitySyncResult.SUCCESS);
-        StravaWebhookController controller = createController(runnerRepository, oAuthController);
+        when(stravaSyncService.syncStravaActivityById(runner, 98765L))
+                .thenReturn(StravaSyncService.SingleActivitySyncResult.RETRYABLE_FAILURE)
+                .thenReturn(StravaSyncService.SingleActivitySyncResult.RETRYABLE_FAILURE)
+                .thenReturn(StravaSyncService.SingleActivitySyncResult.SUCCESS);
+        StravaWebhookController controller = createController(runnerRepository, stravaSyncService);
 
-        ResponseEntity<String> response = controller.handleEvent(Map.of(
+        ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "object_type", "activity",
                 "aspect_type", "create",
                 "owner_id", 321L,
                 "object_id", 98765L
-        ));
+        )), null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
-        verify(oAuthController, timeout(9000).times(3)).syncStravaActivityById(runner, 98765L);
-        verify(oAuthController, never()).deleteStravaActivity(runner, 98765L);
+        verify(stravaSyncService, timeout(9000).times(3)).syncStravaActivityById(runner, 98765L);
+        verify(stravaSyncService, never()).deleteStravaActivity(runner, 98765L);
     }
 
-    private StravaWebhookController createController(RunnerRepository runnerRepository, OAuthController oAuthController) {
-        StravaWebhookController controller = new StravaWebhookController(runnerRepository, oAuthController);
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> event(Map<String, ?> source) {
+        return new HashMap<>(source);
+    }
+
+    private static Map<String, Object> event(String key, Object value) {
+        Map<String, Object> map = new HashMap<>();
+        map.put(key, value);
+        return map;
+    }
+
+    private StravaWebhookController createController(RunnerRepository runnerRepository, StravaSyncService stravaSyncService) {
+        StravaWebhookController controller = new StravaWebhookController(runnerRepository, stravaSyncService);
         ReflectionTestUtils.setField(controller, "verifyToken", VALID_TOKEN);
         return controller;
     }

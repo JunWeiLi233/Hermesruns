@@ -1,15 +1,11 @@
 package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -25,50 +21,37 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class OAuthControllerTests {
 
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        private static HttpEntity<?> anyHttpEntity() {
-                return (HttpEntity) any(HttpEntity.class);
-        }
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static HttpEntity<?> anyHttpEntity() {
+        return (HttpEntity) any(HttpEntity.class);
+    }
 
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        private static <T> ParameterizedTypeReference<T> anyTypeRef() {
-                return (ParameterizedTypeReference) any(ParameterizedTypeReference.class);
-        }
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static <T> ParameterizedTypeReference<T> anyTypeRef() {
+        return (ParameterizedTypeReference) any(ParameterizedTypeReference.class);
+    }
 
-    private static class OAuthController extends com.hermes.backend.OAuthController {
-        OAuthController(
+    private static class TestOAuthController extends com.hermes.backend.OAuthController {
+        TestOAuthController(
                 RunnerRepository runnerRepository,
                 AuthService authService,
                 ActivityRepository activityRepository,
-                ActivityPointRepository activityPointRepository,
                 SecretEncryptionService secretEncryptionService,
                 AiUsageService aiUsageService,
                 RestTemplate restTemplate,
                 SystemConfigService systemConfigService,
-                ApplicationEventPublisher applicationEventPublisher,
-                AutomatedCoachService automatedCoachService
+                StravaTokenService stravaTokenService,
+                StravaSyncService stravaSyncService
         ) {
-            super(
-                    runnerRepository,
-                    authService,
-                    activityRepository,
-                    activityPointRepository,
-                    secretEncryptionService,
-                    aiUsageService,
-                    restTemplate,
-                    systemConfigService,
-                    applicationEventPublisher,
-                    automatedCoachService,
-                    null
-            );
+            super(runnerRepository, authService, activityRepository, secretEncryptionService,
+                    aiUsageService, restTemplate, systemConfigService, stravaTokenService, stravaSyncService);
         }
     }
 
@@ -77,25 +60,17 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         AiUsageService aiUsageService = mock(AiUsageService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
-        ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
-        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository,
-                authService,
-                activityRepository,
-                activityPointRepository,
-                secretEncryptionService,
-                aiUsageService,
-                restTemplate,
-                systemConfigService,
-                applicationEventPublisher,
-                automatedCoachService
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, activityRepository,
+                secretEncryptionService, aiUsageService, restTemplate,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
 
         setField(controller, "stravaClientId", "client-id");
@@ -109,7 +84,11 @@ class OAuthControllerTests {
         currentRunner.setSessionToken("hashed-session-token");
 
         when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isProfileLinkState(any())).thenReturn(true);
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(currentRunner));
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenReturn("https://www.strava.com/oauth/authorize?client_id=client-id&state=profile-link:test");
+        when(stravaTokenService.createProfileLinkState(currentRunner)).thenReturn("profile-link:encoded.signature");
         @SuppressWarnings("unchecked")
         Map<String, Object> linkBody = (Map<String, Object>) controller.createStravaLinkUrl("Bearer session-token").getBody();
         String state = extractQueryParam(String.valueOf(linkBody.get("url")), "state");
@@ -130,7 +109,10 @@ class OAuthControllerTests {
                         "lastname", "Runner"
                 )
         )));
+        when(stravaTokenService.decodeProfileLinkState(state)).thenReturn(
+                Optional.of(new StravaTokenService.PendingStravaLinkRequest(12L, System.currentTimeMillis() + 600_000, "hashed-session-token")));
         when(runnerRepository.findByStravaAthleteId(989898L)).thenReturn(Optional.empty());
+        when(stravaTokenService.stravaEmail(989898L)).thenReturn("strava+989898@hermes.local");
         when(runnerRepository.findByEmailIgnoreCase("strava+989898@hermes.local")).thenReturn(Optional.empty());
         when(runnerRepository.findById(12L)).thenReturn(Optional.of(currentRunner));
         when(secretEncryptionService.encrypt("fresh-token")).thenReturn("enc-access");
@@ -151,37 +133,22 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         AiUsageService aiUsageService = mock(AiUsageService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
-        ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
-        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
 
-        OAuthController firstController = new OAuthController(
-                runnerRepository,
-                authService,
-                activityRepository,
-                activityPointRepository,
-                secretEncryptionService,
-                aiUsageService,
-                restTemplate,
-                systemConfigService,
-                applicationEventPublisher,
-                automatedCoachService
+        TestOAuthController firstController = new TestOAuthController(
+                runnerRepository, authService, activityRepository,
+                secretEncryptionService, aiUsageService, restTemplate,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
-        OAuthController restartedController = new OAuthController(
-                runnerRepository,
-                authService,
-                activityRepository,
-                activityPointRepository,
-                secretEncryptionService,
-                aiUsageService,
-                restTemplate,
-                systemConfigService,
-                applicationEventPublisher,
-                automatedCoachService
+        TestOAuthController restartedController = new TestOAuthController(
+                runnerRepository, authService, activityRepository,
+                secretEncryptionService, aiUsageService, restTemplate,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
 
         setField(firstController, "stravaClientId", "client-id");
@@ -198,7 +165,11 @@ class OAuthControllerTests {
         currentRunner.setSessionToken("hashed-session-token");
 
         when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isProfileLinkState(any())).thenReturn(true);
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(currentRunner));
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenReturn("https://www.strava.com/oauth/authorize?client_id=client-id&state=profile-link:test");
+        when(stravaTokenService.createProfileLinkState(currentRunner)).thenReturn("profile-link:encoded.signature");
         @SuppressWarnings("unchecked")
         Map<String, Object> linkBody = (Map<String, Object>) firstController.createStravaLinkUrl("Bearer session-token").getBody();
         String state = extractQueryParam(String.valueOf(linkBody.get("url")), "state");
@@ -219,7 +190,10 @@ class OAuthControllerTests {
                         "lastname", "Proof"
                 )
         )));
+        when(stravaTokenService.decodeProfileLinkState(state)).thenReturn(
+                Optional.of(new StravaTokenService.PendingStravaLinkRequest(34L, System.currentTimeMillis() + 600_000, "hashed-session-token")));
         when(runnerRepository.findByStravaAthleteId(121212L)).thenReturn(Optional.empty());
+        when(stravaTokenService.stravaEmail(121212L)).thenReturn("strava+121212@hermes.local");
         when(runnerRepository.findByEmailIgnoreCase("strava+121212@hermes.local")).thenReturn(Optional.empty());
         when(runnerRepository.findById(34L)).thenReturn(Optional.of(currentRunner));
         when(secretEncryptionService.encrypt("fresh-token")).thenReturn("enc-access");
@@ -238,25 +212,17 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         AiUsageService aiUsageService = mock(AiUsageService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
-        ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
-        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository,
-                authService,
-                activityRepository,
-                activityPointRepository,
-                secretEncryptionService,
-                aiUsageService,
-                restTemplate,
-                systemConfigService,
-                applicationEventPublisher,
-                automatedCoachService
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, activityRepository,
+                secretEncryptionService, aiUsageService, restTemplate,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
 
         setField(controller, "stravaClientId", "client-id");
@@ -270,7 +236,11 @@ class OAuthControllerTests {
         currentRunner.setSessionToken("hashed-session-token");
 
         when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isProfileLinkState(any())).thenReturn(true);
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(currentRunner));
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenReturn("https://www.strava.com/oauth/authorize?client_id=client-id&state=profile-link:test");
+        when(stravaTokenService.createProfileLinkState(currentRunner)).thenReturn("profile-link:encoded.signature");
         @SuppressWarnings("unchecked")
         Map<String, Object> linkBody = (Map<String, Object>) controller.createStravaLinkUrl("Bearer session-token").getBody();
         String state = extractQueryParam(String.valueOf(linkBody.get("url")), "state");
@@ -292,7 +262,10 @@ class OAuthControllerTests {
                         "lastname", "Proof"
                 )
         )));
+        when(stravaTokenService.decodeProfileLinkState(state)).thenReturn(
+                Optional.of(new StravaTokenService.PendingStravaLinkRequest(56L, System.currentTimeMillis() + 600_000, "hashed-session-token")));
         when(runnerRepository.findByStravaAthleteId(565656L)).thenReturn(Optional.empty());
+        when(stravaTokenService.stravaEmail(565656L)).thenReturn("strava+565656@hermes.local");
         when(runnerRepository.findByEmailIgnoreCase("strava+565656@hermes.local")).thenReturn(Optional.empty());
         when(runnerRepository.findById(56L)).thenReturn(Optional.of(currentRunner));
 
@@ -312,25 +285,17 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         AiUsageService aiUsageService = mock(AiUsageService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
-        ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
-        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository,
-                authService,
-                activityRepository,
-                activityPointRepository,
-                secretEncryptionService,
-                aiUsageService,
-                restTemplate,
-                systemConfigService,
-                applicationEventPublisher,
-                automatedCoachService
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, activityRepository,
+                secretEncryptionService, aiUsageService, restTemplate,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
 
         setField(controller, "stravaClientId", "client-id");
@@ -338,6 +303,9 @@ class OAuthControllerTests {
         setField(controller, "stravaRedirectUri", "http://localhost:8080/api/auth/strava/callback");
 
         when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isProfileLinkState("login")).thenReturn(false);
+        when(stravaTokenService.decodeProfileLinkState("login")).thenReturn(Optional.empty());
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
@@ -355,6 +323,7 @@ class OAuthControllerTests {
                 )
         )));
         when(runnerRepository.findByStravaAthleteId(424242L)).thenReturn(Optional.empty());
+        when(stravaTokenService.stravaEmail(424242L)).thenReturn("strava+424242@hermes.local");
         when(runnerRepository.findByEmailIgnoreCase("strava+424242@hermes.local")).thenReturn(Optional.empty());
         when(secretEncryptionService.encrypt("fresh-token")).thenReturn("enc-access");
         when(secretEncryptionService.encrypt("refresh-token")).thenReturn("enc-refresh");
@@ -364,6 +333,8 @@ class OAuthControllerTests {
             return saved;
         });
         when(authService.issueSessionToken(any(Runner.class))).thenReturn("session-token");
+        when(stravaSyncService.scheduleStravaSync(any(Runner.class), eq("fresh-token"), eq(false), eq("oauth_login")))
+                .thenReturn(StravaSyncService.SyncLaunchResult.STARTED);
 
         RedirectView redirectView = controller.handleStravaCallback("oauth-code", null, "login");
 
@@ -377,109 +348,13 @@ class OAuthControllerTests {
     }
 
     @Test
-    void fetchAndSaveStravaActivitiesRetriesOnceWithRefreshedStoredToken() {
-        RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        AuthService authService = mock(AuthService.class);
-        ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
-        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
-        AiUsageService aiUsageService = mock(AiUsageService.class);
-        RestTemplate restTemplate = mock(RestTemplate.class);
-        SystemConfigService systemConfigService = mock(SystemConfigService.class);
-        ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
-        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
-
-        OAuthController controller = new OAuthController(
-                runnerRepository,
-                authService,
-                activityRepository,
-                activityPointRepository,
-                secretEncryptionService,
-                aiUsageService,
-                restTemplate,
-                systemConfigService,
-                applicationEventPublisher,
-                automatedCoachService
-        );
-
-        Runner staleRunner = new Runner();
-        staleRunner.setId(7L);
-        staleRunner.setStravaAccessToken("encrypted-old-access");
-        staleRunner.setStravaRefreshToken("encrypted-refresh");
-        staleRunner.setStravaTokenExpiresAt((System.currentTimeMillis() / 1000) + 3600);
-
-        Runner freshRunner = new Runner();
-        freshRunner.setId(7L);
-        freshRunner.setStravaAccessToken("encrypted-new-access");
-        freshRunner.setStravaRefreshToken("encrypted-refresh");
-        freshRunner.setStravaTokenExpiresAt((System.currentTimeMillis() / 1000) + 3600);
-
-        Activity existingActivity = new Activity();
-        existingActivity.setId(88L);
-        existingActivity.setActivityType(ActivityType.RUN);
-        existingActivity.setRunner(freshRunner);
-
-        when(runnerRepository.findById(7L))
-                .thenReturn(Optional.of(staleRunner))
-                .thenReturn(Optional.of(freshRunner));
-        when(secretEncryptionService.decrypt("encrypted-new-access")).thenReturn("fresh-access-token");
-        when(secretEncryptionService.decrypt("encrypted-refresh")).thenReturn("refresh-token");
-        when(activityRepository.findByRunnerAndProviderAndSourceChecksum(freshRunner, ImportProvider.STRAVA, "STRAVA_12345"))
-                .thenReturn(Optional.of(existingActivity));
-        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(activityPointRepository.existsByActivity(any(Activity.class))).thenReturn(true);
-
-        HttpClientErrorException unauthorized = HttpClientErrorException.create(
-                HttpStatus.UNAUTHORIZED,
-                "Unauthorized",
-                HttpHeaders.EMPTY,
-                new byte[0],
-                null
-        );
-        ResponseEntity<Object> activityPage = ResponseEntity.ok((Object) List.of(Map.of(
-                "id", "12345",
-                "sport_type", "Run",
-                "type", "Run",
-                "name", "Park Loop",
-                "distance", 6400.0,
-                "moving_time", 1700,
-                "start_date_local", "2026-04-05T07:15:00Z"
-        )));
-
-        when(restTemplate.exchange(
-                eq("https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1"),
-                eq(HttpMethod.GET),
-                anyHttpEntity(),
-                anyTypeRef()
-        )).thenThrow(unauthorized).thenReturn(activityPage);
-
-        when(restTemplate.exchange(
-                eq("https://www.strava.com/api/v3/athlete/activities?per_page=200&page=2"),
-                eq(HttpMethod.GET),
-                anyHttpEntity(),
-                anyTypeRef()
-        )).thenReturn(ResponseEntity.ok(List.of()));
-
-        controller.fetchAndSaveStravaActivities("stale-access-token", 7L, false, "test_retry");
-
-        verify(restTemplate, times(2)).exchange(
-                eq("https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1"),
-                eq(HttpMethod.GET),
-                anyHttpEntity(),
-                anyTypeRef()
-        );
-        verify(runnerRepository, times(2)).findById(7L);
-        verify(activityRepository).save(any(Activity.class));
-    }
-
-    @Test
     void getAuthProvidersReturnsBothProvidersConfigured() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -499,8 +374,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -520,8 +395,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -539,10 +414,12 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
 
         Runner runner = new Runner();
@@ -552,6 +429,8 @@ class OAuthControllerTests {
 
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
         when(systemConfigService.getStravaStatus()).thenReturn(Map.of());
+        when(stravaTokenService.isRunnerStravaLinked(runner)).thenReturn(true);
+        when(stravaSyncService.snapshotSyncStatus(1L)).thenReturn(StravaSyncService.StravaSyncStatusResponse.idle());
 
         var response = controller.getStravaStatus("Bearer token");
 
@@ -561,14 +440,16 @@ class OAuthControllerTests {
     }
 
     @Test
-    void getStravaStatusIncludesActiveSyncSnapshot() throws Exception {
+    void getStravaStatusIncludesActiveSyncSnapshot() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
 
         Runner runner = new Runner();
@@ -577,20 +458,9 @@ class OAuthControllerTests {
         runner.setStravaRefreshToken("refresh-token");
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
         when(systemConfigService.getStravaStatus()).thenReturn(Map.of());
-
-        ReflectionTestUtils.setField(controller, "stravaSyncStates", new java.util.concurrent.ConcurrentHashMap<>());
-        @SuppressWarnings("unchecked")
-        java.util.concurrent.ConcurrentMap<Long, Object> syncStates =
-                (java.util.concurrent.ConcurrentMap<Long, Object>) ReflectionTestUtils.getField(controller, "stravaSyncStates");
-
-        Class<?> trackerClass = Class.forName("com.hermes.backend.OAuthController$StravaSyncTracker");
-        var constructor = trackerClass.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        Object tracker = constructor.newInstance();
-        var tryQueueSync = trackerClass.getDeclaredMethod("tryQueueSync", String.class, boolean.class);
-        tryQueueSync.setAccessible(true);
-        tryQueueSync.invoke(tracker, "app_open_catch_up", true);
-        syncStates.put(1L, tracker);
+        when(stravaTokenService.isRunnerStravaLinked(runner)).thenReturn(true);
+        when(stravaSyncService.snapshotSyncStatus(1L)).thenReturn(new StravaSyncService.StravaSyncStatusResponse(
+                "PENDING", 0, 0, 0, 0, 0, null, true, "app_open_catch_up", true, "2026-04-27T10:00:00Z"));
 
         var response = controller.getStravaStatus("Bearer token");
 
@@ -606,10 +476,12 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
+        StravaSyncService stravaSyncService = mock(StravaSyncService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, stravaSyncService
         );
 
         Runner runner = new Runner();
@@ -619,6 +491,8 @@ class OAuthControllerTests {
 
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
         when(systemConfigService.getStravaStatus()).thenReturn(Map.of());
+        when(stravaTokenService.isRunnerStravaLinked(runner)).thenReturn(false);
+        when(stravaSyncService.snapshotSyncStatus(1L)).thenReturn(StravaSyncService.StravaSyncStatusResponse.idle());
 
         var response = controller.getStravaStatus("Bearer token");
 
@@ -632,8 +506,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -651,17 +525,18 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, null
         );
 
         Runner runner = new Runner();
         runner.setId(1L);
 
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
-        when(systemConfigService.isStravaConfigured()).thenReturn(false);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(false);
 
         var response = controller.createStravaLinkUrl("Bearer token");
 
@@ -676,8 +551,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -696,8 +571,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -716,8 +591,8 @@ class OAuthControllerTests {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, restTemplate,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, restTemplate,
                 systemConfigService, null, null
         );
 
@@ -744,17 +619,18 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, null
         );
 
         setField(controller, "stravaClientId", "client-id");
         setField(controller, "stravaClientSecret", "client-secret");
         setField(controller, "stravaRedirectUri", "http://localhost:8080/api/auth/strava/callback");
 
-        when(systemConfigService.isStravaConfigured()).thenReturn(false);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(false);
 
         RedirectView redirect = controller.handleStravaCallback("code", null, "state");
 
@@ -767,13 +643,14 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, null
         );
 
-        when(systemConfigService.isStravaConfigured()).thenReturn(false);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(false);
 
         RedirectView redirect = controller.startStravaAuth("signup");
 
@@ -788,17 +665,18 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, null
         );
 
         setField(controller, "stravaClientId", "client-id");
         setField(controller, "stravaClientSecret", "client-secret");
         setField(controller, "stravaRedirectUri", "http://localhost:8080/api/auth/strava/callback");
 
-        when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(true);
 
         RedirectView redirect = controller.handleStravaCallback(null, "access_denied", "state");
 
@@ -811,17 +689,18 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, null
         );
 
         setField(controller, "stravaClientId", "client-id");
         setField(controller, "stravaClientSecret", "client-secret");
         setField(controller, "stravaRedirectUri", "http://localhost:8080/api/auth/strava/callback");
 
-        when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(true);
 
         RedirectView redirect = controller.handleStravaCallback(null, null, "state");
 
@@ -835,17 +714,18 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, restTemplate,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, restTemplate,
+                systemConfigService, stravaTokenService, null
         );
 
         setField(controller, "stravaClientId", "client-id");
         setField(controller, "stravaClientSecret", "client-secret");
         setField(controller, "stravaRedirectUri", "http://localhost:8080/api/auth/strava/callback");
 
-        when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.isStravaConfigured()).thenReturn(true);
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
@@ -865,8 +745,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -884,15 +764,17 @@ class OAuthControllerTests {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
+                systemConfigService, stravaTokenService, null
         );
 
         Runner runner = new Runner();
         runner.setId(12L);
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(stravaTokenService.resolveRunnerStravaAccessToken(runner)).thenReturn(null);
 
         var response = controller.triggerOnOpenStravaCatchUp("Bearer token");
 
@@ -907,10 +789,11 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        StravaTokenService stravaTokenService = mock(StravaTokenService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, secretEncryptionService, null, null,
-                systemConfigService, null, null
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, secretEncryptionService, null, null,
+                systemConfigService, stravaTokenService, null
         );
 
         Runner runner = new Runner();
@@ -919,6 +802,7 @@ class OAuthControllerTests {
         runner.setStravaRefreshToken(null);
 
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(stravaTokenService.resolveRunnerStravaAccessToken(runner)).thenReturn(null);
 
         var response = controller.reSyncStrava("Bearer token");
 
@@ -931,8 +815,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
@@ -951,8 +835,8 @@ class OAuthControllerTests {
         AuthService authService = mock(AuthService.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
 
-        OAuthController controller = new OAuthController(
-                runnerRepository, authService, null, null, null, null, null,
+        TestOAuthController controller = new TestOAuthController(
+                runnerRepository, authService, null, null, null, null,
                 systemConfigService, null, null
         );
 
