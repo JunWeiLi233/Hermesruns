@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -15,17 +15,9 @@ import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
-const EXTRA_BRAND_KEYS = ['lining', 'anta', 'brooks', 'hoka'];
 
 function normalizeBrandKey(brand) {
   return (brand || '').toString().trim().toLowerCase().replace(/[\s!.,'"-]+/g, '');
-}
-
-function matchesBrandKey(brand, targetKey, lang = 'zh-CN') {
-  const normalizedBrand = normalizeBrandKey(brand);
-  const normalizedTarget = normalizeBrandKey(targetKey);
-  const localizedTarget = normalizeBrandKey(localizeShoeBrand(targetKey, lang));
-  return normalizedBrand === normalizedTarget || normalizedBrand === localizedTarget;
 }
 
 function shoeHealth(current, max) {
@@ -135,7 +127,7 @@ function mergeCatalog(dynamicCatalog) {
 const TYPE_LABELS = { daily: 'type_daily', speed: 'type_speed', race: 'type_race', trail: 'type_trail', stability: 'type_stability' };
 
 export default function AddShoes() {
-  const { isAuthenticated, email } = useAuth();
+  const { isAuthenticated, email, logout } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -159,7 +151,18 @@ export default function AddShoes() {
   const [formMaxDist, setFormMaxDist] = useState('500');
   const [formPrimary, setFormPrimary] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showExtraBrands, setShowExtraBrands] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
+        setAvatarMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -187,15 +190,10 @@ export default function AddShoes() {
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
+    { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
   ];
 
   const browserBrands = useMemo(() => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)), [catalog]);
-  const extraBrands = useMemo(
-    () => EXTRA_BRAND_KEYS
-      .map((key) => browserBrands.find((brand) => matchesBrandKey(brand.brand, key)))
-      .filter(Boolean),
-    [browserBrands],
-  );
   const browserBrand = useMemo(() => browserBrands.find((brand) => brand.brand === browserBrandKey) || browserBrands[0] || null, [browserBrands, browserBrandKey]);
 
   useEffect(() => {
@@ -205,17 +203,7 @@ export default function AddShoes() {
     if (!browserBrandKey) setBrowserBrandKey(browserBrands[0].brand);
   }, [browserBrandKey, browserBrands, preselectedBrand]);
 
-  useEffect(() => {
-    if (!browserBrand) return;
-    if (extraBrands.some((brand) => brand.brand === browserBrand.brand)) {
-      setShowExtraBrands(true);
-    }
-  }, [browserBrand, extraBrands]);
-  const browserBrandsToShow = useMemo(() => {
-    const items = browserBrands.slice(0, 8);
-    if (browserBrand && !items.some((item) => item.brand === browserBrand.brand)) return [browserBrand, ...items.slice(0, 7)];
-    return items;
-  }, [browserBrand, browserBrands]);
+  const browserBrandsToShow = useMemo(() => browserBrands, [browserBrands]);
   const browserCategoryOptions = useMemo(() => {
     const source = browserBrand?.models || [];
     return ['all', ...Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)))];
@@ -359,9 +347,21 @@ export default function AddShoes() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={profileLabel}>
-                {initials}
-              </button>
+              <div className="user-menu-shell" ref={avatarMenuRef}>
+                <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label={profileLabel} onClick={() => setAvatarMenuOpen((prev) => !prev)}>
+                  {initials}
+                </button>
+                <div className={`user-menu-dropdown${avatarMenuOpen ? ' visible' : ''}`}>
+                  <button type="button" className="user-menu-item" onClick={() => { setAvatarMenuOpen(false); navigate('/profile'); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    {t('profile.change_name')}
+                  </button>
+                  <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setAvatarMenuOpen(false); logout(); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    {t('profile.logout')}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </header>
@@ -451,40 +451,6 @@ export default function AddShoes() {
                       })}
                     </div>
                   </div>
-                  {extraBrands.length ? (
-                    <div className="add-shoes-brand-expand-shell">
-                      <button
-                        type="button"
-                        className={cx('add-shoes-brand-expand-btn', showExtraBrands && 'is-open')}
-                        onClick={() => setShowExtraBrands((current) => !current)}
-                        aria-expanded={showExtraBrands}
-                        aria-label={showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}
-                      >
-                        <span>{showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}</span>
-                        <AppIcon name={showExtraBrands ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
-                      </button>
-                      {showExtraBrands ? (
-                        <div className="add-shoes-brand-expand-grid">
-                          {extraBrands.map((brand) => {
-                            const isActive = browserBrand?.brand === brand.brand;
-                            return (
-                              <button
-                                key={`extra-${brand.brand}`}
-                                type="button"
-                                className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
-                                onClick={() => handleBrandPick(brand)}
-                                aria-pressed={isActive ? 'true' : 'false'}
-                                aria-label={localizeShoeBrand(brand.brand, lang)}
-                              >
-                                <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
-                                <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </section>
 
                 <section className="add-shoes-step add-shoes-step-card add-shoes-model-board">

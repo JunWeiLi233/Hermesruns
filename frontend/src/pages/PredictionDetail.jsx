@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
@@ -37,12 +36,11 @@ export default function PredictionDetail() {
   const { distKey } = useParams();
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
-  const { unit } = useUnit();
   const navigate = useNavigate();
 
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
 
   const distance = useMemo(() => RACE_DISTANCES.find((d) => d.key === distKey), [distKey]);
 
@@ -112,7 +110,7 @@ export default function PredictionDetail() {
   const title = lang === 'zh-CN' ? distance.labelZh : distance.labelEn;
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page prediction-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className="runner-shell-page runner-dashboard-page prediction-detail-page">
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <HermesLogo dark />

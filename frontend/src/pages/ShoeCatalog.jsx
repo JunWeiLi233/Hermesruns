@@ -98,7 +98,7 @@ function getCatalogModelLabel(item, lang) {
 }
 
 export default function ShoeCatalog() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -109,7 +109,19 @@ export default function ShoeCatalog() {
   const [selectedModel, setSelectedModel] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef(null);
   const seriesSectionRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
+        setAvatarMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -182,6 +194,7 @@ export default function ShoeCatalog() {
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
+    { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
   ];
 
   const availableCatalogCategories = useMemo(() => {
@@ -288,9 +301,21 @@ export default function ShoeCatalog() {
             <button type="button" className="runner-shell-topbar-link" onClick={() => navigate('/shoes/add')}>
               {t('shoes.add_page_title')}
             </button>
-            <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label="Profile">
-              H
-            </button>
+            <div className="user-menu-shell" ref={avatarMenuRef}>
+              <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label="Profile" onClick={() => setAvatarMenuOpen((prev) => !prev)}>
+                H
+              </button>
+              <div className={`user-menu-dropdown${avatarMenuOpen ? ' visible' : ''}`}>
+                <button type="button" className="user-menu-item" onClick={() => { setAvatarMenuOpen(false); navigate('/profile'); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  {t('profile.change_name')}
+                </button>
+                <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setAvatarMenuOpen(false); logout(); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  {t('profile.logout')}
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 

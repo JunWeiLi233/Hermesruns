@@ -7,9 +7,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "shoes", indexes = {
     @Index(name = "idx_shoe_runner", columnList = "runner_id"),
-    @Index(name = "idx_shoe_runner_identity", columnList = "runner_id,identity_key"),
-    @Index(name = "idx_shoe_brand_model", columnList = "brand,model"),
-    @Index(name = "idx_shoe_identity_key", columnList = "identity_key")
+    @Index(name = "idx_shoe_runner_identity", columnList = "runner_id,identity_key")
 })
 public class Shoe {
 
@@ -36,6 +34,7 @@ public class Shoe {
     @Column(name = "photo_verified")
     private Boolean photoVerified = false;
     private boolean retired;
+    private LocalDateTime retiredDate;
     private boolean isPrimary;
     private LocalDateTime createdAt;
 
@@ -77,6 +76,9 @@ public class Shoe {
 
     public boolean isRetired() { return retired; }
     public void setRetired(boolean retired) { this.retired = retired; }
+
+    public LocalDateTime getRetiredDate() { return retiredDate; }
+    public void setRetiredDate(LocalDateTime retiredDate) { this.retiredDate = retiredDate; }
 
     public boolean getIsPrimary() { return isPrimary; }
     public void setIsPrimary(boolean isPrimary) { this.isPrimary = isPrimary; }
