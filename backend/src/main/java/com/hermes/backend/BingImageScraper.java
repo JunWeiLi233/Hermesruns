@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,6 +16,7 @@ import java.util.regex.Pattern;
 
 @Component
 public class BingImageScraper {
+    private static final Logger logger = LoggerFactory.getLogger(BingImageScraper.class);
 
     private static final Pattern MEDIA_URL_PATTERN =
             Pattern.compile("mediaurl=(https?%3a%2f%2f[^&\"]+)", Pattern.CASE_INSENSITIVE);
@@ -134,7 +137,7 @@ public class BingImageScraper {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Multi-image fetch failed: " + e.getMessage());
+            logger.warn("Multi-image fetch failed: {}", e.getMessage(), e);
         }
         return urls;
     }
@@ -143,7 +146,7 @@ public class BingImageScraper {
         try {
             String html = fetchBingHtml(searchUrl);
             if (html == null || html.length() < 100) {
-                System.err.println("Bing returned empty/short response for: " + searchUrl);
+                logger.warn("Bing returned empty/short response for: {}", searchUrl);
                 return null;
             }
 
@@ -153,7 +156,7 @@ public class BingImageScraper {
                 if (isImageFileUrl(url)) return url;
             }
         } catch (Exception e) {
-            System.err.println("Image fetch failed for " + searchUrl + ": " + e.getMessage());
+            logger.warn("Image fetch failed for {}: {}", searchUrl, e.getMessage(), e);
         }
         return null;
     }

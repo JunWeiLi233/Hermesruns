@@ -1,6 +1,9 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -12,6 +15,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/shoes")
 public class ShoeImageController {
+    private static final Logger logger = LoggerFactory.getLogger(ShoeImageController.class);
     private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> QUERY_ONLY_FIELDS = Set.of("query");
     private static final Set<String> PHOTO_ONLY_FIELDS = Set.of("photoUrl");
@@ -20,6 +24,7 @@ public class ShoeImageController {
 
     private final AuthService authService;
     private final AiUsageService aiUsageService;
+    private final QuotaService quotaService;
     private final RestTemplate restTemplate;
     private final SystemConfigService systemConfigService;
     private final ApiRateLimiter apiRateLimiter;
@@ -34,6 +39,7 @@ public class ShoeImageController {
             AuthService authService,
             ShoeRepository shoeRepository,
             AiUsageService aiUsageService,
+            QuotaService quotaService,
             RestTemplate restTemplate,
             SystemConfigService systemConfigService,
             ApiRateLimiter apiRateLimiter,
@@ -42,6 +48,7 @@ public class ShoeImageController {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
         this.aiUsageService = aiUsageService;
+        this.quotaService = quotaService;
         this.restTemplate = restTemplate;
         this.systemConfigService = systemConfigService;
         this.apiRateLimiter = apiRateLimiter;
@@ -106,7 +113,7 @@ public class ShoeImageController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
-            System.err.println("Admin image search failed for shoe " + id + ": " + e.getMessage());
+            logger.warn("Admin image search failed for shoe {}: {}", id, e.getMessage(), e);
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
@@ -116,6 +123,7 @@ public class ShoeImageController {
      * with the same brand+model across all users.
      */
     @PutMapping("/admin/{id}/photo")
+    @Transactional
     public ResponseEntity<?> adminSetPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -151,9 +159,9 @@ public class ShoeImageController {
             for (Shoe s : matching) {
                 s.setPhotoUrl(finalUrl);
                 s.setPhotoVerified(false);
-                shoeRepository.save(s);
-                count++;
             }
+            shoeRepository.saveAll(matching);
+            count = matching.size();
         } else {
             shoe.setPhotoUrl(finalUrl);
             shoe.setPhotoVerified(false);
@@ -171,6 +179,7 @@ public class ShoeImageController {
      * Admin: mark the current product image as verified for this shoe model (all same brand+model rows).
      */
     @PutMapping("/admin/{id}/verify-photo")
+    @Transactional
     public ResponseEntity<?> adminVerifyPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -192,13 +201,17 @@ public class ShoeImageController {
         int count = 0;
         if (brand != null && model != null) {
             List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            List<Shoe> toSave = new ArrayList<>();
             for (Shoe s : matching) {
                 String pu = s.getPhotoUrl();
                 if (pu != null && pu.trim().equals(canonicalUrl)) {
                     s.setPhotoVerified(true);
-                    shoeRepository.save(s);
+                    toSave.add(s);
                     count++;
                 }
+            }
+            if (!toSave.isEmpty()) {
+                shoeRepository.saveAll(toSave);
             }
         } else {
             shoe.setPhotoVerified(true);
@@ -214,6 +227,7 @@ public class ShoeImageController {
      * (all same brand+model rows that share the same image URL).
      */
     @PutMapping("/admin/{id}/unverify-photo")
+    @Transactional
     public ResponseEntity<?> adminUnverifyPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -235,13 +249,17 @@ public class ShoeImageController {
         int count = 0;
         if (brand != null && model != null) {
             List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            List<Shoe> toSave = new ArrayList<>();
             for (Shoe s : matching) {
                 String pu = s.getPhotoUrl();
                 if (pu != null && pu.trim().equals(canonicalUrl)) {
                     s.setPhotoVerified(false);
-                    shoeRepository.save(s);
+                    toSave.add(s);
                     count++;
                 }
+            }
+            if (!toSave.isEmpty()) {
+                shoeRepository.saveAll(toSave);
             }
         } else {
             shoe.setPhotoVerified(false);
@@ -286,7 +304,7 @@ public class ShoeImageController {
             }
             return ResponseEntity.ok(Map.of("photoUrl", ""));
         } catch (Exception e) {
-            System.err.println("Image search failed: " + e.getMessage());
+            logger.warn("Image search failed: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of("photoUrl", ""));
         }
     }
@@ -323,7 +341,7 @@ public class ShoeImageController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
-            System.err.println("Image search failed: " + e.getMessage());
+            logger.warn("Image search failed: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
@@ -495,14 +513,27 @@ public class ShoeImageController {
                     .body(Map.of("error", "AI API key not configured. Set APP_AI_API_KEY environment variable."));
         }
 
-        // Check and atomically reserve AI usage quota
         Runner runner = user.get();
-        String quotaError = aiUsageService.tryConsumeQuota(runner);
-        if (quotaError != null) {
-            Map<String, Object> errorBody = new LinkedHashMap<>();
-            errorBody.put("error", quotaError);
-            errorBody.putAll(aiUsageService.getUsageStatus(runner));
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
+
+        // Feature-gating quota check: Pro users skip all quota checks entirely.
+        if (!quotaService.isPro(runner)) {
+            // Step 1: Check feature quota (premium feature gating for free users)
+            if (!quotaService.canUseFeature(runner, "shoe-scan")) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(quotaService.quotaExceededError(runner, "shoe-scan"));
+            }
+
+            // Step 2: Check and atomically reserve AI daily usage quota
+            String aiQuotaError = aiUsageService.tryConsumeQuota(runner);
+            if (aiQuotaError != null) {
+                Map<String, Object> errorBody = new LinkedHashMap<>();
+                errorBody.put("error", aiQuotaError);
+                errorBody.putAll(aiUsageService.getUsageStatus(runner));
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
+            }
+
+            // Consume the feature quota now that we know the scan will proceed
+            quotaService.consumeFeature(runner, "shoe-scan");
         }
 
         try {
@@ -541,11 +572,11 @@ public class ShoeImageController {
             return ResponseEntity.ok(Map.of("shoes", List.of()));
 
         } catch (HttpStatusCodeException e) {
-            System.err.println("AI API error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+            logger.error("AI API error {}: {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "AI service temporarily unavailable. Please try again later."));
         } catch (Exception e) {
-            System.err.println("Shoe image scan failed: " + e.getMessage());
+            logger.error("Shoe image scan failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to analyze image. Please try again."));
         }
