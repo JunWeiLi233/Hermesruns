@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import java.util.zip.ZipInputStream;
 
 @Service
 public class ActivityImportService {
+    private static final Logger logger = LoggerFactory.getLogger(ActivityImportService.class);
     private final ActivityRepository activityRepository;
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
@@ -187,7 +190,7 @@ public class ActivityImportService {
             activity.setPacePenaltySecPerKm(penalty);
             activity.setWeatherAdjusted(penalty != null && penalty > 0);
         } catch (Exception e) {
-            System.err.println("Weather adjustment calculation failed during import: " + e.getMessage());
+            logger.warn("Weather adjustment calculation failed during import: {}", e.getMessage(), e);
         }
 
         // Persist the Activity first so we can bulk-insert ActivityPoint rows
@@ -234,7 +237,7 @@ public class ActivityImportService {
         }
         // Help GC earlier on small-RAM servers.
         if (allPoints != null) {
-            try { allPoints.clear(); } catch (Exception ignored) {}
+            try { allPoints.clear(); } catch (Exception ignored) { logger.trace("GC helper: allPoints.clear() failed", ignored); }
         }
 
         return new ImportResult(
