@@ -1510,14 +1510,13 @@ export default function Dashboard() {
     }, { total: 0, pending: 0, live: 0, missing: 0 });
   }, [courseMapQueueItems]);
 
-  const selectedCourseMapItem = useMemo(
-    () => (
-      getCourseMapRaceId(courseMapDetail) === selectedCourseMapId
-        ? courseMapDetail
-        : courseMapQueueItems.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null
-    ),
-    [courseMapDetail, courseMapQueueItems, selectedCourseMapId],
-  );
+  const selectedCourseMapItem = useMemo(() => {
+    const queueItem = courseMapQueueItems.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null;
+    if (getCourseMapRaceId(courseMapDetail) === selectedCourseMapId) {
+      return buildCourseMapWorkspaceSource({ queueItem, detail: courseMapDetail });
+    }
+    return queueItem;
+  }, [courseMapDetail, courseMapQueueItems, selectedCourseMapId]);
 
   const pendingCourseMapPreview = useMemo(
     () => getCourseMapPending(selectedCourseMapItem),
@@ -3018,7 +3017,7 @@ export default function Dashboard() {
                           </section>
                         </div>
 
-                        <div className="admin-jobs-detail__timeline-shell admin-track-hub-workspace-stack">
+                        <div className="admin-jobs-detail__timeline-shell admin-coursemap-scan-timeline">
                           <div className="admin-jobs-detail__section-head">
                             <span className="section-intro-kicker">{t('dashboard.course_maps_scan_timeline_label')}</span>
                             <strong>{t('dashboard.course_maps_scan_timeline_title')}</strong>

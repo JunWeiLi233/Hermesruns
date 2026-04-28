@@ -40,6 +40,24 @@ assert.match(
 
 assert.match(
   styleSource,
+  /\.admin-jobs-detail__timeline\s*\{[\s\S]*?min-width:\s*0;/,
+  'Dashboard timeline grid should be allowed to shrink inside the inspector panel.',
+);
+
+assert.match(
+  styleSource,
+  /\.admin-jobs-detail__timeline-main p\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/,
+  'Dashboard timeline messages should wrap long words instead of overflowing.',
+);
+
+assert.match(
+  styleSource,
+  /\.admin-jobs-detail__timeline-details span\s*\{[\s\S]*?flex:\s*1 1 180px;[\s\S]*?overflow-wrap:\s*anywhere;/,
+  'Dashboard timeline detail chips should flex-wrap and contain long values without collapsing the page.',
+);
+
+assert.match(
+  styleSource,
   /\.admin-jobs-detail__payload-grid\s*\{/,
   'Dashboard styles should define the jobs inspector payload highlight grid.',
 );

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
+const stylesheetSource = readFileSync(path.join(here, '..', 'styles', 'style.css'), 'utf8');
 
 assert.match(
   dashboardSource,
@@ -26,8 +27,26 @@ assert.match(
 
 assert.match(
   dashboardSource,
-  /admin-jobs-detail__timeline-shell/,
-  'Dashboard should render the scan timeline in a timeline shell container.'
+  /admin-jobs-detail__timeline-shell admin-coursemap-scan-timeline/,
+  'Dashboard should render the scan timeline in its own stacked shell container.'
+);
+
+assert.doesNotMatch(
+  dashboardSource,
+  /admin-jobs-detail__timeline-shell admin-track-hub-workspace-stack/,
+  'The scan timeline shell must not inherit the course-map workspace grid.'
+);
+
+assert.match(
+  stylesheetSource,
+  /admin-coursemap-scan-timeline[\s\S]*grid-column:\s*1\s*\/\s*-1/,
+  'The scan timeline should span the course-map workspace instead of squeezing into a grid cell.'
+);
+
+assert.match(
+  stylesheetSource,
+  /admin-coursemap-scan-timeline[\s\S]*overflow-wrap:\s*anywhere/,
+  'The scan timeline should wrap long AI scan details instead of compressing adjacent content.'
 );
 
 assert.match(

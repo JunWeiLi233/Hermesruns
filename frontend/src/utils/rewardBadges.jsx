@@ -94,6 +94,15 @@ export function RewardGlyph({ icon }) {
       </svg>
     );
   }
+  if (icon === 'medal') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="8" r="6" />
+        <path d="M8.5 13 L10 21 l2-3.5 L14 21 l1.5-8" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <text x="12" y="11" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#f59e0b">1</text>
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 2 15 9 h7 l-5.5 4.2 2.1 7.1 L12 16.7 5.4 20.3 l2.1-7.1 L2 9 h7 Z" />
@@ -108,6 +117,57 @@ export function buildRewardShowcase(runs, lang) {
   const parkRuns = countKeywordRuns(runs, /\b(park|garden|greenway|trail)\b/i);
   const bridgeRuns = countKeywordRuns(runs, /\b(bridge|riverwalk|waterfront)\b/i);
   const cityRuns = countKeywordRuns(runs, /\b(city|downtown|plaza|campus|tower|building)\b/i);
+
+  // Marathon badge: any run >= 42.195 km
+  const marathonCompleted = longestRunKm >= 42.195;
+  // Half-marathon badge: any run >= 21.0975 km
+  const halfMarathonCompleted = longestRunKm >= 21.0975;
+  // 10K badge: any run >= 10 km
+  const tenKCompleted = longestRunKm >= 10;
+  // 5K badge: any run >= 5 km
+  const fiveKCompleted = longestRunKm >= 5;
+
+  // Regional/city detection
+  const cityKeywords = {
+    beijing: /\b(beijing|北京|běijīng)\b/i,
+    shanghai: /\b(shanghai|上海|shànghǎi)\b/i,
+    guangzhou: /\b(guangzhou|广州|guǎngzhōu)\b/i,
+    shenzhen: /\b(shenzhen|深圳|shēnzhèn)\b/i,
+    hangzhou: /\b(hangzhou|杭州|hángzhōu)\b/i,
+    chengdu: /\b(chengdu|成都|chéngdū)\b/i,
+    london: /\b(london|londres)\b/i,
+    boston: /\b(boston)\b/i,
+    tokyo: /\b(tokyo|东京|dōngjīng|tōkyō)\b/i,
+    nyc: /\b(new york|nyc|纽约|niǔyuē)\b/i,
+    chicago: /\b(chicago|芝加哥|zhījiāgē)\b/i,
+    berlin: /\b(berlin|柏林|bólín)\b/i,
+    paris: /\b(paris|巴黎|bālí)\b/i,
+  };
+
+  const cityCounts = {};
+  for (const [city, pattern] of Object.entries(cityKeywords)) {
+    cityCounts[city] = countKeywordRuns(runs, pattern);
+  }
+  const distinctCities = Object.values(cityCounts).filter((count) => count > 0).length;
+
+  // Holiday/seasonal detection
+  function countHolidayRuns(pattern) {
+    return runs.filter((run) => {
+      const date = new Date(run.startTime || run.startDate || 0);
+      return !Number.isNaN(date.getTime()) && pattern(date);
+    }).length;
+  }
+
+  function countSeasonKeywordRuns(pattern) {
+    return countKeywordRuns(runs, pattern);
+  }
+
+  const newYearRuns = countHolidayRuns((date) => date.getMonth() === 0 && date.getDate() === 1);
+  const christmasRuns = countHolidayRuns((date) => date.getMonth() === 11 && date.getDate() === 25);
+  const springRuns = countSeasonKeywordRuns(/\b(spring|春|chūntiān|春天)\b/i);
+  const summerRuns = countSeasonKeywordRuns(/\b(summer|夏|xiàtiān|夏天)\b/i);
+  const autumnRuns = countSeasonKeywordRuns(/\b(autumn|fall|秋|qiūtiān|秋天)\b/i);
+  const winterRuns = countSeasonKeywordRuns(/\b(winter|冬|dōngtiān|冬天)\b/i);
 
   const allRewards = [
     {
@@ -136,6 +196,126 @@ export function buildRewardShowcase(runs, lang) {
       hint: lang === 'zh-CN' ? `${streakWeeks} / 4 连续训练周` : `${streakWeeks} / 4 consecutive weeks`,
       progress: Math.min(1, streakWeeks / 4),
       earned: streakWeeks >= 4,
+    },
+    // Marathon series
+    {
+      id: 'marathon',
+      icon: 'medal',
+      title: lang === 'zh-CN' ? '全程马拉松' : 'Full Marathon',
+      subtitle: lang === 'zh-CN' ? '完成一次 42.195 km 全马距离' : 'Completed a full 42.195 km marathon distance',
+      hint: lang === 'zh-CN' ? `当前最长 ${longestRunKm.toFixed(1)} km，目标 42.195 km` : `Best ${longestRunKm.toFixed(1)} km — reach 42.195 km to unlock`,
+      progress: Math.min(1, longestRunKm / 42.195),
+      earned: marathonCompleted,
+    },
+    {
+      id: 'half-marathon',
+      icon: 'medal',
+      title: lang === 'zh-CN' ? '半程马拉松' : 'Half Marathon',
+      subtitle: lang === 'zh-CN' ? '完成一次 21.1 km 半马距离' : 'Completed a 21.1 km half-marathon distance',
+      hint: lang === 'zh-CN' ? `当前最长 ${longestRunKm.toFixed(1)} km，目标 21.1 km` : `Best ${longestRunKm.toFixed(1)} km — reach 21.1 km to unlock`,
+      progress: Math.min(1, longestRunKm / 21.1),
+      earned: halfMarathonCompleted,
+    },
+    {
+      id: '10k',
+      icon: 'summit',
+      title: lang === 'zh-CN' ? '十公里里程碑' : '10K Milestone',
+      subtitle: lang === 'zh-CN' ? '单次跑步达到 10 km' : 'Ran 10 km in a single effort',
+      hint: lang === 'zh-CN' ? `当前最长 ${longestRunKm.toFixed(1)} km，目标 10 km` : `Best ${longestRunKm.toFixed(1)} km — reach 10 km to unlock`,
+      progress: Math.min(1, longestRunKm / 10),
+      earned: tenKCompleted,
+    },
+    {
+      id: '5k',
+      icon: 'summit',
+      title: lang === 'zh-CN' ? '五公里起跑' : '5K Starter',
+      subtitle: lang === 'zh-CN' ? '单次跑步达到 5 km' : 'Ran 5 km in a single effort',
+      hint: lang === 'zh-CN' ? `当前最长 ${longestRunKm.toFixed(1)} km，目标 5 km` : `Best ${longestRunKm.toFixed(1)} km — reach 5 km to unlock`,
+      progress: Math.min(1, longestRunKm / 5),
+      earned: fiveKCompleted,
+    },
+    // Regional achievements
+    {
+      id: 'city-one',
+      icon: 'city',
+      title: lang === 'zh-CN' ? '城市跑者' : 'City Runner',
+      subtitle: lang === 'zh-CN' ? `在 ${distinctCities} 个城市留下足迹` : `Logged runs in ${distinctCities} cities`,
+      hint: lang === 'zh-CN' ? '在至少 1 个知名城市完成跑步' : 'Log a run in a known city',
+      progress: Math.min(1, distinctCities),
+      earned: distinctCities >= 1,
+    },
+    {
+      id: 'city-three',
+      icon: 'city',
+      title: lang === 'zh-CN' ? '三城旅跑' : '3-City Tourist',
+      subtitle: lang === 'zh-CN' ? `已经在 ${distinctCities} 个城市中跑步` : `${distinctCities} cities in your running passport`,
+      hint: lang === 'zh-CN' ? `当前 ${distinctCities} / 3 座城市` : `${distinctCities} / 3 cities`,
+      progress: Math.min(1, distinctCities / 3),
+      earned: distinctCities >= 3,
+    },
+    {
+      id: 'world-major',
+      icon: 'crown',
+      title: lang === 'zh-CN' ? '大满贯城市' : 'World Major City',
+      subtitle: lang === 'zh-CN' ? '在至少一个大满贯赛道上留下足迹' : 'Ran in a World Marathon Major city',
+      hint: lang === 'zh-CN' ? '在波士顿、伦敦、柏林、芝加哥、纽约或东京完成一次跑步' : 'Log a run in Boston, London, Berlin, Chicago, NYC, or Tokyo',
+      progress: Math.min(1, cityCounts.boston + cityCounts.london + cityCounts.berlin + cityCounts.chicago + cityCounts.nyc + cityCounts.tokyo),
+      earned: (cityCounts.boston + cityCounts.london + cityCounts.berlin + cityCounts.chicago + cityCounts.nyc + cityCounts.tokyo) >= 1,
+    },
+    // Holiday / Seasonal
+    {
+      id: 'newyear',
+      icon: 'calendar',
+      title: lang === 'zh-CN' ? '元旦跑者' : 'New Year Runner',
+      subtitle: lang === 'zh-CN' ? '在元旦当天完成了跑步' : 'Started the year with a run on Jan 1',
+      hint: lang === 'zh-CN' ? '在 1 月 1 日完成一次跑步' : 'Run on January 1st',
+      progress: Math.min(1, newYearRuns),
+      earned: newYearRuns >= 1,
+    },
+    {
+      id: 'christmas',
+      icon: 'calendar',
+      title: lang === 'zh-CN' ? '圣诞跑者' : 'Christmas Runner',
+      subtitle: lang === 'zh-CN' ? '圣诞节也坚持跑步' : 'Stayed active on Christmas Day',
+      hint: lang === 'zh-CN' ? '在 12 月 25 日完成一次跑步' : 'Run on December 25th',
+      progress: Math.min(1, christmasRuns),
+      earned: christmasRuns >= 1,
+    },
+    {
+      id: 'spring',
+      icon: 'park',
+      title: lang === 'zh-CN' ? '春意盎然' : 'Spring Bloom',
+      subtitle: lang === 'zh-CN' ? '在春季记录过跑步' : 'Recorded a run during spring',
+      hint: lang === 'zh-CN' ? '记录一次含「春」字的路线或活动名' : 'Log a run named with spring keywords',
+      progress: Math.min(1, springRuns),
+      earned: springRuns >= 1,
+    },
+    {
+      id: 'summer',
+      icon: 'park',
+      title: lang === 'zh-CN' ? '盛夏坚持' : 'Summer Heat',
+      subtitle: lang === 'zh-CN' ? '在夏季记录过跑步' : 'Recorded a run during summer',
+      hint: lang === 'zh-CN' ? '记录一次含「夏」字的路线或活动名' : 'Log a run named with summer keywords',
+      progress: Math.min(1, summerRuns),
+      earned: summerRuns >= 1,
+    },
+    {
+      id: 'autumn',
+      icon: 'park',
+      title: lang === 'zh-CN' ? '秋日收获' : 'Autumn Miles',
+      subtitle: lang === 'zh-CN' ? '在秋季记录过跑步' : 'Recorded a run during autumn',
+      hint: lang === 'zh-CN' ? '记录一次含「秋」字的路线或活动名' : 'Log a run named with autumn or fall keywords',
+      progress: Math.min(1, autumnRuns),
+      earned: autumnRuns >= 1,
+    },
+    {
+      id: 'winter',
+      icon: 'park',
+      title: lang === 'zh-CN' ? '寒冬不惧' : 'Winter Warrior',
+      subtitle: lang === 'zh-CN' ? '在冬季记录过跑步' : 'Recorded a run during winter',
+      hint: lang === 'zh-CN' ? '记录一次含「冬」字的路线或活动名' : 'Log a run named with winter keywords',
+      progress: Math.min(1, winterRuns),
+      earned: winterRuns >= 1,
     },
     {
       id: 'park',
