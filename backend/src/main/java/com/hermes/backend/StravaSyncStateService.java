@@ -14,9 +14,9 @@ public class StravaSyncStateService {
         return states.computeIfAbsent(runnerId, ignored -> new Tracker());
     }
 
-    public OAuthController.StravaSyncStatusResponse snapshot(Long runnerId) {
+    public StravaSyncService.StravaSyncStatusResponse snapshot(Long runnerId) {
         Tracker tracker = states.get(runnerId);
-        return tracker == null ? OAuthController.StravaSyncStatusResponse.idle() : tracker.snapshot();
+        return tracker == null ? StravaSyncService.StravaSyncStatusResponse.idle() : tracker.snapshot();
     }
 
     @Scheduled(fixedDelay = 600_000)
@@ -89,8 +89,8 @@ public class StravaSyncStateService {
             return lastUpdatedMs < cutoffMs && !"RUNNING".equals(status) && !"PENDING".equals(status);
         }
 
-        synchronized OAuthController.StravaSyncStatusResponse snapshot() {
-            return new OAuthController.StravaSyncStatusResponse(
+        synchronized StravaSyncService.StravaSyncStatusResponse snapshot() {
+            return new StravaSyncService.StravaSyncStatusResponse(
                     status,
                     importedRuns,
                     skippedNonRuns,

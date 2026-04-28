@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import java.util.concurrent.Executors;
 
 @Service
 public class GarminConnectImportService {
+    private static final Logger logger = LoggerFactory.getLogger(GarminConnectImportService.class);
 
     private static final int MAX_ACTIVITIES = 200;
     private static final int POINTS_BATCH_SIZE = 500;
@@ -114,7 +117,7 @@ public class GarminConnectImportService {
                 try {
                     importSingleActivity(runner, activityMeta, tracker);
                 } catch (Exception e) {
-                    System.err.println("[Hermes] Garmin import skipped activity: " + safeMessage(e));
+                    logger.warn("[Hermes] Garmin import skipped activity: {}", safeMessage(e), e);
                 }
             }
 
@@ -251,7 +254,7 @@ public class GarminConnectImportService {
         int exitCode = process.waitFor();
 
         if (stderr.length > 0) {
-            System.err.println("[Hermes] Garmin download stderr: " + new String(stderr, StandardCharsets.UTF_8).trim());
+            logger.warn("[Hermes] Garmin download stderr: {}", new String(stderr, StandardCharsets.UTF_8).trim());
         }
 
         if (exitCode != 0 || stdout.length == 0) {

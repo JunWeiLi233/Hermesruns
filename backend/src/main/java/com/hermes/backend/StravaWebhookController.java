@@ -38,15 +38,15 @@ public class StravaWebhookController {
     private static final Logger log = LoggerFactory.getLogger(StravaWebhookController.class);
 
     private final RunnerRepository runnerRepository;
-    private final OAuthController oAuthController;
+    private final StravaSyncService stravaSyncService;
     private final ExecutorService webhookExecutor;
 
     @Value("${strava.webhook.verify-token:hermes-strava-webhook}")
     private String verifyToken;
 
-    public StravaWebhookController(RunnerRepository runnerRepository, OAuthController oAuthController) {
+    public StravaWebhookController(RunnerRepository runnerRepository, StravaSyncService stravaSyncService) {
         this.runnerRepository = runnerRepository;
-        this.oAuthController = oAuthController;
+        this.stravaSyncService = stravaSyncService;
         // Bound concurrency to reduce memory pressure on small-RAM servers.
         this.webhookExecutor = Executors.newFixedThreadPool(4, r -> {
             Thread t = new Thread(r, "strava-webhook-worker");
@@ -150,7 +150,7 @@ public class StravaWebhookController {
                     } else if ("delete".equals(aspectType)) {
                         log.info("Strava webhook: deleting activity {} for runner {}",
                                 stravaActivityId, runner.getId());
-                        oAuthController.deleteStravaActivity(runner, stravaActivityId);
+                        stravaSyncService.deleteStravaActivity(runner, stravaActivityId);
                     }
                 },
                 () -> log.warn("Strava webhook: no runner found for athlete {}", stravaAthleteId)
@@ -169,10 +169,10 @@ public class StravaWebhookController {
                 }
             }
 
-            OAuthController.SingleActivitySyncResult result = oAuthController.syncStravaActivityById(runner, stravaActivityId);
-            if (result == OAuthController.SingleActivitySyncResult.SUCCESS
-                    || result == OAuthController.SingleActivitySyncResult.ALREADY_RUNNING
-                    || result == OAuthController.SingleActivitySyncResult.PERMANENT_FAILURE) {
+            StravaSyncService.SingleActivitySyncResult result = stravaSyncService.syncStravaActivityById(runner, stravaActivityId);
+            if (result == StravaSyncService.SingleActivitySyncResult.SUCCESS
+                    || result == StravaSyncService.SingleActivitySyncResult.ALREADY_RUNNING
+                    || result == StravaSyncService.SingleActivitySyncResult.PERMANENT_FAILURE) {
                 return;
             }
         }

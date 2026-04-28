@@ -68,7 +68,8 @@ class ProfileControllerTests {
                 mock(ActivityRepository.class),
                 mock(ActivityPointRepository.class),
                 mock(ActivityNormalizationService.class),
-                mock(PersonalRecordService.class)
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
         );
 
         ResponseEntity<?> response = controller.updateDisplayName(
@@ -99,7 +100,8 @@ class ProfileControllerTests {
                 activityRepository,
                 mock(ActivityPointRepository.class),
                 mock(ActivityNormalizationService.class),
-                mock(PersonalRecordService.class)
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
         );
 
         ResponseEntity<?> response = controller.heatmap("Bearer runner-token");
@@ -139,7 +141,8 @@ class ProfileControllerTests {
                 mock(ActivityRepository.class),
                 mock(ActivityPointRepository.class),
                 mock(ActivityNormalizationService.class),
-                personalRecordService
+                personalRecordService,
+                mock(QuotaService.class)
         );
 
         ResponseEntity<?> response = controller.personalRecords("Bearer runner-token");
@@ -155,7 +158,8 @@ class ProfileControllerTests {
                 mock(ActivityRepository.class),
                 mock(ActivityPointRepository.class),
                 mock(ActivityNormalizationService.class),
-                mock(PersonalRecordService.class)
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
         );
     }
 
@@ -165,7 +169,8 @@ class ProfileControllerTests {
             ActivityRepository activityRepository,
             ActivityPointRepository activityPointRepository,
             ActivityNormalizationService activityNormalizationService,
-            PersonalRecordService personalRecordService
+            PersonalRecordService personalRecordService,
+            QuotaService quotaService
     ) {
         return new ProfileController(
                 authService,
@@ -173,7 +178,8 @@ class ProfileControllerTests {
                 activityRepository,
                 activityPointRepository,
                 activityNormalizationService,
-                personalRecordService
+                personalRecordService,
+                quotaService
         );
     }
 

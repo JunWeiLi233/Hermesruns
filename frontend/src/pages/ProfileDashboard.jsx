@@ -16,7 +16,6 @@ import {
   PROGRESSION_TIMEFRAMES,
 } from '../utils/progressionAtlas';
 import { getTodayRunRecommendation } from '../utils/todayRun';
-import { buildRecentShoeSignal } from '../utils/shoeRotation';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
 import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../utils/vdot';
@@ -424,7 +423,6 @@ export default function ProfileDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [shoes, setShoes] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [races, _setRaces] = useState([]);
@@ -437,6 +435,9 @@ export default function ProfileDashboard() {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
+  const [musclePlan, setMusclePlan] = useState(null);
+  const [subscriptionState, setSubscriptionState] = useState(null);
+  const [brandMsgIndex, setBrandMsgIndex] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -449,10 +450,9 @@ export default function ProfileDashboard() {
     async function loadDashboard() {
       setLoadState('loading');
       try {
-        const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
+        const [profileResult, activitiesResult] = await Promise.allSettled([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
-          apiJson('/api/shoes'),
         ]);
 
         if (cancelled) return;
@@ -463,14 +463,12 @@ export default function ProfileDashboard() {
 
         const profileData = profileResult.value;
         const activitiesData = activitiesResult.status === 'fulfilled' ? activitiesResult.value : [];
-        const shoesData = shoesResult.status === 'fulfilled' ? shoesResult.value : [];
 
         const list = Array.isArray(activitiesData) ? activitiesData : [];
         list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
 
         setProfile(profileData);
         setRuns(list);
-        setShoes(Array.isArray(shoesData) ? shoesData : []);
         setLoadState('ready');
 
         const query = new URLSearchParams(window.location.search);
@@ -489,11 +487,17 @@ export default function ProfileDashboard() {
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/profile/personal-records').catch(() => null),
           apiJson('/api/races').catch(() => null),
-        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData]) => {
+          apiJson('/api/training/muscle/plan').catch(() => null),
+          apiJson('/api/profile/quota').catch(() => null),
+        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData, musclePlanData, quotaData]) => {
           if (cancelled) return;
 
           setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
           setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
+          setMusclePlan(musclePlanData && typeof musclePlanData === 'object' && musclePlanData.days ? musclePlanData : null);
+          if (quotaData && typeof quotaData === 'object' && !quotaData.admin) {
+            setSubscriptionState(quotaData);
+          }
 
           if (Array.isArray(racesData)) {
             _setRaces(racesData);
@@ -608,6 +612,13 @@ export default function ProfileDashboard() {
     }
   }, [isAuthenticated, t]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBrandMsgIndex((prev) => (prev + 1) % 3);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const currentDateLine = useMemo(() => {
     const now = new Date();
@@ -619,15 +630,14 @@ export default function ProfileDashboard() {
   }, [lang]);
 
   const todayBundle = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
-  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
-  const shoeRecommendation = shoeSignal?.recommendation;
-
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
 
   const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
+  const totalRuns = runs.length;
+  const totalDistanceKm = useMemo(() => runs.reduce((sum, r) => sum + resolveRunDistanceKm(r), 0), [runs]);
 
   const streak = useMemo(() => calculateStreaks(runs), [runs]);
   const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
@@ -655,6 +665,29 @@ export default function ProfileDashboard() {
 
   const restingHrValue = coachState?.lastNightRestingHr ?? coachState?.profileRestingHeartRateBpm ?? null;
   const sleepScoreValue = coachState?.lastSleepScore ?? null;
+
+  const strengthSummary = useMemo(() => {
+    if (!musclePlan || !Array.isArray(musclePlan.days)) return null;
+    const days = musclePlan.days;
+    const today = days[0] || null;
+    const strengthDays = days.filter((d) => d && d.strength);
+    const sessionCount = strengthDays.length;
+    const sessionMinutes = musclePlan.profile?.sessionMinutes || musclePlan.weekContext?.sessionMinutes || 30;
+    const focus = musclePlan.weekContext?.currentFocus || '';
+    const todayHasStrength = today && today.strength;
+    const todaySessionType = todayHasStrength ? today.strength.sessionType : null;
+    const todayDuration = todayHasStrength ? (today.strength.durationMinutes ?? sessionMinutes) : null;
+    const todayOptional = todayHasStrength ? today.strength.optional : false;
+    return {
+      sessionCount,
+      sessionMinutes,
+      focus,
+      todayHasStrength,
+      todaySessionType,
+      todayDuration,
+      todayOptional,
+    };
+  }, [musclePlan]);
 
   const raceCountdown = useMemo(() => {
     if (!nextRace?.parsedDate) return null;
@@ -864,6 +897,49 @@ export default function ProfileDashboard() {
           <p>{currentDateLine} | {t('profile.dashboard_window_active')}</p>
         </section>
 
+        {loadState === 'ready' && (
+          <section className="runner-dashboard-brand-carousel">
+            <div className="runner-dashboard-brand-inner">
+              <div className="runner-dashboard-brand-copy-carousel">
+                {[
+                  t('profile.brand_carousel_1'),
+                  t('profile.brand_carousel_2'),
+                  t('profile.brand_carousel_3'),
+                ].map((msg, i) => (
+                  <p key={i} className={`runner-dashboard-brand-msg${brandMsgIndex === i ? ' is-active' : ''}`}>
+                    {msg}
+                  </p>
+                ))}
+              </div>
+              <div className="runner-dashboard-brand-real-stats">
+                {totalRuns > 0 ? (
+                  <>
+                    <div>
+                      <strong>{totalRuns}</strong>
+                      <span>{lang === 'zh-CN' ? '次跑步记录' : 'runs'}</span>
+                    </div>
+                    <div>
+                      <strong>{formatDistance(totalDistanceKm, 1, lang, unit)}</strong>
+                      <span>{lang === 'zh-CN' ? '总距离' : 'total distance'}</span>
+                    </div>
+                    <div>
+                      <strong>{profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'}</strong>
+                      <span>{t('profile.vo2_unit_short')}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="runner-dashboard-brand-stats-empty">{t('profile.brand_carousel_subtitle')}</p>
+                )}
+              </div>
+              <div className="runner-dashboard-brand-dots" aria-hidden="true">
+                <span className={brandMsgIndex === 0 ? 'is-active' : ''} />
+                <span className={brandMsgIndex === 1 ? 'is-active' : ''} />
+                <span className={brandMsgIndex === 2 ? 'is-active' : ''} />
+              </div>
+            </div>
+          </section>
+        )}
+
         {banner && (
           <section className={`runner-dashboard-banner tone-${banner.tone || 'info'}`}>
             <span>{banner.message}</span>
@@ -873,6 +949,40 @@ export default function ProfileDashboard() {
 
         {!dismissedComeback && daysOff >= 3 && (
           <ComebackMessage daysOff={daysOff} onDismiss={() => setDismissedComeback(true)} />
+        )}
+
+        {subscriptionState && !subscriptionState.pro && subscriptionState.shoeScan && (
+          <section className="runner-dashboard-pro-quota-card">
+            <div className="runner-dashboard-pro-quota-body">
+              <span className="runner-dashboard-pro-quota-kicker">{t('pro.badge')}</span>
+              <div className="runner-dashboard-pro-quota-copy">
+                <h4>{t('pro.quota_remaining', { remaining: subscriptionState.shoeScan.remaining, limit: subscriptionState.shoeScan.limit })}</h4>
+                {subscriptionState.shoeScan.remaining <= 1 && (
+                  <p>{t('pro.quota_exhausted', { limit: subscriptionState.shoeScan.limit })}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="runner-dashboard-pro-quota-cta"
+                onClick={() => navigate('/profile?checkout=true')}
+              >
+                <span>{t('pro.upgrade_cta')}</span>
+              </button>
+            </div>
+          </section>
+        )}
+
+        {subscriptionState && subscriptionState.pro && (
+          <section className="runner-dashboard-pro-card">
+            <div className="runner-dashboard-pro-body">
+              <span className="runner-dashboard-pro-badge">{t('pro.badge')}</span>
+              <span className="runner-dashboard-pro-expiry">
+                {subscriptionState.expiresAt
+                  ? t('pro.status_active', { date: formatDate(subscriptionState.expiresAt, lang === 'zh-CN' ? 'zh-CN' : 'en-US') })
+                  : t('pro.status_active', { date: '--' })}
+              </span>
+            </div>
+          </section>
         )}
 
         {loadState === 'loading' && (
@@ -1323,7 +1433,7 @@ export default function ProfileDashboard() {
                       <span className="runner-dashboard-race-phase-tag">{racePrepPhase?.label}</span>
                       <p>
                         <small>{t('profile.dashboard_race_prep_advice')}</small>
-                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '\u964d\u4f4e\u8d1f\u8377\uff0c\u4fdd\u6301\u7761\u7720\uff0c\u7528\u77ed\u52a0\u901f\u4fdd\u7559\u795e\u7ecf\u808c\u8089\u72b6\u6001' : 'Prioritize sleep and maintain neuro-muscular pop with short strides.')}
+                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '\u964d\u4f4e\u8d1f\u8377\uff0c\u4fdd\u6301\u7761\u7720\uff0c\u7528\u77ed\u52a0\u901f\u4fdd\u7559\u795e\u7ecf\u808c\u8089\u72b6\u6001' : 'Prioritize sleep and keep your legs sharp with short stride-outs.')}
                         {racePrepPhase?.key === 'peak' && (lang === 'zh-CN' ? '\u9ad8\u5cf0\u5468\u4fdd\u6301\u89c4\u5f8b\u6062\u590d\uff0c\u4e0d\u8981\u8ffd\u52a0\u8fc7\u91cf\u5f3a\u5ea6' : 'Peak volume weeks require consistent recovery and core strength maintenance.')}
                         {racePrepPhase?.key === 'specific' && (lang === 'zh-CN' ? '\u6253\u78e8\u6bd4\u8d5b\u914d\u901f\u4f53\u611f\uff0c\u7ec3\u4e60\u8865\u7ed9\u7b56\u7565' : 'Refine race-pace feel and practice fueling strategies.')}
                         {racePrepPhase?.key === 'base' && (lang === 'zh-CN' ? '\u7528\u7a33\u5b9a\u4f4e\u5fc3\u7387\u8dd1\u91cf\u6253\u597d\u6709\u6c27\u57fa\u7840' : 'Build aerobic base with steady, low-HR volume.')}
@@ -1442,12 +1552,6 @@ export default function ProfileDashboard() {
                     <strong>{heroLoad}</strong>
                   </div>
                 </div>
-                {shoeRecommendation && (
-                  <div className="runner-dashboard-feature-gear">
-                    <label>{t('profile.dashboard_recommended_gear')}</label>
-                    <strong>{shoeRecommendation.brand} {shoeRecommendation.model}</strong>
-                  </div>
-                )}
                 <div className="runner-dashboard-feature-actions">
                   <button type="button" className="runner-dashboard-feature-primary" onClick={() => navigate('/today-run')}>
                     {t('profile.dashboard_start_workout')}
@@ -1491,6 +1595,56 @@ export default function ProfileDashboard() {
                   <span>{t('profile.dashboard_lactate_threshold')}: {thresholdEstimate ?? '--'} bpm</span>
                 </div>
               </article>
+
+              {strengthSummary && (
+                <article className="runner-dashboard-feature-card runner-dashboard-feature-card--muscle">
+                  <div className="runner-dashboard-feature-head">
+                    <span className="runner-dashboard-card-kicker">{t('profile.dashboard_muscle_kicker')}</span>
+                    <span className="runner-dashboard-feature-eyebrow">
+                      {strengthSummary.sessionCount} {lang === 'zh-CN' ? '次/周' : '/ wk'}
+                    </span>
+                  </div>
+                  <div className="runner-dashboard-feature-copy">
+                    <h3>
+                      {strengthSummary.todayHasStrength
+                        ? t('profile.dashboard_muscle_today_session')
+                        : t('profile.dashboard_muscle_no_today')}
+                    </h3>
+                    {strengthSummary.todayHasStrength ? (
+                      <p>
+                        <span className="runner-dashboard-muscle-session-type">
+                          {(() => {
+                            const st = strengthSummary.todaySessionType;
+                            if (st === 'FOUNDATION_STRENGTH') return t('muscle_training.session_type_foundation');
+                            if (st === 'RESILIENCE_CAPACITY') return t('muscle_training.session_type_resilience');
+                            if (st === 'OPTIONAL_ELASTICITY') return t('muscle_training.session_type_elasticity');
+                            return st?.replace(/_/g, ' ') || '';
+                          })()}
+                          {strengthSummary.todayOptional && ` (${lang === 'zh-CN' ? '可选' : 'optional'})`}
+                        </span>
+                        {' · '}
+                        {strengthSummary.todayDuration} {lang === 'zh-CN' ? '分钟' : 'min'}
+                      </p>
+                    ) : (
+                      <p>{t('profile.dashboard_muscle_no_today_hint')}</p>
+                    )}
+                  </div>
+                  {strengthSummary.focus && (
+                    <p className="runner-dashboard-muscle-focus">
+                      {t('profile.dashboard_muscle_focus', { focus: strengthSummary.focus })}
+                    </p>
+                  )}
+                  <div className="runner-dashboard-feature-actions">
+                    <button
+                      type="button"
+                      className="runner-dashboard-feature-secondary"
+                      onClick={() => navigate('/muscle-training')}
+                    >
+                      {t('profile.dashboard_muscle_view_plan')}
+                    </button>
+                  </div>
+                </article>
+              )}
 
               {runs.length > 3 && (
                 <article className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
