@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.stripe.Stripe;
@@ -32,6 +34,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/billing")
 public class BillingController {
+    private static final Logger logger = LoggerFactory.getLogger(BillingController.class);
     private static final Set<String> CHECKOUT_FIELDS = Set.of("months");
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -230,6 +233,7 @@ public class BillingController {
             }
             return Optional.of(Session.retrieve(sessionId));
         } catch (Exception e) {
+            logger.warn("Failed to parse Stripe webhook payload: {}", e.getMessage(), e);
             return Optional.empty();
         }
     }
@@ -240,6 +244,7 @@ public class BillingController {
             try {
                 return Long.parseLong(meta.get("runnerId"));
             } catch (NumberFormatException ignored) {
+                logger.debug("Could not parse runnerId from Stripe metadata", ignored);
             }
         }
         String ref = session.getClientReferenceId();
@@ -247,6 +252,7 @@ public class BillingController {
             try {
                 return Long.parseLong(ref.trim());
             } catch (NumberFormatException ignored) {
+                logger.debug("Could not parse runnerId from Stripe client reference", ignored);
             }
         }
         return null;
@@ -261,6 +267,7 @@ public class BillingController {
                     return m;
                 }
             } catch (NumberFormatException ignored) {
+                logger.debug("Could not parse months from Stripe metadata", ignored);
             }
         }
         return 1;
