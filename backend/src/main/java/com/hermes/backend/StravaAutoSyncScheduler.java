@@ -25,16 +25,19 @@ public class StravaAutoSyncScheduler {
     private static final Logger log = LoggerFactory.getLogger(StravaAutoSyncScheduler.class);
 
     private final RunnerRepository runnerRepository;
-    private final OAuthController oAuthController;
+    private final StravaTokenService stravaTokenService;
+    private final StravaSyncService stravaSyncService;
     private final AdminBackgroundJobService adminBackgroundJobService;
 
     public StravaAutoSyncScheduler(
             RunnerRepository runnerRepository,
-            OAuthController oAuthController,
+            StravaTokenService stravaTokenService,
+            StravaSyncService stravaSyncService,
             AdminBackgroundJobService adminBackgroundJobService
     ) {
         this.runnerRepository = runnerRepository;
-        this.oAuthController = oAuthController;
+        this.stravaTokenService = stravaTokenService;
+        this.stravaSyncService = stravaSyncService;
         this.adminBackgroundJobService = adminBackgroundJobService;
     }
 
@@ -53,7 +56,7 @@ public class StravaAutoSyncScheduler {
     }
 
     private AdminBackgroundJob runSyncJob(Runner actor, String triggerSource) {
-        if (!oAuthController.isStravaConfigured()) {
+        if (!stravaTokenService.isStravaConfigured()) {
             AdminBackgroundJob job = adminBackgroundJobService.createJob(
                     "STRAVA_GLOBAL_SYNC",
                     triggerSource,
@@ -94,14 +97,14 @@ public class StravaAutoSyncScheduler {
 
         for (Runner runner : stravaRunners) {
             try {
-                String accessToken = oAuthController.resolveRunnerStravaAccessToken(runner);
+                String accessToken = stravaTokenService.resolveRunnerStravaAccessToken(runner);
                 if (accessToken == null || accessToken.isBlank()) {
                     log.debug("Strava auto-sync: skipping runner {} (no valid token)", runner.getId());
                     failed++;
                     failures.add(failureRecord(runner, "Missing access token"));
                     continue;
                 }
-                oAuthController.fetchAndSaveStravaActivities(accessToken, runner.getId(), true, "scheduled_recent_sync");
+                stravaSyncService.fetchAndSaveStravaActivities(accessToken, runner.getId(), true, "scheduled_recent_sync");
                 synced++;
             } catch (Exception e) {
                 log.warn("Strava auto-sync: failed for runner {}: {}", runner.getId(), e.getMessage());
