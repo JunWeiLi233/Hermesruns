@@ -16,7 +16,6 @@ const BRAND_ZH_MAP = {
   skechers: '斯凯奇',
   anta: '安踏',
   lining: '李宁',
-  lining: '李宁',
   xtep: '特步',
   peak: '匹克',
   erke: '鸿星尔克',

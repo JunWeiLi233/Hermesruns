@@ -5716,6 +5716,46 @@ Object.assign(translations['zh-CN'].dashboard, {
   users_table_notes_meta: '条备注',
 });
 
+Object.assign(translations['zh-CN'].index, {
+  "stitch_slides_label": "Hermes 网站介绍",
+  "stitch_slide_1_kicker": "今日判断",
+  "stitch_slide_1_line_one": "先看清",
+  "stitch_slide_1_line_two": "今天该怎么跑",
+  "stitch_slide_1_copy": "Hermes 把同步、负荷和恢复信号放进一个入口，让你登录后马上知道今天该推进、放轻还是休息。",
+  "stitch_slide_2_kicker": "训练可信度",
+  "stitch_slide_2_line_one": "从数据里",
+  "stitch_slide_2_line_two": "读出趋势",
+  "stitch_slide_2_copy": "VDOT、ACWR、睡眠和压力信号会被整理成清晰的教练语言，而不是让你自己翻一堆数字。",
+  "stitch_slide_2_stat_one": "有氧能力趋势",
+  "stitch_slide_2_stat_two": "训练负荷护栏",
+  "stitch_slide_3_kicker": "比赛准备",
+  "stitch_slide_3_line_one": "把目标",
+  "stitch_slide_3_line_two": "连到路线",
+  "stitch_slide_3_copy": "从比赛预测到路线洞察和跑鞋状态，Hermes 帮你把下一场训练和下一场比赛连成一条线。",
+  "stitch_slide_3_stat_one": "目标距离预测",
+  "stitch_slide_3_stat_two": "路线与装备信号",
+});
+
+Object.assign(translations.en.index, {
+  "stitch_slides_label": "Hermes website introduction",
+  "stitch_slide_1_kicker": "Daily decision",
+  "stitch_slide_1_line_one": "Know what",
+  "stitch_slide_1_line_two": "today needs",
+  "stitch_slide_1_copy": "Hermes brings sync, load, and recovery signals into one entry point so the next action is clear as soon as you sign in.",
+  "stitch_slide_2_kicker": "Training trust",
+  "stitch_slide_2_line_one": "Turn data",
+  "stitch_slide_2_line_two": "into direction",
+  "stitch_slide_2_copy": "VDOT, ACWR, sleep, and stress become coach-readable guidance instead of another pile of numbers to interpret alone.",
+  "stitch_slide_2_stat_one": "aerobic trend signal",
+  "stitch_slide_2_stat_two": "load guardrail",
+  "stitch_slide_3_kicker": "Race readiness",
+  "stitch_slide_3_line_one": "Connect goals",
+  "stitch_slide_3_line_two": "to the route",
+  "stitch_slide_3_copy": "Race predictions, route insight, and shoe health sit together so every login points toward the next smarter session.",
+  "stitch_slide_3_stat_one": "goal-distance forecasts",
+  "stitch_slide_3_stat_two": "route and gear signals",
+});
+
 Object.assign(translations.en.dashboard, {
   users_command_kicker: 'Roster Command',
   users_command_title: 'Put roster shape, access control, and exception signals on one operator deck',

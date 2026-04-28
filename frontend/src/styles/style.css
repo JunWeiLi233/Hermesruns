@@ -22725,6 +22725,45 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   gap: 22px;
 }
 
+.auth-flow-copy--carousel {
+  gap: 0;
+}
+
+.auth-flow-slide-viewport {
+  position: relative;
+  height: clamp(360px, 47vh, 430px);
+  overflow: hidden;
+}
+
+.auth-flow-slide-track {
+  height: 300%;
+  display: flex;
+  flex-direction: column;
+  animation: authFlowSlideRoll 18s cubic-bezier(0.76, 0, 0.24, 1) infinite;
+  will-change: transform;
+}
+
+.auth-flow-slide {
+  height: 33.333%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+}
+
+.auth-flow-kicker {
+  width: fit-content;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.16);
+  color: rgba(255, 228, 218, 0.84);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  box-shadow: 0 18px 60px rgba(240, 117, 97, 0.14);
+}
+
 .auth-flow-hero {
   display: flex;
   flex-direction: column;
@@ -22792,10 +22831,50 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   height: 6px;
   border-radius: 999px;
   background: rgba(255, 241, 230, 0.2);
+  animation: authFlowDotPulse 18s linear infinite;
 }
 
-.auth-flow-dots .is-active {
-  background: #f07561;
+.auth-flow-dot--2 {
+  animation-delay: 6s;
+}
+
+.auth-flow-dot--3 {
+  animation-delay: 12s;
+}
+
+@keyframes authFlowSlideRoll {
+  0%,
+  26% {
+    transform: translateY(0);
+  }
+
+  33%,
+  59% {
+    transform: translateY(-33.333%);
+  }
+
+  66%,
+  92% {
+    transform: translateY(-66.666%);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes authFlowDotPulse {
+  0%,
+  29% {
+    width: 22px;
+    background: #f07561;
+  }
+
+  34%,
+  100% {
+    width: 6px;
+    background: rgba(255, 241, 230, 0.2);
+  }
 }
 
 /* Profile Dashboard Brand Carousel */
@@ -22897,6 +22976,37 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .runner-dashboard-brand-dots .is-active {
   background: #f07561;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-carousel {
+  background:
+    radial-gradient(circle at top left, rgba(240, 117, 97, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 244, 239, 0.92));
+  border: 1px solid rgba(45, 35, 30, 0.1);
+  box-shadow: 0 22px 46px rgba(94, 72, 61, 0.12);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-msg,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-real-stats strong {
+  color: #251c18;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-real-stats span,
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-stats-empty {
+  color: rgba(72, 56, 48, 0.6);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-real-stats div {
+  border-left: 1px solid rgba(240, 117, 97, 0.2);
+  padding-left: 14px;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-dots span {
+  background: rgba(45, 35, 30, 0.18);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-dots .is-active {
+  background: #d95f4f;
 }
 
 @media (max-width: 720px) {
@@ -23706,6 +23816,10 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
     font-size: clamp(3rem, 10vw, 4.4rem);
   }
 
+  .auth-flow-slide-viewport {
+    height: clamp(310px, 42vh, 380px);
+  }
+
   .auth-flow-formside {
     align-items: center;
     padding: 12px 28px 40px;
@@ -23743,6 +23857,10 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   .auth-flow-hero {
     max-width: 9ch;
     font-size: clamp(2.5rem, 14vw, 3.6rem);
+  }
+
+  .auth-flow-slide-viewport {
+    height: 330px;
   }
 
   .auth-flow-text {
@@ -23785,6 +23903,35 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
     flex-wrap: wrap;
     gap: 10px 16px;
     padding-bottom: 56px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-flow-slide-viewport {
+    height: auto;
+    overflow: visible;
+  }
+
+  .auth-flow-slide-track {
+    height: auto;
+    animation: none;
+  }
+
+  .auth-flow-slide {
+    height: auto;
+  }
+
+  .auth-flow-slide:not(:first-child) {
+    display: none;
+  }
+
+  .auth-flow-dots span {
+    animation: none;
+  }
+
+  .auth-flow-dot--1 {
+    width: 22px;
+    background: #f07561;
   }
 }
 
