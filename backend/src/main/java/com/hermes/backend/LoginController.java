@@ -10,12 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -445,6 +448,7 @@ public class LoginController {
     // 3. ADMIN ENDPOINT: SECURE GET ALL RUNNERS
     // ==========================================
     @GetMapping("/runners")
+    @Transactional
     public ResponseEntity<?> getAllRunners(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
@@ -458,12 +462,16 @@ public class LoginController {
         }
 
         List<Runner> activeRunners = runnerRepository.findByDeletedFalseOrderByIdAsc();
+        List<Runner> toSave = new ArrayList<>();
         for (Runner r : activeRunners) {
             String currentRole = r.getRole();
             if (currentRole == null || currentRole.equalsIgnoreCase("null") || currentRole.trim().isEmpty()) {
                 r.setRole("USER");
-                runnerRepository.save(r);
+                toSave.add(r);
             }
+        }
+        if (!toSave.isEmpty()) {
+            runnerRepository.saveAll(toSave);
         }
 
         // Convert to summary list for clean API response
