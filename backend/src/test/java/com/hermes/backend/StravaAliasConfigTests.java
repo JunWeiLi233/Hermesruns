@@ -3,7 +3,6 @@ package com.hermes.backend;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -64,31 +63,48 @@ class StravaAliasConfigTests {
         }
 
         @Bean
+        StravaTokenService stravaTokenService(RunnerRepository runnerRepository,
+                                               SecretEncryptionService secretEncryptionService,
+                                               RestTemplate restTemplate,
+                                               SystemConfigService systemConfigService) {
+            return new StravaTokenService(runnerRepository, secretEncryptionService, restTemplate, systemConfigService);
+        }
+
+        @Bean
+        StravaSyncService stravaSyncService(ActivityRepository activityRepository,
+                                             ActivityPointRepository activityPointRepository,
+                                             RunnerRepository runnerRepository,
+                                             RestTemplate restTemplate,
+                                             AcclimatizationService acclimatizationService,
+                                             AutomatedCoachService automatedCoachService,
+                                             AiUsageService aiUsageService,
+                                             StravaTokenService stravaTokenService) {
+            return new StravaSyncService(activityRepository, activityPointRepository, runnerRepository,
+                    restTemplate, acclimatizationService, automatedCoachService, null, aiUsageService, stravaTokenService);
+        }
+
+        @Bean
         OAuthController oAuthController(
                 RunnerRepository runnerRepository,
                 AuthService authService,
                 ActivityRepository activityRepository,
-                ActivityPointRepository activityPointRepository,
                 SecretEncryptionService secretEncryptionService,
                 AiUsageService aiUsageService,
                 RestTemplate restTemplate,
                 SystemConfigService systemConfigService,
-                ApplicationEventPublisher applicationEventPublisher,
-                AutomatedCoachService automatedCoachService,
-                AcclimatizationService acclimatizationService
+                StravaTokenService stravaTokenService,
+                StravaSyncService stravaSyncService
         ) {
             return new OAuthController(
                     runnerRepository,
                     authService,
                     activityRepository,
-                    activityPointRepository,
                     secretEncryptionService,
                     aiUsageService,
                     restTemplate,
                     systemConfigService,
-                    applicationEventPublisher,
-                    automatedCoachService,
-                    acclimatizationService
+                    stravaTokenService,
+                    stravaSyncService
             );
         }
 
@@ -120,11 +136,6 @@ class StravaAliasConfigTests {
         @Bean
         RestTemplate restTemplate() {
             return mock(RestTemplate.class);
-        }
-
-        @Bean
-        ApplicationEventPublisher applicationEventPublisher() {
-            return mock(ApplicationEventPublisher.class);
         }
 
         @Bean
