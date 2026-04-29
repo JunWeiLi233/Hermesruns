@@ -4,6 +4,7 @@ import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -458,9 +459,78 @@ public class ShoeController {
             // Soft-delete: retire the shoe so activity links remain valid
             Shoe shoe = shoeOpt.get();
             shoe.setRetired(true);
+            shoe.setRetiredDate(LocalDateTime.now());
             shoeRepository.save(shoe);
             return ResponseEntity.ok(Map.of("message", "Shoe retired"));
         }
+    }
+
+    @PostMapping("/{id}/retire")
+    public ResponseEntity<?> retireShoe(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        Optional<Shoe> shoeOpt = shoeRepository.findByIdAndRunner(id, user.get());
+        if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+        Shoe shoe = shoeOpt.get();
+        shoe.setRetired(true);
+        shoe.setRetiredDate(LocalDateTime.now());
+        Shoe saved = shoeRepository.save(shoe);
+
+        double activityKm = activityRepository.sumDistanceKmByShoeId(saved.getId());
+        double initial = saved.getInitialDistanceKm() != null ? saved.getInitialDistanceKm() : 0.0;
+        saved.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Shoe retired",
+                "shoeId", saved.getId(),
+                "retiredDate", saved.getRetiredDate().toString()
+        ));
+    }
+
+    @PostMapping("/{id}/reactivate")
+    public ResponseEntity<?> reactivateShoe(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        Optional<Shoe> shoeOpt = shoeRepository.findByIdAndRunner(id, user.get());
+        if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+        Shoe shoe = shoeOpt.get();
+        shoe.setRetired(false);
+        shoe.setRetiredDate(null);
+        Shoe saved = shoeRepository.save(shoe);
+
+        double activityKm = activityRepository.sumDistanceKmByShoeId(saved.getId());
+        double initial = saved.getInitialDistanceKm() != null ? saved.getInitialDistanceKm() : 0.0;
+        saved.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Shoe reactivated",
+                "shoeId", saved.getId()
+        ));
+    }
+
+    @GetMapping("/retired")
+    public ResponseEntity<?> listRetiredShoes(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        List<Shoe> retiredShoes = shoeRepository.findByRunnerAndRetiredTrueOrderByRetiredDateDesc(user.get());
+
+        Map<Long, Double> distanceMap = buildShoeDistanceMap(user.get());
+        retiredShoes.forEach(s -> attachCurrentDistance(s, distanceMap));
+
+        return ResponseEntity.ok(retiredShoes);
     }
 
     @PatchMapping("/{shoeId}/assign/{activityId}")
