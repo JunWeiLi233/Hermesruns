@@ -98,7 +98,7 @@ function getCatalogModelLabel(item, lang) {
 }
 
 export default function ShoeCatalog() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -109,7 +109,38 @@ export default function ShoeCatalog() {
   const [selectedModel, setSelectedModel] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [brandsExpanded, setBrandsExpanded] = useState(false);
+  const avatarMenuRef = useRef(null);
   const seriesSectionRef = useRef(null);
+
+  const viewedBrandKeys = useMemo(() => {
+    try {
+      const raw = window.localStorage.getItem('hermes_shoe_brand_views');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }, []);
+
+  const recordBrandView = (brand) => {
+    try {
+      const raw = window.localStorage.getItem('hermes_shoe_brand_views');
+      const list = raw ? JSON.parse(raw) : [];
+      const filtered = list.filter((b) => b !== brand);
+      filtered.unshift(brand);
+      const trimmed = filtered.slice(0, 20);
+      window.localStorage.setItem('hermes_shoe_brand_views', JSON.stringify(trimmed));
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
+        setAvatarMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -182,6 +213,7 @@ export default function ShoeCatalog() {
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
+    { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
   ];
 
   const availableCatalogCategories = useMemo(() => {
@@ -189,6 +221,33 @@ export default function ShoeCatalog() {
     const categories = Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)));
     return ['all', ...categories];
   }, [catalog, selectedBrand]);
+
+  const visibleCatalogBrands = useMemo(() => {
+    if (brandsExpanded) return catalog;
+    if (catalog.length <= 4) return catalog;
+    if (viewedBrandKeys.length > 0) {
+      const ordered = [];
+      const remaining = new Set(catalog.map((b) => b.brand));
+      for (const key of viewedBrandKeys) {
+        const match = catalog.find((b) => b.brand === key);
+        if (match) {
+          ordered.push(match);
+          remaining.delete(match.brand);
+        }
+        if (ordered.length >= 4) break;
+      }
+      if (ordered.length < 4) {
+        const extras = catalog.filter((b) => remaining.has(b.brand));
+        for (const b of extras) {
+          ordered.push(b);
+          if (ordered.length >= 4) break;
+        }
+      }
+      return ordered;
+    }
+    const shuffled = [...catalog].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 4);
+  }, [catalog, brandsExpanded, viewedBrandKeys]);
 
   const visibleCatalogModels = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -222,6 +281,7 @@ export default function ShoeCatalog() {
     setSelectedBrand(brand);
     setSelectedCategory('all');
     setSearchQuery('');
+    recordBrandView(brand.brand);
     requestAnimationFrame(() => {
       seriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
@@ -288,9 +348,21 @@ export default function ShoeCatalog() {
             <button type="button" className="runner-shell-topbar-link" onClick={() => navigate('/shoes/add')}>
               {t('shoes.add_page_title')}
             </button>
-            <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label="Profile">
-              H
-            </button>
+            <div className="user-menu-shell" ref={avatarMenuRef}>
+              <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label="Profile" onClick={() => setAvatarMenuOpen((prev) => !prev)}>
+                H
+              </button>
+              <div className={`user-menu-dropdown${avatarMenuOpen ? ' visible' : ''}`}>
+                <button type="button" className="user-menu-item" onClick={() => { setAvatarMenuOpen(false); navigate('/profile'); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  {t('profile.change_name')}
+                </button>
+                <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setAvatarMenuOpen(false); logout(); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  {t('profile.logout')}
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -342,7 +414,7 @@ export default function ShoeCatalog() {
 
               <div className="add-shoes-browser-layout">
                 <aside className="add-shoes-brand-rail">
-                  {catalog.map((entry) => (
+                  {visibleCatalogBrands.map((entry) => (
                     <button
                       key={entry.brand}
                       type="button"
@@ -358,6 +430,21 @@ export default function ShoeCatalog() {
                       </div>
                     </button>
                   ))}
+                  {catalog.length > 4 && (
+                    <button
+                      type="button"
+                      className={`add-shoes-brand-item add-shoes-brand-item--expand${brandsExpanded ? ' is-expanded' : ''}`}
+                      onClick={() => setBrandsExpanded((prev) => !prev)}
+                    >
+                      <span className="add-shoes-brand-logo add-shoes-brand-logo--expand">
+                        <AppIcon name={brandsExpanded ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
+                      </span>
+                      <div className="add-shoes-brand-copy">
+                        <strong>{brandsExpanded ? (lang === 'zh-CN' ? '收起' : 'Collapse') : (lang === 'zh-CN' ? '展开浏览' : 'Expand browse')}</strong>
+                        <span>{brandsExpanded ? '' : t('shoes.model_count', { count: catalog.length })}</span>
+                      </div>
+                    </button>
+                  )}
                 </aside>
 
                 <div ref={seriesSectionRef} className="add-shoes-model-grid-shell">
