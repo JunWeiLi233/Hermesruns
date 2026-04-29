@@ -178,7 +178,6 @@ export function isPublishBlockingFinding(finding) {
   const checker = String(finding?.checker || "").toLowerCase();
   const summary = String(finding?.summary || "").toLowerCase();
   const sensitive = /secret|pii|api|key|token|password|credential|leak|config/.test(`${checker} ${summary}`);
-  if (/secret|pii/.test(checker)) return true;
   if (severity === "CRITICAL") return true;
   return severity === "HIGH" && sensitive;
 }
