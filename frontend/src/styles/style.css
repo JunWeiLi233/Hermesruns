@@ -26900,7 +26900,7 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 }
 
 .analysis-overview-card--vdot-insight .analysis-overview-insight-copy {
-  color: #f07561;
+  color: rgba(232, 226, 220, 0.5);
 }
 
 .analysis-overview-grid--summary {
@@ -27028,6 +27028,7 @@ body.theme-light .dashboard-body .unit-toggle button.active {
   position: absolute;
   top: 0;
   left: 0;
+  transform: translateX(-50%);
   display: grid;
   gap: 2px;
   min-width: 116px;
@@ -27378,20 +27379,20 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 
 .analysis-overview-risk-level.is-low,
 .analysis-overview-risk-meter span.is-green {
-  color: #59d487;
-  background-color: #59d487;
+  color: #38a35e;
+  background-color: #38a35e;
 }
 
 .analysis-overview-risk-level.is-moderate,
 .analysis-overview-risk-meter span.is-warn {
-  color: #ffb56f;
-  background-color: #ffb56f;
+  color: #d98c3a;
+  background-color: #d98c3a;
 }
 
 .analysis-overview-risk-level.is-high,
 .analysis-overview-risk-meter span.is-danger {
-  color: #ff7b69;
-  background-color: #ff7b69;
+  color: #d94a3a;
+  background-color: #d94a3a;
 }
 
 .analysis-overview-risk-meter {
@@ -27407,24 +27408,24 @@ body.theme-light .dashboard-body .unit-toggle button.active {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
   display: block;
-  opacity: 0.42;
+  opacity: 0.28;
 }
 
 .analysis-overview-risk-meter span:first-child {
-  background: rgba(89, 212, 135, 0.38);
+  background: rgba(56, 163, 94, 0.44);
 }
 
 .analysis-overview-risk-meter span:nth-child(2) {
-  background: rgba(255, 181, 111, 0.38);
+  background: rgba(217, 140, 58, 0.44);
 }
 
 .analysis-overview-risk-meter span:last-child {
-  background: rgba(255, 123, 105, 0.38);
+  background: rgba(217, 74, 58, 0.44);
 }
 
 .analysis-overview-risk-meter span.is-on {
   opacity: 1;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.32), 0 8px 22px rgba(0, 0, 0, 0.2);
 }
 
 .analysis-overview-risk-labels {
@@ -27452,20 +27453,20 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 }
 
 .analysis-overview-risk-labels span:first-child {
-  background: rgba(89, 212, 135, 0.18);
-  color: #72cf95;
+  background: rgba(56, 163, 94, 0.24);
+  color: #2a8a4e;
 }
 
 .analysis-overview-risk-labels span:nth-child(2) {
   text-align: center;
-  background: rgba(255, 181, 111, 0.18);
-  color: #efb66d;
+  background: rgba(217, 140, 58, 0.24);
+  color: #b87528;
 }
 
 .analysis-overview-risk-labels span:last-child {
   text-align: right;
-  background: rgba(255, 123, 105, 0.18);
-  color: #eb8574;
+  background: rgba(217, 74, 58, 0.24);
+  color: #c04333;
 }
 
 .analysis-overview-card--forecast {
@@ -31410,6 +31411,104 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-sa
   width: min(1400px, calc(100% - 32px));
 }
 
+/* Prediction hero */
+.prediction-hero {
+  padding: 0 0 16px;
+}
+.prediction-hero h1 {
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  font-weight: 700;
+  color: var(--text-primary, #e2e8f0);
+  margin: 0 0 8px;
+}
+.prediction-hero-basis {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Effort grid */
+.prediction-effort-grid {
+  margin-top: 20px;
+}
+.prediction-effort-grid h2 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0 0 12px;
+}
+.prediction-effort-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.prediction-effort-card {
+  background: var(--card-bg, rgba(30, 41, 59, 0.7));
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.12));
+  text-align: center;
+}
+.prediction-effort-card.is-easy { border-left: 3px solid #4ccd73; }
+.prediction-effort-card.is-moderate { border-left: 3px solid #f4b860; }
+.prediction-effort-card.is-hard { border-left: 3px solid #f97316; }
+.prediction-effort-card.is-race { border-left: 3px solid #f07561; }
+.prediction-effort-card-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-tertiary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.prediction-effort-card-time {
+  display: block;
+  font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+  font-weight: 700;
+  color: var(--text-primary, #e2e8f0);
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.prediction-effort-card-pace {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-tertiary, #64748b);
+}
+
+/* Training recommendation */
+.prediction-recommendation {
+  margin-top: 24px;
+  background: var(--card-bg, rgba(30, 41, 59, 0.7));
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.12));
+}
+.prediction-recommendation h2 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0 0 8px;
+}
+.prediction-recommendation p {
+  font-size: 0.84rem;
+  color: var(--text-secondary, #94a3b8);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Chart section */
+.prediction-chart-section {
+  margin-top: 24px;
+}
+.prediction-chart-section h2 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0 0 12px;
+}
+
 .prediction-marathon-hero,
 .prediction-marathon-chart-card,
 .prediction-marathon-judgment-card,
@@ -33564,6 +33663,25 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   font-size: 0.72rem;
   letter-spacing: 0;
   text-transform: none;
+}
+
+.schedule-plan-route-insight {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.schedule-plan-route-insight span {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 247, 243, 0.76);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 6px 9px;
+  text-transform: uppercase;
 }
 
 .schedule-plan-route-target {
@@ -39864,6 +39982,53 @@ body.theme-light .settings-control-theme-card.is-active {
 }
 .add-shoes-model-card.is-active { background: linear-gradient(180deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.06)); box-shadow: 0 18px 38px rgba(240, 117, 97, 0.12); }
 .add-shoes-model-empty { grid-column: 1 / -1; padding: 28px 18px; border-radius: 22px; background: rgba(255, 255, 255, 0.04); color: rgba(243, 237, 232, 0.6); text-align: center; }
+
+/* Brand rail expand button */
+.add-shoes-brand-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.add-shoes-brand-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+  font: inherit;
+}
+.add-shoes-brand-item:hover,
+.add-shoes-brand-item:focus-visible {
+  background: rgba(255, 255, 255, 0.07);
+  outline: none;
+}
+.add-shoes-brand-item.is-active {
+  background: rgba(240, 117, 97, 0.18);
+}
+.add-shoes-brand-item--expand {
+  opacity: 0.72;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  justify-content: center;
+}
+.add-shoes-brand-item--expand:hover,
+.add-shoes-brand-item--expand:focus-visible {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+.add-shoes-brand-logo--expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.add-shoes-brand-logo--expand .material-symbols-outlined {
+  font-size: 1.2rem;
+}
 .add-shoes-step--form { padding: 22px; }
 .add-shoes-selected-summary { padding: 18px 20px; display: grid; gap: 6px; }
 .add-shoes-selected-summary strong { color: #f5ede7; font-size: 1.6rem; letter-spacing: -0.05em; }
@@ -40163,7 +40328,7 @@ body.theme-light .settings-control-theme-card.is-active {
 
 .recent-runs-insight-card span {
   display: block;
-  color: rgba(232, 224, 217, 0.48);
+  color: rgba(232, 224, 217, 0.64);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -40181,7 +40346,7 @@ body.theme-light .settings-control-theme-card.is-active {
 
 .recent-runs-insight-card p {
   margin: 8px 0 0;
-  color: rgba(232, 224, 217, 0.68);
+  color: rgba(232, 224, 217, 0.88);
   font-size: 0.88rem;
   line-height: 1.45;
 }
@@ -41685,7 +41850,7 @@ body.theme-light .analysis-overview-metric-title {
 
 body.theme-light .analysis-overview-card--vdot-insight .analysis-overview-insight-copy,
 body.theme-high-contrast-light .analysis-overview-card--vdot-insight .analysis-overview-insight-copy {
-  color: #2d0d08;
+  color: rgba(16, 32, 51, 0.56);
 }
 
 body.theme-light .analysis-overview-card--prediction-table {
@@ -41695,19 +41860,19 @@ body.theme-light .analysis-overview-card--prediction-table {
 }
 
 body.theme-light .analysis-overview-risk-meter span:first-child {
-  background: rgba(89, 212, 135, 0.56);
+  background: rgba(56, 163, 94, 0.62);
 }
 
 body.theme-light .analysis-overview-risk-meter span:nth-child(2) {
-  background: rgba(255, 181, 111, 0.56);
+  background: rgba(217, 140, 58, 0.62);
 }
 
 body.theme-light .analysis-overview-risk-meter span:last-child {
-  background: rgba(255, 123, 105, 0.56);
+  background: rgba(217, 74, 58, 0.62);
 }
 
 body.theme-light .analysis-overview-risk-meter span.is-on {
-  box-shadow: 0 10px 18px rgba(240, 117, 97, 0.12);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.08), 0 8px 22px rgba(0, 0, 0, 0.1);
 }
 
 body.theme-light .analysis-overview-table-head {
@@ -41951,6 +42116,12 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-coach-focus-pil
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-gear-row p,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-meta span {
   color: var(--text-muted);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-insight span {
+  border-color: rgba(17, 24, 39, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(57, 67, 82, 0.78);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-hero h1,
@@ -42328,6 +42499,10 @@ body.theme-light .recent-runs-insight-card strong,
 body.theme-light .recent-runs-stat-card strong,
 body.theme-light .recent-runs-card-top h2,
 body.theme-light .recent-runs-card-metric strong {
+  color: var(--text-strong);
+}
+
+body.theme-light .recent-runs-insight-card p {
   color: var(--text-strong);
 }
 
@@ -47903,6 +48078,59 @@ button.admin-users-command-kpi:hover {
   border-radius: 24px;
 }
 
+.admin-track-hub-sidebar__panel--queue.is-collapsed {
+  gap: 0;
+}
+
+.admin-track-hub-sidebar__queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-track-hub-sidebar__fold-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 180, 167, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffd7cf;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.admin-track-hub-sidebar__fold-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 180, 167, 0.4);
+  background: rgba(255, 180, 167, 0.12);
+}
+
+.admin-track-hub-sidebar__fold-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 180, 167, 0.18);
+  font-size: 0.86rem;
+  line-height: 1;
+}
+
+.admin-track-hub-sidebar__queue-body {
+  display: grid;
+  gap: 18px;
+}
+
 .admin-track-hub-sidebar__panel--metrics,
 .admin-track-hub-sidebar__panel--density {
   padding: 18px;
@@ -47991,6 +48219,114 @@ button.admin-users-command-kpi:hover {
   margin: 10px 0 0;
   color: #ffb4a7;
   font-size: 0.84rem;
+}
+
+.admin-coursemap-progress {
+  width: min(440px, 100%);
+  margin-top: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 180, 167, 0.12), rgba(45, 48, 49, 0.92)),
+    rgba(17, 20, 21, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(255, 180, 167, 0.18), 0 18px 34px rgba(0, 0, 0, 0.2);
+}
+
+.admin-coursemap-progress--dock {
+  width: 100%;
+  margin-top: 0;
+  align-self: start;
+}
+
+.admin-coursemap-working-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 180, 167, 0.16);
+}
+
+.admin-coursemap-working-notice__pulse {
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #6ee7b7;
+  box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.42);
+  animation: admin-coursemap-working-pulse 1.3s ease-out infinite;
+}
+
+.admin-coursemap-working-notice__body {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-coursemap-working-notice__body strong {
+  color: #fff7ed;
+  font-size: 0.84rem;
+}
+
+.admin-coursemap-working-notice__body small {
+  color: #cbd5e1;
+}
+
+@keyframes admin-coursemap-working-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.42);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(110, 231, 183, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(110, 231, 183, 0);
+  }
+}
+
+.admin-coursemap-progress .admin-track-hub-stage__status-line {
+  margin: 0;
+}
+
+.admin-coursemap-progress__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.admin-coursemap-progress__meta strong {
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-coursemap-progress__bar {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-coursemap-progress__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff7a63, #ffb86b, #6ee7b7);
+  box-shadow: 0 0 18px rgba(255, 184, 107, 0.38);
+  transition: width 320ms ease;
+}
+
+.admin-coursemap-progress small {
+  color: #b1b5bc;
+  font-size: 0.76rem;
+  line-height: 1.45;
 }
 
 .admin-track-hub-stage__badge {
@@ -48523,6 +48859,25 @@ body.theme-light .admin-command-page .admin-track-hub-stage__status-line {
   color: #a0392a;
 }
 
+body.theme-light .admin-command-page .admin-coursemap-progress {
+  background:
+    linear-gradient(135deg, rgba(160, 57, 42, 0.08), rgba(255, 255, 255, 0.94)),
+    #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.14), 0 18px 34px rgba(44, 47, 48, 0.08);
+}
+
+body.theme-light .admin-command-page .admin-coursemap-progress__meta strong {
+  color: var(--text-strong);
+}
+
+body.theme-light .admin-command-page .admin-coursemap-progress__bar {
+  background: rgba(160, 57, 42, 0.12);
+}
+
+body.theme-light .admin-command-page .admin-coursemap-progress small {
+  color: rgba(89, 92, 93, 0.78);
+}
+
 body.theme-light .admin-command-page .admin-track-hub-sidebar__panel,
 body.theme-light .admin-command-page .admin-track-hub-stage__header,
 body.theme-light .admin-command-page .admin-coursemap-publish-canvas,
@@ -48593,6 +48948,20 @@ body.theme-light .admin-command-page .admin-coursemap-publish-canvas__kicker,
 body.theme-light .admin-command-page .admin-coursemap-publish-canvas__secondary-label,
 body.theme-light .admin-command-page .admin-coursemap-evidence-card__label {
   color: rgba(89, 92, 93, 0.78);
+}
+
+body.theme-light .admin-command-page .admin-track-hub-footer-panel--publish.is-improve {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(245, 158, 11, 0.16), transparent 32%),
+    radial-gradient(circle at 8% 100%, rgba(240, 117, 97, 0.1), transparent 34%),
+    linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.2), 0 18px 34px rgba(121, 86, 25, 0.08);
+}
+
+body.theme-light .admin-command-page .admin-coursemap-publish-canvas__decision-dock {
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(255, 255, 255, 0.96));
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18), 0 12px 24px rgba(121, 86, 25, 0.06);
 }
 
 body.theme-light .admin-command-page .admin-track-hub-map-stage {
@@ -48998,10 +49367,10 @@ body.theme-light .admin-shoe-card:hover {
 }
 
 .admin-coursemap-publish-layout--bridge {
-  grid-template-columns: minmax(0, 1.22fr) minmax(280px, 0.92fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
   grid-template-areas:
-    "publish ops"
-    "review ops";
+    "publish publish"
+    "ops review";
   gap: 20px;
 }
 
@@ -49035,6 +49404,14 @@ body.theme-light .admin-shoe-card:hover {
   grid-area: publish;
 }
 
+.admin-track-hub-footer-panel--publish.is-improve {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(245, 158, 11, 0.2), transparent 30%),
+    radial-gradient(circle at 8% 100%, rgba(240, 117, 97, 0.16), transparent 32%),
+    linear-gradient(135deg, rgba(47, 36, 22, 0.98), rgba(25, 28, 29, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.28), 0 22px 48px rgba(0, 0, 0, 0.22);
+}
+
 .admin-track-hub-footer-panel--ops {
   grid-area: ops;
 }
@@ -49043,8 +49420,10 @@ body.theme-light .admin-shoe-card:hover {
   gap: 14px;
 }
 
-.admin-track-hub-footer-publish-body {
+.admin-coursemap-publish-layout--bridge .admin-track-hub-footer-publish-body {
   display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  align-items: stretch;
   gap: 16px;
 }
 
@@ -49065,8 +49444,29 @@ body.theme-light .admin-shoe-card:hover {
   gap: 8px;
 }
 
+.admin-coursemap-publish-canvas__decision-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(240, 117, 97, 0.18), rgba(17, 20, 21, 0.82));
+  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.24);
+}
+
+.admin-coursemap-publish-canvas__decision-dock .admin-coursemap-publish-canvas__primary {
+  width: 100%;
+  min-height: 58px;
+  justify-content: center;
+}
+
 .admin-coursemap-publish-layout--bridge .admin-track-hub-footer-output-grid.admin-coursemap-evidence-stack {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: stretch;
 }
 
 .admin-coursemap-publish-layout--bridge .admin-coursemap-ops-band {
@@ -49215,7 +49615,7 @@ body.theme-light .admin-shoe-card:hover {
 .admin-track-hub-footer-grid .admin-coursemap-publish-canvas__secondary-row,
 .admin-track-hub-footer-grid .admin-coursemap-action-group__buttons {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
@@ -49263,6 +49663,16 @@ body.theme-light .admin-shoe-card:hover {
   .admin-track-hub-footer-grid .admin-coursemap-publish-canvas__secondary-row,
   .admin-track-hub-footer-grid .admin-coursemap-action-group__buttons {
     grid-template-columns: 1fr;
+  }
+
+  .admin-coursemap-publish-layout--bridge .admin-track-hub-footer-publish-body,
+  .admin-coursemap-publish-canvas__decision-dock {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-coursemap-publish-layout--bridge .admin-track-hub-footer-output-grid.admin-coursemap-evidence-stack {
+    grid-column: auto;
+    grid-row: auto;
   }
 }
 
@@ -50349,6 +50759,12 @@ body.theme-light .admin-shoe-card:hover {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
+  min-height: 640px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(240, 117, 97, 0.16), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(6, 182, 212, 0.12), transparent 28%),
+    var(--surface-dim, #0a0a0f);
 }
 
 .wf-canvas-wrapper {
@@ -50356,6 +50772,106 @@ body.theme-light .admin-shoe-card:hover {
   width: 100%;
   height: 100%;
   background: var(--bg1, #0a0a0f);
+}
+
+.workflow-builder-state,
+.workflow-builder-empty {
+  position: absolute;
+  inset: clamp(24px, 4vw, 48px);
+  z-index: 6;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  max-width: 560px;
+  padding: clamp(28px, 4vw, 48px);
+  color: var(--text1, #f8fafc);
+  background:
+    linear-gradient(135deg, rgba(26, 26, 46, 0.92), rgba(10, 10, 15, 0.78)),
+    radial-gradient(circle at top right, rgba(240, 117, 97, 0.2), transparent 36%);
+  border-radius: 32px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(22px);
+}
+
+.workflow-builder-state--loading {
+  inset: 0;
+  max-width: none;
+  justify-items: center;
+  text-align: center;
+  border-radius: 0;
+}
+
+.workflow-builder-state-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--primary, #ffb4a7);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.workflow-builder-state h2,
+.workflow-builder-empty h2 {
+  margin: 0;
+  max-width: 12ch;
+  font-family: var(--font-display, Manrope, sans-serif);
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.94;
+  letter-spacing: -0.07em;
+}
+
+.workflow-builder-state p,
+.workflow-builder-empty p {
+  max-width: 44ch;
+  margin: 18px 0 0;
+  color: var(--text2, #cbd5e1);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.workflow-builder-state-detail {
+  padding: 10px 12px;
+  color: var(--text2, #cbd5e1);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.78rem !important;
+}
+
+.workflow-builder-state-cta {
+  margin-top: 24px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--on-primary-container, #2b0b05);
+  background: linear-gradient(135deg, var(--primary, #ffb4a7), var(--primary-container, #f07561));
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 18px 42px rgba(240, 117, 97, 0.28);
+}
+
+.workflow-builder-state-cta:focus-visible {
+  outline: 3px solid rgba(255, 180, 167, 0.45);
+  outline-offset: 4px;
+}
+
+.workflow-builder-state-spinner {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 18px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.14);
+  border-top-color: var(--primary, #ffb4a7);
+  animation: workflow-builder-spin 0.9s linear infinite;
+}
+
+@keyframes workflow-builder-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .wf-canvas {
@@ -50550,6 +51066,32 @@ body.theme-light .admin-shoe-card:hover {
 
 [data-theme="light"] .wf-canvas-wrapper {
   background: var(--bg1, #f8f9fa);
+}
+
+[data-theme="light"] .workflow-builder-canvas {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(252, 126, 105, 0.16), transparent 32%),
+    radial-gradient(circle at 84% 18%, rgba(6, 182, 212, 0.1), transparent 30%),
+    var(--background, #f5f6f7);
+}
+
+[data-theme="light"] .workflow-builder-state,
+[data-theme="light"] .workflow-builder-empty {
+  color: var(--text1, #1a1a2e);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(239, 241, 242, 0.76)),
+    radial-gradient(circle at top right, rgba(252, 126, 105, 0.16), transparent 34%);
+  box-shadow: 0 24px 70px rgba(35, 43, 55, 0.12);
+}
+
+[data-theme="light"] .workflow-builder-state p,
+[data-theme="light"] .workflow-builder-empty p {
+  color: var(--text2, #4b5563);
+}
+
+[data-theme="light"] .workflow-builder-state-detail {
+  color: var(--text2, #4b5563);
+  background: rgba(10, 10, 15, 0.06);
 }
 
 [data-theme="light"] .wf-palette {

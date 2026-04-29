@@ -667,6 +667,10 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
   if ((snapshot.polarized?.hardPct ?? 0) >= 32) readinessScore -= 10;
   if (daysSinceLastRun != null && daysSinceLastRun >= 2) readinessScore += 6;
   readinessScore = clamp(Math.round(readinessScore), 38, 95);
+
+  const readinessBandLabel = lang === 'zh-CN'
+    ? (readinessScore >= 78 ? '高' : readinessScore >= 62 ? '中' : '保守')
+    : (readinessScore >= 78 ? 'High' : readinessScore >= 62 ? 'Medium' : 'Conservative');
   const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
   const sessionTemplates = mergedCoachSessionTemplates(lang, phaseKey);
   const sessionTargets = [
@@ -1850,7 +1854,7 @@ export default function AnalysisInsightDetail() {
                 </article>
 
                 <div className="analysis-cinematic-metrics">
-                  <div className="analysis-cinematic-card analysis-cinematic-card--metric">
+                  <button type="button" className="analysis-cinematic-card analysis-cinematic-card--metric analysis-cinematic-card--interactive" onClick={() => navigate('/analysis/vo2max')}>
                     <div className="analysis-cinematic-metric-icon" aria-hidden="true">
                       <AppIcon name="bolt" className="runner-dashboard-side-link-icon" />
                     </div>
@@ -1859,7 +1863,7 @@ export default function AnalysisInsightDetail() {
                       <strong>{snapshot.bestVdot ? snapshot.bestVdot.toFixed(1) : '--'}</strong>
                       <p>{t('analysis.injury_cinematic_metric_vo2_copy')}</p>
                     </div>
-                  </div>
+                  </button>
                   <button type="button" className="analysis-cinematic-card analysis-cinematic-card--metric analysis-cinematic-card--interactive" onClick={() => navigate('/analysis/intensity')}>
                     <div className="analysis-cinematic-metric-icon" aria-hidden="true">
                       <AppIcon name="architecture" className="runner-dashboard-side-link-icon" />
@@ -2046,7 +2050,7 @@ export default function AnalysisInsightDetail() {
                 <article className="analysis-load-command-methodology-card">
                   <div className="analysis-load-command-panel-head">
                     <div>
-                      <span className="analysis-overview-card-kicker">{t('analysis.load_methodology_kicker')}</span>
+                      <span className="analysis-overview-card-kicker" style={{ letterSpacing: lang === 'zh-CN' ? '0.08em' : undefined, textTransform: lang === 'zh-CN' ? 'none' : undefined }}>{t('analysis.load_methodology_kicker')}</span>
                       <h2>{t('analysis.load_methodology_title')}</h2>
                     </div>
                   </div>
