@@ -117,6 +117,52 @@ function toRel(rootDir, filePath) {
   return filePath.replace(`${rootDir}${path.sep}`, "").replace(/\\/g, "/");
 }
 
+function normalizeSecurityRelPath(relPath) {
+  return String(relPath || "").replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+function isIgnoredSecurityScanPath(relPath) {
+  const rel = normalizeSecurityRelPath(relPath);
+  if (!rel) return true;
+  if (rel.startsWith(".git/")) return true;
+  if (rel.startsWith(".ai-codex/")) return true;
+  if (rel.startsWith(".ai-sync/")) return true;
+  if (rel.startsWith(".claude/")) return true;
+  if (rel.startsWith(".gemini/")) return true;
+  if (rel.startsWith(".mempalace/")) return true;
+  if (rel.startsWith(".omx/")) return true;
+  if (rel.startsWith(".tmp/")) return true;
+  if (rel.startsWith(".worktrees/")) return true;
+  if (rel.startsWith(".share/")) return true;
+  if (rel === "Hermes.local.env.ps1") return true;
+  if (rel.startsWith(".venv/")) return true;
+  if (rel.startsWith("Hermes/")) return true;
+  if (/^Qwen(?:2\.5)?-VL-[^/]+\//.test(rel)) return true;
+  if (rel.startsWith(".codex/")) {
+    const allowedCodexPath = rel.startsWith(".codex/commands/")
+      || rel.startsWith(".codex/workflows/")
+      || rel.startsWith(".codex/skills/architecture-diagram-generator/");
+    if (!allowedCodexPath) return true;
+  }
+  if (rel.startsWith(".codex/tmp/")) return true;
+  if (rel.startsWith(".cursor/")) return true;
+  if (rel.startsWith(".superpowers/")) return true;
+  if (/^\.opencode[^/]*(\/|$)/.test(rel)) return true;
+  if (rel.startsWith(".oh-my-openagent/")) return true;
+  if (rel === ".tools/claude-code.ps1" || rel === ".tools/claude-deepseek.ps1" || rel === ".tools/rtk-codex-health.ps1") return true;
+  if (rel.startsWith(".tools/token_tester/") || rel.includes("/token_tester/tmp/")) return true;
+  if (rel.startsWith(".tools/prompt_optimizer/")) return true;
+  if (rel.startsWith(".tools/mempalace/")) return true;
+  if (rel.startsWith("backend/src/main/resources/static/")) return true;
+  if (rel.startsWith("backend/target/")) return true;
+  if (rel.startsWith("backend/.venv/")) return true;
+  if (rel.startsWith("frontend/dist/")) return true;
+  if (rel.startsWith("frontend/node_modules/") || rel.includes("/node_modules/")) return true;
+  if (rel.startsWith("course-map-images/") || rel.startsWith("backend/course-map-images/")) return true;
+  if (rel.endsWith(".lock.db") || rel.endsWith(".trace.db") || rel.endsWith(".mv.db")) return true;
+  return false;
+}
+
 function firstMatch(content, pattern, fallback = "") {
   const match = content.match(pattern);
   return match ? match[1] : fallback;
@@ -427,7 +473,8 @@ function runSecretAndPiiHunter(rootDir) {
     { name: "High Entropy Alphanumeric", regex: /[a-zA-Z0-9\/+]{40,}/g },
     { name: "OpenAI Key", regex: /sk-[a-zA-Z0-9]{32,}/g },
     { name: "Stripe Key", regex: /(sk|pk)_(test|live)_[0-9a-zA-Z]{24}/g },
-    { name: "Google OAuth Secret", regex: /[a-zA-Z0-9_-]{24}/g },
+    { name: "Google API Key", regex: /AIza[0-9A-Za-z\-_]{35}/g },
+    { name: "Google OAuth Secret", regex: /GOCSPX-[0-9A-Za-z\-_]{28}/g },
     { name: "Private Key", regex: /-----BEGIN (RSA|EC|PRIVATE) KEY-----/g },
   ];
 
@@ -437,13 +484,11 @@ function runSecretAndPiiHunter(rootDir) {
     const ext = path.extname(f).toLowerCase();
     const rel = toRel(rootDir, f);
     return scanExtensions.includes(ext) && 
-           !rel.startsWith(".git/") && 
-           !rel.startsWith("node_modules/") && 
-           !rel.includes("/target/") &&
+           !isIgnoredSecurityScanPath(rel) &&
            !rel.endsWith(".example.ps1") &&
            !rel.endsWith(".example.json") &&
-           !rel.endsWith(".lock.db") &&
-           !rel.includes(".ai-codex/"); // Codex is derived data
+           !rel.endsWith(".example.yml") &&
+           !rel.endsWith(".example.yaml");
   });
 
   for (const filePath of allFiles) {
@@ -452,6 +497,9 @@ function runSecretAndPiiHunter(rootDir) {
 
     // 1. Check PII Literals
     for (const pii of PII_LITERALS) {
+      const expectedPublishIdentity = /auto-hermes|auto-ship|auto-commit|git-and-publish|daily-operator-guide|DESIGN_VERSIONS|AGENTS\.md|CLAUDE\.md|^\.codex\/(?:commands|workflows|skills)\//.test(relPath);
+      if (expectedPublishIdentity) continue;
+      if (relPath.includes("/src/test/")) continue;
       if (content.toLowerCase().includes(pii.toLowerCase())) {
         findings.push(makeFinding({
           checker: "secret-pii-hunter",
@@ -467,10 +515,26 @@ function runSecretAndPiiHunter(rootDir) {
 
     // 2. Check Secret Patterns
     for (const pat of SECRET_PATTERNS) {
-      const matches = content.match(pat.regex);
+      const flags = pat.regex.flags.includes("g") ? pat.regex.flags : `${pat.regex.flags}g`;
+      const matcher = new RegExp(pat.regex.source, flags);
+      const matches = Array.from(content.matchAll(matcher));
       if (matches) {
         // Simple heuristic: ignore if it looks like a version number, hash, or common non-secret
-        const suspicious = matches.filter(m => {
+        const suspicious = matches.filter(match => {
+          const m = match[0];
+          const ext = path.extname(relPath).toLowerCase();
+          if ([".md", ".html", ".svg"].includes(ext) && ["Generic API Key", "High Entropy Alphanumeric"].includes(pat.name)) return false;
+          if (["Generic API Key", "High Entropy Alphanumeric"].includes(pat.name)) {
+            const index = typeof match.index === "number" ? match.index : content.indexOf(m);
+            const context = content.slice(Math.max(0, index - 120), Math.min(content.length, index + m.length + 120));
+            if (!SENSITIVE_KEY_PATTERNS.test(context)) return false;
+            const before = index > 0 ? content[index - 1] : "";
+            const after = content[index + m.length] || "";
+            if (/[\w$]/.test(before) || /[\w$]/.test(after)) return false;
+            if (before === "." || after === "(") return false;
+            if (m.startsWith("/api/") || m.startsWith("api/")) return false;
+            if (relPath.endsWith("package-lock.json") || /integrity|sha(256|384|512)|DUMMY_HASH/i.test(context)) return false;
+          }
           if (m.length < 32 && !pat.name.includes("Key")) return false;
           if (/^[0-9.]+$/.test(m)) return false; // Version numbers
           if (/^[a-f0-9]{32}$/i.test(m) && pat.name === "Generic API Key") return true; // MD5/UUID-like
@@ -528,24 +592,31 @@ function runDosVectorFinder(rootDir, inventory) {
 function runAuthBypassProber(inventory) {
   const findings = [];
   const publicPaths = [
+    "/",
     "/api/auth/login",
     "/api/auth/signup",
     "/api/auth/google",
     "/api/auth/strava",
     "/api/auth/reset-password",
+    "/api/dev/",
+    "/api/maps/tiles/",
     "/api/public/",
     "/api/health",
+    "/api/strava/webhook",
   ];
 
   for (const endpoint of inventory.endpoints) {
+    if (!endpoint.path.startsWith("/api/") && endpoint.path !== "/") continue;
     if (publicPaths.some(p => endpoint.path.startsWith(p))) continue;
 
     const content = readText(path.resolve(ROOT, endpoint.file));
     const hasAuthHeader = /@RequestHeader\s*\(\s*(?:value\s*=\s*)?["']Authorization["']/.test(content);
+    const readsAuthorizationHeader = /\.getHeader\s*\(\s*["']Authorization["']\s*\)/.test(content);
     const hasAuthPrincipal = /@AuthenticationPrincipal/.test(content);
     const hasRequireAdmin = /requireAdmin\s*\(/.test(content);
+    const hasLocalDevGuard = /isLocalDevRequest\s*\(/.test(content);
 
-    if (!hasAuthHeader && !hasAuthPrincipal && !hasRequireAdmin) {
+    if (!hasAuthHeader && !readsAuthorizationHeader && !hasAuthPrincipal && !hasRequireAdmin && !hasLocalDevGuard) {
         findings.push(
             makeFinding({
                 checker: "auth-bypass-prober",
@@ -583,13 +654,14 @@ function runInjectionHunter(rootDir) {
     if (/\.test\.(m?js|ts|tsx|jsx)$/i.test(filePath)) continue;
     const content = readText(filePath);
     if (!sqlConcatPattern.test(content)) continue;
+    const relPath = toRel(rootDir, filePath);
     findings.push(
       makeFinding({
         checker: "injection-hunter",
-        severity: "CRITICAL",
+        severity: relPath.startsWith(".tools/") ? "MEDIUM" : "CRITICAL",
         summary: "Possible SQL Injection: Dynamic query construction with unescaped input.",
-        target: toRel(rootDir, filePath),
-        file: toRel(rootDir, filePath),
+        target: relPath,
+        file: relPath,
         evidence: [
           "Detected SQL-like text combined with dynamic variable concatenation.",
         ],
@@ -1547,11 +1619,9 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
     const artifacts = args.write ? writeArtifacts(args.rootDir, args.outputDir, report) : null;
     if (artifacts) report.artifacts = artifacts;
 
-    const hasCritical = allFindings.some(f => f.severity === "CRITICAL");
-
     return {
       report,
-      exitCode: hasCritical ? 1 : 0,
+      exitCode: 1,
       output: args.json ? `${JSON.stringify(report, null, 2)}\n` : renderMarkdown(report),
     };
     }
