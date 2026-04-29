@@ -295,7 +295,13 @@ export default function Analysis() {
                   </div>
                   <div className="analysis-overview-vo2-bars">
                     {hoveredVo2Bar ? (
-                      <div className="analysis-overview-vo2-tooltip" aria-hidden="true">
+                      <div
+                        className="analysis-overview-vo2-tooltip"
+                        aria-hidden="true"
+                        style={{
+                          left: `${vo2Bars.findIndex((bar) => bar.key === hoveredVo2BarKey) * (100 / vo2Bars.length) + (100 / vo2Bars.length / 2)}%`,
+                        }}
+                      >
                         <span>{hoveredVo2Bar.label}</span>
                         <div className="analysis-overview-vo2-tooltip-values">
                           <div className="analysis-overview-vo2-tooltip-row">
