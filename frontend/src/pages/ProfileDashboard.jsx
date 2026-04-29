@@ -388,6 +388,102 @@ function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, r
   return breakthroughs;
 }
 
+function isRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function sortRunsByMostRecent(runs) {
+  const list = Array.isArray(runs) ? [...runs] : [];
+  list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+  return list;
+}
+
+function normalizeProfileDashboardPayload(payload) {
+  if (!isRecord(payload) || !isRecord(payload.profile)) return null;
+  const activities = payload.activities ?? payload.runs;
+  if (!Array.isArray(activities)) return null;
+
+  return {
+    source: 'batch',
+    profile: payload.profile,
+    runs: sortRunsByMostRecent(activities),
+    coachState: payload.coachState ?? payload.state ?? null,
+    coachToday: payload.coachToday ?? payload.today ?? null,
+    personalRecords: payload.personalRecords ?? payload.personalRecordSummary ?? null,
+    races: payload.races ?? [],
+    musclePlan: payload.musclePlan ?? payload.trainingMusclePlan ?? null,
+    quota: payload.quota ?? payload.subscriptionState ?? null,
+  };
+}
+
+async function loadProfileDashboardFallbackData() {
+  const [profileResult, activitiesResult] = await Promise.allSettled([
+    apiJson('/api/profile/me'),
+    apiJson('/api/activities'),
+  ]);
+
+  if (profileResult.status !== 'fulfilled') {
+    throw profileResult.reason || new Error('profile_load_failed');
+  }
+
+  return {
+    source: 'fallback',
+    profile: profileResult.value,
+    runs: sortRunsByMostRecent(activitiesResult.status === 'fulfilled' ? activitiesResult.value : []),
+  };
+}
+
+async function loadProfileDashboardFallbackEnrichmentData() {
+  const [
+    coachStateData,
+    coachTodayData,
+    personalRecordsData,
+    racesData,
+    musclePlanData,
+    quotaData,
+  ] = await Promise.all([
+    apiJson('/api/coach/state').catch(() => null),
+    apiJson('/api/coach/today').catch(() => null),
+    apiJson('/api/profile/personal-records').catch(() => null),
+    apiJson('/api/races').catch(() => null),
+    apiJson('/api/training/muscle/plan').catch(() => null),
+    apiJson('/api/profile/quota').catch(() => null),
+  ]);
+
+  return {
+    coachState: coachStateData,
+    coachToday: coachTodayData,
+    personalRecords: personalRecordsData,
+    races: racesData,
+    musclePlan: musclePlanData,
+    quota: quotaData,
+  };
+}
+
+async function loadProfileDashboardData() {
+  try {
+    const batchPayload = await apiJson('/api/profile/dashboard');
+    const normalized = normalizeProfileDashboardPayload(batchPayload);
+    if (normalized) return normalized;
+  } catch {
+    // Fall through to the individual endpoints that powered the dashboard before batching.
+  }
+
+  return loadProfileDashboardFallbackData();
+}
+
+function getUpcomingRace(racesData) {
+  if (!Array.isArray(racesData)) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const upcoming = racesData
+    .filter(r => !r.canceled)
+    .map(r => ({ ...r, date: r.date ?? r.eventDate, parsedDate: new Date(r.date ?? r.eventDate) }))
+    .filter(r => !Number.isNaN(r.parsedDate.getTime()) && r.parsedDate >= now)
+    .sort((a, b) => a.parsedDate - b.parsedDate);
+  return upcoming[0] || null;
+}
+
 function formatCelebrationValue(entry, lang, unit, t) {
   if (entry.type === 'distance') {
     return formatDuration(entry.record?.elapsedSeconds || 0);
@@ -450,67 +546,26 @@ export default function ProfileDashboard() {
     async function loadDashboard() {
       setLoadState('loading');
       try {
-        const [profileResult, activitiesResult] = await Promise.allSettled([
-          apiJson('/api/profile/me'),
-          apiJson('/api/activities'),
-        ]);
+        const dashboardData = await loadProfileDashboardData();
 
         if (cancelled) return;
 
-        if (profileResult.status !== 'fulfilled') {
-          throw profileResult.reason || new Error('profile_load_failed');
-        }
+        const profileData = dashboardData.profile;
+        const list = dashboardData.runs;
 
-        const profileData = profileResult.value;
-        const activitiesData = activitiesResult.status === 'fulfilled' ? activitiesResult.value : [];
-
-        const list = Array.isArray(activitiesData) ? activitiesData : [];
-        list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
-
-        setProfile(profileData);
-        setRuns(list);
-        setLoadState('ready');
-
-        const query = new URLSearchParams(window.location.search);
-        if (query.get('source') === 'strava') {
-          setBanner({
-            tone: 'success',
-            message: t('profile.sync_activity_count', { count: list.length }),
-          });
-          query.delete('source');
-          const nextQuery = query.toString();
-          window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
-        }
-
-        void Promise.all([
-          apiJson('/api/coach/state').catch(() => null),
-          apiJson('/api/coach/today').catch(() => null),
-          apiJson('/api/profile/personal-records').catch(() => null),
-          apiJson('/api/races').catch(() => null),
-          apiJson('/api/training/muscle/plan').catch(() => null),
-          apiJson('/api/profile/quota').catch(() => null),
-        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData, musclePlanData, quotaData]) => {
-          if (cancelled) return;
-
-          setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
-          setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
-          setMusclePlan(musclePlanData && typeof musclePlanData === 'object' && musclePlanData.days ? musclePlanData : null);
-          if (quotaData && typeof quotaData === 'object' && !quotaData.admin) {
-            setSubscriptionState(quotaData);
+        function applyDashboardEnrichment(enrichmentData) {
+          setCoachState(enrichmentData.coachState && typeof enrichmentData.coachState === 'object' ? enrichmentData.coachState : null);
+          setCoachToday(enrichmentData.coachToday && typeof enrichmentData.coachToday === 'object' ? enrichmentData.coachToday : null);
+          setMusclePlan(enrichmentData.musclePlan && typeof enrichmentData.musclePlan === 'object' && enrichmentData.musclePlan.days ? enrichmentData.musclePlan : null);
+          if (enrichmentData.quota && typeof enrichmentData.quota === 'object' && !enrichmentData.quota.admin) {
+            setSubscriptionState(enrichmentData.quota);
+          }
+          if (Array.isArray(enrichmentData.races)) {
+            _setRaces(enrichmentData.races);
+            setNextRace(getUpcomingRace(enrichmentData.races));
           }
 
-          if (Array.isArray(racesData)) {
-            _setRaces(racesData);
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            const upcoming = racesData
-              .filter(r => !r.canceled)
-              .map(r => ({ ...r, parsedDate: new Date(r.date) }))
-              .filter(r => !Number.isNaN(r.parsedDate.getTime()) && r.parsedDate >= now)
-              .sort((a, b) => a.parsedDate - b.parsedDate);
-            setNextRace(upcoming[0] || null);
-          }
-
+          const personalRecordsData = enrichmentData.personalRecords;
           if (profileData?.email && personalRecordsData && typeof personalRecordsData === 'object') {
             const storageKey = getPrSnapshotStorageKey(profileData.email);
             const previousSnapshot = readJsonStorage(storageKey);
@@ -528,9 +583,32 @@ export default function ProfileDashboard() {
               });
             }
           }
-        }).catch(() => {
-          // Optional dashboard enrichments should not block the first render.
-        });
+        }
+
+        setProfile(profileData);
+        setRuns(list);
+        setLoadState('ready');
+
+        const query = new URLSearchParams(window.location.search);
+        if (query.get('source') === 'strava') {
+          setBanner({
+            tone: 'success',
+            message: t('profile.sync_activity_count', { count: list.length }),
+          });
+          query.delete('source');
+          const nextQuery = query.toString();
+          window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
+        }
+
+        if (dashboardData.source === 'batch') {
+          applyDashboardEnrichment(dashboardData);
+        } else {
+          void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
+            if (!cancelled) applyDashboardEnrichment(enrichmentData);
+          }).catch(() => {
+            // Optional dashboard enrichments should not block the first render.
+          });
+        }
       } catch {
         if (!cancelled) {
           setLoadState('error');

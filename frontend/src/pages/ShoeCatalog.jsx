@@ -110,8 +110,27 @@ export default function ShoeCatalog() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [brandsExpanded, setBrandsExpanded] = useState(false);
   const avatarMenuRef = useRef(null);
   const seriesSectionRef = useRef(null);
+
+  const viewedBrandKeys = useMemo(() => {
+    try {
+      const raw = window.localStorage.getItem('hermes_shoe_brand_views');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }, []);
+
+  const recordBrandView = (brand) => {
+    try {
+      const raw = window.localStorage.getItem('hermes_shoe_brand_views');
+      const list = raw ? JSON.parse(raw) : [];
+      const filtered = list.filter((b) => b !== brand);
+      filtered.unshift(brand);
+      const trimmed = filtered.slice(0, 20);
+      window.localStorage.setItem('hermes_shoe_brand_views', JSON.stringify(trimmed));
+    } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -203,6 +222,33 @@ export default function ShoeCatalog() {
     return ['all', ...categories];
   }, [catalog, selectedBrand]);
 
+  const visibleCatalogBrands = useMemo(() => {
+    if (brandsExpanded) return catalog;
+    if (catalog.length <= 4) return catalog;
+    if (viewedBrandKeys.length > 0) {
+      const ordered = [];
+      const remaining = new Set(catalog.map((b) => b.brand));
+      for (const key of viewedBrandKeys) {
+        const match = catalog.find((b) => b.brand === key);
+        if (match) {
+          ordered.push(match);
+          remaining.delete(match.brand);
+        }
+        if (ordered.length >= 4) break;
+      }
+      if (ordered.length < 4) {
+        const extras = catalog.filter((b) => remaining.has(b.brand));
+        for (const b of extras) {
+          ordered.push(b);
+          if (ordered.length >= 4) break;
+        }
+      }
+      return ordered;
+    }
+    const shuffled = [...catalog].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 4);
+  }, [catalog, brandsExpanded, viewedBrandKeys]);
+
   const visibleCatalogModels = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     let source = [];
@@ -235,6 +281,7 @@ export default function ShoeCatalog() {
     setSelectedBrand(brand);
     setSelectedCategory('all');
     setSearchQuery('');
+    recordBrandView(brand.brand);
     requestAnimationFrame(() => {
       seriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
@@ -367,7 +414,7 @@ export default function ShoeCatalog() {
 
               <div className="add-shoes-browser-layout">
                 <aside className="add-shoes-brand-rail">
-                  {catalog.map((entry) => (
+                  {visibleCatalogBrands.map((entry) => (
                     <button
                       key={entry.brand}
                       type="button"
@@ -383,6 +430,21 @@ export default function ShoeCatalog() {
                       </div>
                     </button>
                   ))}
+                  {catalog.length > 4 && (
+                    <button
+                      type="button"
+                      className={`add-shoes-brand-item add-shoes-brand-item--expand${brandsExpanded ? ' is-expanded' : ''}`}
+                      onClick={() => setBrandsExpanded((prev) => !prev)}
+                    >
+                      <span className="add-shoes-brand-logo add-shoes-brand-logo--expand">
+                        <AppIcon name={brandsExpanded ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
+                      </span>
+                      <div className="add-shoes-brand-copy">
+                        <strong>{brandsExpanded ? (lang === 'zh-CN' ? '收起' : 'Collapse') : (lang === 'zh-CN' ? '展开浏览' : 'Expand browse')}</strong>
+                        <span>{brandsExpanded ? '' : t('shoes.model_count', { count: catalog.length })}</span>
+                      </div>
+                    </button>
+                  )}
                 </aside>
 
                 <div ref={seriesSectionRef} className="add-shoes-model-grid-shell">
