@@ -79,6 +79,10 @@ function Get-PathPolicy {
 
     $normalized = Normalize-RepoPath -Path $Path
 
+    if ($normalized -eq '.env.example') {
+        return New-PolicyResult -Path $normalized -Bucket 'publishable' -Reason 'Placeholder environment documentation may ship; real .env files remain blocked.'
+    }
+
     # Shared AI workflow files - NOW PUBLISHABLE
     $sharedAiWorkflowRegexes = @(
         '^AGENTS\.md$',
@@ -183,7 +187,7 @@ function Get-PathPolicy {
         '^TICKET\.md$',
         '^frontend/(src|public|package\.json|package-lock\.json|vite\.config.*|eslint\.config.*|scripts/)',
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',
-        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.mjs|auto-hermes-tech-debt\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$'
+        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.(mjs|test\.mjs)|auto-hermes-push-main\.(mjs|test\.mjs)|auto-hermes-tech-debt\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$'
     )
 
     foreach ($pattern in $publishableRegexes) {
