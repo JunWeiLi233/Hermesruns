@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -137,7 +137,7 @@ function getDiscoveryTag(race, fallbackTag) {
   return fallbackTag;
 }
 
-export default function Races() {
+const Races = memo(function Races() {
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -538,6 +538,8 @@ export default function Races() {
                 className="race-center-hero-image"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuB78fsh0TuTwYg8E6RO30Lf-s3-wZGlNHFslrkPJEaZ63kAXeJavUv8FTkLm8X4MmNmXvIP8h2ANynDlJSAxFONBGVTf5CApOoTZiOY6Px4FTXMQb-peyv0k5NH4Mn7WrFSsnd3QHb4_lhQ_vTJF1NT9rT2WY0RWHipYpvljdFvLF0quFElRw6AzNMpRNQMAHMEGLxuNiPagbF3sTun3hlWrjHErakRoJblPn33eVPLmDsl4NPltD-tD_DofI-iIDaJ8EYj77OAXA1S"
                 alt={t('races.stitch_hero_image_alt')}
+                loading="lazy"
+                decoding="async"
               />
               <div className="race-center-hero-overlay" />
               <div className="race-center-hero-body">
@@ -670,7 +672,7 @@ export default function Races() {
                         })}
                         aria-label={t('races.detail_open_card', { name: getLocalizedRaceLabel(race, lang) })}
                       >
-                        <img className="race-center-discovery-image" src={getRaceCardImage(race, officialDiscoveryImages)} alt={getLocalizedRaceLabel(race, lang)} onError={(e) => { e.target.onerror = null; e.target.src = race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image; setOfficialDiscoveryImages((prev) => { const next = { ...prev }; delete next[race.id]; return next; }); invalidateRaceImageCache(race); }} />
+                        <img className="race-center-discovery-image" src={getRaceCardImage(race, officialDiscoveryImages)} alt={getLocalizedRaceLabel(race, lang)} loading="lazy" decoding="async" onError={(e) => { e.target.onerror = null; e.target.src = race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image; setOfficialDiscoveryImages((prev) => { const next = { ...prev }; delete next[race.id]; return next; }); invalidateRaceImageCache(race); }} />
                         <span className="race-center-discovery-tag">{t(`races.discovery_tag_${getDiscoveryTag(race, race.visual.tag).toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}</span>
                       </button>
                       <div className="race-center-discovery-copy">
@@ -807,4 +809,6 @@ export default function Races() {
       </Modal>
     </>
   );
-}
+});
+
+export default Races;
