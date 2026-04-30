@@ -423,7 +423,7 @@ class RaceCourseMapServiceTests {
         assertThat(saved.getPendingImageUrl()).isEqualTo(result.imageUrl());
         assertThat(saved.getPendingSource()).isEqualTo("admin-upload");
         assertThat(saved.getPendingConfidence()).isZero();
-        assertThat(saved.getPendingSummary()).contains("Click Re-analyze");
+        assertThat(saved.getPendingSummary()).contains("automatic Qwen scanning");
         assertThat(saved.getPendingAiAssisted()).isFalse();
         assertThat(saved.getPendingRoutePointsJson()).isEqualTo("[]");
         verify(qwenClient, never()).analyzeCandidate(any(), any(), any());
@@ -715,6 +715,7 @@ class RaceCourseMapServiceTests {
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
         when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(systemConfigService.isCourseMapAiConfigured()).thenReturn(true);
         RaceCourseMapAsset asset = pendingCourseMapAsset(
                 "chicago-marathon-2025",
                 "Bank of America Chicago Marathon",
@@ -764,6 +765,147 @@ class RaceCourseMapServiceTests {
         assertThat(result.courseMapDetected()).isTrue();
         assertThat(result.routePoints()).isNotEmpty();
         assertThat(result.summary()).doesNotContain("failed the plausibility checks");
+    }
+
+    @Test
+    void reanalyzePendingCourseMapStoresSuccessfulRouteLocallyAndReplacesPreviousRoute(@TempDir Path courseMapUploadDirectory) throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(systemConfigService.isCourseMapAiConfigured()).thenReturn(true);
+        Files.createDirectories(courseMapUploadDirectory.resolve("routes"));
+        Files.write(courseMapUploadDirectory.resolve("boston-marathon-source.png"), samplePng());
+        Path previousRoute = courseMapUploadDirectory.resolve("routes").resolve("boston-marathon-old-successful-route.json");
+        Files.writeString(previousRoute, "{\"routePoints\":[{\"lat\":0.0,\"lng\":0.0}]}");
+        RaceCourseMapAsset asset = pendingCourseMapAsset(
+                "boston-marathon",
+                "Boston Marathon",
+                "Boston",
+                "United States",
+                "https://www.baa.org",
+                42.3601,
+                -71.0589,
+                42.195,
+                "local-course-map:boston-marathon-source.png",
+                "admin-upload"
+        );
+        asset.setLocalRouteArtifactRef("local-course-map-route:boston-marathon-old-successful-route.json");
+        asset.setLiveImageUrl("local-course-map:previous-boston.png");
+        asset.setLiveSource("admin-upload");
+        asset.setLiveConfidence(72);
+        asset.setLiveSummary("Previous successful Boston route.");
+        asset.setLiveRoutePointsJson("[{\"lat\":0.0,\"lng\":0.0}]");
+        asset.setLiveAiAssisted(true);
+        when(repository.findByRaceId("boston-marathon")).thenReturn(Optional.of(asset));
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(restTemplate.exchange(
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(ResponseEntity.ok(geminiAlignmentResponse(
+                82,
+                denseBostonRouteJson(),
+                "Aligned the replacement Boston Marathon course map."
+        )));
+        when(restTemplate.exchange(
+                any(RequestEntity.class),
+                org.mockito.ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenReturn(ResponseEntity.ok(Map.of("elevation", sampleElevations())));
+
+        RaceCourseMapService service = createService(
+                restTemplate,
+                systemConfigService,
+                repository,
+                null,
+                buildTestQwenAlignmentClient(restTemplate),
+                courseMapUploadDirectory
+        );
+
+        RaceCourseMapResult result = service.reanalyzePendingCourseMap(
+                "boston-marathon",
+                "Boston Marathon",
+                "Boston",
+                "United States",
+                "https://www.baa.org",
+                42.3601,
+                -71.0589,
+                42.195,
+                "admin@hermes.test"
+        );
+
+        Path currentRoute = courseMapUploadDirectory.resolve("routes").resolve("boston-marathon-successful-route.json");
+        String currentRouteJson = Files.readString(currentRoute);
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(Files.exists(previousRoute)).isFalse();
+        assertThat(asset.getLocalRouteArtifactRef()).isEqualTo("local-course-map-route:boston-marathon-successful-route.json");
+        assertThat(currentRouteJson).contains("Aligned the replacement Boston Marathon course map.");
+        assertThat(currentRouteJson).contains("42.228");
+        assertThat(currentRouteJson).doesNotContain("\"lat\":0.0");
+        assertThat(asset.getLiveImageUrl()).isEqualTo("local-course-map:boston-marathon-source.png");
+        assertThat(asset.getLiveRoutePointsJson()).contains("42.228");
+        assertThat(asset.getLiveConfidence()).isEqualTo(82);
+    }
+
+    @Test
+    void uploadPendingCourseMapClearsPreviousSuccessfulLocalRouteBeforeReplacementScan(@TempDir Path courseMapUploadDirectory) throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(systemConfigService.isCourseMapAiConfigured()).thenReturn(true);
+        Files.createDirectories(courseMapUploadDirectory.resolve("routes"));
+        Path previousRoute = courseMapUploadDirectory.resolve("routes").resolve("tokyo-marathon-successful-route.json");
+        Files.writeString(previousRoute, "{\"routePoints\":[{\"lat\":35.0,\"lng\":139.0}]}");
+        RaceCourseMapAsset asset = new RaceCourseMapAsset();
+        asset.setRaceId("tokyo-marathon");
+        asset.setRaceName("Tokyo Marathon");
+        asset.setCity("Tokyo");
+        asset.setCountry("Japan");
+        asset.setOfficialWebsite("https://www.marathon.tokyo/en/");
+        asset.setLatitude(35.6762);
+        asset.setLongitude(139.6503);
+        asset.setDistanceKm(42.195);
+        asset.setLiveImageUrl("local-course-map:tokyo-marathon-old.png");
+        asset.setLiveSource("admin-upload");
+        asset.setLiveConfidence(84);
+        asset.setLiveSummary("Previous successful Tokyo route.");
+        asset.setLiveOverlayBoundsJson("{\"north\":35.73,\"south\":35.64,\"east\":139.82,\"west\":139.68}");
+        asset.setLiveRoutePointsJson("[{\"lat\":35.0,\"lng\":139.0}]");
+        asset.setLiveElevationSamplesJson("[10,12]");
+        asset.setLiveTotalClimbMeters(120);
+        asset.setLiveAiAssisted(true);
+        asset.setLocalRouteArtifactRef("local-course-map-route:tokyo-marathon-successful-route.json");
+        when(repository.findByRaceId("tokyo-marathon")).thenReturn(Optional.of(asset));
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, null, qwenClient, courseMapUploadDirectory);
+
+        RaceCourseMapResult result = service.uploadPendingCourseMap(
+                "tokyo-marathon",
+                "Tokyo Marathon",
+                "Tokyo",
+                "Japan",
+                "https://www.marathon.tokyo/en/",
+                35.6762,
+                139.6503,
+                42.195,
+                sampleLargeJpegDataUrl(),
+                "admin@hermes.test"
+        );
+
+        assertThat(result.imageUrl()).startsWith("local-course-map:");
+        assertThat(Files.exists(previousRoute)).isFalse();
+        assertThat(asset.getLocalRouteArtifactRef()).isNull();
+        assertThat(asset.getLiveImageUrl()).isNull();
+        assertThat(asset.getLiveRoutePointsJson()).isNull();
+        assertThat(asset.getLiveOverlayBoundsJson()).isNull();
+        assertThat(asset.getPendingImageUrl()).startsWith("local-course-map:");
+        assertThat(asset.getPendingRoutePointsJson()).isEqualTo("[]");
+        verify(qwenClient, never()).analyzeCandidate(any(), any(), any());
     }
 
     @Test
@@ -872,6 +1014,71 @@ class RaceCourseMapServiceTests {
         assertThat(result.courseMapDetected()).isFalse();
         assertThat(result.summary()).contains("could not align");
         assertThat(result.summary()).doesNotContain("city-level course-map match");
+    }
+
+    @Test
+    void acceptPendingCourseMapPublishesRealAdminUploadAsCityLevelReferenceWhenGeometryScanMisses() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset asset = pendingCourseMapAsset(
+                "paris-marathon",
+                "Schneider Electric Marathon de Paris",
+                "Paris",
+                "France",
+                "https://www.schneiderelectricparismarathon.com",
+                48.8566,
+                2.3522,
+                42.195,
+                "local-course-map:paris-marathon-bff639082544a536.jpg",
+                "admin-image-url"
+        );
+        asset.setPendingSummary("Hermes could not align this course-map confidently yet.");
+        when(repository.findByRaceId("paris-marathon")).thenReturn(Optional.of(asset));
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        service.acceptPendingCourseMap("paris-marathon", "admin@hermes.test");
+
+        assertThat(asset.getLiveImageUrl()).isEqualTo("local-course-map:paris-marathon-bff639082544a536.jpg");
+        assertThat(asset.getLiveConfidence()).isEqualTo(58);
+        assertThat(asset.getLiveSummary()).contains("city-level course-map match");
+        assertThat(asset.getLiveSummary()).contains("not a distance-accurate route overlay");
+        assertThat(asset.getLiveOverlayBoundsJson()).contains("\"north\"");
+        assertThat(asset.getLiveRoutePointsJson()).isEqualTo("[]");
+        assertThat(asset.getLiveAiAssisted()).isTrue();
+        assertThat(asset.getPendingImageUrl()).isNull();
+        verify(repository).save(asset);
+    }
+
+    @Test
+    void acceptPendingCourseMapDoesNotConvertImplausibleDetectedRouteToCityLevelReference() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset asset = pendingCourseMapAsset(
+                "tokyo-marathon-qwen-smoke",
+                "Tokyo Marathon",
+                "Tokyo",
+                "Japan",
+                "https://www.marathon.tokyo",
+                35.6762,
+                139.6503,
+                42.195,
+                "local-course-map:tokyo-marathon-qwen-smoke.webp",
+                "admin-image-url"
+        );
+        asset.setPendingConfidence(90);
+        asset.setPendingSummary("Hermes scanned this upload, but Qwen returned 4 route points covering 10.0 km. The route failed the plausibility checks for a 42.2 km road marathon.");
+        when(repository.findByRaceId("tokyo-marathon-qwen-smoke")).thenReturn(Optional.of(asset));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        assertThatThrownBy(() -> service.acceptPendingCourseMap("tokyo-marathon-qwen-smoke", "admin@hermes.test"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Pending course-map must align");
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -2116,8 +2323,8 @@ class RaceCourseMapServiceTests {
         assertThat(prompt).contains("Key landmarks near course");
         assertThat(prompt).contains("Race type: point-to-point.");
         assertThat(prompt).contains("Total distance: 42.195 km.");
-        assertThat(prompt).contains("Do NOT zigzag between parallel lines");
-        assertThat(prompt).contains("Output routePoints as an ordered array from START to FINISH.");
+        assertThat(prompt).contains("Do NOT zigzag between parallel");
+        assertThat(prompt).contains("strict start-to-finish order");
     }
 
     @Test
@@ -2980,7 +3187,7 @@ class RaceCourseMapServiceTests {
         asset.setPendingImageUrl(pendingImageUrl);
         asset.setPendingSource(pendingSource);
         asset.setPendingConfidence(0);
-        asset.setPendingSummary("Hermes saved this upload. Click Re-analyze to run Qwen on the stored course-map image.");
+        asset.setPendingSummary("Hermes saved this upload and queued it for automatic Qwen scanning.");
         asset.setPendingRoutePointsJson("[]");
         asset.setPendingElevationSamplesJson("[]");
         asset.setPendingAiAssisted(false);
@@ -3033,13 +3240,13 @@ class RaceCourseMapServiceTests {
     private QwenCourseMapAlignmentClient buildTestQwenAlignmentClient(RestTemplate restTemplate) {
         QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
         when(qwenClient.analyzeCandidate(any(), any(), any())).thenAnswer(invocation -> {
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+            ResponseEntity<Map> response = restTemplate.exchange(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key",
                     HttpMethod.POST,
                     HttpEntity.EMPTY,
                     Map.class
             );
-            return extractAlignmentText(response.getBody());
+            return extractAlignmentText((Map<String, Object>) response.getBody());
         });
         return qwenClient;
     }
