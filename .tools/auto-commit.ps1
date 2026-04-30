@@ -358,8 +358,7 @@ function Test-SecurityGate {
 
 function Invoke-ArchitectureDiagramRefresh {
     param(
-        [Parameter(Mandatory = $true)]
-        [string[]]$ChangedFiles
+        [string[]]$ChangedFiles = @()
     )
 
     if (-not $ChangedFiles -or $ChangedFiles.Count -eq 0) {
