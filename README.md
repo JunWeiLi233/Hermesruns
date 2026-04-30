@@ -23,15 +23,32 @@ Hermes works with data from **Strava**, **Garmin Connect**, **COROS**, and manua
 
 **Better than Strava?** Hermes earns its place by being smarter (personalized coaching, not social feeds), more actionable (specific pace ranges, not generic recommendations), and more trustworthy (transparent methodology, no hidden algorithms).
 
-### Quick Start (30 seconds)
+### Quick Start
+
+#### Windows
 
 ```powershell
 .\start_hermes.bat
 ```
 
-Opens `http://localhost:8080` — sign up with email and you're in. No database setup, no API keys, no configuration needed.
+#### macOS / Linux
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+Open `http://localhost:8080`, sign up with email, and you're in. No database setup, no API keys, no configuration needed.
 
 > **Want the full experience?** See [Production Setup](#production-setup-postgresql--oauth--admin) for PostgreSQL, Strava/Google OAuth, Stripe billing, and email verification.
+
+### Platform-Specific Instructions
+
+Hermes setup instructions are split by platform from now on:
+
+- **Windows users** should use PowerShell examples, `.bat` launchers, and `Hermes.local.env.ps1`.
+- **macOS / Linux users** should use Bash/Zsh examples, `./mvnw`, and exported environment variables.
+- When adding new setup steps, include both command forms whenever shell syntax differs.
 
 ### Feature Highlights
 
@@ -94,7 +111,19 @@ Hermes includes an AI-agent workflow driven by **Claude Code** and **Gemini CLI*
    npm install -g @anthropic-ai/claude-code
    npm install -g @google/gemini-cli
    ```
-2. Copy `Hermes.local.env.example.ps1` to `Hermes.local.env.ps1` and fill in your API keys.
+2. Configure local secrets for your platform.
+
+   Windows:
+   ```powershell
+   Copy-Item Hermes.local.env.example.ps1 Hermes.local.env.ps1
+   notepad Hermes.local.env.ps1
+   ```
+
+   macOS / Linux:
+   ```bash
+   cp .env.example .env
+   ${EDITOR:-nano} .env
+   ```
 
 #### Claude Code Commands
 
@@ -242,11 +271,28 @@ Fitter runner (higher VDOT) → faster recovery. Long runs (>90 min) add penalty
 
 ### Production Setup (PostgreSQL + OAuth + Admin)
 
+#### Windows
+
 ```powershell
 .\start_hermes_postgres.ps1
 ```
 
 `start_hermes_postgres.ps1` is the main launcher. It loads secrets from `Hermes.local.env.ps1`.
+
+#### macOS / Linux
+
+```bash
+export APP_DB_URL='jdbc:postgresql://localhost:5432/hermes'
+export APP_DB_USERNAME='hermes'
+export APP_DB_PASSWORD='<your-password>'
+export STRAVA_CLIENT_ID='<your-strava-client-id>'
+export STRAVA_CLIENT_SECRET='<your-strava-client-secret>'
+export APP_DATA_ENCRYPTION_KEY='<long-random-hex-key>'
+cd backend
+./mvnw spring-boot:run
+```
+
+Use `.env` only when your shell, IDE, or process manager explicitly loads it before starting Spring Boot. See [docs/setup.md](docs/setup.md) for the canonical variable reference.
 
 #### Core Configuration
 
@@ -302,26 +348,56 @@ Email/password sign-up sends a verification link via SMTP. Leave `SPRING_MAIL_HO
 
 #### Frontend Dev
 
+Windows:
+
 ```powershell
 cd frontend
 npm install
 npm run dev        # → http://localhost:3000 (hot reload, proxies API to :8080)
 ```
 
+macOS / Linux:
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:3000 (hot reload, proxies API to :8080)
+```
+
 #### Build for Production
+
+Windows:
 
 ```powershell
 cd frontend
 npm run build      # → backend/src/main/resources/static/
 ```
 
+macOS / Linux:
+
+```bash
+cd frontend
+npm run build      # backend/src/main/resources/static/
+```
+
 #### Backend
+
+Windows:
 
 ```powershell
 cd backend
-./mvnw spring-boot:run    # → http://localhost:8080
-./mvnw test                # run tests
-./mvnw -q -DskipTests compile  # compile check
+.\mvnw.cmd spring-boot:run        # http://localhost:8080
+.\mvnw.cmd test                   # run tests on Windows
+.\mvnw.cmd -q -DskipTests compile # compile check on Windows
+```
+
+macOS / Linux:
+
+```bash
+cd backend
+./mvnw spring-boot:run            # http://localhost:8080
+./mvnw test                       # run tests
+./mvnw -q -DskipTests compile     # compile check
 ```
 
 ---
@@ -334,6 +410,8 @@ Zero config. Database file created at `backend/hermes_db_v2.mv.db`.
 
 #### PostgreSQL
 
+Windows:
+
 ```powershell
 $env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
 $env:APP_DB_USERNAME = "hermes"
@@ -341,11 +419,23 @@ $env:APP_DB_PASSWORD = "<your-password>"
 .\start_hermes.bat
 ```
 
+macOS / Linux:
+
+```bash
+export APP_DB_URL='jdbc:postgresql://localhost:5432/hermes'
+export APP_DB_USERNAME='hermes'
+export APP_DB_PASSWORD='<your-password>'
+cd backend
+./mvnw spring-boot:run
+```
+
 #### Migrate H2 → PostgreSQL
 
 ```powershell
 .\migrate_h2_to_postgres.bat
 ```
+
+For macOS / Linux, use the PostgreSQL env block above and run the backend against PostgreSQL directly. The current migration helper is Windows-only.
 
 ---
 
@@ -355,8 +445,34 @@ $env:APP_DB_PASSWORD = "<your-password>"
 |---|---|
 | Email | None — sign up and go |
 | Admin | Set `APP_BOOTSTRAP_ADMIN_EMAIL` / `APP_BOOTSTRAP_ADMIN_PASSWORD` |
-| Google | Google Cloud OAuth app + configure in `start_hermes_postgres.ps1` |
-| Strava | Strava API app + configure in `start_hermes_postgres.ps1` |
+| Google | Windows: configure `Hermes.local.env.ps1`; macOS/Linux: export `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET`, `APP_GOOGLE_REDIRECT_URI` |
+| Strava | Windows: configure `Hermes.local.env.ps1`; macOS/Linux: export `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `APP_DATA_ENCRYPTION_KEY` |
+
+#### Local Shared Runner for Contributors
+
+Hermes can bootstrap a local-only demo account with seeded shoes and runs:
+`strava+140971747@hermes.local` / `HermesLocal1!`
+
+Windows:
+
+```powershell
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
+$env:APP_LOCAL_SHARED_RUNNER_EMAIL = "strava+140971747@hermes.local"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+.\start_hermes.bat
+```
+
+macOS / Linux:
+
+```bash
+export APP_LOCAL_SHARED_RUNNER_ENABLED=true
+export APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
+export APP_LOCAL_SHARED_RUNNER_PASSWORD='HermesLocal1!'
+cd backend
+./mvnw spring-boot:run
+```
+
+The bootstrap is local-safe: it is disabled by default, skipped in production, and only seeds mock shoes/runs when the runner has no activities yet.
 
 ---
 
@@ -398,7 +514,7 @@ Supports `GPX`, `TCX`, `FIT`, `ZIP`. Automatic folder watching.
 
 | Problem | Fix |
 |---|---|
-| `ERR_CONNECTION_REFUSED` | Start the backend: `.\start_hermes.bat` |
+| `ERR_CONNECTION_REFUSED` | Windows: `.\start_hermes.bat`; macOS/Linux: `cd backend && ./mvnw spring-boot:run` |
 | `java` not found | Install Java 17 from [adoptium.net](https://adoptium.net) |
 | OAuth callback fails | Backend must run on `localhost:8080`, redirect URIs must match exactly |
 | Frontend changes not showing | Run `npm run build` in `frontend/`, then refresh |

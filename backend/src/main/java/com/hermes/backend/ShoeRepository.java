@@ -19,4 +19,6 @@ public interface ShoeRepository extends JpaRepository<Shoe, Long>, JpaSpecificat
     List<Shoe> findByRunnerAndIdentityKey(Runner runner, String identityKey);
 
     List<Shoe> findByRunnerAndRetiredFalseAndIdentityKeyNotNull(Runner runner);
+
+    List<Shoe> findByRunnerAndRetiredTrueOrderByRetiredDateDesc(Runner runner);
 }

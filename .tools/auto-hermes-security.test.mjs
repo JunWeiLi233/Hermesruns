@@ -104,7 +104,7 @@ check("audit mode discovers repo targets and writes markdown/json reports", asyn
   const { runAutoHermesSecurity } = await import(moduleUrl);
   const fixture = makeFixture();
 
-  const { report } = runAutoHermesSecurity({
+  const { report } = await runAutoHermesSecurity({
     rootDir: fixture.dir,
     mode: "audit",
     commandName: "auto-hermes-security",
@@ -127,7 +127,7 @@ check("attack mode blocks non-local targets before running active probes", async
   const { runAutoHermesSecurity } = await import(moduleUrl);
   const fixture = makeFixture();
 
-  const { report } = runAutoHermesSecurity({
+  const { report } = await runAutoHermesSecurity({
     rootDir: fixture.dir,
     mode: "attack",
     commandName: "auto-hermes-attack",
@@ -170,6 +170,71 @@ check("writeback gate only promotes verified HIGH/CRITICAL findings", async () =
     }),
     false,
   );
+});
+
+check("secret scan skips local artifacts but still scans source files", async () => {
+  const { runAutoHermesSecurity } = await import(moduleUrl);
+  const fixture = makeFixture();
+  const write = (relPath, content) => {
+    const target = path.join(fixture.dir, relPath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content, "utf8");
+  };
+
+  write(".ai-sync/AGENT_SYNC.md", "Junwei local state with sk-" + "a".repeat(40));
+  write(".claude/worktrees/agent-a/frontend/node_modules/pkg/index.js", "const token = 'sk-" + "b".repeat(40) + "';");
+  write("backend/src/main/resources/static/assets/index-generated.js", "const token = 'sk-" + "c".repeat(40) + "';");
+  write("frontend/src/sourceLeak.js", "const token = 'sk-" + "d".repeat(40) + "';");
+
+  const { report } = await runAutoHermesSecurity({
+    rootDir: fixture.dir,
+    mode: "audit",
+    commandName: "auto-hermes-security",
+    write: false,
+    outputDir: ".ai-sync/security-reports",
+    tasks: "TASKS.md",
+  });
+
+  const secretFindings = report.findings.filter((finding) => finding.checker === "secret-pii-hunter");
+  assert.equal(secretFindings.some((finding) => finding.file.startsWith(".ai-sync/")), false);
+  assert.equal(secretFindings.some((finding) => finding.file.startsWith(".claude/worktrees/")), false);
+  assert.equal(secretFindings.some((finding) => finding.file.startsWith("backend/src/main/resources/static/")), false);
+  assert.equal(secretFindings.some((finding) => finding.file === "frontend/src/sourceLeak.js"), true);
+});
+
+check("auth prober accepts controllers that read Authorization from HttpServletRequest", async () => {
+  const { runAutoHermesSecurity } = await import(moduleUrl);
+  const fixture = makeFixture();
+  const target = path.join(fixture.dir, "backend/src/main/java/com/hermes/backend/RequestAuthController.java");
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, `package com.hermes.backend;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/request-auth")
+public class RequestAuthController {
+  @GetMapping
+  public String show(HttpServletRequest request) {
+    return request.getHeader("Authorization");
+  }
+}
+`, "utf8");
+
+  const { report } = await runAutoHermesSecurity({
+    rootDir: fixture.dir,
+    mode: "audit",
+    commandName: "auto-hermes-security",
+    write: false,
+    outputDir: ".ai-sync/security-reports",
+    tasks: "TASKS.md",
+  });
+
+  const authFindings = report.findings.filter((finding) => finding.checker === "auth-bypass-prober");
+  assert.equal(authFindings.some((finding) => finding.target.includes("/api/request-auth")), false);
 });
 
 check("command surfaces and installer wiring include the security commands", async () => {
