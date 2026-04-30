@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { List } from 'react-window';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -134,7 +135,7 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   if (!processed) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={processed} alt={alt} onError={onError} />;
+  return <img className={className} src={processed} alt={alt} onError={onError} loading="lazy" decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
@@ -240,7 +241,16 @@ function matchesInventoryCategory(shoe, category) {
 }
 
 
-export default function Shoes() {
+const SHOE_CARD_ESTIMATED_HEIGHT = 280;
+
+function ShoeCardRow({ index, style, data }) {
+  const { shoes, renderCard } = data;
+  const shoe = shoes[index];
+  if (!shoe) return null;
+  return <div style={style}>{renderCard(shoe)}</div>;
+}
+
+const Shoes = memo(function Shoes() {
   const { isAuthenticated, email, logout } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
@@ -1453,9 +1463,20 @@ export default function Shoes() {
               {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_empty') : t('shoes.stitch_inventory_empty')}</div>}
 
               {loadState === 'ready' && inventoryShoes.length > 0 && (
-                <div className="shoe-inventory-grid">
-                  {inventoryShoes.map((shoe) => renderInventoryCard(shoe))}
-                </div>
+                inventoryShoes.length > 20 ? (
+                  <List
+                    rowComponent={ShoeCardRow}
+                    rowCount={inventoryShoes.length}
+                    rowHeight={SHOE_CARD_ESTIMATED_HEIGHT}
+                    rowProps={{ shoes: inventoryShoes, renderCard: renderInventoryCard }}
+                    style={{ height: Math.min(inventoryShoes.length * SHOE_CARD_ESTIMATED_HEIGHT, 640), width: '100%' }}
+                    className="shoe-inventory-virtual-list"
+                  />
+                ) : (
+                  <div className="shoe-inventory-grid">
+                    {inventoryShoes.map((shoe) => renderInventoryCard(shoe))}
+                  </div>
+                )
               )}
             </>
           )}
@@ -1729,7 +1750,7 @@ export default function Shoes() {
             </div>
             <div className="shoe-scan-modal-preview">
               {scanPreviewUrl ? (
-                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" />
+                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
               ) : (
                 <div className="shoe-scan-modal-preview-empty">
                   <AppIcon name="image_search" className="runner-dashboard-side-link-icon" />
@@ -1920,4 +1941,6 @@ export default function Shoes() {
       </Modal>
     </>
   );
-}
+});
+
+export default Shoes;
