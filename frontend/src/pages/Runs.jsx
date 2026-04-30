@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { List } from 'react-window';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -13,7 +14,6 @@ import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
-const BATCH_SIZE = 10;
 const ROUTE_PREVIEW_CONCURRENCY = 2;
 
 function localizeStravaSyncMessage(message, t) {
@@ -98,7 +98,41 @@ function RoutePreviewThumb({ preview, provider, runName }) {
   );
 }
 
-export default function Runs() {
+const RUN_CARD_HEIGHT = 142;
+
+function RunRow({ index, style, data }) {
+  const { runs, t, lang, routePreviewFallbacks, onOpen } = data;
+  const run = runs[index];
+  if (!run) return null;
+
+  const provider = run.provider || t('runs.manual_import');
+  const runName = run.name || t('runs.default_run_name');
+  const preview = run.routePreview || routePreviewFallbacks[run.id] || null;
+
+  return (
+    <article style={style} className="recent-runs-card" onClick={() => onOpen(run)}>
+      <RoutePreviewThumb preview={preview} provider={provider} runName={runName} />
+      <div className="recent-runs-card-body">
+        <div className="recent-runs-card-top">
+          <div>
+            <h2>{runName}</h2>
+            <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
+          </div>
+          <button type="button" className="recent-runs-card-menu" onClick={(event) => event.stopPropagation()} aria-label={t('runs.stitch_more_actions')}>
+            <AppIcon name="more_horiz" className="runner-dashboard-side-link-icon" />
+          </button>
+        </div>
+        <div className="recent-runs-card-metrics">
+          <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
+          <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
+          <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+const Runs = memo(function Runs() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -111,7 +145,6 @@ export default function Runs() {
   const [activeMode, setActiveMode] = useState('all');
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const [runsSort, setRunsSort] = useState('date');
   const [stravaStatus, setStravaStatus] = useState(null);
   const [stravaLinking, setStravaLinking] = useState(false);
@@ -253,10 +286,6 @@ export default function Runs() {
     return result;
   }, [activeMode, allRuns, selectedMonth, selectedYear, searchQuery, runsSort, t]);
 
-  useEffect(() => {
-    setVisibleCount(BATCH_SIZE);
-  }, [activeMode, selectedYear, selectedMonth]);
-
   const distinctYears = useMemo(() => {
     const years = new Set();
     allRuns.forEach((run) => {
@@ -285,20 +314,10 @@ export default function Runs() {
     if (activeMode === 'month' && selectedMonth == null && monthsWithData.length) setSelectedMonth(monthsWithData[monthsWithData.length - 1]);
   }, [activeMode, monthsWithData, selectedMonth]);
 
-  const sortedRuns = useMemo(() => {
-    if (runsSort === 'distance') return [...filteredRuns].sort((a, b) => (b.distanceKm || 0) - (a.distanceKm || 0));
-    if (runsSort === 'pace') {
-      return [...filteredRuns].sort((a, b) => {
-        const paceA = a.distanceKm > 0 ? (a.movingTimeSeconds || 0) / a.distanceKm : Infinity;
-        const paceB = b.distanceKm > 0 ? (b.movingTimeSeconds || 0) / b.distanceKm : Infinity;
-        return paceA - paceB;
-      });
-    }
-    return filteredRuns;
-  }, [filteredRuns, runsSort]);
-
-  const visibleRuns = sortedRuns.slice(0, visibleCount);
-  const routePreviewRuns = visibleRuns.filter((run) => !run.routePreview);
+  const routePreviewRuns = useMemo(
+    () => filteredRuns.slice(0, 50).filter((run) => !run.routePreview),
+    [filteredRuns],
+  );
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
   const monthNames = t('runs.months').split(',');
@@ -772,40 +791,17 @@ export default function Runs() {
           {loadState === 'loading' ? <div className="recent-runs-status">{t('runs.loading')}</div> : null}
           {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
           {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
-          {loadState === 'ready' && visibleRuns.map((run, index) => {
-            const provider = run.provider || t('runs.manual_import');
-            const runName = run.name || t('runs.default_run_name');
-            const preview = run.routePreview || routePreviewFallbacks[run.id] || null;
-            return (
-              <article key={run.id || `${runName}-${index}`} className="recent-runs-card" onClick={() => openRun(run)}>
-                <RoutePreviewThumb preview={preview} provider={provider} runName={runName} />
-                <div className="recent-runs-card-body">
-                  <div className="recent-runs-card-top">
-                    <div>
-                      <h2>{runName}</h2>
-                      <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
-                    </div>
-                    <button type="button" className="recent-runs-card-menu" onClick={(event) => event.stopPropagation()} aria-label={t('runs.stitch_more_actions')}>
-                      <AppIcon name="more_horiz" className="runner-dashboard-side-link-icon" />
-                    </button>
-                  </div>
-                  <div className="recent-runs-card-metrics">
-                    <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
-                    <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
-                    <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-            </section>
-            {visibleCount < filteredRuns.length ? (
-              <div className="recent-runs-load-more-row">
-            <button type="button" className="recent-runs-load-more" onClick={() => setVisibleCount((value) => Math.min(filteredRuns.length, value + BATCH_SIZE))}>
-              {t('runs.load_more')}
-            </button>
-              </div>
+          {loadState === 'ready' && filteredRuns.length > 0 ? (
+              <List
+                rowComponent={RunRow}
+                rowCount={filteredRuns.length}
+                rowHeight={RUN_CARD_HEIGHT}
+                rowProps={{ runs: filteredRuns, t, lang, routePreviewFallbacks, onOpen: openRun }}
+                style={{ height: Math.min(filteredRuns.length * RUN_CARD_HEIGHT, 560), width: '100%' }}
+                className="recent-runs-virtual-list"
+              />
             ) : null}
+            </section>
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />
             </footer>
@@ -815,4 +811,6 @@ export default function Runs() {
       {renderImportModal()}
     </div>
   );
-}
+});
+
+export default Runs;

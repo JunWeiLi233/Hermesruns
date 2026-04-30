@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { List } from 'react-window';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -45,7 +46,7 @@ function ShoeImage({ src, alt, className, noImageLabel }) {
 
   if (!src) return <div className="admin-shoe-img-empty">{noImageLabel || alt || 'No image'}</div>;
   if (!processed) return <div className="admin-shoe-img-loading" />;
-  return <img className={className} src={processed} alt={alt} />;
+  return <img className={className} src={processed} alt={alt} loading="lazy" decoding="async" />;
 }
 
 const TAB_ITEMS = [
@@ -658,7 +659,7 @@ function formatDashboardJobDuration(startValue, endValue) {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
-export default function Dashboard() {
+const Dashboard = memo(function Dashboard() {
   const { logout, login, isAuthenticated } = useAuth();
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
@@ -4311,7 +4312,7 @@ export default function Dashboard() {
             <div className="img-picker-grid">
               {imgCandidates.map((url, index) => (
                 <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(url, 'scan')}>
-                  <img src={url} alt={`candidate ${index + 1}`} />
+                  <img src={url} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>
@@ -4478,7 +4479,9 @@ export default function Dashboard() {
       </Modal>
     </div>
   );
-}
+});
+
+export default Dashboard;
 
 function Pagination({ pageData, onPageChange, t }) {
   if (!pageData || (pageData.totalPages || 0) <= 1) return null;

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import adidasLogo from '../assets/brand-logos/adidas.png';
 import antaLogo from '../assets/brand-logos/anta.svg';
 import bmaiLogo from '../assets/brand-logos/bmai.svg';
@@ -112,7 +113,7 @@ export function getShoeBrandLogoBackgroundStyle(brand, cssVarName = '--add-shoes
   };
 }
 
-export default function ShoeBrandLogo({ brand, fallbackEmoji }) {
+const ShoeBrandLogo = memo(function ShoeBrandLogo({ brand, fallbackEmoji }) {
   const asset = getBrandLogoAsset(brand);
   if (asset) {
     return (
@@ -146,4 +147,6 @@ export default function ShoeBrandLogo({ brand, fallbackEmoji }) {
       </text>
     </svg>
   );
-}
+});
+
+export default ShoeBrandLogo;
