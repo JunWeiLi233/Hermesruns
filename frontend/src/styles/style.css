@@ -49381,6 +49381,16 @@ button.admin-users-command-kpi:hover {
   font-variant-numeric: tabular-nums;
 }
 
+.admin-coursemap-progress__percent {
+  min-width: 62px;
+  padding: 4px 9px;
+  display: inline-flex;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
 .admin-coursemap-progress__bar {
   width: 100%;
   height: 10px;
@@ -49943,6 +49953,11 @@ body.theme-light .admin-command-page .admin-coursemap-progress {
 
 body.theme-light .admin-command-page .admin-coursemap-progress__meta strong {
   color: var(--text-strong);
+}
+
+body.theme-light .admin-command-page .admin-coursemap-progress__percent {
+  background: rgba(160, 57, 42, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.14);
 }
 
 body.theme-light .admin-command-page .admin-coursemap-progress__bar {

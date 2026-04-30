@@ -589,6 +589,7 @@ export default function RacesDetail() {
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes' },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races', active: true },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
+    { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
   ];
 
   const heroImage = resolvedHeroImage || race?.heroImage || race?.image || DEFAULT_HERO_IMAGE;

@@ -6,7 +6,7 @@ import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 
 export default function ForgotPassword() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -29,7 +29,7 @@ export default function ForgotPassword() {
       if (!res.ok) {
         setError(data.message || t('common.connection_failed'));
       } else {
-        setMessage(data.message || (lang === 'zh-CN' ? '重置链接已发送到你的邮箱。' : 'Password reset link sent to your email.'));
+        setMessage(data.message || t('forgotPassword.reset_link_sent'));
       }
     } catch {
       setError(t('common.connection_failed'));
@@ -48,13 +48,11 @@ export default function ForgotPassword() {
             </div>
             <div className="auth-flow-copy">
               <h2 className="auth-flow-hero">
-                <span>{lang === 'zh-CN' ? '找回' : 'Recover'}</span>
-                <span className="is-accent">{lang === 'zh-CN' ? '你的密码' : 'Your Password'}</span>
+                <span>{t('forgotPassword.hero_recover')}</span>
+                <span className="is-accent">{t('forgotPassword.hero_your_password')}</span>
               </h2>
               <p className="auth-flow-text">
-                {lang === 'zh-CN'
-                  ? '请输入你的跑者邮箱，我们会发送一条重置链接。'
-                  : 'Enter your runner email address and we will send you a reset link.'}
+                {t('forgotPassword.hero_instruction')}
               </p>
             </div>
           </div>
@@ -63,8 +61,8 @@ export default function ForgotPassword() {
         <section className="auth-flow-formside">
           <div className="auth-flow-card">
             <div className="auth-flow-header">
-              <h3>{lang === 'zh-CN' ? '忘记密码？' : 'Forgot Password?'}</h3>
-              <p>{lang === 'zh-CN' ? '我们会帮助你重新进入训练面板。' : 'We will help you get back to your training dashboard.'}</p>
+              <h3>{t('forgotPassword.heading')}</h3>
+              <p>{t('forgotPassword.subtitle')}</p>
             </div>
 
             <form className="auth-flow-form" onSubmit={handleSubmit}>
@@ -86,7 +84,7 @@ export default function ForgotPassword() {
               </div>
 
               <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>
-                {loading ? t('index.submit_loading') : (lang === 'zh-CN' ? '发送重置链接' : 'Send Reset Link')}
+                {loading ? t('index.submit_loading') : t('forgotPassword.send_reset_link')}
               </button>
             </form>
 

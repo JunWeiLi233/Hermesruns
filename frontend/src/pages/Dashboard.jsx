@@ -81,6 +81,8 @@ const TAB_ROUTE_MAP = {
 };
 
 const COURSE_MAP_UPLOAD_ACCEPT = 'image/*,application/pdf,.pdf';
+const ADMIN_JOB_STATUS_REQUEST_TIMEOUT_MS = 10000;
+const ADMIN_JOB_POLL_INTERVAL_MS = 2000;
 
 function normalizeDashboardPathname(pathname) {
   const normalized = String(pathname || '').replace(/\/+$/, '');
@@ -288,6 +290,19 @@ function hasAlignedCourseMapPreview(asset) {
   return Boolean(asset.overlayBounds) && routePoints.length > 1;
 }
 
+function hasCourseMapOsmLayer(asset) {
+  if (!asset || typeof asset !== 'object') return false;
+  const routePoints = Array.isArray(asset.routePoints) ? asset.routePoints : [];
+  return routePoints.length > 1;
+}
+
+function getCourseMapRenderableLive(item) {
+  const currentLive = getCourseMapCurrentLive(item);
+  if (hasCourseMapOsmLayer(currentLive)) return currentLive;
+  const storedLive = getCourseMapLive(item);
+  return hasCourseMapOsmLayer(storedLive) ? storedLive : null;
+}
+
 function getCourseMapPreviewConfidence(asset) {
   return typeof asset?.confidence === 'number' ? Math.round(asset.confidence) : null;
 }
@@ -301,8 +316,8 @@ function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
       tone: 'acquire',
       title: t('dashboard.course_maps_recommendation_acquire_title'),
       body: t('dashboard.course_maps_recommendation_acquire_body'),
-      cta: t('dashboard.course_maps_upload'),
-      action: 'upload',
+      cta: t('dashboard.course_maps_source_scan'),
+      action: 'scan',
     };
   }
 
@@ -311,8 +326,8 @@ function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
       tone: 'refresh',
       title: t('dashboard.course_maps_recommendation_refresh_title'),
       body: t('dashboard.course_maps_recommendation_refresh_body'),
-      cta: t('dashboard.course_maps_upload'),
-      action: 'upload',
+      cta: t('dashboard.course_maps_source_scan'),
+      action: 'scan',
     };
   }
 
@@ -342,14 +357,14 @@ function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
     tone: 'acquire',
     title: t('dashboard.course_maps_recommendation_acquire_title'),
     body: t('dashboard.course_maps_recommendation_acquire_body'),
-    cta: t('dashboard.course_maps_upload'),
-    action: 'upload',
+    cta: t('dashboard.course_maps_source_scan'),
+    action: 'scan',
   };
 }
 
 function getCourseMapStatus(item) {
   if (getCourseMapPending(item)) return 'pending';
-  if (getCourseMapLive(item)) return 'live';
+  if (getCourseMapRenderableLive(item)) return 'live';
   return 'missing';
 }
 
@@ -371,6 +386,14 @@ function getDashboardTierLabel(tier, t) {
   return tier || '-';
 }
 
+function formatShoeScanQuota(user, t) {
+  const remaining = Number(user?.shoeScanRemaining);
+  const limit = Number(user?.shoeScanLimit);
+  if (limit < 0 || remaining < 0) return t('dashboard.shoe_scan_quota_unlimited');
+  if (!Number.isFinite(remaining) || !Number.isFinite(limit) || limit <= 0) return '-';
+  return t('dashboard.shoe_scan_quota_fraction', { remaining, total: limit });
+}
+
 function getDashboardJobStatusLabel(status, t) {
   const normalized = String(status || '').toUpperCase();
   if (normalized === 'COMPLETED') return t('dashboard.jobs_filter_status_completed');
@@ -387,6 +410,7 @@ function getDashboardJobTypeLabel(jobType, t) {
   if (normalized === 'GARMIN_IMPORT') return t('dashboard.jobs_type_garmin_import');
   if (normalized === 'GARMIN_WELLNESS_SYNC') return t('dashboard.jobs_type_garmin_wellness_sync');
   if (normalized === 'FILE_IMPORT') return t('dashboard.jobs_type_file_import');
+  if (normalized === 'COURSE_MAP_PREVIEW_SCAN') return t('dashboard.jobs_type_course_map_scan');
   if (normalized === 'COURSE_MAP_PREVIEW_UPLOAD') return t('dashboard.jobs_type_course_map_upload');
   if (normalized === 'COURSE_MAP_PREVIEW_REANALYZE') return t('dashboard.jobs_type_course_map_reanalyze');
   return jobType || '-';
@@ -441,18 +465,90 @@ function getDashboardJobTone(status) {
 }
 
 function getDashboardJobProgress(job) {
+  const normalized = String(job?.status || '').toUpperCase();
+  if (normalized === 'PENDING') return 12;
+  if (normalized === 'FAILED' || normalized === 'COMPLETED') return 100;
+
   const total = Number(job?.totalCount || 0);
   const success = Number(job?.successCount || 0);
   const failure = Number(job?.failureCount || 0);
   const processed = success + failure;
-  if (total > 0) {
+  if (total > 0 && processed > 0) {
     return Math.max(8, Math.min(100, Math.round((processed / total) * 100)));
   }
-  const normalized = String(job?.status || '').toUpperCase();
-  if (normalized === 'FAILED' || normalized === 'COMPLETED') return 100;
   if (normalized === 'RUNNING') return 62;
-  if (normalized === 'PENDING') return 18;
   return 8;
+}
+
+function getCourseMapActionProgress(action) {
+  const explicitProgress = Number(action?.progress);
+  if (Number.isFinite(explicitProgress)) {
+    return Math.max(8, Math.min(100, Math.round(explicitProgress)));
+  }
+  switch (action?.type) {
+    case 'upload':
+      return 12;
+    case 'scan':
+      return 22;
+    case 'queued':
+      return 18;
+    case 'reanalyze':
+      return 38;
+    case 'pipeline':
+      return 62;
+    case 'accept':
+      return 78;
+    case 'refresh':
+      return 92;
+    default:
+      return 8;
+  }
+}
+
+const COURSE_MAP_ACTION_STATUS_KEYS = {
+  upload: 'dashboard.course_maps_status_running_upload',
+  queued: 'dashboard.course_maps_status_running_queued',
+  scan: 'dashboard.course_maps_status_running_scan',
+  reanalyze: 'dashboard.course_maps_status_running_reanalyze',
+  accept: 'dashboard.course_maps_status_running_accept',
+  clear: 'dashboard.course_maps_status_running_clear',
+  pipeline: 'dashboard.course_maps_status_running_pipeline',
+  refresh: 'dashboard.course_maps_status_running_refresh',
+};
+
+function getCourseMapActionStatusKey(action) {
+  if (String(action?.jobStatus || '').toUpperCase() === 'PENDING') {
+    return 'dashboard.course_maps_status_waiting';
+  }
+  return COURSE_MAP_ACTION_STATUS_KEYS[action?.type] || 'dashboard.course_maps_status_running_processing';
+}
+
+function getCourseMapActionSummary(action, t) {
+  if (String(action?.jobStatus || '').toUpperCase() === 'PENDING') {
+    return t('dashboard.course_maps_progress_waiting_hint');
+  }
+  return action?.summary || t('dashboard.course_maps_progress_fifo_hint');
+}
+
+function getCourseMapActionFromJob(raceId, type, job) {
+  return {
+    raceId,
+    type,
+    progress: getDashboardJobProgress(job),
+    jobId: job?.id,
+    summary: job?.summary || '',
+    jobStatus: String(job?.status || '').toUpperCase(),
+  };
+}
+
+function areCourseMapActionsEqual(left, right) {
+  if (!left || !right) return left === right;
+  return left.raceId === right.raceId
+    && left.type === right.type
+    && left.progress === right.progress
+    && left.jobId === right.jobId
+    && left.summary === right.summary
+    && left.jobStatus === right.jobStatus;
 }
 
 function getDashboardJobPriority(job) {
@@ -623,9 +719,10 @@ export default function Dashboard() {
   const [selectedCourseMapId, setSelectedCourseMapId] = useState(null);
   const [courseMapDetail, setCourseMapDetail] = useState(null);
   const [courseMapLoadState, setCourseMapLoadState] = useState('idle');
-  const [courseMapAction, setCourseMapAction] = useState({ raceId: null, type: '' });
+  const [courseMapActions, setCourseMapActions] = useState({});
   const [courseMapScanTimeline, setCourseMapScanTimeline] = useState([]);
   const [courseMapTimelineLoadState, setCourseMapTimelineLoadState] = useState('idle');
+  const [courseMapQueueCollapsed, setCourseMapQueueCollapsed] = useState(false);
   const courseMapUploadInputRef = useRef(null);
   const courseMapDetailRequestRef = useRef(0);
   const activeTab = useMemo(() => getDashboardSectionFromPathname(location.pathname), [location.pathname]);
@@ -663,6 +760,34 @@ export default function Dashboard() {
     const detail = getCourseMapRaceId(courseMapDetail) === raceId ? courseMapDetail : null;
     return buildCourseMapWorkspaceSource({ queueItem, detail });
   }, [courseMapDetail, courseMapQueueItems]);
+
+  function setCourseMapActionForRace(raceId, nextAction) {
+    if (!raceId) return;
+    setCourseMapActions((current) => {
+      const next = { raceId, ...nextAction };
+      if (areCourseMapActionsEqual(current[raceId], next)) return current;
+      return { ...current, [raceId]: next };
+    });
+  }
+
+  function clearCourseMapActionForRace(raceId, jobId = null) {
+    if (!raceId) return;
+    setCourseMapActions((current) => {
+      const existing = current[raceId];
+      if (!existing) return current;
+      if (jobId != null && existing.jobId != null && String(existing.jobId) !== String(jobId)) return current;
+      const next = { ...current };
+      delete next[raceId];
+      return next;
+    });
+  }
+
+  function announceCourseMapAction(raceId, nextAction) {
+    if (!raceId) return;
+    const action = { raceId, ...nextAction };
+    setCourseMapActionForRace(raceId, action);
+    setMessage(t(getCourseMapActionStatusKey(action)));
+  }
 
   const navigateToTab = useCallback((tab, options) => {
     navigate(TAB_ROUTE_MAP[tab] || TAB_ROUTE_MAP.overview, options);
@@ -1285,7 +1410,8 @@ export default function Dashboard() {
 
   async function uploadCourseMapPreview(raceId, file) {
     if (!raceId || !file) return;
-    setCourseMapAction({ raceId, type: 'upload' });
+    let activeJobId = null;
+    announceCourseMapAction(raceId, { type: 'upload', progress: 12 });
     try {
       const imageDataUrl = await readFileAsDataUrl(file);
       const sourceItem = getCourseMapActionSourceItem(raceId);
@@ -1294,8 +1420,11 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...buildCourseMapAdminPayload(sourceItem), imageDataUrl, fileName: file.name }),
       });
-      setCourseMapAction({ raceId, type: 'processing' });
-      const job = await waitForAdminJob(jobId);
+      activeJobId = jobId;
+      announceCourseMapAction(raceId, { type: 'queued', progress: 12, jobId, jobStatus: 'PENDING' });
+      const job = await waitForAdminJob(jobId, {
+        onProgress: (nextJob) => announceCourseMapAction(raceId, getCourseMapActionFromJob(raceId, 'queued', nextJob)),
+      });
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
       if (job.status === 'FAILED') {
         throw new Error(job.summary || 'Course-map upload failed.');
@@ -1306,7 +1435,7 @@ export default function Dashboard() {
     } catch (error) {
       setMessage(error.message || 'Course-map upload failed.');
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId, activeJobId);
     }
   }
 
@@ -1329,19 +1458,20 @@ export default function Dashboard() {
 
   async function acceptCourseMapLive(raceId) {
     if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'accept' });
+    announceCourseMapAction(raceId, { type: 'accept' });
     try {
       await apiJson(`/api/admin/race-course-maps/${raceId}/accept-live`, { method: 'POST' });
       await Promise.all([loadCourseMaps(), loadQueues()]);
       await loadCourseMapDetail(raceId);
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId);
     }
   }
 
   async function reanalyzeCourseMap(raceId) {
     if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'reanalyze' });
+    let activeJobId = null;
+    announceCourseMapAction(raceId, { type: 'reanalyze', progress: 12 });
     try {
       const sourceItem = getCourseMapActionSourceItem(raceId);
       const { jobId } = await apiJson(`/api/admin/race-course-maps/${raceId}/pending/reanalyze`, {
@@ -1349,7 +1479,11 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
       });
-      const job = await waitForAdminJob(jobId);
+      activeJobId = jobId;
+      announceCourseMapAction(raceId, { type: 'reanalyze', progress: 12, jobId, jobStatus: 'PENDING' });
+      const job = await waitForAdminJob(jobId, {
+        onProgress: (nextJob) => announceCourseMapAction(raceId, getCourseMapActionFromJob(raceId, 'reanalyze', nextJob)),
+      });
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
       if (job.status === 'FAILED') {
         throw new Error(job.summary || 'Course-map re-analysis failed.');
@@ -1360,16 +1494,50 @@ export default function Dashboard() {
     } catch (error) {
       setMessage(error.message || 'Course-map re-analysis failed.');
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId, activeJobId);
     }
   }
 
-  async function waitForAdminJob(jobId, maxAttempts = 180) {
+  async function scanCourseMapSources(raceId) {
+    if (!raceId) return;
+    let activeJobId = null;
+    announceCourseMapAction(raceId, { type: 'scan', progress: 12 });
+    try {
+      const sourceItem = getCourseMapActionSourceItem(raceId);
+      const { jobId } = await apiJson(`/api/admin/race-course-maps/${raceId}/pending/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
+      });
+      activeJobId = jobId;
+      announceCourseMapAction(raceId, { type: 'scan', progress: 12, jobId, jobStatus: 'PENDING' });
+      const job = await waitForAdminJob(jobId, {
+        onProgress: (nextJob) => announceCourseMapAction(raceId, getCourseMapActionFromJob(raceId, 'scan', nextJob)),
+      });
+      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId), loadCourseMapScanTimeline(raceId)]);
+      if (job.status === 'FAILED') {
+        throw new Error(job.summary || 'Course-map source scan failed.');
+      }
+      if (job.summary) {
+        setMessage(job.summary);
+      }
+    } catch (error) {
+      setMessage(error.message || 'Course-map source scan failed.');
+    } finally {
+      clearCourseMapActionForRace(raceId, activeJobId);
+    }
+  }
+
+  async function waitForAdminJob(jobId, options = {}) {
     if (!jobId) {
       throw new Error('Missing admin job id.');
     }
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const pollSignal = AbortSignal.timeout(10000);
+    const configuredAttempts = typeof options === 'number' ? options : options?.maxAttempts;
+    const attemptLimit = Number(configuredAttempts);
+    const hasAttemptLimit = Number.isFinite(attemptLimit) && attemptLimit > 0;
+    const onProgress = typeof options?.onProgress === 'function' ? options.onProgress : null;
+    for (let attempt = 0; !hasAttemptLimit || attempt < attemptLimit; attempt += 1) {
+      const pollSignal = AbortSignal.timeout(ADMIN_JOB_STATUS_REQUEST_TIMEOUT_MS);
       let job;
       try {
         job = await apiJson(`/api/admin/jobs/${jobId}`, { signal: pollSignal });
@@ -1383,14 +1551,15 @@ export default function Dashboard() {
       if (status === 'COMPLETED' || status === 'FAILED') {
         return job;
       }
-      await sleep(2000);
+      onProgress?.(job);
+      await sleep(ADMIN_JOB_POLL_INTERVAL_MS);
     }
     throw new Error('Timed out waiting for course-map job completion.');
   }
 
   async function runMarathonPipeline(raceId) {
     if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'pipeline' });
+    announceCourseMapAction(raceId, { type: 'pipeline' });
     try {
       const sourceItem = getCourseMapActionSourceItem(raceId);
       const payload = {
@@ -1415,14 +1584,14 @@ export default function Dashboard() {
         throw new Error(jobStatus.error || 'Unknown pipeline failure');
       }
 
-      setCourseMapAction({ raceId, type: 'refresh' });
+      announceCourseMapAction(raceId, { type: 'refresh' });
       await Promise.all([loadCourseMaps(), loadQueues()]);
       await loadCourseMapDetail(raceId, { forceFetch: true, fallbackItem: sourceItem });
       setMessage(t('dashboard.course_maps_pipeline_success'));
     } catch (e) {
       setMessage(t('dashboard.course_maps_pipeline_failed', { error: e.message }));
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId);
     }
   }
 
@@ -1431,6 +1600,9 @@ export default function Dashboard() {
     switch (recommendation.action) {
       case 'upload':
         openCourseMapUploadPicker();
+        break;
+      case 'scan':
+        scanCourseMapSources(selectedCourseMapId);
         break;
       case 'reanalyze':
         reanalyzeCourseMap(selectedCourseMapId);
@@ -1524,8 +1696,12 @@ export default function Dashboard() {
   );
 
   const liveCourseMapPreview = useMemo(
-    () => getCourseMapCurrentLive(selectedCourseMapItem) || getCourseMapLive(selectedCourseMapItem),
+    () => getCourseMapRenderableLive(selectedCourseMapItem),
     [selectedCourseMapItem],
+  );
+  const courseMapSourcePreview = useMemo(
+    () => pendingCourseMapPreview || getCourseMapLive(selectedCourseMapItem),
+    [pendingCourseMapPreview, selectedCourseMapItem],
   );
 
   const courseMapRecommendation = useMemo(
@@ -1543,17 +1719,22 @@ export default function Dashboard() {
   const liveCourseMapPointCount = Array.isArray(liveCourseMapPreview?.routePoints)
     ? liveCourseMapPreview.routePoints.length
     : Number(liveCourseMapPreview?.pointCount || 0);
-  const pendingCourseMapAligned = hasAlignedCourseMapPreview(pendingCourseMapPreview);
-  const liveCourseMapAligned = hasAlignedCourseMapPreview(liveCourseMapPreview);
   const courseMapRoutePoints = Array.isArray(courseMapDisplayPreview?.routePoints) ? courseMapDisplayPreview.routePoints : [];
   const courseMapElevationSamples = Array.isArray(courseMapDisplayPreview?.elevationSamples) ? courseMapDisplayPreview.elevationSamples : [];
   const courseMapElevationGainValue = courseMapElevationSamples.length > 1
     ? Math.max(0, Math.round(Math.max(...courseMapElevationSamples.map((sample) => Number(sample.elevation || sample.altitude || sample.y || 0))) - Math.min(...courseMapElevationSamples.map((sample) => Number(sample.elevation || sample.altitude || sample.y || 0)))))
     : null;
   const courseMapSatellitesConnected = String(Math.min(8, Math.max(1, courseMapsPage.items?.length || 1))).padStart(2, '0');
-  const courseMapComputeLoad = Math.min(95, 24 + (courseMapSummary.pending * 11) + (courseMapAction.raceId ? 7 : 0));
+  const courseMapActiveActions = Object.values(courseMapActions).filter((action) => Boolean(action?.type));
+  const selectedCourseMapAction = selectedCourseMapId
+    ? courseMapActions[selectedCourseMapId] || { raceId: null, type: '' }
+    : { raceId: null, type: '' };
+  const courseMapAction = selectedCourseMapAction;
+  const courseMapComputeLoad = Math.min(95, 24 + (courseMapSummary.pending * 11) + (courseMapActiveActions.length ? 7 : 0));
+  const courseMapActionProgress = getCourseMapActionProgress(courseMapAction);
+  const courseMapActionIsSelected = Boolean(courseMapAction.type);
   const courseMapPointCount = courseMapRoutePoints.length || Number(courseMapDisplayPreview?.pointCount || 12482);
-  const courseMapActivePipelines = Math.max(1, courseMapSummary.pending + (courseMapAction.raceId ? 1 : 0));
+  const courseMapActivePipelines = Math.max(1, courseMapSummary.pending + courseMapActiveActions.length);
   const courseMapSurfaceQuality = courseMapConfidenceValue == null
     ? 'B'
     : courseMapConfidenceValue >= 90
@@ -1574,21 +1755,27 @@ export default function Dashboard() {
     ? []
     : [
       {
+        key: 'scan',
+        label: t('dashboard.course_maps_source_scan'),
+        disabled: courseMapActionIsSelected,
+        onClick: () => scanCourseMapSources(selectedCourseMapId),
+      },
+      {
         key: 'upload',
         label: t('dashboard.course_maps_upload'),
-        disabled: courseMapAction.raceId === selectedCourseMapId,
+        disabled: courseMapActionIsSelected,
         onClick: openCourseMapUploadPicker,
       },
       {
         key: 'reanalyze',
         label: t('dashboard.course_maps_reanalyze'),
-        disabled: !pendingCourseMapPreview || courseMapAction.raceId === selectedCourseMapId,
+        disabled: !pendingCourseMapPreview || courseMapActionIsSelected,
         onClick: () => reanalyzeCourseMap(selectedCourseMapId),
       },
       {
         key: 'pipeline',
         label: t('dashboard.course_maps_run_pipeline'),
-        disabled: (!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId,
+        disabled: !courseMapSourcePreview || courseMapActionIsSelected,
         onClick: () => runMarathonPipeline(selectedCourseMapId),
       },
     ]
@@ -1934,6 +2121,46 @@ export default function Dashboard() {
   };
   const activeRouteSurface = adminRouteSurfaces[activeTab || 'overview'] || adminRouteSurfaces.overview;
 
+  function renderCourseMapProgressCard(placement = 'header') {
+    if (!courseMapActionIsSelected) return null;
+    const progressClassName = [
+      'admin-coursemap-progress',
+      placement === 'dock' ? 'admin-coursemap-progress--dock' : '',
+    ].filter(Boolean).join(' ');
+    const courseMapActionStatus = t(getCourseMapActionStatusKey(courseMapAction));
+    const courseMapActionSummary = getCourseMapActionSummary(courseMapAction, t);
+    const courseMapActionPercentLabel = t('dashboard.course_maps_progress_percent', { percent: courseMapActionProgress });
+    return (
+      <div className={progressClassName} aria-live="polite">
+        <div className="admin-coursemap-working-notice" role="status" aria-live="polite">
+          <span className="admin-coursemap-working-notice__pulse" aria-hidden="true" />
+          <span className="admin-coursemap-working-notice__body">
+            <strong>{courseMapActionStatus}</strong>
+            <small>{courseMapActionSummary}</small>
+          </span>
+        </div>
+        <div className="admin-coursemap-progress__meta">
+          <span className="admin-track-hub-stage__status-line">
+            {courseMapActionStatus}
+          </span>
+          <strong className="admin-coursemap-progress__percent">{courseMapActionPercentLabel}</strong>
+        </div>
+        <div
+          className="admin-coursemap-progress__bar"
+          role="progressbar"
+          aria-label={t('dashboard.course_maps_progress_label')}
+          aria-valuetext={courseMapActionPercentLabel}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={courseMapActionProgress}
+        >
+          <span style={{ width: `${courseMapActionProgress}%` }} />
+        </div>
+        <small>{courseMapActionSummary}</small>
+      </div>
+    );
+  }
+
   if (loadState === 'loading') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_loading')}</div></div>;
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
 
@@ -2029,7 +2256,7 @@ export default function Dashboard() {
             </article>
           ))}
         </div>
-        {message && <div className="admin-shoe-status dashboard-message">{message}</div>}
+        {message && <div className="admin-shoe-status dashboard-message" role="status" aria-live="polite">{message}</div>}
 
         {activeTab === 'overview' && overview && (
           <div className="admin-command-route__surface">
@@ -2552,6 +2779,7 @@ export default function Dashboard() {
                         <th>{t('dashboard.th_email')}</th>
                         <th>{t('dashboard.th_role')}</th>
                         <th>{t('dashboard.th_tier')}</th>
+                        <th>{t('dashboard.th_shoe_scan_quota')}</th>
                         <th>{t('dashboard.th_created')}</th>
                         <th>{t('dashboard.th_notes')}</th>
                         <th>{t('dashboard.th_actions')}</th>
@@ -2585,6 +2813,12 @@ export default function Dashboard() {
                             <span className={`admin-users-roster-badge admin-users-roster-badge--tier-${String(user.subscriptionTier || '').toLowerCase()}`}>
                               {getDashboardTierLabel(user.subscriptionTier, t)}
                             </span>
+                          </td>
+                          <td>
+                            <div className="admin-users-roster-table__meta">
+                              <strong>{formatShoeScanQuota(user, t)}</strong>
+                              <span>{t('dashboard.shoe_scan_quota_used_meta', { used: user.shoeScanUsed ?? 0 })}</span>
+                            </div>
                           </td>
                           <td>
                             <div className="admin-users-roster-table__meta">
@@ -2641,70 +2875,84 @@ export default function Dashboard() {
 
             <div className="admin-track-hub-grid admin-coursemap-workbench">
                 <aside className="admin-coursemap-workbench__rail admin-track-hub-sidebar">
-                  <section className="admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--queue">
+                  <section className={`admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--queue${courseMapQueueCollapsed ? ' is-collapsed' : ''}`}>
                   <div className="admin-coursemap-workbench__rail-head">
                     <div>
                       <span className="section-intro-kicker">{t('dashboard.course_maps_kicker')}</span>
                       <h3>{t('dashboard.course_maps_sidebar_title')}</h3>
                     </div>
-                    <strong>{courseMapQueueItems.length}</strong>
+                    <div className="admin-track-hub-sidebar__queue-actions">
+                      <strong>{courseMapQueueItems.length}</strong>
+                      <button
+                        type="button"
+                        className="admin-track-hub-sidebar__fold-toggle"
+                        aria-expanded={!courseMapQueueCollapsed}
+                        aria-controls="admin-coursemap-queue-panel-body"
+                        onClick={() => setCourseMapQueueCollapsed((current) => !current)}
+                      >
+                        <span>{t(courseMapQueueCollapsed ? 'dashboard.course_maps_queue_expand' : 'dashboard.course_maps_queue_collapse')}</span>
+                        <span className="admin-track-hub-sidebar__fold-glyph" aria-hidden="true">{courseMapQueueCollapsed ? '+' : '-'}</span>
+                      </button>
+                    </div>
                   </div>
-                  <p className="admin-coursemap-workbench__rail-copy">{t('dashboard.course_maps_workbench_list_copy')}</p>
-                  <div className="admin-track-hub-sidebar__search">
-                    <input className="admin-shoe-filter" placeholder={t('dashboard.course_maps_search')} value={courseMapQuery.search} onChange={e => setCourseMapQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))} />
-                    <select className="admin-shoe-filter" value={courseMapQuery.status} onChange={e => setCourseMapQuery(prev => ({ ...prev, status: e.target.value, page: 0 }))}>
-                      <option value="">{t('dashboard.course_maps_filter_all')}</option>
-                      <option value="pending">{t('dashboard.course_maps_filter_pending')}</option>
-                      <option value="live">{t('dashboard.course_maps_filter_live')}</option>
-                      <option value="missing">{t('dashboard.course_maps_filter_missing')}</option>
-                    </select>
-                    <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCourseMaps()}>{t('dashboard.btn_refresh')}</button>
-                  </div>
-                  <div className="admin-coursemap-rail">
-                    {courseMapQueueItems.map(item => {
-                      const raceId = getCourseMapRaceId(item);
-                      const status = getCourseMapStatus(item);
-                      const pending = getCourseMapPending(item);
-                      const live = getCourseMapLive(item);
-                      return (
-                        <button
-                          key={raceId || getCourseMapRaceName(item)}
-                          type="button"
-                          className={`admin-coursemap-rail__item${selectedCourseMapId === raceId ? ' is-active' : ''}`}
-                          onClick={() => openCourseMapWorkspace(item)}
-                        >
-                          <div className="admin-coursemap-rail__preview">
-                            <AdminCourseMapPreview
-                              preview={pending || live}
-                              title={getCourseMapRaceName(item)}
-                              emptyLabel={getCourseMapRaceName(item).slice(0, 1)}
-                              variant="card"
-                              forceLiveMap={true}
-                              fallbackCenter={getCourseMapViewportFallback(item)}
-                            />
-                          </div>
-                          <div className="admin-coursemap-rail__body">
-                            <div className="admin-coursemap-rail__head">
-                              <strong>{getCourseMapRaceName(item)}</strong>
-                              <span>{getCourseMapLocation(item) || t('dashboard.course_maps_location_fallback')}</span>
+                  <div id="admin-coursemap-queue-panel-body" className="admin-track-hub-sidebar__queue-body" hidden={courseMapQueueCollapsed}>
+                    <p className="admin-coursemap-workbench__rail-copy">{t('dashboard.course_maps_workbench_list_copy')}</p>
+                    <div className="admin-track-hub-sidebar__search">
+                      <input className="admin-shoe-filter" placeholder={t('dashboard.course_maps_search')} value={courseMapQuery.search} onChange={e => setCourseMapQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))} />
+                      <select className="admin-shoe-filter" value={courseMapQuery.status} onChange={e => setCourseMapQuery(prev => ({ ...prev, status: e.target.value, page: 0 }))}>
+                        <option value="">{t('dashboard.course_maps_filter_all')}</option>
+                        <option value="pending">{t('dashboard.course_maps_filter_pending')}</option>
+                        <option value="live">{t('dashboard.course_maps_filter_live')}</option>
+                        <option value="missing">{t('dashboard.course_maps_filter_missing')}</option>
+                      </select>
+                      <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCourseMaps()}>{t('dashboard.btn_refresh')}</button>
+                    </div>
+                    <div className="admin-coursemap-rail">
+                      {courseMapQueueItems.map(item => {
+                        const raceId = getCourseMapRaceId(item);
+                        const status = getCourseMapStatus(item);
+                        const pending = getCourseMapPending(item);
+                        const live = getCourseMapRenderableLive(item);
+                        return (
+                          <button
+                            key={raceId || getCourseMapRaceName(item)}
+                            type="button"
+                            className={`admin-coursemap-rail__item${selectedCourseMapId === raceId ? ' is-active' : ''}`}
+                            onClick={() => openCourseMapWorkspace(item)}
+                          >
+                            <div className="admin-coursemap-rail__preview">
+                              <AdminCourseMapPreview
+                                preview={pending || live}
+                                title={getCourseMapRaceName(item)}
+                                emptyLabel={getCourseMapRaceName(item).slice(0, 1)}
+                                variant="card"
+                                forceLiveMap={true}
+                                fallbackCenter={getCourseMapViewportFallback(item)}
+                              />
                             </div>
-                            <div className="admin-coursemap-rail__badges">
-                              <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${status}`}>{t(`dashboard.review_state_${status}`)}</span>
+                            <div className="admin-coursemap-rail__body">
+                              <div className="admin-coursemap-rail__head">
+                                <strong>{getCourseMapRaceName(item)}</strong>
+                                <span>{getCourseMapLocation(item) || t('dashboard.course_maps_location_fallback')}</span>
+                              </div>
+                              <div className="admin-coursemap-rail__badges">
+                                <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${status}`}>{t(`dashboard.review_state_${status}`)}</span>
+                              </div>
+                              <p className="admin-coursemap-rail__meta">{formatAdminDate(item?.updatedAt || pending?.updatedAt || live?.updatedAt)}</p>
                             </div>
-                            <p className="admin-coursemap-rail__meta">{formatAdminDate(item?.updatedAt || pending?.updatedAt || live?.updatedAt)}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Pagination pageData={courseMapsPage} onPageChange={page => setCourseMapQuery(prev => ({ ...prev, page }))} t={t} />
+                    <button
+                      type="button"
+                      className="btn-secondary btn-inline-md admin-track-hub-sidebar__archives"
+                      onClick={() => setCourseMapQuery(prev => ({ ...prev, status: '', page: 0 }))}
+                    >
+                      {t('dashboard.course_maps_sidebar_archives')}
+                    </button>
                   </div>
-                  <Pagination pageData={courseMapsPage} onPageChange={page => setCourseMapQuery(prev => ({ ...prev, page }))} t={t} />
-                  <button
-                    type="button"
-                    className="btn-secondary btn-inline-md admin-track-hub-sidebar__archives"
-                    onClick={() => setCourseMapQuery(prev => ({ ...prev, status: '', page: 0 }))}
-                  >
-                    {t('dashboard.course_maps_sidebar_archives')}
-                  </button>
                   </section>
 
                   <section className="admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--metrics">
@@ -2747,22 +2995,18 @@ export default function Dashboard() {
                             <span className={`admin-track-hub-stage__badge is-${getCourseMapStatus(selectedCourseMapItem || {})}`}>{t(`dashboard.review_state_${getCourseMapStatus(selectedCourseMapItem || {})}`)}</span>
                           </div>
                           <p>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</p>
-                          {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type ? (
-                            <p className="admin-track-hub-stage__status-line">
-                              {t(`dashboard.course_maps_status_running_${courseMapAction.type}`)}
-                            </p>
-                          ) : null}
+                          {renderCourseMapProgressCard('header')}
                         </div>
                         <div className="admin-track-hub-stage__actions">
                           <button
                             type="button"
                             className="btn-secondary btn-inline-md"
-                            disabled={!pendingCourseMapPreview || courseMapAction.raceId === selectedCourseMapId}
+                            disabled={!pendingCourseMapPreview || courseMapActionIsSelected}
                             onClick={() => reanalyzeCourseMap(selectedCourseMapId)}
                           >
                             {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'reanalyze' ? t('dashboard.course_maps_reanalyzing') : t('dashboard.course_maps_reanalyze')}
                           </button>
-                          <button type="button" className="btn-primary btn-inline-md" disabled={(!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId} onClick={() => runMarathonPipeline(selectedCourseMapId)}>
+                          <button type="button" className="btn-primary btn-inline-md" disabled={!courseMapSourcePreview || courseMapActionIsSelected} onClick={() => runMarathonPipeline(selectedCourseMapId)}>
                             {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'refresh'
                               ? t('dashboard.course_maps_refreshing_preview')
                               : courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline'
@@ -2924,6 +3168,26 @@ export default function Dashboard() {
                                 ) : null}
                               </div>
 
+                              <div className="admin-coursemap-publish-canvas__decision-dock">
+                                <div className="admin-track-hub-footer-verdict">
+                                  <span className="admin-track-hub-footer-verdict__icon material-symbols-outlined" aria-hidden="true">
+                                    {courseMapAlignmentReady ? 'verified' : 'schedule'}
+                                  </span>
+                                  <span className="admin-track-hub-footer-verdict__text">
+                                    {courseMapAlignmentReady ? t('dashboard.course_maps_alignment_verified') : courseMapRecommendation.title}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="btn-primary btn-inline-md admin-coursemap-publish-canvas__primary"
+                                  disabled={courseMapActionIsSelected}
+                                  onClick={() => runRecommendedCourseMapAction(courseMapRecommendation)}
+                                >
+                                  {courseMapRecommendation.cta}
+                                </button>
+                              </div>
+                              {renderCourseMapProgressCard('dock')}
+
                               <aside className="admin-coursemap-evidence-stack admin-track-hub-footer-output-grid">
                                 {courseMapFooterOutputCards.map((card) => (
                                   <article key={card.key} className="admin-coursemap-evidence-card admin-track-hub-footer-output-card is-refresh">
@@ -2942,23 +3206,7 @@ export default function Dashboard() {
                                 <p>{courseMapRecommendation.body}</p>
                               </div>
                             </div>
-                            <div className="admin-track-hub-footer-verdict">
-                              <span className="admin-track-hub-footer-verdict__icon material-symbols-outlined" aria-hidden="true">
-                                {courseMapAlignmentReady ? 'verified' : 'schedule'}
-                              </span>
-                              <span className="admin-track-hub-footer-verdict__text">
-                                {courseMapAlignmentReady ? t('dashboard.course_maps_alignment_verified') : courseMapRecommendation.title}
-                              </span>
-                            </div>
                             <div className="admin-coursemap-publish-canvas__actions">
-                              <button
-                                type="button"
-                                className="btn-primary btn-inline-md admin-coursemap-publish-canvas__primary"
-                                disabled={courseMapAction.raceId === selectedCourseMapId}
-                                onClick={() => runRecommendedCourseMapAction(courseMapRecommendation)}
-                              >
-                                {courseMapRecommendation.cta}
-                              </button>
                               <div className="admin-coursemap-publish-canvas__secondary">
                                 <span className="admin-coursemap-publish-canvas__secondary-label">{t('dashboard.course_maps_secondary_actions_label')}</span>
                                 <div className="admin-coursemap-publish-canvas__secondary-row">
@@ -2980,7 +3228,10 @@ export default function Dashboard() {
                               <div className="admin-coursemap-action-group">
                                 <span className="admin-coursemap-action-group__label">{t('dashboard.course_maps_action_group_source')}</span>
                                 <div className="admin-coursemap-action-group__buttons">
-                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapAction.raceId === selectedCourseMapId} onClick={openCourseMapUploadPicker}>
+                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapActionIsSelected} onClick={() => scanCourseMapSources(selectedCourseMapId)}>
+                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'scan' ? t('dashboard.course_maps_source_scanning') : t('dashboard.course_maps_source_scan')}
+                                  </button>
+                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapActionIsSelected} onClick={openCourseMapUploadPicker}>
                                     {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'upload' ? t('dashboard.course_maps_uploading') : t('dashboard.course_maps_upload')}
                                   </button>
                                 </div>
@@ -2993,7 +3244,7 @@ export default function Dashboard() {
                                   <button
                                     type="button"
                                     className="btn-secondary btn-inline-md"
-                                    disabled={!pendingCourseMapPreview || courseMapAction.raceId === selectedCourseMapId}
+                                    disabled={!pendingCourseMapPreview || courseMapActionIsSelected}
                                     onClick={() => reanalyzeCourseMap(selectedCourseMapId)}
                                   >
                                     {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'reanalyze' ? t('dashboard.course_maps_reanalyzing') : t('dashboard.course_maps_reanalyze')}
@@ -3001,7 +3252,7 @@ export default function Dashboard() {
                                   <button
                                     type="button"
                                     className="btn-primary btn-inline-md"
-                                    disabled={(!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId}
+                                    disabled={!courseMapSourcePreview || courseMapActionIsSelected}
                                     onClick={() => runMarathonPipeline(selectedCourseMapId)}
                                   >
                                     {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'refresh'
@@ -3019,8 +3270,8 @@ export default function Dashboard() {
 
                         <div className="admin-jobs-detail__timeline-shell admin-coursemap-scan-timeline">
                           <div className="admin-jobs-detail__section-head">
-                            <span className="section-intro-kicker">{t('dashboard.course_maps_scan_timeline_label')}</span>
-                            <strong>{t('dashboard.course_maps_scan_timeline_title')}</strong>
+                            <span className="section-intro-kicker">{t('dashboard.course_maps_timeline_label')}</span>
+                            <strong>{t('dashboard.course_maps_timeline_title')}</strong>
                             {courseMapTimelineLoadState === 'loading' && <span>{t('dashboard.course_maps_timeline_loading')}</span>}
                             {courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 && (
                               <span>{courseMapScanTimeline.length} {t('dashboard.course_maps_timeline_steps')}</span>
@@ -3523,6 +3774,7 @@ export default function Dashboard() {
                       <option value="GARMIN_IMPORT">{t('dashboard.jobs_type_garmin_import')}</option>
                       <option value="GARMIN_WELLNESS_SYNC">{t('dashboard.jobs_type_garmin_wellness_sync')}</option>
                       <option value="FILE_IMPORT">{t('dashboard.jobs_type_file_import')}</option>
+                      <option value="COURSE_MAP_PREVIEW_SCAN">{t('dashboard.jobs_type_course_map_scan')}</option>
                       <option value="COURSE_MAP_PREVIEW_UPLOAD">{t('dashboard.jobs_type_course_map_upload')}</option>
                       <option value="COURSE_MAP_PREVIEW_REANALYZE">{t('dashboard.jobs_type_course_map_reanalyze')}</option>
                     </select>

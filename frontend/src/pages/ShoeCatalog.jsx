@@ -81,13 +81,13 @@ const CATALOG_CATEGORY_META = {
   trail: { zh: '越野', en: 'Trail' },
 };
 
-function getCatalogCategoryLabel(category, lang) {
+function getCatalogCategoryLabel(category, t) {
   const raw = (category || '').toString();
-  if (!raw) return lang === 'zh-CN' ? '其他' : 'Other';
+  if (!raw) return t('shoeCatalog.category_other');
   const normalized = normalizeBrandKey(raw);
-  const meta = CATALOG_CATEGORY_META[normalized];
-  if (meta) return lang === 'zh-CN' ? meta.zh : meta.en;
-  return raw;
+  const key = `shoeCatalog.category.${normalized}`;
+  const translated = t(key);
+  return translated !== key ? translated : raw;
 }
 
 function getCatalogModelLabel(item, lang) {
@@ -340,7 +340,7 @@ export default function ShoeCatalog() {
           <div className="runner-shell-topbar-left">
             <button type="button" className="add-shoes-topbar-back" onClick={() => navigate('/shoes')}>
               <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
-              <span>{lang === 'zh-CN' ? '返回跑鞋库' : 'Back to shoes'}</span>
+              <span>{t('shoeCatalog.back_to_shoes')}</span>
             </button>
           </div>
 
@@ -370,7 +370,7 @@ export default function ShoeCatalog() {
           {isLoading && (
             <div className="shoe-catalog-loading" aria-live="polite" aria-busy="true">
               <span className="shoe-catalog-loading-spinner" aria-hidden="true" />
-              <span>{lang === 'zh-CN' ? '正在加载鞋款库…' : 'Loading catalog…'}</span>
+              <span>{t('shoeCatalog.loading')}</span>
             </div>
           )}
           <div className={`add-shoes-shell${isLoading ? ' shoe-catalog-shell--loading' : ''}`}>
@@ -408,7 +408,7 @@ export default function ShoeCatalog() {
                 </div>
 
                 <button type="button" className="runner-shell-inline-btn" onClick={handleCustom}>
-                  {lang === 'zh-CN' ? '清空' : 'Clear'}
+                  {t('shoeCatalog.clear')}
                 </button>
               </div>
 
@@ -440,7 +440,7 @@ export default function ShoeCatalog() {
                         <AppIcon name={brandsExpanded ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
                       </span>
                       <div className="add-shoes-brand-copy">
-                        <strong>{brandsExpanded ? (lang === 'zh-CN' ? '收起' : 'Collapse') : (lang === 'zh-CN' ? '展开浏览' : 'Expand browse')}</strong>
+                        <strong>{brandsExpanded ? t('shoeCatalog.collapse') : t('shoeCatalog.expand_browse')}</strong>
                         <span>{brandsExpanded ? '' : t('shoes.model_count', { count: catalog.length })}</span>
                       </div>
                     </button>
@@ -449,13 +449,13 @@ export default function ShoeCatalog() {
 
                 <div ref={seriesSectionRef} className="add-shoes-model-grid-shell">
                   <div className="add-shoes-model-grid-head">
-                    <strong>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : (lang === 'zh-CN' ? '系列' : 'Series')}</strong>
+                    <strong>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoeCatalog.series')}</strong>
                     <span>{selectedBrand ? t('shoes.model_count', { count: visibleCatalogModels.length }) : t('shoes.stitch_preview_label')}</span>
                   </div>
 
                   {!selectedBrand ? (
                     <div className="add-shoes-model-empty">
-                      {lang === 'zh-CN' ? '先点一个品牌，这里才会展开对应系列。' : 'Pick a brand first to open the matching series grid.'}
+                      {t('shoeCatalog.pick_brand_first')}
                     </div>
                   ) : (
                     <>
@@ -467,7 +467,7 @@ export default function ShoeCatalog() {
                             className={`add-shoes-filter-chip${selectedCategory === categoryKey ? ' is-active' : ''}`}
                             onClick={() => setSelectedCategory(categoryKey)}
                           >
-                            {getCatalogCategoryLabel(categoryKey, lang)}
+                            {getCatalogCategoryLabel(categoryKey, t)}
                           </button>
                         ))}
                       </div>
@@ -484,7 +484,7 @@ export default function ShoeCatalog() {
                               <BrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
                             </span>
                             <strong>{getCatalogModelLabel(item, lang)}</strong>
-                            <span>{getCatalogCategoryLabel(item.category || item.type, lang)}</span>
+                            <span>{getCatalogCategoryLabel(item.category || item.type, t)}</span>
                           </button>
                         ))}
                       </div>
@@ -500,9 +500,7 @@ export default function ShoeCatalog() {
                 <strong>{selectedModel || t('shoes.add_page_selected_empty')}</strong>
                 <p>
                   {selectedModel
-                    ? lang === 'zh-CN'
-                      ? '已选型号可以直接带入新版添加跑鞋流程。'
-                      : 'The selected model can be carried straight into the newer add-shoe flow.'
+                    ? t('shoeCatalog.selected_model_flow')
                     : t('shoes.add_page_selected_copy')}
                 </p>
               </section>
@@ -510,9 +508,7 @@ export default function ShoeCatalog() {
               <section className="add-shoes-side-card">
                 <span className="add-shoes-panel-kicker">{t('shoes.stitch_actions')}</span>
                 <p>
-                  {lang === 'zh-CN'
-                    ? '找到目标鞋款后，跳到新版添加页完成库存写入和主力鞋设置。'
-                    : 'Once you find the right pair, jump to the newer add page to create the inventory entry and set a primary shoe.'}
+                  {t('shoeCatalog.side_rail_action')}
                 </p>
                 <div className="today-run-marathon-cta-row">
                   <button
@@ -531,9 +527,7 @@ export default function ShoeCatalog() {
               <section className="add-shoes-side-card">
                 <span className="add-shoes-panel-kicker">{t('shoes.stitch_preview_label')}</span>
                 <p>
-                  {lang === 'zh-CN'
-                    ? '这个页面保留为浏览入口，不再停留在旧 top-nav 壳层里。'
-                    : 'This route stays as a browse-first utility surface instead of living inside the older top-nav chrome.'}
+                  {t('shoeCatalog.side_rail_preview')}
                 </p>
               </section>
             </aside>
