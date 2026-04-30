@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -8,6 +8,7 @@ import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import FooterNavLinks from '../components/FooterNavLinks';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -1077,193 +1078,11 @@ function getExerciseGuide(name, isZh) {
   };
 }
 
-function createPageCopy(isZh) {
-  return {
-    checkInTitle: isZh ? '\u4eca\u65e5\u8bad\u7ec3\u786e\u8ba4' : "Today's training check-in",
-    checkInHint: isZh
-      ? '\u5148\u786e\u8ba4\u4f60\u4eca\u5929\u5b9e\u9645\u6253\u7b97\u600e\u4e48\u7ec3\uff0c\u529b\u91cf\u5efa\u8bae\u4f1a\u7acb\u5373\u91cd\u7b97\u672a\u6765 7 \u5929\u3002'
-      : 'Confirm what you are actually doing today and the next 7 days of strength placement will refresh immediately.',
-    checkInTypeLabel: isZh ? '\u4eca\u65e5\u8bad\u7ec3\u7c7b\u578b' : "Today's run type",
-    checkInStateLabel: isZh ? '\u8f93\u5165\u72b6\u6001' : 'Entry state',
-    checkInDistanceLabel: isZh ? '\u53ef\u9009\u516c\u91cc' : 'Optional distance',
-    checkInDurationLabel: isZh ? '\u53ef\u9009\u65f6\u957f' : 'Optional minutes',
-    checkInSave: isZh ? '\u4fdd\u5b58\u4eca\u65e5\u786e\u8ba4' : 'Save today',
-    checkInSaving: isZh ? '\u4fdd\u5b58\u4e2d...' : 'Saving...',
-    checkInReset: isZh ? '\u6062\u590d\u6559\u7ec3\u8ba1\u5212' : 'Restore coach schedule',
-    checkInSaved: isZh ? '\u4eca\u65e5\u8bad\u7ec3\u786e\u8ba4\u5df2\u4fdd\u5b58\uff0c\u529b\u91cf\u8ba1\u5212\u5df2\u5237\u65b0\u3002' : 'Today\'s check-in was saved and the strength plan was refreshed.',
-    checkInResetSuccess: isZh ? '\u5df2\u6e05\u9664\u4eba\u5de5\u786e\u8ba4\uff0c\u6062\u590d\u6309\u6559\u7ec3\u8ba1\u5212\u63a8\u65ad\u3002' : 'Manual check-in cleared. The page is back to coach-schedule mode.',
-    checkInUpdatedAt: isZh ? '\u6700\u540e\u66f4\u65b0' : 'Last updated',
-    planSourceLabel: isZh ? '\u5efa\u8bae\u6765\u6e90' : 'Recommendation source',
-    sourcePills: {
-      COACH_SCHEDULE: isZh ? '\u57fa\u4e8e\u6559\u7ec3\u8ba1\u5212' : 'Coach schedule',
-      USER_PLANNED: isZh ? '\u4f60\u7684\u4eca\u65e5\u8ba1\u5212' : 'Your plan for today',
-      USER_ACTUAL: isZh ? '\u4f60\u7684\u5b9e\u9645\u5b8c\u6210' : 'Your actual session',
-    },
-    sourceSummary: {
-      COACH_SCHEDULE: isZh ? '\u5f53\u524d\u529b\u91cf\u5efa\u8bae\u57fa\u4e8e\u6559\u7ec3\u8ba1\u5212\u63a8\u65ad\uff0c\u5f85\u786e\u8ba4\u3002' : 'The current strength recommendation is inferred from your coach schedule and is still waiting for confirmation.',
-      USER_PLANNED: isZh ? '\u5f53\u524d\u529b\u91cf\u5efa\u8bae\u57fa\u4e8e\u4f60\u4eca\u5929\u4e3b\u52a8\u586b\u5199\u7684\u8ba1\u5212\u3002' : 'The current strength recommendation is based on the plan you entered for today.',
-      USER_ACTUAL: isZh ? '\u5f53\u524d\u529b\u91cf\u5efa\u8bae\u57fa\u4e8e\u4f60\u4eca\u5929\u5df2\u786e\u8ba4\u7684\u5b9e\u9645\u8bad\u7ec3\u3002' : 'The current strength recommendation is based on the actual session you confirmed for today.',
-    },
-    checkInStateOptions: {
-      PLANNED: isZh ? '\u8ba1\u5212' : 'Planned',
-      ACTUAL: isZh ? '\u5b9e\u9645\u5b8c\u6210' : 'Actual',
-    },
-    heading: isZh ? '力量训练' : 'Strength Training',
-    subheading: isZh
-      ? '基于最近跑量、恢复状态、比赛阶段和个人偏好，给你从今天开始的 7 天滚动力量周计划。'
-      : 'A rolling 7-day strength plan built from your recent running load, recovery status, race phase, and preferences.',
-    languageToggleLabel: isZh ? '切换页面语言' : 'Switch page language',
-    loading: isZh ? '正在生成 7 天力量周计划...' : 'Building your 7-day strength plan...',
-    profileTitle: isZh ? '力量偏好设置' : 'Strength preferences',
-    profileHint: isZh
-      ? '这些设置会保存到你的档案，并直接影响动作选择、排课频率和静音过滤。'
-      : 'These settings are saved to your profile and directly shape exercise selection, weekly frequency, and quiet-mode filtering.',
-    experienceLabel: isZh ? '力量经验' : 'Strength experience',
-    equipmentLabel: isZh ? '可用器械' : 'Available equipment',
-    sessionMinutesLabel: isZh ? '每次时长' : 'Minutes per session',
-    noiseLabel: isZh ? '训练环境' : 'Training environment',
-    preferredDaysLabel: isZh ? '偏好训练日' : 'Preferred training days',
-    save: isZh ? '保存设置' : 'Save settings',
-    saving: isZh ? '保存中...' : 'Saving...',
-    saveSuccess: isZh ? '力量偏好已保存，周计划已刷新。' : 'Preferences saved and plan refreshed.',
-    statusTitle: isZh ? '本周状态' : 'This week',
-    rationaleTitle: isZh ? '安排逻辑' : 'Why this plan',
-    weekTitle: isZh ? '滚动 7 天安排' : 'Rolling 7-day schedule',
-    weekHint: isZh
-      ? '力量优先安排在轻松跑后、恢复日或低压力日，并尽量避开关键跑和长跑前 24 小时。'
-      : 'Strength is placed after easy runs, on recovery days, or in low-cost slots, while avoiding the 24 hours before key runs and long runs.',
-    conservativeBanner: isZh
-      ? '跑步数据不足，当前为保守起步版：先给 1 次 20-30 分钟的静音基础力量。'
-      : 'Running data is limited, so this is a conservative starter plan: one quiet 20-30 minute foundation session.',
-    summaryFrequency: isZh ? '推荐频率' : 'Recommended frequency',
-    summaryRecovery: isZh ? '恢复门控' : 'Recovery gate',
-    summaryUpcoming: isZh ? '下一次关键跑 / 长跑' : 'Next key run / long run',
-    summaryFocus: isZh ? '当前力量重点' : 'Current strength focus',
-    noKeyRun: isZh ? '未来 7 天没有关键跑' : 'No key run in the next 7 days',
-    noLongRun: isZh ? '未来 7 天没有长跑' : 'No long run in the next 7 days',
-    runContext: isZh ? '跑步上下文' : 'Run context',
-    strengthTitle: isZh ? '今天的力量安排' : "Today's strength slot",
-    noStrengthTitle: isZh ? '今天不建议做力量' : 'Why strength is not scheduled today',
-    placementTitle: isZh ? '为什么安排在今天' : 'Why it lands here',
-    durationTitle: isZh ? '时长' : 'Duration',
-    rpeTitle: isZh ? '目标 RPE' : 'Target RPE',
-    optionalTitle: isZh ? '课程属性' : 'Session flag',
-    optionalYes: isZh ? '可选' : 'Optional',
-    optionalNo: isZh ? '主课' : 'Primary',
-    noteTitle: isZh ? '注意事项' : 'Caution',
-    watchDemo: isZh ? '看动作示范' : 'Watch demo',
-    intentLabel: isZh ? '动作意图' : 'Intent',
-    regression: isZh ? '退阶' : 'Regression',
-    progression: isZh ? '进阶' : 'Progression',
-    readinessAdjusted: isZh ? '已按恢复状态调整跑步安排' : 'Run adjusted for readiness',
-    experienceOptions: {
-      BEGINNER: isZh ? '新手 / 刚恢复' : 'Beginner / returning',
-      INTERMEDIATE: isZh ? '有规律做过' : 'Intermediate',
-      CONSISTENT: isZh ? '长期稳定训练' : 'Consistent',
-    },
-    equipmentOptions: {
-      BODYWEIGHT: isZh ? '徒手' : 'Bodyweight',
-      BAND: isZh ? '弹力带' : 'Band',
-      DUMBBELL: isZh ? '哑铃' : 'Dumbbell',
-      GYM: isZh ? '完整健身房' : 'Gym',
-    },
-    noiseOptions: {
-      NORMAL: isZh ? '正常环境' : 'Normal',
-      QUIET_ONLY: isZh ? '只能静音训练' : 'Quiet only',
-    },
-    sessionTypes: {
-      FOUNDATION_STRENGTH: isZh ? '基础力量' : 'Foundation strength',
-      RESILIENCE_CAPACITY: isZh ? '韧性容量' : 'Resilience capacity',
-      OPTIONAL_ELASTICITY: isZh ? '可选弹性激活' : 'Optional elasticity',
-    },
-    sessionEmphasis: {
-      FOUNDATION_STRENGTH: isZh ? '单腿力量、后链稳定和小腿韧性' : 'Single-leg strength, posterior chain, and calf resilience',
-      RESILIENCE_CAPACITY: isZh ? '组织容量、躯干控制和低成本耐受' : 'Tissue capacity, trunk control, and low-cost durability',
-      OPTIONAL_ELASTICITY: isZh ? '短促弹性接触与协调激活' : 'Short elastic contacts and coordination',
-    },
-    workoutTypes: {
-      QUALITY: isZh ? '\u8d28\u91cf\u8bfe' : 'Quality session',
-      REST: isZh ? '休息' : 'Rest',
-      EASY: isZh ? '轻松跑' : 'Easy run',
-      RECOVERY: isZh ? '恢复跑' : 'Recovery run',
-      TEMPO: isZh ? '节奏跑' : 'Tempo',
-      THRESHOLD: isZh ? '阈值课' : 'Threshold',
-      INTERVALS: isZh ? '间歇课' : 'Intervals',
-      LONG_RUN: isZh ? '长跑' : 'Long run',
-      CROSS_TRAIN: isZh ? '交叉训练' : 'Cross-train',
-    },
-    loadStatus: {
-      CONSERVATIVE: isZh ? '保守起步' : 'Conservative start',
-      STEADY: isZh ? '负荷稳定' : 'Steady load',
-      SPIKING: isZh ? '负荷上冲' : 'Load spike',
-      HIGH_VOLUME: isZh ? '高跑量周' : 'High-volume week',
-      RACE_WEEK: isZh ? '比赛周' : 'Race week',
-    },
-    recoveryGate: {
-      OPEN: isZh ? '开放' : 'Open',
-      CAUTION: isZh ? '谨慎' : 'Caution',
-      PROTECT: isZh ? '保护' : 'Protect',
-    },
-    currentFocus: {
-      RECOVERY_CAPACITY: isZh ? '恢复与容量维护' : 'Recovery and capacity',
-      QUIET_POSTERIOR_CHAIN: isZh ? '静音后链稳定' : 'Quiet posterior-chain stability',
-      ELASTIC_STIFFNESS: isZh ? '低剂量弹性维持' : 'Elastic stiffness maintenance',
-      POSTERIOR_CHAIN_STABILITY: isZh ? '后链与单腿稳定' : 'Posterior-chain stability',
-    },
-    rationale: {
-      R_VOLUME_28D: isZh ? '最近 28 天跑量决定了本周力量频率的起点。' : 'The last 28 days of running volume set the base weekly strength frequency.',
-      R_COACH_SCHEDULE: isZh ? '结合当前跑步周计划，主动避开关键跑和长跑前 24 小时。' : 'Placement accounts for your current run schedule and avoids the 24 hours before key or long runs.',
-      R_EQUIPMENT_FILTER: isZh ? '动作会按器械条件自动替换，而不是只改名字。' : 'Exercises are swapped based on equipment, not just renamed.',
-      R_CONSERVATIVE_DATA: isZh ? '跑步数据不足，所以先给保守版本。' : 'Running data is limited, so the plan starts conservatively.',
-      R_RECOVERY_GATE: isZh ? '恢复信号触发了强度保护。' : 'Recovery signals triggered a protective downgrade.',
-      R_LOAD_SPIKE: isZh ? '近期跑步负荷上冲，力量课自动降级。' : 'Recent running stress is spiking, so strength work was downgraded.',
-      R_HIGH_VOLUME: isZh ? '高跑量周更重视低成本韧性和小剂量弹性。' : 'High-volume weeks emphasize low-cost resilience and small elastic doses.',
-      R_RACE_WEEK: isZh ? '比赛周避免额外肌肉损伤和残余酸痛。' : 'Race week avoids extra muscle damage and residual soreness.',
-      R_QUIET_FILTER: isZh ? '静音模式已过滤跳跃和明显落地声动作。' : 'Quiet mode removed jumping and high-impact options.',
-      R_SKIP_WEEK: isZh ? '当前周建议跳过正式力量课或只保留激活。' : 'This week may skip formal strength or keep only a light activation.',
-    },
-    placementReasons: {
-      ASSIGN_AFTER_EASY_RUN: isZh ? '放在轻松跑后，减少对关键课的干扰。' : 'Placed after an easy run to avoid interfering with key sessions.',
-      ASSIGN_ON_RECOVERY_DAY: isZh ? '放在恢复或低压力日，训练成本更低。' : 'Placed on a recovery or low-cost day.',
-      ASSIGN_OPTIONAL_LOW_IMPACT_SLOT: isZh ? '放在低压力日，只保留短促弹性激活。' : 'Placed in a low-cost slot as a short elastic activation.',
-    },
-    noStrengthReasons: {
-      SKIP_KEY_RUN_DAY: isZh ? '今天是关键跑，不叠加下肢力量。' : 'Today is a key run day, so lower-body strength stays off the table.',
-      SKIP_LONG_RUN_DAY: isZh ? '今天是长跑日，不再加正式力量课。' : 'Today is a long-run day, so no formal strength work is added.',
-      SKIP_KEY_RUN_TOMORROW: isZh ? '明天有关键跑，今天留恢复缓冲。' : 'A key run is tomorrow, so today stays clear as a buffer.',
-      SKIP_LONG_RUN_TOMORROW: isZh ? '明天有长跑，今天不放重下肢。' : 'A long run is tomorrow, so heavy lower-body work is avoided.',
-      SKIP_RECOVERY_GATE: isZh ? '恢复门控提示本周应降级或跳过。' : 'The recovery gate suggests downgrading or skipping this week.',
-      SKIP_SESSION_CAP_REACHED: isZh ? '本周推荐频率已经达到。' : 'You have already reached the recommended weekly frequency.',
-      SKIP_BUFFER_DAY: isZh ? '今天更适合当作跑步恢复缓冲。' : 'Today works better as a run-recovery buffer.',
-    },
-    cautionCodes: {
-      CAUTION_KEEP_SUBMAXIMAL: isZh ? '这次强度保持次最大，保留 2-3 次余量。' : 'Keep this session submaximal and leave 2-3 reps in reserve.',
-      CAUTION_RACE_WEEK: isZh ? '比赛周只保留轻量刺激，不追求疲劳。' : 'Race week keeps only light stimulus and avoids fatigue.',
-    },
-    blockTitles: {
-      Prep: isZh ? '准备' : 'Prep',
-      Main: isZh ? '主训练' : 'Main',
-      Accessory: isZh ? '补充' : 'Accessory',
-    },
-    exerciseNoise: {
-      QUIET: isZh ? '静音友好' : 'Quiet',
-      SOUND: isZh ? '有落地声' : 'Impact / sound',
-    },
-    exerciseEquipment: {
-      BODYWEIGHT: isZh ? '徒手' : 'Bodyweight',
-      BAND: isZh ? '弹力带' : 'Band',
-      DUMBBELL: isZh ? '哑铃' : 'Dumbbell',
-      GYM: isZh ? '健身房器械' : 'Gym',
-    },
-  };
-}
-
 export default function MuscleTraining() {
   const { isAuthenticated } = useAuth();
   const { lang, t } = useI18n();
   const { isMile } = useUnit();
   const navigate = useNavigate();
-  const location = useLocation();
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [draft, setDraft] = useState(DEFAULT_PROFILE);
   const [plan, setPlan] = useState(null);
@@ -1295,10 +1114,178 @@ export default function MuscleTraining() {
 
   const displayLang = lang;
   const isZh = displayLang === 'zh-CN';
-  const distanceUnitLabel = isMile ? (isZh ? '\u82f1\u91cc' : 'mi') : (isZh ? '\u516c\u91cc' : 'km');
+  const distanceUnitLabel = isMile ? t('muscle_training.miles_unit') : t('muscle_training.km_unit');
   const distanceWindowLabel = isZh ? `${distanceUnitLabel} / 7 \u5929` : `${distanceUnitLabel} / 7d`;
-  const copy = useMemo(() => createPageCopy(isZh), [isZh]);
-  const sessionByType = useMemo(
+
+
+  const copy = useMemo(() => ({
+    checkInTitle: t('muscle_training.check_in_title'),
+    checkInHint: t('muscle_training.check_in_hint'),
+    checkInTypeLabel: t('muscle_training.check_in_type_label'),
+    checkInStateLabel: t('muscle_training.check_in_state_label'),
+    checkInDistanceLabel: t('muscle_training.check_in_distance_label'),
+    checkInDurationLabel: t('muscle_training.check_in_duration_label'),
+    checkInSave: t('muscle_training.check_in_save'),
+    checkInSaving: t('muscle_training.check_in_saving'),
+    checkInReset: t('muscle_training.check_in_reset'),
+    checkInSaved: t('muscle_training.check_in_saved'),
+    checkInResetSuccess: t('muscle_training.check_in_reset_success'),
+    checkInUpdatedAt: t('muscle_training.check_in_updated_at'),
+    planSourceLabel: t('muscle_training.plan_source_label'),
+    sourcePills: {
+      COACH_SCHEDULE: t('muscle_training.source_pill_coach_schedule'),
+      USER_PLANNED: t('muscle_training.source_pill_user_planned'),
+      USER_ACTUAL: t('muscle_training.source_pill_user_actual'),
+    },
+    sourceSummary: {
+      COACH_SCHEDULE: t('muscle_training.source_summary_coach_schedule'),
+      USER_PLANNED: t('muscle_training.source_summary_user_planned'),
+      USER_ACTUAL: t('muscle_training.source_summary_user_actual'),
+    },
+    checkInStateOptions: {
+      PLANNED: t('muscle_training.check_in_state_planned'),
+      ACTUAL: t('muscle_training.check_in_state_actual'),
+    },
+    heading: t('muscle_training.heading'),
+    subheading: t('muscle_training.subheading'),
+    languageToggleLabel: t('muscle_training.language_toggle_label'),
+    loading: t('muscle_training.loading'),
+    profileTitle: t('muscle_training.profile_title'),
+    profileHint: t('muscle_training.profile_hint'),
+    experienceLabel: t('muscle_training.experience_label'),
+    equipmentLabel: t('muscle_training.equipment_label'),
+    sessionMinutesLabel: t('muscle_training.session_minutes_label'),
+    noiseLabel: t('muscle_training.noise_label'),
+    preferredDaysLabel: t('muscle_training.preferred_days_label'),
+    save: t('muscle_training.save_settings'),
+    saving: t('muscle_training.saving_settings'),
+    saveSuccess: t('muscle_training.save_success'),
+    statusTitle: t('muscle_training.status_title'),
+    rationaleTitle: t('muscle_training.rationale_title'),
+    weekTitle: t('muscle_training.week_title'),
+    weekHint: t('muscle_training.week_hint'),
+    conservativeBanner: t('muscle_training.conservative_banner'),
+    summaryFrequency: t('muscle_training.summary_frequency'),
+    summaryRecovery: t('muscle_training.summary_recovery'),
+    summaryUpcoming: t('muscle_training.summary_upcoming'),
+    summaryFocus: t('muscle_training.summary_focus'),
+    noKeyRun: t('muscle_training.no_key_run'),
+    noLongRun: t('muscle_training.no_long_run'),
+    runContext: t('muscle_training.run_context'),
+    strengthTitle: t('muscle_training.strength_title'),
+    noStrengthTitle: t('muscle_training.no_strength_title'),
+    placementTitle: t('muscle_training.placement_title'),
+    durationTitle: t('muscle_training.duration_title'),
+    rpeTitle: t('muscle_training.rpe_title'),
+    optionalTitle: t('muscle_training.optional_title'),
+    optionalYes: t('muscle_training.optional_yes'),
+    optionalNo: t('muscle_training.optional_no'),
+    noteTitle: t('muscle_training.note_title'),
+    watchDemo: t('muscle_training.watch_demo'),
+    intentLabel: t('muscle_training.intent_label'),
+    regression: t('muscle_training.regression_label'),
+    progression: t('muscle_training.progression_label'),
+    readinessAdjusted: t('muscle_training.readiness_adjusted'),
+    experienceOptions: {
+      BEGINNER: t('muscle_training.experience_beginner'),
+      INTERMEDIATE: t('muscle_training.experience_intermediate'),
+      CONSISTENT: t('muscle_training.experience_consistent'),
+    },
+    equipmentOptions: {
+      BODYWEIGHT: t('muscle_training.equipment_bodyweight'),
+      BAND: t('muscle_training.equipment_band'),
+      DUMBBELL: t('muscle_training.equipment_dumbbell'),
+      GYM: t('muscle_training.equipment_gym'),
+    },
+    noiseOptions: {
+      NORMAL: t('muscle_training.noise_normal'),
+      QUIET_ONLY: t('muscle_training.noise_quiet_only'),
+    },
+    sessionTypes: {
+      FOUNDATION_STRENGTH: t('muscle_training.session_type_foundation_strength'),
+      RESILIENCE_CAPACITY: t('muscle_training.session_type_resilience_capacity'),
+      OPTIONAL_ELASTICITY: t('muscle_training.session_type_optional_elasticity'),
+    },
+    sessionEmphasis: {
+      FOUNDATION_STRENGTH: t('muscle_training.session_emphasis_foundation_strength'),
+      RESILIENCE_CAPACITY: t('muscle_training.session_emphasis_resilience_capacity'),
+      OPTIONAL_ELASTICITY: t('muscle_training.session_emphasis_optional_elasticity'),
+    },
+    workoutTypes: {
+      QUALITY: t('muscle_training.workout_quality'),
+      REST: t('muscle_training.workout_rest'),
+      EASY: t('muscle_training.workout_easy'),
+      RECOVERY: t('muscle_training.workout_recovery'),
+      TEMPO: t('muscle_training.workout_tempo'),
+      THRESHOLD: t('muscle_training.workout_threshold'),
+      INTERVALS: t('muscle_training.workout_intervals'),
+      LONG_RUN: t('muscle_training.workout_long_run'),
+      CROSS_TRAIN: t('muscle_training.workout_cross_train'),
+    },
+    loadStatus: {
+      CONSERVATIVE: t('muscle_training.load_status_conservative'),
+      STEADY: t('muscle_training.load_status_steady'),
+      SPIKING: t('muscle_training.load_status_spiking'),
+      HIGH_VOLUME: t('muscle_training.load_status_high_volume'),
+      RACE_WEEK: t('muscle_training.load_status_race_week'),
+    },
+    recoveryGate: {
+      OPEN: t('muscle_training.recovery_gate_open'),
+      CAUTION: t('muscle_training.recovery_gate_caution'),
+      PROTECT: t('muscle_training.recovery_gate_protect'),
+    },
+    currentFocus: {
+      RECOVERY_CAPACITY: t('muscle_training.current_focus_recovery_capacity'),
+      QUIET_POSTERIOR_CHAIN: t('muscle_training.current_focus_quiet_posterior_chain'),
+      ELASTIC_STIFFNESS: t('muscle_training.current_focus_elastic_stiffness'),
+      POSTERIOR_CHAIN_STABILITY: t('muscle_training.current_focus_posterior_chain_stability'),
+    },
+    rationale: {
+      R_VOLUME_28D: t('muscle_training.rationale_r_volume_28d'),
+      R_COACH_SCHEDULE: t('muscle_training.rationale_r_coach_schedule'),
+      R_EQUIPMENT_FILTER: t('muscle_training.rationale_r_equipment_filter'),
+      R_CONSERVATIVE_DATA: t('muscle_training.rationale_r_conservative_data'),
+      R_RECOVERY_GATE: t('muscle_training.rationale_r_recovery_gate'),
+      R_LOAD_SPIKE: t('muscle_training.rationale_r_load_spike'),
+      R_HIGH_VOLUME: t('muscle_training.rationale_r_high_volume'),
+      R_RACE_WEEK: t('muscle_training.rationale_r_race_week'),
+      R_QUIET_FILTER: t('muscle_training.rationale_r_quiet_filter'),
+      R_SKIP_WEEK: t('muscle_training.rationale_r_skip_week'),
+    },
+    placementReasons: {
+      ASSIGN_AFTER_EASY_RUN: t('muscle_training.placement_assign_after_easy_run'),
+      ASSIGN_ON_RECOVERY_DAY: t('muscle_training.placement_assign_on_recovery_day'),
+      ASSIGN_OPTIONAL_LOW_IMPACT_SLOT: t('muscle_training.placement_assign_optional_low_impact_slot'),
+    },
+    noStrengthReasons: {
+      SKIP_KEY_RUN_DAY: t('muscle_training.no_strength_skip_key_run_day'),
+      SKIP_LONG_RUN_DAY: t('muscle_training.no_strength_skip_long_run_day'),
+      SKIP_KEY_RUN_TOMORROW: t('muscle_training.no_strength_skip_key_run_tomorrow'),
+      SKIP_LONG_RUN_TOMORROW: t('muscle_training.no_strength_skip_long_run_tomorrow'),
+      SKIP_RECOVERY_GATE: t('muscle_training.no_strength_skip_recovery_gate'),
+      SKIP_SESSION_CAP_REACHED: t('muscle_training.no_strength_skip_session_cap_reached'),
+      SKIP_BUFFER_DAY: t('muscle_training.no_strength_skip_buffer_day'),
+    },
+    cautionCodes: {
+      CAUTION_KEEP_SUBMAXIMAL: t('muscle_training.caution_keep_submaximal'),
+      CAUTION_RACE_WEEK: t('muscle_training.caution_race_week'),
+    },
+    blockTitles: {
+      Prep: t('muscle_training.block_prep'),
+      Main: t('muscle_training.block_main'),
+      Accessory: t('muscle_training.block_accessory'),
+    },
+    exerciseNoise: {
+      QUIET: t('muscle_training.exercise_noise_quiet'),
+      SOUND: t('muscle_training.exercise_noise_sound'),
+    },
+    exerciseEquipment: {
+      BODYWEIGHT: t('muscle_training.exercise_equipment_bodyweight'),
+      BAND: t('muscle_training.exercise_equipment_band'),
+      DUMBBELL: t('muscle_training.exercise_equipment_dumbbell'),
+      GYM: t('muscle_training.exercise_equipment_gym'),
+    },
+  }), [t]);  const sessionByType = useMemo(
     () => new Map((plan?.sessions || []).map((session) => [session.sessionType, session])),
     [plan],
   );
@@ -1348,51 +1335,60 @@ export default function MuscleTraining() {
   }, [featuredDay]);
   const heroTags = useMemo(() => {
     const tags = [];
-    if (featuredDay?.strength?.optional) tags.push(isZh ? '可选训练' : 'Optional session');
-    if (featuredDay?.run?.keyRun) tags.push(isZh ? '关键跑前可做' : 'Safe before key run');
-    if (featuredDay?.run?.longRun) tags.push(isZh ? '长跑周边' : 'Long-run support');
+    if (featuredDay?.strength?.optional) tags.push(t('muscle_training.tag_optional_session'));
+    if (featuredDay?.run?.keyRun) tags.push(t('muscle_training.tag_safe_before_key_run'));
+    if (featuredDay?.run?.longRun) tags.push(t('muscle_training.tag_long_run_support'));
     if (featuredSession?.emphasis) tags.push(featuredSession.emphasis);
     return tags.slice(0, 3);
-  }, [featuredDay, featuredSession, isZh]);
+  }, [featuredDay, featuredSession, t]);
   const stitchCopy = useMemo(() => ({
-    dashboard: isZh ? '仪表盘' : 'Dashboard',
-    analysis: isZh ? '分析' : 'Analysis',
-    schedule: isZh ? '计划' : 'Schedule',
-    strength: isZh ? '力量' : 'Strength',
-    seriesLabel: isZh ? '力量模块' : 'Strength block',
-    durationLabel: isZh ? '时长' : 'Duration',
-    burnLabel: isZh ? '预估热量' : 'Estimated calories',
-    loadLabel: isZh ? '动作数' : 'Exercise count',
-    protocolTitle: isZh ? '今日协议' : 'Today protocol',
-    readyTitle: isZh ? '你的力量训练已就绪。' : 'Your strength session is ready.',
-    readyHint: isZh ? '先完成上方协议，再在下方控制台记录今天的训练与恢复反馈。' : 'Run the protocol above, then use the control deck below to log the session and update coach state.',
-    startWorkout: isZh ? '开始训练' : 'Start workout',
-    enterWorkout: isZh ? '记录今日训练' : "Log today's session",
-    noStrengthTitle: isZh ? '今天不安排正式力量' : 'No formal strength today',
-    noStrengthHint: isZh ? '教练引擎把今天留给跑步恢复或关键课前缓冲。' : 'The coach engine is keeping today clear for run recovery or a key-session buffer.',
-    muscleFocusTitle: isZh ? '肌群焦点' : 'Muscle focus',
-    coachingCuesTitle: isZh ? '执行提示' : 'Coaching cues',
-    recoveryImpactTitle: isZh ? '恢复影响' : 'Recovery impact',
-    coachDeckTitle: isZh ? '教练控制台' : 'Coach control deck',
-    coachDeckHint: isZh ? '在下方追踪你的偏好、签到和周计划。' : 'Track your preferences, check-in, and weekly plan below.',
-    support: isZh ? '支持' : 'Support',
-    settings: isZh ? '设置' : 'Settings',
-  }), [isZh]);
+    dashboard: t('muscle_training.stitch_dashboard'),
+    analysis: t('muscle_training.stitch_analysis'),
+    schedule: t('muscle_training.stitch_schedule'),
+    strength: t('muscle_training.stitch_strength'),
+    seriesLabel: t('muscle_training.stitch_series_label'),
+    durationLabel: t('muscle_training.stitch_duration_label'),
+    burnLabel: t('muscle_training.stitch_burn_label'),
+    loadLabel: t('muscle_training.stitch_load_label'),
+    protocolTitle: t('muscle_training.stitch_protocol_title'),
+    readyTitle: t('muscle_training.stitch_ready_title'),
+    readyHint: t('muscle_training.stitch_ready_hint'),
+    startWorkout: t('muscle_training.stitch_start_workout'),
+    enterWorkout: t('muscle_training.stitch_enter_workout'),
+    noStrengthTitle: t('muscle_training.stitch_no_strength_title'),
+    noStrengthHint: t('muscle_training.stitch_no_strength_hint'),
+    muscleFocusTitle: t('muscle_training.stitch_muscle_focus_title'),
+    coachingCuesTitle: t('muscle_training.stitch_coaching_cues_title'),
+    recoveryImpactTitle: t('muscle_training.stitch_recovery_impact_title'),
+    coachDeckTitle: t('muscle_training.stitch_coach_deck_title'),
+    coachDeckHint: t('muscle_training.stitch_coach_deck_hint'),
+    support: t('muscle_training.stitch_support'),
+    settings: t('muscle_training.stitch_settings'),
+    todayLabel: t('muscle_training.stitch_today_label'),
+    weekDoseLabel: t('muscle_training.stitch_week_dose_label'),
+    weekAlignLabel: t('muscle_training.stitch_week_align_label'),
+    settingsDisclosure: t('muscle_training.stitch_settings_disclosure'),
+    emptyStateTitle: t('muscle_training.stitch_empty_state_title'),
+    emptyStateAction: t('muscle_training.stitch_empty_state_action'),
+    weekStripLabel: t('muscle_training.stitch_week_strip_label'),
+    sessionsDoneLabel: t('muscle_training.stitch_sessions_done'),
+    sessionsOfLabel: t('muscle_training.stitch_sessions_of'),
+    strengthDayBadge: t('muscle_training.stitch_strength_day_badge'),
+    runDayBadge: t('muscle_training.stitch_run_day_badge'),
+    restDayBadge: t('muscle_training.stitch_rest_day_badge'),
+    todayBadge: t('muscle_training.stitch_today_badge'),
+    keyRunBadge: t('muscle_training.stitch_key_run_badge'),
+    longRunBadge: t('muscle_training.stitch_long_run_badge'),
+    detailsToggle: t('muscle_training.stitch_details_toggle'),
+    noRunContext: t('muscle_training.stitch_no_run_context'),
+  }), [t]);
 
-  const navItems = [
-    { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-    { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-    { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-    { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-    { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-    { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-    { key: 'strength', label: stitchCopy.strength, route: '/muscle-training', icon: 'fitness_center' },
-  ].map((item) => ({
-    ...item,
-    active: location.pathname === item.route || location.pathname.startsWith(`${item.route}/`),
-  }));
+  const navItems = useMemo(
+    () => getRunnerShellNavItems({ t, lang, activeKey: 'muscle' }),
+    [t, lang],
+  );
+  // heroTheme retained for possible future use but not rendered above-fold in this redesign
+  // eslint-disable-next-line no-unused-vars
   const heroTheme = useMemo(() => {
     const focus = pickLabel(copy.currentFocus, plan?.weekContext?.currentFocus, featuredSession?.emphasis || '');
     const split = String(focus || '').split(/[\s/]+/).filter(Boolean);
@@ -1400,10 +1396,66 @@ export default function MuscleTraining() {
       return { lineOne: split[0], lineTwo: split.slice(1).join(' ') };
     }
     return {
-      lineOne: isZh ? '力量' : 'Strength',
-      lineTwo: focus || (isZh ? '就绪' : 'Ready'),
+      lineOne: t('muscle_training.stitch_strength'),
+      lineTwo: focus || t('muscle_training.stitch_ready_label'),
     };
-  }, [copy.currentFocus, featuredSession, isZh, plan]);
+  }, [copy.currentFocus, featuredSession, t, plan]);
+
+  // Count how many strength sessions are planned in the 7-day rolling window
+  const weekDoseStats = useMemo(() => {
+    if (!plan) return { planned: 0, recommended: 0, completedToday: false };
+    const days = plan.days || [];
+    const planned = days.filter((d) => !!d.strength).length;
+    const recommended = plan.weekContext?.recommendedSessionsPerWeek ?? 0;
+    const completedToday = !!plan.todayCheckIn && plan.planSource === 'USER_ACTUAL';
+    return { planned, recommended, completedToday };
+  }, [plan]);
+
+  // Build a specific, warm coach narrative for today
+  const todayCoachNarrative = useMemo(() => {
+    if (!plan || !featuredDay) return null;
+    const hasStrength = !!featuredDay.strength;
+    const runType = featuredDay.run?.workoutType;
+    const runDist = featuredDay.run?.plannedDistanceKm;
+    const strengthDur = featuredDay.strength?.durationMinutes;
+    const sessionType = featuredDay.strength?.sessionType;
+    const acwr = plan.weekContext?.acwr;
+    const volKm = plan.weekContext?.volumeKm7d;
+    const nextKeyDate = plan.weekContext?.nextKeyRunDate;
+    const noReasonCode = featuredDay.noStrengthReasonCode;
+
+    const runLabel = pickLabel(copy.workoutTypes, runType, '');
+    const distStr = runDist != null ? ` ${formatDistance(runDist, isZh, isMile)}` : '';
+    const durStr = strengthDur != null ? formatMinutes(strengthDur, isZh) : '';
+    const acwrStr = acwr != null ? `ACWR ${trimNumber(acwr, 2)}` : '';
+    const volStr = volKm != null ? `${formatDistanceValue(volKm, isMile, 0)} ${isMile ? (t('muscle_training.miles_unit')) : (t('muscle_training.km_unit'))}` : '';
+    const focusLabel = pickLabel(copy.sessionEmphasis, sessionType, '');
+    const nextKeyStr = nextKeyDate ? formatShortDate(nextKeyDate, displayLang) : '';
+
+    if (hasStrength) {
+      if (isZh) {
+        const basisParts = [volStr && `本周跑量 ${volStr}`, acwrStr].filter(Boolean).join('，');
+        const nextKeyNote = nextKeyStr ? `，距下次关键跑（${nextKeyStr}）保留了缓冲` : '';
+        const runNote = runLabel ? `${runType === 'REST' ? '休息日' : `${runLabel}${distStr}之后`}` : '';
+        const durationNote = durStr ? `做 ${durStr}` : '';
+        return `今天${runNote ? runNote + '，建议' : '建议'}${durationNote} ${focusLabel || '力量训练'}${nextKeyNote}。${basisParts ? `基于${basisParts}。` : ''}`;
+      }
+      const basisParts = [volStr && `${volStr} this week`, acwrStr].filter(Boolean).join(', ');
+      const runNote = runLabel
+        ? (runType === 'REST' ? 'rest day' : `after your ${runLabel}${distStr}`)
+        : '';
+      const durationNote = durStr ? `${durStr} of` : '';
+      const nextKeyNote = nextKeyStr ? ` This keeps a buffer before your key run on ${nextKeyStr}.` : '';
+      return `Today${runNote ? ` ${runNote}` : ''}: ${durationNote} ${focusLabel || 'strength work'} — fits this week's load.${nextKeyNote}${basisParts ? ` Based on ${basisParts}.` : ''}`;
+    }
+
+    // No strength today
+    const noReason = pickLabel(copy.noStrengthReasons, noReasonCode, '');
+    if (noReason) {
+      return t('muscle_training.coach_narrative_no_strength_reason', { reason: noReason });
+    }
+    return t('muscle_training.coach_narrative_no_strength_default');
+  }, [copy, displayLang, featuredDay, isZh, t, isMile, plan]);
 
   useEffect(() => {
     const previousIsMile = previousIsMileRef.current;
@@ -1449,7 +1501,7 @@ export default function MuscleTraining() {
         applyLoadedData(nextProfile, nextPlan);
       } catch (cause) {
         if (!cancelled) {
-          setError(cause?.message || (isZh ? '连接失败，请稍后再试。' : 'Connection failed. Please try again.'));
+          setError(cause?.message || t('muscle_training.connection_failed'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -1459,7 +1511,7 @@ export default function MuscleTraining() {
     return () => {
       cancelled = true;
     };
-  }, [applyLoadedData, isAuthenticated, isZh, navigate]);
+  }, [applyLoadedData, isAuthenticated, t, navigate]);
 
   function updateDraft(field, value) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -1510,7 +1562,7 @@ export default function MuscleTraining() {
       applyLoadedData(nextProfile, nextPlan);
       setNotice(copy.saveSuccess);
     } catch (cause) {
-      setError(cause?.message || (isZh ? '保存失败，请稍后再试。' : 'Could not save the profile.'));
+      setError(cause?.message || t('muscle_training.save_failed'));
     } finally {
       setSaving(false);
     }
@@ -1630,143 +1682,243 @@ export default function MuscleTraining() {
 
         <div className="runner-shell-canvas muscle-training-canvas">
           <div className="dashboard-container page-body muscle-training-page">
-        <div className="muscle-training-hero">
-          <div className="muscle-training-hero-copy">
-            <div className="muscle-page-tools">
-              <div>
-                <h1>{copy.heading}</h1>
-                <p>{copy.subheading}</p>
-              </div>{/*
-                  中文
-              </div>
-            */}</div>
-          </div>
-
-          <MuscleMap isZh={isZh} />
-        </div>
-
-        {!loading && !error && plan && (
-          <section className="strength-plan-hero-shell">
-            <section className="strength-plan-hero">
-              <div className="strength-plan-hero-copy">
-                <span className="strength-plan-kicker">{stitchCopy.seriesLabel}</span>
-                <h1>
-                  {heroTheme.lineOne}
-                  <span>{heroTheme.lineTwo}</span>
-                </h1>
-                <div className="strength-plan-metrics">
-                  <div>
-                    <span>{stitchCopy.durationLabel}</span>
-                    <strong>{featuredDay?.strength?.durationMinutes ? formatMinutes(featuredDay.strength.durationMinutes, isZh) : '-'}</strong>
-                  </div>
-                  <div>
-                    <span>{stitchCopy.burnLabel}</span>
-                    <strong>{estimatedBurn != null ? `${estimatedBurn} kcal` : '-'}</strong>
-                  </div>
-                  <div>
-                    <span>{stitchCopy.loadLabel}</span>
-                    <strong>{String(protocolItems.length).padStart(2, '0')}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="strength-plan-hero-actions">
-                <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
-                  {stitchCopy.startWorkout}
-                </button>
-                <div className="strength-plan-hero-tags">
-                  {heroTags.map((tag) => <span key={tag}>{tag}</span>)}
-                </div>
-              </div>
-            </section>
-
-            <section className="strength-plan-content-grid">
-              <div className="strength-plan-protocol">
-                <span className="strength-plan-section-label">{stitchCopy.protocolTitle}</span>
-                {protocolItems.length > 0 ? (
-                  <div className="strength-plan-protocol-list">
-                    {protocolItems.map(({ block, blockIndex, exercise, exerciseIndex }) => {
-                      const exerciseCopy = getExerciseCardContent(exercise, isZh);
-                      return (
-                        <article key={`${block.title}-${exercise.name}-${exerciseIndex}`} className="strength-plan-exercise-row">
-                          <div className="strength-plan-exercise-media">
-                            <ExerciseIllustration exerciseName={exercise.name} />
-                          </div>
-                          <div className="strength-plan-exercise-copy">
-                            <span className="strength-plan-exercise-kicker">
-                              {String(blockIndex + 1).padStart(2, '0')} / {pickLabel(copy.blockTitles, block.title, block.title)}
-                            </span>
-                            <h3>{exerciseCopy.name}</h3>
-                            <p>{exerciseCopy.steps.slice(0, 2).join(' ')}</p>
-                          </div>
-                          <div className="strength-plan-exercise-meta">
-                            <div>
-                              <span>{isZh ? '组数 x 次数/时长' : 'Sets x reps/duration'}</span>
-                              <strong>{exercise.sets} x {exercise.repsOrDuration}</strong>
-                            </div>
-                            <em>RPE {exercise.targetRpe}</em>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="strength-plan-empty-panel">
-                    <h3>{stitchCopy.noStrengthTitle}</h3>
-                    <p>{pickLabel(copy.noStrengthReasons, featuredDay?.noStrengthReasonCode, stitchCopy.noStrengthHint)}</p>
-                  </div>
-                )}
-
-                <div className="strength-plan-cta-panel">
-                  <h3>{stitchCopy.readyTitle}</h3>
-                  <p>{stitchCopy.readyHint}</p>
-                  <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
-                    {stitchCopy.enterWorkout}
-                  </button>
-                </div>
-              </div>
-
-              <aside className="strength-plan-rail">
-                <section className="strength-plan-rail-card">
-                  <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
-                  <div className="strength-plan-map-wrap">
-                    <MuscleMap isZh={isZh} />
-                  </div>
-                  <div className="strength-plan-focus-pills">
-                    {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
-                  </div>
-                </section>
-
-                <section className="strength-plan-rail-card">
-                  <span className="strength-plan-section-label">{stitchCopy.coachingCuesTitle}</span>
-                  <div className="strength-plan-cues">
-                    {coachingCues.map((cue, index) => (
-                      <article key={cue.key} className="strength-plan-cue">
-                        <span>{String(index + 1).padStart(2, '0')}</span>
-                        <div>
-                          <h4>{cue.title}</h4>
-                          <p>{cue.body}</p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="strength-plan-impact-card">
-                  <span className="strength-plan-section-label">{stitchCopy.recoveryImpactTitle}</span>
-                  <strong>{plan.weekContext?.acwr != null ? trimNumber(plan.weekContext.acwr, 2) : '0.00'}</strong>
-                  <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} · {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
-                </section>
-              </aside>
-            </section>
-          </section>
-        )}
 
         {loading && <div style={{ padding: '22px 0', color: 'var(--text-muted)' }}>{copy.loading}</div>}
         {!loading && error && <div className="error-alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
 
+        {!loading && !error && !plan && (
+          <div className="mt-coach-empty">
+            <AppIcon name="fitness_center" className="mt-coach-empty-icon" />
+            <h2>{stitchCopy.emptyStateTitle}</h2>
+            <p>{stitchCopy.emptyStateAction}</p>
+          </div>
+        )}
+
         {!loading && !error && plan && (
           <>
+            {/* ── ZONE 1: What should I do for strength today? ── */}
+            <section className="mt-today-card">
+              <div className="mt-today-card-kicker">
+                <AppIcon name="fitness_center" className="mt-today-kicker-icon" />
+                <span>{stitchCopy.todayLabel}</span>
+                {featuredDay?.strength && (
+                  <span className="mt-today-badge mt-today-badge-strength">
+                    {pickLabel(copy.sessionTypes, featuredDay.strength.sessionType)}
+                  </span>
+                )}
+                {!featuredDay?.strength && (
+                  <span className="mt-today-badge mt-today-badge-rest">
+                    {stitchCopy.noStrengthTitle}
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-today-narrative">{todayCoachNarrative}</p>
+
+              {featuredDay?.strength && (
+                <div className="mt-today-metrics">
+                  <div className="mt-today-metric">
+                    <span>{stitchCopy.durationLabel}</span>
+                    <strong>{featuredDay.strength.durationMinutes ? formatMinutes(featuredDay.strength.durationMinutes, isZh) : '-'}</strong>
+                  </div>
+                  <div className="mt-today-metric">
+                    <span>{copy.rpeTitle}</span>
+                    <strong>RPE {featuredDay.strength.targetRpe ?? '-'}</strong>
+                  </div>
+                  <div className="mt-today-metric">
+                    <span>{stitchCopy.loadLabel}</span>
+                    <strong>{String(protocolItems.length).padStart(2, '0')}</strong>
+                  </div>
+                  {estimatedBurn != null && (
+                    <div className="mt-today-metric">
+                      <span>{stitchCopy.burnLabel}</span>
+                      <strong>{estimatedBurn} kcal</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {featuredDay?.strength && (
+                <div className="mt-today-actions">
+                  <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
+                    {stitchCopy.startWorkout}
+                  </button>
+                  {heroTags.length > 0 && (
+                    <div className="strength-plan-hero-tags">
+                      {heroTags.map((tag) => <span key={tag}>{tag}</span>)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* ── ZONE 2: Where am I in the week's strength dose? ── */}
+            <section className="mt-dose-bar">
+              <div className="mt-dose-bar-head">
+                <span className="strength-plan-section-label">{stitchCopy.weekDoseLabel}</span>
+                <span className="mt-dose-fraction">
+                  {weekDoseStats.planned} {stitchCopy.sessionsOfLabel} {weekDoseStats.recommended} {t('muscle_training.per_wk')}
+                </span>
+              </div>
+              <div className="mt-dose-track">
+                {Array.from({ length: Math.max(weekDoseStats.recommended, weekDoseStats.planned) || 2 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`mt-dose-pip${i < weekDoseStats.planned ? ' is-planned' : ''}${weekDoseStats.completedToday && i === 0 ? ' is-done' : ''}`}
+                  />
+                ))}
+              </div>
+              <div className="mt-dose-context">
+                {plan.weekContext?.acwr != null && (
+                  <span>ACWR {trimNumber(plan.weekContext.acwr, 2)} · {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</span>
+                )}
+                {plan.weekContext?.volumeKm7d != null && (
+                  <span>{formatDistanceValue(plan.weekContext.volumeKm7d, isMile, 1) ?? '0'} {isMile ? t('muscle_training.miles_unit') : t('muscle_training.km_unit')} / 7d</span>
+                )}
+              </div>
+            </section>
+
+            {/* ── ZONE 3: Does it match my running plan this week? ── */}
+            <section className="mt-week-strip">
+              <span className="strength-plan-section-label">{stitchCopy.weekStripLabel}</span>
+              <div className="mt-week-strip-grid">
+                {(plan.days || []).map((day, idx) => {
+                  const hasStrength = !!day.strength;
+                  const isKeyRun = day.run?.keyRun;
+                  const isLongRun = day.run?.longRun;
+                  const isRest = day.run?.workoutType === 'REST' || (!day.run?.workoutType && !hasStrength);
+                  const isToday = idx === 0;
+                  let dayType = 'run';
+                  if (isRest && !hasStrength) dayType = 'rest';
+                  return (
+                    <div
+                      key={day.date || idx}
+                      className={`mt-strip-day${hasStrength ? ' has-strength' : ''}${isToday ? ' is-today' : ''}${isKeyRun ? ' has-key-run' : ''}${isLongRun ? ' has-long-run' : ''} day-type-${dayType}`}
+                    >
+                      <div className="mt-strip-day-label">
+                        {isToday
+                          ? stitchCopy.todayBadge
+                          : formatDayLabel(day.date, day.dayLabel, displayLang)}
+                      </div>
+                      <div className="mt-strip-day-badges">
+                        {hasStrength && (
+                          <span className="mt-strip-badge mt-strip-badge-strength">
+                            {stitchCopy.strengthDayBadge}
+                          </span>
+                        )}
+                        {isKeyRun && (
+                          <span className="mt-strip-badge mt-strip-badge-key">
+                            {stitchCopy.keyRunBadge}
+                          </span>
+                        )}
+                        {isLongRun && (
+                          <span className="mt-strip-badge mt-strip-badge-long">
+                            {stitchCopy.longRunBadge}
+                          </span>
+                        )}
+                        {!hasStrength && !isKeyRun && !isLongRun && (
+                          <span className="mt-strip-badge mt-strip-badge-run">
+                            {isRest ? stitchCopy.restDayBadge : stitchCopy.runDayBadge}
+                          </span>
+                        )}
+                      </div>
+                      {day.run?.plannedDistanceKm != null && (
+                        <div className="mt-strip-day-dist">
+                          {formatDistance(day.run.plannedDistanceKm, isZh, isMile)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* ── PROTOCOL: Full exercise list (disclosed on demand on mobile) ── */}
+            {featuredDay?.strength && (
+              <section className="strength-plan-hero-shell">
+                <section className="strength-plan-content-grid">
+                  <div className="strength-plan-protocol">
+                    <span className="strength-plan-section-label">{stitchCopy.protocolTitle}</span>
+                    {protocolItems.length > 0 ? (
+                      <div className="strength-plan-protocol-list">
+                        {protocolItems.map(({ block, blockIndex, exercise, exerciseIndex }) => {
+                          const exerciseCopy = getExerciseCardContent(exercise, isZh);
+                          return (
+                            <article key={`${block.title}-${exercise.name}-${exerciseIndex}`} className="strength-plan-exercise-row">
+                              <div className="strength-plan-exercise-media">
+                                <ExerciseIllustration exerciseName={exercise.name} />
+                              </div>
+                              <div className="strength-plan-exercise-copy">
+                                <span className="strength-plan-exercise-kicker">
+                                  {String(blockIndex + 1).padStart(2, '0')} / {pickLabel(copy.blockTitles, block.title, block.title)}
+                                </span>
+                                <h3>{exerciseCopy.name}</h3>
+                                <p>{exerciseCopy.steps.slice(0, 2).join(' ')}</p>
+                              </div>
+                              <div className="strength-plan-exercise-meta">
+                                <div>
+                                  <span>{t('muscle_training.sets_reps_duration')}</span>
+                                  <strong>{exercise.sets} x {exercise.repsOrDuration}</strong>
+                                </div>
+                                <em>RPE {exercise.targetRpe}</em>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="strength-plan-empty-panel">
+                        <h3>{stitchCopy.noStrengthTitle}</h3>
+                        <p>{pickLabel(copy.noStrengthReasons, featuredDay?.noStrengthReasonCode, stitchCopy.noStrengthHint)}</p>
+                      </div>
+                    )}
+
+                    <div className="strength-plan-cta-panel">
+                      <h3>{stitchCopy.readyTitle}</h3>
+                      <p>{stitchCopy.readyHint}</p>
+                      <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
+                        {stitchCopy.enterWorkout}
+                      </button>
+                    </div>
+                  </div>
+
+                  <aside className="strength-plan-rail">
+                    <section className="strength-plan-rail-card">
+                      <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
+                      <div className="strength-plan-map-wrap">
+                        <MuscleMap isZh={isZh} />
+                      </div>
+                      <div className="strength-plan-focus-pills">
+                        {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
+                      </div>
+                    </section>
+
+                    <section className="strength-plan-rail-card">
+                      <span className="strength-plan-section-label">{stitchCopy.coachingCuesTitle}</span>
+                      <div className="strength-plan-cues">
+                        {coachingCues.map((cue, index) => (
+                          <article key={cue.key} className="strength-plan-cue">
+                            <span>{String(index + 1).padStart(2, '0')}</span>
+                            <div>
+                              <h4>{cue.title}</h4>
+                              <p>{cue.body}</p>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="strength-plan-impact-card">
+                      <span className="strength-plan-section-label">{stitchCopy.recoveryImpactTitle}</span>
+                      <strong>{plan.weekContext?.acwr != null ? trimNumber(plan.weekContext.acwr, 2) : '0.00'}</strong>
+                      <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} · {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
+                    </section>
+                  </aside>
+                </section>
+              </section>
+            )}
+
+            {/* ── COACH CONTROLS: check-in + preferences behind disclosure ── */}
             <section id="muscle-controls" className="strength-plan-control-deck">
               <div className="strength-plan-control-head">
                 <div>
@@ -1774,6 +1926,12 @@ export default function MuscleTraining() {
                   <p>{stitchCopy.coachDeckHint}</p>
                 </div>
               </div>
+
+            <details className="mt-settings-disclosure">
+              <summary className="mt-settings-summary">
+                <AppIcon name="tune" className="mt-settings-icon" />
+                {stitchCopy.settingsDisclosure}
+              </summary>
 
             <section className="card muscle-panel muscle-preference-panel muscle-checkin-panel">
               <div className="muscle-preference-head">
@@ -1936,7 +2094,7 @@ export default function MuscleTraining() {
                           className={`muscle-day-chip${active ? ' active' : ''}`}
                           onClick={() => togglePreferredDay(day.value)}
                         >
-                          {isZh ? day.zh : day.en}
+                          {t(day.zh ? 'muscle_training.weekday_zh' : 'muscle_training.weekday_en')}
                         </button>
                       );
                     })}
@@ -1952,65 +2110,74 @@ export default function MuscleTraining() {
               </form>
             </section>
 
-            <section className="muscle-week-overview">
-              <div className="muscle-section-head">
-                <h2>{copy.statusTitle}</h2>
-              </div>
+            </details>
 
-              <div className="muscle-status-source">
-                <strong>{copy.planSourceLabel}</strong>
-                <span>{pickLabel(copy.sourceSummary, plan.planSource, '')}</span>
-              </div>
-
-              {plan.weekContext?.conservativeMode && (
-                <div className="muscle-banner-note">{copy.conservativeBanner}</div>
-              )}
-
-              <div className="muscle-status-grid">
-                <div className="muscle-status-card">
-                  <div className="muscle-metric-label">{copy.summaryFrequency}</div>
-                  <strong>{plan.weekContext?.recommendedSessionsPerWeek ?? 0} {isZh ? '次 / 周' : 'sessions / week'}</strong>
-                  <span>{pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</span>
-                </div>
-
-                <div className="muscle-status-card">
-                  <div className="muscle-metric-label">{copy.summaryRecovery}</div>
-                  <strong>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)}</strong>
-                  <span>{plan.weekContext?.acwr != null ? `ACWR ${trimNumber(plan.weekContext.acwr, 2)}` : (isZh ? '无 ACWR' : 'No ACWR')}</span>
-                </div>
-
-                <div className="muscle-status-card">
-                  <div className="muscle-metric-label">{copy.summaryUpcoming}</div>
-                  <strong>
-                    {plan.weekContext?.nextKeyRunDate
-                      ? `${formatShortDate(plan.weekContext.nextKeyRunDate, displayLang)} · ${pickLabel(copy.workoutTypes, plan.weekContext.nextKeyRunType)}`
-                      : copy.noKeyRun}
-                  </strong>
-                  <span>
-                    {plan.weekContext?.nextLongRunDate
-                      ? `${formatShortDate(plan.weekContext.nextLongRunDate, displayLang)} · ${formatDistance(plan.weekContext.nextLongRunKm, isZh, isMile)}`
-                      : copy.noLongRun}
-                  </span>
-                </div>
-
-                <div className="muscle-status-card muscle-status-card-focus">
-                  <div className="muscle-metric-label">{copy.summaryFocus}</div>
-                  <strong>{pickLabel(copy.currentFocus, plan.weekContext?.currentFocus)}</strong>
-                  <span className="muscle-status-distance-window">{formatDistanceValue(plan.weekContext?.volumeKm7d ?? 0, isMile) ?? '0'} {distanceWindowLabel}</span>
-                  <span>{trimNumber(plan.weekContext?.volumeKm7d, 1) ?? '0'} {isZh ? '公里 / 7 天' : 'km / 7d'}</span>
-                </div>
-              </div>
-
-              <section className="card muscle-panel">
-                <h2>{copy.rationaleTitle}</h2>
-                <ul className="muscle-rationale-list">
-                  {(plan.rationale || []).map((code) => (
-                    <li key={code}>{pickLabel(copy.rationale, code, code)}</li>
-                  ))}
-                </ul>
-              </section>
             </section>
 
+            {/* Week status context (demoted — shown in disclosure area) */}
+            <details className="mt-settings-disclosure">
+              <summary className="mt-settings-summary">
+                <AppIcon name="bar_chart" className="mt-settings-icon" />
+                {t('muscle_training.week_context_rationale')}
+              </summary>
+
+              <section className="muscle-week-overview">
+                <div className="muscle-status-source">
+                  <strong>{copy.planSourceLabel}</strong>
+                  <span>{pickLabel(copy.sourceSummary, plan.planSource, '')}</span>
+                </div>
+
+                {plan.weekContext?.conservativeMode && (
+                  <div className="muscle-banner-note">{copy.conservativeBanner}</div>
+                )}
+
+                <div className="muscle-status-grid">
+                  <div className="muscle-status-card">
+                    <div className="muscle-metric-label">{copy.summaryFrequency}</div>
+                    <strong>{plan.weekContext?.recommendedSessionsPerWeek ?? 0} {t('muscle_training.sessions_per_week')}</strong>
+                    <span>{pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</span>
+                  </div>
+
+                  <div className="muscle-status-card">
+                    <div className="muscle-metric-label">{copy.summaryRecovery}</div>
+                    <strong>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)}</strong>
+                    <span>{plan.weekContext?.acwr != null ? `ACWR ${trimNumber(plan.weekContext.acwr, 2)}` : t('muscle_training.no_acwr')}</span>
+                  </div>
+
+                  <div className="muscle-status-card">
+                    <div className="muscle-metric-label">{copy.summaryUpcoming}</div>
+                    <strong>
+                      {plan.weekContext?.nextKeyRunDate
+                        ? `${formatShortDate(plan.weekContext.nextKeyRunDate, displayLang)} · ${pickLabel(copy.workoutTypes, plan.weekContext.nextKeyRunType)}`
+                        : copy.noKeyRun}
+                    </strong>
+                    <span>
+                      {plan.weekContext?.nextLongRunDate
+                        ? `${formatShortDate(plan.weekContext.nextLongRunDate, displayLang)} · ${formatDistance(plan.weekContext.nextLongRunKm, isZh, isMile)}`
+                        : copy.noLongRun}
+                    </span>
+                  </div>
+
+                  <div className="muscle-status-card muscle-status-card-focus">
+                    <div className="muscle-metric-label">{copy.summaryFocus}</div>
+                    <strong>{pickLabel(copy.currentFocus, plan.weekContext?.currentFocus)}</strong>
+                    <span className="muscle-status-distance-window">{formatDistanceValue(plan.weekContext?.volumeKm7d ?? 0, isMile) ?? '0'} {distanceWindowLabel}</span>
+                    <span>{trimNumber(plan.weekContext?.volumeKm7d, 1) ?? '0'} {t('muscle_training.km_per_7d')}</span>
+                  </div>
+                </div>
+
+                <section className="card muscle-panel">
+                  <h2>{copy.rationaleTitle}</h2>
+                  <ul className="muscle-rationale-list">
+                    {(plan.rationale || []).map((code) => (
+                      <li key={code}>{pickLabel(copy.rationale, code, code)}</li>
+                    ))}
+                  </ul>
+                </section>
+              </section>
+            </details>
+
+            {/* Full 7-day rolling detailed cards */}
             <section className="muscle-week-plan">
               <div className="muscle-section-head">
                 <div>
@@ -2054,8 +2221,8 @@ export default function MuscleTraining() {
                           {day.run?.plannedDurationMinutes != null && (
                             <span className="muscle-mini-pill">{formatMinutes(day.run.plannedDurationMinutes, isZh)}</span>
                           )}
-                          {day.run?.keyRun && <span className="muscle-mini-pill muscle-mini-pill-alert">{isZh ? '关键课' : 'Key run'}</span>}
-                          {day.run?.longRun && <span className="muscle-mini-pill muscle-mini-pill-alert">{isZh ? '长跑' : 'Long run'}</span>}
+                          {day.run?.keyRun && <span className="muscle-mini-pill muscle-mini-pill-alert">{t('muscle_training.key_run')}</span>}
+                          {day.run?.longRun && <span className="muscle-mini-pill muscle-mini-pill-alert">{t('muscle_training.long_run')}</span>}
                           {day.run?.readinessAdjusted && <span className="muscle-mini-pill">{copy.readinessAdjusted}</span>}
                         </div>
                         {day.run?.notes && <p className="muscle-run-note">{day.run.notes}</p>}
@@ -2181,7 +2348,6 @@ export default function MuscleTraining() {
                   );
                 })}
               </div>
-            </section>
             </section>
           </>
         )}

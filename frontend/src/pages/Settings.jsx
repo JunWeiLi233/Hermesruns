@@ -15,11 +15,46 @@ import { formatStravaSyncLabel, stravaSyncTone } from '../utils/stravaAutoSync';
 const MANTRA_STORAGE_KEY = 'hermes.settings.mantra';
 const DIGEST_STORAGE_KEY = 'hermes.settings.digest';
 
+const WELLNESS_SOURCE_ROWS = [
+  { key: 'sleep', labelKey: 'settings.stitch_wellness_sleep' },
+  { key: 'hrv', labelKey: 'settings.stitch_wellness_hrv' },
+  { key: 'stress', labelKey: 'settings.stitch_wellness_stress' },
+  { key: 'body', labelKey: 'settings.stitch_wellness_body' },
+];
+
 function resolveDisplayName(profile, fallback) {
   const raw = profile?.displayName?.trim()
     || profile?.email?.split('@')[0]
     || fallback;
   return raw.replace(/^./, (char) => char.toUpperCase());
+}
+
+function resolveWellnessSource(preferences, key) {
+  if (Array.isArray(preferences)) {
+    const match = preferences.find((item) => item?.key === key || item?.metric === key);
+    return match?.source || match?.provider || '';
+  }
+  if (!preferences || typeof preferences !== 'object') return '';
+  const metric = preferences.metrics?.[key] || preferences.sources?.[key] || preferences[key];
+  if (typeof metric === 'string') return metric;
+  return metric?.source || metric?.provider || '';
+}
+
+function formatWellnessSourceLabel(source, t) {
+  switch (String(source || '').trim().toLowerCase()) {
+    case 'garmin':
+      return t('settings.stitch_wellness_source_garmin');
+    case 'apple':
+    case 'apple_health':
+      return t('settings.stitch_wellness_source_apple');
+    case 'google':
+    case 'google_health':
+      return t('settings.stitch_wellness_source_google');
+    case 'manual':
+      return t('settings.stitch_wellness_source_manual');
+    default:
+      return t('settings.stitch_wellness_source_auto');
+  }
 }
 
 export default function Settings() {
@@ -39,6 +74,7 @@ export default function Settings() {
   const [nameSaving, setNameSaving] = useState(false);
   const [nameMsg, setNameMsg] = useState('');
   const [stravaLinking, setStravaLinking] = useState(false);
+  const [wellnessSourcePreferences, setWellnessSourcePreferences] = useState(null);
 
   useEffect(() => {
     try {
@@ -61,9 +97,10 @@ export default function Settings() {
     async function loadSettings() {
       setLoadState('loading');
       try {
-        const [profileData, stravaData] = await Promise.all([
+        const [profileData, stravaData, wellnessPreferencesData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/auth/strava/status').catch(() => null),
+          apiJson('/api/wellness/source-preferences').catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -71,6 +108,7 @@ export default function Settings() {
         setProfile(profileData);
         setDisplayName(profileData?.displayName || '');
         setStravaStatus(stravaData);
+        setWellnessSourcePreferences(wellnessPreferencesData);
         setLoadState('ready');
       } catch {
         if (!cancelled) {
@@ -98,11 +136,15 @@ export default function Settings() {
     { value: 'light', label: t('settings.stitch_theme_glitter'), icon: 'light_mode' },
   ]), [t]);
   const activeThemeLabel = themeCards.find((card) => card.value === theme)?.label || '';
-  const languageLabel = lang === 'zh-CN' ? '\u4e2d\u6587' : 'English (US)';
+  const languageLabel = t('settings.language_label');
   const stravaLabel = formatStravaSyncLabel(stravaStatus, t);
   const digestLabel = digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest');
   const resolvedLanguageLabel = languageLabel;
   const garminStatusLabel = t('settings.stitch_garmin_ready');
+  const wellnessRows = useMemo(() => WELLNESS_SOURCE_ROWS.map((row) => ({
+    ...row,
+    sourceLabel: formatWellnessSourceLabel(resolveWellnessSource(wellnessSourcePreferences, row.key), t),
+  })), [t, wellnessSourcePreferences]);
   const garminLane = {
     eyebrow: t('profile.garmin_connect_status'),
     title: t('profile.garmin_connect_title'),
@@ -373,6 +415,7 @@ export default function Settings() {
           setLang={setLang}
           quickControls={quickControls}
           syncHealthItems={syncHealthItems}
+          wellnessRows={wellnessRows}
           garminLane={garminLane}
           setupChecklist={setupChecklist}
         />

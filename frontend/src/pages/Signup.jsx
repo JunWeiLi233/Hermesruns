@@ -382,7 +382,7 @@ export default function Signup() {
               </div>
 
               <div className="signup-flow-field">
-                <label htmlFor="confirm-password">{t('signup.confirm_password_label') || (lang === 'zh-CN' ? '确认密码' : 'Confirm password')}</label>
+                <label htmlFor="confirm-password">{t('signup.confirm_password_label')}</label>
                 <input
                   type="password"
                   id="confirm-password"
