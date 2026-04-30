@@ -6,6 +6,42 @@ import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
 
+const authBrandSlides = [
+  {
+    id: 'daily-coach',
+    kickerKey: 'index.stitch_slide_1_kicker',
+    lineOneKey: 'index.stitch_slide_1_line_one',
+    lineTwoKey: 'index.stitch_slide_1_line_two',
+    copyKey: 'index.stitch_slide_1_copy',
+    stats: [
+      { value: '12k+', labelKey: 'index.stitch_stat_athletes' },
+      { value: '99.8%', labelKey: 'index.stitch_stat_accuracy' },
+    ],
+  },
+  {
+    id: 'training-trust',
+    kickerKey: 'index.stitch_slide_2_kicker',
+    lineOneKey: 'index.stitch_slide_2_line_one',
+    lineTwoKey: 'index.stitch_slide_2_line_two',
+    copyKey: 'index.stitch_slide_2_copy',
+    stats: [
+      { value: 'VO2', labelKey: 'index.stitch_slide_2_stat_one' },
+      { value: 'ACWR', labelKey: 'index.stitch_slide_2_stat_two' },
+    ],
+  },
+  {
+    id: 'race-ready',
+    kickerKey: 'index.stitch_slide_3_kicker',
+    lineOneKey: 'index.stitch_slide_3_line_one',
+    lineTwoKey: 'index.stitch_slide_3_line_two',
+    copyKey: 'index.stitch_slide_3_copy',
+    stats: [
+      { value: '5K-M', labelKey: 'index.stitch_slide_3_stat_one' },
+      { value: 'GPS', labelKey: 'index.stitch_slide_3_stat_two' },
+    ],
+  },
+];
+
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
@@ -173,29 +209,36 @@ export default function Login() {
               <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
             </div>
 
-            <div className="auth-flow-copy">
-              <h2 className="auth-flow-hero">
-                <span>{t('index.stitch_hero_line_one')}</span>
-                <span className="is-accent">{t('index.stitch_hero_line_two')}</span>
-              </h2>
-              <p className="auth-flow-text">{t('index.stitch_hero_copy')}</p>
+            <div className="auth-flow-copy auth-flow-copy--carousel" aria-label={t('index.stitch_slides_label')}>
+              <div className="auth-flow-slide-viewport">
+                <div className="auth-flow-slide-track">
+                  {authBrandSlides.map((slide) => (
+                    <article className="auth-flow-slide" key={slide.id}>
+                      <span className="auth-flow-kicker">{t(slide.kickerKey)}</span>
+                      <h2 className="auth-flow-hero">
+                        <span>{t(slide.lineOneKey)}</span>
+                        <span className="is-accent">{t(slide.lineTwoKey)}</span>
+                      </h2>
+                      <p className="auth-flow-text">{t(slide.copyKey)}</p>
 
-              <div className="auth-flow-stats">
-                <div>
-                  <strong>12k+</strong>
-                  <span>{t('index.stitch_stat_athletes')}</span>
-                </div>
-                <div>
-                  <strong>99.8%</strong>
-                  <span>{t('index.stitch_stat_accuracy')}</span>
+                      <div className="auth-flow-stats">
+                        {slide.stats.map((stat) => (
+                          <div key={stat.labelKey}>
+                            <strong>{stat.value}</strong>
+                            <span>{t(stat.labelKey)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
                 </div>
               </div>
             </div>
 
             <div className="auth-flow-dots" aria-hidden="true">
-              <span className="is-active" />
-              <span />
-              <span />
+              {authBrandSlides.map((slide, index) => (
+                <span className={`auth-flow-dot auth-flow-dot--${index + 1}`} key={slide.id} />
+              ))}
             </div>
           </div>
         </section>

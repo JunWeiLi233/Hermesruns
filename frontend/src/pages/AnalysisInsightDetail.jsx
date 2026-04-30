@@ -2050,7 +2050,7 @@ export default function AnalysisInsightDetail() {
                 <article className="analysis-load-command-methodology-card">
                   <div className="analysis-load-command-panel-head">
                     <div>
-                      <span className="analysis-overview-card-kicker">{t('analysis.load_methodology_kicker')}</span>
+                      <span className="analysis-overview-card-kicker" style={{ letterSpacing: lang === 'zh-CN' ? '0.08em' : undefined, textTransform: lang === 'zh-CN' ? 'none' : undefined }}>{t('analysis.load_methodology_kicker')}</span>
                       <h2>{t('analysis.load_methodology_title')}</h2>
                     </div>
                   </div>

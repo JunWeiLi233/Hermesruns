@@ -57,6 +57,18 @@ assert.match(
 
 assert.match(
   previewSource,
+  /isBrowserLoadableImageUrl[\s\S]*data:image\/[\s\S]*blob:[\s\S]*https:\/\//,
+  'Admin course-map preview should only render browser-loadable image URLs so internal local-course-map references cannot trip CSP.'
+);
+
+assert.match(
+  previewSource,
+  /candidates\.find\(isBrowserLoadableImageUrl\)/,
+  'Admin course-map preview should reject unsafe fallback image candidates instead of passing custom schemes to <img>.'
+);
+
+assert.match(
+  previewSource,
   /mapFailed|setMapFailed/,
   'Admin course-map preview should track Leaflet preview failures instead of swallowing them into a permanent blank gray box.'
 );
@@ -75,7 +87,49 @@ assert.match(
 
 assert.match(
   previewSource,
-  /applyPreviewViewport[\s\S]*invalidateSize[\s\S]*applyPreviewViewport[\s\S]*tileLayer\.redraw\?/,
+  /const fallbackTileUrl = useMemo\(\(\) => 'https:\/\/\{s\}\.tile\.openstreetmap\.org\/\{z\}\/\{x\}\/\{y\}\.png', \[\]\);/,
+  'Admin course-map preview should keep a direct OpenStreetMap fallback basemap so the review grids do not stay grey when the proxy tile layer fails.'
+);
+
+assert.match(
+  previewSource,
+  /function attachTileLayer\(url\) \{[\s\S]*L\.tileLayer\(url,[\s\S]*layer\.on\('tileload'[\s\S]*tileLoadConfirmed = true[\s\S]*layer\.on\('tileerror'[\s\S]*switchToFallbackTiles\(\)/,
+  'Admin course-map preview should track tileload/tileerror events and switch away from a blank proxy tile layer.'
+);
+
+assert.match(
+  previewSource,
+  /tileFallbackTimer = setTimeout\(\(\) => \{[\s\S]*if \(!tileLoadConfirmed && !switchedToFallbackTiles\) \{[\s\S]*switchToFallbackTiles\(\);[\s\S]*\}[\s\S]*\},\s*ADMIN_REVIEW_PREVIEW_TILE_FALLBACK_MS\);/,
+  'Admin course-map preview should time out blank tile paints and recover to direct OpenStreetMap tiles.'
+);
+
+assert.match(
+  previewSource,
+  /map\.createPane\(name\)[\s\S]*createPreviewPane\('admin-review-preview__tile-pane',\s*180\)[\s\S]*createPreviewPane\('admin-review-preview__source-pane',\s*260\)[\s\S]*createPreviewPane\('admin-review-preview__route-shadow-pane',\s*420\)[\s\S]*createPreviewPane\('admin-review-preview__route-pane',\s*430\)[\s\S]*createPreviewPane\('admin-review-preview__marker-pane',\s*440\)/,
+  'Admin course-map preview should create explicit Leaflet panes so OSM tiles remain the background and extracted routes render on top.'
+);
+
+assert.match(
+  previewSource,
+  /L\.tileLayer\(url,\s*\{[\s\S]*pane:\s*'admin-review-preview__tile-pane'/,
+  'Admin course-map preview should pin the OpenStreetMap tile layer to the bottom pane.'
+);
+
+assert.match(
+  previewSource,
+  /L\.imageOverlay\(imageUrl,[\s\S]*pane:\s*'admin-review-preview__source-pane'[\s\S]*opacity:\s*0\.22/,
+  'Admin course-map preview should keep any aligned source image as a faint reference above OSM, not as the dominant background.'
+);
+
+assert.match(
+  previewSource,
+  /L\.polyline\(polylinePoints,\s*\{[\s\S]*pane:\s*'admin-review-preview__route-shadow-pane'[\s\S]*L\.polyline\(polylinePoints,\s*\{[\s\S]*pane:\s*'admin-review-preview__route-pane'/,
+  'Admin course-map preview should draw the extracted route in the top route pane with an outline for OSM readability.'
+);
+
+assert.match(
+  previewSource,
+  /applyPreviewViewport[\s\S]*invalidateSize[\s\S]*applyPreviewViewport[\s\S]*activeTileLayer\?\.redraw\?/,
   'Admin course-map preview should refit bounds and redraw tiles after Leaflet measures the real preview size, or the map can stay stuck on a blank stale viewport.'
 );
 

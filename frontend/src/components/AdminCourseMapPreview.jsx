@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { getBackendBaseUrl } from '../api';
 
+const ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM = 19;
+const ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM = 14;
+const ADMIN_REVIEW_PREVIEW_TILE_FALLBACK_MS = 1600;
+
 function asFiniteNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -32,15 +36,33 @@ function normalizeRoutePoints(rawPoints) {
     .filter(Boolean);
 }
 
+function isBrowserLoadableImageUrl(value) {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const normalized = trimmed.toLowerCase();
+  if (normalized.startsWith('data:image/') || normalized.startsWith('blob:') || trimmed.startsWith('/')) {
+    return true;
+  }
+  if (normalized.startsWith('https://')) return true;
+  if (normalized.startsWith('http://') && typeof window !== 'undefined' && window.location?.origin) {
+    try {
+      return new URL(trimmed).origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 function resolvePreviewImageUrl(preview) {
   if (!preview || typeof preview !== 'object') return '';
-  return typeof preview.previewImageUrl === 'string' && preview.previewImageUrl
-    ? preview.previewImageUrl
-    : typeof preview.imageUrl === 'string' && preview.imageUrl
-      ? preview.imageUrl
-      : typeof preview.sourceImageUrl === 'string' && preview.sourceImageUrl
-        ? preview.sourceImageUrl
-        : '';
+  const candidates = [
+    preview.previewImageUrl,
+    preview.imageUrl,
+    preview.sourceImageUrl,
+  ];
+  return candidates.find(isBrowserLoadableImageUrl) || '';
 }
 
 function resolvePreviewSummary(preview) {
@@ -87,6 +109,7 @@ export default function AdminCourseMapPreview({
     return normalized ? [normalized.lat, normalized.lng] : null;
   }, [fallbackCenter]);
   const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
+  const fallbackTileUrl = useMemo(() => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', []);
   const hasAlignedRoute = polylinePoints.length > 1;
   const hasAlignedOverlay = Boolean(imageUrl) && Boolean(overlayBounds) && hasAlignedRoute;
   const hasRenderableAlignment = hasAlignedOverlay || hasAlignedRoute;
@@ -108,6 +131,14 @@ export default function AdminCourseMapPreview({
     if (!mapHostRef.current || !shouldRenderMap) return undefined;
     let cancelled = false;
     let resizeTimer = null;
+    let tileFallbackTimer = null;
+
+    const clearTileFallbackTimer = () => {
+      if (tileFallbackTimer) {
+        clearTimeout(tileFallbackTimer);
+        tileFallbackTimer = null;
+      }
+    };
 
     import('leaflet').then((leafletModule) => {
       if (cancelled || !mapHostRef.current) return;
@@ -121,12 +152,21 @@ export default function AdminCourseMapPreview({
         boxZoom: false,
         keyboard: false,
         tap: false,
+        maxZoom: ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM,
       });
 
-      const tileLayer = L.tileLayer(tileUrl, {
-        maxZoom: 18,
-        attribution: '&copy; OpenStreetMap',
-      }).addTo(map);
+      const createPreviewPane = (name, zIndex) => {
+        const pane = map.createPane(name);
+        pane.style.zIndex = String(zIndex);
+        pane.style.pointerEvents = 'none';
+        return pane;
+      };
+
+      createPreviewPane('admin-review-preview__tile-pane', 180);
+      createPreviewPane('admin-review-preview__source-pane', 260);
+      createPreviewPane('admin-review-preview__route-shadow-pane', 420);
+      createPreviewPane('admin-review-preview__route-pane', 430);
+      createPreviewPane('admin-review-preview__marker-pane', 440);
 
       const resolvedOverlayBounds = overlayBounds
         ? L.latLngBounds(
@@ -134,15 +174,83 @@ export default function AdminCourseMapPreview({
           [overlayBounds.north, overlayBounds.east],
         )
         : null;
+      let activeTileLayer = null;
       let polyline = null;
+      let switchedToFallbackTiles = false;
+      let tileLoadConfirmed = false;
+
+      const revealMap = () => {
+        if (!cancelled) setMapReady(true);
+      };
+
+      const forceVisibleTiles = (layer) => {
+        const container = layer.getContainer?.();
+        if (typeof HTMLElement !== 'undefined' && container instanceof HTMLElement) {
+          container.style.mixBlendMode = 'normal';
+          container.style.opacity = '1';
+          container.style.filter = 'none';
+        }
+        const tileElements = container?.querySelectorAll?.('img.leaflet-tile') || [];
+        tileElements.forEach((tile) => {
+          tile.style.mixBlendMode = 'normal';
+          tile.style.opacity = '1';
+          tile.style.filter = 'none';
+          tile.style.visibility = 'visible';
+          tile.style.display = 'block';
+          tile.style.maxWidth = 'none';
+          tile.style.maxHeight = 'none';
+        });
+      };
+
+      function switchToFallbackTiles() {
+        if (cancelled || switchedToFallbackTiles) return;
+        switchedToFallbackTiles = true;
+        tileLoadConfirmed = false;
+        clearTileFallbackTimer();
+        if (activeTileLayer) {
+          activeTileLayer.off();
+          map.removeLayer(activeTileLayer);
+        }
+        activeTileLayer = attachTileLayer(fallbackTileUrl);
+        map.invalidateSize({ pan: false });
+        applyPreviewViewport();
+        activeTileLayer?.redraw?.();
+      }
+
+      function attachTileLayer(url) {
+        const layer = L.tileLayer(url, {
+          pane: 'admin-review-preview__tile-pane',
+          maxZoom: ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM,
+          maxNativeZoom: ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM,
+          attribution: '&copy; OpenStreetMap contributors',
+          className: 'admin-review-preview__osm-tile',
+        }).addTo(map);
+        layer.on('tileload', () => {
+          forceVisibleTiles(layer);
+          tileLoadConfirmed = true;
+          clearTileFallbackTimer();
+          revealMap();
+        });
+        layer.on('tileerror', () => {
+          if (url === fallbackTileUrl) return;
+          switchToFallbackTiles();
+        });
+        return layer;
+      }
 
       const applyPreviewViewport = () => {
-        if (hasAlignedOverlay && resolvedOverlayBounds) {
-          map.fitBounds(resolvedOverlayBounds.pad(0.05), { padding: [18, 18] });
+        if (polyline) {
+          map.fitBounds(polyline.getBounds().pad(0.08), {
+            padding: [18, 18],
+            maxZoom: ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM,
+          });
           return;
         }
-        if (polyline) {
-          map.fitBounds(polyline.getBounds().pad(0.08), { padding: [18, 18] });
+        if (hasAlignedOverlay && resolvedOverlayBounds) {
+          map.fitBounds(resolvedOverlayBounds.pad(0.05), {
+            padding: [18, 18],
+            maxZoom: ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM,
+          });
           return;
         }
         if (fallbackLatLng) {
@@ -152,22 +260,37 @@ export default function AdminCourseMapPreview({
 
       if (hasAlignedOverlay && resolvedOverlayBounds) {
         L.imageOverlay(imageUrl, resolvedOverlayBounds, {
-          opacity: 0.72,
+          pane: 'admin-review-preview__source-pane',
+          opacity: 0.22,
           interactive: false,
           className: 'admin-review-preview__map-overlay',
         }).addTo(map);
       }
 
       if (hasAlignedRoute) {
+        L.polyline(polylinePoints, {
+          pane: 'admin-review-preview__route-shadow-pane',
+          color: '#15202b',
+          weight: 8,
+          opacity: 0.34,
+          interactive: false,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(map);
         polyline = L.polyline(polylinePoints, {
+          pane: 'admin-review-preview__route-pane',
           color: '#f07561',
           weight: 4,
-          opacity: 0.92,
+          opacity: 0.98,
+          interactive: false,
+          lineCap: 'round',
+          lineJoin: 'round',
         }).addTo(map);
       }
 
       if (!hasAlignedRoute && fallbackLatLng) {
         L.circleMarker(fallbackLatLng, {
+          pane: 'admin-review-preview__marker-pane',
           radius: 6,
           weight: 2,
           color: '#f07561',
@@ -176,14 +299,19 @@ export default function AdminCourseMapPreview({
         }).addTo(map);
       }
 
+      activeTileLayer = attachTileLayer(tileUrl);
       applyPreviewViewport();
+      tileFallbackTimer = setTimeout(() => {
+        if (!tileLoadConfirmed && !switchedToFallbackTiles) {
+          switchToFallbackTiles();
+        }
+      }, ADMIN_REVIEW_PREVIEW_TILE_FALLBACK_MS);
 
       const finalizeLayout = () => {
         if (cancelled) return;
         map.invalidateSize({ pan: false });
         applyPreviewViewport();
-        tileLayer.redraw?.();
-        setMapReady(true);
+        activeTileLayer?.redraw?.();
       };
 
       if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
@@ -202,12 +330,13 @@ export default function AdminCourseMapPreview({
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
+      clearTileFallbackTimer();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
-  }, [fallbackLatLng, hasAlignedOverlay, hasAlignedRoute, imageUrl, overlayBounds, polylinePoints, shouldRenderMap, tileUrl]);
+  }, [fallbackLatLng, fallbackTileUrl, hasAlignedOverlay, hasAlignedRoute, imageUrl, overlayBounds, polylinePoints, shouldRenderMap, tileUrl]);
 
   if (shouldRenderMap) {
     return (

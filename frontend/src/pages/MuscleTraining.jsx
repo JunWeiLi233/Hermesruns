@@ -1108,10 +1108,10 @@ function createPageCopy(isZh) {
       PLANNED: isZh ? '\u8ba1\u5212' : 'Planned',
       ACTUAL: isZh ? '\u5b9e\u9645\u5b8c\u6210' : 'Actual',
     },
-    heading: isZh ? '力量训练 2.0' : 'Strength Training 2.0',
+    heading: isZh ? '力量训练' : 'Strength Training',
     subheading: isZh
-      ? '基于最近跑量、恢复门控、比赛阶段和个人偏好，给你从今天开始的 7 天滚动力量周计划。'
-      : 'A rolling 7-day strength plan built from your recent running load, recovery gate, race phase, and preferences.',
+      ? '基于最近跑量、恢复状态、比赛阶段和个人偏好，给你从今天开始的 7 天滚动力量周计划。'
+      : 'A rolling 7-day strength plan built from your recent running load, recovery status, race phase, and preferences.',
     languageToggleLabel: isZh ? '切换页面语言' : 'Switch page language',
     loading: isZh ? '正在生成 7 天力量周计划...' : 'Building your 7-day strength plan...',
     profileTitle: isZh ? '力量偏好设置' : 'Strength preferences',
@@ -1348,8 +1348,8 @@ export default function MuscleTraining() {
   }, [featuredDay]);
   const heroTags = useMemo(() => {
     const tags = [];
-    if (featuredDay?.strength?.optional) tags.push(isZh ? '可选剂量' : 'Optional dose');
-    if (featuredDay?.run?.keyRun) tags.push(isZh ? '关键跑保护' : 'Key-run safe');
+    if (featuredDay?.strength?.optional) tags.push(isZh ? '可选训练' : 'Optional session');
+    if (featuredDay?.run?.keyRun) tags.push(isZh ? '关键跑前可做' : 'Safe before key run');
     if (featuredDay?.run?.longRun) tags.push(isZh ? '长跑周边' : 'Long-run support');
     if (featuredSession?.emphasis) tags.push(featuredSession.emphasis);
     return tags.slice(0, 3);
@@ -1361,20 +1361,20 @@ export default function MuscleTraining() {
     strength: isZh ? '力量' : 'Strength',
     seriesLabel: isZh ? '力量模块' : 'Strength block',
     durationLabel: isZh ? '时长' : 'Duration',
-    burnLabel: isZh ? '负荷估算' : 'Load burn',
+    burnLabel: isZh ? '预估热量' : 'Estimated calories',
     loadLabel: isZh ? '动作数' : 'Exercise count',
     protocolTitle: isZh ? '今日协议' : 'Today protocol',
-    readyTitle: isZh ? '准备开练？' : 'Ready to lift?',
+    readyTitle: isZh ? '你的力量训练已就绪。' : 'Your strength session is ready.',
     readyHint: isZh ? '先完成上方协议，再在下方控制台记录今天的训练与恢复反馈。' : 'Run the protocol above, then use the control deck below to log the session and update coach state.',
     startWorkout: isZh ? '开始训练' : 'Start workout',
-    enterWorkout: isZh ? '打开控制台' : 'Open control deck',
+    enterWorkout: isZh ? '记录今日训练' : "Log today's session",
     noStrengthTitle: isZh ? '今天不安排正式力量' : 'No formal strength today',
     noStrengthHint: isZh ? '教练引擎把今天留给跑步恢复或关键课前缓冲。' : 'The coach engine is keeping today clear for run recovery or a key-session buffer.',
     muscleFocusTitle: isZh ? '肌群焦点' : 'Muscle focus',
     coachingCuesTitle: isZh ? '执行提示' : 'Coaching cues',
     recoveryImpactTitle: isZh ? '恢复影响' : 'Recovery impact',
     coachDeckTitle: isZh ? '教练控制台' : 'Coach control deck',
-    coachDeckHint: isZh ? '下面保留了真实 Hermes 偏好、check-in、周状态和 7 天力量计划，让这个页面既像成品，也继续像工具。' : 'The real Hermes preferences, check-in, weekly status, and 7-day planner stay live below so this surface keeps its coach utility.',
+    coachDeckHint: isZh ? '在下方追踪你的偏好、签到和周计划。' : 'Track your preferences, check-in, and weekly plan below.',
     support: isZh ? '支持' : 'Support',
     settings: isZh ? '设置' : 'Settings',
   }), [isZh]);

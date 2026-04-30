@@ -128,10 +128,12 @@ const WEATHER_PAGE_COPY = {
 };
 
 const ADAPTATION_BAR_LEVELS = [46, 62, 74, 54, 68, 100, 78, 56, 38, 28];
+const WEATHER_PAGE_REQUEST_TIMEOUT_MS = 6000;
+const WEATHER_FORECAST_REQUEST_TIMEOUT_MS = 6500;
 
 function pageText(lang, key) {
   const copy = WEATHER_PAGE_COPY[lang] || WEATHER_PAGE_COPY.en;
-  return copy[key] || key;
+  return copy[key] || WEATHER_PAGE_COPY.en[key] || key;
 }
 
 function formatTemperature(value) {
@@ -160,6 +162,11 @@ function formatWind(value) {
   return Number.isFinite(Number(value)) ? `${Math.round(Number(value))} km/h` : '--';
 }
 
+function toFiniteNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 function formatCardinalDirection(degrees, lang, wt) {
   if (!Number.isFinite(Number(degrees))) return wt('north_flow');
   const labels = lang === 'zh-CN'
@@ -180,9 +187,9 @@ function statusLabel(status, wt) {
 }
 
 function getDisplayName(profile, fallback) {
-  const raw = profile?.displayName?.trim()
-    || profile?.email?.split('@')[0]
-    || fallback;
+  const displayName = typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
+  const emailName = typeof profile?.email === 'string' ? profile.email.split('@')[0] : '';
+  const raw = displayName || emailName || String(fallback || '');
   return raw.replace(/^./, (char) => char.toUpperCase());
 }
 
@@ -274,13 +281,15 @@ export default function WeatherEngine() {
     }
 
     let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), WEATHER_PAGE_REQUEST_TIMEOUT_MS);
 
     async function loadPage() {
       setLoadState('loading');
       try {
         const [profileData, weatherData] = await Promise.all([
-          apiJson('/api/profile/me').catch(() => null),
-          apiJson('/api/v1/weather/context').catch(() => null),
+          apiJson('/api/profile/me', { signal: controller.signal }).catch(() => null),
+          apiJson('/api/v1/weather/context', { signal: controller.signal }).catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -289,28 +298,37 @@ export default function WeatherEngine() {
         setLoadState('ready');
       } catch {
         if (!cancelled) setLoadState('error');
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     }
 
     loadPage();
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [isAuthenticated, navigate]);
 
   useEffect(() => {
-    if (!weatherContext?.available || !Number.isFinite(weatherContext.latitude) || !Number.isFinite(weatherContext.longitude)) {
+    const latitude = toFiniteNumber(weatherContext?.latitude);
+    const longitude = toFiniteNumber(weatherContext?.longitude);
+
+    if (!weatherContext?.available || latitude === null || longitude === null) {
       setLiveWeather(null);
       setForecast([]);
       setForecastState('empty');
       return undefined;
     }
 
+    let disposed = false;
     const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), WEATHER_FORECAST_REQUEST_TIMEOUT_MS);
     setForecastState('loading');
     const url = new URL('https://api.open-meteo.com/v1/forecast');
-    url.searchParams.set('latitude', weatherContext.latitude);
-    url.searchParams.set('longitude', weatherContext.longitude);
+    url.searchParams.set('latitude', latitude);
+    url.searchParams.set('longitude', longitude);
     url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code');
     url.searchParams.set('hourly', 'temperature_2m,weather_code');
     url.searchParams.set('forecast_days', '1');
@@ -325,14 +343,21 @@ export default function WeatherEngine() {
         setForecastState('ready');
       })
       .catch(() => {
-        if (!controller.signal.aborted) {
+        if (!disposed) {
           setLiveWeather(null);
           setForecast([]);
           setForecastState('error');
         }
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
       });
 
-    return () => controller.abort();
+    return () => {
+      disposed = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [lang, weatherContext]);
 
   const initials = getDisplayName(profile, t('profile.default_name')).slice(0, 1).toUpperCase();

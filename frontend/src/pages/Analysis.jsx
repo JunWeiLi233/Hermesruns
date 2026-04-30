@@ -104,6 +104,7 @@ export default function Analysis() {
   const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
   const trainingLoad = snapshot.trainingLoad;
   const loadZone = snapshot.loadZone;
+  const loadZoneTone = loadZone.tone === 'cool' ? 'muted' : loadZone.tone;
   const polarized = snapshot.polarized;
   const injury = snapshot.injury;
   const predictionRows = normalizeAnalysisList(snapshot.predictionRows);
@@ -278,11 +279,7 @@ export default function Analysis() {
           ) : (
             <>
               <section className="analysis-overview-grid analysis-overview-grid--hero">
-                <button
-                  type="button"
-                  className="analysis-overview-card analysis-overview-card--vo2 analysis-overview-card--vo2-clickable analysis-overview-card--interactive"
-                  onClick={() => navigate('/analysis/vo2max')}
-                >
+                <article className="analysis-overview-card analysis-overview-card--vo2">
                   <div className="analysis-overview-card-head">
                     <div>
                       <span className="analysis-overview-card-kicker">{t('analysis.stitch_vo2_kicker')}</span>
@@ -295,7 +292,13 @@ export default function Analysis() {
                   </div>
                   <div className="analysis-overview-vo2-bars">
                     {hoveredVo2Bar ? (
-                      <div className="analysis-overview-vo2-tooltip" aria-hidden="true">
+                      <div
+                        className="analysis-overview-vo2-tooltip"
+                        aria-hidden="true"
+                        style={{
+                          left: `${vo2Bars.findIndex((bar) => bar.key === hoveredVo2BarKey) * (100 / vo2Bars.length) + (100 / vo2Bars.length / 2)}%`,
+                        }}
+                      >
                         <span>{hoveredVo2Bar.label}</span>
                         <div className="analysis-overview-vo2-tooltip-values">
                           <div className="analysis-overview-vo2-tooltip-row">
@@ -353,11 +356,7 @@ export default function Analysis() {
                       </div>
                     )}
                   </div>
-                  <div className="analysis-overview-vo2-link-row">
-                    <span>{t('analysis.vo2_detail_cta')}</span>
-                    <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
-                  </div>
-                </button>
+                </article>
 
                 <div className="analysis-overview-side-stack">
                   <button
@@ -368,7 +367,7 @@ export default function Analysis() {
                     <span className="analysis-overview-card-kicker">{t('analysis.stitch_acwr_title')}</span>
                     <Gauge value={trainingLoad?.lastAcwr || 0} color={loadZone.color} />
                     <div className="analysis-overview-gauge-value">{trainingLoad?.lastAcwr != null ? trainingLoad.lastAcwr.toFixed(2) : '--'}</div>
-                    <span className={cx('analysis-overview-status-pill', `is-${loadZone.tone}`)}>
+                    <span className={cx('analysis-overview-status-pill', `is-${loadZoneTone}`)}>
                       {t(loadZone.key === 'optimal' ? 'analysis.stitch_optimal_zone' : `analysis.stitch_acwr_${loadZone.key}`)}
                     </span>
                     <p>{t('analysis.stitch_acwr_copy')}</p>

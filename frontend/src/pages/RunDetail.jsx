@@ -5,8 +5,22 @@ import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import { formatDuration, formatLongDate, formatPace, formatPaceSeconds } from '../utils/format';
 import { formatShoeDisplayName } from '../utils/shoeNames';
-import AppIcon from '../components/AppIcon';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  Filler,
+  Legend,
+  LineController,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Title,
+  Tooltip,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 import 'leaflet/dist/leaflet.css';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
 
 function readSelectedRunFromSession(expectedId) {
   if (typeof window === 'undefined') return null;
@@ -103,6 +117,7 @@ export default function RunDetail() {
   const [recalibratingElevation, setRecalibratingElevation] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
   const [showAllSplits, setShowAllSplits] = useState(false);
+  const [recentRuns, setRecentRuns] = useState([]);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -172,6 +187,15 @@ export default function RunDetail() {
     if (!isAuthenticated) return;
     apiJson('/api/shoes').then((data) => setShoes(Array.isArray(data) ? data : [])).catch(() => {});
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !id) return;
+    apiJson('/api/activities').then((data) => {
+      if (Array.isArray(data)) {
+        setRecentRuns(data.filter((r) => r.distanceKm > 0 && r.movingTimeSeconds > 0 && String(r.id) !== String(id)));
+      }
+    }).catch(() => {});
+  }, [isAuthenticated, id]);
 
   async function assignShoe(shoeId) {
     if (!run?.id) return;
@@ -303,24 +327,115 @@ export default function RunDetail() {
 
   const lapRows = useMemo(() => (Array.isArray(analytics?.laps) ? analytics.laps : []), [analytics]);
 
-  const heartRateSeries = useMemo(() => {
+  const hrChartData = useMemo(() => {
     const source = lapRows
-      .map((lap, index) => ({ index, hr: Number(lap.averageHeartRate || 0) }))
+      .map((lap, index) => ({ index, label: `${lap.distanceKm ? `${lap.distanceKm.toFixed(1)} km` : `#${lap.lapIndex || index + 1}`}`, hr: Number(lap.averageHeartRate || 0) }))
       .filter((point) => point.hr > 0);
     if (source.length < 2) return null;
-    const minHr = Math.min(...source.map((point) => point.hr));
-    const maxHr = Math.max(...source.map((point) => point.hr), minHr + 1);
-    const span = Math.max(1, maxHr - minHr);
-    const linePath = source.map((point, index) => {
-      const x = source.length === 1 ? 50 : (index / (source.length - 1)) * 100;
-      const y = 84 - (((point.hr - minHr) / span) * 58);
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    }).join(' ');
     return {
-      linePath,
-      areaPath: `${linePath} L 100 92 L 0 92 Z`,
+      labels: source.map((p) => p.label),
+      datasets: [
+        {
+          label: t('run_detail.average_hr'),
+          data: source.map((p) => p.hr),
+          borderColor: '#f49787',
+          backgroundColor: 'rgba(240, 117, 97, 0.18)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 3,
+          pointBackgroundColor: '#f49787',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          pointHoverRadius: 6,
+          borderWidth: 2.5,
+        },
+      ],
     };
-  }, [lapRows]);
+  }, [lapRows, t]);
+
+  const hrChartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { intersect: false, mode: 'index' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(18, 18, 18, 0.92)',
+        titleColor: '#fce6de',
+        bodyColor: '#e1e1e1',
+        cornerRadius: 10,
+        padding: 12,
+        callbacks: {
+          label: (ctx) => `${ctx.parsed.y} bpm`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        display: false,
+      },
+      y: {
+        display: false,
+        min: Math.max(0, Math.min(...(hrChartData?.datasets?.[0]?.data || [0])) - 15),
+        max: Math.max(...(hrChartData?.datasets?.[0]?.data || [0])) + 15,
+      },
+    },
+  }), [hrChartData]);
+
+  const hasHrData = hrChartData && hrChartData.datasets[0].data.length >= 2;
+
+  const lapElevationGains = useMemo(() => {
+    const profile = analytics?.elevationProfile;
+    if (!Array.isArray(profile) || profile.length < 2) return null;
+    if (!lapRows.length) return null;
+    return lapRows.map((lap) => {
+      const startKm = ((lap.lapIndex || 1) - 1) * (lap.distanceKm || 1);
+      const endKm = startKm + (lap.distanceKm || 1);
+      let gain = 0;
+      for (let i = 1; i < profile.length; i++) {
+        const prev = profile[i - 1];
+        const curr = profile[i];
+        if (curr.distanceKm >= startKm && curr.distanceKm <= endKm) {
+          const delta = (curr.elevationMeters || 0) - (prev.elevationMeters || 0);
+          if (delta > 0) gain += delta;
+        }
+      }
+      return gain > 0 ? gain : null;
+    });
+  }, [analytics?.elevationProfile, lapRows]);
+
+  const runComparison = useMemo(() => {
+    if (!run || !recentRuns.length) return null;
+    const distKm = run.distanceKm > 0 ? run.distanceKm : (run.distanceMeters > 0 ? run.distanceMeters / 1000 : null);
+    const movingSec = run.movingTimeSeconds > 0 ? run.movingTimeSeconds : null;
+    if (!distKm || !movingSec) return null;
+    const thisPace = movingSec / distKm;
+    const windowSizes = [5, 10, 20];
+    let bestWindow = null;
+    for (const window of windowSizes) {
+      const comparable = recentRuns
+        .filter((r) => r.distanceKm > 0 && r.movingTimeSeconds > 0)
+        .sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0))
+        .slice(0, window);
+      if (comparable.length < 2) continue;
+      const avgPace = comparable.reduce((sum, r) => sum + (r.movingTimeSeconds / r.distanceKm), 0) / comparable.length;
+      const pctDiff = ((avgPace - thisPace) / avgPace) * 100;
+      bestWindow = { window, count: comparable.length, recentAvgPace: avgPace, pctDiff };
+      break;
+    }
+    if (!bestWindow) return null;
+    let direction;
+    if (Math.abs(bestWindow.pctDiff) < 1.5) direction = 'same';
+    else if (bestWindow.pctDiff > 0) direction = 'faster';
+    else direction = 'slower';
+    return {
+      ...bestWindow,
+      direction,
+      absPct: Math.abs(bestWindow.pctDiff).toFixed(1),
+      recentRuns: bestWindow.count,
+      paceTrend: direction === 'faster' ? 'improving' : direction === 'slower' ? 'declining' : 'stable',
+    };
+  }, [run, recentRuns]);
 
   const elevationPoints = useMemo(() => {
     const profile = analytics?.elevationProfile;
@@ -559,6 +674,34 @@ export default function RunDetail() {
               </section>
             )}
 
+            {runComparison && (
+              <section className="run-detail-section run-detail-comparison-section">
+                <h2>{t('run_detail.run_comparison_title')}</h2>
+                <div className="run-detail-panel run-detail-comparison-panel">
+                  <div className="run-detail-comparison-signal">
+                    <span className={`run-detail-comparison-arrow run-detail-comparison-arrow--${runComparison.direction}`} aria-hidden="true">
+                      {runComparison.direction === 'faster' ? '↑' : runComparison.direction === 'slower' ? '↓' : '→'}
+                    </span>
+                    <div>
+                      <strong>
+                        {runComparison.direction === 'faster'
+                          ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                          : runComparison.direction === 'slower'
+                            ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                            : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
+                      </strong>
+                      <p>
+                        {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
+                          : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
+                            : t('run_detail.run_comparison_stable')}
+                        {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             <section className="run-detail-section">
               <h2>{t('run_detail.physiological_response')}</h2>
               <div className="run-detail-panel">
@@ -572,7 +715,7 @@ export default function RunDetail() {
                     <strong>{run.maxHeartRate != null ? Math.round(run.maxHeartRate) : '--'} <em>{heartRateUnitLabel}</em></strong>
                   </div>
                 </div>
-                <div className="run-detail-hr-chart">
+                <div className="run-detail-hr-chart" style={lapRows.length > 8 ? { overflowX: 'auto', WebkitOverflowScrolling: 'touch' } : undefined}>
                   <div className="run-detail-hr-zones">
                     <span>Z5</span>
                     <span>Z4</span>
@@ -580,17 +723,10 @@ export default function RunDetail() {
                     <span>Z2</span>
                     <span>Z1</span>
                   </div>
-                  {heartRateSeries ? (
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                      <defs>
-                        <linearGradient id="run-detail-hr-fill" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor="rgba(240,117,97,0.34)" />
-                          <stop offset="100%" stopColor="rgba(240,117,97,0)" />
-                        </linearGradient>
-                      </defs>
-                      <path d={heartRateSeries.areaPath} fill="url(#run-detail-hr-fill)" />
-                      <path d={heartRateSeries.linePath} fill="none" stroke="#f49787" strokeWidth="2.3" strokeLinecap="round" />
-                    </svg>
+                  {hasHrData ? (
+                    <div className="run-detail-hr-chart-canvas" style={{ minWidth: Math.max(100, lapRows.length * 48), height: 180 }}>
+                      <Line data={hrChartData} options={hrChartOptions} />
+                    </div>
                   ) : (
                     <div className="run-detail-chart-empty">{t('run_detail.no_heart_rate_data')}</div>
                   )}
@@ -629,14 +765,17 @@ export default function RunDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => (
-                      <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
-                        <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
-                        <td>{lap.pace || '--'}</td>
-                        <td>{formatLapElevation(lap)}</td>
-                        <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
-                      </tr>
-                    )) : (
+                    {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => {
+                      const lapGain = lapElevationGains ? lapElevationGains[index] : null;
+                      return (
+                        <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
+                          <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
+                          <td>{lap.pace || '--'}</td>
+                          <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
+                          <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
+                        </tr>
+                      );
+                    }) : (
                       <tr>
                         <td colSpan="4" className="is-empty">{t('run_detail.no_lap_data')}</td>
                       </tr>

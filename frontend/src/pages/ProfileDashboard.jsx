@@ -388,6 +388,105 @@ function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, r
   return breakthroughs;
 }
 
+function isRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function sortRunsByMostRecent(runs) {
+  const list = Array.isArray(runs) ? [...runs] : [];
+  list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+  return list;
+}
+
+function normalizeProfileDashboardPayload(payload) {
+  if (!isRecord(payload) || !isRecord(payload.profile)) return null;
+  const activities = payload.activities ?? payload.runs;
+  if (!Array.isArray(activities)) return null;
+
+  return {
+    source: 'batch',
+    profile: payload.profile,
+    runs: sortRunsByMostRecent(activities),
+    coachState: payload.coachState ?? payload.state ?? null,
+    coachToday: payload.coachToday ?? payload.today ?? null,
+    personalRecords: payload.personalRecords ?? payload.personalRecordSummary ?? null,
+    races: payload.races ?? [],
+    shoes: Array.isArray(payload.shoes) ? payload.shoes : [],
+    musclePlan: payload.musclePlan ?? payload.trainingMusclePlan ?? null,
+    quota: payload.quota ?? payload.subscriptionState ?? null,
+  };
+}
+
+async function loadProfileDashboardFallbackData() {
+  const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
+    apiJson('/api/profile/me'),
+    apiJson('/api/activities'),
+    apiJson('/api/shoes'),
+  ]);
+
+  if (profileResult.status !== 'fulfilled') {
+    throw profileResult.reason || new Error('profile_load_failed');
+  }
+
+  return {
+    source: 'fallback',
+    profile: profileResult.value,
+    runs: sortRunsByMostRecent(activitiesResult.status === 'fulfilled' ? activitiesResult.value : []),
+    shoes: shoesResult.status === 'fulfilled' && Array.isArray(shoesResult.value) ? shoesResult.value : [],
+  };
+}
+
+async function loadProfileDashboardFallbackEnrichmentData() {
+  const [
+    coachStateData,
+    coachTodayData,
+    personalRecordsData,
+    racesData,
+    musclePlanData,
+    quotaData,
+  ] = await Promise.all([
+    apiJson('/api/coach/state').catch(() => null),
+    apiJson('/api/coach/today').catch(() => null),
+    apiJson('/api/profile/personal-records').catch(() => null),
+    apiJson('/api/races').catch(() => null),
+    apiJson('/api/training/muscle/plan').catch(() => null),
+    apiJson('/api/profile/quota').catch(() => null),
+  ]);
+
+  return {
+    coachState: coachStateData,
+    coachToday: coachTodayData,
+    personalRecords: personalRecordsData,
+    races: racesData,
+    musclePlan: musclePlanData,
+    quota: quotaData,
+  };
+}
+
+async function loadProfileDashboardData() {
+  try {
+    const batchPayload = await apiJson('/api/profile/dashboard');
+    const normalized = normalizeProfileDashboardPayload(batchPayload);
+    if (normalized) return normalized;
+  } catch {
+    // Fall through to the individual endpoints that powered the dashboard before batching.
+  }
+
+  return loadProfileDashboardFallbackData();
+}
+
+function getUpcomingRace(racesData) {
+  if (!Array.isArray(racesData)) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const upcoming = racesData
+    .filter(r => !r.canceled)
+    .map(r => ({ ...r, date: r.date ?? r.eventDate, parsedDate: new Date(r.date ?? r.eventDate) }))
+    .filter(r => !Number.isNaN(r.parsedDate.getTime()) && r.parsedDate >= now)
+    .sort((a, b) => a.parsedDate - b.parsedDate);
+  return upcoming[0] || null;
+}
+
 function formatCelebrationValue(entry, lang, unit, t) {
   if (entry.type === 'distance') {
     return formatDuration(entry.record?.elapsedSeconds || 0);
@@ -437,7 +536,6 @@ export default function ProfileDashboard() {
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
   const [musclePlan, setMusclePlan] = useState(null);
   const [subscriptionState, setSubscriptionState] = useState(null);
-  const [brandMsgIndex, setBrandMsgIndex] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -450,67 +548,26 @@ export default function ProfileDashboard() {
     async function loadDashboard() {
       setLoadState('loading');
       try {
-        const [profileResult, activitiesResult] = await Promise.allSettled([
-          apiJson('/api/profile/me'),
-          apiJson('/api/activities'),
-        ]);
+        const dashboardData = await loadProfileDashboardData();
 
         if (cancelled) return;
 
-        if (profileResult.status !== 'fulfilled') {
-          throw profileResult.reason || new Error('profile_load_failed');
-        }
+        const profileData = dashboardData.profile;
+        const list = dashboardData.runs;
 
-        const profileData = profileResult.value;
-        const activitiesData = activitiesResult.status === 'fulfilled' ? activitiesResult.value : [];
-
-        const list = Array.isArray(activitiesData) ? activitiesData : [];
-        list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
-
-        setProfile(profileData);
-        setRuns(list);
-        setLoadState('ready');
-
-        const query = new URLSearchParams(window.location.search);
-        if (query.get('source') === 'strava') {
-          setBanner({
-            tone: 'success',
-            message: t('profile.sync_activity_count', { count: list.length }),
-          });
-          query.delete('source');
-          const nextQuery = query.toString();
-          window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
-        }
-
-        void Promise.all([
-          apiJson('/api/coach/state').catch(() => null),
-          apiJson('/api/coach/today').catch(() => null),
-          apiJson('/api/profile/personal-records').catch(() => null),
-          apiJson('/api/races').catch(() => null),
-          apiJson('/api/training/muscle/plan').catch(() => null),
-          apiJson('/api/profile/quota').catch(() => null),
-        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData, musclePlanData, quotaData]) => {
-          if (cancelled) return;
-
-          setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
-          setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
-          setMusclePlan(musclePlanData && typeof musclePlanData === 'object' && musclePlanData.days ? musclePlanData : null);
-          if (quotaData && typeof quotaData === 'object' && !quotaData.admin) {
-            setSubscriptionState(quotaData);
+        function applyDashboardEnrichment(enrichmentData) {
+          setCoachState(enrichmentData.coachState && typeof enrichmentData.coachState === 'object' ? enrichmentData.coachState : null);
+          setCoachToday(enrichmentData.coachToday && typeof enrichmentData.coachToday === 'object' ? enrichmentData.coachToday : null);
+          setMusclePlan(enrichmentData.musclePlan && typeof enrichmentData.musclePlan === 'object' && enrichmentData.musclePlan.days ? enrichmentData.musclePlan : null);
+          if (enrichmentData.quota && typeof enrichmentData.quota === 'object' && !enrichmentData.quota.admin) {
+            setSubscriptionState(enrichmentData.quota);
+          }
+          if (Array.isArray(enrichmentData.races)) {
+            _setRaces(enrichmentData.races);
+            setNextRace(getUpcomingRace(enrichmentData.races));
           }
 
-          if (Array.isArray(racesData)) {
-            _setRaces(racesData);
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            const upcoming = racesData
-              .filter(r => !r.canceled)
-              .map(r => ({ ...r, parsedDate: new Date(r.date) }))
-              .filter(r => !Number.isNaN(r.parsedDate.getTime()) && r.parsedDate >= now)
-              .sort((a, b) => a.parsedDate - b.parsedDate);
-            setNextRace(upcoming[0] || null);
-          }
-
+          const personalRecordsData = enrichmentData.personalRecords;
           if (profileData?.email && personalRecordsData && typeof personalRecordsData === 'object') {
             const storageKey = getPrSnapshotStorageKey(profileData.email);
             const previousSnapshot = readJsonStorage(storageKey);
@@ -528,9 +585,32 @@ export default function ProfileDashboard() {
               });
             }
           }
-        }).catch(() => {
-          // Optional dashboard enrichments should not block the first render.
-        });
+        }
+
+        setProfile(profileData);
+        setRuns(list);
+        setLoadState('ready');
+
+        const query = new URLSearchParams(window.location.search);
+        if (query.get('source') === 'strava') {
+          setBanner({
+            tone: 'success',
+            message: t('profile.sync_activity_count', { count: list.length }),
+          });
+          query.delete('source');
+          const nextQuery = query.toString();
+          window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
+        }
+
+        if (dashboardData.source === 'batch') {
+          applyDashboardEnrichment(dashboardData);
+        } else {
+          void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
+            if (!cancelled) applyDashboardEnrichment(enrichmentData);
+          }).catch(() => {
+            // Optional dashboard enrichments should not block the first render.
+          });
+        }
       } catch {
         if (!cancelled) {
           setLoadState('error');
@@ -612,13 +692,6 @@ export default function ProfileDashboard() {
     }
   }, [isAuthenticated, t]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBrandMsgIndex((prev) => (prev + 1) % 3);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
-
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const currentDateLine = useMemo(() => {
     const now = new Date();
@@ -632,12 +705,62 @@ export default function ProfileDashboard() {
   const todayBundle = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
+  const weeklyActualDistanceKm = useMemo(
+    () => weeklyBars.reduce((sum, day) => sum + Number(day.actual || 0), 0),
+    [weeklyBars],
+  );
 
   const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
   const totalRuns = runs.length;
   const totalDistanceKm = useMemo(() => runs.reduce((sum, r) => sum + resolveRunDistanceKm(r), 0), [runs]);
+  const dashboardQuickPreview = useMemo(() => {
+    const vdotValue = profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--';
+    const vdotTrendDetail = profileVdot.representativeVdot > 0 && vdotTrend.hasData
+      ? `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)} ${t(`profile.vdot_trend_${vdotTrend.direction}`)}`
+      : t('profile.dashboard_window_active');
+
+    return [
+      {
+        key: 'readiness',
+        label: t('profile.dashboard_readiness_status'),
+        value: `${readiness.score}%`,
+        detail: readiness.label,
+      },
+      {
+        key: 'week',
+        label: t('profile.dashboard_weekly_progress'),
+        value: formatDistance(weeklyActualDistanceKm, 1, lang, unit),
+        detail: t('profile.dashboard_actual'),
+      },
+      {
+        key: 'distance',
+        label: t('profile.dashboard_progression_distance'),
+        value: formatDistance(totalDistanceKm, 1, lang, unit),
+        detail: `${totalRuns} ${t('profile.dashboard_progression_sessions')}`,
+      },
+      {
+        key: 'vo2',
+        label: t('profile.dashboard_vo2_est'),
+        value: vdotValue,
+        detail: vdotTrendDetail,
+      },
+    ];
+  }, [
+    lang,
+    profileVdot.representativeVdot,
+    readiness.label,
+    readiness.score,
+    t,
+    totalDistanceKm,
+    totalRuns,
+    unit,
+    vdotTrend.delta,
+    vdotTrend.direction,
+    vdotTrend.hasData,
+    weeklyActualDistanceKm,
+  ]);
 
   const streak = useMemo(() => calculateStreaks(runs), [runs]);
   const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
@@ -782,6 +905,7 @@ export default function ProfileDashboard() {
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
+    { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
   ];
 
   return (
@@ -898,43 +1022,21 @@ export default function ProfileDashboard() {
         </section>
 
         {loadState === 'ready' && (
-          <section className="runner-dashboard-brand-carousel">
+          <section className="runner-dashboard-brand-carousel" aria-label={t('profile.dashboard_window_active')}>
             <div className="runner-dashboard-brand-inner">
-              <div className="runner-dashboard-brand-copy-carousel">
-                {[
-                  t('profile.brand_carousel_1'),
-                  t('profile.brand_carousel_2'),
-                  t('profile.brand_carousel_3'),
-                ].map((msg, i) => (
-                  <p key={i} className={`runner-dashboard-brand-msg${brandMsgIndex === i ? ' is-active' : ''}`}>
-                    {msg}
-                  </p>
+              <div className="runner-dashboard-brand-preview-copy">
+                <span>{t('profile.dashboard_window_active')}</span>
+                <h2>{readiness.label}</h2>
+                <p>{readiness.copy}</p>
+              </div>
+              <div className="runner-dashboard-brand-preview-grid">
+                {dashboardQuickPreview.map((item) => (
+                  <article key={item.key} className={`runner-dashboard-brand-preview-card is-${item.key}`}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <em>{item.detail}</em>
+                  </article>
                 ))}
-              </div>
-              <div className="runner-dashboard-brand-real-stats">
-                {totalRuns > 0 ? (
-                  <>
-                    <div>
-                      <strong>{totalRuns}</strong>
-                      <span>{lang === 'zh-CN' ? '次跑步记录' : 'runs'}</span>
-                    </div>
-                    <div>
-                      <strong>{formatDistance(totalDistanceKm, 1, lang, unit)}</strong>
-                      <span>{lang === 'zh-CN' ? '总距离' : 'total distance'}</span>
-                    </div>
-                    <div>
-                      <strong>{profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'}</strong>
-                      <span>{t('profile.vo2_unit_short')}</span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="runner-dashboard-brand-stats-empty">{t('profile.brand_carousel_subtitle')}</p>
-                )}
-              </div>
-              <div className="runner-dashboard-brand-dots" aria-hidden="true">
-                <span className={brandMsgIndex === 0 ? 'is-active' : ''} />
-                <span className={brandMsgIndex === 1 ? 'is-active' : ''} />
-                <span className={brandMsgIndex === 2 ? 'is-active' : ''} />
               </div>
             </div>
           </section>
