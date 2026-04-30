@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 100" role="img" aria-label="Do-win logo">
+  <text x="13" y="43" fill="#050505" font-family="Arial Black,Arial,sans-serif" font-size="38" font-style="italic" font-weight="900">Do-win</text>
+  <circle cx="67" cy="31" r="10" fill="#df0512"/>
+  <path fill="#df0512" d="M41 85c14-24 48-37 116-42l-4 18c-45 2-82 8-112 24Z"/>
+  <path fill="#df0512" d="M53 83c10-13 24-22 43-28-13 10-22 19-29 31l-14-3Z"/>
+  <path fill="#df0512" d="M76 87c8-12 18-21 32-29-7 12-12 21-15 30l-17-1Z"/>
+</svg>
