@@ -3,6 +3,7 @@ package com.hermes.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -83,6 +85,30 @@ RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtr
         assertThatThrownBy(() -> service.extractRoutePath("C:\\maps\\broken-course.png"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mask generation failed");
+    }
+
+    @Test
+    void extractRoutePathTimesOutAndDestroysPythonRouteExtraction() throws Exception {
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+        when(qwenRouteParameterClient.extractRouteParameters("C:\\maps\\slow-course.png", null, null, null, null))
+                .thenReturn(new RouteParametersDTO(
+                        "#CC3311",
+                        List.of("start", "turn one", "turn two", "finish")
+                ));
+        TimeoutProcess process = new TimeoutProcess();
+
+        RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtractionService(
+                qwenRouteParameterClient,
+                new ObjectMapper(),
+                new PythonVenvResolver("", ""),
+                process
+        );
+        ReflectionTestUtils.setField(service, "extractionTimeoutSeconds", 1L);
+
+        assertThatThrownBy(() -> service.extractRoutePath("C:\\maps\\slow-course.png"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Python route extraction timed out");
+        assertThat(process.destroyedForcibly()).isTrue();
     }
 
     @Test
@@ -184,7 +210,7 @@ RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtr
         assertThat(service.command()).containsSubsequence("--route-hex-color", "#D00000");
         assertThat(result.routeParameters().routeHexColor()).isEqualTo("#D71920");
         assertThat(result.routeParameters().anchorPoints())
-                .containsExactly("Osaka Castle Park", "Osaka City Hall", "Kyocera Dome Osaka", "INTEX Osaka");
+                .containsExactly("Osaka Castle Park", "Osaka City Hall", "Kyocera Dome Osaka", "Nakanoshima Park");
         verify(qwenRouteParameterClient, never())
                 .extractRouteParameters(imagePath.toString(), "Osaka Marathon", "Osaka", "Japan", 42.195);
     }
@@ -200,18 +226,45 @@ RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtr
                 new ObjectMapper(),
                 new PythonVenvResolver("python-custom", "backend/src/main/resources/python/extract_route_path.py"),
                 new FakeProcess("""
-                        {"routeHexColor":"#173C89","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12}
+                        {"routeHexColor":"#FDD835","routeSource":"target","points":[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13]],"pointCount":12,"maskPixelCount":120,"skeletonPixelCount":12,"candidateErrors":["palette:#1E88E5: maximum recursion depth exceeded"]}
                         """, "", 0)
         );
 
         RoutePathExtractionResultDTO result = service.extractRoutePath(imagePath.toString(), "Boston Marathon", "Boston", "United States", 42.195);
 
-        assertThat(service.command()).containsSubsequence("--route-hex-color", "#173C89");
-        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#173C89");
+        assertThat(service.command()).containsSubsequence("--route-hex-color", "#FDD835");
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#FDD835");
+        assertThat(result.routeSource()).isEqualTo("target");
+        assertThat(result.candidateErrors()).contains("palette:#1E88E5: maximum recursion depth exceeded");
         assertThat(result.routeParameters().anchorPoints())
                 .containsExactly("Hopkinton", "Framingham", "Wellesley", "Finish");
         verify(qwenRouteParameterClient, never())
                 .extractRouteParameters(imagePath.toString(), "Boston Marathon", "Boston", "United States", 42.195);
+    }
+
+    @Test
+    void extractRoutePathSelectsYellowRouteFromOfficialBostonFixture(@TempDir Path tempDir) throws Exception {
+        Path python = resolveRouteExtractionPython();
+        org.junit.jupiter.api.Assumptions.assumeTrue(python != null, "route extraction Python venv unavailable");
+        Path fixture = tempDir.resolve("boston-official-course-map.gif");
+        try (InputStream inputStream = MarathonRouteExtractionServiceTests.class.getResourceAsStream("/course-maps/boston-official-course-map.gif")) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(inputStream != null, "Boston course-map fixture unavailable");
+            Files.copy(inputStream, fixture);
+        }
+        QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
+        MarathonRouteExtractionService service = new MarathonRouteExtractionService(qwenRouteParameterClient, new ObjectMapper());
+        ReflectionTestUtils.setField(service, "pythonExecutable", python.toString());
+        ReflectionTestUtils.setField(service, "pythonScriptPath", Path.of("src", "main", "resources", "python", "extract_route_path.py").toString());
+        ReflectionTestUtils.setField(service, "extractionTimeoutSeconds", 30L);
+
+        RoutePathExtractionResultDTO result = service.extractRoutePath(fixture.toString(), "Boston Marathon", "Boston", "United States", 42.195);
+
+        assertThat(result.routeParameters().routeHexColor()).isEqualTo("#FDD835");
+        assertThat(result.routeSource()).isEqualTo("target");
+        assertThat(result.pointCount()).isGreaterThan(1_000);
+        assertThat(result.candidateErrors()).isEmpty();
+        verify(qwenRouteParameterClient, never())
+                .extractRouteParameters(fixture.toString(), "Boston Marathon", "Boston", "United States", 42.195);
     }
 
     @Test
@@ -283,6 +336,20 @@ RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtr
                 );
     }
 
+    private static Path resolveRouteExtractionPython() {
+        for (Path candidate : List.of(
+                Path.of(".venv", "Scripts", "python.exe"),
+                Path.of("backend", ".venv", "Scripts", "python.exe"),
+                Path.of(".venv", "bin", "python"),
+                Path.of("backend", ".venv", "bin", "python")
+        )) {
+            if (Files.exists(candidate)) {
+                return candidate.toAbsolutePath();
+            }
+        }
+        return null;
+    }
+
 private static final class RecordingMarathonRouteExtractionService extends MarathonRouteExtractionService {
         private final Process process;
         private List<String> command;
@@ -294,7 +361,9 @@ private static final class RecordingMarathonRouteExtractionService extends Marat
                 PythonVenvResolver pythonVenvResolver,
                 Process process
         ) {
-            super(qwenRouteParameterClient, objectMapper, pythonVenvResolver);
+            super(qwenRouteParameterClient, objectMapper);
+            ReflectionTestUtils.setField(this, "pythonExecutable", pythonVenvResolver.resolvePythonCommand("extract_route_path.py"));
+            ReflectionTestUtils.setField(this, "pythonScriptPath", pythonVenvResolver.resolveScriptPath("extract_route_path.py"));
             this.process = process;
         }
 
@@ -362,6 +431,60 @@ private static final class RecordingMarathonRouteExtractionService extends Marat
         @Override
         public boolean isAlive() {
             return false;
+        }
+    }
+
+    private static final class TimeoutProcess extends Process {
+        private boolean destroyedForcibly;
+
+        @Override
+        public OutputStream getOutputStream() {
+            return OutputStream.nullOutputStream();
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return new ByteArrayInputStream(new byte[0]);
+        }
+
+        @Override
+        public InputStream getErrorStream() {
+            return new ByteArrayInputStream(new byte[0]);
+        }
+
+        @Override
+        public int waitFor() {
+            return 0;
+        }
+
+        @Override
+        public boolean waitFor(long timeout, TimeUnit unit) {
+            return false;
+        }
+
+        @Override
+        public int exitValue() {
+            return 0;
+        }
+
+        @Override
+        public void destroy() {
+            destroyedForcibly = true;
+        }
+
+        @Override
+        public Process destroyForcibly() {
+            destroyedForcibly = true;
+            return this;
+        }
+
+        @Override
+        public boolean isAlive() {
+            return !destroyedForcibly;
+        }
+
+        private boolean destroyedForcibly() {
+            return destroyedForcibly;
         }
     }
 }
