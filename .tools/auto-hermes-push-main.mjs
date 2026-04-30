@@ -160,6 +160,7 @@ export function buildAutoHermesPushMainPlan(rawArgs = {}) {
     steps: [
       step("repo", "Verify this is a Git repository and the publish remote is the Hermes main repo.", `${git} config --get remote.${args.remoteName}.url`),
       step("identity", "Verify git identity before creating publish commits.", `${git} config user.name && ${git} config user.email`),
+      step("source-branch", "Verify the current branch is a PR source branch, not main.", `${git} branch --show-current`),
       step("readme-diagrams", "Always refresh README, /auto-hermes workflow diagram, SaaS diagram, and AI agents diagram.", `${node} .tools/refresh-architecture-diagrams.mjs --write --force`),
       step("static-security", "Run the repo-aware secret, PII, API-key, config, and leak detector before publishing.", `${node} .tools/auto-hermes-security.mjs --mode audit --write --json --command-name auto-hermes-push-main`),
       step("frontend", "Run frontend lint before publish.", "cd frontend && npm run lint"),
@@ -239,6 +240,22 @@ function assertIdentity(result, userName, userEmail) {
   return true;
 }
 
+function assertSourceBranch(result, sourceBranch, targetBranch) {
+  const normalizedSource = String(sourceBranch || "").trim();
+  result.sourceBranch = normalizedSource;
+  if (!normalizedSource) {
+    result.status = "blocked";
+    result.reason = "Cannot create a PR from a detached HEAD or unnamed branch. Switch to a feature branch first.";
+    return false;
+  }
+  if (normalizedSource === targetBranch) {
+    result.status = "blocked";
+    result.reason = `Cannot create a PR from ${targetBranch} into itself. Switch to a feature branch first.`;
+    return false;
+  }
+  return true;
+}
+
 async function runSecurityGate(rootDir, commandName) {
   const { report } = await runAutoHermesSecurity({
     rootDir,
@@ -264,6 +281,48 @@ function markStep(result, id, status, extra = {}) {
   if (item) Object.assign(item, { status }, extra);
 }
 
+async function runPrePublishGates(args, result, runCommand) {
+  markStep(result, "readme-diagrams", "running");
+  const diagramRefresh = runArchitectureDiagramRefresh({ rootDir: args.rootDir, force: true, write: true, changedFiles: ["README.md"] });
+  const diagramOutputs = diagramRefresh?.result?.outputs || [];
+  if (args.execute && diagramOutputs.length) {
+    runGit(runCommand, args.rootDir, ["add", "--", ...diagramOutputs]);
+  }
+  markStep(result, "readme-diagrams", "completed");
+
+  if (!args.skipChecks) {
+    markStep(result, "static-security", "running");
+    const security = await runSecurityGate(args.rootDir, "auto-hermes-push-main");
+    result.securityReportId = security.report.runId;
+    result.blockingFindings = security.blockingFindings;
+    if (result.blockingFindings.length) {
+      result.status = "blocked";
+      result.reason = "Security gate found publish-blocking secret, PII, API, or config leak findings.";
+      markStep(result, "static-security", "blocked");
+      return false;
+    }
+    markStep(result, "static-security", "completed");
+
+    markStep(result, "frontend", "running");
+    runNpmScript(runCommand, path.join(args.rootDir, "frontend"), "lint");
+    markStep(result, "frontend", "completed");
+
+    markStep(result, "backend", "running");
+    runCommand(process.platform === "win32" ? "cmd" : "./mvnw", process.platform === "win32"
+      ? ["/c", "mvnw.cmd", "-q", "-DskipTests", "compile"]
+      : ["-q", "-DskipTests", "compile"], { cwd: path.join(args.rootDir, "backend") });
+    markStep(result, "backend", "completed");
+
+    markStep(result, "docker", "running");
+    runCommand("node", [resolveFromRoot(args.rootDir, ".tools/auto-hermes-docker-gate.mjs"), "--write"], { cwd: args.rootDir });
+    markStep(result, "docker", "completed");
+  } else {
+    ["static-security", "frontend", "backend", "docker"].forEach((id) => markStep(result, id, "skipped"));
+  }
+
+  return true;
+}
+
 export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
   const providedObject = !Array.isArray(rawArgs);
   const args = providedObject ? { ...parseArgs([]), ...rawArgs } : parseArgs(rawArgs);
@@ -272,7 +331,7 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
   const result = {
     generatedAt: new Date().toISOString(),
     status: args.execute ? "running" : "dry-run",
-    reason: args.execute ? "Executing guarded push-main workflow." : "Dry run only. Pass --execute to write branches and push.",
+    reason: args.execute ? "Executing guarded push-main workflow." : "Dry run validates local publish gates only. Pass --execute to commit, push the branch, and create a PR.",
     execute: Boolean(args.execute),
     remoteName: args.remoteName,
     targetRemoteUrl: args.targetRemoteUrl,
@@ -307,7 +366,19 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
       markStep(result, "identity", "running");
       if (!assertIdentity(result, metadata.userName, metadata.userEmail)) return finish(args, result);
       markStep(result, "identity", "completed");
+
+      markStep(result, "source-branch", "running");
+      if (!assertSourceBranch(result, metadata.sourceBranch, args.targetBranch)) {
+        markStep(result, "source-branch", "blocked");
+        return finish(args, result);
+      }
+      markStep(result, "source-branch", "completed");
+
+      const gatesPassed = await runPrePublishGates(args, result, runCommand);
+      if (!gatesPassed) return finish(args, result);
+      ["commit", "fetch", "push-branch", "create-pr"].forEach((id) => markStep(result, id, "skipped", { note: "Dry-run does not commit, push, or create a PR." }));
       result.status = "dry-run";
+      result.reason = "Dry run passed local publish gates without pushing or creating a PR.";
       return finish(args, result);
     }
 
@@ -324,40 +395,15 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
     if (!assertIdentity(result, userName, userEmail)) return finish(args, result);
     markStep(result, "identity", "completed");
 
-
-    markStep(result, "readme-diagrams", "running");
-    runArchitectureDiagramRefresh({ rootDir: args.rootDir, force: true, changedFiles: ["README.md"] });
-    markStep(result, "readme-diagrams", "completed");
-
-    if (!args.skipChecks) {
-      markStep(result, "static-security", "running");
-      const security = await runSecurityGate(args.rootDir, "auto-hermes-push-main");
-      result.securityReportId = security.report.runId;
-      result.blockingFindings = security.blockingFindings;
-      if (result.blockingFindings.length) {
-        result.status = "blocked";
-        result.reason = "Security gate found publish-blocking secret, PII, API, or config leak findings.";
-        markStep(result, "static-security", "blocked");
-        return finish(args, result);
-      }
-      markStep(result, "static-security", "completed");
-
-      markStep(result, "frontend", "running");
-      runNpmScript(runCommand, path.join(args.rootDir, "frontend"), "lint");
-      markStep(result, "frontend", "completed");
-
-      markStep(result, "backend", "running");
-      runCommand(process.platform === "win32" ? "cmd" : "./mvnw", process.platform === "win32"
-        ? ["/c", "mvnw.cmd", "-q", "-DskipTests", "compile"]
-        : ["-q", "-DskipTests", "compile"], { cwd: path.join(args.rootDir, "backend") });
-      markStep(result, "backend", "completed");
-
-      markStep(result, "docker", "running");
-      runCommand("node", [resolveFromRoot(args.rootDir, ".tools/auto-hermes-docker-gate.mjs"), "--write"], { cwd: args.rootDir });
-      markStep(result, "docker", "completed");
-    } else {
-      ["static-security", "frontend", "backend", "docker"].forEach((id) => markStep(result, id, "skipped"));
+    markStep(result, "source-branch", "running");
+    if (!assertSourceBranch(result, result.sourceBranch, args.targetBranch)) {
+      markStep(result, "source-branch", "blocked");
+      return finish(args, result);
     }
+    markStep(result, "source-branch", "completed");
+
+    const gatesPassed = await runPrePublishGates(args, result, runCommand);
+    if (!gatesPassed) return finish(args, result);
 
     markStep(result, "commit", "running");
     const statusAfterDocs = runGit(runCommand, args.rootDir, ["status", "--short", "--untracked-files=all"]);
@@ -375,9 +421,7 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
 
     markStep(result, "push-branch", "running");
     const currentBranch = runGit(runCommand, args.rootDir, ["branch", "--show-current"]);
-    if (currentBranch === args.targetBranch) {
-      result.status = "blocked";
-      result.reason = `Cannot create a PR from ${args.targetBranch} into itself. Switch to a feature branch first.`;
+    if (!assertSourceBranch(result, currentBranch, args.targetBranch)) {
       markStep(result, "push-branch", "blocked");
       return finish(args, result);
     }

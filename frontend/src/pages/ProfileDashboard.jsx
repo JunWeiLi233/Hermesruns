@@ -411,15 +411,17 @@ function normalizeProfileDashboardPayload(payload) {
     coachToday: payload.coachToday ?? payload.today ?? null,
     personalRecords: payload.personalRecords ?? payload.personalRecordSummary ?? null,
     races: payload.races ?? [],
+    shoes: Array.isArray(payload.shoes) ? payload.shoes : [],
     musclePlan: payload.musclePlan ?? payload.trainingMusclePlan ?? null,
     quota: payload.quota ?? payload.subscriptionState ?? null,
   };
 }
 
 async function loadProfileDashboardFallbackData() {
-  const [profileResult, activitiesResult] = await Promise.allSettled([
+  const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
     apiJson('/api/profile/me'),
     apiJson('/api/activities'),
+    apiJson('/api/shoes'),
   ]);
 
   if (profileResult.status !== 'fulfilled') {
@@ -430,6 +432,7 @@ async function loadProfileDashboardFallbackData() {
     source: 'fallback',
     profile: profileResult.value,
     runs: sortRunsByMostRecent(activitiesResult.status === 'fulfilled' ? activitiesResult.value : []),
+    shoes: shoesResult.status === 'fulfilled' && Array.isArray(shoesResult.value) ? shoesResult.value : [],
   };
 }
 
@@ -533,7 +536,6 @@ export default function ProfileDashboard() {
   const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
   const [musclePlan, setMusclePlan] = useState(null);
   const [subscriptionState, setSubscriptionState] = useState(null);
-  const [brandMsgIndex, setBrandMsgIndex] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -690,13 +692,6 @@ export default function ProfileDashboard() {
     }
   }, [isAuthenticated, t]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBrandMsgIndex((prev) => (prev + 1) % 3);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
-
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const currentDateLine = useMemo(() => {
     const now = new Date();
@@ -710,12 +705,62 @@ export default function ProfileDashboard() {
   const todayBundle = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
+  const weeklyActualDistanceKm = useMemo(
+    () => weeklyBars.reduce((sum, day) => sum + Number(day.actual || 0), 0),
+    [weeklyBars],
+  );
 
   const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
   const totalRuns = runs.length;
   const totalDistanceKm = useMemo(() => runs.reduce((sum, r) => sum + resolveRunDistanceKm(r), 0), [runs]);
+  const dashboardQuickPreview = useMemo(() => {
+    const vdotValue = profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--';
+    const vdotTrendDetail = profileVdot.representativeVdot > 0 && vdotTrend.hasData
+      ? `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)} ${t(`profile.vdot_trend_${vdotTrend.direction}`)}`
+      : t('profile.dashboard_window_active');
+
+    return [
+      {
+        key: 'readiness',
+        label: t('profile.dashboard_readiness_status'),
+        value: `${readiness.score}%`,
+        detail: readiness.label,
+      },
+      {
+        key: 'week',
+        label: t('profile.dashboard_weekly_progress'),
+        value: formatDistance(weeklyActualDistanceKm, 1, lang, unit),
+        detail: t('profile.dashboard_actual'),
+      },
+      {
+        key: 'distance',
+        label: t('profile.dashboard_progression_distance'),
+        value: formatDistance(totalDistanceKm, 1, lang, unit),
+        detail: `${totalRuns} ${t('profile.dashboard_progression_sessions')}`,
+      },
+      {
+        key: 'vo2',
+        label: t('profile.dashboard_vo2_est'),
+        value: vdotValue,
+        detail: vdotTrendDetail,
+      },
+    ];
+  }, [
+    lang,
+    profileVdot.representativeVdot,
+    readiness.label,
+    readiness.score,
+    t,
+    totalDistanceKm,
+    totalRuns,
+    unit,
+    vdotTrend.delta,
+    vdotTrend.direction,
+    vdotTrend.hasData,
+    weeklyActualDistanceKm,
+  ]);
 
   const streak = useMemo(() => calculateStreaks(runs), [runs]);
   const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
@@ -860,6 +905,7 @@ export default function ProfileDashboard() {
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
+    { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
   ];
 
   return (
@@ -976,43 +1022,21 @@ export default function ProfileDashboard() {
         </section>
 
         {loadState === 'ready' && (
-          <section className="runner-dashboard-brand-carousel">
+          <section className="runner-dashboard-brand-carousel" aria-label={t('profile.dashboard_window_active')}>
             <div className="runner-dashboard-brand-inner">
-              <div className="runner-dashboard-brand-copy-carousel">
-                {[
-                  t('profile.brand_carousel_1'),
-                  t('profile.brand_carousel_2'),
-                  t('profile.brand_carousel_3'),
-                ].map((msg, i) => (
-                  <p key={i} className={`runner-dashboard-brand-msg${brandMsgIndex === i ? ' is-active' : ''}`}>
-                    {msg}
-                  </p>
+              <div className="runner-dashboard-brand-preview-copy">
+                <span>{t('profile.dashboard_window_active')}</span>
+                <h2>{readiness.label}</h2>
+                <p>{readiness.copy}</p>
+              </div>
+              <div className="runner-dashboard-brand-preview-grid">
+                {dashboardQuickPreview.map((item) => (
+                  <article key={item.key} className={`runner-dashboard-brand-preview-card is-${item.key}`}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <em>{item.detail}</em>
+                  </article>
                 ))}
-              </div>
-              <div className="runner-dashboard-brand-real-stats">
-                {totalRuns > 0 ? (
-                  <>
-                    <div>
-                      <strong>{totalRuns}</strong>
-                      <span>{lang === 'zh-CN' ? '次跑步记录' : 'runs'}</span>
-                    </div>
-                    <div>
-                      <strong>{formatDistance(totalDistanceKm, 1, lang, unit)}</strong>
-                      <span>{lang === 'zh-CN' ? '总距离' : 'total distance'}</span>
-                    </div>
-                    <div>
-                      <strong>{profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'}</strong>
-                      <span>{t('profile.vo2_unit_short')}</span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="runner-dashboard-brand-stats-empty">{t('profile.brand_carousel_subtitle')}</p>
-                )}
-              </div>
-              <div className="runner-dashboard-brand-dots" aria-hidden="true">
-                <span className={brandMsgIndex === 0 ? 'is-active' : ''} />
-                <span className={brandMsgIndex === 1 ? 'is-active' : ''} />
-                <span className={brandMsgIndex === 2 ? 'is-active' : ''} />
               </div>
             </div>
           </section>

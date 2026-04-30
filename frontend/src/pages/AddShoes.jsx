@@ -10,11 +10,12 @@ import HermesLogo from '../components/HermesLogo';
 import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import shoeCatalog from '../data/shoeCatalog';
-import { buildSeriesCatalog } from '../utils/addShoeCatalog.js';
+import { buildSeriesCatalog, readLocalSeriesCatalog, writeLocalSeriesCatalog } from '../utils/addShoeCatalog.js';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
+const FEATURED_DECK_SECONDARY_COUNT = 8;
 
 function normalizeBrandKey(brand) {
   return (brand || '').toString().trim().toLowerCase().replace(/[\s!.,'"-]+/g, '');
@@ -152,6 +153,7 @@ export default function AddShoes() {
   const [formPrimary, setFormPrimary] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [showExtraBrands, setShowExtraBrands] = useState(false);
   const avatarMenuRef = useRef(null);
 
   useEffect(() => {
@@ -171,11 +173,14 @@ export default function AddShoes() {
       try {
         const [catalogData, shoesData] = await Promise.all([apiJson('/api/shoe-catalog').catch(() => shoeCatalog), apiJson('/api/shoes')]);
         const mergedCatalog = Array.isArray(catalogData) ? catalogData : mergeCatalog(catalogData);
-        setCatalog(buildSeriesCatalog(mergedCatalog));
+        const localSeriesCatalog = readLocalSeriesCatalog();
+        const seriesCatalog = writeLocalSeriesCatalog(mergedCatalog);
+        setCatalog(seriesCatalog.length ? seriesCatalog : localSeriesCatalog.length ? localSeriesCatalog : buildSeriesCatalog(shoeCatalog));
         setShoes(Array.isArray(shoesData) ? shoesData : []);
         setLoadState('ready');
       } catch {
-        setCatalog(buildSeriesCatalog(shoeCatalog));
+        const localSeriesCatalog = readLocalSeriesCatalog();
+        setCatalog(localSeriesCatalog.length ? localSeriesCatalog : buildSeriesCatalog(shoeCatalog));
         setShoes([]);
         setLoadState('error');
       }
@@ -203,7 +208,48 @@ export default function AddShoes() {
     if (!browserBrandKey) setBrowserBrandKey(browserBrands[0].brand);
   }, [browserBrandKey, browserBrands, preselectedBrand]);
 
-  const browserBrandsToShow = useMemo(() => browserBrands, [browserBrands]);
+  const browserBrandsToShow = useMemo(() => {
+    const items = [];
+    const seen = new Set();
+    const addBrand = (brand) => {
+      if (!brand?.brand || seen.has(brand.brand)) return;
+      items.push(brand);
+      seen.add(brand.brand);
+    };
+    addBrand(browserBrand);
+    for (const brand of browserBrands) {
+      addBrand(brand);
+      if (items.length >= FEATURED_DECK_SECONDARY_COUNT + 1) break;
+    }
+    return items;
+  }, [browserBrand, browserBrands]);
+  const extraBrands = useMemo(() => {
+    const visible = new Set(browserBrandsToShow.map((brand) => brand.brand));
+    const seen = new Set(visible);
+    const byKey = new Map(browserBrands.map((brand) => [normalizeBrandKey(brand.brand), brand]));
+    const expanded = [];
+    const addBrand = (brand) => {
+      if (!brand?.brand || seen.has(brand.brand)) return;
+      expanded.push(brand);
+      seen.add(brand.brand);
+    };
+
+    for (const catalogBrand of shoeCatalog) {
+      const fromCatalogOrder = byKey.get(normalizeBrandKey(catalogBrand.brand));
+      addBrand(fromCatalogOrder);
+    }
+    for (const brand of browserBrands) {
+      addBrand(brand);
+    }
+    return expanded;
+  }, [browserBrands, browserBrandsToShow]);
+
+  useEffect(() => {
+    if (!browserBrand) return;
+    if (extraBrands.some((brand) => brand.brand === browserBrand.brand)) {
+      setShowExtraBrands(true);
+    }
+  }, [browserBrand, extraBrands]);
   const browserCategoryOptions = useMemo(() => {
     const source = browserBrand?.models || [];
     return ['all', ...Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)))];
@@ -451,6 +497,39 @@ export default function AddShoes() {
                       })}
                     </div>
                   </div>
+                  {extraBrands.length ? (
+                    <div className="add-shoes-brand-expand-shell">
+                      <button
+                        type="button"
+                        className={cx('add-shoes-brand-expand-btn', showExtraBrands && 'is-open')}
+                        onClick={() => setShowExtraBrands((current) => !current)}
+                        aria-expanded={showExtraBrands}
+                      >
+                        <span>{showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}</span>
+                        <AppIcon name={showExtraBrands ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
+                      </button>
+                      {showExtraBrands ? (
+                        <div className="add-shoes-brand-expand-grid">
+                          {extraBrands.map((brand) => {
+                            const isActive = browserBrand?.brand === brand.brand;
+                            return (
+                              <button
+                                key={`extra-${brand.brand}`}
+                                type="button"
+                                className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
+                                onClick={() => handleBrandPick(brand)}
+                                aria-pressed={isActive ? 'true' : 'false'}
+                                aria-label={localizeShoeBrand(brand.brand, lang)}
+                              >
+                                <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
+                                <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </section>
 
                 <section className="add-shoes-step add-shoes-step-card add-shoes-model-board">
