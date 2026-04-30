@@ -184,6 +184,7 @@ function Get-PathPolicy {
         '^\.gitignore$',
         '^design\.md$',
         '^DESIGN_VERSIONS\.md$',
+        '^\.github/prompts/auto-hermes-push-main\.prompt\.md$',
         '^TICKET\.md$',
         '^frontend/(src|public|package\.json|package-lock\.json|vite\.config.*|eslint\.config.*|scripts/)',
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',

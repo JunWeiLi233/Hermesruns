@@ -27,8 +27,20 @@ assert.match(
 
 assert.match(
   addShoesSource,
-  /EXTRA_BRAND_KEYS\s*=\s*\['lining', 'anta', 'brooks', 'hoka'\]/,
-  'Add Shoes should explicitly support the requested extra brands in the expandable section.',
+  /FEATURED_DECK_SECONDARY_COUNT\s*=\s*8/,
+  'Add Shoes should show eight secondary brand cards next to the active featured brand.',
+);
+
+assert.match(
+  addShoesSource,
+  /for\s*\(\s*const\s+catalogBrand\s+of\s+shoeCatalog\s*\)/,
+  'Add Shoes expandable brand section should derive more running brands from shoeCatalog order.',
+);
+
+assert.doesNotMatch(
+  addShoesSource,
+  /EXTRA_BRAND_KEYS/,
+  'Add Shoes should not limit expanded brands to a short hard-coded key list.',
 );
 
 assert.match(
