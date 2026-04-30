@@ -225,46 +225,110 @@ function pickCurrentGear(shoes) {
     || null;
 }
 
-function getRouteZoneLabel(zoneKey, lang) {
-  const labels = lang === 'zh-CN'
-    ? {
-      core: '核心路线',
-      north: '北向路线',
-      south: '南向路线',
-      east: '东向路线',
-      west: '西向路线',
-      'north-east': '东北路线',
-      'north-west': '西北路线',
-      'south-east': '东南路线',
-      'south-west': '西南路线',
-    }
-    : {
-      core: 'Core route',
-      north: 'North route',
-      south: 'South route',
-      east: 'East route',
-      west: 'West route',
-      'north-east': 'Northeast route',
-      'north-west': 'Northwest route',
-      'south-east': 'Southeast route',
-      'south-west': 'Southwest route',
-    };
-
-  return labels[zoneKey] || labels.core;
-}
-
-function getRouteAnchoredRunsLabel(routeRecommendation, lang) {
-  if (!routeRecommendation) {
-    return lang === 'zh-CN' ? '等待路线记录' : 'Waiting for route history';
+function normalizeRouteWaypoint(point) {
+  if (Array.isArray(point) && point.length >= 2) {
+    const lat = Number(point[0]);
+    const lng = Number(point[1]);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
   }
-  return lang === 'zh-CN'
-    ? `在这片区域跑过 ${routeRecommendation.activityCount} 次`
-    : `${routeRecommendation.activityCount} runs anchored here`;
+  const lat = Number(point?.lat ?? point?.latitude);
+  const lng = Number(point?.lng ?? point?.lon ?? point?.longitude);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-function getRouteConfidenceLabel(routeRecommendation, lang, unit) {
+function buildPlannedRoutePreview(waypoints) {
+  const points = (Array.isArray(waypoints) ? waypoints : [])
+    .map(normalizeRouteWaypoint)
+    .filter(Boolean);
+  if (points.length < 2) return null;
+
+  const minLat = Math.min(...points.map((point) => point.lat));
+  const maxLat = Math.max(...points.map((point) => point.lat));
+  const minLng = Math.min(...points.map((point) => point.lng));
+  const maxLng = Math.max(...points.map((point) => point.lng));
+  const latSpan = Math.max(0.00012, maxLat - minLat);
+  const lngSpan = Math.max(0.00012, maxLng - minLng);
+  const padding = 10;
+  const scale = 100 - padding * 2;
+  const projected = points.map((point) => ({
+    x: padding + ((point.lng - minLng) / lngSpan) * scale,
+    y: padding + ((maxLat - point.lat) / latSpan) * scale,
+  }));
+  const path = projected
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(' ');
+  const start = projected[0];
+  const finish = projected[projected.length - 1];
+  return {
+    path,
+    startX: start.x,
+    startY: start.y,
+    finishX: finish.x,
+    finishY: finish.y,
+  };
+}
+
+function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
+  const candidates = (Array.isArray(plannedRoutes) ? plannedRoutes : [])
+    .map((route) => {
+      const actualDistanceKm = Number(route?.actualDistanceKm || 0);
+      const routeTargetDistanceKm = Number(route?.targetDistanceKm || actualDistanceKm || 0);
+      const preview = buildPlannedRoutePreview(route?.waypoints);
+      if (!preview || actualDistanceKm <= 0) return null;
+      const desiredDistanceKm = Number(targetDistanceKm || routeTargetDistanceKm || actualDistanceKm);
+      const distanceGapKm = Math.abs(actualDistanceKm - desiredDistanceKm);
+      const distanceAccuracy = Number(route?.distanceAccuracy || (desiredDistanceKm > 0 ? actualDistanceKm / desiredDistanceKm : 1));
+      const createdAt = new Date(route?.createdAt || 0).getTime();
+      return {
+        zoneKey: 'core',
+        confidence: distanceGapKm <= Math.max(1, desiredDistanceKm * 0.12) ? 'distance-match' : 'near-match',
+        targetDistanceKm: desiredDistanceKm,
+        representativeDistanceKm: actualDistanceKm,
+        activityCount: 1,
+        preview,
+        source: 'planner',
+        actualDistanceKm,
+        distanceGapKm,
+        distanceAccuracy,
+        elevationGainMeters: Number(route?.elevationGainMeters || 0),
+        estimatedTimeMinutes: Number(route?.estimatedTimeMinutes || 0),
+        elevationPreference: String(route?.elevationPreference || 'rolling').toLowerCase(),
+        createdAt: Number.isFinite(createdAt) ? createdAt : 0,
+      };
+    })
+    .filter(Boolean);
+
+  return candidates.sort((a, b) => (
+    a.distanceGapKm - b.distanceGapKm
+      || b.createdAt - a.createdAt
+  ))[0] || null;
+}
+
+function getRouteElevationPreferenceLabel(preference, s) {
+  switch (String(preference || '').toLowerCase()) {
+    case 'flat':
+      return s('route_elevation_flat');
+    case 'hilly':
+      return s('route_elevation_hilly');
+    default:
+      return s('route_elevation_rolling');
+  }
+}
+
+function getRouteZoneLabel(zoneKey, s) {
+  return s(`routeZone.${zoneKey}`);
+}
+
+function getRouteAnchoredRunsLabel(routeRecommendation, s) {
   if (!routeRecommendation) {
-    return lang === 'zh-CN' ? '等待路线记录' : 'Waiting for route history';
+    return s('routeAnchoredRuns.waiting');
+  }
+  return s('routeAnchoredRuns.runs_anchored', { count: routeRecommendation.activityCount });
+}
+
+function getRouteConfidenceLabel(routeRecommendation, s, unit, lang) {
+  if (!routeRecommendation) {
+    return s('routeConfidence.waiting');
   }
 
   const targetDistance = Number(routeRecommendation.targetDistanceKm || 0) > 0
@@ -272,22 +336,16 @@ function getRouteConfidenceLabel(routeRecommendation, lang, unit) {
     : null;
 
   if (!targetDistance) {
-    return lang === 'zh-CN' ? '根据最近跑步记录推荐' : 'Built from your recent run history';
+    return s('routeConfidence.built_from_history');
   }
 
   switch (routeRecommendation.confidence) {
     case 'distance-match':
-      return lang === 'zh-CN'
-        ? `匹配到今日 ${targetDistance} 计划`
-        : `Matched to today's ${targetDistance} plan`;
+      return s('routeConfidence.distance_match', { distance: targetDistance });
     case 'near-match':
-      return lang === 'zh-CN'
-        ? `最接近 ${targetDistance} 的最近路线`
-        : `Closest recent route to ${targetDistance}`;
+      return s('routeConfidence.near_match', { distance: targetDistance });
     default:
-      return lang === 'zh-CN'
-        ? `先用这片最近常跑区，等待更接近 ${targetDistance} 的路线`
-        : `Best recent area while we wait for a closer ${targetDistance} match`;
+      return s('routeConfidence.best_recent', { distance: targetDistance });
   }
 }
 
@@ -306,6 +364,7 @@ export default function Schedule() {
   const [coachToday, setCoachToday] = useState(null);
   const [coachSchedule, setCoachSchedule] = useState([]);
   const [shoes, setShoes] = useState([]);
+  const [plannedRoutes, setPlannedRoutes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
 
   useEffect(() => {
@@ -319,13 +378,14 @@ export default function Schedule() {
     async function loadSchedule() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData] = await Promise.all([
+        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData, plannedRouteData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
           apiJson('/api/coach/state').catch(() => null),
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/coach/schedule?days=14').catch(() => []),
           apiJson('/api/shoes').catch(() => []),
+          apiJson('/api/route/plan/recent').catch(() => []),
         ]);
 
         if (cancelled) return;
@@ -339,6 +399,7 @@ export default function Schedule() {
         setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
         setCoachSchedule(Array.isArray(coachScheduleData) ? coachScheduleData : []);
         setShoes(Array.isArray(shoeData) ? shoeData : []);
+        setPlannedRoutes(Array.isArray(plannedRouteData) ? plannedRouteData : []);
         setLoadState('ready');
       } catch {
         if (!cancelled) {
@@ -394,9 +455,6 @@ export default function Schedule() {
     () => pickCurrentGear(shoes),
     [shoes],
   );
-  const routeRecommendation = coachToday?.routeRecommendation || null;
-  const routePreview = routeRecommendation?.preview || null;
-  const hasRoutePreview = Boolean(routePreview?.path);
 
   const activeBlock = coachState?.activeBlock || null;
   const targetBlock = useMemo(
@@ -578,16 +636,36 @@ export default function Schedule() {
   const sleepLabel = coachState?.lastSleepScore != null && coachState.lastSleepScore >= 80
     ? s('sleep_high')
     : s('sleep_moderate');
-  const routeTitle = routeRecommendation
-    ? getRouteZoneLabel(routeRecommendation.zoneKey, lang)
-    : targetBlock.name || s('default_route_name');
-  const routeAnchoredRuns = getRouteAnchoredRunsLabel(routeRecommendation, lang);
-  const routeConfidenceLabel = getRouteConfidenceLabel(routeRecommendation, lang, unit);
-  const routeTargetDistanceKm = Number(
-    routeRecommendation?.targetDistanceKm
-      || nextSession?.plannedDistanceKm
+  const targetRouteDistanceKm = Number(
+    nextSession?.plannedDistanceKm
       || coachToday?.today?.plannedDistanceKm
       || targetBlock.currentLongRunKm
+      || 0,
+  );
+  const plannedRouteRecommendation = useMemo(
+    () => selectPlannedRouteRecommendation(plannedRoutes, targetRouteDistanceKm),
+    [plannedRoutes, targetRouteDistanceKm],
+  );
+  const routeRecommendation = plannedRouteRecommendation || coachToday?.routeRecommendation || null;
+  const routeRecommendationSource = routeRecommendation?.source === 'planner' ? 'planner' : 'history';
+  const routePreview = routeRecommendation?.preview || null;
+  const hasRoutePreview = Boolean(routePreview?.path);
+  const routeTitle = routeRecommendation
+    ? routeRecommendationSource === 'planner'
+      ? s('route_planner_title')
+      : getRouteZoneLabel(routeRecommendation.zoneKey, s)
+    : targetBlock.name || s('default_route_name');
+  const routeAnchoredRuns = routeRecommendationSource === 'planner'
+    ? s('route_planner_source')
+    : getRouteAnchoredRunsLabel(routeRecommendation, s);
+  const routeConfidenceLabel = routeRecommendationSource === 'planner' && routeRecommendation?.actualDistanceKm
+    ? s('route_planner_accuracy', {
+      distance: formatDistance(routeRecommendation.actualDistanceKm, 1, lang, unit),
+    })
+    : getRouteConfidenceLabel(routeRecommendation, s, unit, lang);
+  const routeTargetDistanceKm = Number(
+    routeRecommendation?.targetDistanceKm
+      || targetRouteDistanceKm
       || 0,
   );
   const routeTargetDistanceLabel = routeTargetDistanceKm > 0
@@ -609,6 +687,17 @@ export default function Schedule() {
         ? s('phase_label', { week: targetBlock.weekIndex || 1 })
         : null,
   ].filter(Boolean);
+  const routePlannerInsights = routeRecommendationSource === 'planner'
+    ? [
+      getRouteElevationPreferenceLabel(routeRecommendation.elevationPreference, s),
+      s('route_planner_safety'),
+      routeConfidenceLabel,
+    ]
+    : [
+      routeTargetDistanceLabel ? s('route_planner_target', { distance: routeTargetDistanceLabel }) : null,
+      s('route_elevation_rolling'),
+      s('route_planner_safety_pending'),
+    ].filter(Boolean);
   const coachTargetValue = [raceTargetDistanceLabel, targetRaceDateLabel].filter(Boolean).join(' / ');
 
   if (loadState === 'loading') {
@@ -644,10 +733,11 @@ export default function Schedule() {
             { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
             { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
             { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
+    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
             { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
             { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
             { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today', active: true },
+            { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
           ].map((item) => (
             <button
               key={item.key}
@@ -826,6 +916,11 @@ export default function Schedule() {
                     <div className="schedule-plan-route-meta">
                       <span>{routeAnchoredRuns}</span>
                       <span>{routeConfidenceLabel}</span>
+                    </div>
+                    <div className="schedule-plan-route-insight" aria-label={s('route_planner_insights')}>
+                      {routePlannerInsights.map((insight) => (
+                        <span key={insight}>{insight}</span>
+                      ))}
                     </div>
                     {targetBlock.hasActiveBlock && routeTargetDistanceLabel ? (
                       <div className="schedule-plan-route-target">

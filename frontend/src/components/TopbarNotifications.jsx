@@ -57,7 +57,7 @@ function buildNotificationCopy(lang) {
 }
 
 export default function TopbarNotifications({ onOpenRuns }) {
-  const { lang } = useI18n();
+  const { t, lang } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -121,7 +121,7 @@ export default function TopbarNotifications({ onOpenRuns }) {
             <button
               type="button"
               className="runner-shell-notification-close"
-              aria-label={lang === 'zh-CN' ? '关闭通知' : 'Close notifications'}
+              aria-label={t('common.close_notifications')}
               onClick={() => setIsOpen(false)}
             >
               <AppIcon name="close" className="runner-dashboard-side-link-icon" />

@@ -13,6 +13,13 @@ export function getBackendBaseUrl() {
 export async function apiFetch(url, options = {}) {
   const baseUrl = getBackendBaseUrl();
   const headers = new Headers(options.headers || {});
+  if (!headers.has('Accept-Language')) {
+    const storedLanguage = localStorage.getItem('hermes_lang');
+    const browserLanguage = typeof navigator !== 'undefined'
+      ? navigator.languages?.[0] || navigator.language || 'en'
+      : 'en';
+    headers.set('Accept-Language', storedLanguage || browserLanguage);
+  }
   const token = localStorage.getItem('hermes_jwt');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
