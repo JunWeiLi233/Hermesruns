@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
@@ -102,6 +103,7 @@ export default function PredictionDetail() {
   const { distKey } = useParams();
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const [runs, setRuns] = useState([]);
@@ -244,7 +246,7 @@ export default function PredictionDetail() {
     plugins: {
       legend: {
         display: true,
-        labels: { color: 'rgba(232, 226, 220, 0.7)', boxWidth: 10, usePointStyle: true },
+        labels: { color: isDark ? 'rgba(232, 226, 220, 0.7)' : 'rgba(44, 47, 48, 0.7)', boxWidth: 10, usePointStyle: true },
       },
       tooltip: {
         callbacks: {
@@ -253,16 +255,16 @@ export default function PredictionDetail() {
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: 'rgba(232, 226, 220, 0.58)' } },
+      x: { grid: { display: false }, ticks: { color: isDark ? 'rgba(232, 226, 220, 0.58)' : 'rgba(44, 47, 48, 0.58)' } },
       y: {
-        grid: { color: 'rgba(232, 226, 220, 0.08)' },
+        grid: { color: isDark ? 'rgba(232, 226, 220, 0.08)' : 'rgba(44, 47, 48, 0.08)' },
         ticks: {
-          color: 'rgba(232, 226, 220, 0.58)',
+          color: isDark ? 'rgba(232, 226, 220, 0.58)' : 'rgba(44, 47, 48, 0.58)',
           callback: (value) => formatPredictedTime(Number(value) * 60),
         },
       },
     },
-  }), []);
+  }), [isDark]);
   const navItems = useMemo(
     () => getRunnerShellNavItems({ t, lang, activeKey: 'analysis' }),
     [t, lang],
