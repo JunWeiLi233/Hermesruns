@@ -26,13 +26,49 @@ function filterBrandToSeriesModels(entry) {
 
   return {
     ...entry,
-    models: filteredModels,
+    models: filteredModels.map((item) => ({
+      ...item,
+      brand: item.brand || entry?.brand || '',
+    })),
   };
 }
 
 export function buildSeriesCatalog(catalog) {
   if (!Array.isArray(catalog)) return [];
   return catalog.map((entry) => filterBrandToSeriesModels(entry));
+}
+
+export const LOCAL_SERIES_CATALOG_STORAGE_KEY = 'hermes.addShoes.seriesCatalog.v1';
+
+function getLocalStorage(storage) {
+  return storage || globalThis.localStorage;
+}
+
+export function readLocalSeriesCatalog(storage) {
+  try {
+    const targetStorage = getLocalStorage(storage);
+    if (!targetStorage?.getItem) return [];
+    const parsed = JSON.parse(targetStorage.getItem(LOCAL_SERIES_CATALOG_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeLocalSeriesCatalog(catalog, storage) {
+  const seriesCatalog = buildSeriesCatalog(catalog);
+  if (!seriesCatalog.length) return seriesCatalog;
+
+  try {
+    const targetStorage = getLocalStorage(storage);
+    if (targetStorage?.setItem) {
+      targetStorage.setItem(LOCAL_SERIES_CATALOG_STORAGE_KEY, JSON.stringify(seriesCatalog));
+    }
+  } catch {
+    // Local catalog storage is a convenience cache; rendering should continue without it.
+  }
+
+  return seriesCatalog;
 }
 
 export { getCanonicalSeriesName };

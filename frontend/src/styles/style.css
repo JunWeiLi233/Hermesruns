@@ -29,6 +29,8 @@
     --bg-recommend-easy: rgba(187, 247, 208, 0.55);
     --bg-recommend-quality: rgba(254, 240, 138, 0.5);
     --bg-recommend-restart: rgba(254, 226, 226, 0.72);
+    --accent-coral: #ffb4a7;
+    --accent-coral-strong: #f07561;
     --classic-bg: rgba(255, 255, 255, 0.92);
     --classic-border: rgba(15, 23, 42, 0.08);
     --classic-text: #0f172a;
@@ -62,6 +64,8 @@
     --classic-bg: rgba(255, 255, 255, 0.94);
     --classic-border: rgba(171, 173, 174, 0.15);
     --classic-text: #2c2f30;
+    --accent-coral: #ffb4a7;
+    --accent-coral-strong: #f07561;
 }
 
 [data-theme="midnight"], body.theme-midnight {
@@ -21607,6 +21611,13 @@ body.theme-light .runner-progression-info-hero {
     text-transform: uppercase;
 }
 
+.runner-dashboard-sessions-slot {
+    border-radius: var(--radius-xl);
+    padding: 1.45rem;
+    background: var(--surface-strong);
+    box-shadow: var(--shadow-card);
+}
+
 .runner-dashboard-session-list {
     display: flex;
     flex-direction: column;
@@ -24629,6 +24640,275 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
     width: 22px;
     background: #f07561;
   }
+}
+
+/* ── Theme-light overrides for auth-flow pages (login / forgot-password) ── */
+body.theme-light .auth-page--login {
+  background:
+    linear-gradient(90deg, rgba(250, 250, 250, 0.9) 0%, rgba(248, 248, 246, 0.84) 48%, rgba(245, 245, 244, 0.72) 100%),
+    radial-gradient(circle at 22% 52%, rgba(160, 57, 42, 0.06), transparent 34%),
+    radial-gradient(circle at 88% 92%, rgba(59, 130, 191, 0.08), transparent 26%),
+    url('https://images.unsplash.com/photo-1502904550040-7534597429ae?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+  color: var(--text-strong);
+}
+body.theme-light .auth-page--login::before {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.34) 54%, rgba(255, 255, 255, 0.52) 100%); /* tokens-ok */
+}
+body.theme-light .auth-page--login::after {
+  background:
+    radial-gradient(circle at 64% 28%, rgba(252, 126, 105, 0.06), transparent 28%),
+    radial-gradient(circle at 76% 76%, rgba(160, 57, 42, 0.04), transparent 24%);
+}
+
+body.theme-light .auth-flow-wordmark,
+body.theme-light .signup-flow-wordmark {
+  color: var(--brand-accent);
+}
+body.theme-light .auth-flow-pulse {
+  color: var(--brand-accent-strong);
+}
+body.theme-light .auth-flow-kicker {
+  background: rgba(160, 57, 42, 0.08);
+  color: var(--brand-accent-strong);
+  box-shadow: 0 8px 24px rgba(160, 57, 42, 0.04);
+}
+body.theme-light .auth-flow-hero {
+  color: var(--text-strong);
+}
+body.theme-light .auth-flow-hero .is-accent {
+  color: var(--brand-accent);
+}
+body.theme-light .auth-flow-text {
+  color: var(--text-muted);
+}
+body.theme-light .auth-flow-stats strong {
+  color: var(--text-strong);
+}
+body.theme-light .auth-flow-stats span {
+  color: var(--text-muted);
+}
+body.theme-light .auth-flow-dots span {
+  background: rgba(44, 47, 48, 0.1);
+}
+
+body.theme-light .auth-flow-card {
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 48px rgba(44, 47, 48, 0.1);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+body.theme-light .auth-flow-header h3 {
+  color: var(--text-strong);
+}
+body.theme-light .auth-flow-header p {
+  color: var(--text-muted);
+}
+body.theme-light .auth-flow-btn--strava {
+  background: linear-gradient(135deg, var(--accent-coral-strong), var(--accent-coral));
+  color: #fff;
+}
+body.theme-light .auth-flow-btn--google,
+body.theme-light .auth-flow-btn--submit {
+  background: rgba(245, 246, 247, 0.88);
+  color: var(--text-strong);
+  box-shadow: 0 2px 8px rgba(44, 47, 48, 0.04);
+}
+body.theme-light .auth-flow-btn--google:hover:not(:disabled),
+body.theme-light .auth-flow-btn--submit:hover:not(:disabled) {
+  background: rgba(235, 236, 237, 0.94);
+}
+body.theme-light .auth-flow-divider span {
+  background: rgba(171, 173, 174, 0.2);
+}
+body.theme-light .auth-flow-divider strong {
+  color: var(--text-muted);
+}
+body.theme-light .auth-flow-status-note {
+  color: var(--text-muted);
+}
+
+body.theme-light .form-group--auth label,
+body.theme-light .label-row--auth label {
+  color: var(--brand-accent-strong);
+}
+body.theme-light .forgot-password--auth {
+  color: var(--text-muted);
+}
+body.theme-light .auth-page--login .form-group--auth input,
+body.theme-light .auth-page--forgot-password .form-group--auth input {
+  background: rgba(245, 246, 247, 0.92);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.15);
+}
+body.theme-light .auth-page--login .form-group--auth input::placeholder,
+body.theme-light .auth-page--forgot-password .form-group--auth input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+body.theme-light .auth-page--login .form-group--auth input:focus,
+body.theme-light .auth-page--forgot-password .form-group--auth input:focus {
+  box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.36);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+body.theme-light .auth-flow-legal {
+  color: var(--text-muted);
+}
+body.theme-light .auth-flow-legal a {
+  color: var(--text-strong);
+}
+
+body.theme-light .signup-link--auth {
+  color: var(--text-muted);
+}
+body.theme-light .signup-link--auth a {
+  color: var(--brand-accent);
+}
+
+body.theme-light .auth-resend-box--login {
+  background: rgba(245, 246, 247, 0.88);
+  border-color: rgba(171, 173, 174, 0.15);
+}
+body.theme-light .auth-resend-copy {
+  color: var(--text-muted);
+}
+body.theme-light .auth-resend-box--login .btn-secondary {
+  background: rgba(160, 57, 42, 0.1);
+  color: var(--brand-accent);
+}
+
+/* ── Theme-light for signup flow ── */
+body.theme-light .auth-page--signup {
+  background: #f5f6f7;
+  color: var(--text-strong);
+}
+body.theme-light .auth-page--signup::before {
+  background:
+    linear-gradient(90deg, rgba(245, 246, 247, 0.96) 0%, rgba(245, 246, 247, 0.82) 44%, rgba(245, 246, 247, 0.58) 62%, rgba(245, 246, 247, 0.82) 100%),
+    radial-gradient(circle at 24% 30%, rgba(160, 57, 42, 0.05), transparent 26%),
+    radial-gradient(circle at 76% 78%, rgba(160, 57, 42, 0.03), transparent 28%);
+}
+body.theme-light .signup-flow-bg {
+  background:
+    linear-gradient(90deg, rgba(245, 246, 247, 0.72) 0%, rgba(245, 246, 247, 0.42) 44%, rgba(245, 246, 247, 0.6) 100%),
+    url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+}
+body.theme-light .signup-flow-hero {
+  color: var(--text-strong);
+}
+body.theme-light .signup-flow-hero .is-accent {
+  color: var(--brand-accent);
+}
+body.theme-light .signup-flow-text {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-subtle {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-standard {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-standard-line {
+  background: rgba(171, 173, 174, 0.3);
+}
+body.theme-light .signup-flow-login-link {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-panel {
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 48px rgba(44, 47, 48, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: var(--text-strong);
+}
+body.theme-light .signup-flow-strava {
+  background: #fc4c02;
+  color: #fff;
+}
+body.theme-light .signup-flow-strava:hover {
+  background: #e34402;
+}
+body.theme-light .signup-flow-primary {
+  background: var(--brand-accent-gradient);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(160, 57, 42, 0.14);
+}
+body.theme-light .signup-flow-primary:hover {
+  opacity: 0.92;
+}
+body.theme-light .signup-flow-google {
+  background: rgba(245, 246, 247, 0.88);
+  color: var(--text-strong);
+  box-shadow: 0 2px 8px rgba(44, 47, 48, 0.04);
+}
+body.theme-light .signup-flow-google:hover {
+  background: rgba(235, 236, 237, 0.94);
+}
+body.theme-light .signup-flow-divider span {
+  background: rgba(171, 173, 174, 0.2);
+}
+body.theme-light .signup-flow-divider strong {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-field label {
+  color: var(--text-muted);
+}
+body.theme-light .auth-page--signup .signup-flow-field input {
+  background: rgba(245, 246, 247, 0.92);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.12);
+}
+body.theme-light .auth-page--signup .signup-flow-field input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+body.theme-light .auth-page--signup .signup-flow-field input:focus {
+  box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.36);
+  background: rgba(255, 255, 255, 0.96);
+}
+body.theme-light .signup-flow-legal {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-legal a,
+body.theme-light .signup-flow-footer-links a {
+  color: var(--text-strong);
+}
+body.theme-light .signup-flow-footer {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-footer::before {
+  background: rgba(171, 173, 174, 0.2);
+}
+body.theme-light .signup-flow-rules {
+  background: rgba(245, 246, 247, 0.88);
+}
+body.theme-light .signup-flow-rules h3,
+body.theme-light .signup-flow-rules li {
+  color: var(--text-muted);
+}
+body.theme-light .signup-flow-rules li.is-passed > span:first-child {
+  color: var(--brand-accent);
+}
+
+/* ── Theme-light for forgot-password flow ── */
+body.theme-light .auth-page--forgot-password .auth-flow-brand-inner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(245, 246, 247, 0.9) 100%);
+}
+body.theme-light .auth-page--forgot-password {
+  background: var(--bg-body-base);
+  color: var(--text-strong);
+}
+
+/* ── Theme-light error alerts on auth pages ── */
+body.theme-light .auth-page .error-alert {
+  border-color: rgba(220, 38, 38, 0.16); /* tokens-ok */
+  background: rgba(254, 242, 242, 0.92); /* tokens-ok */
+  color: #b91c1c; /* tokens-ok */
+}
+body.theme-light .auth-page .error-alert--success {
+  border-color: rgba(34, 197, 94, 0.16); /* tokens-ok */
+  background: rgba(240, 253, 244, 0.95); /* tokens-ok */
+  color: #166534; /* tokens-ok */
 }
 
 .landing-page--editorial {
@@ -49381,6 +49661,16 @@ button.admin-users-command-kpi:hover {
   font-variant-numeric: tabular-nums;
 }
 
+.admin-coursemap-progress__percent {
+  min-width: 62px;
+  padding: 4px 9px;
+  display: inline-flex;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
 .admin-coursemap-progress__bar {
   width: 100%;
   height: 10px;
@@ -49943,6 +50233,11 @@ body.theme-light .admin-command-page .admin-coursemap-progress {
 
 body.theme-light .admin-command-page .admin-coursemap-progress__meta strong {
   color: var(--text-strong);
+}
+
+body.theme-light .admin-command-page .admin-coursemap-progress__percent {
+  background: rgba(160, 57, 42, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.14);
 }
 
 body.theme-light .admin-command-page .admin-coursemap-progress__bar {
@@ -52871,62 +53166,6 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-load-callout.is-dan
   background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
 }
 
-.error-alert--success {
-  background: rgba(34, 197, 94, 0.1) !important;
-  border-color: rgba(34, 197, 94, 0.2) !important;
-  color: #22c55e !important;
-}
-
-.signup-link--auth {
-  margin-top: 24px;
-  text-align: center;
-  border-top: 1px solid var(--border-soft);
-  padding-top: 24px;
-}
-
-.signup-link--auth a {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-weight: 600;
-  transition: color 0.2s ease;
-}
-
-.signup-link--auth a:hover {
-  color: var(--text-primary);
-}
-
-.signup-flow-google {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  color: #333;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.signup-flow-google:hover {
-  background: #f9f9f9;
-  border-color: #ccc;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.auth-flow-google-g {
-  font-family: 'Product Sans', Arial, sans-serif;
-  font-size: 1.2rem;
-  font-weight: 900;
-  color: #4285F4;
-}
 
 @media (max-width: 600px) {
   .password-rules-list {
@@ -54122,8 +54361,8 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     --lc-surface-low: rgba(22, 25, 29, 0.86);
     --lc-surface-mid: rgba(28, 32, 38, 0.92);
     --lc-ink: #f1eee9;
-    --lc-ink-muted: #a8a8a8;
-    --lc-ink-faint: #6e7178;
+    --lc-ink-muted: #b8b8b8; /* tokens-ok — landing cinematic token */
+    --lc-ink-faint: #8a8d92; /* tokens-ok — landing cinematic token */
     --lc-rule: rgba(255, 255, 255, 0.06);
     --lc-coral: #f07561;
     --lc-coral-soft: #ffb4a7;
@@ -54326,7 +54565,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 .landing-cinematic-hero {
     position: relative;
     min-height: 720px;
-    padding: 64px 0 70px;
+    padding: 80px 0 96px; /* tokens-ok — cinematic section rhythm */
     overflow: hidden;
 }
 
@@ -54425,7 +54664,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 .landing-cinematic-hero-title {
     margin: 18px 0 28px;
     font-size: clamp(3.3rem, 8vw, 7.4rem);
-    line-height: 0.92;
+    line-height: 1.08;
     font-weight: 800;
 }
 
@@ -54720,7 +54959,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 .landing-cinematic-answers,
 .landing-cinematic-races,
 .landing-cinematic-zones {
-    padding: 100px 0;
+    padding: 96px 0; /* tokens-ok — cinematic section rhythm */
 }
 
 .landing-cinematic-coach-grid {
@@ -54935,7 +55174,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 
 .landing-cinematic-formula,
 .landing-cinematic-compare {
-    padding: 100px 0;
+    padding: 96px 0; /* tokens-ok — cinematic section rhythm */
     background: rgba(17, 19, 22, 0.86);
 }
 
@@ -55175,7 +55414,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 }
 
 .landing-cinematic-compare-icon.is-no {
-    color: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.28); /* tokens-ok */
 }
 
 .landing-cinematic-zone-grid {
@@ -55232,7 +55471,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 }
 
 .landing-cinematic-final {
-    padding: 62px 0 88px;
+    padding: 80px 0 96px; /* tokens-ok — cinematic section rhythm */
 }
 
 .landing-cinematic-final-card {
@@ -55412,7 +55651,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 
     .landing-cinematic-hero {
         min-height: auto;
-        padding: 46px 0 58px;
+        padding: 52px 0 64px; /* tokens-ok — cinematic section rhythm */
     }
 
     .landing-cinematic-hero-photo {
@@ -55458,7 +55697,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     .landing-cinematic-races,
     .landing-cinematic-compare,
     .landing-cinematic-zones {
-        padding: 68px 0;
+        padding: 64px 0; /* tokens-ok — cinematic section rhythm */
     }
 
     .landing-cinematic-quote-mark {
