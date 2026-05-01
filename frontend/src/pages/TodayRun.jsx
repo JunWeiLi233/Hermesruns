@@ -881,9 +881,7 @@ export default function TodayRun() {
 
           <section className="today-run-plan-grid">
             <div className="today-run-plan-left">
-              <div className="mb-6">
-                <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
-              </div>
+              <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
 
               <article className="today-run-plan-card">
                 <div className="today-run-plan-card-head">
