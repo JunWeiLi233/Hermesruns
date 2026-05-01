@@ -2298,14 +2298,10 @@ class RaceCourseMapServiceTests {
 
     @Test
     void buildAlignmentPromptIncludesRaceSpecificLocationContext() {
-        RaceCourseMapAiService aiService = new RaceCourseMapAiService(
-                mock(RestTemplate.class),
-                new com.fasterxml.jackson.databind.ObjectMapper(),
-                mock(RaceCourseMapGeometryService.class)
-        );
+        RaceCourseMapPromptBuilder promptBuilder = new RaceCourseMapPromptBuilder();
 
         String prompt = ReflectionTestUtils.invokeMethod(
-                aiService,
+                promptBuilder,
                 "buildAlignmentPrompt",
                 "Boston Marathon",
                 "Boston",
