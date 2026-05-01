@@ -54137,8 +54137,8 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     --lc-surface-low: rgba(22, 25, 29, 0.86);
     --lc-surface-mid: rgba(28, 32, 38, 0.92);
     --lc-ink: #f1eee9;
-    --lc-ink-muted: #a8a8a8;
-    --lc-ink-faint: #6e7178;
+    --lc-ink-muted: #b8b8b8; /* tokens-ok — landing cinematic token */
+    --lc-ink-faint: #8a8d92; /* tokens-ok — landing cinematic token */
     --lc-rule: rgba(255, 255, 255, 0.06);
     --lc-coral: #f07561;
     --lc-coral-soft: #ffb4a7;
@@ -54341,7 +54341,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 .landing-cinematic-hero {
     position: relative;
     min-height: 720px;
-    padding: 64px 0 70px;
+    padding: 80px 0 96px; /* tokens-ok — cinematic section rhythm */
     overflow: hidden;
 }
 
@@ -54440,7 +54440,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 .landing-cinematic-hero-title {
     margin: 18px 0 28px;
     font-size: clamp(3.3rem, 8vw, 7.4rem);
-    line-height: 0.92;
+    line-height: 1.08;
     font-weight: 800;
 }
 
@@ -54735,7 +54735,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 .landing-cinematic-answers,
 .landing-cinematic-races,
 .landing-cinematic-zones {
-    padding: 100px 0;
+    padding: 96px 0; /* tokens-ok — cinematic section rhythm */
 }
 
 .landing-cinematic-coach-grid {
@@ -54950,7 +54950,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 
 .landing-cinematic-formula,
 .landing-cinematic-compare {
-    padding: 100px 0;
+    padding: 96px 0; /* tokens-ok — cinematic section rhythm */
     background: rgba(17, 19, 22, 0.86);
 }
 
@@ -55190,7 +55190,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 }
 
 .landing-cinematic-compare-icon.is-no {
-    color: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.28); /* tokens-ok */
 }
 
 .landing-cinematic-zone-grid {
@@ -55247,7 +55247,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 }
 
 .landing-cinematic-final {
-    padding: 62px 0 88px;
+    padding: 80px 0 96px; /* tokens-ok — cinematic section rhythm */
 }
 
 .landing-cinematic-final-card {
@@ -55427,7 +55427,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 
     .landing-cinematic-hero {
         min-height: auto;
-        padding: 46px 0 58px;
+        padding: 52px 0 64px; /* tokens-ok — cinematic section rhythm */
     }
 
     .landing-cinematic-hero-photo {
@@ -55473,7 +55473,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     .landing-cinematic-races,
     .landing-cinematic-compare,
     .landing-cinematic-zones {
-        padding: 68px 0;
+        padding: 64px 0; /* tokens-ok — cinematic section rhythm */
     }
 
     .landing-cinematic-quote-mark {
