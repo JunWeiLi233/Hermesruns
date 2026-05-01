@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import translations from '../i18n/translations';
+import zhCN from '../i18n/locales/zh-CN.js';
+import en from '../i18n/locales/en.js';
+
+const TRANSLATIONS = { 'zh-CN': zhCN, en };
 
 const STORAGE_KEY = 'hermes_lang';
 const DEFAULT_LANGUAGE = 'en';
@@ -47,7 +50,7 @@ function detectSystemLanguage() {
 }
 
 function getValue(language, key) {
-  return key.split('.').reduce((current, part) => current && current[part], translations[language]);
+  return key.split('.').reduce((current, part) => current && current[part], TRANSLATIONS[language]);
 }
 
 function humanizeKey(key) {

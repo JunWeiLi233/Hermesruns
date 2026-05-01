@@ -1,41 +1,56 @@
 import { Terminal, FileOutput, Bot, ArrowRightLeft, Trash2, Play } from 'lucide-react';
+import { useI18n } from '../../contexts/I18nContext';
+import { DEFAULT_POSITIONS } from '../../utils/workflowHelpers';
 
 const NODE_TYPES = [
-  { type: 'input', label: 'Input', icon: Terminal, color: 'purple' },
-  { type: 'output', label: 'Output', icon: FileOutput, color: 'green' },
-  { type: 'agent', label: 'Agent', icon: Bot, color: 'cyan' },
-  { type: 'transform', label: 'Transform', icon: ArrowRightLeft, color: 'amber' },
+  { type: 'input', labelKey: 'workflow_builder.input_node_type', ariaKey: 'workflow_builder.input_node_label', icon: Terminal, color: 'purple' },
+  { type: 'output', labelKey: 'workflow_builder.output_node_type', ariaKey: 'workflow_builder.output_node_label', icon: FileOutput, color: 'green' },
+  { type: 'agent', labelKey: 'workflow_builder.agent_node_type', ariaKey: 'workflow_builder.agent_node_label', icon: Bot, color: 'cyan' },
+  { type: 'transform', labelKey: 'workflow_builder.transform_node_type', ariaKey: 'workflow_builder.transform_node_label', icon: ArrowRightLeft, color: 'amber' },
 ];
 
-export default function NodePalette({ onDragStart, onClear, onExecute }) {
+export default function NodePalette({ onDragStart, onClear, onExecute, onAddNode }) {
+  const { t } = useI18n();
+  const paletteTitleId = 'workflow-node-palette-title';
+
+  const handlePaletteKeyDown = (event, type) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onAddNode?.(type, DEFAULT_POSITIONS[type]);
+  };
+
   return (
-    <aside className="wf-palette">
+    <aside className="wf-palette" aria-labelledby={paletteTitleId}>
       <div className="wf-palette-header">
-        <h3>Nodes</h3>
+        <h3 id={paletteTitleId}>{t('workflow.nodes_label')}</h3>
       </div>
-      <div className="wf-palette-items">
-        {NODE_TYPES.map(({ type, label, icon: _Icon, color }) => (
+      <div className="wf-palette-items" role="list" aria-label={t('workflow.nodes_label')}>
+        {NODE_TYPES.map(({ type, labelKey, ariaKey, icon: _Icon, color }) => (
           <div
             key={type}
             className={`wf-palette-item wf-palette-item--${color}`}
+            role="listitem"
+            tabIndex={0}
             draggable
+            aria-label={t(ariaKey)}
+            onKeyDown={(e) => handlePaletteKeyDown(e, type)}
             onDragStart={(e) => {
               e.dataTransfer.setData('application/reactflow', type);
               e.dataTransfer.effectAllowed = 'move';
               onDragStart?.(e, type);
             }}
           >
-            <_Icon size={16} />
-            <span>{label}</span>
+            <_Icon size={16} aria-hidden="true" />
+            <span>{t(labelKey)}</span>
           </div>
         ))}
       </div>
       <div className="wf-palette-actions">
-        <button type="button" className="wf-palette-btn" onClick={onExecute}>
-          <Play size={14} /> Run
+        <button type="button" className="wf-palette-btn" onClick={onExecute} aria-label={t('workflow.run')}>
+          <Play size={14} aria-hidden="true" /> {t('workflow.run')}
         </button>
-        <button type="button" className="wf-palette-btn wf-palette-btn--danger" onClick={onClear}>
-          <Trash2 size={14} /> Clear
+        <button type="button" className="wf-palette-btn wf-palette-btn--danger" onClick={onClear} aria-label={t('workflow.clear')}>
+          <Trash2 size={14} aria-hidden="true" /> {t('workflow.clear')}
         </button>
       </div>
     </aside>

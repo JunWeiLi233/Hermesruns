@@ -37,6 +37,7 @@ export default function SettingsAtlasLayout({
   setLang,
   quickControls,
   syncHealthItems,
+  wellnessRows = [],
   garminLane,
   setupChecklist,
 }) {
@@ -357,6 +358,24 @@ export default function SettingsAtlasLayout({
                   <span className="settings-atlas-sync-pill">
                     {item.tone === 'live' ? t('settings.stitch_connected_short') : (item.tone === 'ready' ? t('settings.stitch_ready_short') : t('settings.stitch_review'))}
                   </span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="settings-atlas-panel settings-atlas-panel--wellness-hub">
+            <div className="settings-atlas-panel-head">
+              <strong>{t('settings.stitch_wellness_hub_title')}</strong>
+              <span>{t('settings.stitch_wellness_hub_copy')}</span>
+            </div>
+            <div className="settings-atlas-sync-stack settings-atlas-wellness-stack">
+              {wellnessRows.map((row) => (
+                <div key={row.key} className="settings-atlas-sync-row is-ready">
+                  <div className="settings-atlas-sync-copy">
+                    <strong>{t(row.labelKey)}</strong>
+                    <span>{t('settings.stitch_wellness_source_label')}</span>
+                  </div>
+                  <span className="settings-atlas-sync-pill">{row.sourceLabel}</span>
                 </div>
               ))}
             </div>
