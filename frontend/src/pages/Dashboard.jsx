@@ -524,21 +524,35 @@ function getCourseMapActionStatusKey(action) {
   return COURSE_MAP_ACTION_STATUS_KEYS[action?.type] || 'dashboard.course_maps_status_running_processing';
 }
 
+function isStaleCourseMapQueuedSummary(summary) {
+  const normalized = String(summary || '').toLowerCase();
+  return normalized.includes('queued course-map') || normalized.includes('fifo scan');
+}
+
 function getCourseMapActionSummary(action, t) {
   if (String(action?.jobStatus || '').toUpperCase() === 'PENDING') {
     return t('dashboard.course_maps_progress_waiting_hint');
+  }
+  if (String(action?.jobStatus || '').toUpperCase() === 'RUNNING' && isStaleCourseMapQueuedSummary(action?.summary)) {
+    return t(COURSE_MAP_ACTION_STATUS_KEYS[action?.type] || 'dashboard.course_maps_status_running_processing');
   }
   return action?.summary || t('dashboard.course_maps_progress_fifo_hint');
 }
 
 function getCourseMapActionFromJob(raceId, type, job) {
+  const jobStatus = String(job?.status || '').toUpperCase();
+  const resolvedType = jobStatus === 'PENDING'
+    ? type
+    : type === 'queued'
+      ? 'scan'
+      : type;
   return {
     raceId,
-    type,
+    type: resolvedType,
     progress: getDashboardJobProgress(job),
     jobId: job?.id,
     summary: job?.summary || '',
-    jobStatus: String(job?.status || '').toUpperCase(),
+    jobStatus,
   };
 }
 
@@ -2273,8 +2287,18 @@ const Dashboard = memo(function Dashboard() {
                   </div>
                 ) : null}
                 <div className="admin-overview-hud__status-pills">
-                  <span className="admin-overview-hud__status-pill is-live">{t('dashboard.nav_sync_strava')}</span>
-                  <span className="admin-overview-hud__status-pill">{t('dashboard.jobs_type_garmin_import')}</span>
+                  {overviewQueueSpotlights.length > 0 ? (
+                    overviewQueueSpotlights.map((card) => (
+                      <span
+                        key={card.key}
+                        className={`admin-overview-hud__status-pill${card.count > 0 ? ' is-live' : ''}`}
+                      >
+                        {t(card.titleKey)} {card.count > 0 ? `(${card.count})` : ''}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="admin-overview-hud__status-pill is-live">{t('dashboard.status_queue_health_healthy')}</span>
+                  )}
                 </div>
                 <div className="admin-overview-hud__actions">
                   <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('users')}>
@@ -2310,8 +2334,8 @@ const Dashboard = memo(function Dashboard() {
             <section className="admin-overview-section">
               <div className="admin-overview-section__head">
                 <div>
-                  <h3>{t('dashboard.ops_overview_title')}</h3>
-                  <p>{t('dashboard.portal_desc')}</p>
+                  <h3>{t('dashboard.ops_overview_kicker')}</h3>
+                  <p>{totalQueueCount > 0 ? t('dashboard.status_queue_health_attention', { count: totalQueueCount }) : t('dashboard.status_queue_health_healthy')}</p>
                 </div>
                 <div className="admin-overview-section__actions">
                   <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('users')}>
@@ -2473,8 +2497,8 @@ const Dashboard = memo(function Dashboard() {
               <article className="admin-overview-bento__panel admin-overview-bento__panel--spotlight">
                 <div className="admin-overview-bento__panel-head">
                   <div>
-                    <span className="section-intro-kicker">{t('dashboard.ops_overview_title')}</span>
-                    <h3>{t('dashboard.quick_actions_title')}</h3>
+                    <span className="section-intro-kicker">{t('dashboard.ops_overview_kicker')}</span>
+                    <h3>{t('dashboard.status_queue_health_label')}</h3>
                   </div>
                   <strong>{totalQueueCount}</strong>
                 </div>
@@ -2502,8 +2526,8 @@ const Dashboard = memo(function Dashboard() {
               <article className="admin-overview-bento__panel admin-overview-bento__panel--status">
                 <div className="admin-overview-bento__panel-head">
                   <div>
-                    <span className="section-intro-kicker">{t('dashboard.status_queue_health_label')}</span>
-                    <h3>{t('dashboard.status_audit_label')}</h3>
+                    <span className="section-intro-kicker">{t('dashboard.status_jobs_label')}</span>
+                    <h3>{t('dashboard.system_health_title')}</h3>
                   </div>
                 </div>
                 <div className="admin-overview-bento__status-stack">
@@ -2520,12 +2544,9 @@ const Dashboard = memo(function Dashboard() {
               <article className="admin-overview-bento__panel admin-overview-bento__panel--workbench">
                 <div className="admin-overview-bento__panel-head">
                   <div>
-                    <span className="section-intro-kicker">{t('dashboard.tab_course_maps')}</span>
-                    <h3>{t('dashboard.course_maps_title')}</h3>
+                    <span className="section-intro-kicker">{t('dashboard.portal_eyebrow')}</span>
+                    <h3>{t('dashboard.shoe_review_title')}</h3>
                   </div>
-                  <button type="button" className="btn-secondary btn-inline-sm" onClick={() => navigateToTab('courseMaps')}>
-                    {t('dashboard.tab_course_maps')}
-                  </button>
                 </div>
                 <div className="admin-overview-bento__workbench-card is-coursemaps">
                   <strong>{courseMapSummary.pending}</strong>
@@ -2547,23 +2568,23 @@ const Dashboard = memo(function Dashboard() {
               <span className="admin-quick-actions__label">{t('dashboard.quick_actions_title')}</span>
               <div className="admin-quick-actions__row">
                 <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('users')}>
-                  <span className="admin-quick-action-icon">👤</span>
+                  <span className="admin-quick-action-icon" data-icon="groups" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_users')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={() => { setShoeQuery(prev => ({ ...prev, queue: 'unverified_photo', page: 0 })); navigateToTab('shoes'); }}>
-                  <span className="admin-quick-action-icon">👟</span>
+                  <span className="admin-quick-action-icon" data-icon="footprint" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_shoe_review')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('jobs')}>
-                  <span className="admin-quick-action-icon">⚙</span>
+                  <span className="admin-quick-action-icon" data-icon="sync" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_jobs')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('audit')}>
-                  <span className="admin-quick-action-icon">🔍</span>
+                  <span className="admin-quick-action-icon" data-icon="history" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_audit')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={triggerSync}>
-                  <span className="admin-quick-action-icon">↻</span>
+                  <span className="admin-quick-action-icon" data-icon="autorenew" aria-hidden="true" />
                   <span>{t('dashboard.nav_sync_strava')}</span>
                 </button>
               </div>
