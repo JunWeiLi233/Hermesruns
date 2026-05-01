@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Component, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -7,15 +7,77 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import WorkflowCanvas from '../components/workflow/WorkflowCanvas';
+import useWorkflowStore from '../stores/useWorkflowStore';
+
+class WorkflowCanvasBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
+}
 
 export default function WorkflowBuilder() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isCanvasLoading, setIsCanvasLoading] = useState(true);
+  const [canvasError, setCanvasError] = useState(null);
+  const [canvasInstanceKey, setCanvasInstanceKey] = useState(0);
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const addNode = useWorkflowStore((s) => s.addNode);
 
   const displayName = user?.displayName || user?.email || '';
   const initials = displayName.split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+  const isCanvasEmpty = !isCanvasLoading && !canvasError && nodes.length === 0;
+
+  useEffect(() => {
+    setIsCanvasLoading(true);
+    const frameId = window.requestAnimationFrame(() => {
+      setIsCanvasLoading(false);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [canvasInstanceKey]);
+
+  const handleCanvasRetry = () => {
+    setCanvasError(null);
+    setCanvasInstanceKey((key) => key + 1);
+  };
+
+  const handleEmptyCta = () => {
+    addNode('input', { x: 120, y: 120 });
+  };
+
+  const renderCanvasError = () => (
+    <div className="workflow-builder-state workflow-builder-state--error" role="alert">
+      <span className="workflow-builder-state-kicker">{t('workflow_builder.error_kicker')}</span>
+      <h2>{t('workflow_builder.error_title')}</h2>
+      <p>{t('workflow_builder.error_copy')}</p>
+      {canvasError?.message ? (
+        <p className="workflow-builder-state-detail">{canvasError.message}</p>
+      ) : null}
+      <button type="button" className="workflow-builder-state-cta" onClick={handleCanvasRetry}>
+        {t('workflow_builder.retry')}
+      </button>
+    </div>
+  );
 
   return (
     <div className={`runner-shell-page workflow-builder-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
@@ -42,11 +104,11 @@ export default function WorkflowBuilder() {
             { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
             { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
             { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-  { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
+            { key: 'weather_engine', label: t('profile.dashboard_nav_weather'), route: '/weather', icon: 'thermostat' },
             { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
             { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
             { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-            { key: 'workflows', label: lang === 'zh-CN' ? '工作流' : 'Workflows', route: '/workflows', icon: 'account_tree', active: true },
+            { key: 'workflows', label: t('profile.dashboard_nav_workflows'), route: '/workflows', icon: 'account_tree', active: true },
           ].map((item) => (
             <button
               key={item.key}
@@ -77,7 +139,7 @@ export default function WorkflowBuilder() {
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
             <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{lang === 'zh-CN' ? '工作流' : 'Workflows'}</span>
+              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_workflows')}</span>
             </div>
           </div>
 
@@ -95,7 +157,31 @@ export default function WorkflowBuilder() {
         </header>
 
         <div className="runner-shell-canvas workflow-builder-canvas">
-          <WorkflowCanvas />
+          {isCanvasLoading ? (
+            <div className="workflow-builder-state workflow-builder-state--loading" role="status" aria-live="polite">
+              <span className="workflow-builder-state-spinner" aria-hidden="true" />
+              <span className="workflow-builder-state-kicker">{t('workflow_builder.loading_kicker')}</span>
+              <h2>{t('workflow_builder.loading_title')}</h2>
+              <p>{t('workflow_builder.loading_copy')}</p>
+            </div>
+          ) : null}
+          <WorkflowCanvasBoundary
+            key={canvasInstanceKey}
+            onError={setCanvasError}
+            fallback={renderCanvasError()}
+          >
+            {!isCanvasLoading ? <WorkflowCanvas /> : null}
+          </WorkflowCanvasBoundary>
+          {isCanvasEmpty ? (
+            <div className="workflow-builder-empty" aria-live="polite">
+              <span className="workflow-builder-state-kicker">{t('workflow_builder.empty_kicker')}</span>
+              <h2>{t('workflow_builder.empty_title')}</h2>
+              <p>{t('workflow_builder.empty_copy')}</p>
+              <button type="button" className="workflow-builder-state-cta" onClick={handleEmptyCta}>
+                {t('workflow_builder.empty_cta')}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <FooterNavLinks />

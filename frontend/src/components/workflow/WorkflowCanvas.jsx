@@ -15,6 +15,7 @@ import AgentNode from './nodes/AgentNode';
 import TransformNode from './nodes/TransformNode';
 import SmartEdge from './edges/SmartEdge';
 import NodePalette from './NodePalette';
+import { useI18n } from '../../contexts/I18nContext';
 import useWorkflowStore from '../../stores/useWorkflowStore';
 
 const nodeTypes = {
@@ -29,6 +30,7 @@ const edgeTypes = {
 };
 
 function WorkflowCanvasInner() {
+  const { t } = useI18n();
   const reactFlowWrapper = useRef(null);
   const { screenToFlowPosition } = useReactFlow();
   const nodes = useWorkflowStore((s) => s.nodes);
@@ -82,17 +84,30 @@ function WorkflowCanvasInner() {
         defaultEdgeOptions={{ type: 'smart', animated: true }}
         fitView
         className="wf-canvas"
+        aria-label={t('workflow_builder.canvas_label')}
+        ariaLabelConfig={{
+          'controls.ariaLabel': t('workflow_builder.controls_label'),
+          'controls.zoomIn.ariaLabel': t('workflow_builder.controls_zoom_in_label'),
+          'controls.zoomOut.ariaLabel': t('workflow_builder.controls_zoom_out_label'),
+          'controls.fitView.ariaLabel': t('workflow_builder.controls_fit_view_label'),
+          'controls.interactive.ariaLabel': t('workflow_builder.controls_interactive_label'),
+          'minimap.ariaLabel': t('workflow_builder.minimap_label'),
+          'handle.ariaLabel': t('workflow_builder.handle_label'),
+        }}
       >
         <Background color="rgba(255,255,255,0.05)" gap={20} />
-        <Controls className="wf-controls" />
+        <Controls className="wf-controls" aria-label={t('workflow_builder.controls_label')} />
         <MiniMap
           className="wf-minimap"
+          aria-label={t('workflow_builder.minimap_label')}
+          ariaLabel={t('workflow_builder.minimap_label')}
           nodeStrokeColor="var(--neon-cyan, #06b6d4)"
           maskColor="rgba(0,0,0,0.7)"
         />
       </ReactFlow>
       <NodePalette
         onDragStart={() => {}}
+        onAddNode={addNode}
         onClear={clearCanvas}
         onExecute={onExecute}
       />
