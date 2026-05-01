@@ -654,7 +654,9 @@ function getDashboardJobTimelineTone(status) {
   if (/(fail|error|denied|invalid|timeout|blocked)/.test(normalized)) return 'failed';
   if (/(running|start|scan|process|align|extract|search|geocode|qwen)/.test(normalized)) return 'running';
   if (/(pending|queued|wait|retry)/.test(normalized)) return 'pending';
-  return 'completed';
+  if (/(skipped|skip)/.test(normalized)) return 'skipped';
+  if (/(success|done|complete|ok)/.test(normalized)) return 'success';
+  return 'info';
 }
 
 function formatDashboardJobDuration(startValue, endValue) {
@@ -2262,9 +2264,12 @@ const Dashboard = memo(function Dashboard() {
 
           <main className={`dashboard-container admin-portal-container admin-command-shell${activeTab === 'courseMaps' ? ' admin-command-shell--coursemaps' : ''}`}>
         <div className={`admin-command-route admin-command-route--${activeTab || 'overview'}`}>
-        <div className="admin-command-route__summary">
-          {activeRouteSurface.metrics.map((metric) => (
-            <article key={`${activeTab || 'overview'}-${metric.label}`} className="admin-command-route__summary-card">
+        <div className="admin-command-route__summary admin-command-lane">
+          {activeRouteSurface.metrics.map((metric, index) => (
+            <article
+              key={`${activeTab || 'overview'}-${metric.label}`}
+              className={`admin-command-route__summary-card${index === 0 ? ' is-primary' : ''}`}
+            >
               <span>{metric.label}</span>
               <strong>{metric.value}</strong>
               {metric.helper ? <small>{metric.helper}</small> : null}
@@ -3291,6 +3296,53 @@ const Dashboard = memo(function Dashboard() {
                         </div>
 
                         <div className="admin-jobs-detail__timeline-shell admin-coursemap-scan-timeline">
+                          <style>{`
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-success .admin-jobs-detail__timeline-dot {
+                              background: var(--accent-coral-strong);
+                              box-shadow: 0 0 0 5px var(--admin-accent-glow);
+                            }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-skipped .admin-jobs-detail__timeline-dot {
+                              background: var(--admin-text-muted);
+                              box-shadow: 0 0 0 5px var(--admin-border-subtle);
+                            }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-info .admin-jobs-detail__timeline-dot {
+                              background: var(--admin-text-secondary);
+                              box-shadow: 0 0 0 5px var(--admin-border-subtle);
+                            }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-success .admin-jobs-detail__timeline-meta span {
+                              background: var(--admin-accent-soft);
+                              color: var(--accent-coral-strong);
+                            }
+                            .admin-coursemap-scan-timeline .timeline-step-icon {
+                              font-size: 16px;
+                              line-height: 1;
+                              width: 16px;
+                              height: 16px;
+                              display: inline-flex;
+                              align-items: center;
+                              justify-content: center;
+                              flex-shrink: 0;
+                              font-variation-settings: 'FILL' 1;
+                            }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-success { color: var(--accent-coral-strong); }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-failed { color: #f87171; /* tokens-ok */ }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-running { color: #86efac; /* tokens-ok */ }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-pending { color: var(--accent-coral); }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-skipped { color: var(--admin-text-muted); }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-info { color: var(--admin-text-secondary); }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline-meta small.timeline-duration {
+                              color: var(--admin-text-muted);
+                              font-style: italic;
+                            }
+                            @media (max-width: 480px) {
+                              .admin-coursemap-scan-timeline .admin-jobs-detail__timeline-meta {
+                                gap: 6px;
+                              }
+                              .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li {
+                                padding: 12px;
+                              }
+                            }
+                          `}</style>
                           <div className="admin-jobs-detail__section-head">
                             <span className="section-intro-kicker">{t('dashboard.course_maps_timeline_label')}</span>
                             <strong>{t('dashboard.course_maps_timeline_title')}</strong>
@@ -3299,18 +3351,57 @@ const Dashboard = memo(function Dashboard() {
                               <span>{courseMapScanTimeline.length} {t('dashboard.course_maps_timeline_steps')}</span>
                             )}
                           </div>
-                          {courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 ? (
+                          {courseMapTimelineLoadState === 'loading' ? (
+                            <div className="admin-jobs-detail__json-empty">{t('dashboard.course_maps_timeline_loading')}</div>
+                          ) : courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 ? (
                             <ol className="admin-jobs-detail__timeline">
                               {courseMapScanTimeline.map((step, index) => {
-                                const tone = getDashboardJobTimelineTone(step.status);
+                                const rawStatus = String(step.status || '');
+                                const tone = getDashboardJobTimelineTone(rawStatus);
+                                const stepName = step.stage || step.step || `Step ${index + 1}`;
+                                const startedAt = step.startedAt || step.at || null;
+                                const completedAt = step.completedAt || null;
+                                const statusLabel = (() => {
+                                  const s = rawStatus.toUpperCase();
+                                  if (s === 'SUCCESS') return 'OK';
+                                  if (s === 'FAILED') return 'FAIL';
+                                  return s.length > 12 ? `${s.slice(0, 10)}…` : s;
+                                })();
+                                const iconName = tone === 'running' ? 'progress_activity'
+                                  : tone === 'success' ? 'check_circle'
+                                  : tone === 'failed' ? 'cancel'
+                                  : tone === 'skipped' ? 'skip_next'
+                                  : tone === 'pending' ? 'schedule'
+                                  : 'info';
+                                const timeDisplay = (() => {
+                                  if (completedAt) {
+                                    const d = new Date(completedAt);
+                                    return `${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                                  }
+                                  if (startedAt) {
+                                    const d = new Date(startedAt);
+                                    return `${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                                  }
+                                  return '';
+                                })();
+                                const duration = startedAt && completedAt
+                                  ? (() => {
+                                      const diff = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+                                      if (diff <= 0) return '';
+                                      const sec = Math.round(diff / 1000);
+                                      return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`;
+                                    })()
+                                  : '';
                                 return (
-                                  <li className={`is-${tone}`} key={`scan-${step.stage || index}-${index}`}>
+                                  <li className={`is-${tone}`} key={`scan-${stepName}-${index}`}>
                                     <span className="admin-jobs-detail__timeline-dot" aria-hidden="true" />
                                     <div className="admin-jobs-detail__timeline-main">
                                       <div className="admin-jobs-detail__timeline-meta">
-                                        <strong>{step.stage}</strong>
-                                        <span>{step.status}</span>
-                                        <small>{step.at ? new Date(step.at).toLocaleTimeString() : ''}</small>
+                                        <span className={`timeline-step-icon material-symbols-outlined is-${tone}`} aria-hidden="true">{iconName}</span>
+                                        <strong>{stepName}</strong>
+                                        <span>{statusLabel}</span>
+                                        {timeDisplay ? <small>{timeDisplay}</small> : null}
+                                        {duration ? <small className="timeline-duration">{duration}</small> : null}
                                       </div>
                                       {step.message && <p>{step.message}</p>}
                                       {step.details && typeof step.details === 'object' && (
