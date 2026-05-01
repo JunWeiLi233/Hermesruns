@@ -167,13 +167,11 @@ function toFiniteNumber(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function formatCardinalDirection(degrees, lang, wt) {
-  if (!Number.isFinite(Number(degrees))) return wt('north_flow');
-  const labels = lang === 'zh-CN'
-    ? ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
-    : ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+function formatCardinalDirection(degrees, t) {
+  if (!Number.isFinite(Number(degrees))) return t('weather_engine.northFlow');
+  const dirKeys = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   const index = Math.round(Number(degrees) / 45) % 8;
-  return labels[index];
+  return t(`weather_engine.cardinalDirection.${dirKeys[index]}`);
 }
 
 function statusLabel(status, wt) {
@@ -193,20 +191,20 @@ function getDisplayName(profile, fallback) {
   return raw.replace(/^./, (char) => char.toUpperCase());
 }
 
-function describeWeatherCode(code, lang) {
+function describeWeatherCode(code, t) {
   const value = Number(code);
-  if (!Number.isFinite(value)) return lang === 'zh-CN' ? '环境待确认' : 'Conditions pending';
-  if (value === 0) return lang === 'zh-CN' ? '晴朗窗口' : 'Clear window';
-  if ([1, 2].includes(value)) return lang === 'zh-CN' ? '云量较轻' : 'Light cloud';
-  if (value === 3) return lang === 'zh-CN' ? '阴天冷空气' : 'Overcast cold air';
-  if ([45, 48].includes(value)) return lang === 'zh-CN' ? '低能见度雾气' : 'Fog and low visibility';
-  if ((value >= 51 && value <= 67) || (value >= 80 && value <= 82)) return lang === 'zh-CN' ? '潮湿或有降雨' : 'Wet or rainy';
-  if (value >= 71 && value <= 77) return lang === 'zh-CN' ? '寒冷降雪' : 'Cold snow';
-  if (value >= 95) return lang === 'zh-CN' ? '强对流风险' : 'Storm risk';
-  return lang === 'zh-CN' ? '环境波动' : 'Variable conditions';
+  if (!Number.isFinite(value)) return t('weather_engine.weatherCode.pending');
+  if (value === 0) return t('weather_engine.weatherCode.clear');
+  if ([1, 2].includes(value)) return t('weather_engine.weatherCode.lightCloud');
+  if (value === 3) return t('weather_engine.weatherCode.overcast');
+  if ([45, 48].includes(value)) return t('weather_engine.weatherCode.fog');
+  if ((value >= 51 && value <= 67) || (value >= 80 && value <= 82)) return t('weather_engine.weatherCode.rain');
+  if (value >= 71 && value <= 77) return t('weather_engine.weatherCode.snow');
+  if (value >= 95) return t('weather_engine.weatherCode.storm');
+  return t('weather_engine.weatherCode.variable');
 }
 
-function buildHourlyForecast(response, lang) {
+function buildHourlyForecast(response, lang, t) {
   const hourly = response?.hourly;
   if (!hourly) return [];
   const times = Array.isArray(hourly.time) ? hourly.time : [];
@@ -225,7 +223,7 @@ function buildHourlyForecast(response, lang) {
       label,
       temperature: temps[index],
       weatherCode: codes[index],
-      summary: describeWeatherCode(codes[index], lang),
+      summary: describeWeatherCode(codes[index], t),
     };
   });
 }
@@ -339,7 +337,7 @@ export default function WeatherEngine() {
       .then((payload) => {
         if (controller.signal.aborted) return;
         setLiveWeather(payload?.current || null);
-        setForecast(buildHourlyForecast(payload, lang));
+        setForecast(buildHourlyForecast(payload, lang, t));
         setForecastState('ready');
       })
       .catch(() => {
@@ -358,7 +356,7 @@ export default function WeatherEngine() {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [lang, weatherContext]);
+  }, [lang, t, weatherContext]);
 
   const initials = getDisplayName(profile, t('profile.default_name')).slice(0, 1).toUpperCase();
   const navItems = useMemo(
@@ -400,7 +398,7 @@ export default function WeatherEngine() {
           key: 'wind',
           label: wt('wind_label'),
           value: formatWind(liveWeather.wind_speed_10m),
-          accent: formatCardinalDirection(liveWeather.wind_direction_10m, lang, wt),
+          accent: formatCardinalDirection(liveWeather.wind_direction_10m, t),
           note: wt('north_flow'),
           icon: 'air',
         },
@@ -410,7 +408,7 @@ export default function WeatherEngine() {
 
   const heroStatus = weatherContext?.available ? wt('hero_status_ready') : wt('hero_status_fallback');
   const heroTemperature = formatTemperature(liveWeather?.temperature_2m);
-  const heroCondition = describeWeatherCode(liveWeather?.weather_code, lang);
+  const heroCondition = describeWeatherCode(liveWeather?.weather_code, t);
 
   if (loadState === 'loading') {
     return (

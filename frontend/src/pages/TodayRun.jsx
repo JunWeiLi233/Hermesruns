@@ -273,6 +273,63 @@ function buildConfidenceModel(metrics, toneKey, hasCoachSession, runs, coachStat
   return { score, tone };
 }
 
+function isRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function sortRunsByMostRecent(runs) {
+  const list = Array.isArray(runs) ? [...runs] : [];
+  list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+  return list;
+}
+
+function normalizeTodayDashboardPayload(payload) {
+  if (!isRecord(payload)) return null;
+  const activities = payload.activities ?? payload.runs;
+  if (!Array.isArray(activities)) return null;
+
+  return {
+    profile: payload.profile ?? null,
+    runs: sortRunsByMostRecent(activities),
+    coachPayload: payload.coachPayload ?? payload.coachToday ?? payload.coach ?? null,
+    weatherContext: payload.weatherContext ?? payload.weather ?? null,
+    races: payload.races ?? [],
+    shoes: payload.shoes ?? [],
+  };
+}
+
+async function loadTodayRunFallbackData() {
+  const [profileData, activitiesData, coachData, weatherData, raceData, shoeData] = await Promise.all([
+    apiJson('/api/profile/me').catch(() => null),
+    apiJson('/api/activities'),
+    apiJson('/api/coach/today').catch(() => null),
+    apiJson('/api/v1/weather/context').catch(() => null),
+    apiJson('/api/races').catch(() => []),
+    apiJson('/api/shoes').catch(() => []),
+  ]);
+
+  return {
+    profile: profileData,
+    runs: sortRunsByMostRecent(activitiesData),
+    coachPayload: coachData,
+    weatherContext: weatherData,
+    races: raceData,
+    shoes: shoeData,
+  };
+}
+
+async function loadTodayRunData() {
+  try {
+    const batchPayload = await apiJson('/api/today/dashboard');
+    const normalized = normalizeTodayDashboardPayload(batchPayload);
+    if (normalized) return normalized;
+  } catch {
+    // Fall through to the individual endpoints that powered Today's Run before batching.
+  }
+
+  return loadTodayRunFallbackData();
+}
+
 export default function TodayRun() {
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
@@ -304,26 +361,16 @@ export default function TodayRun() {
     async function loadTodayRun() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData, coachData, weatherData, raceData, shoeData] = await Promise.all([
-          apiJson('/api/profile/me').catch(() => null),
-          apiJson('/api/activities'),
-          apiJson('/api/coach/today').catch(() => null),
-          apiJson('/api/v1/weather/context').catch(() => null),
-          apiJson('/api/races').catch(() => []),
-          apiJson('/api/shoes').catch(() => []),
-        ]);
+        const dashboardData = await loadTodayRunData();
 
         if (cancelled) return;
 
-        const list = Array.isArray(activitiesData) ? activitiesData : [];
-        list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
-
-        setProfile(profileData && typeof profileData === 'object' ? profileData : null);
-        setRuns(list);
-        setCoachPayload(coachData && typeof coachData === 'object' ? coachData : null);
-        setWeatherContext(weatherData && typeof weatherData === 'object' ? weatherData : null);
-        setRaces(Array.isArray(raceData) ? raceData : []);
-        setShoes(Array.isArray(shoeData) ? shoeData : []);
+        setProfile(dashboardData.profile && typeof dashboardData.profile === 'object' ? dashboardData.profile : null);
+        setRuns(dashboardData.runs);
+        setCoachPayload(dashboardData.coachPayload && typeof dashboardData.coachPayload === 'object' ? dashboardData.coachPayload : null);
+        setWeatherContext(dashboardData.weatherContext && typeof dashboardData.weatherContext === 'object' ? dashboardData.weatherContext : null);
+        setRaces(Array.isArray(dashboardData.races) ? dashboardData.races : []);
+        setShoes(Array.isArray(dashboardData.shoes) ? dashboardData.shoes : []);
         setLoadState('ready');
       } catch {
         if (!cancelled) setLoadState('error');
@@ -834,9 +881,7 @@ export default function TodayRun() {
 
           <section className="today-run-plan-grid">
             <div className="today-run-plan-left">
-              <div className="mb-6">
-                <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
-              </div>
+              <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
 
               <article className="today-run-plan-card">
                 <div className="today-run-plan-card-head">

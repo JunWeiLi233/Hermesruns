@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.ArgumentCaptor;
 import org.springframework.web.client.RestTemplate;
 
@@ -303,7 +304,7 @@ class RaceCourseMapAiServiceTests {
         assertThat(alignment.summary()).contains("Recovered the full Chicago Marathon course");
         assertThat(alignment.routePoints()).hasSizeGreaterThan(12);
         assertThat(promptCaptor.getAllValues().get(0)).contains("Known Chicago Marathon corridor");
-        assertThat(promptCaptor.getAllValues().get(0)).contains("Never repeat the same coordinate");
+        assertThat(promptCaptor.getAllValues().get(0)).contains("consecutive route points share the same coordinate");
         assertThat(promptCaptor.getAllValues().get(1)).contains("Do NOT reuse the Chicago city center");
     }
 
@@ -346,6 +347,115 @@ class RaceCourseMapAiServiceTests {
 
         assertThat(alignment).isNull();
         verify(qwenClient, times(2)).analyzeCandidate(any(), eq("image/png"), any());
+    }
+
+    @Test
+    void analyzeCandidateRejectsNewYorkMarathonRouteThatDriftsIntoOpenWaterWhenCorrectiveQwenDoesNotFixIt() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
+        when(qwenClient.analyzeCandidate(any(), eq("image/png"), any())).thenReturn("""
+                {
+                  "isCourseMap": true,
+                  "confidence": 91,
+                  "summary": "Guessed the NYC Marathon route from memory, including a lower-bay/ocean waypoint.",
+                  "overlayBounds": { "north": 40.84, "south": 40.54, "east": -73.88, "west": -74.10 },
+                  "routePoints": [
+                    { "lat": 40.6036, "lng": -74.0566, "label": "Start" },
+                    { "lat": 40.6150, "lng": -74.0350 },
+                    { "lat": 40.5600, "lng": -73.9300, "label": "Ocean waypoint" },
+                    { "lat": 40.6500, "lng": -73.9900 },
+                    { "lat": 40.6782, "lng": -73.9442, "label": "Brooklyn" },
+                    { "lat": 40.7000, "lng": -73.9400 },
+                    { "lat": 40.7250, "lng": -73.9300 },
+                    { "lat": 40.7567, "lng": -73.9548, "label": "Queensboro Bridge" },
+                    { "lat": 40.7700, "lng": -73.9500 },
+                    { "lat": 40.7900, "lng": -73.9400 },
+                    { "lat": 40.8150, "lng": -73.9300 },
+                    { "lat": 40.8050, "lng": -73.9150 },
+                    { "lat": 40.7900, "lng": -73.9300 },
+                    { "lat": 40.7800, "lng": -73.9500 },
+                    { "lat": 40.7711, "lng": -73.9742, "label": "Finish" }
+                  ]
+                }
+                """);
+
+        RaceCourseMapAiService service = new RaceCourseMapAiService(restTemplate, new ObjectMapper(), geometryService, qwenClient);
+
+        RaceCourseMapService.CourseMapAlignment alignment = service.analyzeCandidate(
+                "https://cdn.example.com/nyc-course-map.jpg",
+                samplePngBytes(),
+                "TCS New York City Marathon",
+                "New York",
+                "United States",
+                40.7128,
+                -74.0060,
+                42.195,
+                false,
+                RaceCourseMapService.PromptRaceType.POINT_TO_POINT,
+                "image/png"
+        );
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(qwenClient, times(2)).analyzeCandidate(any(), eq("image/png"), promptCaptor.capture());
+        assertThat(alignment).isNull();
+        assertThat(promptCaptor.getAllValues().get(0)).contains("Known New York City Marathon corridor");
+        assertThat(promptCaptor.getAllValues().get(1)).contains("open water");
+    }
+
+    @Test
+    void analyzeCandidateRejectsKnownMarathonRouteOutsideLocalCourseBoundsWhenCorrectiveQwenDoesNotFixIt() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
+        when(qwenClient.analyzeCandidate(any(), eq("image/png"), any())).thenReturn("""
+                {
+                  "isCourseMap": true,
+                  "confidence": 90,
+                  "summary": "Recovered a Chicago route but drifted outside the known marathon corridor into Lake Michigan.",
+                  "overlayBounds": { "north": 42.03, "south": 41.75, "east": -87.56, "west": -87.76 },
+                  "routePoints": [
+                    { "lat": 41.8819, "lng": -87.6233, "label": "Start" },
+                    { "lat": 41.9005, "lng": -87.6310 },
+                    { "lat": 41.9280, "lng": -87.6405 },
+                    { "lat": 41.9476, "lng": -87.6550 },
+                    { "lat": 41.9250, "lng": -87.6430 },
+                    { "lat": 41.8955, "lng": -87.5600, "label": "Lake Michigan waypoint" },
+                    { "lat": 41.8840, "lng": -87.6500 },
+                    { "lat": 41.8810, "lng": -87.6680 },
+                    { "lat": 41.8680, "lng": -87.6565 },
+                    { "lat": 41.8520, "lng": -87.6500 },
+                    { "lat": 41.8430, "lng": -87.6320 },
+                    { "lat": 41.8320, "lng": -87.6265 },
+                    { "lat": 41.8160, "lng": -87.6170 },
+                    { "lat": 41.7900, "lng": -87.6155 },
+                    { "lat": 41.8230, "lng": -87.6230 },
+                    { "lat": 41.8756, "lng": -87.6244, "label": "Finish" }
+                  ]
+                }
+                """);
+
+        RaceCourseMapAiService service = new RaceCourseMapAiService(restTemplate, new ObjectMapper(), geometryService, qwenClient);
+
+        RaceCourseMapService.CourseMapAlignment alignment = service.analyzeCandidate(
+                "https://cdn.example.com/chicago-course-map.jpg",
+                samplePngBytes(),
+                "Bank of America Chicago Marathon",
+                "Chicago",
+                "United States",
+                41.8781,
+                -87.6298,
+                42.195,
+                false,
+                RaceCourseMapService.PromptRaceType.LOOP,
+                "image/png"
+        );
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(qwenClient, times(2)).analyzeCandidate(any(), eq("image/png"), promptCaptor.capture());
+        assertThat(alignment).isNull();
+        assertThat(promptCaptor.getAllValues().get(0)).contains("Known Chicago Marathon corridor");
+        assertThat(promptCaptor.getAllValues().get(1)).contains("outside the known");
     }
 
     @Test
@@ -484,12 +594,34 @@ class RaceCourseMapAiServiceTests {
                 null
         );
 
-        assertThat(prompt).contains("Return 16 to 24 routePoints total for full marathons");
+        assertThat(prompt).contains("16 to 24 routePoints");
         assertThat(prompt).contains("Hopkinton");
         assertThat(prompt).contains("Wellesley");
         assertThat(prompt).contains("Copley");
-        assertThat(prompt).contains("Prefer widely spaced points across the full route");
+        assertThat(prompt).contains("Spread points EVENLY");
         assertThat(prompt).contains("Do NOT focus only on the final downtown segment");
+    }
+
+    @Test
+    void buildAlignmentPromptPreservesExplicitOutAndBackReturnGeometry() {
+        RaceCourseMapPromptBuilder promptBuilder = new RaceCourseMapPromptBuilder();
+
+        String prompt = promptBuilder.buildAlignmentPrompt(
+                "Example Out And Back Marathon",
+                "Example City",
+                "United States",
+                40.0,
+                -75.0,
+                42.195,
+                false,
+                RaceCourseMapService.PromptRaceType.OUT_AND_BACK,
+                null
+        );
+
+        assertThat(prompt).contains("Trace the full outbound leg, the turnaround point, and the return leg");
+        assertThat(prompt).contains("When the return lane is visibly separate from the outbound");
+        assertThat(prompt).doesNotContain("Trace ONLY the outbound direction");
+        assertThat(prompt).doesNotContain("Reported distance should be HALF");
     }
 
     @Test
@@ -508,21 +640,23 @@ class RaceCourseMapAiServiceTests {
                 null
         );
 
-        assertThat(prompt).contains("Scan every plausible route-bearing course-map picture");
-        assertThat(prompt).contains("printed");
-        assertThat(prompt).contains("scanned");
-        assertThat(prompt).contains("photographed");
-        assertThat(prompt).contains("screenshot");
-        assertThat(prompt).contains("PDF-rendered");
-        assertThat(prompt).contains("Do not reject solely because the map is stylized, rasterized, compressed");
-        assertThat(prompt).contains("Only return routePoints when the route can be anchored");
-        assertThat(prompt).contains("street labels, mile markers, landmarks, neighborhoods, water, parks, or coastline");
-        assertThat(prompt).contains("city-level reference only");
+        assertThat(prompt).contains("ACCEPT AS A COURSE MAP");
+        assertThat(prompt).contains("Printed course maps");
+        assertThat(prompt).contains("photographed maps");
+        assertThat(prompt).contains("screenshots");
+        assertThat(prompt).contains("PDF-rendered maps");
+        assertThat(prompt).contains("Poster-style official race graphics");
+        assertThat(prompt).contains("STAGE 1");
+        assertThat(prompt).contains("STAGE 2");
+        assertThat(prompt).contains("STAGE 3");
         assertThat(prompt).contains("routePoints=[]");
+        assertThat(prompt).contains("distinct, ordered checkpoints");
+        assertThat(prompt).contains("street names");
+        assertThat(prompt).contains("mile or kilometer markers");
+        assertThat(prompt).contains("HONESTY RULE");
         assertThat(prompt).contains("Known Chicago Marathon corridor");
-        assertThat(prompt).contains("Never fill routePoints with cityCenterLat/cityCenterLng");
-        assertThat(prompt).contains("Never repeat the same coordinate");
-        assertThat(prompt).contains("Do not turn decorative route-like art into a distance-accurate overlay");
+        assertThat(prompt).contains("NEVER copy cityCenterLat/cityCenterLng");
+        assertThat(prompt).contains("consecutive route points share the same coordinate");
     }
 
     private byte[] samplePngBytes() {
