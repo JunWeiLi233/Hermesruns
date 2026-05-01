@@ -50,6 +50,48 @@ function LandingGlyph({ name, className = '' }) {
           <path d="M17 7L7 17" />
         </>
       )}
+      {name === 'vdot' && (
+        <>
+          <path d="M4 20l5-12 4 8 6-14" />
+          <circle cx="19" cy="4" r="2" />
+        </>
+      )}
+      {name === 'zones' && (
+        <>
+          <rect x="4" y="16" width="3" height="4" rx="1" />
+          <rect x="8.5" y="12" width="3" height="8" rx="1" />
+          <rect x="13" y="8" width="3" height="12" rx="1" />
+          <rect x="17.5" y="4" width="3" height="16" rx="1" />
+        </>
+      )}
+      {name === 'shoe' && (
+        <>
+          <path d="M4 18c1.5-4 4-6 6-8l2-1 3 2c1 1 1.5 2 1 3l-1 2" />
+          <path d="M8 8l2-2 6 4-2 2" />
+        </>
+      )}
+      {name === 'sync' && (
+        <>
+          <path d="M4 12a8 8 0 0 1 13.6-5.6" />
+          <path d="M20 12a8 8 0 0 1-13.6 5.6" />
+          <polyline points="18,4 18,8 14,8" />
+          <polyline points="6,20 6,16 10,16" />
+        </>
+      )}
+      {name === 'globe' && (
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M4 12h16" />
+          <ellipse cx="12" cy="12" rx="3" ry="8" />
+        </>
+      )}
+      {name === 'chart' && (
+        <>
+          <rect x="3" y="12" width="4" height="8" rx="1" />
+          <rect x="10" y="7" width="4" height="13" rx="1" />
+          <rect x="17" y="3" width="4" height="17" rx="1" />
+        </>
+      )}
     </svg>
   );
 }
@@ -165,20 +207,19 @@ export default function Landing() {
   }, []);
 
   const navLinks = [
-    ['#answers', t('landing.cinematic_nav_daily')],
-    ['#formula', t('landing.cinematic_nav_method')],
-    ['#races', t('landing.cinematic_nav_races')],
+    ['#features', t('landing.cinematic_nav_daily')],
+    ['#answers', t('landing.cinematic_nav_method')],
+    ['#science', t('landing.cinematic_nav_races')],
     ['#compare', t('landing.cinematic_nav_compare')],
   ];
 
-  const tickerItems = [
-    t('landing.cinematic_ticker_vdot'),
-    t('landing.cinematic_ticker_acwr'),
-    t('landing.cinematic_ticker_paces'),
-    t('landing.cinematic_ticker_logged'),
-    t('landing.cinematic_ticker_weekly'),
-    t('landing.cinematic_ticker_marathon'),
-    t('landing.cinematic_ticker_shoes'),
+  const features = [
+    { icon: 'vdot', title: t('landing.cinematic_ticker_vdot'), desc: t('landing.cinematic_answer_2_body') },
+    { icon: 'zones', title: t('landing.cinematic_ticker_paces'), desc: t('landing.cinematic_hero_text') },
+    { icon: 'sync', title: t('landing.cinematic_ticker_logged'), desc: t('landing.feature_analytics_desc') },
+    { icon: 'chart', title: t('landing.cinematic_ticker_acwr'), desc: t('landing.cinematic_answer_1_body') },
+    { icon: 'shoe', title: t('landing.cinematic_ticker_shoes'), desc: t('landing.cinematic_answer_3_body') },
+    { icon: 'globe', title: t('landing.cinematic_ticker_marathon'), desc: t('landing.cinematic_races_copy') },
   ];
 
   const paces = [
@@ -235,6 +276,7 @@ export default function Landing() {
 
   return (
     <div className="landing-page--cinematic">
+      {/* ── Navigation ── */}
       <header className={`landing-cinematic-nav ${isScrolled ? 'is-scrolled' : ''}`}>
         <PageWidth className="landing-cinematic-nav-inner">
           <Link to="/" className="landing-cinematic-brand">
@@ -261,19 +303,14 @@ export default function Landing() {
       </header>
 
       <main>
+        {/* ── 1. Hero ── */}
         <section className="landing-cinematic-hero">
           <div className="landing-cinematic-hero-plate" aria-hidden="true">
             <div className="landing-cinematic-hero-photo" />
             <div className="landing-cinematic-hero-scrim" />
-            <div className="landing-cinematic-grain" />
           </div>
 
           <PageWidth className="landing-cinematic-hero-inner">
-            <div className="landing-cinematic-hero-meta">
-              <span>{t('landing.cinematic_issue')}</span>
-              <span>{t('landing.cinematic_local')}</span>
-            </div>
-
             <RevealSection className="landing-cinematic-hero-grid">
               <div className="landing-cinematic-hero-copy">
                 <span className="landing-cinematic-kicker">{t('landing.badge')}</span>
@@ -346,14 +383,29 @@ export default function Landing() {
           </PageWidth>
         </section>
 
-        <section className="landing-cinematic-ticker" aria-label={t('landing.cinematic_ticker_label')}>
-          <div className="landing-cinematic-ticker-track">
-            {[...tickerItems, ...tickerItems].map((item, index) => (
-              <span key={`${item}-${index}`}>{item}</span>
-            ))}
-          </div>
+        {/* ── 2. Feature Grid ── */}
+        <section id="features" className="landing-cinematic-features">
+          <PageWidth>
+            <RevealSection className="landing-cinematic-section-head">
+              <span className="landing-cinematic-kicker">{t('landing.cinematic_ticker_label')}</span>
+              <h2>{t('landing.cinematic_answers_title')} <span>{t('landing.cinematic_answers_title_muted')}</span></h2>
+            </RevealSection>
+
+            <div className="landing-cinematic-feature-grid">
+              {features.map((f, i) => (
+                <RevealSection key={f.title} delay={i * 40} className="landing-cinematic-feature-card">
+                  <div className="landing-cinematic-feature-icon">
+                    <LandingGlyph name={f.icon} />
+                  </div>
+                  <h3>{f.title}</h3>
+                  <p>{f.desc}</p>
+                </RevealSection>
+              ))}
+            </div>
+          </PageWidth>
         </section>
 
+        {/* ── 3. Coach Voice ── */}
         <section className="landing-cinematic-coach">
           <PageWidth>
             <RevealSection className="landing-cinematic-coach-grid">
@@ -370,6 +422,7 @@ export default function Landing() {
           </PageWidth>
         </section>
 
+        {/* ── 4. Three Daily Answers ── */}
         <section id="answers" className="landing-cinematic-answers">
           <PageWidth>
             <RevealSection className="landing-cinematic-section-head">
@@ -420,7 +473,8 @@ export default function Landing() {
           </PageWidth>
         </section>
 
-        <section id="formula" className="landing-cinematic-formula">
+        {/* ── 5. Science: VDOT + Formula ── */}
+        <section id="science" className="landing-cinematic-formula">
           <PageWidth className="landing-cinematic-formula-grid">
             <RevealSection className="landing-cinematic-formula-copy">
               <span className="landing-cinematic-kicker">{t('landing.cinematic_formula_kicker')}</span>
@@ -461,6 +515,31 @@ export default function Landing() {
           </PageWidth>
         </section>
 
+        {/* ── 6. Training Zones ── */}
+        <section className="landing-cinematic-zones">
+          <PageWidth>
+            <RevealSection className="landing-cinematic-section-head">
+              <span className="landing-cinematic-kicker">{t('landing.cinematic_zones_kicker')}</span>
+              <h2>{t('landing.cinematic_zones_title')}</h2>
+            </RevealSection>
+
+            <div className="landing-cinematic-zone-grid">
+              {zones.map(([name, percent, desc, pace], index) => (
+                <RevealSection key={name} className={`landing-cinematic-zone ${index === 3 ? 'is-active' : ''}`} delay={index * 35}>
+                  <div>
+                    <h3>{name}</h3>
+                    <span>{percent} VO2</span>
+                  </div>
+                  <p>{desc}</p>
+                  <i><span style={{ width: `${22 + index * 12}%` }} /></i>
+                  <strong>{pace}</strong>
+                </RevealSection>
+              ))}
+            </div>
+          </PageWidth>
+        </section>
+
+        {/* ── 7. Races ── */}
         <section id="races" className="landing-cinematic-races">
           <PageWidth>
             <RevealSection className="landing-cinematic-section-head is-split">
@@ -493,6 +572,7 @@ export default function Landing() {
           </PageWidth>
         </section>
 
+        {/* ── 8. Comparison ── */}
         <section id="compare" className="landing-cinematic-compare">
           <PageWidth>
             <RevealSection className="landing-cinematic-section-head">
@@ -519,29 +599,7 @@ export default function Landing() {
           </PageWidth>
         </section>
 
-        <section className="landing-cinematic-zones">
-          <PageWidth>
-            <RevealSection className="landing-cinematic-section-head">
-              <span className="landing-cinematic-kicker">{t('landing.cinematic_zones_kicker')}</span>
-              <h2>{t('landing.cinematic_zones_title')}</h2>
-            </RevealSection>
-
-            <div className="landing-cinematic-zone-grid">
-              {zones.map(([name, percent, desc, pace], index) => (
-                <RevealSection key={name} className={`landing-cinematic-zone ${index === 3 ? 'is-active' : ''}`} delay={index * 35}>
-                  <div>
-                    <h3>{name}</h3>
-                    <span>{percent} VO2</span>
-                  </div>
-                  <p>{desc}</p>
-                  <i><span style={{ width: `${22 + index * 12}%` }} /></i>
-                  <strong>{pace}</strong>
-                </RevealSection>
-              ))}
-            </div>
-          </PageWidth>
-        </section>
-
+        {/* ── 9. Final CTA ── */}
         <section className="landing-cinematic-final">
           <PageWidth>
             <RevealSection className="landing-cinematic-final-card">
@@ -569,6 +627,7 @@ export default function Landing() {
         </section>
       </main>
 
+      {/* ── Footer ── */}
       <footer className="landing-cinematic-footer">
         <PageWidth className="landing-cinematic-footer-inner">
           <div className="landing-cinematic-footer-brand">

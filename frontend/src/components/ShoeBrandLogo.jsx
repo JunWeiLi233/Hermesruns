@@ -1,15 +1,10 @@
 import { memo } from 'react';
 import adidasLogo from '../assets/brand-logos/adidas.png';
-import antaLogo from '../assets/brand-logos/anta.svg';
-import bmaiLogo from '../assets/brand-logos/bmai.svg';
-import doWinLogo from '../assets/brand-logos/do-win.svg';
 import erkeLogo from '../assets/brand-logos/erke.jpg';
 import logo361 from '../assets/brand-logos/361.webp';
 import asicsLogo from '../assets/brand-logos/asics.webp';
-import liningLogo from '../assets/brand-logos/lining.svg';
 import newBalanceLogo from '../assets/brand-logos/new-balance.png';
 import nikeLogo from '../assets/brand-logos/nike.webp';
-import peakLogo from '../assets/brand-logos/peak.svg';
 import pumaLogo from '../assets/brand-logos/puma.png';
 import sauconyLogo from '../assets/brand-logos/saucony.png';
 import xtepLogo from '../assets/brand-logos/xtep.png';
@@ -18,21 +13,11 @@ const BRAND_LOGO_ASSETS = {
   '361': logo361,
   '361°': logo361,
   adidas: adidasLogo,
-  anta: antaLogo,
-  '安踏': antaLogo,
   asics: asicsLogo,
-  bmai: bmaiLogo,
-  '必迈': bmaiLogo,
-  dowin: doWinLogo,
-  '多威': doWinLogo,
   erke: erkeLogo,
   '鸿星尔克': erkeLogo,
-  lining: liningLogo,
-  '李宁': liningLogo,
   newbalance: newBalanceLogo,
   nike: nikeLogo,
-  peak: peakLogo,
-  '匹克': peakLogo,
   puma: pumaLogo,
   '彪马': pumaLogo,
   saucony: sauconyLogo,

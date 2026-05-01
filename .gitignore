@@ -18,9 +18,11 @@ oracleJdk-26/
 # env / secrets files
 .env
 .env.*
+!.env.example
 # Local PowerShell env (secrets); keep Hermes.local.env.example.ps1 in git
 Hermes.local.env.ps1
 Hermes.local.env.*.ps1
+!Hermes.local.env.example.ps1
 # Claude Code / DeepSeek local API-key files
 .claude/settings.local.json
 .claude/*.local.json
