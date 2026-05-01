@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
-import { fetchPasswordRules, getFailedPasswordRuleIds, getDisplayPasswordRuleIds } from '../utils/passwordRules';
+import { fetchPasswordRules, getFailedPasswordRuleIds } from '../utils/passwordRules';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
@@ -75,7 +75,6 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [failedRules, setFailedRules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pwRules, setPwRules] = useState(null);
   const [doneInfo, setDoneInfo] = useState(null);
@@ -137,7 +136,6 @@ export default function Signup() {
     () => getFailedPasswordRuleIds(password, pwRules || {}),
     [password, pwRules],
   );
-  const displayFailed = failedRules.length > 0 ? failedRules : clientFailed;
 
   const strengthScore = useMemo(() => {
     if (!password) return null;
@@ -160,7 +158,6 @@ export default function Signup() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    setFailedRules([]);
 
     if (password !== confirmPassword) {
       setError(s('confirm_password_mismatch'));
@@ -169,7 +166,6 @@ export default function Signup() {
 
     const failed = getFailedPasswordRuleIds(password, pwRules || {});
     if (failed.length > 0) {
-      setFailedRules(failed);
       setError(t('signup.password_rules_title'));
       return;
     }
@@ -185,7 +181,6 @@ export default function Signup() {
 
       if (!res.ok) {
         if (data.code === 'WEAK_PASSWORD' && Array.isArray(data.failedRules)) {
-          setFailedRules(data.failedRules);
           setError(data.error || t('signup.password_rules_title'));
         } else {
           setError(data.error || data.message || 'Request failed.');
@@ -352,21 +347,6 @@ export default function Signup() {
 
               <div className="signup-flow-field">
                 <label htmlFor="password">{t('signup.password_label')}</label>
-                
-                <div className="password-rules-display">
-                  <ul className="password-rules-list">
-                    {getDisplayPasswordRuleIds(pwRules || {}).map((id) => {
-                      const isPassed = !displayFailed.includes(id) && password.length > 0;
-                      return (
-                        <li key={id} className={`password-rule-item${isPassed ? ' is-passed' : ''}`}>
-                          <AppIcon name={isPassed ? 'check' : 'close'} className="rule-icon" />
-                          <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-
                 <input
                   type="password"
                   id="password"
@@ -374,10 +354,7 @@ export default function Signup() {
                   autoComplete="new-password"
                   required
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setFailedRules([]);
-                  }}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 

@@ -1266,7 +1266,7 @@ export default function ProfileDashboard() {
                 </div>
               </article>
 
-              <article className="runner-dashboard-sessions-slot bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+              <article className="runner-dashboard-sessions-slot">
                 <div className="runner-dashboard-section-head">
                   <div>
                     <span className="runner-dashboard-card-kicker">{t('profile.dashboard_timeline')}</span>
@@ -1794,7 +1794,7 @@ export default function ProfileDashboard() {
               )}
 
               {runs.length > 3 && (
-                <article className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                <article className="runner-dashboard-feature-card runner-dashboard-feature-card--sessions">
                 <div className="runner-dashboard-feature-head">
                   <span className="runner-dashboard-card-kicker">{t('profile.dashboard_recent_sessions')}</span>
                   <span className="runner-dashboard-feature-eyebrow">{featuredSession ? formatRunDate(featuredSession, lang) : '--'}</span>
