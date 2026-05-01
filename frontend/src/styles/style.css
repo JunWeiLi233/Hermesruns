@@ -47682,6 +47682,7 @@ body.theme-light .admin-command-page,
   font-size: 0.72rem;
 }
 
+@media (max-width: 900px) {
 .admin-command-page {
   background: #111415;
   color: #e1e3e4;
@@ -48196,6 +48197,7 @@ body.theme-light .admin-command-page,
  .admin-command-shell > .admin-overview-bento {
   display: none;
 }
+}
 
 .admin-command-kpi-grid {
   gap: 18px;
@@ -48207,11 +48209,9 @@ body.theme-light .admin-command-page,
 .admin-command-queue-card,
 .admin-command-quick-actions {
   border: 0;
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top right, rgba(252, 126, 105, 0.08), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 241, 242, 0.98));
-  box-shadow: 0 18px 38px rgba(44, 47, 48, 0.06);
+  border-radius: var(--radius-xl);
+  background: var(--admin-surface-dark);
+  box-shadow: var(--admin-shadow-card);
 }
 
 .admin-command-kpi-card {
@@ -48236,13 +48236,16 @@ body.theme-light .admin-command-page,
   min-height: 50px;
   padding: 0 18px;
   border: 0;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 10px 22px rgba(44, 47, 48, 0.05);
+  border-radius: var(--radius-lg);
+  background: var(--admin-card-bg);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.04);
+  color: var(--admin-text-primary);
+  transition: background var(--transition), color var(--transition);
 }
 
 .admin-command-quick-action-btn:hover {
-  background: rgba(252, 126, 105, 0.12);
-  color: var(--brand-accent-strong);
+  background: var(--admin-accent-soft);
+  color: var(--accent-coral-strong);
 }
 
 .admin-command-page .admin-quick-action-icon {
@@ -48303,9 +48306,10 @@ body.theme-light .admin-command-page,
 .admin-command-page .action-bar input {
   min-height: 48px;
   border: 0;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.18);
+  border-radius: var(--radius-lg);
+  background: var(--admin-card-bg);
+  color: var(--admin-text-primary);
+  box-shadow: inset 0 0 0 1px var(--admin-border-subtle);
 }
 
 .admin-command-page .data-table-wrap {
@@ -48385,8 +48389,8 @@ body.theme-light .admin-command-page,
 .admin-users-command-hero,
 .admin-users-command-console,
 .admin-users-roster-board {
-  border-radius: 20px;
-  border: 1px solid rgba(87, 66, 62, 0.38);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--admin-border-subtle);
 }
 
 .admin-users-command-hero {
@@ -48394,9 +48398,7 @@ body.theme-light .admin-command-page,
   grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.95fr);
   gap: 30px;
   padding: 36px;
-  background:
-    radial-gradient(circle at top right, rgba(240, 117, 97, 0.2), transparent 28%),
-    linear-gradient(145deg, rgba(17, 20, 21, 0.98), rgba(25, 28, 29, 0.96));
+  background: var(--admin-surface-dark);
 }
 
 .admin-users-command-hero__copy {
@@ -48406,12 +48408,12 @@ body.theme-light .admin-command-page,
 }
 
 .admin-users-command-hero__kicker {
-  color: #ffb4a7;
+  color: var(--accent-coral);
 }
 
 .admin-users-command-hero__copy h1 {
   margin: 0;
-  color: #ffffff;
+  color: var(--admin-text-primary);
   font-family: "Manrope", var(--font-display);
   font-size: clamp(2.4rem, 5vw, 4.35rem);
   font-weight: 900;
@@ -48422,7 +48424,7 @@ body.theme-light .admin-command-page,
 .admin-users-command-hero__copy p {
   margin: 0;
   max-width: 56ch;
-  color: #b1b5bc;
+  color: var(--admin-text-secondary);
   line-height: 1.7;
 }
 
@@ -48438,8 +48440,8 @@ body.theme-light .admin-command-page,
   min-height: 36px;
   padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #dec0bb;
+  background: var(--admin-card-bg);
+  color: var(--admin-text-secondary);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -48462,17 +48464,15 @@ body.theme-light .admin-command-page,
   display: grid;
   gap: 10px;
   padding: 22px;
-  border-radius: 18px;
-  background: rgba(12, 15, 16, 0.72);
-  box-shadow: inset 0 0 0 1px rgba(87, 66, 62, 0.28);
+  border-radius: var(--radius-lg);
+  background: var(--admin-card-bg);
+  box-shadow: inset 0 0 0 1px var(--admin-border-subtle);
 }
 
 .admin-users-command-hero__story-card--primary {
   padding: 22px;
-  background:
-    radial-gradient(circle at top right, rgba(255, 180, 167, 0.1), transparent 36%),
-    linear-gradient(145deg, rgba(160, 57, 42, 0.22), rgba(17, 20, 21, 0.82));
-  box-shadow: inset 0 0 0 1px rgba(255, 180, 167, 0.16);
+  background: var(--admin-accent-glow);
+  box-shadow: inset 0 0 0 1px rgba(255, 180, 167, 0.16), var(--admin-shadow-card);
 }
 
 .admin-users-command-hero__story-card span,
@@ -48482,7 +48482,7 @@ body.theme-light .admin-command-page,
 .admin-users-roster-table__meta span,
 .admin-users-roster-table__identity-copy span,
 .admin-users-roster-badge {
-  color: #a58b86;
+  color: var(--admin-text-muted);
   font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -48495,7 +48495,7 @@ body.theme-light .admin-command-page,
 .admin-users-roster-board__head h3,
 .admin-users-roster-table__identity-copy strong,
 .admin-users-roster-table__meta strong {
-  color: #ffffff;
+  color: var(--admin-text-primary);
   font-family: "Manrope", var(--font-display);
   font-style: normal;
   transform: none;
@@ -48514,7 +48514,7 @@ body.theme-light .admin-command-page,
 .admin-users-command-bulk__copy p,
 .admin-users-roster-board__head p {
   margin: 0;
-  color: #b1b5bc;
+  color: var(--admin-text-secondary);
   line-height: 1.55;
 }
 
@@ -48528,11 +48528,11 @@ body.theme-light .admin-command-page,
   display: grid;
   gap: 10px;
   padding: 24px;
-  border: 1px solid rgba(87, 66, 62, 0.34);
-  border-radius: 18px;
-  background: #191c1d;
+  border: 1px solid var(--admin-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--admin-card-bg);
   text-align: left;
-  color: #e1e3e4;
+  color: var(--admin-text-primary);
   box-shadow: none;
 }
 
@@ -48542,7 +48542,7 @@ button.admin-users-command-kpi {
 
 button.admin-users-command-kpi:hover {
   border-color: rgba(255, 180, 167, 0.28);
-  background: #1d2021;
+  background: var(--admin-card-bg-hover);
 }
 
 .admin-users-command-kpi strong {
@@ -48553,13 +48553,13 @@ button.admin-users-command-kpi:hover {
 }
 
 .admin-users-command-kpi--queue strong {
-  color: #ffb4a7;
+  color: var(--accent-coral);
 }
 
 .admin-users-command-console,
 .admin-users-roster-board {
   padding: 28px;
-  background: #191c1d;
+  background: var(--admin-card-bg);
 }
 
 .admin-users-command-console {
@@ -48597,8 +48597,8 @@ button.admin-users-command-kpi:hover {
   gap: 8px;
   padding: 6px;
   border-radius: 999px;
-  background: #282a2b;
-  box-shadow: inset 0 0 0 1px rgba(87, 66, 62, 0.24);
+  background: var(--admin-card-bg);
+  box-shadow: inset 0 0 0 1px var(--admin-border-subtle);
 }
 
 .admin-users-command-bulk {
@@ -48607,10 +48607,9 @@ button.admin-users-command-kpi:hover {
   justify-content: space-between;
   gap: 18px;
   padding: 18px 20px;
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(12, 15, 16, 0.96), rgba(17, 20, 21, 0.96));
-  box-shadow: inset 0 0 0 1px rgba(87, 66, 62, 0.3);
+  border-radius: var(--radius-lg);
+  background: var(--admin-surface-deeper);
+  box-shadow: inset 0 0 0 1px var(--admin-border-subtle);
 }
 
 .admin-users-command-bulk__copy {
@@ -48643,8 +48642,8 @@ button.admin-users-command-kpi:hover {
   min-height: 36px;
   padding: 0 14px;
   border-radius: 999px;
-  background: #282a2b;
-  color: #dec0bb;
+  background: var(--admin-card-bg);
+  color: var(--admin-text-secondary);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -48652,25 +48651,25 @@ button.admin-users-command-kpi:hover {
 }
 
 .admin-users-roster-board__table-wrap.data-table-wrap {
-  border-radius: 20px;
-  background: #111415;
-  box-shadow: inset 0 0 0 1px rgba(87, 66, 62, 0.28);
+  border-radius: var(--radius-xl);
+  background: var(--admin-page-bg);
+  box-shadow: inset 0 0 0 1px var(--admin-border-subtle);
 }
 
 .admin-users-roster-table thead th {
-  background: rgba(40, 42, 43, 0.88) !important;
-  color: #8f969d !important;
-  border-bottom-color: rgba(87, 66, 62, 0.4) !important;
+  background: var(--admin-card-bg) !important;
+  color: var(--admin-text-muted) !important;
+  border-bottom-color: var(--admin-border-subtle) !important;
 }
 
 .admin-users-roster-table td {
-  color: #e1e3e4;
-  border-bottom-color: rgba(87, 66, 62, 0.34);
+  color: var(--admin-text-primary);
+  border-bottom-color: var(--admin-border-subtle);
   background: transparent;
 }
 
 .admin-users-roster-table tbody tr:hover {
-  background: rgba(240, 117, 97, 0.08) !important;
+  background: var(--admin-accent-soft) !important;
 }
 
 .admin-users-roster-table__identity {
@@ -48686,8 +48685,8 @@ button.admin-users-command-kpi:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #282a2b;
-  color: #ffb4a7;
+  background: var(--admin-card-bg);
+  color: var(--accent-coral);
   font-weight: 900;
   box-shadow: inset 0 0 0 1px rgba(255, 180, 167, 0.12);
 }
@@ -48704,7 +48703,7 @@ button.admin-users-command-kpi:hover {
 
 .admin-users-roster-table__identity-copy span,
 .admin-users-roster-table__meta span {
-  color: #8f969d;
+  color: var(--admin-text-muted);
 }
 
 .admin-users-roster-table__meta {
@@ -48723,27 +48722,31 @@ button.admin-users-command-kpi:hover {
   min-height: 28px;
   padding: 0 12px;
   border-radius: 999px;
-  background: #282a2b;
+  background: var(--admin-card-bg);
+  color: var(--admin-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .admin-users-roster-badge--tier-pro {
   background: rgba(160, 57, 42, 0.2);
-  color: #ffb4a7;
+  color: var(--accent-coral);
   box-shadow: inset 0 0 0 1px rgba(255, 180, 167, 0.14);
 }
 
 .admin-users-roster-badge--tier-free {
-  color: #c2c7cd;
+  color: var(--admin-text-muted);
 }
 
 .admin-users-roster-badge--role-admin {
-  background: rgba(15, 23, 42, 0.72);
-  color: #b9d3ff;
+  background: rgba(59, 130, 246, 0.16);
+  color: #93bbfd;
   box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
 }
 
 .admin-users-roster-badge--role-user {
-  color: #dec0bb;
+  color: var(--admin-text-secondary);
 }
 
 @media (max-width: 1380px) {
