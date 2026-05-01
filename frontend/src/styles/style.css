@@ -55744,3 +55744,396 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
         transform: none;
     }
 }
+
+/* ===================================================================
+   Landing page v2 — cleaner modern editorial refresh
+   =================================================================== */
+
+/* --- 1. Hero refresh: cleaner background, no grain --- */
+.landing-cinematic-hero {
+    min-height: auto;
+    padding: 96px 0 80px; /* tokens-ok */
+}
+
+.landing-cinematic-hero-photo {
+    left: 0;
+    inset-block: 0;
+    background:
+        radial-gradient(ellipse at 72% 18%, rgba(240, 117, 97, 0.22), transparent 48%),
+        radial-gradient(ellipse at 22% 58%, rgba(255, 180, 167, 0.07), transparent 36%),
+        linear-gradient(160deg, #111316 0%, #0d0e10 100%);
+    clip-path: none;
+    opacity: 0.64;
+}
+
+.landing-cinematic-hero-photo::after { display: none; }
+.landing-cinematic-grain { display: none; }
+
+.landing-cinematic-hero-scrim {
+    background: linear-gradient(180deg, rgba(13, 14, 16, 0) 0%, var(--lc-bg) 100%);
+    opacity: 0.64;
+}
+
+.landing-cinematic-hero-meta {
+    display: none;
+}
+
+.landing-cinematic-hero-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr); /* tokens-ok */
+    align-items: center;
+    gap: 64px;
+}
+
+.landing-cinematic-hero-title {
+    margin: 14px 0 22px;
+    font-size: clamp(3.6rem, 8.5vw, 6.8rem);
+}
+
+.landing-cinematic-hero-copy > p {
+    max-width: 520px;
+    font-size: 1.08rem;
+    line-height: 1.65;
+}
+
+.landing-cinematic-hero-actions {
+    margin-top: 32px;
+    gap: 14px;
+}
+
+.landing-cinematic-trust {
+    margin-top: 26px;
+    gap: 28px;
+}
+
+/* --- 1b. HUD card refresh: cleaner surface --- */
+.landing-cinematic-hud {
+    border-radius: 28px; /* tokens-ok */
+    padding: 28px;
+    background: linear-gradient(180deg, rgba(28, 32, 38, 0.9), rgba(20, 23, 27, 0.96));
+    box-shadow:
+        0 32px 80px -36px rgba(0, 0, 0, 0.72),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* --- 2. Nav refresh --- */
+.landing-cinematic-nav.is-scrolled {
+    background: rgba(13, 14, 16, 0.78);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.landing-cinematic-nav-inner {
+    min-height: 72px;
+}
+
+.landing-cinematic-brand {
+    gap: 8px;
+    font-size: 0.94rem;
+}
+
+.landing-cinematic-brand-glyph {
+    width: 30px;
+    height: 30px;
+}
+
+.landing-cinematic-btn--primary {
+    background: var(--lc-coral);
+    color: #1a1c20;
+    box-shadow: 0 12px 28px -16px var(--lc-coral);
+    font-weight: 750;
+}
+
+.landing-cinematic-btn--primary:hover {
+    box-shadow: 0 20px 36px -18px var(--lc-coral);
+}
+
+/* --- 3. Feature grid (replaces ticker) --- */
+.landing-cinematic-ticker {
+    display: none;
+}
+
+.landing-cinematic-features {
+    padding: 72px 0 80px; /* tokens-ok */
+    background: rgba(15, 17, 20, 0.6);
+}
+
+.landing-cinematic-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.landing-cinematic-feature-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+    border-radius: 20px;
+    padding: 28px 24px;
+    background: var(--lc-surface-low);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: transform 0.22s ease, background 0.22s ease;
+}
+
+.landing-cinematic-feature-card:hover {
+    transform: translateY(-2px);
+    background: var(--lc-surface-mid);
+}
+
+.landing-cinematic-feature-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(240, 117, 97, 0.14);
+    color: var(--lc-coral);
+    flex-shrink: 0;
+}
+
+.landing-cinematic-feature-card h3 {
+    margin: 0;
+    font-family: var(--lc-font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.landing-cinematic-feature-card p {
+    margin: 0;
+    color: var(--lc-ink-muted);
+    font-size: 0.84rem;
+    line-height: 1.52;
+}
+
+/* --- 4. Coach quote refresh (kept but simplified) --- */
+.landing-cinematic-coach {
+    padding: 88px 0; /* tokens-ok */
+}
+
+.landing-cinematic-coach-grid {
+    grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.landing-cinematic-quote-mark {
+    font-size: 10rem;
+    line-height: 0.68;
+}
+
+.landing-cinematic-coach blockquote p {
+    font-size: clamp(2.2rem, 4.4vw, 3.5rem);
+}
+
+/* --- 5. Answers section refresh --- */
+.landing-cinematic-answers {
+    padding: 88px 0; /* tokens-ok */
+    background: rgba(15, 17, 20, 0.46);
+}
+
+.landing-cinematic-section-head {
+    margin-bottom: 52px;
+}
+
+.landing-cinematic-section-head h2 {
+    font-size: clamp(2.6rem, 5.4vw, 4rem);
+}
+
+.landing-cinematic-answer-grid {
+    gap: 18px;
+}
+
+.landing-cinematic-answer-card {
+    min-height: 440px; /* tokens-ok */
+    padding: 32px 28px;
+    border-radius: 24px;
+}
+
+.landing-cinematic-answer-head h3 {
+    font-size: 1.6rem;
+}
+
+.landing-cinematic-answer-card > p {
+    margin: 16px 0 22px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* --- 6. Science section refresh --- */
+.landing-cinematic-formula {
+    padding: 88px 0; /* tokens-ok */
+    background: transparent;
+}
+
+.landing-cinematic-formula-grid {
+    gap: 56px;
+}
+
+.landing-cinematic-paper {
+    border-radius: 24px; /* tokens-ok */
+    padding: 28px;
+    box-shadow: 0 24px 64px -40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.landing-cinematic-equations span,
+.landing-cinematic-equations strong {
+    border-radius: 12px;
+}
+
+/* --- 7. Zones section refresh --- */
+.landing-cinematic-zones {
+    padding: 64px 0 88px; /* tokens-ok */
+}
+
+.landing-cinematic-zone-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.landing-cinematic-zone {
+    min-height: 200px; /* tokens-ok */
+    border-radius: 20px;
+    padding: 24px 20px;
+}
+
+/* --- 8. Races section refresh --- */
+.landing-cinematic-races {
+    padding: 88px 0; /* tokens-ok */
+    background: rgba(15, 17, 20, 0.46);
+}
+
+.landing-cinematic-race-stage {
+    gap: 52px;
+}
+
+.landing-cinematic-race-row {
+    padding: 14px 0;
+}
+
+/* --- 9. Compare section refresh --- */
+.landing-cinematic-compare {
+    padding: 88px 0; /* tokens-ok */
+    background: transparent;
+}
+
+.landing-cinematic-compare-row {
+    min-height: 52px; /* tokens-ok */
+    padding: 12px 8px;
+}
+
+.landing-cinematic-compare-row.is-head strong {
+    font-size: 1.25rem;
+}
+
+/* --- 10. Final CTA refresh --- */
+.landing-cinematic-final {
+    padding: 72px 0 96px; /* tokens-ok */
+}
+
+.landing-cinematic-final-card {
+    min-height: 460px; /* tokens-ok */
+    border-radius: 32px;
+    padding: 72px 64px;
+    background: linear-gradient(135deg, #1a1c20 0%, #131518 100%);
+    box-shadow: 0 32px 80px -48px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.landing-cinematic-final-bg {
+    background:
+        radial-gradient(ellipse at 62% 40%, rgba(240, 117, 97, 0.32), transparent 52%),
+        linear-gradient(150deg, rgba(240, 117, 97, 0.08) 0%, transparent 60%);
+}
+
+.landing-cinematic-final-copy {
+    max-width: 620px;
+}
+
+.landing-cinematic-final-copy h2 {
+    font-size: clamp(2.6rem, 5.4vw, 4rem);
+}
+
+.landing-cinematic-final-trust {
+    margin-top: 32px; /* tokens-ok */
+    gap: 18px 22px;
+}
+
+/* --- 11. Footer refresh --- */
+.landing-cinematic-footer {
+    padding: 64px 0 32px; /* tokens-ok */
+}
+
+.landing-cinematic-footer-inner {
+    gap: 52px;
+}
+
+.landing-cinematic-footer-cols {
+    gap: 28px;
+}
+
+/* ===================================================================
+   Responsive overrides for v2
+   =================================================================== */
+
+@media (max-width: 1080px) {
+    .landing-cinematic-hero-grid {
+        gap: 44px;
+    }
+    .landing-cinematic-feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .landing-cinematic-hero {
+        padding: 64px 0 56px; /* tokens-ok */
+    }
+    .landing-cinematic-hero-grid {
+        grid-template-columns: 1fr;
+        gap: 36px;
+    }
+    .landing-cinematic-hero-title {
+        font-size: clamp(3rem, 14vw, 4.8rem);
+    }
+    .landing-cinematic-hud {
+        max-width: 100%;
+        padding: 22px;
+    }
+    .landing-cinematic-hero-photo {
+        opacity: 0.32;
+    }
+    .landing-cinematic-features {
+        padding: 52px 0 56px; /* tokens-ok */
+    }
+    .landing-cinematic-feature-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .landing-cinematic-feature-card {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+    }
+    .landing-cinematic-feature-icon {
+        width: 36px;
+        height: 36px;
+    }
+    .landing-cinematic-coach,
+    .landing-cinematic-answers,
+    .landing-cinematic-formula,
+    .landing-cinematic-races,
+    .landing-cinematic-compare,
+    .landing-cinematic-zones {
+        padding: 56px 0; /* tokens-ok */
+    }
+    .landing-cinematic-zone-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .landing-cinematic-final-card {
+        padding: 48px 28px;
+    }
+    .landing-cinematic-answer-card {
+        min-height: auto;
+    }
+}
