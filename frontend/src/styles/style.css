@@ -23069,22 +23069,23 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
     }
 }
 
+/* ── Login Page Redesign ── */
 .auth-page--login {
   position: relative;
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(15, 16, 17, 0.88) 0%, rgba(34, 36, 30, 0.72) 48%, rgba(18, 20, 23, 0.48) 100%),
-    radial-gradient(circle at 22% 52%, rgba(164, 98, 54, 0.18), transparent 34%),
-    radial-gradient(circle at 88% 92%, rgba(40, 140, 150, 0.22), transparent 26%),
-    url('https://images.unsplash.com/photo-1502904550040-7534597429ae?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
-  color: #f5efe9;
+    linear-gradient(160deg, rgba(12, 13, 14, 0.94) 0%, rgba(22, 23, 20, 0.78) 42%, rgba(14, 16, 19, 0.62) 100%),
+    radial-gradient(ellipse at 18% 44%, rgba(240, 117, 97, 0.10), transparent 38%),
+    radial-gradient(ellipse at 82% 88%, rgba(40, 140, 150, 0.16), transparent 30%),
+    url('https://images.unsplash.com/photo-1502904550040-7534597429ae?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; /* tokens-ok */
+  color: #f5efe9; /* tokens-ok */
 }
 
 .auth-page--login::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(19, 19, 19, 0.45) 0%, rgba(19, 19, 19, 0.1) 54%, rgba(19, 19, 19, 0.28) 100%);
+  background: linear-gradient(90deg, rgba(12, 12, 12, 0.52) 0%, rgba(12, 12, 12, 0.12) 50%, rgba(12, 12, 12, 0.32) 100%); /* tokens-ok */
   pointer-events: none;
 }
 
@@ -23093,8 +23094,8 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 64% 28%, rgba(244, 210, 150, 0.18), transparent 28%),
-    radial-gradient(circle at 76% 76%, rgba(59, 187, 191, 0.12), transparent 24%);
+    radial-gradient(ellipse at 60% 20%, rgba(244, 210, 150, 0.12), transparent 32%), /* tokens-ok */
+    radial-gradient(ellipse at 78% 72%, rgba(59, 187, 191, 0.08), transparent 28%); /* tokens-ok */
   pointer-events: none;
 }
 
@@ -23103,7 +23104,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   z-index: 1;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.92fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
 }
 
 .auth-flow-brand,
@@ -23114,15 +23115,15 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 .auth-flow-brand {
   display: flex;
   align-items: center;
-  padding: clamp(56px, 7vw, 92px);
+  padding: clamp(60px, 8vw, 96px);
 }
 
 .auth-flow-brand-inner {
   width: 100%;
-  max-width: 470px;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: 52px;
 }
 
 .auth-flow-wordmark-wrap {
@@ -23134,28 +23135,28 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 .auth-flow-wordmark {
   margin: 0;
   font-family: "Manrope", var(--font-display);
-  font-size: clamp(1.95rem, 3vw, 2.5rem);
+  font-size: clamp(2rem, 3.2vw, 2.6rem);
   font-style: italic;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #f07561;
+  color: var(--accent-coral-strong);
   transform: none;
 }
 
 .auth-flow-pulse {
   padding-left: 2px;
   font-size: 0.68rem;
-  letter-spacing: 0.34em;
+  letter-spacing: 0.36em;
   text-transform: uppercase;
-  color: rgba(240, 117, 97, 0.92);
+  color: var(--accent-coral);
   font-weight: 700;
 }
 
 .auth-flow-copy {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 24px;
 }
 
 .auth-flow-copy--carousel {
@@ -23164,7 +23165,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .auth-flow-slide-viewport {
   position: relative;
-  height: clamp(360px, 47vh, 430px);
+  height: clamp(360px, 48vh, 440px);
   overflow: hidden;
 }
 
@@ -23186,15 +23187,15 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .auth-flow-kicker {
   width: fit-content;
-  padding: 7px 12px;
+  padding: 7px 14px;
   border-radius: 999px;
-  background: rgba(240, 117, 97, 0.16);
-  color: rgba(255, 228, 218, 0.84);
-  font-size: 0.66rem;
+  background: rgba(240, 117, 97, 0.14); /* tokens-ok */
+  color: rgba(255, 228, 218, 0.86); /* tokens-ok */
+  font-size: 0.64rem;
   font-weight: 800;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  box-shadow: 0 18px 60px rgba(240, 117, 97, 0.14);
+  box-shadow: 0 12px 40px rgba(240, 117, 97, 0.10); /* tokens-ok */
 }
 
 .auth-flow-hero {
@@ -23203,30 +23204,30 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   gap: 0;
   margin: 0;
   font-family: "Manrope", var(--font-display);
-  font-size: clamp(3.8rem, 6vw, 5.4rem);
+  font-size: clamp(3.6rem, 5.6vw, 5.2rem);
   font-style: normal;
   font-weight: 800;
   letter-spacing: -0.08em;
-  line-height: 0.9;
-  color: #f7f4ef;
+  line-height: 0.88;
+  color: #f7f4ef; /* tokens-ok */
   transform: none;
 }
 
 .auth-flow-hero .is-accent {
-  color: #f07561;
+  color: var(--accent-coral-strong);
 }
 
 .auth-flow-text {
   max-width: 32ch;
   margin: 0;
-  color: rgba(239, 231, 221, 0.84);
-  font-size: 1.02rem;
+  color: rgba(239, 231, 221, 0.82); /* tokens-ok */
+  font-size: 1.04rem;
   line-height: 1.7;
 }
 
 .auth-flow-stats {
   display: flex;
-  gap: 34px;
+  gap: 36px;
   flex-wrap: wrap;
 }
 
@@ -23241,29 +23242,29 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.06em;
-  color: #ffffff;
+  color: #ffffff; /* tokens-ok */
 }
 
 .auth-flow-stats span {
-  font-size: 0.65rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.26em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(255, 244, 236, 0.52);
+  color: rgba(255, 244, 236, 0.48); /* tokens-ok */
 }
 
 .auth-flow-dots {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .auth-flow-dots span {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 241, 230, 0.2);
+  background: rgba(255, 241, 230, 0.18); /* tokens-ok */
   animation: authFlowDotPulse 18s linear infinite;
 }
 
@@ -23276,38 +23277,15 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 }
 
 @keyframes authFlowSlideRoll {
-  0%,
-  26% {
-    transform: translateY(0);
-  }
-
-  33%,
-  59% {
-    transform: translateY(-33.333%);
-  }
-
-  66%,
-  92% {
-    transform: translateY(-66.666%);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
+  0%, 26%  { transform: translateY(0); }
+  33%, 59% { transform: translateY(-33.333%); }
+  66%, 92% { transform: translateY(-66.666%); }
+  100%     { transform: translateY(0); }
 }
 
 @keyframes authFlowDotPulse {
-  0%,
-  29% {
-    width: 22px;
-    background: #f07561;
-  }
-
-  34%,
-  100% {
-    width: 6px;
-    background: rgba(255, 241, 230, 0.2);
-  }
+  0%, 29% { width: 24px; background: var(--accent-coral-strong); }
+  34%, 100% { width: 6px; background: rgba(255, 241, 230, 0.18); } /* tokens-ok */
 }
 
 /* Profile Dashboard Brand Carousel */
@@ -23740,18 +23718,18 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   flex-direction: column;
   justify-content: center;
   align-items: flex-end;
-  padding: 56px clamp(32px, 6vw, 84px) 40px 24px;
-  gap: 18px;
+  padding: 56px clamp(32px, 5vw, 80px) 44px 24px;
+  gap: 20px;
 }
 
 .auth-flow-card {
-  width: min(100%, 420px);
-  padding: 34px 30px 28px;
-  border-radius: 26px;
-  background: rgba(44, 44, 41, 0.72);
-  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  width: min(100%, 432px);
+  padding: 36px 32px 32px;
+  border-radius: var(--radius-xl);
+  background: rgba(32, 32, 30, 0.64); /* tokens-ok */
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.38), 0 0 0 0.5px rgba(255, 255, 255, 0.04); /* tokens-ok */
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
 }
 
 .auth-flow-header {
@@ -23759,52 +23737,53 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 }
 
 .auth-flow-header h3 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-family: "Manrope", var(--font-display);
-  font-size: 2rem;
+  font-size: 1.85rem;
   font-style: normal;
   font-weight: 800;
-  letter-spacing: -0.06em;
-  color: #f5f0ea;
+  letter-spacing: -0.05em;
+  color: #f5f0ea; /* tokens-ok */
   transform: none;
 }
 
 .auth-flow-header p {
   margin: 0;
-  color: rgba(237, 232, 225, 0.72);
+  color: rgba(237, 232, 225, 0.68); /* tokens-ok */
   font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .auth-flow-social {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 24px;
 }
 
 .auth-flow-status-note {
   margin: -4px 2px 0;
-  color: rgba(239, 231, 221, 0.56);
-  font-size: 0.82rem;
+  color: rgba(239, 231, 221, 0.5); /* tokens-ok */
+  font-size: 0.8rem;
   line-height: 1.5;
 }
 
 .auth-flow-btn {
   width: 100%;
-  min-height: 56px;
+  min-height: 54px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   padding: 0 22px;
-  font-family: "Inter", var(--font-body);
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  transition: transform var(--transition), background var(--transition), color var(--transition), opacity var(--transition);
+  transition: transform var(--transition), background var(--transition), box-shadow var(--transition), opacity var(--transition);
   cursor: pointer;
 }
 
@@ -23818,23 +23797,40 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 
 .auth-flow-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .auth-flow-btn--strava {
-  background: linear-gradient(135deg, #f57a63, #c7523f);
-  color: #fff4ef;
+  background: linear-gradient(135deg, #fc6a46, #d94a35); /* tokens-ok */
+  color: #fff; /* tokens-ok */
+  box-shadow: 0 8px 28px rgba(240, 117, 97, 0.18); /* tokens-ok */
 }
 
-.auth-flow-btn--google,
+.auth-flow-btn--strava:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f57a5a, #e05540); /* tokens-ok */
+  box-shadow: 0 12px 32px rgba(240, 117, 97, 0.24); /* tokens-ok */
+}
+
+.auth-flow-btn--google {
+  background: rgba(255, 255, 255, 0.05); /* tokens-ok */
+  color: rgba(245, 239, 233, 0.72); /* tokens-ok */
+}
+
+.auth-flow-btn--google:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09); /* tokens-ok */
+  color: #f5efe9; /* tokens-ok */
+}
+
 .auth-flow-btn--submit {
-  background: rgba(56, 55, 53, 0.88);
-  color: #f5efe9;
+  background: var(--accent-coral-strong);
+  color: #1a0804; /* tokens-ok */
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(240, 117, 97, 0.16); /* tokens-ok */
 }
 
-.auth-flow-btn--google:hover:not(:disabled),
 .auth-flow-btn--submit:hover:not(:disabled) {
-  background: rgba(72, 70, 68, 0.94);
+  background: #f5826e; /* tokens-ok */
+  box-shadow: 0 12px 30px rgba(240, 117, 97, 0.22); /* tokens-ok */
 }
 
 .auth-flow-btn__icon {
@@ -23853,11 +23849,11 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #4285f4, #ea4335 48%, #fbbc05 72%, #34a853 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #4285f4, #ea4335 48%, #fbbc05 72%, #34a853 100%); /* tokens-ok */
+  color: #ffffff; /* tokens-ok */
   font-size: 0.72rem;
   font-weight: 900;
 }
@@ -23865,28 +23861,28 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 .auth-flow-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 0 0 22px;
+  gap: 14px;
+  margin: 0 0 24px;
 }
 
 .auth-flow-divider span {
   flex: 1 1 auto;
   height: 1px;
-  background: rgba(222, 192, 187, 0.16);
+  background: rgba(255, 255, 255, 0.06); /* tokens-ok */
 }
 
 .auth-flow-divider strong {
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(239, 231, 221, 0.34);
+  color: rgba(239, 231, 221, 0.28); /* tokens-ok */
 }
 
 .auth-flow-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .form-group--auth {
@@ -23898,11 +23894,11 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 .form-group--auth label,
 .label-row--auth label {
   padding-left: 2px;
-  font-size: 0.63rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #f49787;
+  color: var(--accent-coral);
 }
 
 .label-row--auth {
@@ -23914,38 +23910,51 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 
 .forgot-password--auth {
   font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(239, 231, 221, 0.3);
+  color: rgba(239, 231, 221, 0.36); /* tokens-ok */
   text-decoration: none;
+  transition: color var(--transition);
+}
+
+.forgot-password--auth:hover {
+  color: var(--accent-coral);
 }
 
 .auth-page--login .form-group--auth input {
-  min-height: 52px;
-  border: 0;
-  border-radius: 12px;
-  background: rgba(20, 20, 20, 0.84);
-  color: #f7f2ec;
-  padding: 0 16px;
-  box-shadow: inset 0 0 0 1px rgba(222, 192, 187, 0.04);
+  min-height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.06); /* tokens-ok */
+  border-radius: var(--radius-md);
+  background: rgba(18, 18, 17, 0.78); /* tokens-ok */
+  color: #f5f0ea; /* tokens-ok */
+  padding: 0 18px;
+  font-size: 0.95rem;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .auth-page--login .form-group--auth input::placeholder {
-  color: rgba(239, 231, 221, 0.24);
+  color: rgba(239, 231, 221, 0.22); /* tokens-ok */
 }
 
 .auth-page--login .form-group--auth input:focus {
   outline: none;
-  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.65);
-  background: rgba(16, 16, 16, 0.92);
+  border-color: var(--accent-coral-strong);
+  background: rgba(22, 22, 21, 0.9); /* tokens-ok */
+  box-shadow: 0 0 0 3px rgba(240, 117, 97, 0.12), inset 0 0 0 0.5px rgba(240, 117, 97, 0.2); /* tokens-ok */
 }
 
+.auth-page--login .form-group--auth input.error {
+  border-color: rgba(248, 113, 113, 0.4); /* tokens-ok */
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.08); /* tokens-ok */
+}
+
+/* ── Signup Page Redesign ── */
 .auth-page--signup {
   position: relative;
   min-height: 100vh;
-  background: #111110;
-  color: #f5efe9;
+  background: #0e0e0d; /* tokens-ok */
+  color: #f5efe9; /* tokens-ok */
   overflow: hidden;
 }
 
@@ -23955,9 +23964,9 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   inset: 0;
   z-index: 0;
   background:
-    linear-gradient(90deg, rgba(15, 15, 14, 0.96) 0%, rgba(15, 15, 14, 0.82) 44%, rgba(15, 15, 14, 0.58) 62%, rgba(15, 15, 14, 0.82) 100%),
-    radial-gradient(circle at 24% 30%, rgba(240, 117, 97, 0.1), transparent 26%),
-    radial-gradient(circle at 76% 78%, rgba(240, 117, 97, 0.06), transparent 28%);
+    linear-gradient(160deg, rgba(12, 12, 11, 0.94) 0%, rgba(14, 14, 13, 0.78) 42%, rgba(12, 12, 11, 0.64) 64%, rgba(14, 14, 13, 0.84) 100%), /* tokens-ok */
+    radial-gradient(ellipse at 22% 28%, rgba(240, 117, 97, 0.08), transparent 30%), /* tokens-ok */
+    radial-gradient(ellipse at 78% 74%, rgba(240, 117, 97, 0.05), transparent 32%); /* tokens-ok */
   pointer-events: none;
 }
 
@@ -23966,17 +23975,17 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   inset: 0;
   z-index: 0;
   background:
-    linear-gradient(90deg, rgba(17, 17, 16, 0.72) 0%, rgba(17, 17, 16, 0.42) 44%, rgba(17, 17, 16, 0.6) 100%),
-    url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
-  filter: grayscale(1);
-  opacity: 0.34;
+    linear-gradient(90deg, rgba(12, 12, 11, 0.68) 0%, rgba(12, 12, 11, 0.38) 42%, rgba(12, 12, 11, 0.56) 100%), /* tokens-ok */
+    url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; /* tokens-ok */
+  filter: grayscale(0.9);
+  opacity: 0.28;
   transform: scale(1.04);
 }
 
 .auth-page--signup .lang-switcher {
-  background: rgba(21, 21, 20, 0.82);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+  background: rgba(21, 21, 20, 0.82); /* tokens-ok */
+  border-color: rgba(255, 255, 255, 0.06); /* tokens-ok */
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28); /* tokens-ok */
 }
 
 .signup-flow-nav,
@@ -23991,13 +24000,13 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 24px 24px 0;
+  padding: 28px 28px 0;
 }
 
 .signup-flow-wordmark {
-  color: #f07561;
+  color: var(--accent-coral-strong);
   font-family: "Manrope", var(--font-display);
-  font-size: 1.95rem;
+  font-size: 1.85rem;
   font-style: italic;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -24006,34 +24015,36 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 }
 
 .signup-flow-login-link {
-  color: rgba(239, 231, 221, 0.66);
-  font-size: 0.67rem;
+  color: rgba(239, 231, 221, 0.58); /* tokens-ok */
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.34em;
+  letter-spacing: 0.36em;
   text-decoration: none;
   text-transform: uppercase;
+  transition: color var(--transition);
 }
 
 .signup-flow-login-link:hover,
 .signup-flow-wordmark:hover,
 .signup-flow-legal a:hover,
 .signup-flow-footer-links a:hover {
-  color: #f8a592;
+  color: var(--accent-coral);
 }
 
 .signup-flow-shell {
   min-height: calc(100vh - 180px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
   align-items: center;
-  gap: clamp(28px, 4vw, 60px);
-  padding: 34px clamp(24px, 6vw, 60px) 32px;
+  gap: clamp(32px, 5vw, 64px);
+  padding: 38px clamp(28px, 6vw, 64px) 36px;
 }
 
 .signup-flow-shell--done {
   min-height: calc(100vh - 140px);
   display: flex;
   align-items: center;
+  justify-content: center;
   padding-top: 96px;
 }
 
@@ -24045,6 +24056,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 
 .signup-flow-copy--done {
   width: min(100%, 780px);
+  justify-content: center;
 }
 
 .signup-flow-copy-stack {
@@ -24052,7 +24064,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   max-width: 560px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 28px;
 }
 
 .signup-flow-hero {
@@ -24060,33 +24072,33 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   flex-direction: column;
   gap: 0;
   margin: 0;
-  color: #f7f1eb;
+  color: #f7f1eb; /* tokens-ok */
   font-family: "Manrope", var(--font-display);
-  font-size: clamp(4.4rem, 9vw, 6.8rem);
+  font-size: clamp(4rem, 8.5vw, 6.4rem);
   font-weight: 800;
-  letter-spacing: -0.08em;
-  line-height: 0.9;
+  letter-spacing: -0.07em;
+  line-height: 0.88;
   text-transform: uppercase;
 }
 
 .signup-flow-hero .is-accent {
-  color: #f47b68;
+  color: var(--accent-coral-strong);
   font-style: italic;
 }
 
 .signup-flow-text {
-  max-width: 31ch;
+  max-width: 32ch;
   margin: 0;
-  color: rgba(236, 226, 218, 0.72);
-  font-size: 1.1rem;
-  line-height: 1.65;
+  color: rgba(236, 226, 218, 0.66); /* tokens-ok */
+  font-size: 1.08rem;
+  line-height: 1.7;
 }
 
 .signup-flow-subtle {
   max-width: 42ch;
   margin: 0;
-  color: rgba(236, 226, 218, 0.5);
-  font-size: 0.92rem;
+  color: rgba(236, 226, 218, 0.44); /* tokens-ok */
+  font-size: 0.94rem;
   line-height: 1.65;
 }
 
@@ -24094,35 +24106,35 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   display: flex;
   align-items: center;
   gap: 16px;
-  color: rgba(239, 231, 221, 0.34);
-  font-size: 0.62rem;
+  color: rgba(239, 231, 221, 0.28); /* tokens-ok */
+  font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.46em;
+  letter-spacing: 0.48em;
   text-transform: uppercase;
 }
 
 .signup-flow-standard-line {
-  width: 42px;
+  width: 44px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.14); /* tokens-ok */
 }
 
 .signup-flow-rail {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
 .signup-flow-rail span {
   width: 3px;
   height: 34px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06); /* tokens-ok */
 }
 
 .signup-flow-rail .is-active {
-  background: #f07561;
+  background: var(--accent-coral-strong);
 }
 
 .signup-flow-panel-wrap {
@@ -24131,34 +24143,34 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 }
 
 .signup-flow-panel {
-  width: min(100%, 430px);
-  padding: 30px 30px 24px;
-  border-radius: 16px;
-  background: rgba(34, 32, 31, 0.76);
-  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  color: #f5efe9;
+  width: min(100%, 432px);
+  padding: 32px 30px 26px;
+  border-radius: var(--radius-xl);
+  background: rgba(32, 32, 30, 0.64); /* tokens-ok */
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.38), 0 0 0 0.5px rgba(255, 255, 255, 0.04); /* tokens-ok */
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  color: #f5efe9; /* tokens-ok */
 }
 
 .signup-flow-strava,
 .signup-flow-primary,
 .signup-flow-google {
   width: 100%;
-  min-height: 44px;
+  min-height: 50px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 18px;
-  font-family: "Inter", var(--font-body);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  gap: 10px;
+  padding: 0 20px;
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  transition: transform var(--transition), background var(--transition), color var(--transition), opacity var(--transition);
+  transition: transform var(--transition), background var(--transition), box-shadow var(--transition), opacity var(--transition);
   cursor: pointer;
 }
 
@@ -24178,16 +24190,18 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 .signup-flow-primary:disabled,
 .signup-flow-google:disabled {
   cursor: not-allowed;
-  opacity: 0.65;
+  opacity: 0.55;
 }
 
 .signup-flow-strava {
-  background: #fc6100;
-  color: #fff5ef;
+  background: linear-gradient(135deg, #fc6a46, #d94a35); /* tokens-ok */
+  color: #fff; /* tokens-ok */
+  box-shadow: 0 8px 28px rgba(240, 117, 97, 0.18); /* tokens-ok */
 }
 
 .signup-flow-strava:hover {
-  background: #e65a05;
+  background: linear-gradient(135deg, #f57a5a, #e05540); /* tokens-ok */
+  box-shadow: 0 12px 32px rgba(240, 117, 97, 0.24); /* tokens-ok */
 }
 
 .signup-flow-strava-icon {
@@ -24201,20 +24215,20 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   display: flex;
   align-items: center;
   gap: 14px;
-  margin: 24px 0 18px;
+  margin: 22px 0 20px;
 }
 
 .signup-flow-divider span {
   flex: 1 1 auto;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06); /* tokens-ok */
 }
 
 .signup-flow-divider strong {
-  color: rgba(239, 231, 221, 0.26);
+  color: rgba(239, 231, 221, 0.24); /* tokens-ok */
   font-size: 0.58rem;
   font-weight: 700;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
 }
 
@@ -24232,42 +24246,44 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 
 .signup-flow-field label {
   padding-left: 2px;
-  color: rgba(239, 231, 221, 0.54);
-  font-size: 0.58rem;
+  color: var(--accent-coral);
+  font-size: 0.6rem;
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
 .auth-page--signup .signup-flow-field input {
-  min-height: 36px;
-  border: 0;
-  border-radius: 6px;
-  background: rgba(66, 63, 60, 0.78);
-  color: #f8f3ee;
-  padding: 0 14px;
-  box-shadow: none;
+  min-height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.06); /* tokens-ok */
+  border-radius: var(--radius-md);
+  background: rgba(18, 18, 17, 0.78); /* tokens-ok */
+  color: #f5f0ea; /* tokens-ok */
+  padding: 0 16px;
+  font-size: 0.92rem;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .auth-page--signup .signup-flow-field input::placeholder {
-  color: rgba(239, 231, 221, 0.24);
+  color: rgba(239, 231, 221, 0.22); /* tokens-ok */
 }
 
 .auth-page--signup .signup-flow-field input:focus {
   outline: none;
-  background: rgba(78, 74, 70, 0.92);
-  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.52);
+  border-color: var(--accent-coral-strong);
+  background: rgba(22, 22, 21, 0.9); /* tokens-ok */
+  box-shadow: 0 0 0 3px rgba(240, 117, 97, 0.12), inset 0 0 0 0.5px rgba(240, 117, 97, 0.2); /* tokens-ok */
 }
 
 .signup-flow-rules {
   padding: 14px 16px 12px;
-  border-radius: 8px;
-  background: rgba(27, 25, 24, 0.72);
+  border-radius: var(--radius-sm);
+  background: rgba(20, 20, 19, 0.64); /* tokens-ok */
 }
 
 .signup-flow-rules h3 {
   margin: 0 0 10px;
-  color: rgba(239, 231, 221, 0.28);
+  color: rgba(239, 231, 221, 0.24); /* tokens-ok */
   font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -24287,50 +24303,52 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(239, 231, 221, 0.64);
+  color: rgba(239, 231, 221, 0.58); /* tokens-ok */
   font-size: 0.73rem;
 }
 
 .signup-flow-rules li > span:first-child {
-  color: rgba(239, 231, 221, 0.42);
+  color: rgba(239, 231, 221, 0.36); /* tokens-ok */
   font-size: 0.78rem;
 }
 
 .signup-flow-rules li.is-passed > span:first-child {
-  color: #f47b68;
+  color: var(--accent-coral-strong);
 }
 
 .signup-flow-primary {
   margin-top: 8px;
-  background: #f47b68;
-  color: #3d160f;
-  box-shadow: 0 10px 24px rgba(240, 117, 97, 0.16);
+  background: var(--accent-coral-strong);
+  color: #1a0804; /* tokens-ok */
+  box-shadow: 0 8px 24px rgba(240, 117, 97, 0.18); /* tokens-ok */
 }
 
 .signup-flow-primary:hover {
-  background: #f88977;
+  background: #f5826e; /* tokens-ok */
+  box-shadow: 0 12px 30px rgba(240, 117, 97, 0.24); /* tokens-ok */
 }
 
 .signup-flow-google {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(239, 231, 221, 0.88);
+  background: rgba(255, 255, 255, 0.05); /* tokens-ok */
+  color: rgba(239, 231, 221, 0.72); /* tokens-ok */
 }
 
 .signup-flow-google:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.09); /* tokens-ok */
+  color: #f5efe9; /* tokens-ok */
 }
 
 .signup-flow-legal {
-  margin: 16px 0 0;
-  color: rgba(239, 231, 221, 0.34);
-  font-size: 0.58rem;
+  margin: 18px 0 0;
+  color: rgba(239, 231, 221, 0.28); /* tokens-ok */
+  font-size: 0.6rem;
   line-height: 1.65;
   text-align: center;
 }
 
 .signup-flow-legal a,
 .signup-flow-footer-links a {
-  color: rgba(239, 231, 221, 0.56);
+  color: rgba(239, 231, 221, 0.48); /* tokens-ok */
   text-decoration: underline;
   text-underline-offset: 3px;
   transition: color var(--transition);
@@ -24341,8 +24359,8 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 0 24px 24px;
-  color: rgba(239, 231, 221, 0.26);
+  padding: 0 28px 28px;
+  color: rgba(239, 231, 221, 0.2); /* tokens-ok */
   font-size: 0.54rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -24352,7 +24370,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   content: "";
   width: 96px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06); /* tokens-ok */
   margin-bottom: 4px;
 }
 
@@ -24372,7 +24390,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   .signup-flow-shell {
     grid-template-columns: 1fr;
     min-height: auto;
-    padding-top: 24px;
+    padding-top: 26px;
   }
 
   .signup-flow-copy,
@@ -24407,17 +24425,17 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   }
 
   .signup-flow-wordmark {
-    font-size: 1.65rem;
+    font-size: 1.55rem;
   }
 
   .signup-flow-login-link {
-    font-size: 0.6rem;
-    letter-spacing: 0.26em;
+    font-size: 0.58rem;
+    letter-spacing: 0.24em;
   }
 
   .signup-flow-shell,
   .signup-flow-shell--done {
-    padding: 24px 18px 26px;
+    padding: 24px 18px 28px;
   }
 
   .signup-flow-copy-stack {
@@ -24425,19 +24443,19 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   }
 
   .signup-flow-hero {
-    font-size: clamp(3.2rem, 16vw, 4.4rem);
+    font-size: clamp(3rem, 15vw, 4rem);
   }
 
   .signup-flow-text {
-    font-size: 0.98rem;
+    font-size: 0.95rem;
   }
 
   .signup-flow-panel {
-    padding: 24px 18px 20px;
+    padding: 26px 20px 22px;
   }
 
   .signup-flow-divider {
-    margin-top: 20px;
+    margin: 18px 0 16px;
   }
 
   .signup-flow-footer {
@@ -24456,37 +24474,41 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   }
 }
 
-.auth-flow-btn--submit {
-  margin-top: 2px;
-  border-radius: 12px;
-}
-
+/* ── Shared Auth Elements ── */
 .auth-resend-box--login {
-  margin-bottom: 2px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03); /* tokens-ok */
 }
 
 .auth-resend-box--login .btn-secondary {
   align-self: flex-start;
   min-width: auto;
   padding-inline: 18px;
-  background: rgba(240, 117, 97, 0.18);
-  color: #ffd8d1;
+  background: rgba(240, 117, 97, 0.16); /* tokens-ok */
+  color: var(--accent-coral);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
 }
 
 .signup-link--auth {
-  margin-top: 24px;
+  margin-top: 26px;
   text-align: center;
-  font-size: 0.77rem;
-  color: rgba(239, 231, 221, 0.42);
+  font-size: 0.78rem;
+  color: rgba(239, 231, 221, 0.38); /* tokens-ok */
 }
 
 .signup-link--auth a {
   margin-left: 6px;
-  color: #f07561;
+  color: var(--accent-coral);
   font-weight: 800;
   text-decoration: none;
+  transition: color var(--transition);
+}
+
+.signup-link--auth a:hover {
+  color: var(--accent-coral-strong);
 }
 
 .auth-flow-legal {
@@ -24494,42 +24516,43 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   justify-content: flex-end;
   gap: 22px;
   width: 100%;
-  font-size: 0.66rem;
-  letter-spacing: 0.2em;
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(239, 231, 221, 0.3);
+  color: rgba(239, 231, 221, 0.26); /* tokens-ok */
 }
 
 .auth-flow-legal a {
   text-decoration: none;
 }
 
+/* ── Login Responsive Breakpoints ── */
 @media (max-width: 1024px) {
   .auth-flow-shell {
     grid-template-columns: 1fr;
   }
 
   .auth-flow-brand {
-    padding: 52px 28px 18px;
+    padding: 52px 32px 18px;
   }
 
   .auth-flow-brand-inner {
     max-width: 100%;
-    gap: 30px;
+    gap: 32px;
   }
 
   .auth-flow-hero {
     max-width: 10ch;
-    font-size: clamp(3rem, 10vw, 4.4rem);
+    font-size: clamp(2.8rem, 10vw, 4.2rem);
   }
 
   .auth-flow-slide-viewport {
-    height: clamp(310px, 42vh, 380px);
+    height: clamp(300px, 40vh, 370px);
   }
 
   .auth-flow-formside {
     align-items: center;
-    padding: 12px 28px 40px;
+    padding: 12px 32px 44px;
   }
 
   .auth-flow-card {
@@ -24544,8 +24567,8 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 @media (max-width: 720px) {
   .auth-page--login {
     background:
-      linear-gradient(180deg, rgba(15, 16, 17, 0.9) 0%, rgba(31, 31, 27, 0.84) 52%, rgba(11, 13, 15, 0.92) 100%),
-      url('https://images.unsplash.com/photo-1502904550040-7534597429ae?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+      linear-gradient(180deg, rgba(12, 13, 14, 0.92) 0%, rgba(22, 23, 20, 0.84) 50%, rgba(14, 16, 19, 0.94) 100%), /* tokens-ok */
+      url('https://images.unsplash.com/photo-1502904550040-7534597429ae?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat; /* tokens-ok */
   }
 
   .auth-page--login .lang-switcher {
@@ -24554,7 +24577,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   }
 
   .auth-flow-brand {
-    padding: 44px 20px 6px;
+    padding: 40px 20px 4px;
   }
 
   .auth-flow-brand-inner {
@@ -24563,39 +24586,39 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 
   .auth-flow-hero {
     max-width: 9ch;
-    font-size: clamp(2.5rem, 14vw, 3.6rem);
+    font-size: clamp(2.4rem, 13vw, 3.4rem);
   }
 
   .auth-flow-slide-viewport {
-    height: 330px;
+    height: 320px;
   }
 
   .auth-flow-text {
     max-width: none;
-    font-size: 0.94rem;
+    font-size: 0.92rem;
   }
 
   .auth-flow-stats {
-    gap: 22px;
+    gap: 20px;
   }
 
   .auth-flow-formside {
-    padding: 10px 20px 36px;
+    padding: 10px 18px 40px;
   }
 
   .auth-flow-card {
-    padding: 26px 20px 22px;
-    border-radius: 22px;
+    padding: 26px 20px 24px;
+    border-radius: var(--radius-lg);
   }
 
   .auth-flow-header h3 {
-    font-size: 1.75rem;
+    font-size: 1.7rem;
   }
 
   .auth-flow-btn {
-    min-height: 52px;
+    min-height: 50px;
     font-size: 0.82rem;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
 
   .auth-flow-divider strong,
@@ -24609,7 +24632,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   .auth-flow-legal {
     flex-wrap: wrap;
     gap: 10px 16px;
-    padding-bottom: 56px;
+    padding-bottom: 60px;
   }
 }
 
@@ -24637,27 +24660,29 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
   }
 
   .auth-flow-dot--1 {
-    width: 22px;
-    background: #f07561;
+    width: 24px;
+    background: var(--accent-coral-strong);
   }
 }
 
-/* ── Theme-light overrides for auth-flow pages (login / forgot-password) ── */
+/* ── Theme-light overrides for auth pages ── */
+
+/* Login page light mode */
 body.theme-light .auth-page--login {
   background:
-    linear-gradient(90deg, rgba(250, 250, 250, 0.9) 0%, rgba(248, 248, 246, 0.84) 48%, rgba(245, 245, 244, 0.72) 100%),
-    radial-gradient(circle at 22% 52%, rgba(160, 57, 42, 0.06), transparent 34%),
-    radial-gradient(circle at 88% 92%, rgba(59, 130, 191, 0.08), transparent 26%),
-    url('https://images.unsplash.com/photo-1502904550040-7534597429ae?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+    linear-gradient(160deg, rgba(250, 250, 249, 0.92) 0%, rgba(246, 246, 244, 0.84) 42%, rgba(244, 244, 242, 0.76) 100%), /* tokens-ok */
+    radial-gradient(ellipse at 18% 44%, rgba(160, 57, 42, 0.06), transparent 38%), /* tokens-ok */
+    radial-gradient(ellipse at 82% 88%, rgba(59, 130, 191, 0.05), transparent 30%), /* tokens-ok */
+    url('https://images.unsplash.com/photo-1502904550040-7534597429ae?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; /* tokens-ok */
   color: var(--text-strong);
 }
 body.theme-light .auth-page--login::before {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.34) 54%, rgba(255, 255, 255, 0.52) 100%); /* tokens-ok */
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.76) 0%, rgba(255, 255, 255, 0.34) 50%, rgba(255, 255, 255, 0.56) 100%); /* tokens-ok */
 }
 body.theme-light .auth-page--login::after {
   background:
-    radial-gradient(circle at 64% 28%, rgba(252, 126, 105, 0.06), transparent 28%),
-    radial-gradient(circle at 76% 76%, rgba(160, 57, 42, 0.04), transparent 24%);
+    radial-gradient(ellipse at 60% 20%, rgba(252, 126, 105, 0.04), transparent 32%), /* tokens-ok */
+    radial-gradient(ellipse at 78% 72%, rgba(160, 57, 42, 0.03), transparent 28%); /* tokens-ok */
 }
 
 body.theme-light .auth-flow-wordmark,
@@ -24668,9 +24693,9 @@ body.theme-light .auth-flow-pulse {
   color: var(--brand-accent-strong);
 }
 body.theme-light .auth-flow-kicker {
-  background: rgba(160, 57, 42, 0.08);
+  background: rgba(160, 57, 42, 0.07); /* tokens-ok */
   color: var(--brand-accent-strong);
-  box-shadow: 0 8px 24px rgba(160, 57, 42, 0.04);
+  box-shadow: 0 8px 24px rgba(160, 57, 42, 0.03); /* tokens-ok */
 }
 body.theme-light .auth-flow-hero {
   color: var(--text-strong);
@@ -24688,14 +24713,14 @@ body.theme-light .auth-flow-stats span {
   color: var(--text-muted);
 }
 body.theme-light .auth-flow-dots span {
-  background: rgba(44, 47, 48, 0.1);
+  background: rgba(44, 47, 48, 0.08); /* tokens-ok */
 }
 
 body.theme-light .auth-flow-card {
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 48px rgba(44, 47, 48, 0.1);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(255, 255, 255, 0.78); /* tokens-ok */
+  box-shadow: 0 20px 52px rgba(44, 47, 48, 0.08), 0 0 0 0.5px rgba(0, 0, 0, 0.04); /* tokens-ok */
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
 }
 body.theme-light .auth-flow-header h3 {
   color: var(--text-strong);
@@ -24705,20 +24730,25 @@ body.theme-light .auth-flow-header p {
 }
 body.theme-light .auth-flow-btn--strava {
   background: linear-gradient(135deg, var(--accent-coral-strong), var(--accent-coral));
-  color: #fff;
+  color: #fff; /* tokens-ok */
 }
-body.theme-light .auth-flow-btn--google,
-body.theme-light .auth-flow-btn--submit {
-  background: rgba(245, 246, 247, 0.88);
+body.theme-light .auth-flow-btn--google {
+  background: rgba(245, 246, 247, 0.88); /* tokens-ok */
+  color: var(--text-muted);
+}
+body.theme-light .auth-flow-btn--google:hover:not(:disabled) {
+  background: rgba(235, 236, 237, 0.94); /* tokens-ok */
   color: var(--text-strong);
-  box-shadow: 0 2px 8px rgba(44, 47, 48, 0.04);
 }
-body.theme-light .auth-flow-btn--google:hover:not(:disabled),
+body.theme-light .auth-flow-btn--submit {
+  background: var(--brand-accent-gradient);
+  color: #fff; /* tokens-ok */
+}
 body.theme-light .auth-flow-btn--submit:hover:not(:disabled) {
-  background: rgba(235, 236, 237, 0.94);
+  opacity: 0.92;
 }
 body.theme-light .auth-flow-divider span {
-  background: rgba(171, 173, 174, 0.2);
+  background: rgba(171, 173, 174, 0.16); /* tokens-ok */
 }
 body.theme-light .auth-flow-divider strong {
   color: var(--text-muted);
@@ -24734,21 +24764,25 @@ body.theme-light .label-row--auth label {
 body.theme-light .forgot-password--auth {
   color: var(--text-muted);
 }
+body.theme-light .forgot-password--auth:hover {
+  color: var(--brand-accent);
+}
 body.theme-light .auth-page--login .form-group--auth input,
 body.theme-light .auth-page--forgot-password .form-group--auth input {
-  background: rgba(245, 246, 247, 0.92);
+  border-color: rgba(171, 173, 174, 0.14); /* tokens-ok */
+  background: rgba(245, 246, 247, 0.92); /* tokens-ok */
   color: var(--text-strong);
-  box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.15);
 }
 body.theme-light .auth-page--login .form-group--auth input::placeholder,
 body.theme-light .auth-page--forgot-password .form-group--auth input::placeholder {
   color: var(--text-muted);
-  opacity: 0.5;
+  opacity: 0.45;
 }
 body.theme-light .auth-page--login .form-group--auth input:focus,
 body.theme-light .auth-page--forgot-password .form-group--auth input:focus {
-  box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.36);
-  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px rgba(160, 57, 42, 0.08), inset 0 0 0 0.5px rgba(160, 57, 42, 0.24); /* tokens-ok */
+  background: rgba(255, 255, 255, 0.96); /* tokens-ok */
 }
 
 body.theme-light .auth-flow-legal {
@@ -24766,32 +24800,36 @@ body.theme-light .signup-link--auth a {
 }
 
 body.theme-light .auth-resend-box--login {
-  background: rgba(245, 246, 247, 0.88);
-  border-color: rgba(171, 173, 174, 0.15);
+  background: rgba(245, 246, 247, 0.84); /* tokens-ok */
 }
 body.theme-light .auth-resend-copy {
   color: var(--text-muted);
 }
 body.theme-light .auth-resend-box--login .btn-secondary {
-  background: rgba(160, 57, 42, 0.1);
+  background: rgba(160, 57, 42, 0.08); /* tokens-ok */
   color: var(--brand-accent);
 }
 
-/* ── Theme-light for signup flow ── */
+/* ── Signup page light mode ── */
 body.theme-light .auth-page--signup {
-  background: #f5f6f7;
+  background: #f5f6f7; /* tokens-ok */
   color: var(--text-strong);
 }
 body.theme-light .auth-page--signup::before {
   background:
-    linear-gradient(90deg, rgba(245, 246, 247, 0.96) 0%, rgba(245, 246, 247, 0.82) 44%, rgba(245, 246, 247, 0.58) 62%, rgba(245, 246, 247, 0.82) 100%),
-    radial-gradient(circle at 24% 30%, rgba(160, 57, 42, 0.05), transparent 26%),
-    radial-gradient(circle at 76% 78%, rgba(160, 57, 42, 0.03), transparent 28%);
+    linear-gradient(160deg, rgba(246, 247, 248, 0.94) 0%, rgba(246, 247, 248, 0.78) 42%, rgba(246, 247, 248, 0.64) 64%, rgba(246, 247, 248, 0.84) 100%), /* tokens-ok */
+    radial-gradient(ellipse at 22% 28%, rgba(160, 57, 42, 0.04), transparent 30%), /* tokens-ok */
+    radial-gradient(ellipse at 78% 74%, rgba(160, 57, 42, 0.02), transparent 32%); /* tokens-ok */
 }
 body.theme-light .signup-flow-bg {
   background:
-    linear-gradient(90deg, rgba(245, 246, 247, 0.72) 0%, rgba(245, 246, 247, 0.42) 44%, rgba(245, 246, 247, 0.6) 100%),
-    url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+    linear-gradient(90deg, rgba(245, 246, 247, 0.68) 0%, rgba(245, 246, 247, 0.38) 42%, rgba(245, 246, 247, 0.56) 100%), /* tokens-ok */
+    url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; /* tokens-ok */
+}
+body.theme-light .auth-page--signup .lang-switcher {
+  background: rgba(255, 255, 255, 0.88); /* tokens-ok */
+  border-color: rgba(171, 173, 174, 0.15); /* tokens-ok */
+  box-shadow: 0 12px 32px rgba(44, 47, 48, 0.06); /* tokens-ok */
 }
 body.theme-light .signup-flow-hero {
   color: var(--text-strong);
@@ -24804,67 +24842,72 @@ body.theme-light .signup-flow-text {
 }
 body.theme-light .signup-flow-subtle {
   color: var(--text-muted);
+  opacity: 0.7;
 }
 body.theme-light .signup-flow-standard {
   color: var(--text-muted);
 }
 body.theme-light .signup-flow-standard-line {
-  background: rgba(171, 173, 174, 0.3);
+  background: rgba(171, 173, 174, 0.22); /* tokens-ok */
 }
 body.theme-light .signup-flow-login-link {
   color: var(--text-muted);
 }
+body.theme-light .signup-flow-login-link:hover {
+  color: var(--brand-accent);
+}
 body.theme-light .signup-flow-panel {
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 48px rgba(44, 47, 48, 0.08);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(255, 255, 255, 0.78); /* tokens-ok */
+  box-shadow: 0 20px 52px rgba(44, 47, 48, 0.08), 0 0 0 0.5px rgba(0, 0, 0, 0.04); /* tokens-ok */
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   color: var(--text-strong);
 }
 body.theme-light .signup-flow-strava {
-  background: #fc4c02;
-  color: #fff;
+  background: linear-gradient(135deg, #fc6a46, #d94a35); /* tokens-ok */
+  color: #fff; /* tokens-ok */
 }
 body.theme-light .signup-flow-strava:hover {
-  background: #e34402;
+  background: linear-gradient(135deg, #f57a5a, #e05540); /* tokens-ok */
 }
 body.theme-light .signup-flow-primary {
   background: var(--brand-accent-gradient);
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(160, 57, 42, 0.14);
+  color: #fff; /* tokens-ok */
+  box-shadow: 0 6px 18px rgba(160, 57, 42, 0.12); /* tokens-ok */
 }
 body.theme-light .signup-flow-primary:hover {
   opacity: 0.92;
 }
 body.theme-light .signup-flow-google {
-  background: rgba(245, 246, 247, 0.88);
-  color: var(--text-strong);
-  box-shadow: 0 2px 8px rgba(44, 47, 48, 0.04);
+  background: rgba(245, 246, 247, 0.88); /* tokens-ok */
+  color: var(--text-muted);
 }
 body.theme-light .signup-flow-google:hover {
-  background: rgba(235, 236, 237, 0.94);
+  background: rgba(235, 236, 237, 0.94); /* tokens-ok */
+  color: var(--text-strong);
 }
 body.theme-light .signup-flow-divider span {
-  background: rgba(171, 173, 174, 0.2);
+  background: rgba(171, 173, 174, 0.16); /* tokens-ok */
 }
 body.theme-light .signup-flow-divider strong {
   color: var(--text-muted);
 }
 body.theme-light .signup-flow-field label {
-  color: var(--text-muted);
+  color: var(--brand-accent-strong);
 }
 body.theme-light .auth-page--signup .signup-flow-field input {
-  background: rgba(245, 246, 247, 0.92);
+  border-color: rgba(171, 173, 174, 0.14); /* tokens-ok */
+  background: rgba(245, 246, 247, 0.92); /* tokens-ok */
   color: var(--text-strong);
-  box-shadow: inset 0 0 0 1px rgba(171, 173, 174, 0.12);
 }
 body.theme-light .auth-page--signup .signup-flow-field input::placeholder {
   color: var(--text-muted);
-  opacity: 0.5;
+  opacity: 0.45;
 }
 body.theme-light .auth-page--signup .signup-flow-field input:focus {
-  box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.36);
-  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px rgba(160, 57, 42, 0.08), inset 0 0 0 0.5px rgba(160, 57, 42, 0.24); /* tokens-ok */
+  background: rgba(255, 255, 255, 0.96); /* tokens-ok */
 }
 body.theme-light .signup-flow-legal {
   color: var(--text-muted);
@@ -24877,10 +24920,10 @@ body.theme-light .signup-flow-footer {
   color: var(--text-muted);
 }
 body.theme-light .signup-flow-footer::before {
-  background: rgba(171, 173, 174, 0.2);
+  background: rgba(171, 173, 174, 0.16); /* tokens-ok */
 }
 body.theme-light .signup-flow-rules {
-  background: rgba(245, 246, 247, 0.88);
+  background: rgba(245, 246, 247, 0.84); /* tokens-ok */
 }
 body.theme-light .signup-flow-rules h3,
 body.theme-light .signup-flow-rules li {
@@ -24888,6 +24931,12 @@ body.theme-light .signup-flow-rules li {
 }
 body.theme-light .signup-flow-rules li.is-passed > span:first-child {
   color: var(--brand-accent);
+}
+body.theme-light .signup-flow-rail span {
+  background: rgba(44, 47, 48, 0.08); /* tokens-ok */
+}
+body.theme-light .signup-flow-rail .is-active {
+  background: var(--brand-accent);
 }
 
 /* ── Theme-light for forgot-password flow ── */
