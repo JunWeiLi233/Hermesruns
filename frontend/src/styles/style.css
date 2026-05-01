@@ -8064,14 +8064,14 @@ body.theme-midnight .weekly-flashcard-graph-track {
     border-radius: 999px;
     font-size: 0.78rem;
     font-weight: 700;
-    background: rgba(251, 146, 60, 0.12);
+    background: color-mix(in srgb, var(--accent-coral, #ffb4a7) 24%, transparent);
     color: var(--brand-accent, #FF6B35);
 }
 
 .muscle-pill-core,
 .muscle-tag:last-child {
-    background: rgba(244, 63, 94, 0.12);
-    color: #e11d48;
+    background: color-mix(in srgb, var(--brand-accent-strong, #8f2f22) 14%, transparent);
+    color: var(--brand-accent-strong, #8f2f22);
 }
 
 .muscle-training-metrics {
@@ -8154,7 +8154,7 @@ body.theme-midnight .weekly-flashcard-graph-track {
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--brand-accent, #FF6B35);
+    color: var(--accent-coral-strong, #f07561);
     font-weight: 800;
 }
 
@@ -8227,10 +8227,10 @@ body.theme-midnight .weekly-flashcard-graph-track {
 }
 
 .muscle-exercise-card {
-    padding: 14px;
+    padding: 18px;
     display: grid;
-    grid-template-columns: minmax(0, 136px) minmax(0, 1fr);
-    gap: 14px;
+    grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
+    gap: 18px;
     min-width: 0;
     max-width: 100%;
     align-items: start;
@@ -8238,29 +8238,38 @@ body.theme-midnight .weekly-flashcard-graph-track {
     isolation: isolate;
     background:
         radial-gradient(circle at top left, rgba(251, 146, 60, 0.12), transparent 38%),
-        color-mix(in srgb, var(--surface, rgba(255, 255, 255, 0.94)) 92%, transparent);
+        var(--bg-recommend-card, rgba(255, 255, 255, 0.96));
+    transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.muscle-exercise-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 28px 52px rgba(0, 0, 0, 0.3); /* tokens-ok: hover elevation shadow */
 }
 
 .muscle-exercise-card-sound {
     background:
         radial-gradient(circle at top left, rgba(249, 115, 22, 0.14), transparent 38%),
-        color-mix(in srgb, var(--surface, rgba(255, 255, 255, 0.94)) 92%, transparent);
+        var(--bg-recommend-card, rgba(255, 255, 255, 0.96));
 }
 
 .muscle-exercise-figure {
     width: 100%;
     height: auto;
+    border-radius: var(--radius-lg, 16px);
+    overflow: hidden;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28); /* tokens-ok: illustration depth shadow */
 }
 
 .muscle-exercise-figure .muscle-exercise-bg {
-    fill: rgba(13, 18, 28, 0.98);
-    stroke: rgba(255, 255, 255, 0.06);
+    fill: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+    stroke: var(--line-soft, rgba(255, 255, 255, 0.06));
     stroke-width: 1.2;
 }
 
 .muscle-exercise-figure .muscle-map-panel {
-    fill: rgba(7, 10, 16, 0.96);
-    stroke: rgba(255, 255, 255, 0.08);
+    fill: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+    stroke: var(--line-soft, rgba(255, 255, 255, 0.08));
     stroke-width: 1.1;
 }
 
@@ -8269,24 +8278,24 @@ body.theme-midnight .weekly-flashcard-graph-track {
     font-size: 0.56rem;
     font-weight: 800;
     letter-spacing: 0.18em;
-    fill: rgba(226, 232, 240, 0.8);
+    fill: var(--text-muted, #595c5d);
     text-transform: uppercase;
 }
 
 .muscle-exercise-figure .muscle-map-shadow {
-    fill: rgba(255, 255, 255, 0.08);
+    fill: var(--line-soft, rgba(171, 173, 174, 0.15));
 }
 
 .muscle-exercise-figure .muscle-body-head,
 .muscle-exercise-figure .muscle-body-core {
-    fill: rgba(27, 32, 40, 0.98);
-    stroke: rgba(255, 255, 255, 0.1);
+    fill: var(--bg-glass, rgba(245, 246, 247, 0.70));
+    stroke: var(--line-glass, rgba(171, 173, 174, 0.15));
     stroke-width: 1;
 }
 
 .muscle-exercise-figure .muscle-body-limb {
     fill: none;
-    stroke: rgba(27, 32, 40, 0.98);
+    stroke: var(--bg-glass, rgba(245, 246, 247, 0.70));
     stroke-width: 10;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -8298,17 +8307,19 @@ body.theme-midnight .weekly-flashcard-graph-track {
 
 .muscle-exercise-figure .muscle-body-inner-line {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.1);
+    stroke: var(--line-glass, rgba(171, 173, 174, 0.15));
     stroke-width: 1.2;
     stroke-linecap: round;
 }
 
 .muscle-exercise-figure .muscle-region-primary {
-    fill: rgba(255, 111, 76, 0.95);
+    fill: var(--accent-coral-strong, #f07561);
+    opacity: 0.95;
 }
 
 .muscle-exercise-figure .muscle-region-secondary {
-    fill: rgba(255, 181, 88, 0.92);
+    fill: var(--accent-coral, #ffb4a7);
+    opacity: 0.92;
 }
 
 /* 闂佸啿鍘滈崑鎾绘煃閸忓浜?Rewards hero card 闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜?*/
@@ -8843,7 +8854,11 @@ body.theme-midnight .weekly-flashcard-graph-track {
 
 .muscle-exercise-top h3 {
     margin: 0;
-    font-size: 1rem;
+    font-family: "Manrope", var(--font-display);
+    font-size: 1.08rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
     min-width: 0;
     max-width: 100%;
     overflow-wrap: anywhere;
@@ -8853,6 +8868,7 @@ body.theme-midnight .weekly-flashcard-graph-track {
 .muscle-exercise-prescription {
     color: var(--text-muted);
     font-weight: 700;
+    font-size: 0.88rem;
     min-width: 0;
     max-width: 100%;
     overflow-wrap: anywhere;
@@ -8866,13 +8882,15 @@ body.theme-midnight .weekly-flashcard-graph-track {
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
+    margin-top: 2px;
 }
 
 .muscle-step-list {
     margin: 0;
     padding-left: 18px;
     color: var(--text-muted);
-    line-height: 1.55;
+    line-height: 1.65;
+    font-size: 0.92rem;
     min-width: 0;
     max-width: 100%;
     overflow-wrap: anywhere;
@@ -8900,25 +8918,25 @@ body.theme-midnight .weekly-flashcard-graph-track {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 38px;
-    padding: 9px 14px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 107, 53, 0.96), rgba(244, 63, 94, 0.96));
+    min-height: 40px;
+    padding: 10px 16px;
+    border-radius: var(--radius-lg, 16px);
+    background: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #fc7e69));
     color: #ffffff;
     text-decoration: none;
     font-size: 0.84rem;
     font-weight: 800;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
     max-width: 100%;
     white-space: normal;
     text-align: center;
-    box-shadow: 0 12px 24px rgba(255, 107, 53, 0.2);
+    box-shadow: var(--shadow-glow, 0 0 20px rgba(160, 57, 42, 0.18));
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .muscle-video-link:hover {
     transform: translateY(-1px);
-    box-shadow: 0 16px 28px rgba(255, 107, 53, 0.28);
+    box-shadow: 0 16px 32px rgba(240, 117, 97, 0.28);
 }
 
 body:is(.theme-midnight, .theme-high-contrast) .dashboard-body .muscle-training-hero-copy {
@@ -16158,8 +16176,8 @@ body.theme-midnight .polarized-target-marker {
 
 .muscle-day-chip.active {
   color: #ffffff;
-  background: linear-gradient(135deg, #ff7e5f, #ff5d36);
-  box-shadow: 0 10px 20px rgba(255, 107, 53, 0.2);
+  background: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #fc7e69));
+  box-shadow: var(--shadow-glow, 0 0 20px rgba(160, 57, 42, 0.18));
 }
 
 .muscle-choice-row {
@@ -16243,11 +16261,13 @@ body.theme-midnight .polarized-target-marker {
 
 /* Zone 1: Today card */
 .mt-today-card {
-  padding: 20px 22px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  margin-bottom: 14px;
+  padding: 22px 24px;
+  border-radius: var(--radius-xl, 22px);
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+  border: 1px solid var(--line-glass, rgba(171, 173, 174, 0.15));
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card, 0 10px 28px rgba(44, 47, 48, 0.05));
+  transition: border-color var(--transition);
 }
 
 .mt-today-card-kicker {
@@ -16259,7 +16279,7 @@ body.theme-midnight .polarized-target-marker {
 
 .mt-today-kicker-icon {
   font-size: 1rem;
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .mt-today-card-kicker > span:first-of-type {
@@ -16280,20 +16300,20 @@ body.theme-midnight .polarized-target-marker {
 }
 
 .mt-today-badge-strength {
-  background: rgba(240, 117, 97, 0.18);
-  color: #ffb4a7;
+  background: rgba(240, 117, 97, 0.18); /* tokens-ok: translucent overlay for badge readability */
+  color: var(--accent-coral, #ffb4a7);
 }
 
 .mt-today-badge-rest {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(242, 233, 231, 0.6);
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+  color: var(--text-muted, #595c5d);
 }
 
 .mt-today-narrative {
   margin: 0 0 16px;
   font-size: 0.97rem;
-  line-height: 1.65;
-  color: rgba(242, 233, 231, 0.82);
+  line-height: 1.7;
+  color: var(--text-strong, #2c2f30);
   max-width: 56rem;
 }
 
@@ -16314,15 +16334,15 @@ body.theme-midnight .polarized-target-marker {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255, 188, 173, 0.7);
+  color: var(--accent-coral, #ffb4a7);
 }
 
 .mt-today-metric > strong {
-  font-family: "Manrope", sans-serif;
+  font-family: "Manrope", var(--font-display);
   font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #f2e9e7;
+  color: var(--text-strong, #2c2f30);
 }
 
 .mt-today-actions {
@@ -16335,10 +16355,11 @@ body.theme-midnight .polarized-target-marker {
 /* Zone 2: Dose bar */
 .mt-dose-bar {
   padding: 16px 22px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 14px;
+  border-radius: var(--radius-lg, 16px);
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+  border: 1px solid var(--line-glass, rgba(171, 173, 174, 0.15));
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card, 0 10px 28px rgba(44, 47, 48, 0.05));
 }
 
 .mt-dose-bar-head {
@@ -16352,7 +16373,7 @@ body.theme-midnight .polarized-target-marker {
 .mt-dose-fraction {
   font-size: 0.82rem;
   font-weight: 700;
-  color: rgba(242, 233, 231, 0.7);
+  color: var(--text-muted, #595c5d);
 }
 
 .mt-dose-track {
@@ -16367,16 +16388,17 @@ body.theme-midnight .polarized-target-marker {
   flex: 1;
   min-width: 32px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--line-soft, rgba(171, 173, 174, 0.15));
   transition: background 0.2s ease;
 }
 
 .mt-dose-pip.is-planned {
-  background: rgba(240, 117, 97, 0.5);
+  background: var(--accent-coral, #ffb4a7);
+  opacity: 0.55;
 }
 
 .mt-dose-pip.is-done {
-  background: #f07561;
+  background: var(--accent-coral-strong, #f07561);
 }
 
 .mt-dose-context {
@@ -16387,7 +16409,7 @@ body.theme-midnight .polarized-target-marker {
 
 .mt-dose-context > span {
   font-size: 0.75rem;
-  color: rgba(242, 233, 231, 0.48);
+  color: var(--text-muted, #595c5d);
 }
 
 /* Zone 3: Week strip */
@@ -16408,25 +16430,25 @@ body.theme-midnight .polarized-target-marker {
 
 .mt-strip-day {
   padding: 10px 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md, 12px);
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+  border: 1px solid var(--line-glass, rgba(171, 173, 174, 0.15));
   text-align: center;
   min-height: 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  transition: background 0.15s ease;
+  transition: background var(--transition);
 }
 
 .mt-strip-day.is-today {
-  background: rgba(240, 117, 97, 0.1);
-  border-color: rgba(240, 117, 97, 0.28);
+  background: color-mix(in srgb, var(--accent-coral-strong, #f07561) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent-coral-strong, #f07561) 28%, transparent);
 }
 
 .mt-strip-day.has-strength {
-  border-color: rgba(240, 117, 97, 0.22);
+  border-color: color-mix(in srgb, var(--accent-coral-strong, #f07561) 22%, transparent);
 }
 
 .mt-strip-day-label {
@@ -16434,11 +16456,11 @@ body.theme-midnight .polarized-target-marker {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(242, 233, 231, 0.52);
+  color: var(--text-muted, #595c5d);
 }
 
 .mt-strip-day.is-today .mt-strip-day-label {
-  color: #ffb4a7;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .mt-strip-day-badges {
@@ -16459,33 +16481,34 @@ body.theme-midnight .polarized-target-marker {
 }
 
 .mt-strip-badge-strength {
-  background: rgba(240, 117, 97, 0.22);
-  color: #ffb4a7;
+  background: rgba(240, 117, 97, 0.22); /* tokens-ok: overlay tint for badge */
+  color: var(--accent-coral, #ffb4a7);
 }
 
 .mt-strip-badge-run {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(242, 233, 231, 0.6);
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+  color: var(--text-muted, #595c5d);
 }
 
 .mt-strip-badge-rest {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(242, 233, 231, 0.32);
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+  color: var(--text-muted, #595c5d);
+  opacity: 0.6;
 }
 
 .mt-strip-badge-key {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2); /* tokens-ok: warning badge tint */
+  color: #b45309;
 }
 
 .mt-strip-badge-long {
-  background: rgba(96, 165, 250, 0.2);
-  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.2); /* tokens-ok: info badge tint */
+  color: #2563eb;
 }
 
 .mt-strip-day-dist {
   font-size: 0.62rem;
-  color: rgba(242, 233, 231, 0.4);
+  color: var(--text-muted, #595c5d);
 }
 
 /* Settings disclosure */
@@ -16498,15 +16521,20 @@ body.theme-midnight .polarized-target-marker {
   align-items: center;
   gap: 8px;
   padding: 14px 18px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg, 16px);
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+  border: 1px solid var(--line-glass, rgba(171, 173, 174, 0.15));
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 700;
-  color: rgba(242, 233, 231, 0.72);
+  color: var(--text-strong, #2c2f30);
   list-style: none;
   user-select: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.mt-settings-summary:hover {
+  border-color: var(--accent-coral-strong, #f07561);
 }
 
 .mt-settings-summary::-webkit-details-marker {
@@ -16518,6 +16546,7 @@ body.theme-midnight .polarized-target-marker {
   font-size: 0.7rem;
   margin-right: 4px;
   transition: transform 0.18s ease;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 details[open] .mt-settings-summary::before {
@@ -16526,86 +16555,23 @@ details[open] .mt-settings-summary::before {
 
 .mt-settings-icon {
   font-size: 1rem;
-  color: rgba(255, 188, 173, 0.7);
+  color: var(--accent-coral-strong, #f07561);
 }
 
-/* Light theme overrides for new classes */
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-today-card,
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-dose-bar,
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-day,
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-settings-summary {
-  background: rgba(0, 0, 0, 0.03);
-  border-color: rgba(0, 0, 0, 0.09);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-today-card-kicker > span:first-of-type,
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-today-kicker-icon {
-  color: #c0392b;
-}
-
+/* Light theme overrides for mt-*: ensure accent contrast is readable on light surfaces */
 body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-today-badge-strength {
-  background: rgba(192, 57, 43, 0.12);
-  color: #c0392b;
+  background: color-mix(in srgb, var(--brand-accent, #a0392a) 12%, transparent);
+  color: var(--brand-accent-strong, #8f2f22);
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-today-narrative {
-  color: rgba(15, 23, 42, 0.82);
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-badge-key {
+  background: rgba(251, 191, 36, 0.16); /* tokens-ok: warning badge tint */
+  color: #92400e; /* tokens-ok: amber warning text */
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-today-metric > span {
-  color: rgba(100, 60, 50, 0.7);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-today-metric > strong {
-  color: #0f172a;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-dose-pip.is-planned {
-  background: rgba(192, 57, 43, 0.4);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-dose-pip.is-done {
-  background: #c0392b;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-dose-fraction,
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-dose-context > span {
-  color: rgba(15, 23, 42, 0.58);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-day-label {
-  color: rgba(15, 23, 42, 0.52);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-day.is-today {
-  background: rgba(192, 57, 43, 0.07);
-  border-color: rgba(192, 57, 43, 0.22);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-day.is-today .mt-strip-day-label {
-  color: #c0392b;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-badge-strength {
-  background: rgba(192, 57, 43, 0.14);
-  color: #c0392b;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-badge-run {
-  background: rgba(0, 0, 0, 0.07);
-  color: rgba(15, 23, 42, 0.6);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-day-dist {
-  color: rgba(15, 23, 42, 0.42);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-settings-summary {
-  color: rgba(15, 23, 42, 0.7);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-settings-icon {
-  color: rgba(150, 60, 40, 0.7);
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-strip-badge-long {
+  background: rgba(96, 165, 250, 0.16); /* tokens-ok: info badge tint */
+  color: #1d4ed8; /* tokens-ok: blue info text */
 }
 
 /* Mobile: week strip collapses to scrollable row */
@@ -16636,9 +16602,9 @@ body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-settings-i
   margin-bottom: 12px;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(249, 115, 22, 0.16);
-  background: linear-gradient(135deg, rgba(255, 237, 213, 0.96), rgba(255, 247, 237, 0.88));
-  color: #9a3412;
+  border: 1px solid color-mix(in srgb, var(--accent-coral-strong, #f07561) 16%, transparent);
+  background: linear-gradient(135deg, var(--bg-recommend-recovery, rgba(236, 253, 245, 0.92)), var(--bg-recommend-card, rgba(255, 255, 255, 0.96)));
+  color: var(--brand-accent-strong, #8f2f22);
   font-weight: 600;
 }
 
@@ -16648,8 +16614,8 @@ body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .mt-settings-i
   margin-bottom: 12px;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-soft, rgba(171, 173, 174, 0.15));
+  background: var(--bg-glass, rgba(245, 246, 247, 0.70));
 }
 
 .muscle-status-source strong {
@@ -17556,10 +17522,10 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-shell {
     min-height: 100vh;
     background:
-        radial-gradient(circle at 20% 16%, rgba(240, 117, 97, 0.08), transparent 30%),
-        radial-gradient(circle at 78% 66%, rgba(240, 117, 97, 0.07), transparent 34%),
-        linear-gradient(180deg, #141111 0%, #181313 100%);
-    color: #f2e9e7;
+        radial-gradient(circle at 20% 16%, color-mix(in srgb, var(--brand-accent, #a0392a) 10%, transparent), transparent 30%),
+        radial-gradient(circle at 78% 66%, color-mix(in srgb, var(--brand-accent, #a0392a) 8%, transparent), transparent 34%),
+        var(--bg-body-base, linear-gradient(160deg, #000000 0%, #0A0A0F 50%, #050508 100%));
+    color: var(--text-strong, #ffffff);
 }
 
 /* 闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸?Run Detail Stitch Page 闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑鎾绘煃閸忓浜鹃梺鍐插帨閸嬫捇鏌嶉崗澶婁壕闂佸啿鍘滈崑?*/
@@ -18485,7 +18451,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-impact-card p,
 .strength-plan-cta-panel p,
 .strength-plan-control-head p {
-    color: rgba(242, 233, 231, 0.48);
+    color: var(--text-muted, #595c5d);
 }
 
 .strength-plan-metrics span,
@@ -18517,14 +18483,20 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
     padding: 0 30px;
     border: none;
     border-radius: 999px;
-    background: #f07561;
-    color: #24120d;
+    background: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #fc7e69));
+    color: #ffffff;
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     cursor: pointer;
-    box-shadow: 0 22px 40px rgba(240, 117, 97, 0.2);
+    box-shadow: var(--shadow-glow, 0 0 20px rgba(160, 57, 42, 0.18));
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.strength-plan-primary-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(240, 117, 97, 0.28);
 }
 
 .strength-plan-hero-tags,
@@ -18538,11 +18510,12 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-focus-pills span {
     padding: 8px 12px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-glass, rgba(245, 246, 247, 0.70));
     font-size: 0.62rem;
     font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
+    color: var(--text-muted, #595c5d);
 }
 
 .strength-plan-content-grid {
@@ -18560,9 +18533,9 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-control-deck .muscle-day-card,
 .strength-plan-control-deck .muscle-status-source,
 .strength-plan-control-deck .muscle-banner-note {
-    background: rgba(31, 25, 25, 0.86);
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.26);
-    color: #f2e9e7;
+    background: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+    box-shadow: var(--shadow-card, 0 10px 28px rgba(44, 47, 48, 0.05));
+    color: var(--text-strong, #2c2f30);
 }
 
 .strength-plan-protocol-list {
@@ -18580,10 +18553,10 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 
 .strength-plan-exercise-media {
     min-height: 122px;
-    border-radius: 16px;
+    border-radius: var(--radius-lg, 16px);
     overflow: hidden;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(52, 44, 44, 0.94));
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.34);
+    background: linear-gradient(180deg, var(--bg-glass-strong, rgba(255, 255, 255, 0.92)), var(--bg-glass, rgba(245, 246, 247, 0.70)));
+    box-shadow: var(--shadow-soft, 0 18px 40px rgba(44, 47, 48, 0.06));
 }
 
 .strength-plan-exercise-media .muscle-exercise-figure {
@@ -18595,8 +18568,8 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 
 .strength-plan-exercise-copy h3 {
     margin: 10px 0 8px;
-    color: #f5efee;
-    font-family: "Manrope", sans-serif;
+    color: var(--text-strong, #2c2f30);
+    font-family: "Manrope", var(--font-display);
     font-size: 2rem;
     font-style: normal;
     font-weight: 700;
@@ -18607,7 +18580,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-exercise-copy p {
     max-width: 30rem;
     line-height: 1.7;
-    color: rgba(242, 233, 231, 0.44);
+    color: var(--text-muted, #595c5d);
 }
 
 .strength-plan-exercise-meta {
@@ -18628,8 +18601,8 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-exercise-meta em {
     padding: 7px 10px;
     border-radius: 8px;
-    background: rgba(240, 117, 97, 0.18);
-    color: #ffb4a7;
+    background: color-mix(in srgb, var(--brand-accent, #a0392a) 14%, transparent);
+    color: var(--accent-coral, #ffb4a7);
     font-size: 0.66rem;
     font-style: normal;
     font-weight: 800;
@@ -18648,8 +18621,8 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-empty-panel h3,
 .strength-plan-control-deck .muscle-panel h2,
 .strength-plan-control-deck .muscle-section-head h2 {
-    color: #f4ecea;
-    font-family: "Manrope", sans-serif;
+    color: var(--text-strong, #2c2f30);
+    font-family: "Manrope", var(--font-display);
     font-style: normal;
     transform: none;
 }
@@ -18683,7 +18656,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
     margin-top: 14px;
     padding: 12px;
     border: none;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-glass, rgba(245, 246, 247, 0.70));
     box-shadow: none;
 }
 
@@ -18700,8 +18673,8 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 }
 
 .strength-plan-cue > span {
-    color: #ffb4a7;
-    font-family: "Manrope", sans-serif;
+    color: var(--accent-coral, #ffb4a7);
+    font-family: "Manrope", var(--font-display);
     font-size: 1.15rem;
     font-style: italic;
     font-weight: 800;
@@ -18718,10 +18691,11 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 .strength-plan-impact-card strong {
     display: block;
     margin: 18px 0 10px;
-    font-family: "Manrope", sans-serif;
+    font-family: "Manrope", var(--font-display);
     font-size: 3rem;
     font-weight: 800;
     letter-spacing: -0.06em;
+    color: var(--text-strong, #2c2f30);
 }
 
 .strength-plan-control-deck {
@@ -18734,6 +18708,75 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
     margin-top: 10px;
     max-width: 42rem;
     line-height: 1.7;
+}
+
+/* ── Light mode: strength-plan surfaces ── */
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-protocol,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-rail-card,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-impact-card,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-cta-panel,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-control-deck .muscle-panel,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-control-deck .muscle-status-card,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-control-deck .muscle-day-card {
+    background: var(--bg-recommend-card, rgba(255, 255, 255, 0.96));
+    box-shadow: var(--shadow-card, 0 10px 28px rgba(44, 47, 48, 0.05));
+    color: var(--text-strong, #2c2f30);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-exercise-media {
+    background: linear-gradient(180deg, var(--bg-glass-strong, rgba(255, 255, 255, 0.94)), var(--bg-glass, rgba(245, 246, 247, 0.70)));
+    box-shadow: var(--shadow-soft, 0 18px 40px rgba(44, 47, 48, 0.06));
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-exercise-copy h3 {
+    color: var(--text-strong, #2c2f30);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-exercise-copy p {
+    color: var(--text-muted, #595c5d);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-exercise-meta em {
+    background: rgba(160, 57, 42, 0.1);
+    color: var(--brand-accent, #a0392a);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-cta-panel h3,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-empty-panel h3,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-control-deck .muscle-panel h2,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-control-deck .muscle-section-head h2 {
+    color: var(--text-strong, #2c2f30);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-cue > span {
+    color: var(--brand-accent, #a0392a);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-impact-card strong {
+    color: var(--text-strong, #2c2f30);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-map-wrap .muscle-map-card {
+    background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-section-label,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-kicker,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-exercise-kicker {
+    color: var(--brand-accent, #a0392a);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-hero-tags span,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-focus-pills span {
+    background: rgba(160, 57, 42, 0.08);
+    color: var(--brand-accent, #a0392a);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-control-deck .muscle-status-source,
+body:is(.theme-light, .theme-high-contrast-light) .dashboard-body .strength-plan-control-deck .muscle-banner-note {
+    background: var(--bg-glass, rgba(245, 246, 247, 0.70));
+    border-color: var(--line-soft, rgba(171, 173, 174, 0.15));
+    color: var(--text-muted, #595c5d);
 }
 
 .strength-plan-control-deck .muscle-preference-panel,
