@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
+import AppIcon from '../components/AppIcon';
 import { formatDuration, formatLongDate, formatPace, formatPaceSeconds } from '../utils/format';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import {
@@ -525,7 +526,7 @@ export default function RunDetail() {
 
   const dateText = formatLongDate(run.startTime || run.startDate, lang);
   const startDate = new Date(run.startTime || run.startDate || 0);
-  const metaSeparator = lang === 'zh-CN' ? ' · ' : ' • ';
+  const metaSeparator = t('run_detail.meta_separator');
   const distanceUnitLabel = t('run_detail.unit_km');
   const paceUnitLabel = t('run_detail.unit_pace');
   const speedUnitLabel = t('run_detail.unit_kmh');

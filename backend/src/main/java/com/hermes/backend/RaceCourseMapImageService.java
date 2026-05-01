@@ -13,19 +13,35 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 public class RaceCourseMapImageService {
@@ -35,7 +51,12 @@ public class RaceCourseMapImageService {
     private static final int DEFAULT_PDF_RENDER_PAGE_LIMIT = 2;
     private static final int PDF_RENDER_DPI = 200;
     private static final int MAX_INLINE_UPLOAD_PREVIEW_DIMENSION_PX = 1800;
+    private static final float JPEG_ENCODING_QUALITY = 0.92f;
     private static final String LOCAL_COURSE_MAP_REFERENCE_PREFIX = "local-course-map:";
+    private static final String LOCAL_COURSE_MAP_ROUTE_REFERENCE_PREFIX = "local-course-map-route:";
+    private static final String LOCAL_COURSE_MAP_IMAGE_ENDPOINT = "/api/races/course-map-image?ref=";
+    private static final String LOCAL_COURSE_MAP_ROUTE_DIRECTORY = "routes";
+    private static final String SUCCESSFUL_ROUTE_FILE_SUFFIX = "-successful-route.json";
 
     private final RestTemplate restTemplate;
 
@@ -109,14 +130,107 @@ public class RaceCourseMapImageService {
         }
     }
 
+    public String replaceSuccessfulCourseMapRoute(String raceId, String previousRouteReference, String routeJson) {
+        if (routeJson == null || routeJson.isBlank()) return null;
+        try {
+            Path routeDirectory = resolveCourseMapRouteDirectory();
+            Files.createDirectories(routeDirectory);
+            String raceStem = sanitizeFileStem(raceId);
+            String fileName = raceStem + SUCCESSFUL_ROUTE_FILE_SUFFIX;
+            Path target = routeDirectory.resolve(fileName).normalize();
+            if (!target.startsWith(routeDirectory)) {
+                throw new IllegalArgumentException("Invalid course-map route filename.");
+            }
+            deleteSuccessfulCourseMapRoute(previousRouteReference);
+            deleteStaleSuccessfulRouteFiles(routeDirectory, raceStem, fileName);
+            Files.writeString(
+                    target,
+                    routeJson,
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE
+            );
+            return LOCAL_COURSE_MAP_ROUTE_REFERENCE_PREFIX + fileName;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to store successful course-map route locally.", exception);
+        }
+    }
+
+    public boolean deleteSuccessfulCourseMapRoute(String routeReference) {
+        try {
+            Path routePath = resolveLocalCourseMapRoutePath(routeReference);
+            if (routePath == null || !Files.exists(routePath)) return false;
+            Files.deleteIfExists(routePath);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public List<RaceCourseMapService.ResolvedCandidateAsset> resolveLocalCourseMapAssets(String raceId) {
+        String raceStem = sanitizeFileStem(raceId);
+        if (raceStem.isBlank()) return List.of();
+        Path uploadDirectory = resolveCourseMapUploadDirectory();
+        if (!Files.isDirectory(uploadDirectory)) return List.of();
+        try (java.util.stream.Stream<Path> stream = Files.list(uploadDirectory)) {
+            List<Path> localFiles = stream
+                    .filter(Files::isRegularFile)
+                    .toList();
+            Map<String, Set<String>> hashRaceStems = localContentHashRaceStems(localFiles);
+            return localFiles.stream()
+                    .filter(path -> isLocalCourseMapFileForRace(path, raceStem))
+                    .filter(path -> !isSharedLocalContentHash(path, hashRaceStems))
+                    .sorted(Comparator
+                            .comparingLong(this::safeLastModifiedMillis)
+                            .reversed()
+                            .thenComparing(path -> path.getFileName().toString()))
+                    .map(this::readLocalCourseMapAsset)
+                    .filter(Objects::nonNull)
+                    .toList();
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    public boolean quarantineLocalCourseMapReference(String imageReference) {
+        try {
+            Path source = resolveLocalCourseMapPath(imageReference);
+            if (source == null || !Files.isRegularFile(source)) return false;
+            Path uploadDirectory = resolveCourseMapUploadDirectory();
+            Path rejectedDirectory = uploadDirectory.resolve("rejected").normalize();
+            if (!rejectedDirectory.startsWith(uploadDirectory)) return false;
+            Files.createDirectories(rejectedDirectory);
+            Path target = rejectedDirectory.resolve(source.getFileName()).normalize();
+            if (!target.startsWith(rejectedDirectory)) return false;
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     public String buildDisplayablePreviewImageUrl(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) return imageUrl;
         if (isImageDataUrl(imageUrl)) return imageUrl;
+        if (isLocalCourseMapReference(imageUrl)) {
+            return LOCAL_COURSE_MAP_IMAGE_ENDPOINT + URLEncoder.encode(imageUrl, StandardCharsets.UTF_8);
+        }
         RaceCourseMapService.ResolvedCandidateAsset resolved = resolveUploadedReference(imageUrl);
         if (resolved == null || resolved.imageBytes() == null || resolved.imageBytes().length == 0) return imageUrl;
         String mediaType = detectMediaTypeFromBytes(resolved.imageBytes(), imageUrl);
         if (mediaType == null || mediaType.isBlank()) mediaType = "image/png";
         return "data:" + mediaType + ";base64," + Base64.getEncoder().encodeToString(resolved.imageBytes());
+    }
+
+    public DisplayableCourseMapImage resolveDisplayableLocalImage(String imageReference) {
+        if (!isLocalCourseMapReference(imageReference)) return null;
+        if (!isSupportedLocalCourseMapImage(imageReference.toLowerCase(Locale.ROOT))) return null;
+        byte[] imageBytes = readLocalCourseMapBytes(imageReference);
+        if (imageBytes == null || imageBytes.length == 0) return null;
+        String mediaType = detectMediaTypeFromBytes(imageBytes, imageReference);
+        if (mediaType == null || mediaType.isBlank()) mediaType = "image/jpeg";
+        return new DisplayableCourseMapImage(mediaType, imageBytes);
     }
 
     public String buildTransparentCourseMapOverlayImageUrl(String imageUrl) {
@@ -217,6 +331,131 @@ public class RaceCourseMapImageService {
                 : courseMapUploadDirectory).toAbsolutePath().normalize();
     }
 
+    private Path resolveCourseMapRouteDirectory() {
+        Path uploadDirectory = resolveCourseMapUploadDirectory();
+        Path routeDirectory = uploadDirectory.resolve(LOCAL_COURSE_MAP_ROUTE_DIRECTORY).normalize();
+        if (!routeDirectory.startsWith(uploadDirectory)) {
+            throw new IllegalArgumentException("Invalid course-map route directory.");
+        }
+        return routeDirectory;
+    }
+
+    private Path resolveLocalCourseMapRoutePath(String routeReference) {
+        if (!isLocalCourseMapRouteReference(routeReference)) return null;
+        String fileName = routeReference.substring(LOCAL_COURSE_MAP_ROUTE_REFERENCE_PREFIX.length()).trim();
+        if (fileName.isBlank()
+                || fileName.contains("/")
+                || fileName.contains("\\")
+                || fileName.contains("..")
+                || !fileName.endsWith(".json")) return null;
+        Path routeDirectory = resolveCourseMapRouteDirectory();
+        Path resolved = routeDirectory.resolve(fileName).normalize();
+        return resolved.startsWith(routeDirectory) ? resolved : null;
+    }
+
+    private void deleteStaleSuccessfulRouteFiles(Path routeDirectory, String raceStem, String keepFileName) {
+        if (raceStem == null || raceStem.isBlank() || !Files.isDirectory(routeDirectory)) return;
+        try (java.util.stream.Stream<Path> stream = Files.list(routeDirectory)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String fileName = path.getFileName() == null ? "" : path.getFileName().toString();
+                        return fileName.startsWith(raceStem + "-")
+                                && fileName.endsWith(SUCCESSFUL_ROUTE_FILE_SUFFIX)
+                                && !fileName.equals(keepFileName);
+                    })
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (Exception ignored) {
+                        }
+                    });
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean isLocalCourseMapFileForRace(Path path, String raceStem) {
+        String fileName = path == null || path.getFileName() == null
+                ? ""
+                : path.getFileName().toString();
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        return lower.startsWith(raceStem + "-") && isSupportedLocalCourseMapImage(lower);
+    }
+
+    private boolean isSupportedLocalCourseMapImage(String fileName) {
+        return fileName.endsWith(".png")
+                || fileName.endsWith(".jpg")
+                || fileName.endsWith(".jpeg")
+                || fileName.endsWith(".webp")
+                || fileName.endsWith(".gif")
+                || fileName.endsWith(".avif")
+                || fileName.endsWith(".bmp");
+    }
+
+    private RaceCourseMapService.ResolvedCandidateAsset readLocalCourseMapAsset(Path path) {
+        try {
+            long size = Files.size(path);
+            if (size <= 0 || size > MAX_DOCUMENT_BYTES) return null;
+            return new RaceCourseMapService.ResolvedCandidateAsset(
+                    LOCAL_COURSE_MAP_REFERENCE_PREFIX + path.getFileName(),
+                    Files.readAllBytes(path)
+            );
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private long safeLastModifiedMillis(Path path) {
+        try {
+            return Files.getLastModifiedTime(path).toMillis();
+        } catch (Exception ignored) {
+            return 0L;
+        }
+    }
+
+    private Map<String, Set<String>> localContentHashRaceStems(List<Path> paths) {
+        Map<String, Set<String>> owners = new HashMap<>();
+        if (paths == null || paths.isEmpty()) return owners;
+        for (Path path : paths) {
+            String fileName = path == null || path.getFileName() == null
+                    ? ""
+                    : path.getFileName().toString().toLowerCase(Locale.ROOT);
+            if (!isSupportedLocalCourseMapImage(fileName)) continue;
+            String hash = localCourseMapContentHash(fileName);
+            String raceStem = localCourseMapRaceStem(fileName);
+            if (hash.isBlank() || raceStem.isBlank()) continue;
+            owners.computeIfAbsent(hash, ignored -> new HashSet<>()).add(raceStem);
+        }
+        return owners;
+    }
+
+    private boolean isSharedLocalContentHash(Path path, Map<String, Set<String>> hashRaceStems) {
+        if (path == null || path.getFileName() == null || hashRaceStems == null || hashRaceStems.isEmpty()) return false;
+        String hash = localCourseMapContentHash(path.getFileName().toString().toLowerCase(Locale.ROOT));
+        if (hash.isBlank()) return false;
+        Set<String> owners = hashRaceStems.get(hash);
+        return owners != null && owners.size() > 1;
+    }
+
+    private String localCourseMapRaceStem(String fileName) {
+        int hashSeparator = localCourseMapHashSeparator(fileName);
+        return hashSeparator <= 0 ? "" : fileName.substring(0, hashSeparator);
+    }
+
+    private String localCourseMapContentHash(String fileName) {
+        int hashSeparator = localCourseMapHashSeparator(fileName);
+        int extensionSeparator = fileName == null ? -1 : fileName.lastIndexOf('.');
+        if (hashSeparator < 0 || extensionSeparator <= hashSeparator + 1) return "";
+        String hash = fileName.substring(hashSeparator + 1, extensionSeparator);
+        return hash.matches("[0-9a-f]{16}") ? hash : "";
+    }
+
+    private int localCourseMapHashSeparator(String fileName) {
+        if (fileName == null || fileName.isBlank()) return -1;
+        int extensionSeparator = fileName.lastIndexOf('.');
+        if (extensionSeparator <= 17) return -1;
+        return fileName.lastIndexOf('-', extensionSeparator - 17);
+    }
+
     private byte[] fetchBinaryBytes(String url, int maxBytes) {
         try {
             ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
@@ -241,6 +480,10 @@ public class RaceCourseMapImageService {
 
     private boolean isLocalCourseMapReference(String url) {
         return url != null && url.regionMatches(true, 0, LOCAL_COURSE_MAP_REFERENCE_PREFIX, 0, LOCAL_COURSE_MAP_REFERENCE_PREFIX.length());
+    }
+
+    private boolean isLocalCourseMapRouteReference(String url) {
+        return url != null && url.regionMatches(true, 0, LOCAL_COURSE_MAP_ROUTE_REFERENCE_PREFIX, 0, LOCAL_COURSE_MAP_ROUTE_REFERENCE_PREFIX.length());
     }
 
     private boolean isImageDataUrl(String url) {
@@ -364,7 +607,11 @@ public class RaceCourseMapImageService {
         }
         try {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
-            ImageIO.write(outputImage, format, output);
+            if ("jpg".equals(format)) {
+                writeJpegWithQuality(outputImage, output, JPEG_ENCODING_QUALITY);
+            } else {
+                ImageIO.write(outputImage, format, output);
+            }
             byte[] encodedBytes = output.toByteArray();
             if (encodedBytes.length == 0) return null;
             return new RaceCourseMapService.ResolvedCandidateAsset(
@@ -431,4 +678,47 @@ public class RaceCourseMapImageService {
                 && bytes[11] == 'f';
         return (looksLikeWebp || looksLikeAvif) && bytes.length >= 1024;
     }
+
+    // Preprocess raw image bytes for Qwen course-map analysis:
+    // resize → enhance contrast → sharpen → encode as PNG
+    public byte[] preprocessImageBytesForQwen(byte[] imageBytes, String mediaType) {
+        if (imageBytes == null || imageBytes.length == 0) return imageBytes;
+        BufferedImage decoded = decodeImage(imageBytes);
+        if (decoded == null) return imageBytes;
+        try {
+            BufferedImage resized = QwenImagePreprocessor.resizeIfNeeded(decoded, QwenImagePreprocessor.DEFAULT_QWEN_MAX_DIMENSION);
+            BufferedImage enhanced = QwenImagePreprocessor.enhanceContrast(resized);
+            BufferedImage sharpened = QwenImagePreprocessor.sharpen(enhanced);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            ImageIO.write(sharpened, "png", output);
+            byte[] encodedBytes = output.toByteArray();
+            return encodedBytes.length > 0 ? encodedBytes : imageBytes;
+        } catch (Exception ignored) {
+            return imageBytes; // fallback to original on any processing error
+        }
+    }
+
+    // Write JPEG with explicit quality setting — ImageIO.write default is ~0.75,
+    // which introduces visible artifacts on course map line art
+    private void writeJpegWithQuality(BufferedImage image, OutputStream output, float quality) throws java.io.IOException {
+        Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+        if (!writers.hasNext()) {
+            ImageIO.write(image, "jpg", output);
+            return;
+        }
+        ImageWriter writer = writers.next();
+        try {
+            ImageOutputStream ios = ImageIO.createImageOutputStream(output);
+            writer.setOutput(ios);
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(quality);
+            writer.write(null, new IIOImage(image, null, null), param);
+            ios.flush();
+        } finally {
+            writer.dispose();
+        }
+    }
+
+    public record DisplayableCourseMapImage(String mediaType, byte[] imageBytes) {}
 }
