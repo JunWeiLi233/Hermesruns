@@ -122,10 +122,21 @@ public class RaceCourseMapAiService {
                 "raceType", raceType == null ? "" : raceType.name()
         ));
 
+        // Preprocess the image once here and reuse the prepared bytes for both the
+        // initial alignment call and any rescue call. This avoids repeating the
+        // resize → contrast-enhance → sharpen pipeline on the same image bytes.
+        scanWatcher.beginStep("qwen.image_preprocess", "Preprocessing course-map image for Qwen (shared for all passes).");
+        byte[] preparedImageBytes = QwenImagePreprocessor.preprocessBytes(imageBytes);
+        String preparedMediaType = preparedImageBytes == imageBytes ? mediaType : "image/png";
+        scanWatcher.completeStep("qwen.image_preprocess", "SUCCESS", "Image preprocessing complete (shared for all passes).", Map.of(
+                "originalMediaType", mediaType == null ? "" : mediaType,
+                "finalMediaType", preparedMediaType
+        ));
+
         scanWatcher.beginStep("qwen.call", "Sending course-map alignment request to Qwen.");
-        RaceCourseMapService.CourseMapAlignment alignment = requestAlignment(
-                imageBytes,
-                mediaType,
+        RaceCourseMapService.CourseMapAlignment alignment = requestAlignmentPrepared(
+                preparedImageBytes,
+                preparedMediaType,
                 promptText,
                 latitude,
                 longitude,
@@ -213,9 +224,9 @@ public class RaceCourseMapAiService {
         }
 
         scanWatcher.beginStep("qwen.rescue", "Running corrective Qwen pass with rescue prompt.");
-        RaceCourseMapService.CourseMapAlignment corrected = requestAlignment(
-                imageBytes,
-                mediaType,
+        RaceCourseMapService.CourseMapAlignment corrected = requestAlignmentPrepared(
+                preparedImageBytes,
+                preparedMediaType,
                 promptBuilder.buildAlignmentPrompt(raceName, city, country, latitude, longitude, distanceKm, true, raceType, rescuePrompt),
                 latitude,
                 longitude,
@@ -388,23 +399,21 @@ public class RaceCourseMapAiService {
         return lowerBayOrAtlantic || offshoreSouthOfBrooklyn;
     }
 
-    private RaceCourseMapService.CourseMapAlignment requestAlignment(
-            byte[] imageBytes,
-            String mediaType,
+    /**
+     * Invoke Qwen with already-preprocessed image bytes. Preprocessing (resize, contrast-enhance,
+     * sharpen) must be applied by the caller before this method — call
+     * {@link QwenImagePreprocessor#preprocessBytes(byte[])} once and reuse the result for all
+     * passes (initial + rescue) to avoid redundant work.
+     */
+    private RaceCourseMapService.CourseMapAlignment requestAlignmentPrepared(
+            byte[] preparedBytes,
+            String preparedMediaType,
             String prompt,
             Double latitude,
             Double longitude,
             Double distanceKm,
             RaceCourseMapService.PromptRaceType raceType
     ) {
-        scanWatcher.beginStep("qwen.image_preprocess", "Preprocessing course-map image for Qwen.");
-        byte[] preparedBytes = QwenImagePreprocessor.preprocessBytes(imageBytes);
-        String preparedMediaType = preparedBytes == imageBytes ? mediaType : "image/png";
-        scanWatcher.completeStep("qwen.image_preprocess", "SUCCESS", "Image preprocessing complete.", Map.of(
-                "originalMediaType", mediaType == null ? "" : mediaType,
-                "finalMediaType", preparedMediaType
-        ));
-
         scanWatcher.beginStep("qwen.invoke", "Calling Qwen vision model for course-map alignment.");
         String text = callQwen(preparedBytes, preparedMediaType, prompt);
         if (text == null || text.isBlank()) {
