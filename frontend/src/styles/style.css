@@ -16259,6 +16259,238 @@ body.theme-midnight .polarized-target-marker {
   line-height: 1.6;
 }
 
+.runner-shell-canvas .muscle-training-page {
+  max-width: 1180px;
+}
+
+.mt-coach-cockpit {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.36fr) minmax(280px, 0.64fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 22px;
+}
+
+.mt-coach-cockpit::before {
+  content: '';
+  position: absolute;
+  inset: -24px -18px auto 18%;
+  height: 210px;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-coral-strong, #f07561) 18%, transparent) 0%, transparent 68%);
+  filter: blur(18px);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.mt-coach-cockpit-main,
+.mt-coach-cockpit-rail {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.mt-coach-cockpit-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 14px;
+}
+
+.mt-coach-cockpit .mt-today-card {
+  position: relative;
+  display: flex;
+  min-height: 286px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  margin-bottom: 0;
+  padding: 30px;
+  border: 0;
+  background:
+    radial-gradient(circle at 88% 6%, color-mix(in srgb, var(--accent-coral-strong, #f07561) 22%, transparent) 0%, transparent 34%),
+    linear-gradient(140deg, color-mix(in srgb, var(--surface, #ffffff) 92%, var(--accent-coral-strong, #f07561) 8%) 0%, var(--bg-glass, rgba(245, 246, 247, 0.70)) 62%, color-mix(in srgb, var(--surface-strong, #ffffff) 88%, var(--accent-coral, #ffb4a7) 12%) 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-coral-strong, #f07561) 14%, transparent),
+    0 24px 70px color-mix(in srgb, var(--accent-coral-strong, #f07561) 13%, transparent),
+    var(--shadow-card, 0 10px 28px rgba(44, 47, 48, 0.05));
+}
+
+.mt-coach-cockpit .mt-today-card::after {
+  content: '';
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  width: 118px;
+  height: 118px;
+  border-radius: 34px;
+  background:
+    linear-gradient(135deg, transparent 30%, color-mix(in srgb, var(--accent-coral-strong, #f07561) 24%, transparent) 30% 36%, transparent 36%),
+    color-mix(in srgb, var(--surface-strong, #ffffff) 62%, transparent);
+  opacity: 0.52;
+  transform: rotate(8deg);
+}
+
+.mt-coach-cockpit .mt-today-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.mt-coach-cockpit .mt-today-narrative {
+  max-width: 44rem;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+  font-weight: 700;
+  line-height: 1.32;
+  letter-spacing: -0.04em;
+}
+
+.mt-coach-cockpit .mt-dose-bar {
+  margin-bottom: 0;
+  border: 0;
+  box-shadow:
+    inset 0 0 0 1px var(--line-glass, rgba(171, 173, 174, 0.15)),
+    var(--shadow-card, 0 10px 28px rgba(44, 47, 48, 0.05));
+}
+
+.mt-coach-cockpit-rail {
+  display: grid;
+  gap: 14px;
+}
+
+.mt-coach-rail-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 24px;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--bg-glass, rgba(245, 246, 247, 0.70)) 90%, var(--accent-coral, #ffb4a7) 10%), var(--surface-strong, #ffffff));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--line-glass, rgba(171, 173, 174, 0.15)) 76%, transparent),
+    var(--shadow-card, 0 10px 28px rgba(44, 47, 48, 0.05));
+  color: var(--text-strong, #2c2f30);
+}
+
+.mt-coach-rail-card--focus {
+  display: grid;
+  align-content: space-between;
+  min-height: 184px;
+}
+
+.mt-coach-rail-card--focus strong {
+  display: block;
+  margin-top: 14px;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.58rem;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.05em;
+  color: var(--text-strong, #2c2f30);
+}
+
+.mt-coach-rail-card--focus p {
+  margin: 10px 0 0;
+  color: var(--text-muted, #595c5d);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.mt-coach-rail-meter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent-coral-strong, #f07561) 11%, transparent);
+}
+
+.mt-coach-rail-meter span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted, #595c5d);
+}
+
+.mt-coach-rail-meter strong {
+  margin: 0;
+  font-size: 1.85rem;
+  color: var(--brand-accent-strong, #8f2f22);
+}
+
+.mt-coach-rail-card--map {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.mt-coach-mini-map {
+  display: grid;
+  place-items: center;
+  min-height: 202px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--accent-coral-strong, #f07561) 12%, transparent) 0%, transparent 58%),
+    color-mix(in srgb, var(--surface-strong, #ffffff) 78%, transparent);
+}
+
+.mt-coach-rail-card--map .muscle-map-card {
+  margin: 0;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mt-coach-rail-card--map .muscle-map-card:hover {
+  transform: none;
+}
+
+.mt-coach-rail-card--map .muscle-map-figure {
+  width: min(100%, 176px);
+}
+
+.mt-coach-rail-card--map .strength-plan-focus-pills {
+  margin-top: 0;
+}
+
+@media (max-width: 1040px) {
+  .mt-coach-cockpit {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-coach-cockpit-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .mt-coach-cockpit {
+    gap: 14px;
+  }
+
+  .mt-coach-cockpit .mt-today-card {
+    min-height: auto;
+    padding: 24px 20px;
+  }
+
+  .mt-coach-cockpit .mt-today-card::after {
+    width: 86px;
+    height: 86px;
+    opacity: 0.32;
+  }
+
+  .mt-coach-cockpit-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-coach-mini-map {
+    min-height: 178px;
+  }
+}
+
 /* Zone 1: Today card */
 .mt-today-card {
   padding: 22px 24px;
@@ -23213,15 +23445,15 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 }
 
 .auth-flow-slide-track {
-  height: 300%;
+  height: 700%;
   display: flex;
   flex-direction: column;
-  animation: authFlowSlideRoll 18s cubic-bezier(0.76, 0, 0.24, 1) infinite;
+  animation: authFlowSlideRoll 42s cubic-bezier(0.76, 0, 0.24, 1) infinite;
   will-change: transform;
 }
 
 .auth-flow-slide {
-  height: 33.333%;
+  height: 14.2857%;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -23308,7 +23540,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   height: 6px;
   border-radius: 999px;
   background: rgba(255, 241, 230, 0.18); /* tokens-ok */
-  animation: authFlowDotPulse 18s linear infinite;
+  animation: authFlowDotPulse 42s linear infinite;
 }
 
 .auth-flow-dot--2 {
@@ -23319,16 +23551,36 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   animation-delay: 12s;
 }
 
+.auth-flow-dot--4 {
+  animation-delay: 18s;
+}
+
+.auth-flow-dot--5 {
+  animation-delay: 24s;
+}
+
+.auth-flow-dot--6 {
+  animation-delay: 30s;
+}
+
+.auth-flow-dot--7 {
+  animation-delay: 36s;
+}
+
 @keyframes authFlowSlideRoll {
-  0%, 26%  { transform: translateY(0); }
-  33%, 59% { transform: translateY(-33.333%); }
-  66%, 92% { transform: translateY(-66.666%); }
-  100%     { transform: translateY(0); }
+  0%,     9.52%  { transform: translateY(0); }
+  14.29%, 23.81% { transform: translateY(-14.2857%); }
+  28.57%, 38.10% { transform: translateY(-28.5714%); }
+  42.86%, 52.38% { transform: translateY(-42.8571%); }
+  57.14%, 66.67% { transform: translateY(-57.1429%); }
+  71.43%, 80.95% { transform: translateY(-71.4286%); }
+  85.71%, 95.24% { transform: translateY(-85.7143%); }
+  100%           { transform: translateY(0); }
 }
 
 @keyframes authFlowDotPulse {
-  0%, 29% { width: 24px; background: var(--accent-coral-strong); }
-  34%, 100% { width: 6px; background: rgba(255, 241, 230, 0.18); } /* tokens-ok */
+  0%, 9.52% { width: 24px; background: var(--accent-coral-strong); }
+  14.29%, 100% { width: 6px; background: rgba(255, 241, 230, 0.18); } /* tokens-ok */
 }
 
 /* Profile Dashboard Brand Carousel */
@@ -55005,9 +55257,9 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     --lc-font-body: "Inter", "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --lc-font-display: "Manrope", "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --lc-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
-    --lc-bg: #0d0e10;
-    --lc-surface-low: rgba(22, 25, 29, 0.86);
-    --lc-surface-mid: rgba(28, 32, 38, 0.92);
+    --lc-bg: #090b0f;
+    --lc-surface-low: rgba(16, 20, 25, 0.88);
+    --lc-surface-mid: rgba(21, 27, 34, 0.94);
     --lc-ink: #f1eee9;
     --lc-ink-muted: #b8b8b8; /* tokens-ok — landing cinematic token */
     --lc-ink-faint: #8a8d92; /* tokens-ok — landing cinematic token */
@@ -55017,9 +55269,9 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     --lc-green: #9ec5a6;
     min-height: 100vh;
     background:
-        radial-gradient(circle at 78% 8%, rgba(240, 117, 97, 0.2), transparent 34%),
-        radial-gradient(circle at 16% 22%, rgba(255, 180, 167, 0.08), transparent 26%),
-        linear-gradient(180deg, #0d0e10 0%, #111316 42%, #0d0e10 100%);
+        radial-gradient(circle at 79% 7%, rgba(240, 117, 97, 0.24), transparent 32%),
+        radial-gradient(circle at 22% 18%, rgba(255, 180, 167, 0.1), transparent 24%),
+        linear-gradient(180deg, #090b0f 0%, #11141a 40%, #090b0f 100%);
     color: var(--lc-ink);
     font-family: var(--lc-font-body);
     isolation: isolate;
@@ -55074,7 +55326,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 }
 
 .landing-cinematic-nav.is-scrolled {
-    background: rgba(13, 14, 16, 0.68);
+    background: rgba(9, 11, 15, 0.74);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     box-shadow: inset 0 -1px 0 var(--lc-rule);
@@ -55230,9 +55482,9 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     left: 48%;
     inset-block: -10% 0;
     background:
-        radial-gradient(ellipse at 68% 24%, rgba(240, 117, 97, 0.38), transparent 34%),
-        radial-gradient(ellipse at 42% 64%, rgba(255, 180, 167, 0.12), transparent 28%),
-        linear-gradient(135deg, #2a1d1a 0%, #15171b 56%, #0d0e10 100%);
+        radial-gradient(ellipse at 70% 24%, rgba(240, 117, 97, 0.42), transparent 34%),
+        radial-gradient(ellipse at 40% 62%, rgba(255, 180, 167, 0.14), transparent 28%),
+        linear-gradient(140deg, #261815 0%, #141922 52%, #090b0f 100%);
     clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
 }
 
@@ -55250,7 +55502,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 }
 
 .landing-cinematic-hero-scrim {
-    background: linear-gradient(90deg, var(--lc-bg) 8%, rgba(13, 14, 16, 0.82) 43%, rgba(13, 14, 16, 0.12) 78%);
+    background: linear-gradient(90deg, var(--lc-bg) 8%, rgba(9, 11, 15, 0.88) 44%, rgba(9, 11, 15, 0.16) 78%);
 }
 
 .landing-cinematic-grain {
@@ -55373,10 +55625,10 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 .landing-cinematic-hud {
     border-radius: 24px;
     padding: 26px;
-    background: linear-gradient(180deg, rgba(36, 41, 49, 0.82), rgba(22, 25, 29, 0.94));
+    background: linear-gradient(180deg, rgba(22, 28, 35, 0.88), rgba(13, 17, 22, 0.96));
     box-shadow:
-        0 42px 120px -46px rgba(0, 0, 0, 0.82),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        0 42px 120px -46px rgba(0, 0, 0, 0.86),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
 }
@@ -57350,6 +57602,7 @@ body.light-mode .territory-map-section::after {
 /* Map overlay containers: positional px values are map-viewport insets, no positional token exists */
 .terr-overlay-stats,
 .terr-overlay-filters,
+.terr-overlay-command,
 .terr-overlay-legend {
   position: absolute;
   z-index: 2;
@@ -57372,11 +57625,21 @@ body.light-mode .territory-map-section::after {
   max-width: min(560px, calc(100% - 36px));
 }
 
+.terr-overlay-command {
+  left: 18px;
+  bottom: 18px;
+  width: min(430px, calc(100% - 160px));
+  display: grid;
+  gap: 12px;
+}
+
 .terr-overlay-legend {
   right: 18px; /* tokens-ok */
   bottom: 18px;
-  left: 18px;
+  left: auto;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: min(520px, calc(100% - 480px));
 }
 
 .terr-stat-chip,
@@ -57483,6 +57746,183 @@ body.light-mode .territory-map-section::after {
   backdrop-filter: blur(18px);
 }
 
+.terr-command-card {
+  border: 1px solid var(--terr-border);
+  border-radius: 24px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    var(--terr-surface-strong);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
+.terr-command-card--focus.is-hot {
+  border-color: rgba(251, 191, 36, 0.28);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(251, 191, 36, 0.18), transparent 12rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    var(--terr-surface-strong);
+}
+
+.terr-command-card--focus.is-stable {
+  border-color: rgba(134, 239, 172, 0.2);
+}
+
+.terr-command-kicker {
+  display: inline-flex;
+  align-items: center;
+  color: var(--terr-accent);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.terr-command-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.terr-command-head strong {
+  display: block;
+  color: var(--terr-text);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.3rem, 2vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.terr-command-head p {
+  margin: 10px 0 0;
+  color: var(--terr-muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.terr-command-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.terr-command-meta span {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.terr-command-meta small {
+  color: var(--terr-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.terr-command-meta strong {
+  color: var(--terr-text);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.terr-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.terr-command-primary {
+  min-width: 180px;
+}
+
+.terr-command-secondary {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--terr-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--terr-text);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.terr-command-secondary:hover {
+  transform: translateY(-1px);
+  border-color: rgba(240, 117, 97, 0.34);
+}
+
+.terr-command-watchlist {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.terr-command-queue-btn {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--terr-text);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.terr-command-queue-btn:hover {
+  transform: translateY(-1px);
+}
+
+.terr-command-queue-btn span,
+.terr-command-queue-btn small {
+  color: var(--terr-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.terr-command-queue-btn strong {
+  color: var(--terr-text);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.terr-command-queue-btn.is-hot {
+  border-color: rgba(251, 191, 36, 0.24);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.terr-command-queue-btn.is-expand {
+  border-color: rgba(240, 117, 97, 0.22);
+}
+
+.terr-command-queue-btn.is-stable {
+  border-color: rgba(134, 239, 172, 0.18);
+}
+
+.terr-command-queue-btn.is-active {
+  border-color: rgba(240, 117, 97, 0.4);
+  background: rgba(240, 117, 97, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.12);
+}
+
 .terr-cities-card {
   min-height: 100%;
 }
@@ -57539,6 +57979,18 @@ body.light-mode .territory-map-section::after {
 .terr-zone-row.is-contested {
   border-color: rgba(240, 117, 97, 0.34); /* tokens-ok */
   background: rgba(240, 117, 97, 0.11); /* tokens-ok */
+}
+
+.terr-zone-row--button {
+  width: 100%;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.terr-zone-row--button.is-selected {
+  border-color: rgba(240, 117, 97, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.14);
 }
 
 .terr-lb-rank,
@@ -57706,6 +58158,17 @@ body.light-mode .territory-map-section::after {
   margin: 12px 0 0; /* tokens-ok */
 }
 
+.terr-mode-banner {
+  display: grid;
+  gap: 10px;
+}
+
+.terr-mode-banner p {
+  margin: 0;
+  color: var(--terr-muted);
+  line-height: 1.65;
+}
+
 /* Territory brief — above-fold coach summary */
 /* Editorial spacing: border-radius (28px) and padding (24px 28px) are intentional layout values; box-shadow is dark-mode ambient depth; gradient stops are decorative */
 .terr-brief {
@@ -57848,6 +58311,18 @@ body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-brief-kpi--
   background: rgba(180, 130, 0, 0.06);
 }
 
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-command-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(248, 242, 238, 0.84)),
+    var(--terr-surface-strong);
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-command-meta span,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-command-queue-btn,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-command-secondary {
+  background: rgba(255, 255, 255, 0.72);
+}
+
 body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-mini-pill.is-accent {
   color: #1a6b3c; /* tokens-ok */
   background: rgba(22, 163, 74, 0.12);
@@ -57924,6 +58399,7 @@ body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-map-section
 
   .terr-overlay-stats,
   .terr-overlay-filters,
+  .terr-overlay-command,
   .terr-overlay-legend {
     position: relative;
     inset: auto;
@@ -57950,6 +58426,14 @@ body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-map-section
 
   .terr-overlay-filters {
     justify-content: flex-start;
+  }
+
+  .terr-overlay-command {
+    width: auto;
+  }
+
+  .terr-command-meta {
+    grid-template-columns: 1fr;
   }
 
   .terr-lb-row,
