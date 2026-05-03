@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -49,6 +49,66 @@ export default function Analysis() {
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [hoveredVo2BarKey, setHoveredVo2BarKey] = useState(null);
+  const vo2BarsContainerRef = useRef(null);
+  const vo2TouchDismissTimerRef = useRef(null);
+  const vo2TouchActiveRef = useRef(false);
+
+  const clearVo2TouchTimer = useCallback(() => {
+    if (vo2TouchDismissTimerRef.current) {
+      clearTimeout(vo2TouchDismissTimerRef.current);
+      vo2TouchDismissTimerRef.current = null;
+    }
+  }, []);
+
+  const dismissVo2Tooltip = useCallback(() => {
+    clearVo2TouchTimer();
+    vo2TouchActiveRef.current = false;
+    setHoveredVo2BarKey(null);
+  }, [clearVo2TouchTimer]);
+
+  const handleVo2BarPointerDown = useCallback((event, key) => {
+    if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+      vo2TouchActiveRef.current = true;
+      setHoveredVo2BarKey(key);
+      clearVo2TouchTimer();
+      vo2TouchDismissTimerRef.current = setTimeout(() => {
+        vo2TouchActiveRef.current = false;
+        setHoveredVo2BarKey(null);
+      }, 3000);
+    }
+  }, [clearVo2TouchTimer]);
+
+  const handleVo2BarPointerEnter = useCallback((event, key) => {
+    if (event.pointerType === 'mouse') {
+      setHoveredVo2BarKey(key);
+    }
+  }, []);
+
+  const handleVo2BarPointerLeave = useCallback((event, key) => {
+    if (event.pointerType === 'mouse') {
+      setHoveredVo2BarKey((current) => (current === key ? null : current));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hoveredVo2BarKey) return undefined;
+    const handlePointerDownOutside = (event) => {
+      const container = vo2BarsContainerRef.current;
+      if (container && container.contains(event.target)) return;
+      dismissVo2Tooltip();
+    };
+    const handleScroll = () => {
+      if (vo2TouchActiveRef.current) dismissVo2Tooltip();
+    };
+    document.addEventListener('pointerdown', handlePointerDownOutside, true);
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDownOutside, true);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [hoveredVo2BarKey, dismissVo2Tooltip]);
+
+  useEffect(() => () => clearVo2TouchTimer(), [clearVo2TouchTimer]);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
@@ -290,7 +350,7 @@ export default function Analysis() {
                       <span>{t('analysis.stitch_vo2_band')}</span>
                     </div>
                   </div>
-                  <div className="analysis-overview-vo2-bars">
+                  <div className="analysis-overview-vo2-bars" ref={vo2BarsContainerRef}>
                     {hoveredVo2Bar ? (
                       <div
                         className="analysis-overview-vo2-tooltip"
@@ -321,8 +381,9 @@ export default function Analysis() {
                         tabIndex={0}
                         role="img"
                         aria-label={`${bar.label}: VO2max ${bar.value != null ? bar.value.toFixed(1) : '--'}${bar.hasAdjustment ? `, Adjusted ${bar.adjustedValue.toFixed(1)}` : ''}`}
-                        onPointerEnter={() => setHoveredVo2BarKey(bar.key)}
-                        onPointerLeave={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
+                        onPointerDown={(event) => handleVo2BarPointerDown(event, bar.key)}
+                        onPointerEnter={(event) => handleVo2BarPointerEnter(event, bar.key)}
+                        onPointerLeave={(event) => handleVo2BarPointerLeave(event, bar.key)}
                         onFocus={() => setHoveredVo2BarKey(bar.key)}
                         onBlur={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
                       >
