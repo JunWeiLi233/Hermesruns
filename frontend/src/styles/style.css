@@ -54424,14 +54424,30 @@ body.theme-light .pwd-strength-rule.is-met .rule-icon {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.6); /* tokens-ok — inside dark coaching strip; overridden in light mode below */
+}
+
+.today-run-readiness-signal-label {
+  flex-shrink: 0;
+  min-width: 32px; /* tokens-ok */
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.7;
+  letter-spacing: 0.02em;
 }
 
 .today-run-readiness-signal small {
+  flex-shrink: 0;
   min-width: 18px;
   text-align: right;
   font-weight: 600;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255,255,255,0.7); /* tokens-ok — inside dark coaching strip; overridden in light mode below */
+}
+
+.today-run-readiness-signal-scale {
+  font-weight: 400; /* tokens-ok */
+  opacity: 0.55;
+  margin-left: 1px;
 }
 
 .today-run-readiness-signal-icon {
@@ -54444,17 +54460,30 @@ body.theme-light .pwd-strength-rule.is-met .rule-icon {
 .today-run-readiness-signal-bar {
   flex: 1;
   height: 5px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 3px;
+  background: rgba(255,255,255,0.1); /* tokens-ok — inside dark coaching strip; overridden in light mode below */
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
 .today-run-readiness-signal-fill {
   display: block;
   height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #60a5fa, #4ade80);
-  transition: width 0.4s ease;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, #60a5fa, #4ade80); /* tokens-ok — data-vis gradient, no token equivalent */
+  transition: width var(--transition);
+}
+
+/* Light-mode parity for readiness signals — raw rgba consistent with existing theme-light overrides in this file */
+body:is(.theme-light, .theme-high-contrast-light) .today-run-readiness-signal {
+  color: rgba(0,0,0,0.5); /* tokens-ok */
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .today-run-readiness-signal small {
+  color: rgba(0,0,0,0.65); /* tokens-ok */
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .today-run-readiness-signal-bar {
+  background: rgba(0,0,0,0.08); /* tokens-ok */
 }
 
 .today-run-plan-metric-adjusted {
