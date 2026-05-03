@@ -785,20 +785,6 @@ export default function TodayRun() {
                   ))}
                 </div>              </div>
 
-              <div className={`today-run-load-callout is-${acwrInsight.zone}`}>
-                <div className="today-run-load-callout-copy">
-                  <span>{t('today_run.acwr_state_kicker')}</span>
-                  <strong>{acwrNarrative.title}</strong>
-                  <p>{acwrNarrative.body}</p>
-                </div>
-                <div className="today-run-load-callout-metric">
-                  <small>{t('today_run.acwr_state_current_label')}</small>
-                  <strong>{metrics.acwr != null ? metrics.acwr.toFixed(2) : '--'}</strong>
-                  <span className="today-run-load-callout-zone">{acwrNarrative.stripLabel}</span>
-                  <span>{t('today_run.acwr_state_safe_zone')}</span>
-                </div>
-              </div>
-
               <div className="today-run-plan-hero-metrics">
                 <article>
                   <span>{t('profile.today_run_distance')}</span>
