@@ -604,39 +604,59 @@ export default function TodayRun() {
                 <span className="today-run-coaching-answer-sub">{coachPayload?.state?.readinessScore != null ? `${coachPayload.state.readinessScore}/100` : recommendation.purpose}</span>
                 <div className="today-run-readiness-signals">
                   {coachPayload?.state?.readinessSleep != null && (
-                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_sleep')}: ${coachPayload.state.readinessSleep}`}>
+                    <span
+                      className="today-run-readiness-signal"
+                      aria-label={`${t('today_run.readiness_signal_sleep')}: ${coachPayload.state.readinessSleep}/100`}
+                      title={t('today_run.readiness_signal_sleep_tooltip')}
+                    >
                       <AppIcon name="sleep" className="today-run-readiness-signal-icon" aria-hidden="true" />
+                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_sleep_short')}</span>
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessSleep}%` }} />
                       </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessSleep}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessSleep}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_sleep_scale')}</span></small>
                     </span>
                   )}
                   {coachPayload?.state?.readinessHrv != null && (
-                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_hrv')}: ${coachPayload.state.readinessHrv}`}>
+                    <span
+                      className="today-run-readiness-signal"
+                      aria-label={`${t('today_run.readiness_signal_hrv')}: ${coachPayload.state.readinessHrv}/100`}
+                      title={t('today_run.readiness_signal_hrv_tooltip')}
+                    >
                       <AppIcon name="monitor_heart" className="today-run-readiness-signal-icon" aria-hidden="true" />
+                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_hrv_short')}</span>
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessHrv}%` }} />
                       </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessHrv}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessHrv}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_hrv_scale')}</span></small>
                     </span>
                   )}
                   {coachPayload?.state?.readinessRhr != null && (
-                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_rhr')}: ${coachPayload.state.readinessRhr}`}>
+                    <span
+                      className="today-run-readiness-signal"
+                      aria-label={`${t('today_run.readiness_signal_rhr')}: ${coachPayload.state.readinessRhr}/100`}
+                      title={t('today_run.readiness_signal_rhr_tooltip')}
+                    >
                       <AppIcon name="favorite" className="today-run-readiness-signal-icon" aria-hidden="true" />
+                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_rhr_short')}</span>
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessRhr}%` }} />
                       </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessRhr}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessRhr}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_rhr_scale')}</span></small>
                     </span>
                   )}
                   {coachPayload?.state?.readinessStress != null && (
-                    <span className="today-run-readiness-signal" aria-label={`${t('today_run.readiness_signal_stress')}: ${coachPayload.state.readinessStress}`}>
+                    <span
+                      className="today-run-readiness-signal"
+                      aria-label={`${t('today_run.readiness_signal_stress')}: ${coachPayload.state.readinessStress}/100`}
+                      title={t('today_run.readiness_signal_stress_tooltip')}
+                    >
                       <AppIcon name="stress" className="today-run-readiness-signal-icon" aria-hidden="true" />
+                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_stress_short')}</span>
                       <span className="today-run-readiness-signal-bar">
                         <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessStress}%` }} />
                       </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessStress}</small>
+                      <small aria-hidden="true">{coachPayload.state.readinessStress}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_stress_scale')}</span></small>
                     </span>
                   )}
                 </div>
@@ -796,8 +816,16 @@ export default function TodayRun() {
                   <strong>{coachDuration}</strong>
                 </article>
                 <article>
-                  <span>{t('today_run.stitch_body_battery')}</span>
-                  <strong>{`${readinessBattery}%`}</strong>
+                  <span>
+                    {coachPayload?.state?.lastBodyBatteryAtWake != null
+                      ? t('today_run.stitch_body_battery')
+                      : t('today_run.stitch_readiness_blend')}
+                  </span>
+                  <strong>
+                    {coachPayload?.state?.lastBodyBatteryAtWake != null
+                      ? `${coachPayload.state.lastBodyBatteryAtWake}%`
+                      : `${readinessBattery}%`}
+                  </strong>
                 </article>
               </div>
 

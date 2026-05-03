@@ -49,7 +49,6 @@ const EXERCISE_LABELS = {
   'Glute bridge (pause at top)': { zh: '臀桥（顶端停顿）', en: 'Glute bridge (pause at top)' },
   'Tibialis wall raise': { zh: '靠墙胫骨前肌提脚', en: 'Tibialis wall raise' },
   "World's greatest stretch": { zh: '世界最强拉伸', en: "World's greatest stretch" },
-  'World鈥檚 greatest stretch': { zh: '世界最强拉伸', en: "World's greatest stretch" },
   'Ankle dorsiflexion rocks': { zh: '踝背屈前移', en: 'Ankle dorsiflexion rocks' },
   'Step-down (knee tracking)': { zh: '台阶下放（膝轨迹）', en: 'Step-down (knee tracking)' },
   'Hamstring curl (slider or machine)': { zh: '腘绳肌弯曲（滑盘/器械）', en: 'Hamstring curl (slider or machine)' },
@@ -59,12 +58,6 @@ const EXERCISE_LABELS = {
   'Skipping A-drill': { zh: 'A Skip 抬腿跳步', en: 'Skipping A-drill' },
   'Box step-up (explosive)': { zh: '爆发式箱上踏步', en: 'Box step-up (explosive)' },
   'Single-leg hop (low amplitude)': { zh: '单腿小幅弹跳', en: 'Single-leg hop (low amplitude)' },
-};
-
-const EXERCISE_ALIAS_MAP = {
-  'World’s greatest stretch': "World's greatest stretch",
-  'World鈥檚 greatest stretch': "World's greatest stretch",
-  'World閳ユ獨 greatest stretch': "World's greatest stretch",
 };
 
 const DEFAULT_EXERCISE_COPY = {
@@ -515,8 +508,7 @@ const LOCALIZED_EXERCISE_LIBRARY = {
 const EXERCISE_COPY_FIELDS = ['name', 'muscles', 'steps', 'intent', 'regression', 'progression'];
 
 function normalizeExerciseName(name) {
-  if (!name) return '';
-  return EXERCISE_ALIAS_MAP[name] || name;
+  return name || '';
 }
 
 function getExerciseDefinition(name) {
@@ -736,7 +728,6 @@ function resolveExerciseVisualKey(name) {
     case 'Split squat':
     case 'Step-down (knee tracking)':
     case "World's greatest stretch":
-    case 'World鈥檚 greatest stretch':
       return 'split';
     case 'Single-leg Romanian deadlift':
     case 'Hip airplanes':
@@ -768,7 +759,6 @@ function getExerciseVideoUrl(name) {
     'Glute bridge (pause at top)': 'glute bridge pause at top exercise demo',
     'Tibialis wall raise': 'tibialis wall raise exercise demo',
     "World's greatest stretch": 'world greatest stretch exercise demo',
-    'World鈥檚 greatest stretch': 'world greatest stretch exercise demo',
     'Ankle dorsiflexion rocks': 'ankle dorsiflexion rocks exercise demo',
     'Step-down (knee tracking)': 'step down knee tracking exercise demo',
     'Hamstring curl (slider or machine)': 'hamstring slider curl exercise demo',
@@ -1005,12 +995,6 @@ function getExerciseGuide(name, isZh) {
         : ['Lean back into a stable support.', 'Lift the forefoot and pull the toes up.', 'Lower with control and feel the front of the shin.'],
     },
     "World's greatest stretch": {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['进入长弓步位。', '一手撑地，另一手打开胸椎向上转。', '每次动作都带着呼吸和控制。']
-        : ['Step into a long lunge.', 'One hand stays down while the other opens the chest up.', 'Move slowly and breathe through each rep.'],
-    },
-    'World鈥檚 greatest stretch': {
       muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
       steps: isZh
         ? ['进入长弓步位。', '一手撑地，另一手打开胸椎向上转。', '每次动作都带着呼吸和控制。']
@@ -1697,7 +1681,9 @@ export default function MuscleTraining() {
         {!loading && !error && plan && (
           <>
             {/* ── ZONE 1: What should I do for strength today? ── */}
-            <section className="mt-today-card">
+            <section className="mt-coach-cockpit">
+              <div className="mt-coach-cockpit-main">
+                <section className="mt-today-card">
               <div className="mt-today-card-kicker">
                 <AppIcon name="fitness_center" className="mt-today-kicker-icon" />
                 <span>{stitchCopy.todayLabel}</span>
@@ -1778,7 +1764,36 @@ export default function MuscleTraining() {
               </div>
             </section>
 
-            {/* ── ZONE 3: Does it match my running plan this week? ── */}
+              </div>
+
+              <aside className="mt-coach-cockpit-rail">
+                <section className="mt-coach-rail-card mt-coach-rail-card--focus">
+                  <span className="strength-plan-section-label">{stitchCopy.recoveryImpactTitle}</span>
+                  <strong>{pickLabel(copy.currentFocus, plan.weekContext?.currentFocus)}</strong>
+                  <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} - {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
+                  {plan.weekContext?.acwr != null && (
+                    <div className="mt-coach-rail-meter">
+                      <span>ACWR</span>
+                      <strong>{trimNumber(plan.weekContext.acwr, 2)}</strong>
+                    </div>
+                  )}
+                </section>
+
+                <section className="mt-coach-rail-card mt-coach-rail-card--map">
+                  <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
+                  <div className="mt-coach-mini-map">
+                    <MuscleMap isZh={isZh} />
+                  </div>
+                  {muscleFocus.length > 0 && (
+                    <div className="strength-plan-focus-pills">
+                      {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
+                    </div>
+                  )}
+                </section>
+              </aside>
+            </section>
+
+            {/* ZONE 3: Does it match my running plan this week? */}
             <section className="mt-week-strip">
               <span className="strength-plan-section-label">{stitchCopy.weekStripLabel}</span>
               <div className="mt-week-strip-grid">
