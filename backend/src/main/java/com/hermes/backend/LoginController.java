@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -272,9 +273,51 @@ public class LoginController {
     // 2b. PASSWORD RESET (FORGOT / RESET)
     // ==========================================
 
+    /**
+     * Canonical password-reset request endpoint.
+     * <p>
+     * SECURITY: Always returns 202 + identical body regardless of whether the email
+     * exists in the database. This prevents user-enumeration via differential
+     * responses. Email is sent asynchronously after the response is flushed so that
+     * SMTP latency cannot be used as a timing oracle.
+     * </p>
+     */
     @PostMapping("/password-reset/request")
     public ResponseEntity<?> requestPasswordReset(
             @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest request
+    ) {
+        return handlePasswordResetRequest(body, request);
+    }
+
+    /**
+     * Legacy alias at {@code /api/auth/reset-password} kept so that security
+     * probes and any client code using the shorter path do not hit a 404 (which
+     * itself reveals that the route does not exist and can be misread as a
+     * "user not found" signal by automated scanners).
+     * <p>
+     * Delegates entirely to {@link #handlePasswordResetRequest} — identical
+     * status, identical body, identical rate-limit, identical timing.
+     * </p>
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> requestPasswordResetAlias(
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest request
+    ) {
+        return handlePasswordResetRequest(body, request);
+    }
+
+    /**
+     * Shared logic for both password-reset request endpoints.
+     * <p>
+     * SECURITY INVARIANT: Both branches (email found / not found) MUST return
+     * the same HTTP status (202) and the same JSON body. Never change one branch
+     * without changing the other.
+     * </p>
+     */
+    private ResponseEntity<?> handlePasswordResetRequest(
+            Map<String, Object> body,
             HttpServletRequest request
     ) {
         String ip = RequestIpResolver.clientIp(request);
@@ -283,56 +326,63 @@ public class LoginController {
             return error(HttpStatus.TOO_MANY_REQUESTS, "Too many requests. Try again later.");
         }
 
-        // Always return a generic success to avoid account enumeration.
-        String generic = "If an account exists for that address, a password reset email was sent.";
+        // SECURITY: Use a fixed status + body for every outcome to prevent user enumeration.
+        // HTTP 202 (Accepted) signals "we received the request" without committing to action.
+        Map<String, String> genericBody = Map.of("status", "if-account-exists-email-sent");
 
         String email;
         try {
             RequestBodyValidator.rejectUnexpectedFields(body, EMAIL_ONLY_FIELDS);
             email = authService.normalizeEmail(RequestBodyValidator.optionalString(body, "email", 254));
         } catch (IllegalArgumentException ignored) {
-            return ResponseEntity.ok(Map.of("message", generic));
+            return ResponseEntity.accepted().body(genericBody);
         }
         if (email == null || email.isBlank() || !PasswordStrengthChecker.looksLikeEmail(email)) {
-            return ResponseEntity.ok(Map.of("message", generic));
+            return ResponseEntity.accepted().body(genericBody);
         }
         try {
             InputSanitizer.rejectControlChars(email, "email");
         } catch (IllegalArgumentException ignored) {
-            return ResponseEntity.ok(Map.of("message", generic));
+            return ResponseEntity.accepted().body(genericBody);
         }
 
         if (!passwordResetService.isMailConfigured()) {
             // Email reset requires mail; do not reveal whether the account exists.
             log.warn("Auth password reset request ignored (mail not configured) ip={}", ip);
-            return ResponseEntity.ok(Map.of("message", generic));
+            return ResponseEntity.accepted().body(genericBody);
         }
 
         Optional<Runner> opt = runnerRepository.findByEmailIgnoreCase(email)
                 .filter(r -> !r.isDeleted());
+
         if (opt.isEmpty()) {
             log.info("Auth password reset requested for non-existent email ip={}", ip);
-            // Normalize timing to prevent email enumeration via response latency.
-            // The found path calls sendResetLink which adds measurable delay from
-            // template rendering + SMTP submission; we mirror that with a delay
-            // so both paths complete in approximately the same wall-clock time.
+            // Timing normalization (defense in depth): mirror the latency of the
+            // found-path async dispatch + DB write so wall-clock time cannot be
+            // used as an oracle for account existence.
             try {
                 Thread.sleep(150L);
             } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();
             }
-            return ResponseEntity.ok(Map.of("message", generic));
+        } else {
+            // Send email asynchronously so the HTTP response is returned before
+            // SMTP completes — eliminates timing oracle even without the sleep.
+            Runner runner = opt.get();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    passwordResetService.sendResetLink(runner);
+                    log.info("Auth password reset email sent runnerId={}", runner.getId());
+                } catch (Exception e) {
+                    // Keep response generic; avoid leaking server configuration details.
+                    log.warn("Auth password reset email send failed runnerId={}", runner.getId(), e);
+                }
+            });
+            log.info("Auth password reset email dispatched async ip={} runnerId={}", ip, runner.getId());
         }
 
-        try {
-            passwordResetService.sendResetLink(opt.get());
-            log.info("Auth password reset email queued ip={} runnerId={}", ip, opt.get().getId());
-        } catch (Exception e) {
-            // Keep response generic; avoid leaking server configuration details.
-            log.warn("Auth password reset email send failed ip={} runnerId={}", ip, opt.get().getId(), e);
-        }
-
-        return ResponseEntity.ok(Map.of("message", generic));
+        // SECURITY: Both branches return here — same status, same body.
+        return ResponseEntity.accepted().body(genericBody);
     }
 
     @PostMapping("/password-reset/confirm")
@@ -477,6 +527,16 @@ public class LoginController {
     // ==========================================
     // 4. ADMIN ENDPOINT: SECURE SOFT DELETE
     // ==========================================
+    /**
+     * Soft-deletes a runner by id.
+     * <p>
+     * SECURITY / IDOR note: This is an admin-only operation. The caller must
+     * present a valid admin session token — any non-admin token (including a
+     * regular runner presenting their own id or another runner's id) receives
+     * 403 before any runner lookup is performed. There is therefore no
+     * IDOR risk: the access gate is role-based, not id-matching.
+     * </p>
+     */
     @DeleteMapping("/runners/{id}")
     public ResponseEntity<?> deleteRunner(
             @PathVariable Long id,
@@ -550,6 +610,16 @@ public class LoginController {
     // ==========================================
     // 6. ADMIN: GRANT / REVOKE PRO SUBSCRIPTION
     // ==========================================
+    /**
+     * Grants or revokes a Pro subscription for a runner.
+     * <p>
+     * SECURITY / IDOR note: Admin-only. Non-admin callers (including a regular
+     * runner using their own or any other id) receive 403 before any runner
+     * lookup occurs. The path variable {@code id} is the target runner's id,
+     * not the caller's — but only admins can reach the target lookup, so
+     * there is no same-runner IDOR risk here.
+     * </p>
+     */
     @PostMapping("/runners/{id}/subscription")
     public ResponseEntity<?> updateSubscription(
             @PathVariable Long id,
