@@ -16266,10 +16266,10 @@ body.theme-midnight .polarized-target-marker {
 .mt-coach-cockpit {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.36fr) minmax(280px, 0.64fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 0.78fr) minmax(540px, 1.22fr);
+  gap: 22px;
   align-items: stretch;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .mt-coach-cockpit::before {
@@ -16300,9 +16300,10 @@ body.theme-midnight .polarized-target-marker {
 .mt-coach-cockpit .mt-today-card {
   position: relative;
   display: flex;
-  min-height: 286px;
+  min-height: 336px;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 18px;
   overflow: hidden;
   margin-bottom: 0;
   padding: 30px;
@@ -16319,16 +16320,15 @@ body.theme-midnight .polarized-target-marker {
 .mt-coach-cockpit .mt-today-card::after {
   content: '';
   position: absolute;
-  right: 24px;
-  top: 24px;
-  width: 118px;
-  height: 118px;
-  border-radius: 34px;
+  right: -56px;
+  top: -66px;
+  width: 210px;
+  height: 210px;
+  border-radius: 999px;
   background:
-    linear-gradient(135deg, transparent 30%, color-mix(in srgb, var(--accent-coral-strong, #f07561) 24%, transparent) 30% 36%, transparent 36%),
-    color-mix(in srgb, var(--surface-strong, #ffffff) 62%, transparent);
-  opacity: 0.52;
-  transform: rotate(8deg);
+    radial-gradient(circle, transparent 48%, color-mix(in srgb, var(--accent-coral-strong, #f07561) 30%, transparent) 49% 50%, transparent 51%),
+    radial-gradient(circle, color-mix(in srgb, var(--surface-strong, #ffffff) 42%, transparent) 0%, transparent 58%);
+  opacity: 0.72;
 }
 
 .mt-coach-cockpit .mt-today-card > * {
@@ -16343,6 +16343,84 @@ body.theme-midnight .polarized-target-marker {
   font-weight: 700;
   line-height: 1.32;
   letter-spacing: -0.04em;
+}
+
+.mt-today-verdict {
+  max-width: 46rem;
+}
+
+.mt-readiness-deck {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px; /* tokens-ok */
+}
+
+.mt-readiness-card {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  gap: 12px; /* tokens-ok */
+  min-height: 132px; /* tokens-ok */
+  overflow: hidden;
+  padding: 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--surface-strong) 82%, transparent), color-mix(in srgb, var(--bg-glass) 86%, var(--accent-coral-strong) 14%));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--line-glass) 74%, transparent),
+    0 18px 42px color-mix(in srgb, var(--accent-coral-strong) 8%, transparent);
+}
+
+.mt-readiness-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: color-mix(in srgb, var(--accent-coral-strong) 68%, transparent);
+}
+
+.mt-readiness-card > span {
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mt-readiness-card strong {
+  display: block;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.05rem, 1.35vw, 1.34rem);
+  font-weight: 850;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  color: var(--text-strong);
+}
+
+.mt-readiness-card small {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.mt-readiness-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.mt-readiness-card--decision {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-coral-strong) 17%, var(--surface-strong)), color-mix(in srgb, var(--surface-strong) 76%, transparent));
+}
+
+.mt-readiness-card--next-run::before {
+  background: color-mix(in srgb, var(--brand-blue, var(--accent-coral-strong)) 62%, transparent);
+}
+
+.mt-readiness-card--gate::before {
+  background: color-mix(in srgb, var(--accent-teal, var(--accent-coral-strong)) 62%, transparent);
 }
 
 .mt-coach-cockpit .mt-dose-bar {
@@ -16424,21 +16502,24 @@ body.theme-midnight .polarized-target-marker {
   display: grid;
   align-content: start;
   gap: 12px;
+  min-height: 560px;
+  overflow: visible;
 }
 
 .mt-coach-mini-map {
   display: grid;
   place-items: center;
-  min-height: 202px;
+  min-height: 494px;
+  overflow: visible;
   border-radius: 22px;
   background:
-    radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--accent-coral-strong, #f07561) 12%, transparent) 0%, transparent 58%),
+    radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--accent-coral-strong, #f07561) 8%, transparent) 0%, transparent 58%),
     color-mix(in srgb, var(--surface-strong, #ffffff) 78%, transparent);
 }
 
 .mt-coach-rail-card--map .muscle-map-card {
   margin: 0;
-  padding: 8px;
+  padding: 4px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -16448,8 +16529,352 @@ body.theme-midnight .polarized-target-marker {
   transform: none;
 }
 
+.mt-body-measure-atlas {
+  display: grid;
+  width: 100%;
+  gap: 14px; /* tokens-ok */
+  color: var(--accent-coral-strong, #f07561);
+}
+
+.mt-body-measure-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px; /* tokens-ok */
+}
+
+.mt-body-measure-header strong {
+  max-width: 18rem;
+  color: var(--text-strong, #2c2f30);
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.mt-body-measure-svg {
+  width: min(100%, 330px);
+  min-height: 224px;
+  color: var(--accent-coral-strong, #f07561);
+  filter: drop-shadow(0 20px 34px color-mix(in srgb, var(--accent-coral-strong, #f07561) 10%, transparent));
+}
+
+.mt-body-measure-anatomy-plate {
+  position: relative; /* tokens-ok */
+  display: grid;
+  min-height: 486px;
+  place-items: center;
+  overflow: visible;
+  isolation: isolate;
+  border-radius: 22px;
+  padding: 8px 18px;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(240, 117, 97, 0.06), transparent 28%),
+    #fff;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 47, 48, 0.08),
+    0 18px 38px rgba(83, 45, 33, 0.1);
+}
+
+.mt-body-measure-anatomy-plate::before {
+  content: ""; /* tokens-ok */
+  position: absolute;
+  inset: 8px 12px;
+  z-index: -1;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, transparent 49.5%, rgba(44, 47, 48, 0.07) 50%, transparent 50.5%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(44, 47, 48, 0.025) 23px 24px);
+  opacity: 0.22;
+}
+
+.mt-body-measure-anatomy-plate .mt-body-measure-svg {
+  width: min(100%, 700px); /* tokens-ok */
+  min-height: 458px;
+  filter: drop-shadow(0 14px 18px rgba(83, 45, 33, 0.1));
+}
+
+.mt-body-measure-atlas--compact {
+  gap: 10px;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-anatomy-plate {
+  min-height: 430px;
+  padding: 10px 12px 8px;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-anatomy-plate .mt-body-measure-svg {
+  width: min(100%, 720px);
+  min-height: 420px;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-callout,
+.mt-body-measure-atlas--compact .mt-body-measure-label,
+.mt-body-measure-atlas--compact .mt-body-measure-region path {
+  transition: opacity 160ms ease, transform 160ms ease, stroke 160ms ease, filter 160ms ease;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-callout:not(.is-active) {
+  opacity: 0;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-label:not(.is-active):not(.is-focused) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-region:not(.is-active):not(.is-focused) path {
+  opacity: 0.025;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-label.is-active {
+  background: rgba(255, 240, 233, 0.98);
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 117, 97, 0.36),
+    0 10px 24px rgba(119, 47, 32, 0.1);
+}
+
+.mt-body-measure-view-label {
+  fill: rgba(44, 47, 48, 0.68);
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.mt-body-measure-base {
+  fill: rgba(255, 244, 236, 0.94);
+  stroke: rgba(89, 54, 44, 0.26);
+  stroke-width: 1.2;
+}
+
+.mt-body-measure-detail {
+  fill: none;
+  stroke: rgba(96, 45, 31, 0.42);
+  stroke-linecap: round;
+  stroke-width: 1.1;
+}
+
+.mt-body-measure-limb {
+  fill: none;
+  stroke: rgba(190, 74, 46, 0.58);
+  stroke-linecap: round;
+  stroke-width: 20;
+}
+
+.mt-body-measure-lower {
+  stroke-width: 17;
+}
+
+.mt-body-lean-runner-atlas :is(
+  .mt-body-reference-standard,
+  .mt-body-measure-region path,
+  .mt-body-measure-region .mt-body-muscle-fiber
+) {
+  transform: scale(1.08) scaleX(0.9);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.mt-body-lean-runner-atlas .mt-body-reference-standard {
+  transform: scale(1.14) scaleX(0.94);
+}
+
+.mt-body-reference-standard {
+  pointer-events: none;
+}
+
+.mt-body-reference-standard .mt-ref-body-outline {
+  fill: url("#mtBodyAnatomyBase");
+  opacity: 0.98;
+  stroke: rgba(80, 23, 17, 0.72);
+  stroke-linejoin: round;
+  stroke-width: 1.08;
+}
+
+.mt-body-reference-standard .mt-ref-hand,
+.mt-body-reference-standard .mt-ref-foot {
+  fill: #a33424; /* tokens-ok — brand red shared with existing anatomy palette, no design token maps this exact accent */
+  opacity: 0.94;
+  stroke: rgba(67, 18, 13, 0.62); /* tokens-ok */
+  stroke-linejoin: round;
+  stroke-width: 0.72;
+}
+
+.mt-body-figure-clean .mt-body-figure-contour {
+  fill: none;
+  stroke: rgba(255, 218, 196, 0.42); /* tokens-ok */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.mt-body-measure-region path {
+  fill: url("#mtBodyMeasureRest");
+  opacity: 0.045;
+  stroke: rgba(116, 45, 30, 0.2);
+  stroke-linejoin: round;
+  stroke-width: 0.9;
+  mix-blend-mode: multiply;
+  transition: opacity 160ms ease, stroke 160ms ease, filter 160ms ease;
+}
+
+.mt-body-measure-region.is-active path {
+  fill: url("#mtBodyMeasureHot");
+  opacity: 0.12;
+  stroke: color-mix(in srgb, var(--accent-coral-strong, #f07561) 64%, transparent);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-coral-strong, #f07561) 24%, transparent));
+}
+
+.mt-body-measure-region.is-focused path {
+  opacity: 0.2;
+  stroke: rgba(96, 27, 18, 0.92);
+  filter: drop-shadow(0 0 12px rgba(240, 117, 97, 0.38));
+}
+
+.mt-body-measure-region .mt-body-muscle-fiber {
+  fill: none;
+  opacity: 0.76;
+  stroke: rgba(255, 246, 239, 0.82);
+  stroke-linecap: round;
+  stroke-width: 1.35;
+  vector-effect: non-scaling-stroke;
+}
+
+.mt-body-measure-region.is-active .mt-body-muscle-fiber,
+.mt-body-measure-region.is-focused .mt-body-muscle-fiber {
+  stroke: rgba(255, 255, 255, 0.92);
+}
+
+.mt-body-measure-callout {
+  pointer-events: none;
+}
+
+.mt-body-measure-callout path {
+  fill: none;
+  stroke: rgba(16, 20, 24, 0.74);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+
+.mt-body-measure-callout circle {
+  fill: rgba(16, 20, 24, 0.78);
+  stroke: #fff;
+  stroke-width: 1;
+}
+
+.mt-body-measure-callout.is-active path,
+.mt-body-measure-callout.is-active circle {
+  stroke: var(--accent-coral-strong, #f07561);
+}
+
+.mt-body-measure-callout.is-active circle {
+  fill: var(--accent-coral-strong, #f07561);
+}
+
+.mt-body-measure-label {
+  position: absolute;
+  z-index: 2;
+  max-width: 9.6rem;
+  border: 0;
+  border-radius: 6px; /* tokens-ok */
+  padding: 2px 5px;
+  /* anatomy plate is always light/white — labels must read as dark text in both themes */
+  color: rgba(22, 22, 26, 0.88); /* tokens-ok */
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  font-size: clamp(0.56rem, 0.78vw, 0.74rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent-coral, #ffb4a7) 60%, transparent);
+  text-underline-offset: 2px;
+  transform: translate(8px, -50%);
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  left: var(--label-x);
+  top: var(--label-y);
+}
+
+.mt-body-measure-label.is-left {
+  text-align: right;
+  transform: translate(calc(-100% + 16px), -50%);
+}
+
+.mt-body-measure-label:hover,
+.mt-body-measure-label:focus-visible,
+.mt-body-measure-label.is-active {
+  color: #7f2217;
+  background: rgba(255, 240, 233, 0.96);
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 117, 97, 0.42),
+    0 8px 18px rgba(240, 117, 97, 0.12);
+}
+
+.mt-body-measure-label.is-focused {
+  transform: translate(10px, -50%) scale(1.03);
+}
+
+.mt-body-measure-label.is-left.is-focused {
+  transform: translate(calc(-100% + 14px), -50%) scale(1.03);
+}
+
+.mt-body-measure-divider {
+  stroke: color-mix(in srgb, var(--line-glass, rgba(171, 173, 174, 0.15)) 88%, transparent);
+  stroke-dasharray: 4 8;
+  stroke-linecap: round;
+}
+
+.mt-body-measure-readout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px; /* tokens-ok */
+}
+
+.mt-body-measure-gauge {
+  display: grid;
+  gap: 8px; /* tokens-ok */
+  padding: 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-strong, #ffffff) 72%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line-glass, rgba(171, 173, 174, 0.15)) 72%, transparent);
+}
+
+.mt-body-measure-gauge span {
+  color: var(--text-muted, #595c5d);
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mt-body-measure-gauge strong {
+  color: var(--text-strong, #2c2f30);
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.22rem;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.mt-body-measure-gauge i {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--accent-coral-strong, #f07561) var(--measure, 50%), transparent var(--measure, 50%)),
+    color-mix(in srgb, var(--line-glass, rgba(171, 173, 174, 0.15)) 90%, transparent);
+}
+
 .mt-coach-rail-card--map .muscle-map-figure {
-  width: min(100%, 176px);
+  width: min(100%, 760px);
 }
 
 .mt-coach-rail-card--map .strength-plan-focus-pills {
@@ -16462,6 +16887,10 @@ body.theme-midnight .polarized-target-marker {
   }
 
   .mt-coach-cockpit-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mt-readiness-deck {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -16480,6 +16909,14 @@ body.theme-midnight .polarized-target-marker {
     width: 86px;
     height: 86px;
     opacity: 0.32;
+  }
+
+  .mt-readiness-deck {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-readiness-card {
+    min-height: 112px;
   }
 
   .mt-coach-cockpit-rail {
@@ -16510,6 +16947,9 @@ body.theme-midnight .polarized-target-marker {
 }
 
 .mt-today-kicker-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
   font-size: 1rem;
   color: var(--accent-coral-strong, #f07561);
 }
@@ -23454,10 +23894,13 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .auth-flow-slide {
   height: 14.2857%;
+  flex: 0 0 14.2857%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 22px;
+  gap: clamp(14px, 2.4vh, 22px);
+  overflow: hidden;
 }
 
 .auth-flow-kicker {
@@ -23479,13 +23922,18 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   gap: 0;
   margin: 0;
   font-family: "Manrope", var(--font-display);
-  font-size: clamp(3.6rem, 5.6vw, 5.2rem);
+  font-size: clamp(2.4rem, 4vw, 3.4rem);
   font-style: normal;
   font-weight: 800;
-  letter-spacing: -0.08em;
-  line-height: 0.88;
+  letter-spacing: -0.06em;
+  line-height: 0.96;
   color: #f7f4ef; /* tokens-ok */
   transform: none;
+  overflow-wrap: break-word;
+}
+
+.auth-flow-hero > span {
+  display: block;
 }
 
 .auth-flow-hero .is-accent {
@@ -23493,16 +23941,17 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 }
 
 .auth-flow-text {
-  max-width: 32ch;
+  max-width: 38ch;
   margin: 0;
   color: rgba(239, 231, 221, 0.82); /* tokens-ok */
-  font-size: 1.04rem;
-  line-height: 1.7;
+  font-size: 0.96rem;
+  line-height: 1.55;
+  overflow-wrap: break-word;
 }
 
 .auth-flow-stats {
   display: flex;
-  gap: 36px;
+  gap: clamp(20px, 3vw, 36px);
   flex-wrap: wrap;
 }
 
@@ -23514,7 +23963,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .auth-flow-stats strong {
   font-family: "Manrope", var(--font-display);
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.06em;
   color: #ffffff; /* tokens-ok */
@@ -24838,11 +25287,11 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 
   .auth-flow-hero {
     max-width: 10ch;
-    font-size: clamp(2.8rem, 10vw, 4.2rem);
+    font-size: clamp(2.4rem, 7vw, 3.6rem);
   }
 
   .auth-flow-slide-viewport {
-    height: clamp(300px, 40vh, 370px);
+    height: clamp(360px, 46vh, 420px);
   }
 
   .auth-flow-formside {
@@ -24881,20 +25330,26 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-brand-previe
 
   .auth-flow-hero {
     max-width: 9ch;
-    font-size: clamp(2.4rem, 13vw, 3.4rem);
+    font-size: clamp(2rem, 8.5vw, 2.8rem);
+    line-height: 0.96;
   }
 
   .auth-flow-slide-viewport {
-    height: 320px;
+    height: 380px;
   }
 
   .auth-flow-text {
     max-width: none;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
   }
 
   .auth-flow-stats {
-    gap: 20px;
+    gap: 16px;
+  }
+
+  .auth-flow-stats strong {
+    font-size: 1.4rem;
   }
 
   .auth-flow-formside {
@@ -37425,31 +37880,47 @@ body.theme-light .settings-atlas-build-meta span {
   gap: 12px;
 }
 
+.settings-atlas-panel--quick-controls {
+  overflow: hidden;
+}
+
 .settings-atlas-quick-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .settings-atlas-quick-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 30px;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  min-height: 78px;
-  padding: 14px 16px;
+  min-height: 74px;
+  padding: 14px;
   border: 0;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.028)),
+    rgba(255, 255, 255, 0.035);
   color: inherit;
   cursor: pointer;
   text-align: left;
-  transition: transform 180ms ease, background-color 180ms ease;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .settings-atlas-quick-card:hover {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(240, 117, 97, 0.06)),
+    rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.18);
+}
+
+.settings-atlas-quick-card:focus-visible {
+  outline: 2px solid var(--brand-accent, #f07561);
+  outline-offset: 3px;
 }
 
 .settings-atlas-quick-icon {
@@ -37470,6 +37941,12 @@ body.theme-light .settings-atlas-build-meta span {
   min-width: 0;
 }
 
+.settings-atlas-quick-copy strong {
+  line-height: 1.18;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
 .settings-atlas-quick-copy strong,
 .settings-atlas-sync-copy strong {
   color: inherit;
@@ -37485,12 +37962,33 @@ body.theme-light .settings-atlas-build-meta span {
   line-height: 1.45;
 }
 
-body.theme-light .settings-atlas-quick-card {
-  background: rgba(18, 32, 51, 0.05);
+.settings-atlas-quick-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.12);
+  color: var(--brand-accent, #f07561);
 }
 
-body.theme-light .settings-atlas-quick-card:hover {
-  background: rgba(18, 32, 51, 0.08);
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-quick-card {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(248, 241, 235, 0.82)),
+    rgba(18, 32, 51, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(18, 32, 51, 0.07);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-quick-card:hover {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(252, 235, 226, 0.9)),
+    rgba(18, 32, 51, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.2);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-quick-arrow {
+  background: rgba(240, 117, 97, 0.14);
 }
 
 body.theme-light .settings-atlas-quick-copy span,
@@ -38837,6 +39335,13 @@ body:is(.theme-light, .theme-high-contrast-light) .garmin-wellness-status { colo
   .settings-atlas-quick-grid,
   .settings-atlas-inline-actions {
     grid-template-columns: 1fr;
+  }
+
+  .settings-atlas-quick-card {
+    grid-template-columns: 42px minmax(0, 1fr) 28px;
+    min-height: 68px;
+    gap: 12px;
+    padding: 12px;
   }
 
   .settings-atlas-hero-avatar {
@@ -58547,5 +59052,382 @@ body:is(.light-mode, .theme-light, .theme-high-contrast-light) .terr-brief-empty
   .terr-brief-empty-cta {
     width: 100%;
     text-align: center;
+  }
+}
+
+/* Auto-Hermes Max profile/admin visual refresh. */
+.runner-dashboard-page .runner-dashboard-main {
+  position: relative;
+  isolation: isolate;
+}
+
+.runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit {
+  min-height: clamp(520px, 58vh, 680px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 244, 236, 0.18);
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at 10% 6%, rgba(255, 180, 167, 0.28), transparent 30%),
+    radial-gradient(circle at 84% 14%, rgba(240, 117, 97, 0.2), transparent 28%),
+    radial-gradient(circle at 78% 88%, rgba(255, 244, 236, 0.08), transparent 34%),
+    linear-gradient(135deg, #231815 0%, #151312 54%, #080706 100%); /* tokens-ok */
+  box-shadow:
+    0 38px 90px rgba(4, 4, 4, 0.42),
+    inset 0 1px 0 rgba(255, 244, 236, 0.16);
+}
+
+.runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit::before {
+  background:
+    linear-gradient(112deg, rgba(255, 244, 236, 0.08) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(90deg, transparent 0 28px, rgba(255, 244, 236, 0.035) 28px 29px),
+    radial-gradient(circle at 50% 48%, transparent 0 39%, rgba(240, 117, 97, 0.12) 40%, transparent 42%),
+    linear-gradient(90deg, rgba(240, 117, 97, 0.18), transparent 22%, transparent 78%, rgba(255, 180, 167, 0.1));
+  opacity: 0.86;
+}
+
+.runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit::after {
+  content: "";
+  position: absolute;
+  right: clamp(20px, 4vw, 52px);
+  bottom: clamp(18px, 4vw, 48px);
+  width: min(34vw, 360px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 244, 236, 0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, transparent 47%, rgba(255, 244, 236, 0.18) 48% 52%, transparent 53%),
+    repeating-radial-gradient(circle, rgba(255, 244, 236, 0.16) 0 1px, transparent 1px 26px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-layout {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: minmax(0, 0.96fr) minmax(360px, 1.04fr);
+  align-items: stretch;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-primary {
+  min-height: clamp(420px, 48vh, 560px);
+  padding: clamp(10px, 1.2vw, 18px);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 244, 236, 0.08), rgba(255, 244, 236, 0.02)),
+    rgba(255, 244, 236, 0.035);
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 236, 0.08);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-copy h1 {
+  max-width: 11ch;
+  font-size: clamp(3rem, 5.35vw, 5.55rem);
+  letter-spacing: -0.085em;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-copy p {
+  max-width: 46rem;
+  color: rgba(255, 250, 247, 0.78);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-score {
+  width: min(100%, 320px);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 244, 236, 0.18), transparent 44%),
+    linear-gradient(135deg, rgba(255, 244, 236, 0.12), rgba(240, 117, 97, 0.16));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 236, 0.14),
+    0 26px 56px rgba(0, 0, 0, 0.26);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-score strong {
+  font-size: clamp(4.2rem, 9vw, 7.4rem);
+  letter-spacing: -0.11em;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-secondary {
+  align-content: stretch;
+  gap: 16px;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-quick-grid {
+  gap: 14px;
+}
+
+.runner-dashboard-page .runner-dashboard-brand-preview-card {
+  min-height: 124px;
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 244, 236, 0.15), rgba(255, 255, 255, 0.045)),
+    rgba(255, 244, 236, 0.055);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 236, 0.1),
+    0 20px 42px rgba(0, 0, 0, 0.18);
+}
+
+.runner-dashboard-page .runner-dashboard-brand-preview-card::before {
+  opacity: 0.95;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-prescription {
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(255, 180, 167, 0.16), transparent 28%),
+    linear-gradient(135deg, rgba(255, 244, 236, 0.13), rgba(255, 244, 236, 0.04));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 236, 0.12),
+    0 26px 54px rgba(0, 0, 0, 0.22);
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page {
+  background:
+    radial-gradient(circle at 10% 4%, rgba(240, 117, 97, 0.16), transparent 28rem),
+    radial-gradient(circle at 92% 10%, rgba(42, 75, 88, 0.08), transparent 30rem),
+    linear-gradient(180deg, #f7f0e8 0%, #efe4da 52%, #f8f4ee 100%); /* tokens-ok */
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit {
+  border-color: rgba(112, 61, 46, 0.16);
+  background:
+    radial-gradient(circle at 8% 4%, rgba(240, 117, 97, 0.2), transparent 26%),
+    radial-gradient(circle at 84% 18%, rgba(255, 180, 167, 0.3), transparent 30%),
+    linear-gradient(135deg, rgba(255, 252, 246, 0.98), rgba(250, 237, 226, 0.94));
+  box-shadow:
+    0 38px 80px rgba(93, 53, 39, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit::before {
+  background:
+    linear-gradient(112deg, rgba(112, 61, 46, 0.06) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(90deg, transparent 0 28px, rgba(112, 61, 46, 0.035) 28px 29px),
+    radial-gradient(circle at 50% 48%, transparent 0 39%, rgba(240, 117, 97, 0.11) 40%, transparent 42%),
+    linear-gradient(90deg, rgba(240, 117, 97, 0.16), transparent 24%, transparent 76%, rgba(112, 61, 46, 0.08));
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit::after {
+  border-color: rgba(112, 61, 46, 0.14);
+  background:
+    linear-gradient(135deg, transparent 47%, rgba(112, 61, 46, 0.18) 48% 52%, transparent 53%),
+    repeating-radial-gradient(circle, rgba(112, 61, 46, 0.13) 0 1px, transparent 1px 26px);
+  opacity: 0.4;
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-primary,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-brand-preview-card,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-prescription {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 248, 241, 0.66)),
+    rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 0 0 1px rgba(112, 61, 46, 0.1),
+    0 22px 46px rgba(93, 53, 39, 0.1);
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-copy h1,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-copy h3,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-score strong,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-brand-preview-card strong,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-prescription h3 {
+  color: #211713; /* tokens-ok */
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-copy p,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-brand-preview-card em,
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-prescription p {
+  color: rgba(42, 31, 25, 0.68);
+}
+
+body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard-page .runner-dashboard-coach-score {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.84), transparent 42%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(240, 117, 97, 0.16));
+  box-shadow:
+    inset 0 0 0 1px rgba(112, 61, 46, 0.12),
+    0 24px 50px rgba(93, 53, 39, 0.12);
+}
+
+.admin-command-page {
+  --admin-command-panel-radius: 18px;
+  --admin-command-rail-bg:
+    radial-gradient(circle at 18% 8%, rgba(240, 117, 97, 0.2), transparent 28%),
+    linear-gradient(180deg, #191412 0%, #0f0f0e 100%); /* tokens-ok */
+  --admin-command-panel-bg:
+    linear-gradient(145deg, rgba(255, 244, 236, 0.09), rgba(255, 255, 255, 0.035)),
+    rgba(18, 18, 18, 0.86);
+  --admin-command-panel-bg-raised:
+    linear-gradient(145deg, rgba(255, 244, 236, 0.12), rgba(255, 255, 255, 0.04)),
+    rgba(22, 19, 18, 0.92);
+  --admin-command-hairline: rgba(255, 244, 236, 0.12);
+  background:
+    radial-gradient(circle at 20% -5%, rgba(240, 117, 97, 0.12), transparent 26rem),
+    radial-gradient(circle at 90% 8%, rgba(255, 180, 167, 0.08), transparent 28rem),
+    linear-gradient(180deg, #11100f 0%, #090908 100%); /* tokens-ok */
+}
+
+.admin-command-page .admin-command-sidebar {
+  background: var(--admin-command-rail-bg);
+  box-shadow:
+    24px 0 60px rgba(0, 0, 0, 0.32),
+    inset -1px 0 0 rgba(255, 244, 236, 0.08);
+}
+
+.admin-command-page .admin-command-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, rgba(255, 244, 236, 0.05) 0 1px, transparent 1px 18px),
+    radial-gradient(circle at 0 28%, rgba(240, 117, 97, 0.2), transparent 34%);
+  pointer-events: none;
+}
+
+.admin-command-page .admin-command-topbar {
+  border-bottom: 1px solid rgba(255, 244, 236, 0.1);
+  background:
+    linear-gradient(135deg, rgba(23, 19, 17, 0.94), rgba(14, 14, 13, 0.9)),
+    rgba(12, 12, 11, 0.9);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(18px);
+}
+
+.admin-command-page .dashboard-container.admin-command-shell {
+  padding: 26px 30px 78px;
+}
+
+.admin-command-page .admin-command-lane {
+  top: 72px;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 244, 236, 0.12);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 244, 236, 0.1), rgba(255, 255, 255, 0.035)),
+    rgba(13, 13, 12, 0.9);
+  box-shadow:
+    0 24px 56px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 244, 236, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.admin-command-page .admin-command-route__summary-card {
+  min-height: 84px;
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 244, 236, 0.08), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 236, 0.08),
+    0 14px 30px rgba(0, 0, 0, 0.18);
+}
+
+.admin-command-page .admin-command-route__summary-card.is-primary {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 180, 167, 0.22), transparent 40%),
+    linear-gradient(135deg, rgba(240, 117, 97, 0.28), rgba(255, 244, 236, 0.08)),
+    rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 4px 0 0 #f07561, /* tokens-ok */
+    inset 0 0 0 1px rgba(255, 244, 236, 0.12),
+    0 18px 36px rgba(240, 117, 97, 0.14);
+}
+
+.admin-command-page .admin-command-sidebar__nav-item,
+.admin-command-page .admin-command-sidebar__status-card,
+.admin-command-page .admin-command-topbar__nav,
+.admin-command-page .admin-overview-hud,
+.admin-command-page .admin-users-command-hero,
+.admin-command-page .admin-track-hub-hero,
+.admin-command-page .admin-shoe-stitch-hero,
+.admin-command-page .admin-jobs-command-deck__hero,
+.admin-command-page .admin-audit-terminal__hero,
+.admin-command-page .admin-settings-studio__hero,
+.admin-command-page .admin-coursemap-workbench__rail,
+.admin-command-page .admin-coursemap-workbench__stage,
+.admin-command-page .admin-shoe-workbench__queue,
+.admin-command-page .admin-shoe-workbench__stage,
+.admin-command-page .admin-jobs-terminal,
+.admin-command-page .admin-jobs-detail,
+.admin-command-page .admin-users-roster-board,
+.admin-command-page .admin-audit-terminal__table-shell,
+.admin-command-page .admin-settings-studio__panel {
+  border-radius: var(--admin-command-panel-radius);
+}
+
+body.theme-light .admin-command-page {
+  --admin-command-rail-bg:
+    radial-gradient(circle at 18% 8%, rgba(240, 117, 97, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(238, 231, 224, 0.96));
+  --admin-command-panel-bg:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(251, 242, 234, 0.86));
+  --admin-command-panel-bg-raised:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 238, 229, 0.92));
+  --admin-command-hairline: rgba(112, 61, 46, 0.14);
+  background:
+    radial-gradient(circle at 18% -4%, rgba(240, 117, 97, 0.14), transparent 28rem),
+    radial-gradient(circle at 90% 10%, rgba(42, 75, 88, 0.08), transparent 30rem),
+    linear-gradient(180deg, #f7f0e8 0%, #ede2d8 100%); /* tokens-ok */
+}
+
+body.theme-light .admin-command-page .admin-command-topbar,
+body.theme-light .admin-command-page .admin-command-lane {
+  border-color: rgba(112, 61, 46, 0.14);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(250, 239, 229, 0.9)),
+    rgba(255, 255, 255, 0.82);
+  box-shadow: 0 24px 54px rgba(93, 53, 39, 0.12);
+}
+
+body.theme-light .admin-command-page .admin-command-sidebar {
+  background: var(--admin-command-rail-bg);
+  border-right-color: rgba(112, 61, 46, 0.12);
+  box-shadow:
+    22px 0 50px rgba(93, 53, 39, 0.08),
+    inset -1px 0 0 rgba(112, 61, 46, 0.08);
+}
+
+body.theme-light .admin-command-page .admin-command-route__summary-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 248, 241, 0.72)),
+    rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 0 0 0 1px rgba(112, 61, 46, 0.09),
+    0 14px 30px rgba(93, 53, 39, 0.08);
+}
+
+body.theme-light .admin-command-page .admin-command-route__summary-card.is-primary {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(240, 117, 97, 0.16), transparent 40%),
+    linear-gradient(135deg, rgba(240, 117, 97, 0.16), rgba(255, 255, 255, 0.8)),
+    #ffffff; /* tokens-ok */
+  box-shadow:
+    inset 4px 0 0 #a0392a, /* tokens-ok */
+    inset 0 0 0 1px rgba(112, 61, 46, 0.1),
+    0 18px 36px rgba(93, 53, 39, 0.1);
+}
+
+@media (max-width: 980px) {
+  .runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit {
+    min-height: auto;
+    border-radius: 28px;
+  }
+
+  .runner-dashboard-page .runner-dashboard-coach-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .runner-dashboard-page .runner-dashboard-coach-primary {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-command-page .dashboard-container.admin-command-shell {
+    padding: 16px 12px 48px;
+  }
+
+  .admin-command-page .admin-command-lane {
+    border-radius: 18px;
+    padding: 10px;
   }
 }
