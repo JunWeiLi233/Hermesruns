@@ -774,7 +774,7 @@ function getExerciseVideoUrl(name) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
 
-function MuscleMap({ isZh }) {
+function LegacyMuscleMap({ isZh }) {
   const setsLabel = isZh ? '4组' : '4 sets';
 
   const frontHighlights = [
@@ -848,6 +848,604 @@ function MuscleMap({ isZh }) {
         <text x="374" y="228" className="mm-label" textAnchor="end">{setsLabel}</text>
         <line x1="344" y1="226" x2="316" y2="226" className="mm-leader" />
       </svg>
+    </div>
+  );
+}
+
+const BODY_MEASURE_REGIONS = [
+  {
+    key: 'core',
+    view: 'front',
+    label: { en: 'Core', zh: '核心' },
+    tokens: ['core', 'abs', 'trunk', '核心'],
+    paths: [
+      'M98 83 C104 76 116 76 122 83 L120 126 C115 134 105 134 100 126 Z',
+      'M92 90 C98 96 100 111 98 127 C91 121 89 104 90 94 Z',
+      'M128 90 C122 96 120 111 122 127 C129 121 131 104 130 94 Z',
+    ],
+  },
+  {
+    key: 'hip-flexors',
+    view: 'front',
+    label: { en: 'Hip flexors', zh: '髋屈肌' },
+    tokens: ['hip', 'flexor', 'groin', '髋'],
+    paths: [
+      'M96 132 C102 127 108 128 110 138 L106 153 C99 151 95 144 96 132 Z',
+      'M124 132 C118 127 112 128 110 138 L114 153 C121 151 125 144 124 132 Z',
+    ],
+  },
+  {
+    key: 'quads',
+    view: 'front',
+    label: { en: 'Quads', zh: '股四头肌' },
+    tokens: ['quad', 'quadriceps', 'knee', '膝', '大腿'],
+    paths: [
+      'M91 153 C101 158 103 184 99 211 C89 204 85 174 87 160 Z',
+      'M129 153 C119 158 117 184 121 211 C131 204 135 174 133 160 Z',
+    ],
+  },
+  {
+    key: 'adductors',
+    view: 'front',
+    label: { en: 'Adductors', zh: '内收肌' },
+    tokens: ['adductor', 'groin', 'inner', '内收'],
+    paths: [
+      'M105 151 C109 161 109 186 105 202 C101 190 101 165 103 153 Z',
+      'M115 151 C111 161 111 186 115 202 C119 190 119 165 117 153 Z',
+    ],
+  },
+  {
+    key: 'shins',
+    view: 'front',
+    label: { en: 'Shins', zh: '胫骨前肌' },
+    tokens: ['shin', 'tibialis', 'ankle', '胫骨', '踝'],
+    paths: [
+      'M91 215 C98 223 98 251 94 274 C87 262 86 233 88 219 Z',
+      'M129 215 C122 223 122 251 126 274 C133 262 134 233 132 219 Z',
+    ],
+  },
+  {
+    key: 'glutes',
+    view: 'back',
+    label: { en: 'Glutes', zh: '臀部' },
+    tokens: ['glute', '臀'],
+    paths: [
+      'M338 134 C350 126 362 130 365 145 C360 156 345 156 338 148 Z',
+      'M392 134 C380 126 368 130 365 145 C370 156 385 156 392 148 Z',
+    ],
+  },
+  {
+    key: 'hamstrings',
+    view: 'back',
+    label: { en: 'Hamstrings', zh: '腘绳肌' },
+    tokens: ['hamstring', 'posterior thigh', '腘'],
+    paths: [
+      'M342 156 C354 166 354 196 348 218 C337 207 335 174 339 160 Z',
+      'M388 156 C376 166 376 196 382 218 C393 207 395 174 391 160 Z',
+    ],
+  },
+  {
+    key: 'calves',
+    view: 'back',
+    label: { en: 'Calves', zh: '小腿' },
+    tokens: ['calf', 'calves', 'gastrocnemius', 'soleus', '小腿'],
+    paths: [
+      'M344 220 C354 230 354 258 348 281 C338 266 337 238 340 224 Z',
+      'M386 220 C376 230 376 258 382 281 C392 266 393 238 390 224 Z',
+    ],
+  },
+];
+
+function resolveBodyMeasureRegions(focusMuscles) {
+  const normalizedFocus = (focusMuscles || [])
+    .map((muscle) => String(muscle || '').toLowerCase())
+    .join(' ');
+  const matched = BODY_MEASURE_REGIONS
+    .filter((region) => region.tokens.some((token) => normalizedFocus.includes(token.toLowerCase())))
+    .map((region) => region.key);
+  return new Set(matched.length ? matched : ['glutes', 'hamstrings', 'calves', 'core']);
+}
+
+function MuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStats, copy }) {
+  const activeRegions = resolveBodyMeasureRegions(focusMuscles);
+  const activeRegionLabels = BODY_MEASURE_REGIONS
+    .filter((region) => activeRegions.has(region.key))
+    .map((region) => region.label[isZh ? 'zh' : 'en']);
+  const loadScore = Math.min(100, Math.round(((weekDoseStats?.planned || 0) / Math.max(weekDoseStats?.recommended || 1, 1)) * 100));
+  const acwrScore = weekContext?.acwr == null ? 50 : Math.min(100, Math.max(12, Math.round(weekContext.acwr * 70)));
+  const bodyMeasureCopy = copy || {};
+
+  function renderBaseBody(prefix) {
+    return (
+      <>
+        <circle cx={prefix === 'front' ? 110 : 365} cy="38" r="18" className="mt-body-measure-base mt-body-measure-head" />
+        <path
+          d={prefix === 'front'
+            ? 'M88 68 C92 50 102 45 110 45 C118 45 128 50 132 68 L139 118 C135 132 124 141 110 142 C96 141 85 132 81 118 Z'
+            : 'M343 68 C347 50 357 45 365 45 C373 45 383 50 387 68 L394 118 C390 132 379 141 365 142 C351 141 340 132 336 118 Z'}
+          className="mt-body-measure-base"
+        />
+        <path d={prefix === 'front' ? 'M80 75 C63 98 57 123 54 151' : 'M335 75 C318 98 312 123 309 151'} className="mt-body-measure-limb" />
+        <path d={prefix === 'front' ? 'M140 75 C157 98 163 123 166 151' : 'M395 75 C412 98 418 123 421 151'} className="mt-body-measure-limb" />
+        <path d={prefix === 'front' ? 'M93 141 C82 166 79 201 87 224' : 'M348 141 C337 166 334 201 342 224'} className="mt-body-measure-limb" />
+        <path d={prefix === 'front' ? 'M127 141 C138 166 141 201 133 224' : 'M382 141 C393 166 396 201 388 224'} className="mt-body-measure-limb" />
+        <path d={prefix === 'front' ? 'M87 224 C84 248 86 273 94 300' : 'M342 224 C339 248 341 273 349 300'} className="mt-body-measure-limb mt-body-measure-lower" />
+        <path d={prefix === 'front' ? 'M133 224 C136 248 134 273 126 300' : 'M388 224 C391 248 389 273 381 300'} className="mt-body-measure-limb mt-body-measure-lower" />
+      </>
+    );
+  }
+
+  return (
+    <div className="muscle-map-card mt-body-measure-atlas">
+      <div className="mt-body-measure-header">
+        <span className="strength-plan-section-label">{bodyMeasureCopy.title}</span>
+        <strong>{activeRegionLabels.slice(0, 3).join(' / ')}</strong>
+      </div>
+
+      <svg
+        viewBox="0 0 520 340"
+        className="muscle-map-figure mt-body-measure-svg"
+        role="img"
+        aria-labelledby="mt-body-measure-title mt-body-measure-desc"
+      >
+        <title id="mt-body-measure-title">{bodyMeasureCopy.title}</title>
+        <desc id="mt-body-measure-desc">{bodyMeasureCopy.desc}</desc>
+        <defs>
+          <linearGradient id="mtBodyMeasureHot" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.92" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0.54" />
+          </linearGradient>
+        </defs>
+
+        <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.anterior}>
+          <text x="110" y="24" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.anterior}</text>
+          {renderBaseBody('front')}
+        </g>
+        <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.posterior}>
+          <text x="365" y="24" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.posterior}</text>
+          {renderBaseBody('back')}
+        </g>
+
+        {BODY_MEASURE_REGIONS.map((region) => (
+          <g key={region.key} className={`mt-body-measure-region${activeRegions.has(region.key) ? ' is-active' : ''}`} data-region={region.key}>
+            {region.paths.map((d, index) => (
+              <path key={`${region.key}-${index}`} d={d} />
+            ))}
+          </g>
+        ))}
+
+        <line x1="226" y1="70" x2="226" y2="292" className="mt-body-measure-divider" />
+      </svg>
+
+      <div className="mt-body-measure-readout">
+        <div className="mt-body-measure-gauge">
+          <span>{bodyMeasureCopy.loadLabel}</span>
+          <strong>{loadScore}%</strong>
+          <i style={{ '--measure': `${loadScore}%` }} />
+        </div>
+        <div className="mt-body-measure-gauge">
+          <span>{bodyMeasureCopy.balanceLabel}</span>
+          <strong>{weekContext?.acwr == null ? '-' : trimNumber(weekContext.acwr, 2)}</strong>
+          <i style={{ '--measure': `${acwrScore}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const REFERENCE_BODY_MEASURE_VIEWBOX = { width: 760, height: 580 };
+
+/* ── Clean anatomical chart regions ─────────────────────────────────────
+   Front figure centred ~x190, back figure centred ~x570.
+   callout.side 'left'  → label sits to the left  of the figure
+   callout.side 'right' → label sits to the right of the figure
+──────────────────────────────────────────────────────────────────────── */
+const REFERENCE_BODY_MEASURE_REGIONS = [
+  /* ── FRONT VIEW ──────────────────────────────────────────────── */
+  {
+    key: 'neck',
+    label: { en: 'Neck', zh: '颈部' },
+    tokens: ['neck', '颈'],
+    callout: { from: [190, 108], elbow: [128, 92], label: [108, 82], side: 'left' },
+    paths: ['M179 98 C185 106 195 106 201 98 C205 112 208 122 210 132 C198 136 182 136 170 132 C172 122 175 112 179 98 Z'],
+  },
+  {
+    key: 'traps-front',
+    label: { en: 'Traps', zh: '斜方肌' },
+    tokens: ['trapezius', 'trap', '斜方肌'],
+    callout: { from: [148, 130], elbow: [100, 114], label: [80, 104], side: 'left' },
+    paths: [
+      'M143 126 C158 112 178 115 190 132 C178 141 162 146 140 143 C139 136 140 130 143 126 Z',
+      'M237 126 C222 112 202 115 190 132 C202 141 218 146 240 143 C241 136 240 130 237 126 Z',
+    ],
+  },
+  {
+    key: 'deltoids',
+    label: { en: 'Shoulders', zh: '肩' },
+    tokens: ['shoulder', 'deltoid', '肩', '三角肌'],
+    callout: { from: [122, 148], elbow: [78, 140], label: [58, 130], side: 'left' },
+    paths: [
+      'M124 138 C108 136 95 154 91 180 C108 180 126 162 138 143 C134 140 130 138 124 138 Z',
+      'M256 138 C272 136 285 154 289 180 C272 180 254 162 242 143 C246 140 250 138 256 138 Z',
+    ],
+  },
+  {
+    key: 'pectorals',
+    label: { en: 'Chest', zh: '胸' },
+    tokens: ['pectoral', 'chest', '胸', '胸大肌'],
+    callout: { from: [230, 155], elbow: [278, 144], label: [298, 134], side: 'right' },
+    paths: [
+      'M140 140 C158 122 182 125 190 142 C184 162 162 174 135 165 C132 153 134 145 140 140 Z',
+      'M240 140 C222 122 198 125 190 142 C196 162 218 174 245 165 C248 153 246 145 240 140 Z',
+    ],
+  },
+  {
+    key: 'biceps',
+    label: { en: 'Biceps', zh: '肱二头肌' },
+    tokens: ['biceps', 'arm', 'elbow', '肱二头肌', '手臂'],
+    callout: { from: [278, 190], elbow: [310, 188], label: [332, 178], side: 'right' },
+    paths: [
+      'M90 154 C104 164 106 200 93 224 C80 207 78 171 85 158 Z',
+      'M290 154 C276 164 274 200 287 224 C300 207 302 171 295 158 Z',
+    ],
+  },
+  {
+    key: 'forearms-front',
+    label: { en: 'Forearms', zh: '前臂' },
+    tokens: ['forearm', 'brachioradialis', 'wrist', '手腕', '前臂'],
+    callout: { from: [296, 248], elbow: [326, 256], label: [348, 254], side: 'right' },
+    paths: [
+      'M82 222 C96 228 100 267 88 302 C75 286 72 242 79 224 Z',
+      'M298 222 C284 228 280 267 292 302 C305 286 308 242 301 224 Z',
+    ],
+  },
+  {
+    key: 'abdominals',
+    label: { en: 'Abs', zh: '腹部' },
+    tokens: ['core', 'abs', 'abdominals', 'trunk', '腹', '核心'],
+    callout: { from: [190, 220], elbow: [264, 218], label: [286, 218], side: 'right' },
+    paths: [
+      'M167 168 C175 160 185 158 190 168 L188 258 C181 267 170 262 166 250 Z',
+      'M213 168 C205 160 195 158 190 168 L192 258 C199 267 210 262 214 250 Z',
+      'M142 164 C156 182 163 224 152 263 C134 244 126 193 134 170 Z',
+      'M238 164 C224 182 217 224 228 263 C246 244 254 193 246 170 Z',
+    ],
+  },
+  {
+    key: 'quadriceps',
+    label: { en: 'Quadriceps', zh: '股四头肌' },
+    tokens: ['quad', 'quadriceps', 'knee', 'thigh', '股四头肌', '大腿'],
+    callout: { from: [226, 346], elbow: [278, 368], label: [300, 372], side: 'right' },
+    paths: [
+      'M138 272 C162 286 164 364 148 436 C127 408 120 313 130 280 Z',
+      'M242 272 C218 286 216 364 232 436 C253 408 260 313 250 280 Z',
+      'M170 278 C185 302 185 380 175 440 C157 392 158 314 163 281 Z',
+      'M210 278 C195 302 195 380 205 440 C223 392 222 314 217 281 Z',
+    ],
+  },
+  {
+    key: 'calves-front',
+    label: { en: 'Calves', zh: '小腿' },
+    tokens: ['calf', 'calves', 'shin', 'tibialis', 'ankle', '小腿', '胫骨', '踝'],
+    callout: { from: [230, 462], elbow: [278, 480], label: [300, 480], side: 'right' },
+    paths: [
+      'M145 436 C162 450 160 504 150 532 C134 508 132 458 140 440 Z',
+      'M235 436 C218 450 220 504 230 532 C246 508 248 458 240 440 Z',
+    ],
+  },
+
+  /* ── BACK VIEW ───────────────────────────────────────────────── */
+  {
+    key: 'trapezius',
+    label: { en: 'Traps', zh: '斜方肌' },
+    tokens: ['trapezius', 'trap', '斜方肌'],
+    callout: { from: [542, 112], elbow: [604, 96], label: [624, 86], side: 'right' },
+    paths: [
+      'M488 90 C508 106 522 128 533 156 C510 149 484 136 464 114 C470 102 478 94 488 90 Z',
+      'M572 90 C552 106 538 128 527 156 C550 149 576 136 596 114 C590 102 582 94 572 90 Z',
+      'M503 108 C515 130 521 160 523 188 C506 172 490 136 490 110 Z',
+      'M557 108 C545 130 539 160 537 188 C554 172 570 136 570 110 Z',
+    ],
+  },
+  {
+    key: 'shoulders-back',
+    label: { en: 'Shoulders', zh: '肩' },
+    tokens: ['shoulder', 'deltoid', 'infraspinatus', '肩', '三角肌', '冈下肌'],
+    callout: { from: [594, 154], elbow: [636, 144], label: [658, 134], side: 'right' },
+    paths: [
+      'M464 134 C490 120 516 134 518 162 C492 170 470 162 459 145 Z',
+      'M596 134 C570 120 544 134 542 162 C568 170 590 162 601 145 Z',
+    ],
+  },
+  {
+    key: 'lats',
+    label: { en: 'Upper Back', zh: '上背' },
+    tokens: ['lat', 'lats', 'back', 'latissimus', '背阔肌', '背', 'upper back'],
+    callout: { from: [592, 224], elbow: [640, 240], label: [662, 240], side: 'right' },
+    paths: [
+      'M462 162 C491 176 508 220 501 274 C470 254 452 196 457 168 Z',
+      'M598 162 C569 176 552 220 559 274 C590 254 608 196 603 168 Z',
+    ],
+  },
+  {
+    key: 'triceps',
+    label: { en: 'Triceps', zh: '肱三头肌' },
+    tokens: ['triceps', 'arm', '肱三头肌', '手臂'],
+    callout: { from: [622, 208], elbow: [654, 210], label: [674, 210], side: 'right' },
+    paths: [
+      'M436 152 C453 167 455 210 442 235 C428 214 424 170 431 156 Z',
+      'M624 152 C607 167 605 210 618 235 C632 214 636 170 629 156 Z',
+    ],
+  },
+  {
+    key: 'forearms-back',
+    label: { en: 'Forearms', zh: '前臂' },
+    tokens: ['forearm', 'wrist', '前臂', '手腕'],
+    callout: { from: [624, 262], elbow: [658, 270], label: [680, 270], side: 'right' },
+    paths: [
+      'M425 228 C440 238 440 278 424 308 C410 290 408 248 419 230 Z',
+      'M635 228 C620 238 620 278 636 308 C650 290 652 248 641 230 Z',
+    ],
+  },
+  {
+    key: 'lower-back',
+    label: { en: 'Lower Back', zh: '下背' },
+    tokens: ['spine', 'erector', 'lower back', '竖脊肌', '腰'],
+    callout: { from: [530, 240], elbow: [598, 274], label: [622, 278], side: 'right' },
+    paths: [
+      'M516 158 C526 192 526 252 518 300 C507 262 507 198 512 162 Z',
+      'M544 158 C534 192 534 252 542 300 C553 262 553 198 548 162 Z',
+    ],
+  },
+  {
+    key: 'glutes',
+    label: { en: 'Glutes', zh: '臀部' },
+    tokens: ['glute', 'hip', 'posterior chain', '臀'],
+    callout: { from: [566, 326], elbow: [632, 340], label: [656, 344], side: 'right' },
+    paths: [
+      'M467 290 C494 273 522 286 530 322 C514 352 480 354 458 328 C458 310 461 298 467 290 Z',
+      'M593 290 C566 273 538 286 530 322 C546 352 580 354 602 328 C602 310 599 298 593 290 Z',
+    ],
+  },
+  {
+    key: 'hamstrings',
+    label: { en: 'Hamstrings', zh: '腘绳肌' },
+    tokens: ['hamstring', 'posterior thigh', 'posterior chain', '腘绳肌', '大腿'],
+    callout: { from: [576, 396], elbow: [632, 406], label: [656, 406], side: 'right' },
+    paths: [
+      'M470 340 C498 358 500 436 482 478 C458 448 450 372 461 346 Z',
+      'M590 340 C562 358 560 436 578 478 C602 448 610 372 599 346 Z',
+      'M502 344 C518 368 517 434 506 482 C490 436 491 368 497 347 Z',
+      'M558 344 C542 368 543 434 554 482 C570 436 569 368 563 347 Z',
+    ],
+  },
+  {
+    key: 'gastrocnemius',
+    label: { en: 'Calves', zh: '小腿' },
+    tokens: ['calf', 'calves', 'gastrocnemius', 'soleus', 'ankle', '小腿', '腓肠肌', '踝'],
+    callout: { from: [576, 490], elbow: [630, 508], label: [654, 508], side: 'right' },
+    paths: [
+      'M476 468 C496 481 495 527 481 549 C463 530 460 490 470 470 Z',
+      'M584 468 C564 481 565 527 579 549 C597 530 600 490 590 470 Z',
+    ],
+  },
+];
+
+function resolveReferenceBodyMeasureRegions(focusMuscles) {
+  const normalizedFocus = (focusMuscles || [])
+    .map((muscle) => String(muscle || '').toLowerCase())
+    .join(' ');
+  const matched = REFERENCE_BODY_MEASURE_REGIONS
+    .filter((region) => region.tokens.some((token) => normalizedFocus.includes(token.toLowerCase())))
+    .map((region) => region.key);
+  return new Set(matched.length ? matched : ['glutes', 'hamstrings', 'gastrocnemius', 'abdominals']);
+}
+
+function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStats, copy, compact = false }) {
+  const planRegions = resolveReferenceBodyMeasureRegions(focusMuscles);
+  const [hoveredRegionKey, setHoveredRegionKey] = useState(null);
+  const [selectedRegionKey, setSelectedRegionKey] = useState(null);
+  const focusRegionKey = hoveredRegionKey || selectedRegionKey;
+  const highlightedRegions = new Set(planRegions);
+  if (focusRegionKey) highlightedRegions.add(focusRegionKey);
+  const activeRegionLabels = REFERENCE_BODY_MEASURE_REGIONS
+    .filter((region) => highlightedRegions.has(region.key))
+    .map((region) => region.label[isZh ? 'zh' : 'en']);
+  const loadScore = Math.min(100, Math.round(((weekDoseStats?.planned || 0) / Math.max(weekDoseStats?.recommended || 1, 1)) * 100));
+  const acwrScore = weekContext?.acwr == null ? 50 : Math.min(100, Math.max(12, Math.round(weekContext.acwr * 70)));
+  const bodyMeasureCopy = copy || {};
+  const atlasClassName = [
+    'muscle-map-card',
+    'mt-body-measure-atlas',
+    'mt-body-medical-atlas',
+    'mt-body-lean-runner-atlas',
+    compact ? 'mt-body-measure-atlas--compact' : '',
+  ].filter(Boolean).join(' ');
+
+  const labelStyle = (region) => ({
+    '--label-x': `${(region.callout.label[0] / REFERENCE_BODY_MEASURE_VIEWBOX.width) * 100}%`,
+    '--label-y': `${(region.callout.label[1] / REFERENCE_BODY_MEASURE_VIEWBOX.height) * 100}%`,
+  });
+
+  const renderRegion = (region) => {
+    const isPlanActive = planRegions.has(region.key);
+    const isFocused = focusRegionKey === region.key;
+    return (
+      <g
+        key={region.key}
+        className={`mt-body-measure-region${highlightedRegions.has(region.key) ? ' is-active' : ''}${isPlanActive ? ' is-plan-active' : ''}${isFocused ? ' is-focused' : ''}`}
+        data-region={region.key}
+      >
+        {region.paths.map((d, index) => <path key={`${region.key}-path-${index}`} d={d} />)}
+        {(region.fibers || []).map((d, index) => <path key={`${region.key}-fiber-${index}`} d={d} className="mt-body-muscle-fiber" />)}
+      </g>
+    );
+  };
+
+  const renderCallout = (region) => {
+    const points = `M${region.callout.from[0]} ${region.callout.from[1]} L${region.callout.elbow[0]} ${region.callout.elbow[1]} L${region.callout.label[0]} ${region.callout.label[1]}`;
+    return (
+      <g
+        key={`${region.key}-callout`}
+        className={`mt-body-measure-callout${highlightedRegions.has(region.key) ? ' is-active' : ''}`}
+        data-region={region.key}
+      >
+        <path d={points} />
+        <circle cx={region.callout.from[0]} cy={region.callout.from[1]} r="2.4" />
+      </g>
+    );
+  };
+
+  return (
+    <div className={atlasClassName}>
+      <div className="mt-body-measure-header">
+        <span className="strength-plan-section-label">{bodyMeasureCopy.title}</span>
+        <strong>{activeRegionLabels.slice(0, 3).join(' / ')}</strong>
+      </div>
+
+      <div className="mt-body-measure-anatomy-plate">
+        <svg
+          viewBox={`0 0 ${REFERENCE_BODY_MEASURE_VIEWBOX.width} ${REFERENCE_BODY_MEASURE_VIEWBOX.height}`}
+          className="muscle-map-figure mt-body-measure-svg mt-body-reference-standard"
+          role="img"
+          aria-labelledby="mt-body-measure-title mt-body-measure-desc"
+        >
+          <title id="mt-body-measure-title">{bodyMeasureCopy.title}</title>
+          <desc id="mt-body-measure-desc">{bodyMeasureCopy.desc}</desc>
+          <defs>
+            <linearGradient id="mtBodyMeasureHot" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="currentColor" stopOpacity="0.98" />
+              <stop offset="58%" stopColor="currentColor" stopOpacity="0.76" />
+              <stop offset="100%" stopColor="currentColor" stopOpacity="0.54" />
+            </linearGradient>
+            <linearGradient id="mtBodyMeasureRest" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#df7452" stopOpacity="0.84" />
+              <stop offset="58%" stopColor="#c94f35" stopOpacity="0.72" />
+              <stop offset="100%" stopColor="#9d3028" stopOpacity="0.58" />
+            </linearGradient>
+            <linearGradient id="mtBodyAnatomyBase" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f07856" stopOpacity="0.98" />
+              <stop offset="42%" stopColor="#c94631" stopOpacity="0.96" />
+              <stop offset="100%" stopColor="#7f241d" stopOpacity="0.94" />
+            </linearGradient>
+            <radialGradient id="mtBodyMuscleBelly" cx="42%" cy="24%" r="76%">
+              <stop offset="0%" stopColor="#ffc0a5" stopOpacity="0.96" />
+              <stop offset="44%" stopColor="#db5f41" stopOpacity="0.94" />
+              <stop offset="100%" stopColor="#7f211a" stopOpacity="0.9" />
+            </radialGradient>
+            <radialGradient id="mtBodyMuscleBellyDeep" cx="38%" cy="18%" r="80%">
+              <stop offset="0%" stopColor="#e8a882" stopOpacity="0.92" />
+              <stop offset="44%" stopColor="#c04428" stopOpacity="0.92" />
+              <stop offset="100%" stopColor="#6e1a14" stopOpacity="0.9" />
+            </radialGradient>
+            <linearGradient id="mtBodyAnatomyTendon" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#fad5c0" stopOpacity="0.82" />
+              <stop offset="100%" stopColor="#c45a3a" stopOpacity="0.74" />
+            </linearGradient>
+            <pattern id="mtBodyTissueTexture" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(18)">
+              <path d="M-4 10 C4 4 12 18 26 8" fill="none" stroke="#ffe4d8" strokeOpacity="0.2" strokeWidth="1.1" />
+              <path d="M-2 18 C7 12 14 26 28 16" fill="none" stroke="#7b2017" strokeOpacity="0.12" strokeWidth="0.7" />
+            </pattern>
+          </defs>
+
+          {/* ── FRONT FIGURE ─────────────────────────────────────────────── */}
+          <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.anterior}>
+            <text x="190" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.anterior}</text>
+            <g className="mt-body-figure-clean" aria-hidden="true">
+              {/* single coherent body silhouette — anterior */}
+              <path
+                className="mt-ref-body-outline"
+                d="M190 38 C205 38 215 51 213 68 C211 85 203 98 196 106 L197 116 C213 119 230 127 243 140 C264 146 280 170 287 200 C294 236 292 272 284 301 C279 317 272 322 266 313 C261 307 265 279 264 250 C263 216 255 182 240 163 C235 179 234 218 228 256 C224 282 218 300 209 310 C220 349 224 396 221 438 C218 477 214 511 208 534 C205 544 195 541 195 528 C192 492 191 454 190 420 C189 454 188 492 185 528 C185 541 175 544 172 534 C166 511 162 477 159 438 C156 396 160 349 171 310 C162 300 156 282 152 256 C146 218 145 179 140 163 C125 182 117 216 116 250 C115 279 119 307 114 313 C108 322 101 317 96 301 C88 272 86 236 93 200 C100 170 116 146 137 140 C150 127 167 119 183 116 L184 106 C177 98 169 85 167 68 C165 51 175 38 190 38 Z"
+              />
+              {/* hands */}
+              <path className="mt-ref-hand" d="M82 294 C76 301 74 311 78 319 C82 322 86 316 87 308 C89 315 93 321 97 318 C97 308 93 298 88 294 Z" />
+              <path className="mt-ref-hand" d="M298 294 C304 301 306 311 302 319 C298 322 294 316 293 308 C291 315 287 321 283 318 C283 308 287 298 292 294 Z" />
+              {/* feet */}
+              <path className="mt-ref-foot" d="M140 543 C130 548 120 550 114 547 C118 540 131 535 144 536 Z" />
+              <path className="mt-ref-foot" d="M240 543 C250 548 260 550 266 547 C262 540 249 535 236 536 Z" />
+              {/* internal muscle contour lines — anterior */}
+              <path className="mt-body-figure-contour" d="M175 97 C179 108 184 116 190 119 C196 116 201 108 205 97" />
+              <path className="mt-body-figure-contour" d="M143 130 C157 123 177 121 190 133 C203 121 223 123 237 130" />
+              <path className="mt-body-figure-contour" d="M137 146 C154 151 171 153 190 153 C209 153 226 151 243 146" />
+              <path className="mt-body-figure-contour" d="M170 180 C177 187 183 190 190 190 C197 190 203 187 210 180" />
+              <path className="mt-body-figure-contour" d="M173 202 L207 202 M172 224 L208 224 M173 247 L207 247" />
+              <path className="mt-body-figure-contour" d="M190 167 L190 255" />
+              <path className="mt-body-figure-contour" d="M152 275 C162 285 174 291 190 295 C206 291 218 285 228 275" />
+              <path className="mt-body-figure-contour" d="M141 295 C154 330 155 380 149 421 M239 295 C226 330 225 380 231 421" />
+              <path className="mt-body-figure-contour" d="M164 295 C172 336 172 386 167 432 M216 295 C208 336 208 386 213 432" />
+              <path className="mt-body-figure-contour" d="M143 435 C151 458 152 497 148 528 M237 435 C229 458 228 497 232 528" />
+            </g>
+          </g>
+
+          {/* ── BACK FIGURE ──────────────────────────────────────────────── */}
+          <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.posterior}>
+            <text x="570" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.posterior}</text>
+            <g className="mt-body-figure-clean" aria-hidden="true">
+              {/* single coherent body silhouette — posterior */}
+              <path
+                className="mt-ref-body-outline"
+                d="M570 38 C585 38 595 51 593 68 C591 85 583 98 576 106 L577 116 C593 119 610 127 623 140 C644 146 660 170 667 200 C674 236 672 272 664 301 C659 317 652 322 646 313 C641 307 645 279 644 250 C643 216 635 182 620 163 C615 179 614 218 608 256 C604 282 598 300 589 310 C600 349 604 396 601 438 C598 477 594 511 588 534 C585 544 575 541 575 528 C572 492 571 454 570 420 C569 454 568 492 565 528 C565 541 555 544 552 534 C546 511 542 477 539 438 C536 396 540 349 551 310 C542 300 536 282 532 256 C526 218 525 179 520 163 C505 182 497 216 496 250 C495 279 499 307 494 313 C488 322 481 317 476 301 C468 272 466 236 473 200 C480 170 496 146 517 140 C530 127 547 119 563 116 L564 106 C557 98 549 85 547 68 C545 51 555 38 570 38 Z"
+              />
+              {/* hands */}
+              <path className="mt-ref-hand" d="M456 296 C450 303 448 313 452 321 C456 324 460 317 461 309 C463 317 467 323 471 320 C471 310 467 299 462 296 Z" />
+              <path className="mt-ref-hand" d="M684 296 C690 303 692 313 688 321 C684 324 680 317 679 309 C677 317 673 323 669 320 C669 310 673 299 678 296 Z" />
+              {/* feet */}
+              <path className="mt-ref-foot" d="M510 549 C499 554 489 555 483 552 C487 545 500 540 514 541 Z" />
+              <path className="mt-ref-foot" d="M630 549 C641 554 651 555 657 552 C653 545 640 540 626 541 Z" />
+              {/* internal muscle contour lines — posterior */}
+              <path className="mt-body-figure-contour" d="M526 104 C540 126 552 158 558 192 M614 104 C600 126 588 158 582 192" />
+              <path className="mt-body-figure-contour" d="M498 130 C521 121 542 131 570 158 C598 131 619 121 642 130" />
+              <path className="mt-body-figure-contour" d="M493 166 C518 190 530 224 531 267 M647 166 C622 190 610 224 609 267" />
+              <path className="mt-body-figure-contour" d="M547 164 C552 202 552 252 548 296 M593 164 C588 202 588 252 592 296" />
+              <path className="mt-body-figure-contour" d="M570 111 L570 303" />
+              <path className="mt-body-figure-contour" d="M518 298 C534 308 547 320 570 337 C593 320 606 308 622 298" />
+              <path className="mt-body-figure-contour" d="M500 340 C516 374 520 430 512 474 M640 340 C624 374 620 430 628 474" />
+              <path className="mt-body-figure-contour" d="M532 346 C542 385 542 437 536 481 M608 346 C598 385 598 437 604 481" />
+              <path className="mt-body-figure-contour" d="M509 480 C517 500 517 526 513 548 M631 480 C623 500 623 526 627 548" />
+            </g>
+          </g>
+
+          {REFERENCE_BODY_MEASURE_REGIONS.map(renderRegion)}
+          {REFERENCE_BODY_MEASURE_REGIONS.map(renderCallout)}
+          <line x1="380" y1="52" x2="380" y2="552" className="mt-body-measure-divider" />
+        </svg>
+
+        {REFERENCE_BODY_MEASURE_REGIONS.map((region) => {
+          const isPlanActive = planRegions.has(region.key);
+          const isFocused = focusRegionKey === region.key;
+          const localeLabel = region.label[isZh ? 'zh' : 'en'];
+          return (
+            <button
+              key={`${region.key}-label`}
+              type="button"
+              className={`mt-body-measure-label is-${region.callout.side}${highlightedRegions.has(region.key) ? ' is-active' : ''}${isPlanActive ? ' is-plan-active' : ''}${isFocused ? ' is-focused' : ''}`}
+              data-region={region.key}
+              aria-pressed={selectedRegionKey === region.key}
+              style={labelStyle(region)}
+              onMouseEnter={() => setHoveredRegionKey(region.key)}
+              onMouseLeave={() => setHoveredRegionKey(null)}
+              onFocus={() => setHoveredRegionKey(region.key)}
+              onBlur={() => setHoveredRegionKey(null)}
+              onClick={() => setSelectedRegionKey((current) => (current === region.key ? null : region.key))}
+            >
+              {localeLabel}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-body-measure-readout">
+        <div className="mt-body-measure-gauge">
+          <span>{bodyMeasureCopy.loadLabel}</span>
+          <strong>{loadScore}%</strong>
+          <i style={{ '--measure': `${loadScore}%` }} />
+        </div>
+        <div className="mt-body-measure-gauge">
+          <span>{bodyMeasureCopy.balanceLabel}</span>
+          <strong>{weekContext?.acwr == null ? '-' : trimNumber(weekContext.acwr, 2)}</strong>
+          <i style={{ '--measure': `${acwrScore}%` }} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -1118,11 +1716,13 @@ export default function MuscleTraining() {
     planSourceLabel: t('muscle_training.plan_source_label'),
     sourcePills: {
       COACH_SCHEDULE: t('muscle_training.source_pill_coach_schedule'),
+      COACH_SYNC: t('muscle_training.source_pill_coach_schedule'),
       USER_PLANNED: t('muscle_training.source_pill_user_planned'),
       USER_ACTUAL: t('muscle_training.source_pill_user_actual'),
     },
     sourceSummary: {
       COACH_SCHEDULE: t('muscle_training.source_summary_coach_schedule'),
+      COACH_SYNC: t('muscle_training.source_summary_coach_schedule'),
       USER_PLANNED: t('muscle_training.source_summary_user_planned'),
       USER_ACTUAL: t('muscle_training.source_summary_user_actual'),
     },
@@ -1240,8 +1840,12 @@ export default function MuscleTraining() {
       ASSIGN_AFTER_EASY_RUN: t('muscle_training.placement_assign_after_easy_run'),
       ASSIGN_ON_RECOVERY_DAY: t('muscle_training.placement_assign_on_recovery_day'),
       ASSIGN_OPTIONAL_LOW_IMPACT_SLOT: t('muscle_training.placement_assign_optional_low_impact_slot'),
+      REST_DAY_OPTIMAL: t('muscle_training.placement_rest_day_optimal'),
+      EASY_DAY_PAIRING: t('muscle_training.placement_easy_day_pairing'),
     },
     noStrengthReasons: {
+      KEY_RUN_PRIORITY: t('muscle_training.no_strength_key_run_priority'),
+      WEEKLY_CAP_REACHED: t('muscle_training.no_strength_skip_session_cap_reached'),
       SKIP_KEY_RUN_DAY: t('muscle_training.no_strength_skip_key_run_day'),
       SKIP_LONG_RUN_DAY: t('muscle_training.no_strength_skip_long_run_day'),
       SKIP_KEY_RUN_TOMORROW: t('muscle_training.no_strength_skip_key_run_tomorrow'),
@@ -1351,6 +1955,16 @@ export default function MuscleTraining() {
     todayLabel: t('muscle_training.stitch_today_label'),
     weekDoseLabel: t('muscle_training.stitch_week_dose_label'),
     weekAlignLabel: t('muscle_training.stitch_week_align_label'),
+    decisionLabel: t('muscle_training.stitch_decision_label'),
+    nextRunLabel: t('muscle_training.stitch_next_run_label'),
+    recoveryGateLabel: t('muscle_training.stitch_recovery_gate_label'),
+    runwayEmpty: t('muscle_training.stitch_runway_empty'),
+    bodyMeasureTitle: t('muscle_training.stitch_body_measure_title'),
+    bodyMeasureDesc: t('muscle_training.stitch_body_measure_desc'),
+    bodyMeasureLoadLabel: t('muscle_training.stitch_body_measure_load_label'),
+    bodyMeasureBalanceLabel: t('muscle_training.stitch_body_measure_balance_label'),
+    bodyMeasureAnterior: t('muscle_training.stitch_body_measure_anterior'),
+    bodyMeasurePosterior: t('muscle_training.stitch_body_measure_posterior'),
     settingsDisclosure: t('muscle_training.stitch_settings_disclosure'),
     emptyStateTitle: t('muscle_training.stitch_empty_state_title'),
     emptyStateAction: t('muscle_training.stitch_empty_state_action'),
@@ -1440,6 +2054,39 @@ export default function MuscleTraining() {
     }
     return t('muscle_training.coach_narrative_no_strength_default');
   }, [copy, displayLang, featuredDay, isZh, t, isMile, plan]);
+
+  const nextRunSummary = useMemo(() => {
+    const days = plan?.days || [];
+    const nextRunIndex = days.findIndex((day) => {
+      const workoutType = day.run?.workoutType;
+      return workoutType && workoutType !== 'REST';
+    });
+
+    if (nextRunIndex < 0) {
+      return {
+        label: stitchCopy.runwayEmpty,
+        meta: stitchCopy.noRunContext,
+      };
+    }
+
+    const nextRunDay = days[nextRunIndex];
+    const runLabel = pickLabel(copy.workoutTypes, nextRunDay.run?.workoutType, stitchCopy.runDayBadge);
+    const dayLabel = nextRunIndex === 0
+      ? stitchCopy.todayBadge
+      : formatDayLabel(nextRunDay.date, nextRunDay.dayLabel, displayLang);
+    const distanceLabel = nextRunDay.run?.plannedDistanceKm != null
+      ? formatDistance(nextRunDay.run.plannedDistanceKm, isZh, isMile)
+      : '';
+    const badges = [
+      nextRunDay.run?.keyRun ? stitchCopy.keyRunBadge : '',
+      nextRunDay.run?.longRun ? stitchCopy.longRunBadge : '',
+    ].filter(Boolean);
+
+    return {
+      label: [dayLabel, runLabel].filter(Boolean).join(' - '),
+      meta: [distanceLabel, ...badges].filter(Boolean).join(' · ') || stitchCopy.weekAlignLabel,
+    };
+  }, [copy.workoutTypes, displayLang, isMile, isZh, plan, stitchCopy]);
 
   useEffect(() => {
     const previousIsMile = previousIsMileRef.current;
@@ -1684,59 +2331,102 @@ export default function MuscleTraining() {
             <section className="mt-coach-cockpit">
               <div className="mt-coach-cockpit-main">
                 <section className="mt-today-card">
-              <div className="mt-today-card-kicker">
-                <AppIcon name="fitness_center" className="mt-today-kicker-icon" />
-                <span>{stitchCopy.todayLabel}</span>
-                {featuredDay?.strength && (
-                  <span className="mt-today-badge mt-today-badge-strength">
-                    {pickLabel(copy.sessionTypes, featuredDay.strength.sessionType)}
-                  </span>
-                )}
-                {!featuredDay?.strength && (
-                  <span className="mt-today-badge mt-today-badge-rest">
-                    {stitchCopy.noStrengthTitle}
-                  </span>
-                )}
-              </div>
+                  <div className="mt-today-verdict">
+                    <div className="mt-today-card-kicker">
+                      <AppIcon name="fitness_center" className="mt-today-kicker-icon" />
+                      <span>{stitchCopy.todayLabel}</span>
+                      {featuredDay?.strength && (
+                        <span className="mt-today-badge mt-today-badge-strength">
+                          {pickLabel(copy.sessionTypes, featuredDay.strength.sessionType)}
+                        </span>
+                      )}
+                      {!featuredDay?.strength && (
+                        <span className="mt-today-badge mt-today-badge-rest">
+                          {stitchCopy.noStrengthTitle}
+                        </span>
+                      )}
+                    </div>
 
-              <p className="mt-today-narrative">{todayCoachNarrative}</p>
+                    <p className="mt-today-narrative">{todayCoachNarrative}</p>
+                  </div>
 
-              {featuredDay?.strength && (
-                <div className="mt-today-metrics">
-                  <div className="mt-today-metric">
-                    <span>{stitchCopy.durationLabel}</span>
-                    <strong>{featuredDay.strength.durationMinutes ? formatMinutes(featuredDay.strength.durationMinutes, isZh) : '-'}</strong>
+                  <div className="mt-readiness-deck">
+                    <article className="mt-readiness-card mt-readiness-card--decision">
+                      <span>{stitchCopy.decisionLabel}</span>
+                      <strong>
+                        {featuredDay?.strength
+                          ? pickLabel(copy.sessionTypes, featuredDay.strength.sessionType)
+                          : stitchCopy.noStrengthTitle}
+                      </strong>
+                      <p>{featuredDay?.strength ? (heroTags[0] || stitchCopy.readyHint) : stitchCopy.noStrengthHint}</p>
+                    </article>
+
+                    <article className="mt-readiness-card mt-readiness-card--dose">
+                      <span>{stitchCopy.weekDoseLabel}</span>
+                      <strong>
+                        {weekDoseStats.planned}
+                        <small> / {weekDoseStats.recommended || 0}</small>
+                      </strong>
+                      <p>
+                        {plan.weekContext?.volumeKm7d != null
+                          ? `${formatDistanceValue(plan.weekContext.volumeKm7d, isMile, 1) ?? '0'} ${isMile ? t('muscle_training.miles_unit') : t('muscle_training.km_unit')} / 7d`
+                          : stitchCopy.weekAlignLabel}
+                      </p>
+                    </article>
+
+                    <article className="mt-readiness-card mt-readiness-card--next-run">
+                      <span>{stitchCopy.nextRunLabel}</span>
+                      <strong>{nextRunSummary.label}</strong>
+                      <p>{nextRunSummary.meta}</p>
+                    </article>
+
+                    <article className="mt-readiness-card mt-readiness-card--gate">
+                      <span>{stitchCopy.recoveryGateLabel}</span>
+                      <strong>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)}</strong>
+                      <p>
+                        {plan.weekContext?.acwr != null
+                          ? `ACWR ${trimNumber(plan.weekContext.acwr, 2)} · ${pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}`
+                          : pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}
+                      </p>
+                    </article>
                   </div>
-                  <div className="mt-today-metric">
-                    <span>{copy.rpeTitle}</span>
-                    <strong>RPE {featuredDay.strength.targetRpe ?? '-'}</strong>
-                  </div>
-                  <div className="mt-today-metric">
-                    <span>{stitchCopy.loadLabel}</span>
-                    <strong>{String(protocolItems.length).padStart(2, '0')}</strong>
-                  </div>
-                  {estimatedBurn != null && (
-                    <div className="mt-today-metric">
-                      <span>{stitchCopy.burnLabel}</span>
-                      <strong>{estimatedBurn} kcal</strong>
+
+                  {featuredDay?.strength && (
+                    <div className="mt-today-metrics">
+                      <div className="mt-today-metric">
+                        <span>{stitchCopy.durationLabel}</span>
+                        <strong>{featuredDay.strength.durationMinutes ? formatMinutes(featuredDay.strength.durationMinutes, isZh) : '-'}</strong>
+                      </div>
+                      <div className="mt-today-metric">
+                        <span>{copy.rpeTitle}</span>
+                        <strong>RPE {featuredDay.strength.targetRpe ?? '-'}</strong>
+                      </div>
+                      <div className="mt-today-metric">
+                        <span>{stitchCopy.loadLabel}</span>
+                        <strong>{String(protocolItems.length).padStart(2, '0')}</strong>
+                      </div>
+                      {estimatedBurn != null && (
+                        <div className="mt-today-metric">
+                          <span>{stitchCopy.burnLabel}</span>
+                          <strong>{estimatedBurn} kcal</strong>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {featuredDay?.strength && (
-                <div className="mt-today-actions">
-                  <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
-                    {stitchCopy.startWorkout}
-                  </button>
-                  {heroTags.length > 0 && (
-                    <div className="strength-plan-hero-tags">
-                      {heroTags.map((tag) => <span key={tag}>{tag}</span>)}
+                  {featuredDay?.strength && (
+                    <div className="mt-today-actions">
+                      <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
+                        {stitchCopy.startWorkout}
+                      </button>
+                      {heroTags.length > 0 && (
+                        <div className="strength-plan-hero-tags">
+                          {heroTags.map((tag) => <span key={tag}>{tag}</span>)}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </section>
+                </section>
 
             {/* ── ZONE 2: Where am I in the week's strength dose? ── */}
             <section className="mt-dose-bar">
@@ -1782,7 +2472,21 @@ export default function MuscleTraining() {
                 <section className="mt-coach-rail-card mt-coach-rail-card--map">
                   <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
                   <div className="mt-coach-mini-map">
-                    <MuscleMap isZh={isZh} />
+                    <ReferenceMuscleMap
+                      isZh={isZh}
+                      focusMuscles={muscleFocus}
+                      weekContext={plan.weekContext}
+                      weekDoseStats={weekDoseStats}
+                      compact={true}
+                      copy={{
+                        title: stitchCopy.bodyMeasureTitle,
+                        desc: stitchCopy.bodyMeasureDesc,
+                        loadLabel: stitchCopy.bodyMeasureLoadLabel,
+                        balanceLabel: stitchCopy.bodyMeasureBalanceLabel,
+                        anterior: stitchCopy.bodyMeasureAnterior,
+                        posterior: stitchCopy.bodyMeasurePosterior,
+                      }}
+                    />
                   </div>
                   {muscleFocus.length > 0 && (
                     <div className="strength-plan-focus-pills">
@@ -1901,7 +2605,20 @@ export default function MuscleTraining() {
                     <section className="strength-plan-rail-card">
                       <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
                       <div className="strength-plan-map-wrap">
-                        <MuscleMap isZh={isZh} />
+                        <ReferenceMuscleMap
+                          isZh={isZh}
+                          focusMuscles={muscleFocus}
+                          weekContext={plan.weekContext}
+                          weekDoseStats={weekDoseStats}
+                          copy={{
+                            title: stitchCopy.bodyMeasureTitle,
+                            desc: stitchCopy.bodyMeasureDesc,
+                            loadLabel: stitchCopy.bodyMeasureLoadLabel,
+                            balanceLabel: stitchCopy.bodyMeasureBalanceLabel,
+                            anterior: stitchCopy.bodyMeasureAnterior,
+                            posterior: stitchCopy.bodyMeasurePosterior,
+                          }}
+                        />
                       </div>
                       <div className="strength-plan-focus-pills">
                         {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
