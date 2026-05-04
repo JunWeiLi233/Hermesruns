@@ -378,11 +378,13 @@ export default function Schedule() {
   const [plannedRoutes, setPlannedRoutes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
   const [autoPlanning, setAutoPlanning] = useState(false);
+  const [recentRunFallback, setRecentRunFallback] = useState(null);
 
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
   const didAutoPlanRef = useRef(false);
   const startPointCacheRef = useRef(null);
+  const didRecentRunFetchRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -663,8 +665,12 @@ export default function Schedule() {
     () => selectPlannedRouteRecommendation(plannedRoutes, targetRouteDistanceKm),
     [plannedRoutes, targetRouteDistanceKm],
   );
-  const routeRecommendation = plannedRouteRecommendation || coachToday?.routeRecommendation || null;
-  const routeRecommendationSource = routeRecommendation?.source === 'planner' ? 'planner' : 'history';
+  const routeRecommendation = plannedRouteRecommendation || recentRunFallback || coachToday?.routeRecommendation || null;
+  const routeRecommendationSource = routeRecommendation?.source === 'planner'
+    ? 'planner'
+    : routeRecommendation?.source === 'recent-run'
+      ? 'recent-run'
+      : 'history';
   const routeWaypoints = routeRecommendation?.waypoints || null;
   const hasRoutePreview = Boolean(routeWaypoints && routeWaypoints.length >= 2);
   const routeTitle = routeRecommendation
@@ -674,12 +680,18 @@ export default function Schedule() {
     : targetBlock.name || s('default_route_name');
   const routeAnchoredRuns = routeRecommendationSource === 'planner'
     ? s('route_planner_source')
-    : getRouteAnchoredRunsLabel(routeRecommendation, s);
+    : routeRecommendationSource === 'recent-run'
+      ? s('route_planner_source_recent_run', { date: routeRecommendation?.runDateLabel || '' })
+      : getRouteAnchoredRunsLabel(routeRecommendation, s);
   const routeConfidenceLabel = routeRecommendationSource === 'planner' && routeRecommendation?.actualDistanceKm
     ? s('route_planner_accuracy', {
       distance: formatDistance(routeRecommendation.actualDistanceKm, 1, lang, unit),
     })
-    : getRouteConfidenceLabel(routeRecommendation, s, unit, lang);
+    : routeRecommendationSource === 'recent-run' && routeRecommendation?.actualDistanceKm
+      ? s('route_planner_accuracy', {
+        distance: formatDistance(routeRecommendation.actualDistanceKm, 1, lang, unit),
+      })
+      : getRouteConfidenceLabel(routeRecommendation, s, unit, lang);
   const routeTargetDistanceKm = Number(
     routeRecommendation?.targetDistanceKm
       || targetRouteDistanceKm
@@ -773,7 +785,8 @@ export default function Schedule() {
           if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) {
             return null;
           }
-          const pt = { lat, lng };
+          // Cache full points list so the recent-run fallback effect can reuse it
+          const pt = { lat, lng, _fullPoints: Array.isArray(points) ? points : null };
           startPointCacheRef.current = pt;
           return pt;
         })
@@ -815,6 +828,110 @@ export default function Schedule() {
             setAutoPlanning(false);
           });
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadState, plannedRoutes.length, isAuthenticated]);
+
+  // Recent-run fallback: when no plannedRoutes, immediately build a recommendation
+  // from the most recent run's GPS points so the Leaflet map renders right away.
+  // Re-uses the same /api/activities/{id}/points fetch (cached in startPointCacheRef)
+  // that the auto-plan effect already uses for its start coord.
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    if (plannedRoutes.length > 0) return;
+    if (didRecentRunFetchRef.current) return;
+    if (!isAuthenticated) return;
+
+    const startCandidateRun = runs.find((r) => r?.routePreview && r?.id != null);
+    if (!startCandidateRun) return;
+
+    didRecentRunFetchRef.current = true;
+
+    const resolvePoints = () => {
+      if (startPointCacheRef.current?._fullPoints) {
+        return Promise.resolve(startPointCacheRef.current._fullPoints);
+      }
+      return apiJson(`/api/activities/${startCandidateRun.id}/points`)
+        .then((points) => {
+          if (!Array.isArray(points) || points.length < 2) return null;
+          // Cache both first-point (for auto-plan) and full points list
+          const first = points[0];
+          const lat = Number(first.latitude);
+          const lng = Number(first.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+            startPointCacheRef.current = { lat, lng, _fullPoints: points };
+          }
+          return points;
+        })
+        .catch((err) => {
+          console.warn('[Schedule] recent-run points fetch failed:', err.message);
+          return null;
+        });
+    };
+
+    resolvePoints().then((points) => {
+      if (!Array.isArray(points) || points.length < 2) return;
+
+      // Decimate to ~100 points — keep first and last exactly
+      const MAX_WAYPOINTS = 100;
+      let decimated;
+      if (points.length <= MAX_WAYPOINTS) {
+        decimated = points;
+      } else {
+        const step = Math.floor(points.length / (MAX_WAYPOINTS - 1));
+        const sampled = [];
+        for (let i = 0; i < points.length - 1; i += step) {
+          sampled.push(points[i]);
+        }
+        sampled.push(points[points.length - 1]);
+        decimated = sampled;
+      }
+
+      const waypoints = decimated
+        .map((p) => {
+          const lat = Number(p.latitude);
+          const lng = Number(p.longitude);
+          return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+        })
+        .filter(Boolean);
+
+      if (waypoints.length < 2) return;
+
+      const preview = buildPlannedRoutePreview(waypoints);
+      const runDistanceKm = resolveRunDistanceKm(startCandidateRun);
+      const rawTarget = Number(
+        nextSession?.plannedDistanceKm
+          || coachToday?.today?.plannedDistanceKm
+          || 0,
+      );
+      const targetDistanceKm = rawTarget > 0 ? rawTarget : runDistanceKm;
+
+      // Format date for the source label
+      const runDate = new Date(startCandidateRun.startTime || startCandidateRun.startDate || 0);
+      const runDateLabel = Number.isNaN(runDate.getTime())
+        ? ''
+        : runDate.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+          month: 'short',
+          day: 'numeric',
+        });
+
+      setRecentRunFallback({
+        source: 'recent-run',
+        zoneKey: 'core',
+        confidence: 'built_from_history',
+        waypoints,
+        preview,
+        actualDistanceKm: runDistanceKm,
+        targetDistanceKm,
+        activityCount: 1,
+        elevationGainMeters: Number(startCandidateRun.elevationGainMeters || startCandidateRun.totalElevationGain || 0),
+        estimatedTimeMinutes: 0,
+        elevationPreference: 'rolling',
+        distanceGapKm: Math.abs(runDistanceKm - targetDistanceKm),
+        distanceAccuracy: targetDistanceKm > 0 ? runDistanceKm / targetDistanceKm : 1,
+        createdAt: runDate.getTime() || 0,
+        runDateLabel,
+      });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadState, plannedRoutes.length, isAuthenticated]);
 

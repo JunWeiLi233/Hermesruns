@@ -3606,6 +3606,7 @@ export default {
       "gear_missing": "先去跑鞋页添加一双在役鞋，Hermes 才能把装备和计划连起来。",
       "route_planner_title": "推荐路线",
       "route_planner_source": "根据你最近的跑步自动生成",
+      "route_planner_source_recent_run": "基于你 {date} 的跑步绘制",
       "route_planner_safety": "可通行道路，OSM 数据核实",
       "route_planner_accuracy": "~{distance} 路线",
       "route_planner_target": "目标 {distance}",
