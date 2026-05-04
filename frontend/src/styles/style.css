@@ -16530,6 +16530,9 @@ body.theme-midnight .polarized-target-marker {
 }
 
 .mt-body-measure-atlas {
+  --mt-atlas-ink: #5f1c14; /* tokens-ok */
+  --mt-atlas-warm-shadow: rgba(83, 45, 33, 0.14); /* tokens-ok */
+  --mt-atlas-paper: #fffaf7; /* tokens-ok */
   display: grid;
   width: 100%;
   gap: 14px; /* tokens-ok */
@@ -16570,11 +16573,14 @@ body.theme-midnight .polarized-target-marker {
   border-radius: 22px;
   padding: 8px 18px;
   background:
-    radial-gradient(circle at 30% 18%, rgba(240, 117, 97, 0.06), transparent 28%),
-    #fff;
+    radial-gradient(circle at 22% 16%, rgba(255, 210, 188, 0.72), transparent 24%),
+    radial-gradient(circle at 77% 84%, rgba(180, 63, 41, 0.1), transparent 28%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 242, 0.86) 48%, rgba(255, 255, 255, 0.98)),
+    var(--mt-atlas-paper);
   box-shadow:
-    inset 0 0 0 1px rgba(44, 47, 48, 0.08),
-    0 18px 38px rgba(83, 45, 33, 0.1);
+    inset 0 0 0 1px rgba(111, 52, 36, 0.12),
+    inset 0 18px 42px rgba(255, 255, 255, 0.72),
+    0 18px 38px var(--mt-atlas-warm-shadow);
 }
 
 .mt-body-measure-anatomy-plate::before {
@@ -16584,9 +16590,23 @@ body.theme-midnight .polarized-target-marker {
   z-index: -1;
   border-radius: 18px;
   background:
-    linear-gradient(90deg, transparent 49.5%, rgba(44, 47, 48, 0.07) 50%, transparent 50.5%),
-    repeating-linear-gradient(0deg, transparent 0 23px, rgba(44, 47, 48, 0.025) 23px 24px);
-  opacity: 0.22;
+    linear-gradient(90deg, transparent 49.45%, rgba(111, 52, 36, 0.08) 50%, transparent 50.55%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(111, 52, 36, 0.035) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgba(111, 52, 36, 0.025) 31px 32px);
+  opacity: 0.36;
+}
+
+.mt-body-measure-anatomy-plate::after {
+  content: ""; /* tokens-ok */
+  position: absolute;
+  inset: 16px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(126, 45, 29, 0.18) 0 1px, transparent 1px calc(100% - 1px), rgba(126, 45, 29, 0.18) calc(100% - 1px)),
+    linear-gradient(0deg, rgba(126, 45, 29, 0.18) 0 1px, transparent 1px calc(100% - 1px), rgba(126, 45, 29, 0.18) calc(100% - 1px));
+  opacity: 0.62;
 }
 
 .mt-body-measure-anatomy-plate .mt-body-measure-svg {
@@ -16669,51 +16689,146 @@ body.theme-midnight .polarized-target-marker {
 
 .mt-body-lean-runner-atlas :is(
   .mt-body-reference-standard,
+  .mt-body-measure-region-bed path,
   .mt-body-measure-region path,
   .mt-body-measure-region .mt-body-muscle-fiber
 ) {
-  transform: scale(1.08) scaleX(0.9);
+  transform: scale(1.04) scaleX(0.9);
   transform-box: fill-box;
   transform-origin: center;
 }
 
 .mt-body-lean-runner-atlas .mt-body-reference-standard {
-  transform: scale(1.14) scaleX(0.94);
+  transform: scale(1.08) scaleX(0.94);
+}
+
+.mt-body-real-human-atlas .mt-body-reference-standard {
+  filter: none;
 }
 
 .mt-body-reference-standard {
+  pointer-events: auto;
+}
+
+.mt-body-reference-image-layer {
+  opacity: 1;
   pointer-events: none;
 }
 
+.mt-body-reference-image {
+  opacity: 1;
+  filter: saturate(0.98) contrast(1.06);
+}
+
 .mt-body-reference-standard .mt-ref-body-outline {
-  fill: url("#mtBodyAnatomyBase");
-  opacity: 0.98;
-  stroke: rgba(80, 23, 17, 0.72);
+  fill: url("#mtBodyHumanFascia");
+  opacity: 0.04;
+  stroke: transparent;
   stroke-linejoin: round;
-  stroke-width: 1.08;
+  stroke-width: 0.4;
 }
 
 .mt-body-reference-standard .mt-ref-hand,
 .mt-body-reference-standard .mt-ref-foot {
   fill: #a33424; /* tokens-ok — brand red shared with existing anatomy palette, no design token maps this exact accent */
-  opacity: 0.94;
-  stroke: rgba(67, 18, 13, 0.62); /* tokens-ok */
+  opacity: 0;
+  stroke: transparent;
   stroke-linejoin: round;
   stroke-width: 0.72;
 }
 
 .mt-body-figure-clean .mt-body-figure-contour {
   fill: none;
-  stroke: rgba(255, 218, 196, 0.42); /* tokens-ok */
+  stroke: rgba(255, 218, 196, 0.12); /* tokens-ok */
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 0.7;
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.mt-body-figure-clean,
+.mt-body-human-negative-space,
+.mt-body-measure-region-bed-layer {
+  pointer-events: none;
+}
+
+.mt-body-human-landmarks {
+  fill: none;
+  stroke: rgba(255, 230, 218, 0.1); /* tokens-ok */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.mt-body-human-landmarks .mt-body-cranial-landmark {
+  stroke: rgba(255, 238, 229, 0.78); /* tokens-ok */
+  stroke-width: 0.78;
+}
+
+.mt-body-human-landmarks .mt-body-anatomy-landmark {
+  opacity: 0.82;
+}
+
+.mt-body-clinical-frame {
+  fill: none;
+  pointer-events: none;
+  stroke: rgba(111, 52, 36, 0.12); /* tokens-ok */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.mt-body-clinical-frame rect {
+  fill: rgba(255, 255, 255, 0.16); /* tokens-ok */
+}
+
+.mt-body-clinical-frame path {
+  stroke: rgba(111, 52, 36, 0.2); /* tokens-ok */
+}
+
+.mt-body-clinical-frame .mt-body-clinical-axis {
+  stroke: rgba(255, 228, 216, 0.42); /* tokens-ok */
+  stroke-dasharray: 5 10;
+}
+
+.mt-body-measure-region-bed-layer {
+  opacity: 0;
+}
+
+.mt-body-measure-region-bed path {
+  fill: url("#mtBodyHumanMusclePlate");
+  opacity: 0.035;
+  stroke: rgba(92, 29, 21, 0.22); /* tokens-ok */
+  stroke-linejoin: round;
+  stroke-width: 0.72;
+  mix-blend-mode: multiply;
+  vector-effect: non-scaling-stroke;
+}
+
+.mt-body-measure-region-bed:nth-child(2n) path {
+  fill: url("#mtBodyHumanFascia");
+  opacity: 0.2;
+}
+
+.mt-body-measure-atlas--compact .mt-body-measure-region-bed path {
+  opacity: 0.06;
+}
+
+.mt-body-human-negative-space {
+  fill: rgba(255, 250, 247, 0.86); /* tokens-ok */
+  opacity: 0;
+  stroke: rgba(111, 52, 36, 0.12); /* tokens-ok */
+  stroke-linejoin: round;
+  stroke-width: 0.45;
   vector-effect: non-scaling-stroke;
 }
 
 .mt-body-measure-region path {
   fill: url("#mtBodyMeasureRest");
-  opacity: 0.045;
+  opacity: 0.05;
+  pointer-events: bounding-box;
   stroke: rgba(116, 45, 30, 0.2);
   stroke-linejoin: round;
   stroke-width: 0.9;
@@ -16721,17 +16836,43 @@ body.theme-midnight .polarized-target-marker {
   transition: opacity 160ms ease, stroke 160ms ease, filter 160ms ease;
 }
 
+.mt-body-measure-region {
+  color: #9b3327; /* tokens-ok */
+  cursor: pointer;
+  outline: none;
+}
+
+.mt-body-measure-region.is-plan-active path {
+  opacity: 0.34;
+  stroke: rgba(112, 34, 24, 0.28); /* tokens-ok */
+}
+
 .mt-body-measure-region.is-active path {
   fill: url("#mtBodyMeasureHot");
-  opacity: 0.12;
-  stroke: color-mix(in srgb, var(--accent-coral-strong, #f07561) 64%, transparent);
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-coral-strong, #f07561) 24%, transparent));
+  opacity: 0.44;
+  stroke: rgba(91, 24, 17, 0.3); /* tokens-ok */
+  stroke-width: 0.62;
+  filter: blur(0.12px);
+}
+
+.mt-body-real-human-atlas .mt-body-measure-region[data-view="posterior"].is-active path {
+  fill: rgba(191, 58, 38, 0.16); /* tokens-ok */
+  opacity: 0.9;
+  stroke: rgba(142, 36, 24, 0.82); /* tokens-ok */
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  filter: drop-shadow(0 0 4px rgba(151, 42, 28, 0.2)); /* tokens-ok */
+  mix-blend-mode: multiply;
 }
 
 .mt-body-measure-region.is-focused path {
-  opacity: 0.2;
-  stroke: rgba(96, 27, 18, 0.92);
-  filter: drop-shadow(0 0 12px rgba(240, 117, 97, 0.38));
+  opacity: 0.54;
+  stroke: rgba(96, 27, 18, 0.5);
+  filter: blur(0.12px) drop-shadow(0 0 5px rgba(126, 35, 23, 0.16)); /* tokens-ok */
+}
+
+.mt-body-measure-region.is-active.is-focused path {
+  opacity: 0.58;
 }
 
 .mt-body-measure-region .mt-body-muscle-fiber {
@@ -16780,23 +16921,21 @@ body.theme-midnight .polarized-target-marker {
   position: absolute;
   z-index: 2;
   max-width: 9.6rem;
-  border: 0;
-  border-radius: 6px; /* tokens-ok */
-  padding: 2px 5px;
+  border: 1px solid rgba(128, 46, 31, 0.12); /* tokens-ok */
+  border-radius: 999px;
+  padding: 4px 8px;
   /* anatomy plate is always light/white — labels must read as dark text in both themes */
   color: rgba(22, 22, 26, 0.88); /* tokens-ok */
-  background: transparent;
-  box-shadow: none;
+  background: rgba(255, 250, 247, 0.84); /* tokens-ok */
+  box-shadow: 0 8px 18px rgba(83, 45, 33, 0.06); /* tokens-ok */
   cursor: pointer;
   font-size: clamp(0.56rem, 0.78vw, 0.74rem);
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: 850;
+  letter-spacing: 0.03em;
   line-height: 1.1;
   overflow-wrap: anywhere;
   text-align: left;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--accent-coral, #ffb4a7) 60%, transparent);
-  text-underline-offset: 2px;
+  text-decoration: none;
   transform: translate(8px, -50%);
   transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   left: var(--label-x);
@@ -16812,7 +16951,7 @@ body.theme-midnight .polarized-target-marker {
 .mt-body-measure-label:focus-visible,
 .mt-body-measure-label.is-active {
   color: #7f2217;
-  background: rgba(255, 240, 233, 0.96);
+  background: rgba(255, 240, 233, 0.98);
   box-shadow:
     inset 0 0 0 1px rgba(240, 117, 97, 0.42),
     0 8px 18px rgba(240, 117, 97, 0.12);
@@ -35771,6 +35910,45 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   stroke-width: 1.4;
 }
 
+/* Leaflet map slot inside the route card */
+.schedule-plan-route-leaflet-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.schedule-plan-route-leaflet-map.leaflet-container,
+.schedule-plan-route-leaflet-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-xl);
+  background: transparent;
+}
+
+/* Spinner for auto-plan loading state */
+.schedule-plan-route-empty-panel--loading {
+  justify-content: center;
+  align-items: center;
+}
+
+.schedule-plan-route-auto-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--accent-coral);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: schedule-route-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes schedule-route-spin {
+  to { transform: rotate(360deg); }
+}
+
 .schedule-plan-route-empty-panel {
   position: relative;
   z-index: 1;
@@ -36222,6 +36400,10 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
 
   .schedule-plan-route-target {
     width: 100%;
+  }
+
+  .schedule-plan-route-leaflet-map {
+    min-height: 180px;
   }
 
   .schedule-plan-coach-focus-grid {
@@ -44612,6 +44794,17 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-empty-cop
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-empty-copy span {
   color: var(--text-muted);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-leaflet-map,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-leaflet-map.leaflet-container,
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-leaflet-map .leaflet-container {
+  border-radius: var(--radius-xl);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-auto-spinner {
+  border-color: var(--brand-accent);
+  border-top-color: transparent;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-watch-btn {
