@@ -3606,6 +3606,7 @@ export default {
       "readiness_7d_trend": "7-Day Recovery Trend",
       "route_planner_title": "Recommended route",
       "route_planner_source": "Auto-built from your recent runs",
+      "route_planner_source_recent_run": "Built from your last run on {date}",
       "route_planner_safety": "Accessible roads, OSM-verified",
       "route_planner_accuracy": "~{distance} route",
       "route_planner_target": "Targeting {distance}",
