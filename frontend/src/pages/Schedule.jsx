@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
-import { apiJson } from '../api';
+import { apiJson, apiFetch } from '../api';
+import 'leaflet/dist/leaflet.css';
 import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
@@ -268,13 +269,22 @@ function buildPlannedRoutePreview(waypoints) {
   };
 }
 
+function extractRouteWaypoints(route) {
+  const rawWaypoints = route?.waypoints;
+  const points = (Array.isArray(rawWaypoints) ? rawWaypoints : [])
+    .map(normalizeRouteWaypoint)
+    .filter(Boolean);
+  return points.length >= 2 ? points : null;
+}
+
 function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
   const candidates = (Array.isArray(plannedRoutes) ? plannedRoutes : [])
     .map((route) => {
       const actualDistanceKm = Number(route?.actualDistanceKm || 0);
       const routeTargetDistanceKm = Number(route?.targetDistanceKm || actualDistanceKm || 0);
-      const preview = buildPlannedRoutePreview(route?.waypoints);
-      if (!preview || actualDistanceKm <= 0) return null;
+      const waypoints = extractRouteWaypoints(route);
+      const preview = waypoints ? buildPlannedRoutePreview(route?.waypoints) : null;
+      if (!waypoints || actualDistanceKm <= 0) return null;
       const desiredDistanceKm = Number(targetDistanceKm || routeTargetDistanceKm || actualDistanceKm);
       const distanceGapKm = Math.abs(actualDistanceKm - desiredDistanceKm);
       const distanceAccuracy = Number(route?.distanceAccuracy || (desiredDistanceKm > 0 ? actualDistanceKm / desiredDistanceKm : 1));
@@ -286,6 +296,7 @@ function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
         representativeDistanceKm: actualDistanceKm,
         activityCount: 1,
         preview,
+        waypoints,
         source: 'planner',
         actualDistanceKm,
         distanceGapKm,
@@ -366,6 +377,11 @@ export default function Schedule() {
   const [shoes, setShoes] = useState([]);
   const [plannedRoutes, setPlannedRoutes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const [autoPlanning, setAutoPlanning] = useState(false);
+
+  const routeMapRef = useRef(null);
+  const routeMapInstanceRef = useRef(null);
+  const didAutoPlanRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -648,8 +664,8 @@ export default function Schedule() {
   );
   const routeRecommendation = plannedRouteRecommendation || coachToday?.routeRecommendation || null;
   const routeRecommendationSource = routeRecommendation?.source === 'planner' ? 'planner' : 'history';
-  const routePreview = routeRecommendation?.preview || null;
-  const hasRoutePreview = Boolean(routePreview?.path);
+  const routeWaypoints = routeRecommendation?.waypoints || null;
+  const hasRoutePreview = Boolean(routeWaypoints && routeWaypoints.length >= 2);
   const routeTitle = routeRecommendation
     ? routeRecommendationSource === 'planner'
       ? s('route_planner_title')
@@ -700,6 +716,142 @@ export default function Schedule() {
     ].filter(Boolean);
   const coachTargetValue = [raceTargetDistanceLabel, targetRaceDateLabel].filter(Boolean).join(' / ');
 
+  // Auto-plan: fire once when load is ready AND no saved planned routes exist
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    if (plannedRoutes.length > 0) return;
+    if (didAutoPlanRef.current) return;
+    if (!isAuthenticated) return;
+
+    const startRun = runs.find((run) => {
+      const lat = Number(run.startLatitude ?? run.startLat);
+      const lng = Number(run.startLongitude ?? run.startLng);
+      return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
+    });
+    if (!startRun) return;
+
+    const startLat = Number(startRun.startLatitude ?? startRun.startLat);
+    const startLng = Number(startRun.startLongitude ?? startRun.startLng);
+
+    const rawTarget = Number(
+      coachToday?.today?.plannedDistanceKm
+        || targetBlock?.currentLongRunKm
+        || 0,
+    );
+    const targetDistanceKm = Math.min(50, Math.max(1, rawTarget > 0 ? rawTarget : 5));
+
+    // Derive elevation preference from last 5 runs
+    const recentWithElevation = runs
+      .filter((r) => Number(r.distanceKm || 0) > 0 && Number(r.elevationGainMeters || r.totalElevationGain || 0) > 0)
+      .slice(0, 5);
+    let elevationPreference = 'rolling';
+    if (recentWithElevation.length > 0) {
+      const gainPerKmValues = recentWithElevation.map((r) => {
+        const dist = Number(r.distanceKm || 1);
+        const gain = Number(r.elevationGainMeters || r.totalElevationGain || 0);
+        return gain / dist;
+      });
+      gainPerKmValues.sort((a, b) => a - b);
+      const median = gainPerKmValues[Math.floor(gainPerKmValues.length / 2)];
+      if (median < 6) elevationPreference = 'flat';
+      else if (median > 12) elevationPreference = 'hilly';
+      else elevationPreference = 'rolling';
+    }
+
+    didAutoPlanRef.current = true;
+    setAutoPlanning(true);
+
+    apiFetch('/api/route/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startLat, startLng, targetDistanceKm, elevationPreference }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`auto-plan HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((newRoute) => {
+        if (newRoute && typeof newRoute === 'object') {
+          setPlannedRoutes((prev) => [newRoute, ...prev]);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Schedule] auto-plan failed:', err.message);
+      })
+      .finally(() => {
+        setAutoPlanning(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadState, plannedRoutes.length, isAuthenticated]);
+
+  // Leaflet map effect for the route card
+  useEffect(() => {
+    if (!routeMapRef.current) return;
+    if (!routeWaypoints || routeWaypoints.length < 2) {
+      if (routeMapInstanceRef.current) {
+        routeMapInstanceRef.current.remove();
+        routeMapInstanceRef.current = null;
+      }
+      return;
+    }
+
+    if (routeMapInstanceRef.current) {
+      // Already initialized — rebuild for new waypoints
+      routeMapInstanceRef.current.remove();
+      routeMapInstanceRef.current = null;
+    }
+
+    import('leaflet').then((L) => {
+      if (!routeMapRef.current) return;
+      const map = L.map(routeMapRef.current, {
+        zoomControl: false,
+        scrollWheelZoom: false,
+        dragging: false,
+        touchZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        attributionControl: true,
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18,
+      }).addTo(map);
+
+      const latlngs = routeWaypoints.map((pt) => [pt.lat, pt.lng]);
+      const polyline = L.polyline(latlngs, {
+        color: '#f07561',
+        weight: 4,
+        opacity: 0.92,
+      }).addTo(map);
+
+      L.circleMarker(latlngs[0], {
+        radius: 6,
+        color: '#ffffff',
+        fillColor: '#4caf50',
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(map);
+      L.circleMarker(latlngs[latlngs.length - 1], {
+        radius: 7,
+        color: '#ffffff',
+        fillColor: '#f07561',
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(map);
+
+      map.fitBounds(polyline.getBounds(), { padding: [16, 16] });
+      routeMapInstanceRef.current = map;
+    });
+
+    return () => {
+      if (routeMapInstanceRef.current) {
+        routeMapInstanceRef.current.remove();
+        routeMapInstanceRef.current = null;
+      }
+    };
+  }, [routeWaypoints]);
+
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('loading')}</div></div>;
   }
@@ -733,7 +885,8 @@ export default function Schedule() {
             { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
             { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
             { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
+            { key: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory', icon: 'territory' },
+            { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
             { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
             { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
             { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today', active: true },
@@ -889,12 +1042,14 @@ export default function Schedule() {
               <article className={`schedule-plan-route-card${hasRoutePreview ? ' has-route-preview' : ' is-route-fallback'}`}>
                 <div className="schedule-plan-route-map" aria-hidden="true">
                   {hasRoutePreview ? (
-                    <svg className="schedule-plan-route-map-svg" viewBox="0 0 100 100">
-                      <path className="schedule-plan-route-map-shadow" d={routePreview.path} />
-                      <path className="schedule-plan-route-map-line" d={routePreview.path} />
-                      <circle className="schedule-plan-route-map-start" cx={routePreview.startX} cy={routePreview.startY} r="3.2" />
-                      <circle className="schedule-plan-route-map-finish" cx={routePreview.finishX} cy={routePreview.finishY} r="3.6" />
-                    </svg>
+                    <div ref={routeMapRef} className="schedule-plan-route-leaflet-map" />
+                  ) : autoPlanning ? (
+                    <div className="schedule-plan-route-empty-panel schedule-plan-route-empty-panel--loading">
+                      <div className="schedule-plan-route-auto-spinner" aria-hidden="true" />
+                      <div className="schedule-plan-route-empty-copy">
+                        <span>{s('route_auto_loading')}</span>
+                      </div>
+                    </div>
                   ) : (
                     <div className="schedule-plan-route-empty-panel">
                       <div className="schedule-plan-route-empty-badges">
@@ -904,7 +1059,7 @@ export default function Schedule() {
                       </div>
                       <div className="schedule-plan-route-empty-copy">
                         <strong>{routeTitle}</strong>
-                        <span>{routeFallbackStatus}</span>
+                        <span>{runs.length === 0 ? s('route_auto_empty_hint') : routeFallbackStatus}</span>
                       </div>
                     </div>
                   )}
