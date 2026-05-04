@@ -382,6 +382,7 @@ export default function Schedule() {
   const routeMapRef = useRef(null);
   const routeMapInstanceRef = useRef(null);
   const didAutoPlanRef = useRef(false);
+  const startPointCacheRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -716,31 +717,32 @@ export default function Schedule() {
     ].filter(Boolean);
   const coachTargetValue = [raceTargetDistanceLabel, targetRaceDateLabel].filter(Boolean).join(' / ');
 
-  // Auto-plan: fire once when load is ready AND no saved planned routes exist
+  // Auto-plan: fire once when load is ready AND no saved planned routes exist.
+  // Derives start lat/lng from /api/activities/{id}/points because the activity
+  // payload does not expose top-level lat/lng — only routePreview with normalised
+  // viewBox coords.
   useEffect(() => {
     if (loadState !== 'ready') return;
     if (plannedRoutes.length > 0) return;
     if (didAutoPlanRef.current) return;
     if (!isAuthenticated) return;
 
-    const startRun = runs.find((run) => {
-      const lat = Number(run.startLatitude ?? run.startLat);
-      const lng = Number(run.startLongitude ?? run.startLng);
-      return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
-    });
-    if (!startRun) return;
+    // Find the most recent run that has GPS-backed route data
+    const startCandidateRun = runs.find((r) => r?.routePreview && r?.id != null);
+    if (!startCandidateRun) return;
 
-    const startLat = Number(startRun.startLatitude ?? startRun.startLat);
-    const startLng = Number(startRun.startLongitude ?? startRun.startLng);
+    didAutoPlanRef.current = true;
+    setAutoPlanning(true);
 
     const rawTarget = Number(
-      coachToday?.today?.plannedDistanceKm
+      nextSession?.plannedDistanceKm
+        || coachToday?.today?.plannedDistanceKm
         || targetBlock?.currentLongRunKm
         || 0,
     );
     const targetDistanceKm = Math.min(50, Math.max(1, rawTarget > 0 ? rawTarget : 5));
 
-    // Derive elevation preference from last 5 runs
+    // Derive elevation preference from last 5 runs (median gain/km)
     const recentWithElevation = runs
       .filter((r) => Number(r.distanceKm || 0) > 0 && Number(r.elevationGainMeters || r.totalElevationGain || 0) > 0)
       .slice(0, 5);
@@ -758,28 +760,60 @@ export default function Schedule() {
       else elevationPreference = 'rolling';
     }
 
-    didAutoPlanRef.current = true;
-    setAutoPlanning(true);
+    const resolveStartPoint = () => {
+      if (startPointCacheRef.current) {
+        return Promise.resolve(startPointCacheRef.current);
+      }
+      return apiJson(`/api/activities/${startCandidateRun.id}/points`)
+        .then((points) => {
+          const first = Array.isArray(points) ? points[0] : null;
+          if (!first) return null;
+          const lat = Number(first.latitude);
+          const lng = Number(first.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) {
+            return null;
+          }
+          const pt = { lat, lng };
+          startPointCacheRef.current = pt;
+          return pt;
+        })
+        .catch((err) => {
+          console.warn('[Schedule] auto-plan points fetch failed:', err.message);
+          return null;
+        });
+    };
 
-    apiFetch('/api/route/plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startLat, startLng, targetDistanceKm, elevationPreference }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`auto-plan HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((newRoute) => {
-        if (newRoute && typeof newRoute === 'object') {
-          setPlannedRoutes((prev) => [newRoute, ...prev]);
+    resolveStartPoint()
+      .then((pt) => {
+        if (!pt) {
+          setAutoPlanning(false);
+          return;
         }
-      })
-      .catch((err) => {
-        console.warn('[Schedule] auto-plan failed:', err.message);
-      })
-      .finally(() => {
-        setAutoPlanning(false);
+        return apiFetch('/api/route/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startLat: pt.lat,
+            startLng: pt.lng,
+            targetDistanceKm,
+            elevationPreference,
+          }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`auto-plan HTTP ${res.status}`);
+            return res.json();
+          })
+          .then((newRoute) => {
+            if (newRoute && typeof newRoute === 'object') {
+              setPlannedRoutes((prev) => [newRoute, ...prev]);
+            }
+          })
+          .catch((err) => {
+            console.warn('[Schedule] auto-plan failed:', err.message);
+          })
+          .finally(() => {
+            setAutoPlanning(false);
+          });
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadState, plannedRoutes.length, isAuthenticated]);
