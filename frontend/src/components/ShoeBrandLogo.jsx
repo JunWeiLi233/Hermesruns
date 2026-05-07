@@ -1,43 +1,86 @@
 import { memo } from 'react';
 import adidasLogo from '../assets/brand-logos/adidas.png';
+import altraLogo from '../assets/brand-logos/altra.svg';
 import antaLogo from '../assets/brand-logos/anta.svg';
 import bmaiLogo from '../assets/brand-logos/bmai.svg';
+import brooksLogo from '../assets/brand-logos/brooks.svg';
+import dayanLogo from '../assets/brand-logos/dayan.svg';
 import doWinLogo from '../assets/brand-logos/do-win.svg';
 import erkeLogo from '../assets/brand-logos/erke.jpg';
 import logo361 from '../assets/brand-logos/361.webp';
 import asicsLogo from '../assets/brand-logos/asics.webp';
+import hokaLogo from '../assets/brand-logos/hoka.svg';
+import inov8Logo from '../assets/brand-logos/inov-8.svg';
 import liningLogo from '../assets/brand-logos/lining.svg';
+import macondoLogo from '../assets/brand-logos/macondo.svg';
+import merrellLogo from '../assets/brand-logos/merrell.svg';
+import mizunoLogo from '../assets/brand-logos/mizuno.svg';
 import newBalanceLogo from '../assets/brand-logos/new-balance.png';
 import nikeLogo from '../assets/brand-logos/nike.webp';
+import nordaLogo from '../assets/brand-logos/norda.svg';
+import onLogo from '../assets/brand-logos/on.svg';
 import peakLogo from '../assets/brand-logos/peak.svg';
 import pumaLogo from '../assets/brand-logos/puma.png';
+import qiaodanLogo from '../assets/brand-logos/qiaodan.svg';
+import reebokLogo from '../assets/brand-logos/reebok.svg';
+import salomonLogo from '../assets/brand-logos/salomon.svg';
 import sauconyLogo from '../assets/brand-logos/saucony.png';
+import skechersLogo from '../assets/brand-logos/skechers.svg';
+import topoLogo from '../assets/brand-logos/topo-athletic.svg';
+import underArmourLogo from '../assets/brand-logos/under-armour.svg';
+import volantiLogo from '../assets/brand-logos/volanti.svg';
 import xtepLogo from '../assets/brand-logos/xtep.png';
 
 const BRAND_LOGO_ASSETS = {
   '361': logo361,
   '361°': logo361,
   adidas: adidasLogo,
+  altra: altraLogo,
   anta: antaLogo,
   '安踏': antaLogo,
   asics: asicsLogo,
   bmai: bmaiLogo,
+  brooks: brooksLogo,
+  dayan: dayanLogo,
+  '澶ч捕': dayanLogo,
+  '\u5927\u9cb6': dayanLogo,
   '必迈': bmaiLogo,
   dowin: doWinLogo,
   '多威': doWinLogo,
   erke: erkeLogo,
+  hoka: hokaLogo,
   '鸿星尔克': erkeLogo,
   lining: liningLogo,
+  macondo: macondoLogo,
+  '椹瓟澶?': macondoLogo,
+  '\u9a6c\u5b54\u591a': macondoLogo,
   '李宁': liningLogo,
   newbalance: newBalanceLogo,
   nike: nikeLogo,
+  on: onLogo,
   peak: peakLogo,
   '匹克': peakLogo,
   puma: pumaLogo,
+  qiaodan: qiaodanLogo,
+  '涓浗涔斾腹': qiaodanLogo,
+  '\u4e54\u4e39': qiaodanLogo,
+  '\u4e2d\u56fd\u4e54\u4e39': qiaodanLogo,
   '彪马': pumaLogo,
   saucony: sauconyLogo,
+  skechers: skechersLogo,
+  inov8: inov8Logo,
+  merrell: merrellLogo,
+  mizuno: mizunoLogo,
+  norda: nordaLogo,
+  reebok: reebokLogo,
+  salomon: salomonLogo,
+  topoathletic: topoLogo,
+  underarmour: underArmourLogo,
+  ua: underArmourLogo,
+  volanti: volantiLogo,
+  '\u6c83\u5170\u8fea': volantiLogo,
+  '\u7279\u6b65': xtepLogo,
   xtep: xtepLogo,
-  '特步': xtepLogo,
 };
 
 function normalizeBrandKey(brand) {
