@@ -30,6 +30,8 @@ See [`.claude/skills/_TRIGGERS.md`](../skills/_TRIGGERS.md). Authority order: He
 - Prompt-engineering source: `https://github.com/NeoLabHQ/context-engineering-kit/tree/master/plugins/customaize-agent/skills/prompt-engineering`
 - Brainstorming source: `https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md`
 - Web-quality audit source: `https://officialskills.sh/addyosmani/skills/web-quality-audit` (GitHub: `https://github.com/addyosmani/web-quality-skills/tree/main/skills/web-quality-audit`)
+- Impeccable frontend-design audit source: `https://github.com/pbakaus/impeccable` — 7 design domains (typography / color / spacing / motion / interaction / responsive / UX writing), 23 design commands, 27 anti-pattern detectors. CLI: `npx impeccable detect <dir|file|url>`. Slash commands when the bundle is installed: `/impeccable audit <area>`, `/impeccable critique <area>`, `/impeccable polish <area>`, `/impeccable harden <area>`. Optional local install: `cp -r dist/claude-code/.claude .claude/` after cloning.
+- UI/UX Pro Max design-system source: `https://github.com/nextlevelbuilder/ui-ux-pro-max-skill` — industry-tailored design systems, 161 color palettes, 57 font pairings, 161 product types, 99 UX guidelines, 25 chart types, 10 stacks. Already installed locally as the `ui-ux-pro-max` skill. CLI alternative: `npm install -g uipro-cli && uipro init --ai claude`.
 - Hermes manifest: `.tools/auto-hermes-skills.mjs`
 - Local install targets when vendored or manually installed: `.codex/skills/multi-agent-patterns/`, `.codex/skills/evaluation/`, `.codex/skills/prompt-engineering/`, `.codex/superpowers/skills/brainstorming/`, and `.codex/skills/web-quality-audit/`
 
@@ -95,6 +97,26 @@ Apply this advisory checklist before accepting frontend or website-audit quality
 - Capture browser proof before claim: runtime URL, console state, screenshot or DOM evidence, and any Lighthouse-style observations.
 - Prioritize user-impact issues over score chasing.
 - Treat runtime proof, `run-vite-build.mjs`, translation parity, design-token checks, and Hermes source-truth rules as higher authority.
+
+Use `impeccable` when a round changes typography, color, spacing, motion, interaction, responsive behavior, or UX copy on a visible Hermes surface — or when reviewing a freshly built UI for design tells that read as generic AI output (purple gradients, nested cards, overused fonts, gray text on colored backgrounds).
+
+Apply this advisory checklist before locking a frontend visual round and after the implementation:
+
+- Run `npx impeccable detect frontend/src/<surface-glob>` as a pre-flight scan, or `/impeccable audit <surface>` / `/impeccable critique <surface>` when the local skill bundle is installed.
+- Treat Impeccable findings as a `soft-signal` lane verdict, not a blocker: cherry-pick anti-pattern hits (purple gradient, nested card, gray-on-color, default font stack) that match the touched surface and fix those first.
+- Map Impeccable domains to existing Hermes gates — color/spacing land in design-token check; typography lands in CSS reads + translation parity; motion lands in `prefers-reduced-motion` guards; UX writing lands in coach-voice + translation-sync.
+- Do not let Impeccable override `design.md`, the approved live Hermes surface, or an explicit user reference. Hermes authority order still applies.
+- For polish-only rounds, prefer `/impeccable polish <surface>` after the Builder step and before the reviewer pass.
+
+Use `ui-ux-pro-max` when a round (1) starts a new surface, component, or page, (2) refactors visual structure, (3) chooses or revisits a color/typography system for a runner-facing route, or (4) needs an industry-tailored design baseline (runner analytics / coach product / fintech-adjacent billing flow) before locking the PM plan.
+
+Apply this advisory checklist before locking the PM plan or starting a new surface:
+
+- Treat the locally installed `ui-ux-pro-max` skill as the canonical entry point; `https://github.com/nextlevelbuilder/ui-ux-pro-max-skill` is the upstream for reference and updates.
+- Authority order is strict: current live Hermes surface → explicit user reference → `design.md` → `ui-ux-pro-max` recommendations. The skill never overrides an approved layout.
+- Pull only the surface-relevant slices (palette, type pair, interaction patterns) — do not import a generic dashboard template wholesale.
+- After choosing patterns, write them into the PM lock (`surface / visual goal / preserve list / round type / reference source`) so the Builder cannot drift.
+- If the skill suggests a stack switch (e.g. Tailwind, shadcn) that conflicts with the Hermes React 19 + plain CSS stack, discard the suggestion — Hermes stack is fixed.
 
 Skill guidance is advisory. Hermes queue ownership, human gate, runtime proof, verification-before-completion, source-truth, stop rules, and finish behavior remain authoritative.
 
