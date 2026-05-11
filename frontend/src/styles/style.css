@@ -16881,40 +16881,7 @@ body.theme-midnight .polarized-target-marker {
 }
 
 .mt-body-real-human-atlas .mt-body-figure-clean {
-  opacity: 0.32; /* tokens-ok — bare float, not a color/bg; no opacity token exists in the design system */
-}
-
-/* Silhouette outline strokes for SVG anatomy mode (no raster behind it) */
-.mt-body-real-human-atlas .mt-body-figure-clean .mt-ref-body-outline {
-  fill: none;
-  stroke: var(--accent-coral);
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.55; /* tokens-ok — bare float, no opacity token in design system */
-}
-
-.mt-body-real-human-atlas .mt-body-figure-clean .mt-ref-hand,
-.mt-body-real-human-atlas .mt-body-figure-clean .mt-ref-foot {
-  fill: var(--accent-coral);
-  opacity: 0.42; /* tokens-ok — bare float, no opacity token in design system */
-  stroke: none;
-}
-
-/* Light mode parity — silhouette reads at same perceptual weight on bright bg */
-body:is(.theme-light, .theme-high-contrast-light) .mt-body-real-human-atlas .mt-body-figure-clean {
-  opacity: 0.28; /* tokens-ok — bare float, no opacity token in design system */
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .mt-body-real-human-atlas .mt-body-figure-clean .mt-ref-body-outline {
-  stroke: var(--accent-coral-strong);
-  opacity: 0.38; /* tokens-ok — bare float, no opacity token in design system */
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .mt-body-real-human-atlas .mt-body-figure-clean .mt-ref-hand,
-body:is(.theme-light, .theme-high-contrast-light) .mt-body-real-human-atlas .mt-body-figure-clean .mt-ref-foot {
-  fill: var(--accent-coral-strong);
-  opacity: 0.32; /* tokens-ok — bare float, no opacity token in design system */
+  opacity: 0;
 }
 
 .mt-body-human-landmarks {
@@ -17060,63 +17027,6 @@ body:is(.theme-light, .theme-high-contrast-light) .mt-body-real-human-atlas .mt-
     transform: none;
   }
 }
-
-/* ── Inline SVG anatomy paths (MuscleAnatomySvg) ────────────────────────── */
-
-/* Base muscle path: subtle pale fill so the anatomy is visible in dark mode. */
-.muscle-anatomy-part {
-  fill: rgba(180, 180, 180, 0.32); /* tokens-ok — anatomy base, no semantic token maps this exact neutral */
-  stroke: rgba(80, 80, 80, 0.45); /* tokens-ok */
-  stroke-width: 0.5;
-  transition: fill 200ms ease, opacity 200ms ease;
-  pointer-events: none;
-}
-
-/* Plan-active: today's planned focus muscles. */
-.muscle-anatomy-part.is-plan-active {
-  fill: color-mix(in srgb, var(--accent-coral) 60%, transparent);
-  stroke: color-mix(in srgb, var(--accent-coral-strong) 40%, transparent);
-}
-
-/* Active selection (clicked label). */
-.muscle-anatomy-part.is-active {
-  fill: var(--accent-coral-strong);
-  stroke: var(--accent-coral-strong);
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent-coral-strong) 50%, transparent));
-}
-
-/* Hover / keyboard focus. */
-.muscle-anatomy-part.is-focused {
-  fill: color-mix(in srgb, var(--accent-coral-strong) 88%, transparent);
-  stroke: color-mix(in srgb, var(--accent-coral-strong) 60%, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .muscle-anatomy-part { transition: none; }
-}
-
-/* Light mode overrides — anatomy reads on a light background */
-body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-part {
-  fill: rgba(120, 80, 60, 0.18); /* tokens-ok — warm neutral on light bg */
-  stroke: rgba(80, 40, 20, 0.35); /* tokens-ok */
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-part.is-plan-active {
-  fill: color-mix(in srgb, var(--accent-coral) 72%, transparent);
-  stroke: color-mix(in srgb, var(--accent-coral-strong) 55%, transparent);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-part.is-active {
-  fill: var(--accent-coral-strong);
-  stroke: var(--accent-coral-strong);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-part.is-focused {
-  fill: color-mix(in srgb, var(--accent-coral-strong) 80%, transparent);
-  stroke: color-mix(in srgb, var(--accent-coral-strong) 70%, transparent);
-}
-
-/* ── End inline SVG anatomy paths ──────────────────────────────────────── */
 
 .mt-body-measure-divider {
   stroke: color-mix(in srgb, var(--line-glass, rgba(171, 173, 174, 0.15)) 88%, transparent);
