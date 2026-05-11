@@ -9,8 +9,7 @@ import HermesLogo from '../components/HermesLogo';
 import FooterNavLinks from '../components/FooterNavLinks';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import anatomyAnteriorGray from '../assets/anatomy/muscles-anterior-gray.png';
-import anatomyPosteriorGray from '../assets/anatomy/muscles-posterior-gray-unlabeled.png';
+import { MuscleAnatomySvg, buildRegionStates } from '../components/MuscleAnatomySvg';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -1056,23 +1055,14 @@ function MuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStats, copy }
 }
 
 const REFERENCE_BODY_MEASURE_VIEWBOX = { width: 790, height: 580 };
-/*
- * The posterior PNG uses the same source-to-SVG scale as the anterior PNG,
- * then gets a head-reveal y nudge. That keeps the rear view reading as the
- * same person instead of a larger, broader body while leaving enough top room
- * for the back head. Its visible body axis is centered in the wider rear grid,
- * and the posterior SVG/muscle regions share that fitted person-scale matrix
- * with legacy x-axis corrections on top.
- */
-const POSTERIOR_RASTER_ALIGNMENT_TRANSFORM = 'translate(0 0)';
+/* Posterior figure-clean and negative-space elements still use this transform
+   to keep the hand-drawn silhouette and contour lines aligned to the back panel. */
 const POSTERIOR_SVG_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 32.3948031496 18.805511811)';
+/* Legacy alignment data retained on REFERENCE_BODY_MEASURE_REGIONS for
+   backward-compat callout positioning — no longer applied to rendered paths. */
 const POSTERIOR_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 83.7 9.0)';
 const POSTERIOR_GLUTE_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 89.0 12.0)';
 const POSTERIOR_LEG_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 70.5 7.0)';
-
-function getPosteriorRegionAlignmentTransform(region) {
-  return region.posteriorAlignmentTransform || POSTERIOR_REGION_ALIGNMENT_TRANSFORM;
-}
 const REFERENCE_BODY_MEASURE_FRONT_OUTLINE = [
   'M190 46 C200 46 206 56 205 70 C204 85 198 99 194 106',
   'L194 120 C211 123 229 129 244 141 C257 151 265 168 270 188',
@@ -1321,6 +1311,8 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
   const [hoveredRegionKey, setHoveredRegionKey] = useState(null);
   const [selectedRegionKey, setSelectedRegionKey] = useState(null);
   const focusRegionKey = hoveredRegionKey || selectedRegionKey;
+  const frontStates = buildRegionStates(planRegions, hoveredRegionKey, selectedRegionKey, 'front');
+  const backStates = buildRegionStates(planRegions, hoveredRegionKey, selectedRegionKey, 'back');
   const toggleSelectedRegion = useCallback((regionKey) => {
     setSelectedRegionKey((current) => (current === regionKey ? null : regionKey));
   }, []);
@@ -1364,7 +1356,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
     const isPlanActive = planRegions.has(region.key);
     const isFocused = hoveredRegionKey === region.key;
     const isPosteriorRegion = region.callout.from[0] > REFERENCE_BODY_MEASURE_VIEWBOX.width / 2;
-    const posteriorRegionTransform = isPosteriorRegion ? getPosteriorRegionAlignmentTransform(region) : undefined;
     const regionLabel = region.label[isZh ? 'zh' : 'en'];
     const regionInspection = inspection.get(region.key);
     const regionExerciseNames = (regionInspection?.exercises || []).map((item) => item.name).slice(0, 2).join(' / ');
@@ -1372,10 +1363,10 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
       ? `${regionLabel}, ${bodyMeasureCopy.trainedByLabel || ''} ${regionExerciseNames}`.trim()
       : regionLabel;
     const anchors = region.anchors || [];
-    // Compute a bounding hit-target rect that covers all anchors for pointer events
+    // Bounding hit-target rect covering all anchor positions
     const allCx = anchors.map((a) => a.cx);
     const allCy = anchors.map((a) => a.cy);
-    const hitR = 42; // half hit-area size in viewBox units
+    const hitR = 42;
     const hitX = allCx.length ? Math.min(...allCx) - hitR : 0;
     const hitY = allCy.length ? Math.min(...allCy) - hitR : 0;
     const hitW = allCx.length ? Math.max(...allCx) - Math.min(...allCx) + hitR * 2 : 0;
@@ -1387,7 +1378,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
         data-region={region.key}
         data-training-count={regionInspection?.exercises?.length || 0}
         data-view={isPosteriorRegion ? 'posterior' : 'anterior'}
-        transform={posteriorRegionTransform}
         role="button"
         tabIndex={0}
         aria-label={regionAriaLabel}
@@ -1408,61 +1398,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
             aria-hidden="true"
           />
         )}
-        {/* Spotlight anchors: glow circle + shape marker */}
-        {anchors.map((anchor, index) => (
-          <g key={`${region.key}-anchor-${index}`} aria-hidden="true">
-            {/* Soft radial glow — fades from coral to transparent */}
-            <circle
-              className="mt-body-spotlight-glow"
-              cx={anchor.cx}
-              cy={anchor.cy}
-              r={42}
-              fill="url(#mtMuscleGlow)"
-            />
-            {/* Anchor marker — circle or ellipse */}
-            {anchor.kind === 'circle'
-              ? (
-                <circle
-                  className="mt-body-spotlight-marker"
-                  cx={anchor.cx}
-                  cy={anchor.cy}
-                  r={anchor.r || 8}
-                />
-              )
-              : (
-                <ellipse
-                  className="mt-body-spotlight-marker"
-                  cx={anchor.cx}
-                  cy={anchor.cy}
-                  rx={anchor.rx || 8}
-                  ry={anchor.ry || 14}
-                />
-              )
-            }
-          </g>
-        ))}
-      </g>
-    );
-  };
-
-  const renderRegionBed = (region) => {
-    const isPosteriorRegion = region.callout.from[0] > REFERENCE_BODY_MEASURE_VIEWBOX.width / 2;
-    const posteriorRegionTransform = isPosteriorRegion ? getPosteriorRegionAlignmentTransform(region) : undefined;
-    const anchors = region.anchors || [];
-    return (
-      <g
-        key={`${region.key}-bed`}
-        className="mt-body-measure-region-bed"
-        data-region={region.key}
-        data-view={isPosteriorRegion ? 'posterior' : 'anterior'}
-        transform={posteriorRegionTransform}
-        aria-hidden="true"
-      >
-        {anchors.map((anchor, index) => (
-          anchor.kind === 'circle'
-            ? <circle key={`${region.key}-bed-${index}`} cx={anchor.cx} cy={anchor.cy} r={(anchor.r || 8) * 2.4} />
-            : <ellipse key={`${region.key}-bed-${index}`} cx={anchor.cx} cy={anchor.cy} rx={(anchor.rx || 8) * 2.2} ry={(anchor.ry || 14) * 2.2} />
-        ))}
       </g>
     );
   };
@@ -1484,12 +1419,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           <title id="mt-body-measure-title">{bodyMeasureCopy.title}</title>
           <desc id="mt-body-measure-desc">{bodyMeasureCopy.desc}</desc>
           <defs>
-            {/* Spotlight radial glow — coral at centre, transparent at edge */}
-            <radialGradient id="mtMuscleGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="var(--accent-coral-strong, #f07561)" stopOpacity="0.85" />
-              <stop offset="55%" stopColor="var(--accent-coral, #ffb4a7)" stopOpacity="0.42" />
-              <stop offset="100%" stopColor="var(--accent-coral, #ffb4a7)" stopOpacity="0" />
-            </radialGradient>
             <linearGradient id="mtBodyMeasureHot" x1="0" x2="1" y1="0" y2="1">
               <stop offset="0%" stopColor="currentColor" stopOpacity="0.98" />
               <stop offset="58%" stopColor="currentColor" stopOpacity="0.76" />
@@ -1558,20 +1487,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           {/* ── FRONT FIGURE ─────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.anterior}>
             <text x="190" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.anterior}</text>
-            <g className="mt-body-reference-image-layer" aria-hidden="true">
-              <image
-                href={anatomyAnteriorGray}
-                x="58"
-                y="42"
-                width="264"
-                height="508"
-                data-align-level="shared-anatomy-baseline"
-                data-visual-scale="frame-contained-slice"
-                preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#mtBodyAnteriorPlate)"
-                className="mt-body-reference-image"
-              />
-            </g>
             <g className="mt-body-figure-clean" aria-hidden="true">
               {/* single coherent body silhouette — anterior */}
               <path
@@ -1613,26 +1528,12 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
               <path className="mt-body-figure-contour" d="M164 295 C172 336 172 386 167 432 M216 295 C208 336 208 386 213 432" />
               <path className="mt-body-figure-contour" d="M143 435 C151 458 152 497 148 528 M237 435 C229 458 228 497 232 528" />
             </g>
+            <MuscleAnatomySvg view="front" regionStates={frontStates} />
           </g>
 
           {/* ── BACK FIGURE ──────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.posterior}>
             <text x="570" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.posterior}</text>
-            <g className="mt-body-reference-image-layer" transform={POSTERIOR_RASTER_ALIGNMENT_TRANSFORM} aria-hidden="true">
-              <image
-                href={anatomyPosteriorGray}
-                x="411.12"
-                y="59.4"
-                width="370.2"
-                height="491.2"
-                data-align-level="shared-anatomy-baseline"
-                data-crop-align="posterior-body-axis-fitted"
-                data-visual-scale="posterior-matched-person-grid-fit"
-                preserveAspectRatio="xMidYMid meet"
-                clipPath="url(#mtBodyPosteriorPlate)"
-                className="mt-body-reference-image"
-              />
-            </g>
             <g className="mt-body-figure-clean" transform={POSTERIOR_SVG_ALIGNMENT_TRANSFORM} aria-hidden="true">
               {/* single coherent body silhouette — posterior */}
               <path
@@ -1669,11 +1570,9 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
               <path className="mt-body-figure-contour" d="M532 346 C542 385 542 437 536 481 M608 346 C598 385 598 437 604 481" />
               <path className="mt-body-figure-contour" d="M509 480 C517 500 517 526 513 548 M631 480 C623 500 623 526 627 548" />
             </g>
+            <MuscleAnatomySvg view="back" regionStates={backStates} />
           </g>
 
-          <g className="mt-body-measure-region-bed-layer" aria-hidden="true" clipPath="url(#mtBodyClinicalClip)">
-            {REFERENCE_BODY_MEASURE_REGIONS.map(renderRegionBed)}
-          </g>
           {REFERENCE_BODY_MEASURE_REGIONS.map(renderRegion)}
           <g className="mt-body-human-negative-space" aria-hidden="true">
             <path d="M182 320 C186 362 187 460 184 540 C187 545 193 545 196 540 C193 460 194 362 198 320 C193 323 187 323 182 320 Z" />
