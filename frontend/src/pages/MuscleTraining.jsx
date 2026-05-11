@@ -9,6 +9,8 @@ import HermesLogo from '../components/HermesLogo';
 import FooterNavLinks from '../components/FooterNavLinks';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import anatomyAnteriorGray from '../assets/anatomy/muscles-anterior-gray.png';
+import anatomyPosteriorGray from '../assets/anatomy/muscles-posterior-gray-unlabeled.png';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -714,35 +716,55 @@ function getExerciseCardContent(exercise, isZh) {
   };
 }
 
-function resolveExerciseVisualKey(name) {
+function resolveExerciseVisualKey(name, muscles = []) {
   switch (normalizeExerciseName(name)) {
     case 'Dead bug':
       return 'deadbug';
     case 'Side plank':
+      return 'sideplank';
     case 'Pallof press':
+      return 'pallof';
     case 'Farmer carry (suitcase)':
-      return 'core';
+      return 'carry';
     case 'Glute bridge (pause at top)':
-    case 'Hamstring curl (slider or machine)':
       return 'bridge';
+    case 'Hamstring curl (slider or machine)':
+      return 'hamstring';
     case 'Split squat':
-    case 'Step-down (knee tracking)':
-    case "World's greatest stretch":
       return 'split';
+    case 'Step-down (knee tracking)':
+      return 'stepdown';
+    case "World's greatest stretch":
+      return 'stretch';
     case 'Single-leg Romanian deadlift':
-    case 'Hip airplanes':
       return 'hinge';
+    case 'Hip airplanes':
+      return 'balance';
     case 'Standing calf raise':
     case 'Calf raises (slow tempo)':
-    case 'Tibialis wall raise':
-    case 'Ankle dorsiflexion rocks':
       return 'calf';
+    case 'Tibialis wall raise':
+      return 'shin';
+    case 'Ankle dorsiflexion rocks':
+      return 'ankle';
     case 'Pogo hops':
+      return 'pogo';
     case 'Skipping A-drill':
+      return 'skip';
     case 'Box step-up (explosive)':
+      return 'stepup';
     case 'Single-leg hop (low amplitude)':
       return 'hop';
     default:
+      {
+        const muscleText = (muscles || []).join(' ').toLowerCase();
+        if (/shin|胫/.test(muscleText)) return 'shin';
+        if (/ankle|踝/.test(muscleText)) return 'ankle';
+        if (/calf|小腿/.test(muscleText)) return 'calf';
+        if (/hamstring|腘/.test(muscleText)) return 'hamstring';
+        if (/glute|臀/.test(muscleText)) return 'bridge';
+        if (/core|核心/.test(muscleText)) return 'deadbug';
+      }
       return 'standing';
   }
 }
@@ -1033,7 +1055,58 @@ function MuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStats, copy }
   );
 }
 
-const REFERENCE_BODY_MEASURE_VIEWBOX = { width: 760, height: 580 };
+const REFERENCE_BODY_MEASURE_VIEWBOX = { width: 790, height: 580 };
+/*
+ * The posterior PNG uses the same source-to-SVG scale as the anterior PNG,
+ * then gets a head-reveal y nudge. That keeps the rear view reading as the
+ * same person instead of a larger, broader body while leaving enough top room
+ * for the back head. Its visible body axis is centered in the wider rear grid,
+ * and the posterior SVG/muscle regions share that fitted person-scale matrix
+ * with legacy x-axis corrections on top.
+ */
+const POSTERIOR_RASTER_ALIGNMENT_TRANSFORM = 'translate(0 0)';
+const POSTERIOR_SVG_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 32.3948031496 18.805511811)';
+const POSTERIOR_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 72.3948031496 18.805511811)';
+const POSTERIOR_GLUTE_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 62.3948031496 18.805511811)';
+const POSTERIOR_LEG_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 46.3948031496 18.805511811)';
+
+function getPosteriorRegionAlignmentTransform(region) {
+  return region.posteriorAlignmentTransform || POSTERIOR_REGION_ALIGNMENT_TRANSFORM;
+}
+const REFERENCE_BODY_MEASURE_FRONT_OUTLINE = [
+  'M190 46 C200 46 206 56 205 70 C204 85 198 99 194 106',
+  'L194 120 C211 123 229 129 244 141 C257 151 265 168 270 188',
+  'C279 209 285 236 286 263 C287 286 286 307 282 321',
+  'C278 333 270 336 263 324 C259 315 258 292 258 270',
+  'C257 230 251 195 241 169 C233 188 230 218 228 246',
+  'C226 274 220 303 210 322 C214 353 218 391 217 433',
+  'C216 477 212 518 206 546 C204 556 196 557 194 547',
+  'C190 519 188 487 187 455 C186 487 184 519 180 547',
+  'C178 557 170 556 168 546 C162 518 158 477 157 433',
+  'C156 391 160 353 164 322 C154 303 148 274 146 246',
+  'C144 218 141 188 133 169 C123 195 117 230 116 270',
+  'C116 292 115 315 111 324 C104 336 96 333 92 321',
+  'C88 307 87 286 89 263 C90 236 96 209 106 188',
+  'C111 168 119 151 132 141 C147 129 165 123 186 120',
+  'L186 106 C182 99 176 85 175 70 C174 56 180 46 190 46 Z',
+].join(' ');
+const REFERENCE_BODY_MEASURE_BACK_OUTLINE = [
+  'M570 46 C580 46 586 56 585 70 C584 85 578 99 574 106',
+  'L574 120 C591 123 609 129 624 141 C637 151 645 168 650 188',
+  'C659 209 665 236 666 263 C668 286 666 307 662 321',
+  'C658 333 650 336 643 324 C639 315 638 292 638 270',
+  'C637 230 631 195 621 169 C613 188 610 218 608 246',
+  'C606 274 600 303 590 322 C594 353 598 391 597 433',
+  'C596 477 592 518 586 546 C584 556 576 557 574 547',
+  'C570 519 568 487 567 455 C566 487 564 519 560 547',
+  'C558 557 550 556 548 546 C542 518 538 477 537 433',
+  'C536 391 540 353 544 322 C534 303 528 274 526 246',
+  'C524 218 521 188 513 169 C503 195 497 230 496 270',
+  'C496 292 495 315 491 324 C484 336 476 333 472 321',
+  'C468 307 466 286 468 263 C469 236 475 209 485 188',
+  'C490 168 498 151 511 141 C526 129 544 123 566 120',
+  'L566 106 C562 99 556 85 555 70 C554 56 560 46 570 46 Z',
+].join(' ');
 
 /* ── Clean anatomical chart regions ─────────────────────────────────────
    Front figure centred ~x190, back figure centred ~x570.
@@ -1065,8 +1138,8 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['shoulder', 'deltoid', '肩', '三角肌'],
     callout: { from: [122, 148], elbow: [78, 140], label: [58, 130], side: 'left' },
     paths: [
-      'M124 138 C108 136 95 154 91 180 C108 180 126 162 138 143 C134 140 130 138 124 138 Z',
-      'M256 138 C272 136 285 154 289 180 C272 180 254 162 242 143 C246 140 250 138 256 138 Z',
+      'M127 137 C112 136 99 149 93 169 C96 181 109 182 124 173 C134 166 140 154 141 143 C136 139 132 137 127 137 Z',
+      'M253 137 C268 136 281 149 287 169 C284 181 271 182 256 173 C246 166 240 154 239 143 C244 139 248 137 253 137 Z',
     ],
   },
   {
@@ -1075,8 +1148,8 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['pectoral', 'chest', '胸', '胸大肌'],
     callout: { from: [230, 155], elbow: [278, 144], label: [298, 134], side: 'right' },
     paths: [
-      'M140 140 C158 122 182 125 190 142 C184 162 162 174 135 165 C132 153 134 145 140 140 Z',
-      'M240 140 C222 122 198 125 190 142 C196 162 218 174 245 165 C248 153 246 145 240 140 Z',
+      'M142 142 C156 129 175 126 189 145 C184 162 169 171 145 168 C137 159 135 149 142 142 Z',
+      'M238 142 C224 129 205 126 191 145 C196 162 211 171 235 168 C243 159 245 149 238 142 Z',
     ],
   },
   {
@@ -1085,8 +1158,8 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['biceps', 'arm', 'elbow', '肱二头肌', '手臂'],
     callout: { from: [278, 190], elbow: [310, 188], label: [332, 178], side: 'right' },
     paths: [
-      'M90 154 C104 164 106 200 93 224 C80 207 78 171 85 158 Z',
-      'M290 154 C276 164 274 200 287 224 C300 207 302 171 295 158 Z',
+      'M92 154 C104 165 108 188 104 209 C100 219 91 222 84 214 C80 201 80 173 86 159 Z',
+      'M288 154 C276 165 272 188 276 209 C280 219 289 222 296 214 C300 201 300 173 294 159 Z',
     ],
   },
   {
@@ -1095,8 +1168,8 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['forearm', 'brachioradialis', 'wrist', '手腕', '前臂'],
     callout: { from: [296, 248], elbow: [326, 256], label: [348, 254], side: 'right' },
     paths: [
-      'M82 222 C96 228 100 267 88 302 C75 286 72 242 79 224 Z',
-      'M298 222 C284 228 280 267 292 302 C305 286 308 242 301 224 Z',
+      'M81 223 C93 229 97 250 94 275 C91 291 82 302 74 300 C71 284 72 244 78 226 Z',
+      'M299 223 C287 229 283 250 286 275 C289 291 298 302 306 300 C309 284 308 244 302 226 Z',
     ],
   },
   {
@@ -1105,10 +1178,10 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['core', 'abs', 'abdominals', 'trunk', '腹', '核心'],
     callout: { from: [190, 220], elbow: [264, 218], label: [286, 218], side: 'right' },
     paths: [
-      'M167 168 C175 160 185 158 190 168 L188 258 C181 267 170 262 166 250 Z',
-      'M213 168 C205 160 195 158 190 168 L192 258 C199 267 210 262 214 250 Z',
-      'M142 164 C156 182 163 224 152 263 C134 244 126 193 134 170 Z',
-      'M238 164 C224 182 217 224 228 263 C246 244 254 193 246 170 Z',
+      'M173 170 C178 162 185 159 190 166 L189 259 C183 265 176 262 172 252 Z',
+      'M207 170 C202 162 195 159 190 166 L191 259 C197 265 204 262 208 252 Z',
+      'M145 165 C157 181 164 214 160 249 C151 261 140 261 132 249 C131 221 135 186 145 165 Z',
+      'M235 165 C223 181 216 214 220 249 C229 261 240 261 248 249 C249 221 245 186 235 165 Z',
     ],
   },
   {
@@ -1117,20 +1190,20 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['quad', 'quadriceps', 'knee', 'thigh', '股四头肌', '大腿'],
     callout: { from: [226, 346], elbow: [278, 368], label: [300, 372], side: 'right' },
     paths: [
-      'M138 272 C162 286 164 364 148 436 C127 408 120 313 130 280 Z',
-      'M242 272 C218 286 216 364 232 436 C253 408 260 313 250 280 Z',
-      'M170 278 C185 302 185 380 175 440 C157 392 158 314 163 281 Z',
-      'M210 278 C195 302 195 380 205 440 C223 392 222 314 217 281 Z',
+      'M136 274 C154 286 162 320 160 372 C158 408 151 435 141 446 C129 424 125 308 130 280 Z',
+      'M244 274 C226 286 218 320 220 372 C222 408 229 435 239 446 C251 424 255 308 250 280 Z',
+      'M166 282 C177 304 179 349 176 396 C173 420 168 438 162 446 C156 416 156 316 161 286 Z',
+      'M214 282 C203 304 201 349 204 396 C207 420 212 438 218 446 C224 416 224 316 219 286 Z',
     ],
   },
   {
     key: 'calves-front',
-    label: { en: 'Calves', zh: '小腿' },
-    tokens: ['calf', 'calves', 'shin', 'tibialis', 'ankle', '小腿', '胫骨', '踝'],
+    label: { en: 'Shins', zh: '胫骨前肌' },
+    tokens: ['shin', 'shins', 'tibialis', 'ankle', '胫骨', '胫骨前肌', '踝'],
     callout: { from: [230, 462], elbow: [278, 480], label: [300, 480], side: 'right' },
     paths: [
-      'M145 436 C162 450 160 504 150 532 C134 508 132 458 140 440 Z',
-      'M235 436 C218 450 220 504 230 532 C246 508 248 458 240 440 Z',
+      'M145 438 C158 452 160 486 154 520 C148 528 140 524 136 512 C133 484 136 452 141 441 Z',
+      'M235 438 C222 452 220 486 226 520 C232 528 240 524 244 512 C247 484 244 452 239 441 Z',
     ],
   },
 
@@ -1139,159 +1212,328 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     key: 'trapezius',
     label: { en: 'Traps', zh: '斜方肌' },
     tokens: ['trapezius', 'trap', '斜方肌'],
-    callout: { from: [542, 112], elbow: [604, 96], label: [624, 86], side: 'right' },
+    callout: { from: [542, 112], elbow: [616, 96], label: [630, 86], side: 'left' },
     paths: [
-      'M488 90 C508 106 522 128 533 156 C510 149 484 136 464 114 C470 102 478 94 488 90 Z',
-      'M572 90 C552 106 538 128 527 156 C550 149 576 136 596 114 C590 102 582 94 572 90 Z',
-      'M503 108 C515 130 521 160 523 188 C506 172 490 136 490 110 Z',
-      'M557 108 C545 130 539 160 537 188 C554 172 570 136 570 110 Z',
+      'M494 90 C517 102 529 122 536 149 C521 151 503 146 482 131 C480 113 484 99 494 90 Z',
+      'M566 90 C543 102 531 122 524 149 C539 151 557 146 578 131 C580 113 576 99 566 90 Z',
+      'M508 108 C519 126 524 154 524 185 C510 172 499 138 496 111 Z',
+      'M552 108 C541 126 536 154 536 185 C550 172 561 138 564 111 Z',
+    ],
+    highlightPaths: [
+      'M502 104 C516 111 526 128 530 150 C520 150 507 144 494 133 C493 120 496 110 502 104 Z',
+      'M558 104 C544 111 534 128 530 150 C540 150 553 144 566 133 C567 120 564 110 558 104 Z',
+      'M516 128 C524 145 526 166 524 184 C514 172 507 149 506 131 Z',
+      'M544 128 C536 145 534 166 536 184 C546 172 553 149 554 131 Z',
+    ],
+    markers: [
+      { cx: 516, cy: 128, rx: 4.4, ry: 4.4 },
+      { cx: 544, cy: 128, rx: 4.4, ry: 4.4 },
+      { cx: 526, cy: 166, rx: 3.7, ry: 5 },
+      { cx: 534, cy: 166, rx: 3.7, ry: 5 },
     ],
   },
   {
     key: 'shoulders-back',
     label: { en: 'Shoulders', zh: '肩' },
     tokens: ['shoulder', 'deltoid', 'infraspinatus', '肩', '三角肌', '冈下肌'],
-    callout: { from: [594, 154], elbow: [636, 144], label: [658, 134], side: 'right' },
+    callout: { from: [594, 154], elbow: [620, 144], label: [630, 134], side: 'left' },
     paths: [
-      'M464 134 C490 120 516 134 518 162 C492 170 470 162 459 145 Z',
-      'M596 134 C570 120 544 134 542 162 C568 170 590 162 601 145 Z',
+      'M463 136 C482 125 504 132 514 154 C510 168 495 172 473 167 C462 157 458 146 463 136 Z',
+      'M597 136 C578 125 556 132 546 154 C550 168 565 172 587 167 C598 157 602 146 597 136 Z',
+    ],
+    highlightPaths: [
+      'M466 143 C482 134 500 139 509 155 C505 166 492 168 476 164 C467 157 464 149 466 143 Z',
+      'M594 143 C578 134 560 139 551 155 C555 166 568 168 584 164 C593 157 596 149 594 143 Z',
+    ],
+    markers: [
+      { cx: 488, cy: 154, rx: 5.4, ry: 4.2 },
+      { cx: 572, cy: 154, rx: 5.4, ry: 4.2 },
     ],
   },
   {
     key: 'lats',
-    label: { en: 'Upper Back', zh: '上背' },
+    label: { en: 'Lats', zh: '背阔肌' },
     tokens: ['lat', 'lats', 'back', 'latissimus', '背阔肌', '背', 'upper back'],
-    callout: { from: [592, 224], elbow: [640, 240], label: [662, 240], side: 'right' },
+    callout: { from: [592, 224], elbow: [620, 240], label: [630, 240], side: 'left' },
     paths: [
-      'M462 162 C491 176 508 220 501 274 C470 254 452 196 457 168 Z',
-      'M598 162 C569 176 552 220 559 274 C590 254 608 196 603 168 Z',
+      'M465 165 C490 178 504 208 504 245 C494 264 475 274 456 268 C451 230 454 186 465 165 Z',
+      'M595 165 C570 178 556 208 556 245 C566 264 585 274 604 268 C609 230 606 186 595 165 Z',
+    ],
+    highlightPaths: [
+      'M478 176 C494 187 503 211 501 238 C493 252 477 259 464 254 C462 222 466 192 478 176 Z',
+      'M582 176 C566 187 557 211 559 238 C567 252 583 259 596 254 C598 222 594 192 582 176 Z',
+    ],
+    markers: [
+      { cx: 484, cy: 214, rx: 5.2, ry: 8.4 },
+      { cx: 576, cy: 214, rx: 5.2, ry: 8.4 },
     ],
   },
   {
     key: 'triceps',
     label: { en: 'Triceps', zh: '肱三头肌' },
     tokens: ['triceps', 'arm', '肱三头肌', '手臂'],
-    callout: { from: [622, 208], elbow: [654, 210], label: [674, 210], side: 'right' },
+    callout: { from: [622, 208], elbow: [632, 210], label: [630, 210], side: 'left' },
     paths: [
-      'M436 152 C453 167 455 210 442 235 C428 214 424 170 431 156 Z',
-      'M624 152 C607 167 605 210 618 235 C632 214 636 170 629 156 Z',
+      'M437 154 C451 168 454 194 450 219 C445 231 435 232 428 221 C425 201 427 171 432 158 Z',
+      'M623 154 C609 168 606 194 610 219 C615 231 625 232 632 221 C635 201 633 171 628 158 Z',
+    ],
+    highlightPaths: [
+      'M434 171 C445 181 447 200 441 218 C432 210 427 189 428 175 Z',
+      'M626 171 C615 181 613 200 619 218 C628 210 633 189 632 175 Z',
+    ],
+    markers: [
+      { cx: 440, cy: 194, rx: 3.6, ry: 6.8 },
+      { cx: 620, cy: 194, rx: 3.6, ry: 6.8 },
     ],
   },
   {
     key: 'forearms-back',
     label: { en: 'Forearms', zh: '前臂' },
     tokens: ['forearm', 'wrist', '前臂', '手腕'],
-    callout: { from: [624, 262], elbow: [658, 270], label: [680, 270], side: 'right' },
+    callout: { from: [624, 262], elbow: [632, 270], label: [630, 270], side: 'left' },
     paths: [
-      'M425 228 C440 238 440 278 424 308 C410 290 408 248 419 230 Z',
-      'M635 228 C620 238 620 278 636 308 C650 290 652 248 641 230 Z',
+      'M424 229 C435 238 437 260 433 286 C428 300 420 308 412 304 C409 279 412 244 418 232 Z',
+      'M636 229 C625 238 623 260 627 286 C632 300 640 308 648 304 C651 279 648 244 642 232 Z',
+    ],
+    highlightPaths: [
+      'M413 235 C423 244 426 265 422 286 C413 280 407 256 407 240 Z',
+      'M647 235 C637 244 634 265 638 286 C647 280 653 256 653 240 Z',
+    ],
+    markers: [
+      { cx: 424, cy: 266, rx: 3.4, ry: 7.2 },
+      { cx: 636, cy: 266, rx: 3.4, ry: 7.2 },
     ],
   },
   {
     key: 'lower-back',
     label: { en: 'Lower Back', zh: '下背' },
     tokens: ['spine', 'erector', 'lower back', '竖脊肌', '腰'],
-    callout: { from: [530, 240], elbow: [598, 274], label: [622, 278], side: 'right' },
+    callout: { from: [530, 240], elbow: [612, 274], label: [630, 278], side: 'left' },
     paths: [
-      'M516 158 C526 192 526 252 518 300 C507 262 507 198 512 162 Z',
-      'M544 158 C534 192 534 252 542 300 C553 262 553 198 548 162 Z',
+      'M520 160 C527 192 528 232 523 284 C516 298 508 295 505 279 C505 233 508 191 514 163 Z',
+      'M540 160 C533 192 532 232 537 284 C544 298 552 295 555 279 C555 233 552 191 546 163 Z',
+    ],
+    highlightPaths: [
+      'M516 181 C525 209 526 248 522 280 C517 290 511 288 508 276 C508 236 511 204 516 181 Z',
+      'M544 181 C535 209 534 248 538 280 C543 290 549 288 552 276 C552 236 549 204 544 181 Z',
+    ],
+    markers: [
+      { cx: 518, cy: 228, rx: 4, ry: 8.4 },
+      { cx: 542, cy: 228, rx: 4, ry: 8.4 },
     ],
   },
   {
     key: 'glutes',
     label: { en: 'Glutes', zh: '臀部' },
     tokens: ['glute', 'hip', 'posterior chain', '臀'],
-    callout: { from: [566, 326], elbow: [632, 340], label: [656, 344], side: 'right' },
+    callout: { from: [566, 326], elbow: [612, 340], label: [630, 344], side: 'left' },
+    posteriorAlignmentTransform: POSTERIOR_GLUTE_REGION_ALIGNMENT_TRANSFORM,
     paths: [
-      'M467 290 C494 273 522 286 530 322 C514 352 480 354 458 328 C458 310 461 298 467 290 Z',
-      'M593 290 C566 273 538 286 530 322 C546 352 580 354 602 328 C602 310 599 298 593 290 Z',
+      'M502 300 C515 291 526 298 529 318 C524 333 513 341 500 338 C493 326 494 309 502 300 Z',
+      'M550 300 C540 291 532 298 531 318 C535 333 544 340 556 337 C562 326 560 309 550 300 Z',
+    ],
+    highlightPaths: [
+      'M506 304 C516 298 525 303 527 318 C523 329 514 335 504 333 C499 323 500 310 506 304 Z',
+      'M554 304 C544 298 535 303 533 318 C537 329 546 335 556 333 C561 323 560 310 554 304 Z',
+    ],
+    fibers: [
+      'M508 313 C516 307 523 309 526 318',
+      'M534 318 C538 309 545 307 552 313',
+      'M505 326 C512 332 520 333 527 326',
+      'M533 326 C541 333 549 332 555 326',
+    ],
+    markers: [
+      { cx: 520, cy: 321, rx: 4, ry: 4 },
+      { cx: 548, cy: 321, rx: 4, ry: 4 },
     ],
   },
   {
     key: 'hamstrings',
     label: { en: 'Hamstrings', zh: '腘绳肌' },
     tokens: ['hamstring', 'posterior thigh', 'posterior chain', '腘绳肌', '大腿'],
-    callout: { from: [576, 396], elbow: [632, 406], label: [656, 406], side: 'right' },
+    callout: { from: [576, 396], elbow: [612, 406], label: [630, 406], side: 'left' },
+    posteriorAlignmentTransform: POSTERIOR_LEG_REGION_ALIGNMENT_TRANSFORM,
     paths: [
-      'M470 340 C498 358 500 436 482 478 C458 448 450 372 461 346 Z',
-      'M590 340 C562 358 560 436 578 478 C602 448 610 372 599 346 Z',
-      'M502 344 C518 368 517 434 506 482 C490 436 491 368 497 347 Z',
-      'M558 344 C542 368 543 434 554 482 C570 436 569 368 563 347 Z',
+      'M512 346 C526 360 529 394 525 440 C522 456 516 469 508 473 C501 450 504 379 511 350 Z',
+      'M537 350 C547 371 547 405 542 450 C539 464 533 474 526 478 C522 450 524 378 532 352 Z',
+      'M547 350 C540 371 540 405 545 450 C548 464 554 474 561 478 C565 450 563 378 556 352 Z',
+      'M574 346 C562 360 558 394 563 440 C567 456 574 469 582 473 C587 450 584 379 576 350 Z',
+    ],
+    highlightPaths: [
+      'M512 354 C523 365 524 396 520 435 C518 449 513 460 508 464 C504 440 506 378 512 354 Z',
+      'M532 356 C542 376 541 407 537 444 C535 456 531 466 526 470 C523 445 526 380 532 356 Z',
+      'M556 356 C546 376 547 407 551 444 C553 456 557 466 562 470 C565 445 562 380 556 356 Z',
+      'M574 354 C563 365 562 396 566 435 C568 449 573 460 578 464 C582 440 580 378 574 354 Z',
+    ],
+    fibers: [
+      'M516 358 C520 385 519 421 513 456',
+      'M531 360 C535 389 534 426 528 462',
+      'M551 360 C548 389 549 426 556 462',
+      'M570 358 C566 385 567 421 576 456',
+    ],
+    markers: [
+      { cx: 524, cy: 382, rx: 4, ry: 4 },
+      { cx: 532, cy: 430, rx: 4, ry: 4 },
+      { cx: 554, cy: 382, rx: 4, ry: 4 },
+      { cx: 566, cy: 430, rx: 4, ry: 4 },
     ],
   },
   {
     key: 'gastrocnemius',
     label: { en: 'Calves', zh: '小腿' },
     tokens: ['calf', 'calves', 'gastrocnemius', 'soleus', 'ankle', '小腿', '腓肠肌', '踝'],
-    callout: { from: [576, 490], elbow: [630, 508], label: [654, 508], side: 'right' },
+    callout: { from: [576, 490], elbow: [612, 508], label: [630, 508], side: 'left' },
+    posteriorAlignmentTransform: POSTERIOR_LEG_REGION_ALIGNMENT_TRANSFORM,
     paths: [
-      'M476 468 C496 481 495 527 481 549 C463 530 460 490 470 470 Z',
-      'M584 468 C564 481 565 527 579 549 C597 530 600 490 590 470 Z',
+      'M528 470 C540 482 541 508 535 532 C530 542 523 545 517 536 C514 512 516 486 522 472 Z',
+      'M565 470 C556 482 555 508 561 532 C566 542 573 545 579 536 C581 512 579 486 574 472 Z',
+    ],
+    highlightPaths: [
+      'M524 478 C535 490 536 510 531 530 C527 538 522 540 518 533 C516 512 518 490 524 478 Z',
+      'M568 478 C558 490 557 510 562 530 C566 538 571 540 575 533 C577 512 575 490 568 478 Z',
+    ],
+    fibers: [
+      'M526 476 C532 492 532 514 526 535',
+      'M537 478 C540 497 539 517 533 536',
+      'M563 478 C560 497 561 517 567 536',
+      'M573 476 C568 492 568 514 574 535',
+    ],
+    markers: [
+      { cx: 528, cy: 494, rx: 4, ry: 4 },
+      { cx: 532, cy: 524, rx: 4, ry: 4 },
+      { cx: 566, cy: 494, rx: 4, ry: 4 },
+      { cx: 570, cy: 524, rx: 4, ry: 4 },
     ],
   },
 ];
 
-function resolveReferenceBodyMeasureRegions(focusMuscles) {
+function resolveReferenceBodyMeasureRegionKeys(focusMuscles) {
   const normalizedFocus = (focusMuscles || [])
     .map((muscle) => String(muscle || '').toLowerCase())
     .join(' ');
-  const matched = REFERENCE_BODY_MEASURE_REGIONS
+  return REFERENCE_BODY_MEASURE_REGIONS
     .filter((region) => region.tokens.some((token) => normalizedFocus.includes(token.toLowerCase())))
     .map((region) => region.key);
+}
+
+function resolveReferenceBodyMeasureRegions(focusMuscles) {
+  const matched = resolveReferenceBodyMeasureRegionKeys(focusMuscles);
   return new Set(matched.length ? matched : ['glutes', 'hamstrings', 'gastrocnemius', 'abdominals']);
 }
 
-function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStats, copy, compact = false }) {
+function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStats, copy, inspection = new Map(), compact = false }) {
   const planRegions = resolveReferenceBodyMeasureRegions(focusMuscles);
   const [hoveredRegionKey, setHoveredRegionKey] = useState(null);
   const [selectedRegionKey, setSelectedRegionKey] = useState(null);
   const focusRegionKey = hoveredRegionKey || selectedRegionKey;
-  const highlightedRegions = new Set(planRegions);
-  if (focusRegionKey) highlightedRegions.add(focusRegionKey);
+  const toggleSelectedRegion = useCallback((regionKey) => {
+    setSelectedRegionKey((current) => (current === regionKey ? null : regionKey));
+  }, []);
+  const handleRegionKeyDown = useCallback((event, regionKey) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggleSelectedRegion(regionKey);
+      return;
+    }
+    if (event.key === 'Escape') {
+      setHoveredRegionKey(null);
+      setSelectedRegionKey(null);
+    }
+  }, [toggleSelectedRegion]);
+  const highlightedRegions = selectedRegionKey ? new Set([selectedRegionKey]) : new Set();
+  const bodyMeasureCopy = copy || {};
   const activeRegionLabels = REFERENCE_BODY_MEASURE_REGIONS
-    .filter((region) => highlightedRegions.has(region.key))
+    .filter((region) => (focusRegionKey ? region.key === focusRegionKey : planRegions.has(region.key)))
     .map((region) => region.label[isZh ? 'zh' : 'en']);
+  const planRegionOptions = REFERENCE_BODY_MEASURE_REGIONS.filter((region) => planRegions.has(region.key));
+  const focusedRegion = REFERENCE_BODY_MEASURE_REGIONS.find((region) => region.key === focusRegionKey);
+  const focusedRegionLabel = focusedRegion?.label?.[isZh ? 'zh' : 'en'] || activeRegionLabels[0] || bodyMeasureCopy.interactionHint;
+  const focusedInspection = focusRegionKey ? inspection.get(focusRegionKey) : null;
+  const focusedInspectionExercises = focusedInspection?.exercises || [];
+  const focusedInspectionSummary = focusedInspectionExercises.length
+    ? focusedInspectionExercises.map((item) => item.name).slice(0, 3).join(' / ')
+    : bodyMeasureCopy.inspectHint;
   const loadScore = Math.min(100, Math.round(((weekDoseStats?.planned || 0) / Math.max(weekDoseStats?.recommended || 1, 1)) * 100));
   const acwrScore = weekContext?.acwr == null ? 50 : Math.min(100, Math.max(12, Math.round(weekContext.acwr * 70)));
-  const bodyMeasureCopy = copy || {};
   const atlasClassName = [
     'muscle-map-card',
     'mt-body-measure-atlas',
+    'mt-body-clinical-atlas',
+    'mt-body-real-human-atlas',
     'mt-body-medical-atlas',
     'mt-body-lean-runner-atlas',
     compact ? 'mt-body-measure-atlas--compact' : '',
   ].filter(Boolean).join(' ');
 
-  const labelStyle = (region) => ({
-    '--label-x': `${(region.callout.label[0] / REFERENCE_BODY_MEASURE_VIEWBOX.width) * 100}%`,
-    '--label-y': `${(region.callout.label[1] / REFERENCE_BODY_MEASURE_VIEWBOX.height) * 100}%`,
-  });
-
   const renderRegion = (region) => {
     const isPlanActive = planRegions.has(region.key);
-    const isFocused = focusRegionKey === region.key;
+    const isFocused = hoveredRegionKey === region.key;
+    const isPosteriorRegion = region.callout.from[0] > REFERENCE_BODY_MEASURE_VIEWBOX.width / 2;
+    const posteriorRegionTransform = isPosteriorRegion ? getPosteriorRegionAlignmentTransform(region) : undefined;
+    const hasCalibratedPosteriorHighlight = isPosteriorRegion && Boolean(region.highlightPaths?.length);
+    const visibleRegionPaths = hasCalibratedPosteriorHighlight ? region.highlightPaths : region.paths;
+    const hitTargetPaths = hasCalibratedPosteriorHighlight ? visibleRegionPaths : region.paths;
+    const regionLabel = region.label[isZh ? 'zh' : 'en'];
+    const regionInspection = inspection.get(region.key);
+    const regionExerciseNames = (regionInspection?.exercises || []).map((item) => item.name).slice(0, 2).join(' / ');
+    const regionAriaLabel = regionExerciseNames
+      ? `${regionLabel}, ${bodyMeasureCopy.trainedByLabel || ''} ${regionExerciseNames}`.trim()
+      : regionLabel;
     return (
       <g
         key={region.key}
-        className={`mt-body-measure-region${highlightedRegions.has(region.key) ? ' is-active' : ''}${isPlanActive ? ' is-plan-active' : ''}${isFocused ? ' is-focused' : ''}`}
+        className={`mt-body-measure-region${highlightedRegions.has(region.key) ? ' is-active' : ''}${isPlanActive ? ' is-plan-active' : ''}${regionInspection?.exercises?.length ? ' is-trainable' : ''}${isFocused ? ' is-focused' : ''}`}
         data-region={region.key}
+        data-training-count={regionInspection?.exercises?.length || 0}
+        data-view={isPosteriorRegion ? 'posterior' : 'anterior'}
+        data-highlight-geometry={hasCalibratedPosteriorHighlight ? 'posterior-calibrated' : undefined}
+        transform={posteriorRegionTransform}
+        clipPath={isPosteriorRegion ? 'url(#mtBodyPosteriorPlate)' : 'url(#mtBodyClinicalClip)'}
+        role="button"
+        tabIndex={0}
+        aria-label={regionAriaLabel}
+        aria-pressed={selectedRegionKey === region.key}
+        onMouseEnter={() => setHoveredRegionKey(region.key)}
+        onMouseLeave={() => setHoveredRegionKey(null)}
+        onFocus={() => setHoveredRegionKey(region.key)}
+        onBlur={() => setHoveredRegionKey(null)}
+        onClick={() => toggleSelectedRegion(region.key)}
+        onKeyDown={(event) => handleRegionKeyDown(event, region.key)}
       >
-        {region.paths.map((d, index) => <path key={`${region.key}-path-${index}`} d={d} />)}
+        {hitTargetPaths.map((d, index) => (
+          <path
+            key={`${region.key}-hit-${index}`}
+            className="mt-body-measure-hit-target"
+            d={d}
+            aria-hidden="true"
+          />
+        ))}
+        {visibleRegionPaths.map((d, index) => (
+          <path
+            key={`${region.key}-path-${index}`}
+            className={hasCalibratedPosteriorHighlight ? 'mt-body-posterior-highlight-path' : undefined}
+            d={d}
+          />
+        ))}
         {(region.fibers || []).map((d, index) => <path key={`${region.key}-fiber-${index}`} d={d} className="mt-body-muscle-fiber" />)}
       </g>
     );
   };
 
-  const renderCallout = (region) => {
-    const points = `M${region.callout.from[0]} ${region.callout.from[1]} L${region.callout.elbow[0]} ${region.callout.elbow[1]} L${region.callout.label[0]} ${region.callout.label[1]}`;
+  const renderRegionBed = (region) => {
+    const isPosteriorRegion = region.callout.from[0] > REFERENCE_BODY_MEASURE_VIEWBOX.width / 2;
+    const posteriorRegionTransform = isPosteriorRegion ? getPosteriorRegionAlignmentTransform(region) : undefined;
     return (
       <g
-        key={`${region.key}-callout`}
-        className={`mt-body-measure-callout${highlightedRegions.has(region.key) ? ' is-active' : ''}`}
+        key={`${region.key}-bed`}
+        className="mt-body-measure-region-bed"
         data-region={region.key}
+        data-view={isPosteriorRegion ? 'posterior' : 'anterior'}
+        transform={posteriorRegionTransform}
+        clipPath={isPosteriorRegion ? 'url(#mtBodyPosteriorPlate)' : undefined}
+        aria-hidden="true"
       >
-        <path d={points} />
-        <circle cx={region.callout.from[0]} cy={region.callout.from[1]} r="2.4" />
+        {region.paths.map((d, index) => <path key={`${region.key}-bed-path-${index}`} d={d} />)}
       </g>
     );
   };
@@ -1328,6 +1570,16 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
               <stop offset="42%" stopColor="#c94631" stopOpacity="0.96" />
               <stop offset="100%" stopColor="#7f241d" stopOpacity="0.94" />
             </linearGradient>
+            <linearGradient id="mtBodyHumanFascia" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#eaa184" stopOpacity="0.94" />
+              <stop offset="40%" stopColor="#bf553f" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#7d241c" stopOpacity="0.88" />
+            </linearGradient>
+            <radialGradient id="mtBodyHumanMusclePlate" cx="48%" cy="26%" r="78%">
+              <stop offset="0%" stopColor="#f7b197" stopOpacity="0.86" />
+              <stop offset="48%" stopColor="#b9412f" stopOpacity="0.82" />
+              <stop offset="100%" stopColor="#641812" stopOpacity="0.78" />
+            </radialGradient>
             <radialGradient id="mtBodyMuscleBelly" cx="42%" cy="24%" r="76%">
               <stop offset="0%" stopColor="#ffc0a5" stopOpacity="0.96" />
               <stop offset="44%" stopColor="#db5f41" stopOpacity="0.94" />
@@ -1346,23 +1598,74 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
               <path d="M-4 10 C4 4 12 18 26 8" fill="none" stroke="#ffe4d8" strokeOpacity="0.2" strokeWidth="1.1" />
               <path d="M-2 18 C7 12 14 26 28 16" fill="none" stroke="#7b2017" strokeOpacity="0.12" strokeWidth="0.7" />
             </pattern>
+            <clipPath id="mtBodyClinicalClip" clipPathUnits="userSpaceOnUse">
+              <path d={REFERENCE_BODY_MEASURE_FRONT_OUTLINE} />
+              <g transform={POSTERIOR_SVG_ALIGNMENT_TRANSFORM}>
+                <path d={REFERENCE_BODY_MEASURE_BACK_OUTLINE} />
+              </g>
+            </clipPath>
+            <clipPath id="mtBodyAnteriorPlate" clipPathUnits="userSpaceOnUse">
+              <rect x="58" y="42" width="264" height="508" rx="32" />
+            </clipPath>
+            <clipPath id="mtBodyPosteriorPlate" clipPathUnits="userSpaceOnUse">
+              <rect x="391.8" y="42" width="383.1" height="508" rx="32" />
+            </clipPath>
           </defs>
+
+          <g className="mt-body-clinical-frame" aria-hidden="true">
+            <rect x="58" y="42" width="264" height="508" rx="32" />
+            <rect x="391.8" y="42" width="383.1" height="508" rx="32" />
+            <path d="M78 84 H128 M252 84 H302 M78 508 H128 M252 508 H302" />
+            <path d="M412 84 H462 M705 84 H755 M412 508 H462 M705 508 H755" />
+            <path className="mt-body-clinical-axis" d="M190 70 V534 M570 70 V534" />
+          </g>
 
           {/* ── FRONT FIGURE ─────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.anterior}>
             <text x="190" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.anterior}</text>
+            <g className="mt-body-reference-image-layer" aria-hidden="true">
+              <image
+                href={anatomyAnteriorGray}
+                x="58"
+                y="42"
+                width="264"
+                height="508"
+                data-align-level="shared-anatomy-baseline"
+                data-visual-scale="frame-contained-slice"
+                preserveAspectRatio="xMidYMid slice"
+                clipPath="url(#mtBodyAnteriorPlate)"
+                className="mt-body-reference-image"
+              />
+            </g>
             <g className="mt-body-figure-clean" aria-hidden="true">
               {/* single coherent body silhouette — anterior */}
               <path
                 className="mt-ref-body-outline"
-                d="M190 38 C205 38 215 51 213 68 C211 85 203 98 196 106 L197 116 C213 119 230 127 243 140 C264 146 280 170 287 200 C294 236 292 272 284 301 C279 317 272 322 266 313 C261 307 265 279 264 250 C263 216 255 182 240 163 C235 179 234 218 228 256 C224 282 218 300 209 310 C220 349 224 396 221 438 C218 477 214 511 208 534 C205 544 195 541 195 528 C192 492 191 454 190 420 C189 454 188 492 185 528 C185 541 175 544 172 534 C166 511 162 477 159 438 C156 396 160 349 171 310 C162 300 156 282 152 256 C146 218 145 179 140 163 C125 182 117 216 116 250 C115 279 119 307 114 313 C108 322 101 317 96 301 C88 272 86 236 93 200 C100 170 116 146 137 140 C150 127 167 119 183 116 L184 106 C177 98 169 85 167 68 C165 51 175 38 190 38 Z"
+                d={REFERENCE_BODY_MEASURE_FRONT_OUTLINE}
               />
+              <g className="mt-body-human-landmarks mt-body-human-landmarks--front">
+                <path className="mt-body-cranial-landmark" d="M177 66 C181 88 199 88 203 66" />
+                <path className="mt-body-cranial-landmark" d="M181 58 C185 55 195 55 199 58" />
+                <path className="mt-body-cranial-landmark" d="M190 61 L189 78" />
+                <path className="mt-body-cranial-landmark" d="M183 87 C187 90 193 90 197 87" />
+                <path className="mt-body-anatomy-landmark" d="M156 132 C168 126 181 126 190 135 C199 126 212 126 224 132" />
+                <path className="mt-body-anatomy-landmark" d="M142 150 C158 158 176 161 190 161 C204 161 222 158 238 150" />
+                <path className="mt-body-anatomy-landmark" d="M190 166 L190 282" />
+                <path className="mt-body-anatomy-landmark" d="M174 186 C182 191 198 191 206 186" />
+                <path className="mt-body-anatomy-landmark" d="M172 205 L208 205 M173 228 L207 228 M175 250 L205 250" />
+                <path className="mt-body-anatomy-landmark" d="M157 176 C164 205 164 238 155 263" />
+                <path className="mt-body-anatomy-landmark" d="M223 176 C216 205 216 238 225 263" />
+                <path className="mt-body-anatomy-landmark" d="M160 296 C171 307 181 313 190 314 C199 313 209 307 220 296" />
+                <path className="mt-body-anatomy-landmark" d="M166 322 C174 356 174 394 169 426 M214 322 C206 356 206 394 211 426" />
+                <path className="mt-body-anatomy-landmark" d="M150 405 C158 414 167 418 176 417 M204 417 C213 418 222 414 230 405" />
+                <path className="mt-body-anatomy-landmark" d="M146 511 C152 518 160 520 168 517 M212 517 C220 520 228 518 234 511" />
+              </g>
               {/* hands */}
-              <path className="mt-ref-hand" d="M82 294 C76 301 74 311 78 319 C82 322 86 316 87 308 C89 315 93 321 97 318 C97 308 93 298 88 294 Z" />
-              <path className="mt-ref-hand" d="M298 294 C304 301 306 311 302 319 C298 322 294 316 293 308 C291 315 287 321 283 318 C283 308 287 298 292 294 Z" />
+              <path className="mt-ref-hand" d="M88 292 C81 299 78 307 80 315 C82 322 86 321 88 313 C89 322 94 324 96 316 C98 322 103 320 103 311 C104 302 98 294 92 290 Z" />
+              <path className="mt-ref-hand" d="M292 292 C299 299 302 307 300 315 C298 322 294 321 292 313 C291 322 286 324 284 316 C282 322 277 320 277 311 C276 302 282 294 288 290 Z" />
               {/* feet */}
-              <path className="mt-ref-foot" d="M140 543 C130 548 120 550 114 547 C118 540 131 535 144 536 Z" />
-              <path className="mt-ref-foot" d="M240 543 C250 548 260 550 266 547 C262 540 249 535 236 536 Z" />
+              <path className="mt-ref-foot" d="M154 541 C143 544 133 549 127 555 C139 557 153 555 164 548 C164 543 160 540 154 541 Z" />
+              <path className="mt-ref-foot" d="M226 541 C237 544 247 549 253 555 C241 557 227 555 216 548 C216 543 220 540 226 541 Z" />
               {/* internal muscle contour lines — anterior */}
               <path className="mt-body-figure-contour" d="M175 97 C179 108 184 116 190 119 C196 116 201 108 205 97" />
               <path className="mt-body-figure-contour" d="M143 130 C157 123 177 121 190 133 C203 121 223 123 237 130" />
@@ -1380,18 +1683,46 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           {/* ── BACK FIGURE ──────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.posterior}>
             <text x="570" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.posterior}</text>
-            <g className="mt-body-figure-clean" aria-hidden="true">
+            <g className="mt-body-reference-image-layer" transform={POSTERIOR_RASTER_ALIGNMENT_TRANSFORM} aria-hidden="true">
+              <image
+                href={anatomyPosteriorGray}
+                x="411.12"
+                y="59.4"
+                width="370.2"
+                height="491.2"
+                data-align-level="shared-anatomy-baseline"
+                data-crop-align="posterior-body-axis-fitted"
+                data-visual-scale="posterior-matched-person-grid-fit"
+                preserveAspectRatio="xMidYMid meet"
+                clipPath="url(#mtBodyPosteriorPlate)"
+                className="mt-body-reference-image"
+              />
+            </g>
+            <g className="mt-body-figure-clean" transform={POSTERIOR_SVG_ALIGNMENT_TRANSFORM} aria-hidden="true">
               {/* single coherent body silhouette — posterior */}
               <path
                 className="mt-ref-body-outline"
-                d="M570 38 C585 38 595 51 593 68 C591 85 583 98 576 106 L577 116 C593 119 610 127 623 140 C644 146 660 170 667 200 C674 236 672 272 664 301 C659 317 652 322 646 313 C641 307 645 279 644 250 C643 216 635 182 620 163 C615 179 614 218 608 256 C604 282 598 300 589 310 C600 349 604 396 601 438 C598 477 594 511 588 534 C585 544 575 541 575 528 C572 492 571 454 570 420 C569 454 568 492 565 528 C565 541 555 544 552 534 C546 511 542 477 539 438 C536 396 540 349 551 310 C542 300 536 282 532 256 C526 218 525 179 520 163 C505 182 497 216 496 250 C495 279 499 307 494 313 C488 322 481 317 476 301 C468 272 466 236 473 200 C480 170 496 146 517 140 C530 127 547 119 563 116 L564 106 C557 98 549 85 547 68 C545 51 555 38 570 38 Z"
+                d={REFERENCE_BODY_MEASURE_BACK_OUTLINE}
               />
+              <g className="mt-body-human-landmarks mt-body-human-landmarks--back">
+                <path className="mt-body-cranial-landmark" d="M557 66 C561 88 579 88 583 66" />
+                <path className="mt-body-cranial-landmark" d="M561 92 C566 97 574 97 579 92" />
+                <path className="mt-body-anatomy-landmark" d="M536 130 C548 124 562 127 570 142 C578 127 592 124 604 130" />
+                <path className="mt-body-anatomy-landmark" d="M570 114 L570 316" />
+                <path className="mt-body-anatomy-landmark" d="M515 158 C536 176 548 205 550 244 M625 158 C604 176 592 205 590 244" />
+                <path className="mt-body-anatomy-landmark" d="M538 172 C546 200 547 240 542 286 M602 172 C594 200 593 240 598 286" />
+                <path className="mt-body-anatomy-landmark" d="M510 194 C524 214 530 242 528 270 M630 194 C616 214 610 242 612 270" />
+                <path className="mt-body-anatomy-landmark" d="M520 302 C538 313 553 326 570 342 C587 326 602 313 620 302" />
+                <path className="mt-body-anatomy-landmark" d="M540 350 C550 382 550 424 544 462 M600 350 C590 382 590 424 596 462" />
+                <path className="mt-body-anatomy-landmark" d="M530 407 C540 416 550 420 560 418 M580 418 C590 420 600 416 610 407" />
+                <path className="mt-body-anatomy-landmark" d="M528 512 C535 519 544 521 552 518 M588 518 C596 521 605 519 612 512" />
+              </g>
               {/* hands */}
-              <path className="mt-ref-hand" d="M456 296 C450 303 448 313 452 321 C456 324 460 317 461 309 C463 317 467 323 471 320 C471 310 467 299 462 296 Z" />
-              <path className="mt-ref-hand" d="M684 296 C690 303 692 313 688 321 C684 324 680 317 679 309 C677 317 673 323 669 320 C669 310 673 299 678 296 Z" />
+              <path className="mt-ref-hand" d="M468 292 C461 299 458 307 460 315 C462 322 466 321 468 313 C469 322 474 324 476 316 C478 322 483 320 483 311 C484 302 478 294 472 290 Z" />
+              <path className="mt-ref-hand" d="M672 292 C679 299 682 307 680 315 C678 322 674 321 672 313 C671 322 666 324 664 316 C662 322 657 320 657 311 C656 302 662 294 668 290 Z" />
               {/* feet */}
-              <path className="mt-ref-foot" d="M510 549 C499 554 489 555 483 552 C487 545 500 540 514 541 Z" />
-              <path className="mt-ref-foot" d="M630 549 C641 554 651 555 657 552 C653 545 640 540 626 541 Z" />
+              <path className="mt-ref-foot" d="M534 541 C523 544 513 549 507 555 C519 557 533 555 544 548 C544 543 540 540 534 541 Z" />
+              <path className="mt-ref-foot" d="M606 541 C617 544 627 549 633 555 C621 557 607 555 596 548 C596 543 600 540 606 541 Z" />
               {/* internal muscle contour lines — posterior */}
               <path className="mt-body-figure-contour" d="M526 104 C540 126 552 158 558 192 M614 104 C600 126 588 158 582 192" />
               <path className="mt-body-figure-contour" d="M498 130 C521 121 542 131 570 158 C598 131 619 121 642 130" />
@@ -1405,36 +1736,65 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
             </g>
           </g>
 
+          <g className="mt-body-measure-region-bed-layer" aria-hidden="true" clipPath="url(#mtBodyClinicalClip)">
+            {REFERENCE_BODY_MEASURE_REGIONS.map(renderRegionBed)}
+          </g>
           {REFERENCE_BODY_MEASURE_REGIONS.map(renderRegion)}
-          {REFERENCE_BODY_MEASURE_REGIONS.map(renderCallout)}
+          <g className="mt-body-human-negative-space" aria-hidden="true">
+            <path d="M182 320 C186 362 187 460 184 540 C187 545 193 545 196 540 C193 460 194 362 198 320 C193 323 187 323 182 320 Z" />
+            <path d="M132 174 C121 208 116 254 119 292 C128 265 132 218 140 184 Z" />
+            <path d="M248 174 C259 208 264 254 261 292 C252 265 248 218 240 184 Z" />
+            <g transform={POSTERIOR_SVG_ALIGNMENT_TRANSFORM}>
+              <path d="M562 320 C566 362 567 460 564 540 C567 545 573 545 576 540 C573 460 574 362 578 320 C573 323 567 323 562 320 Z" />
+              <path d="M512 174 C501 208 496 254 499 292 C508 265 512 218 520 184 Z" />
+              <path d="M628 174 C639 208 644 254 641 292 C632 265 628 218 620 184 Z" />
+            </g>
+          </g>
           <line x1="380" y1="52" x2="380" y2="552" className="mt-body-measure-divider" />
         </svg>
-
-        {REFERENCE_BODY_MEASURE_REGIONS.map((region) => {
-          const isPlanActive = planRegions.has(region.key);
-          const isFocused = focusRegionKey === region.key;
-          const localeLabel = region.label[isZh ? 'zh' : 'en'];
-          return (
-            <button
-              key={`${region.key}-label`}
-              type="button"
-              className={`mt-body-measure-label is-${region.callout.side}${highlightedRegions.has(region.key) ? ' is-active' : ''}${isPlanActive ? ' is-plan-active' : ''}${isFocused ? ' is-focused' : ''}`}
-              data-region={region.key}
-              aria-pressed={selectedRegionKey === region.key}
-              style={labelStyle(region)}
-              onMouseEnter={() => setHoveredRegionKey(region.key)}
-              onMouseLeave={() => setHoveredRegionKey(null)}
-              onFocus={() => setHoveredRegionKey(region.key)}
-              onBlur={() => setHoveredRegionKey(null)}
-              onClick={() => setSelectedRegionKey((current) => (current === region.key ? null : region.key))}
-            >
-              {localeLabel}
-            </button>
-          );
-        })}
       </div>
 
       <div className="mt-body-measure-readout">
+        <div className="mt-body-measure-interaction" aria-live="polite">
+          <span>{focusRegionKey ? bodyMeasureCopy.selectedLabel : bodyMeasureCopy.interactionHint}</span>
+          <strong>{focusedRegionLabel}</strong>
+          <div className="mt-body-measure-region-plan">
+            <span>{focusedInspectionExercises.length ? bodyMeasureCopy.trainedByLabel : bodyMeasureCopy.planFocusLabel}</span>
+            <p>{focusedInspectionSummary}</p>
+            {focusedInspectionExercises.length > 0 && (
+              <ul>
+                {focusedInspectionExercises.slice(0, 3).map((item) => (
+                  <li key={`${item.name}-${item.prescription}`}>
+                    <strong>{item.name}</strong>
+                    <em>{item.prescription}</em>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+        <div className="mt-body-measure-region-pills" aria-label={bodyMeasureCopy.planFocusLabel}>
+          {planRegionOptions.map((region) => {
+            const regionLabel = region.label[isZh ? 'zh' : 'en'];
+            const isSelected = focusRegionKey === region.key;
+            return (
+              <button
+                key={`${region.key}-quick-pick`}
+                type="button"
+                className={isSelected ? 'is-selected' : ''}
+                data-region={region.key}
+                aria-pressed={selectedRegionKey === region.key}
+                onMouseEnter={() => setHoveredRegionKey(region.key)}
+                onMouseLeave={() => setHoveredRegionKey(null)}
+                onFocus={() => setHoveredRegionKey(region.key)}
+                onBlur={() => setHoveredRegionKey(null)}
+                onClick={() => toggleSelectedRegion(region.key)}
+              >
+                {regionLabel}
+              </button>
+            );
+          })}
+        </div>
         <div className="mt-body-measure-gauge">
           <span>{bodyMeasureCopy.loadLabel}</span>
           <strong>{loadScore}%</strong>
@@ -1450,8 +1810,14 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
   );
 }
 
-function ExerciseIllustration({ exerciseName }) {
-  const mode = resolveExerciseVisualKey(exerciseName);
+function ExerciseIllustration({ exerciseName, muscles = [], isZh = false }) {
+  const mode = resolveExerciseVisualKey(exerciseName, muscles);
+  const visibleMuscles = (muscles || []).filter(Boolean);
+  const muscleSummary = visibleMuscles.join(' / ') || 'Target muscles';
+  const trimSvgLabel = (value, maxLength = 18) => {
+    const label = String(value || '').trim();
+    return label.length > maxLength ? `${label.slice(0, maxLength - 3)}...` : label;
+  };
   const regions = {
     front: {
       abs: 'M52 56 C58 48 70 48 76 56 L73 88 C68 94 60 94 55 88 Z',
@@ -1482,17 +1848,156 @@ function ExerciseIllustration({ exerciseName }) {
   };
 
   const regionSets = {
-    deadbug: { frontPrimary: ['abs'], frontSecondary: ['obliqueLeft', 'obliqueRight', 'hipFlexorLeft', 'hipFlexorRight'], backSecondary: ['lowerBack'] },
-    core: { frontPrimary: ['abs', 'obliqueLeft', 'obliqueRight'], backSecondary: ['lowerBack'] },
-    bridge: { backPrimary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight'], frontSecondary: ['abs'] },
-    split: { frontPrimary: ['quadsLeft', 'quadsRight', 'adductorLeft', 'adductorRight'], backSecondary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight'] },
-    hinge: { backPrimary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight', 'lowerBack'], frontSecondary: ['abs'] },
-    calf: { backPrimary: ['calfLeft', 'calfRight'], frontSecondary: ['shinLeft', 'shinRight'] },
-    hop: { frontPrimary: ['quadsLeft', 'quadsRight', 'calfLeft', 'calfRight'], backSecondary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight'] },
-    standing: { frontPrimary: ['quadsLeft', 'quadsRight'], backSecondary: ['gluteLeft', 'gluteRight'] },
+    deadbug: {
+      focus: 'front',
+      frontPrimary: ['abs'],
+      frontSecondary: ['obliqueLeft', 'obliqueRight', 'hipFlexorLeft', 'hipFlexorRight'],
+      backSecondary: ['lowerBack'],
+      cue: 'Brace',
+    },
+    sideplank: {
+      focus: 'front',
+      frontPrimary: ['obliqueLeft', 'obliqueRight', 'abs'],
+      backSecondary: ['upperBackLeft', 'upperBackRight', 'lowerBack'],
+      cue: 'Lateral',
+    },
+    pallof: {
+      focus: 'front',
+      frontPrimary: ['abs', 'obliqueLeft', 'obliqueRight'],
+      backSecondary: ['lowerBack', 'upperBackLeft', 'upperBackRight'],
+      cue: 'Anti-rotation',
+    },
+    carry: {
+      focus: 'front',
+      frontPrimary: ['obliqueLeft', 'obliqueRight', 'abs'],
+      backPrimary: ['gluteLeft', 'gluteRight'],
+      backSecondary: ['lowerBack'],
+      cue: 'Carry',
+    },
+    bridge: {
+      focus: 'back',
+      backPrimary: ['gluteLeft', 'gluteRight'],
+      backSecondary: ['hamLeft', 'hamRight'],
+      frontSecondary: ['abs'],
+      cue: 'Hip drive',
+    },
+    hamstring: {
+      focus: 'back',
+      backPrimary: ['hamLeft', 'hamRight'],
+      backSecondary: ['gluteLeft', 'gluteRight', 'calfLeft', 'calfRight'],
+      cue: 'Curl',
+    },
+    split: {
+      focus: 'front',
+      frontPrimary: ['quadsLeft', 'quadsRight', 'adductorLeft', 'adductorRight'],
+      backSecondary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight'],
+      cue: 'Split stance',
+    },
+    stepdown: {
+      focus: 'front',
+      frontPrimary: ['quadsLeft', 'quadsRight'],
+      frontSecondary: ['adductorLeft', 'adductorRight'],
+      backPrimary: ['gluteLeft', 'gluteRight'],
+      cue: 'Knee line',
+    },
+    stretch: {
+      focus: 'front',
+      frontSecondary: ['hipFlexorLeft', 'hipFlexorRight', 'obliqueLeft', 'obliqueRight'],
+      backPrimary: ['gluteLeft', 'gluteRight'],
+      backSecondary: ['hamLeft', 'hamRight'],
+      cue: 'Open chain',
+    },
+    hinge: {
+      focus: 'back',
+      backPrimary: ['gluteLeft', 'gluteRight', 'hamLeft', 'hamRight', 'lowerBack'],
+      frontSecondary: ['abs'],
+      cue: 'Hinge',
+    },
+    balance: {
+      focus: 'back',
+      backPrimary: ['gluteLeft', 'gluteRight', 'lowerBack'],
+      frontSecondary: ['abs', 'obliqueLeft', 'obliqueRight'],
+      cue: 'Balance',
+    },
+    calf: {
+      focus: 'back',
+      backPrimary: ['calfLeft', 'calfRight'],
+      frontSecondary: ['shinLeft', 'shinRight'],
+      cue: 'Plantar flex',
+    },
+    shin: {
+      focus: 'front',
+      frontPrimary: ['shinLeft', 'shinRight'],
+      backSecondary: ['calfLeft', 'calfRight'],
+      cue: 'Toe lift',
+    },
+    ankle: {
+      focus: 'front',
+      frontPrimary: ['shinLeft', 'shinRight'],
+      frontSecondary: ['calfLeft', 'calfRight'],
+      backSecondary: ['calfLeft', 'calfRight'],
+      cue: 'Ankle range',
+    },
+    pogo: {
+      focus: 'back',
+      backPrimary: ['calfLeft', 'calfRight'],
+      frontSecondary: ['quadsLeft', 'quadsRight'],
+      cue: 'Elastic',
+    },
+    skip: {
+      focus: 'front',
+      frontPrimary: ['hipFlexorLeft', 'hipFlexorRight', 'quadsLeft', 'quadsRight'],
+      backSecondary: ['gluteLeft', 'gluteRight', 'calfLeft', 'calfRight'],
+      cue: 'Rhythm',
+    },
+    stepup: {
+      focus: 'front',
+      frontPrimary: ['quadsLeft', 'quadsRight', 'calfLeft', 'calfRight'],
+      backPrimary: ['gluteLeft', 'gluteRight'],
+      cue: 'Drive',
+    },
+    hop: {
+      focus: 'back',
+      backPrimary: ['calfLeft', 'calfRight', 'gluteLeft', 'gluteRight'],
+      frontSecondary: ['quadsLeft', 'quadsRight', 'abs'],
+      cue: 'Landing',
+    },
+    standing: {
+      focus: 'front',
+      frontPrimary: ['quadsLeft', 'quadsRight'],
+      backSecondary: ['gluteLeft', 'gluteRight'],
+      cue: 'Standing',
+    },
   };
 
   const active = regionSets[mode] || regionSets.standing;
+  const movementVectors = {
+    deadbug: ['M142 58 C158 44 179 44 194 58', 'M61 82 C72 69 83 69 94 82'],
+    sideplank: ['M52 66 C38 83 38 109 52 126', 'M174 66 C190 83 190 109 174 126'],
+    pallof: ['M52 78 C78 60 98 60 123 78', 'M128 78 C154 96 174 96 199 78'],
+    carry: ['M46 70 C38 92 39 122 48 145', 'M182 70 C190 92 189 122 180 145'],
+    bridge: ['M37 146 C55 126 78 124 99 142', 'M146 145 C166 126 190 126 210 144'],
+    hamstring: ['M61 144 C72 154 77 171 72 190', 'M166 144 C177 154 182 171 177 190'],
+    split: ['M62 128 C75 118 89 116 102 124', 'M151 128 C166 118 183 119 198 130'],
+    stepdown: ['M74 114 L91 132 L74 150', 'M158 113 L176 132 L158 151'],
+    stretch: ['M60 70 C91 54 125 58 153 80', 'M71 142 C101 126 135 127 164 144'],
+    hinge: ['M42 94 C70 72 90 79 101 116', 'M150 94 C178 72 198 79 209 116'],
+    balance: ['M43 112 C74 82 94 93 99 139', 'M151 112 C182 82 202 93 207 139'],
+    calf: ['M65 169 C72 155 80 155 87 169', 'M169 169 C176 155 184 155 191 169'],
+    shin: ['M67 158 C76 145 84 145 92 158', 'M157 158 C166 145 174 145 182 158'],
+    ankle: ['M58 183 C76 173 95 173 111 184', 'M145 183 C164 173 184 173 201 184'],
+    pogo: ['M62 174 C74 151 88 151 99 174', 'M153 174 C166 151 181 151 192 174'],
+    skip: ['M62 116 C77 97 93 97 105 117', 'M152 116 C168 97 184 97 197 117'],
+    stepup: ['M64 137 L88 113 L112 137', 'M145 137 L170 113 L198 137'],
+    hop: ['M67 171 C82 144 96 144 110 171', 'M147 171 C162 144 178 144 193 171'],
+    standing: ['M70 128 C84 117 96 117 110 128', 'M145 128 C160 117 174 117 190 128'],
+  };
+  const vectorPaths = movementVectors[mode] || movementVectors.standing;
+  const hasPrimaryOnFront = Boolean(active.frontPrimary?.length);
+  const hasPrimaryOnBack = Boolean(active.backPrimary?.length);
+  const primaryLabel = trimSvgLabel(visibleMuscles[0] || active.cue || 'Primary');
+  const secondaryLabel = trimSvgLabel(visibleMuscles[1] || 'Support');
+  const diagramTitle = `${normalizeExerciseName(exerciseName) || exerciseName} muscle diagram`;
 
   function renderRegions(side, names, tone) {
     return (names || []).map((name) => (
@@ -1501,11 +2006,13 @@ function ExerciseIllustration({ exerciseName }) {
   }
 
   function renderBody(side, label, x) {
+    const isFocusedSide = active.focus === side;
     return (
-      <g transform={`translate(${x} 18)`}>
-        <rect x="0" y="0" width="92" height="138" rx="28" className="muscle-map-panel" />
-        <text x="46" y="16" textAnchor="middle" className="muscle-map-panel-label">{label}</text>
-        <ellipse cx="46" cy="126" rx="24" ry="6" className="muscle-map-shadow" />
+      <g transform={`translate(${x} 22)`} className={`muscle-map-body muscle-map-body--${side}${isFocusedSide ? ' is-focus-body' : ''}`}>
+        <rect x="0" y="0" width="96" height="184" rx="28" className="muscle-map-panel" />
+        <text x="48" y="17" textAnchor="middle" className="muscle-map-panel-label">{label}</text>
+        <path d="M48 37 L48 176" className="muscle-body-axis" />
+        <ellipse cx="48" cy="174" rx="25" ry="7" className="muscle-map-shadow" />
         <circle cx="46" cy="23" r="11" className="muscle-body-head" />
         <path d="M33 38 C35 27 40 22 46 22 C52 22 57 27 59 38 L62 55 C63 65 56 75 46 77 C36 75 29 65 30 55 Z" className="muscle-body-core" />
         <path d="M30 46 C24 56 20 69 18 81" className="muscle-body-limb" />
@@ -1525,13 +2032,34 @@ function ExerciseIllustration({ exerciseName }) {
   }
 
   return (
-    <svg viewBox="0 0 220 176" className="muscle-exercise-figure" aria-hidden="true">
-      <rect x="8" y="8" width="204" height="160" rx="30" className="muscle-exercise-bg" />
-      {renderBody('back', 'BACK', 16)}
-      {renderBody('front', 'FRONT', 112)}
-      <text x="110" y="162" textAnchor="middle" className="muscle-map-legend-copy">Primary / Secondary</text>
-      <circle cx="82" cy="159" r="4" className="muscle-region-primary" />
-      <circle cx="138" cy="159" r="4" className="muscle-region-secondary" />
+    <svg
+      viewBox="0 0 252 232"
+      className={`muscle-exercise-figure muscle-exercise-figure--${mode}`}
+      role="img"
+      aria-label={`${diagramTitle}: ${muscleSummary}`}
+      data-muscle-mode={mode}
+      data-muscle-summary={muscleSummary}
+    >
+      <title>{diagramTitle}</title>
+      <desc>{muscleSummary}</desc>
+      <rect x="8" y="8" width="236" height="216" rx="32" className="muscle-exercise-bg" />
+      <path d="M24 205 H228" className="muscle-exercise-floor" />
+      <g className="muscle-action-vectors" aria-hidden="true">
+        {vectorPaths.map((pathData) => (
+          <path key={pathData} d={pathData} className="muscle-action-vector" />
+        ))}
+        <circle cx={hasPrimaryOnBack ? 70 : 177} cy="43" r="3.8" className="muscle-action-node" />
+        <circle cx={hasPrimaryOnFront ? 177 : 70} cy="197" r="3.8" className="muscle-action-node muscle-action-node--quiet" />
+      </g>
+      {renderBody('back', 'BACK', 22)}
+      {renderBody('front', 'FRONT', 134)}
+      <g className="muscle-exercise-legend">
+        <circle cx="24" cy="216" r="4" className="muscle-region-primary" />
+        <text x="34" y="219" className="muscle-exercise-primary-label">{primaryLabel}</text>
+        <circle cx="139" cy="216" r="4" className="muscle-region-secondary" />
+        <text x="149" y="219" className="muscle-exercise-secondary-label">{secondaryLabel}</text>
+      </g>
+      <text x="126" y="29" textAnchor="middle" className="muscle-map-legend-copy">{active.cue}</text>
     </svg>
   );
 }
@@ -1903,6 +2431,27 @@ export default function MuscleTraining() {
     });
     return labels.slice(0, 4);
   }, [isZh, protocolItems]);
+  const muscleInspection = useMemo(() => {
+    const registry = new Map();
+    protocolItems.forEach(({ block, exercise, exerciseIndex }) => {
+      const exerciseCopy = getExerciseCardContent(exercise, isZh);
+      const regionKeys = resolveReferenceBodyMeasureRegionKeys(exerciseCopy.muscles);
+      regionKeys.forEach((regionKey) => {
+        const current = registry.get(regionKey) || { exercises: [] };
+        if (!current.exercises.some((item) => item.name === exerciseCopy.name)) {
+          current.exercises.push({
+            name: exerciseCopy.name,
+            prescription: formatLocalizedExercisePrescription(exercise, isZh),
+            cue: exerciseCopy.intent || exerciseCopy.steps?.[0] || '',
+            blockTitle: pickLabel(copy.blockTitles, block.title, block.title),
+            order: exerciseIndex + 1,
+          });
+        }
+        registry.set(regionKey, current);
+      });
+    });
+    return registry;
+  }, [copy.blockTitles, isZh, protocolItems]);
   const coachingCues = useMemo(
     () => protocolItems.slice(0, 3).map(({ exercise, exerciseIndex }) => {
       const content = getExerciseCardContent(exercise, isZh);
@@ -1965,6 +2514,11 @@ export default function MuscleTraining() {
     bodyMeasureBalanceLabel: t('muscle_training.stitch_body_measure_balance_label'),
     bodyMeasureAnterior: t('muscle_training.stitch_body_measure_anterior'),
     bodyMeasurePosterior: t('muscle_training.stitch_body_measure_posterior'),
+    bodyMeasureInteractionHint: t('muscle_training.stitch_body_measure_interaction_hint'),
+    bodyMeasureSelectedLabel: t('muscle_training.stitch_body_measure_selected_label'),
+    bodyMeasureTrainedByLabel: t('muscle_training.stitch_body_measure_trained_by_label'),
+    bodyMeasurePlanFocusLabel: t('muscle_training.stitch_body_measure_plan_focus_label'),
+    bodyMeasureInspectHint: t('muscle_training.stitch_body_measure_inspect_hint'),
     settingsDisclosure: t('muscle_training.stitch_settings_disclosure'),
     emptyStateTitle: t('muscle_training.stitch_empty_state_title'),
     emptyStateAction: t('muscle_training.stitch_empty_state_action'),
@@ -2327,10 +2881,57 @@ export default function MuscleTraining() {
 
         {!loading && !error && plan && (
           <>
+            <section
+              className="mt-strength-lab"
+              aria-labelledby="mt-strength-lab-title"
+              data-session-state={featuredDay?.strength ? 'active' : 'recovery'}
+            >
             {/* ── ZONE 1: What should I do for strength today? ── */}
-            <section className="mt-coach-cockpit">
+              <section className="mt-anatomy-command-board" aria-label={stitchCopy.muscleFocusTitle}>
+                <div className="mt-anatomy-command-map">
+                  <ReferenceMuscleMap
+                    isZh={isZh}
+                    focusMuscles={muscleFocus}
+                    weekContext={plan.weekContext}
+                    weekDoseStats={weekDoseStats}
+                    inspection={muscleInspection}
+                    copy={{
+                      title: stitchCopy.bodyMeasureTitle,
+                      desc: stitchCopy.bodyMeasureDesc,
+                      loadLabel: stitchCopy.bodyMeasureLoadLabel,
+                      balanceLabel: stitchCopy.bodyMeasureBalanceLabel,
+                      anterior: stitchCopy.bodyMeasureAnterior,
+                      posterior: stitchCopy.bodyMeasurePosterior,
+                      interactionHint: stitchCopy.bodyMeasureInteractionHint,
+                      selectedLabel: stitchCopy.bodyMeasureSelectedLabel,
+                      trainedByLabel: stitchCopy.bodyMeasureTrainedByLabel,
+                      planFocusLabel: stitchCopy.bodyMeasurePlanFocusLabel,
+                      inspectHint: stitchCopy.bodyMeasureInspectHint,
+                    }}
+                  />
+                </div>
+                <div className="mt-anatomy-command-copy">
+                  <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
+                  <strong>{stitchCopy.bodyMeasureTitle}</strong>
+                  <p>{stitchCopy.bodyMeasureInteractionHint}</p>
+                  {muscleFocus.length > 0 && (
+                    <div className="strength-plan-focus-pills">
+                      {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <div className="mt-strength-lab-header">
+                <div>
+                  <span className="strength-plan-section-label">{stitchCopy.seriesLabel}</span>
+                  <h1 id="mt-strength-lab-title">{stitchCopy.strength}</h1>
+                </div>
+              </div>
+
+              <section className="mt-coach-cockpit">
               <div className="mt-coach-cockpit-main">
-                <section className="mt-today-card">
+                <section className={`mt-today-card${featuredDay?.strength ? ' has-session' : ' is-recovery-session'}`}>
                   <div className="mt-today-verdict">
                     <div className="mt-today-card-kicker">
                       <AppIcon name="fitness_center" className="mt-today-kicker-icon" />
@@ -2428,32 +3029,6 @@ export default function MuscleTraining() {
                   )}
                 </section>
 
-            {/* ── ZONE 2: Where am I in the week's strength dose? ── */}
-            <section className="mt-dose-bar">
-              <div className="mt-dose-bar-head">
-                <span className="strength-plan-section-label">{stitchCopy.weekDoseLabel}</span>
-                <span className="mt-dose-fraction">
-                  {weekDoseStats.planned} {stitchCopy.sessionsOfLabel} {weekDoseStats.recommended} {t('muscle_training.per_wk')}
-                </span>
-              </div>
-              <div className="mt-dose-track">
-                {Array.from({ length: Math.max(weekDoseStats.recommended, weekDoseStats.planned) || 2 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`mt-dose-pip${i < weekDoseStats.planned ? ' is-planned' : ''}${weekDoseStats.completedToday && i === 0 ? ' is-done' : ''}`}
-                  />
-                ))}
-              </div>
-              <div className="mt-dose-context">
-                {plan.weekContext?.acwr != null && (
-                  <span>ACWR {trimNumber(plan.weekContext.acwr, 2)} · {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</span>
-                )}
-                {plan.weekContext?.volumeKm7d != null && (
-                  <span>{formatDistanceValue(plan.weekContext.volumeKm7d, isMile, 1) ?? '0'} {isMile ? t('muscle_training.miles_unit') : t('muscle_training.km_unit')} / 7d</span>
-                )}
-              </div>
-            </section>
-
               </div>
 
               <aside className="mt-coach-cockpit-rail">
@@ -2461,38 +3036,6 @@ export default function MuscleTraining() {
                   <span className="strength-plan-section-label">{stitchCopy.recoveryImpactTitle}</span>
                   <strong>{pickLabel(copy.currentFocus, plan.weekContext?.currentFocus)}</strong>
                   <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} - {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
-                  {plan.weekContext?.acwr != null && (
-                    <div className="mt-coach-rail-meter">
-                      <span>ACWR</span>
-                      <strong>{trimNumber(plan.weekContext.acwr, 2)}</strong>
-                    </div>
-                  )}
-                </section>
-
-                <section className="mt-coach-rail-card mt-coach-rail-card--map">
-                  <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
-                  <div className="mt-coach-mini-map">
-                    <ReferenceMuscleMap
-                      isZh={isZh}
-                      focusMuscles={muscleFocus}
-                      weekContext={plan.weekContext}
-                      weekDoseStats={weekDoseStats}
-                      compact={true}
-                      copy={{
-                        title: stitchCopy.bodyMeasureTitle,
-                        desc: stitchCopy.bodyMeasureDesc,
-                        loadLabel: stitchCopy.bodyMeasureLoadLabel,
-                        balanceLabel: stitchCopy.bodyMeasureBalanceLabel,
-                        anterior: stitchCopy.bodyMeasureAnterior,
-                        posterior: stitchCopy.bodyMeasurePosterior,
-                      }}
-                    />
-                  </div>
-                  {muscleFocus.length > 0 && (
-                    <div className="strength-plan-focus-pills">
-                      {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
-                    </div>
-                  )}
                 </section>
               </aside>
             </section>
@@ -2553,8 +3096,10 @@ export default function MuscleTraining() {
             </section>
 
             {/* ── PROTOCOL: Full exercise list (disclosed on demand on mobile) ── */}
+            </section>
+
             {featuredDay?.strength && (
-              <section className="strength-plan-hero-shell">
+              <section className="strength-plan-hero-shell mt-protocol-board">
                 <section className="strength-plan-content-grid">
                   <div className="strength-plan-protocol">
                     <span className="strength-plan-section-label">{stitchCopy.protocolTitle}</span>
@@ -2563,9 +3108,17 @@ export default function MuscleTraining() {
                         {protocolItems.map(({ block, blockIndex, exercise, exerciseIndex }) => {
                           const exerciseCopy = getExerciseCardContent(exercise, isZh);
                           return (
-                            <article key={`${block.title}-${exercise.name}-${exerciseIndex}`} className="strength-plan-exercise-row">
+                            <article
+                              key={`${block.title}-${exercise.name}-${exerciseIndex}`}
+                              className="strength-plan-exercise-row"
+                              data-block-index={blockIndex + 1}
+                              data-exercise-index={exerciseIndex + 1}
+                            >
                               <div className="strength-plan-exercise-media">
-                                <ExerciseIllustration exerciseName={exercise.name} />
+                                <span className="strength-plan-exercise-order" aria-hidden="true">
+                                  {String(exerciseIndex + 1).padStart(2, '0')}
+                                </span>
+                                <ExerciseIllustration exerciseName={exercise.name} muscles={exerciseCopy.muscles} isZh={isZh} />
                               </div>
                               <div className="strength-plan-exercise-copy">
                                 <span className="strength-plan-exercise-kicker">
@@ -2577,9 +3130,9 @@ export default function MuscleTraining() {
                               <div className="strength-plan-exercise-meta">
                                 <div>
                                   <span>{t('muscle_training.sets_reps_duration')}</span>
-                                  <strong>{exercise.sets} x {exercise.repsOrDuration}</strong>
+                                  <strong>{formatLocalizedExercisePrescription(exercise, isZh)}</strong>
                                 </div>
-                                <em>RPE {exercise.targetRpe}</em>
+                                <em>{exerciseCopy.intent}</em>
                               </div>
                             </article>
                           );
@@ -2601,31 +3154,8 @@ export default function MuscleTraining() {
                     </div>
                   </div>
 
-                  <aside className="strength-plan-rail">
-                    <section className="strength-plan-rail-card">
-                      <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
-                      <div className="strength-plan-map-wrap">
-                        <ReferenceMuscleMap
-                          isZh={isZh}
-                          focusMuscles={muscleFocus}
-                          weekContext={plan.weekContext}
-                          weekDoseStats={weekDoseStats}
-                          copy={{
-                            title: stitchCopy.bodyMeasureTitle,
-                            desc: stitchCopy.bodyMeasureDesc,
-                            loadLabel: stitchCopy.bodyMeasureLoadLabel,
-                            balanceLabel: stitchCopy.bodyMeasureBalanceLabel,
-                            anterior: stitchCopy.bodyMeasureAnterior,
-                            posterior: stitchCopy.bodyMeasurePosterior,
-                          }}
-                        />
-                      </div>
-                      <div className="strength-plan-focus-pills">
-                        {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
-                      </div>
-                    </section>
-
-                    <section className="strength-plan-rail-card">
+                  <aside className="strength-plan-rail strength-plan-rail--cues-only">
+                    <section className="strength-plan-rail-card strength-plan-rail-card--cues">
                       <span className="strength-plan-section-label">{stitchCopy.coachingCuesTitle}</span>
                       <div className="strength-plan-cues">
                         {coachingCues.map((cue, index) => (
@@ -2638,12 +3168,6 @@ export default function MuscleTraining() {
                           </article>
                         ))}
                       </div>
-                    </section>
-
-                    <section className="strength-plan-impact-card">
-                      <span className="strength-plan-section-label">{stitchCopy.recoveryImpactTitle}</span>
-                      <strong>{plan.weekContext?.acwr != null ? trimNumber(plan.weekContext.acwr, 2) : '0.00'}</strong>
-                      <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} · {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
                     </section>
                   </aside>
                 </section>
@@ -2846,241 +3370,6 @@ export default function MuscleTraining() {
 
             </section>
 
-            {/* Week status context (demoted — shown in disclosure area) */}
-            <details className="mt-settings-disclosure">
-              <summary className="mt-settings-summary">
-                <AppIcon name="bar_chart" className="mt-settings-icon" />
-                {t('muscle_training.week_context_rationale')}
-              </summary>
-
-              <section className="muscle-week-overview">
-                <div className="muscle-status-source">
-                  <strong>{copy.planSourceLabel}</strong>
-                  <span>{pickLabel(copy.sourceSummary, plan.planSource, '')}</span>
-                </div>
-
-                {plan.weekContext?.conservativeMode && (
-                  <div className="muscle-banner-note">{copy.conservativeBanner}</div>
-                )}
-
-                <div className="muscle-status-grid">
-                  <div className="muscle-status-card">
-                    <div className="muscle-metric-label">{copy.summaryFrequency}</div>
-                    <strong>{plan.weekContext?.recommendedSessionsPerWeek ?? 0} {t('muscle_training.sessions_per_week')}</strong>
-                    <span>{pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</span>
-                  </div>
-
-                  <div className="muscle-status-card">
-                    <div className="muscle-metric-label">{copy.summaryRecovery}</div>
-                    <strong>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)}</strong>
-                    <span>{plan.weekContext?.acwr != null ? `ACWR ${trimNumber(plan.weekContext.acwr, 2)}` : t('muscle_training.no_acwr')}</span>
-                  </div>
-
-                  <div className="muscle-status-card">
-                    <div className="muscle-metric-label">{copy.summaryUpcoming}</div>
-                    <strong>
-                      {plan.weekContext?.nextKeyRunDate
-                        ? `${formatShortDate(plan.weekContext.nextKeyRunDate, displayLang)} · ${pickLabel(copy.workoutTypes, plan.weekContext.nextKeyRunType)}`
-                        : copy.noKeyRun}
-                    </strong>
-                    <span>
-                      {plan.weekContext?.nextLongRunDate
-                        ? `${formatShortDate(plan.weekContext.nextLongRunDate, displayLang)} · ${formatDistance(plan.weekContext.nextLongRunKm, isZh, isMile)}`
-                        : copy.noLongRun}
-                    </span>
-                  </div>
-
-                  <div className="muscle-status-card muscle-status-card-focus">
-                    <div className="muscle-metric-label">{copy.summaryFocus}</div>
-                    <strong>{pickLabel(copy.currentFocus, plan.weekContext?.currentFocus)}</strong>
-                    <span className="muscle-status-distance-window">{formatDistanceValue(plan.weekContext?.volumeKm7d ?? 0, isMile) ?? '0'} {distanceWindowLabel}</span>
-                    <span>{trimNumber(plan.weekContext?.volumeKm7d, 1) ?? '0'} {t('muscle_training.km_per_7d')}</span>
-                  </div>
-                </div>
-
-                <section className="card muscle-panel">
-                  <h2>{copy.rationaleTitle}</h2>
-                  <ul className="muscle-rationale-list">
-                    {(plan.rationale || []).map((code) => (
-                      <li key={code}>{pickLabel(copy.rationale, code, code)}</li>
-                    ))}
-                  </ul>
-                </section>
-              </section>
-            </details>
-
-            {/* Full 7-day rolling detailed cards */}
-            <section className="muscle-week-plan">
-              <div className="muscle-section-head">
-                <div>
-                  <h2>{copy.weekTitle}</h2>
-                  <p>{copy.weekHint}</p>
-                </div>
-              </div>
-
-              <div className="muscle-week-grid">
-                {(plan.days || []).map((day) => {
-                  const session = day.strength ? sessionByType.get(day.strength.sessionType) : null;
-                  return (
-                    <article key={day.date} className={`card muscle-day-card${day.strength ? ' is-strength' : ''}`}>
-                      <div className="muscle-day-head">
-                        <div>
-                          <div className="muscle-session-kicker">{formatDayLabel(day.date, day.dayLabel, displayLang)}</div>
-                          <h3>{formatShortDate(day.date, displayLang)}</h3>
-                        </div>
-                        <div className="muscle-day-tags">
-                          <span className="muscle-pill">{pickLabel(copy.workoutTypes, day.run?.workoutType)}</span>
-                          {day.run?.planSource && (
-                            <span className="muscle-pill muscle-pill-source">
-                              {pickLabel(copy.sourcePills, day.run.planSource, day.run.planSource)}
-                            </span>
-                          )}
-                          {day.strength && (
-                            <span className="muscle-pill muscle-pill-core">
-                              {pickLabel(copy.sessionTypes, day.strength.sessionType, day.strength.title)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <section className="muscle-run-strip">
-                        <div className="muscle-run-strip-head">{copy.runContext}</div>
-                        <div className="muscle-run-strip-row">
-                          <span className="muscle-mini-pill">{pickLabel(copy.workoutTypes, day.run?.workoutType)}</span>
-                          {day.run?.plannedDistanceKm != null && (
-                            <span className="muscle-mini-pill">{formatDistance(day.run.plannedDistanceKm, isZh, isMile)}</span>
-                          )}
-                          {day.run?.plannedDurationMinutes != null && (
-                            <span className="muscle-mini-pill">{formatMinutes(day.run.plannedDurationMinutes, isZh)}</span>
-                          )}
-                          {day.run?.keyRun && <span className="muscle-mini-pill muscle-mini-pill-alert">{t('muscle_training.key_run')}</span>}
-                          {day.run?.longRun && <span className="muscle-mini-pill muscle-mini-pill-alert">{t('muscle_training.long_run')}</span>}
-                          {day.run?.readinessAdjusted && <span className="muscle-mini-pill">{copy.readinessAdjusted}</span>}
-                        </div>
-                        {day.run?.notes && <p className="muscle-run-note">{day.run.notes}</p>}
-                      </section>
-
-                      {day.strength ? (
-                        <>
-                          <section className="muscle-day-summary">
-                            <div className="muscle-run-strip-head">{copy.strengthTitle}</div>
-                            <h4>{pickLabel(copy.sessionTypes, day.strength.sessionType, day.strength.title)}</h4>
-                            <p>{pickLabel(copy.sessionEmphasis, day.strength.sessionType, session?.emphasis || day.strength.emphasis)}</p>
-
-                            <div className="muscle-day-meta">
-                              <div>
-                                <span>{copy.durationTitle}</span>
-                                <strong>{formatMinutes(day.strength.durationMinutes, isZh)}</strong>
-                              </div>
-                              <div>
-                                <span>{copy.rpeTitle}</span>
-                                <strong>RPE {day.strength.targetRpe}</strong>
-                              </div>
-                              <div>
-                                <span>{copy.optionalTitle}</span>
-                                <strong>{day.strength.optional ? copy.optionalYes : copy.optionalNo}</strong>
-                              </div>
-                            </div>
-
-                            <div className="muscle-note">
-                              <strong>{copy.placementTitle}</strong>
-                              <span>{pickLabel(copy.placementReasons, day.strength.placementReasonCode, day.strength.placementReasonCode)}</span>
-                            </div>
-
-                            {day.strength.cautionCode && (
-                              <div className="muscle-note muscle-note-caution">
-                                <strong>{copy.noteTitle}</strong>
-                                <span>{pickLabel(copy.cautionCodes, day.strength.cautionCode, day.strength.cautionCode)}</span>
-                              </div>
-                            )}
-                          </section>
-
-                          {session && (
-                            <div className="muscle-plan-blocks">
-                              {(session.blocks || []).map((block) => (
-                                <section key={`${day.date}-${block.title}`} className="muscle-block-card">
-                                  <div className="muscle-block-title">{pickLabel(copy.blockTitles, block.title, block.title)}</div>
-                                  <div className="muscle-exercise-grid">
-                                    {(block.exercises || []).map((exercise) => {
-                                      const exerciseCopy = getExerciseCardContent(exercise, isZh);
-                                      const legacyGuide = getExerciseGuide(exercise.name, isZh);
-                                      const legacyCopy = getLocalizedExerciseContent(exercise, isZh);
-                                      const exerciseTitle = `${formatExercisePrescription(exercise, isZh)} · ${legacyGuide.muscles.join(' / ')}`;
-                                      return (
-                                        <article
-                                          key={`${day.date}-${block.title}-${exercise.name}`}
-                                          className="muscle-exercise-card muscle-exercise-plan-card"
-                                          title={exerciseTitle}
-                                          data-legacy-intent={legacyCopy.intent || ''}
-                                        >
-                                          <ExerciseIllustration exerciseName={exercise.name} />
-                                          <div className="muscle-exercise-copy">
-                                            <div className="muscle-exercise-top">
-                                              <div className="muscle-exercise-heading">
-                                                <h3>{exerciseCopy.name}</h3>
-                                                <div className="muscle-exercise-prescription muscle-exercise-prescription-localized">
-                                                  {formatLocalizedExercisePrescription(exercise, isZh)}
-                                                </div>
-                                              </div>
-                                              <div className="muscle-exercise-tags">
-                                                {exerciseCopy.muscles.map((muscle) => (
-                                                  <span key={`${exercise.name}-${muscle}`} className="muscle-tag">{muscle}</span>
-                                                ))}
-                                                <span className="muscle-tag">{pickLabel(copy.exerciseNoise, exercise.noiseLevel, exercise.noiseLevel)}</span>
-                                                <span className="muscle-tag">{pickLabel(copy.exerciseEquipment, exercise.equipmentNeeded, exercise.equipmentNeeded)}</span>
-                                              </div>
-                                            </div>
-
-                                            <p className="muscle-exercise-intent">
-                                              <strong>{copy.intentLabel}:</strong> {exerciseCopy.intent}
-                                            </p>
-
-                                            <ol className="muscle-step-list">
-                                              {exerciseCopy.steps.map((step) => <li key={`${exercise.name}-${step}`}>{step}</li>)}
-                                            </ol>
-
-                                            <div className="muscle-exercise-swaps">
-                                              <div>
-                                                <strong>{copy.regression}</strong>
-                                                <p>{exerciseCopy.regression}</p>
-                                              </div>
-                                              <div>
-                                                <strong>{copy.progression}</strong>
-                                                <p>{exerciseCopy.progression}</p>
-                                              </div>
-                                            </div>
-
-                                            <div className="muscle-exercise-actions">
-                                              <a
-                                                href={getExerciseVideoUrl(exercise.name)}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="muscle-video-link"
-                                              >
-                                                {copy.watchDemo}
-                                              </a>
-                                            </div>
-                                          </div>
-                                        </article>
-                                      );
-                                    })}
-                                  </div>
-                                </section>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <section className="muscle-day-summary">
-                          <div className="muscle-run-strip-head">{copy.noStrengthTitle}</div>
-                          <p>{pickLabel(copy.noStrengthReasons, day.noStrengthReasonCode, day.noStrengthReasonCode)}</p>
-                        </section>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
           </>
         )}
           </div>
