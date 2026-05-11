@@ -1120,16 +1120,16 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Neck', zh: '颈部' },
     tokens: ['neck', '颈'],
     callout: { from: [190, 108], elbow: [128, 92], label: [108, 82], side: 'left' },
-    paths: ['M179 98 C185 106 195 106 201 98 C205 112 208 122 210 132 C198 136 182 136 170 132 C172 122 175 112 179 98 Z'],
+    anchors: [{ cx: 190, cy: 120, kind: 'circle', r: 6 }],
   },
   {
     key: 'traps-front',
     label: { en: 'Traps', zh: '斜方肌' },
     tokens: ['trapezius', 'trap', '斜方肌'],
     callout: { from: [148, 130], elbow: [100, 114], label: [80, 104], side: 'left' },
-    paths: [
-      'M143 133 C158 119 178 122 190 139 C178 148 162 153 140 150 C139 143 140 137 143 133 Z',
-      'M237 133 C222 119 202 122 190 139 C202 148 218 153 240 150 C241 143 240 137 237 133 Z',
+    anchors: [
+      { cx: 168, cy: 140, kind: 'ellipse', rx: 10, ry: 8 },
+      { cx: 212, cy: 140, kind: 'ellipse', rx: 10, ry: 8 },
     ],
   },
   {
@@ -1137,9 +1137,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Shoulders', zh: '肩' },
     tokens: ['shoulder', 'deltoid', '肩', '三角肌'],
     callout: { from: [122, 148], elbow: [78, 140], label: [58, 130], side: 'left' },
-    paths: [
-      'M127 137 C112 136 99 149 93 169 C96 181 109 182 124 173 C134 166 140 154 141 143 C136 139 132 137 127 137 Z',
-      'M253 137 C268 136 281 149 287 169 C284 181 271 182 256 173 C246 166 240 154 239 143 C244 139 248 137 253 137 Z',
+    anchors: [
+      { cx: 130, cy: 160, kind: 'circle', r: 10 },
+      { cx: 250, cy: 160, kind: 'circle', r: 10 },
     ],
   },
   {
@@ -1147,9 +1147,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Chest', zh: '胸' },
     tokens: ['pectoral', 'chest', '胸', '胸大肌'],
     callout: { from: [230, 155], elbow: [278, 144], label: [298, 134], side: 'right' },
-    paths: [
-      'M142 157 C156 144 175 141 189 160 C184 177 169 186 145 183 C137 174 135 164 142 157 Z',
-      'M238 157 C224 144 205 141 191 160 C196 177 211 186 235 183 C243 174 245 164 238 157 Z',
+    anchors: [
+      { cx: 170, cy: 170, kind: 'ellipse', rx: 14, ry: 10 },
+      { cx: 210, cy: 170, kind: 'ellipse', rx: 14, ry: 10 },
     ],
   },
   {
@@ -1157,9 +1157,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Biceps', zh: '肱二头肌' },
     tokens: ['biceps', 'arm', 'elbow', '肱二头肌', '手臂'],
     callout: { from: [278, 190], elbow: [310, 188], label: [332, 178], side: 'right' },
-    paths: [
-      'M92 154 C104 165 108 188 104 209 C100 219 91 222 84 214 C80 201 80 173 86 159 Z',
-      'M288 154 C276 165 272 188 276 209 C280 219 289 222 296 214 C300 201 300 173 294 159 Z',
+    anchors: [
+      { cx: 98, cy: 200, kind: 'ellipse', rx: 10, ry: 22 },
+      { cx: 282, cy: 200, kind: 'ellipse', rx: 10, ry: 22 },
     ],
   },
   {
@@ -1167,9 +1167,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Forearms', zh: '前臂' },
     tokens: ['forearm', 'brachioradialis', 'wrist', '手腕', '前臂'],
     callout: { from: [296, 248], elbow: [326, 256], label: [348, 254], side: 'right' },
-    paths: [
-      'M81 223 C93 229 97 250 94 275 C91 291 82 302 74 300 C71 284 72 244 78 226 Z',
-      'M299 223 C287 229 283 250 286 275 C289 291 298 302 306 300 C309 284 308 244 302 226 Z',
+    anchors: [
+      { cx: 88, cy: 270, kind: 'ellipse', rx: 10, ry: 26 },
+      { cx: 292, cy: 270, kind: 'ellipse', rx: 10, ry: 26 },
     ],
   },
   {
@@ -1177,23 +1177,16 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Abs', zh: '腹部' },
     tokens: ['core', 'abs', 'abdominals', 'trunk', '腹', '核心'],
     callout: { from: [190, 220], elbow: [264, 218], label: [286, 218], side: 'right' },
-    paths: [
-      'M173 170 C178 162 185 159 190 166 L189 259 C183 265 176 262 172 252 Z',
-      'M207 170 C202 162 195 159 190 166 L191 259 C197 265 204 262 208 252 Z',
-      'M145 165 C157 181 164 214 160 249 C151 261 140 261 132 249 C131 221 135 186 145 165 Z',
-      'M235 165 C223 181 216 214 220 249 C229 261 240 261 248 249 C249 221 245 186 235 165 Z',
-    ],
+    anchors: [{ cx: 190, cy: 212, kind: 'ellipse', rx: 14, ry: 38 }],
   },
   {
     key: 'quadriceps',
     label: { en: 'Quadriceps', zh: '股四头肌' },
     tokens: ['quad', 'quadriceps', 'knee', 'thigh', '股四头肌', '大腿'],
     callout: { from: [226, 346], elbow: [278, 368], label: [300, 372], side: 'right' },
-    paths: [
-      'M136 274 C154 286 162 320 160 372 C158 408 151 435 141 446 C129 424 125 308 130 280 Z',
-      'M244 274 C226 286 218 320 220 372 C222 408 229 435 239 446 C251 424 255 308 250 280 Z',
-      'M166 282 C177 304 179 349 176 396 C173 420 168 438 162 446 C156 416 156 316 161 286 Z',
-      'M214 282 C203 304 201 349 204 396 C207 420 212 438 218 446 C224 416 224 316 219 286 Z',
+    anchors: [
+      { cx: 170, cy: 360, kind: 'ellipse', rx: 14, ry: 50 },
+      { cx: 210, cy: 360, kind: 'ellipse', rx: 14, ry: 50 },
     ],
   },
   {
@@ -1201,9 +1194,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Shins', zh: '胫骨前肌' },
     tokens: ['shin', 'shins', 'tibialis', 'ankle', '胫骨', '胫骨前肌', '踝'],
     callout: { from: [230, 462], elbow: [278, 480], label: [300, 480], side: 'right' },
-    paths: [
-      'M145 438 C158 452 160 486 154 520 C148 528 140 524 136 512 C133 484 136 452 141 441 Z',
-      'M235 438 C222 452 220 486 226 520 C232 528 240 524 244 512 C247 484 244 452 239 441 Z',
+    anchors: [
+      { cx: 170, cy: 480, kind: 'ellipse', rx: 10, ry: 30 },
+      { cx: 210, cy: 480, kind: 'ellipse', rx: 10, ry: 30 },
     ],
   },
 
@@ -1213,23 +1206,10 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Traps', zh: '斜方肌' },
     tokens: ['trapezius', 'trap', '斜方肌'],
     callout: { from: [526, 112], elbow: [600, 96], label: [614, 86], side: 'left' },
-    paths: [
-      'M477 90 C500 102 512 122 519 149 C504 151 486 146 465 131 C463 113 467 99 477 90 Z',
-      'M549 90 C526 102 514 122 507 149 C522 151 540 146 561 131 C563 113 559 99 549 90 Z',
-      'M491 108 C502 126 507 154 507 185 C493 172 482 138 479 111 Z',
-      'M535 108 C524 126 519 154 519 185 C533 172 544 138 547 111 Z',
-    ],
-    highlightPaths: [
-      'M485 104 C499 111 509 128 513 150 C503 150 490 144 477 133 C476 120 479 110 485 104 Z',
-      'M541 104 C527 111 517 128 513 150 C523 150 536 144 549 133 C550 120 547 110 541 104 Z',
-      'M499 128 C507 145 509 166 507 184 C497 172 490 149 489 131 Z',
-      'M527 128 C519 145 517 166 519 184 C529 172 536 149 537 131 Z',
-    ],
-    markers: [
-      { cx: 499, cy: 128, rx: 4.4, ry: 4.4 },
-      { cx: 527, cy: 128, rx: 4.4, ry: 4.4 },
-      { cx: 509, cy: 166, rx: 3.7, ry: 5 },
-      { cx: 517, cy: 166, rx: 3.7, ry: 5 },
+    posteriorAlignmentTransform: POSTERIOR_REGION_ALIGNMENT_TRANSFORM,
+    anchors: [
+      { cx: 486, cy: 128, kind: 'circle', r: 10 },
+      { cx: 538, cy: 128, kind: 'circle', r: 10 },
     ],
   },
   {
@@ -1237,17 +1217,10 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Shoulders', zh: '肩' },
     tokens: ['shoulder', 'deltoid', 'infraspinatus', '肩', '三角肌', '冈下肌'],
     callout: { from: [578, 154], elbow: [604, 144], label: [614, 134], side: 'left' },
-    paths: [
-      'M415 136 C434 125 456 132 466 154 C462 168 447 172 425 167 C414 157 410 146 415 136 Z',
-      'M645 136 C626 125 604 132 594 154 C598 168 613 172 635 167 C646 157 650 146 645 136 Z',
-    ],
-    highlightPaths: [
-      'M418 143 C434 134 452 139 461 155 C457 166 444 168 428 164 C419 157 416 149 418 143 Z',
-      'M642 143 C626 134 608 139 599 155 C603 166 616 168 632 164 C641 157 644 149 642 143 Z',
-    ],
-    markers: [
-      { cx: 440, cy: 154, rx: 5.4, ry: 4.2 },
-      { cx: 620, cy: 154, rx: 5.4, ry: 4.2 },
+    posteriorAlignmentTransform: POSTERIOR_REGION_ALIGNMENT_TRANSFORM,
+    anchors: [
+      { cx: 448, cy: 160, kind: 'circle', r: 10 },
+      { cx: 576, cy: 160, kind: 'circle', r: 10 },
     ],
   },
   {
@@ -1255,17 +1228,10 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Lats', zh: '背阔肌' },
     tokens: ['lat', 'lats', 'back', 'latissimus', '背阔肌', '背', 'upper back'],
     callout: { from: [576, 224], elbow: [604, 240], label: [614, 240], side: 'left' },
-    paths: [
-      'M444 165 C469 175 494 206 494 245 C484 264 453 280 432 272 C429 238 433 184 444 165 Z',
-      'M616 165 C591 175 566 206 566 245 C576 264 607 280 628 272 C631 238 627 184 616 165 Z',
-    ],
-    highlightPaths: [
-      'M456 176 C472 187 492 210 490 238 C482 252 454 268 440 262 C438 229 442 191 456 176 Z',
-      'M604 176 C588 187 568 210 570 238 C578 252 606 268 620 262 C622 229 618 191 604 176 Z',
-    ],
-    markers: [
-      { cx: 462, cy: 214, rx: 5.2, ry: 8.4 },
-      { cx: 598, cy: 214, rx: 5.2, ry: 8.4 },
+    posteriorAlignmentTransform: POSTERIOR_REGION_ALIGNMENT_TRANSFORM,
+    anchors: [
+      { cx: 470, cy: 215, kind: 'ellipse', rx: 14, ry: 28 },
+      { cx: 554, cy: 215, kind: 'ellipse', rx: 14, ry: 28 },
     ],
   },
   {
@@ -1273,17 +1239,10 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Triceps', zh: '肱三头肌' },
     tokens: ['triceps', 'arm', '肱三头肌', '手臂'],
     callout: { from: [622, 208], elbow: [642, 210], label: [650, 210], side: 'left' },
-    paths: [
-      'M406 144 C420 158 433 184 429 219 C424 231 414 232 397 221 C394 201 396 161 401 148 Z',
-      'M654 144 C640 158 627 184 631 219 C636 231 646 232 663 221 C666 201 664 161 659 148 Z',
-    ],
-    highlightPaths: [
-      'M403 161 C414 171 426 190 420 218 C409 210 396 189 397 165 Z',
-      'M657 161 C646 171 634 190 640 218 C651 210 664 189 663 165 Z',
-    ],
-    markers: [
-      { cx: 409, cy: 188, rx: 3.6, ry: 6.8 },
-      { cx: 651, cy: 188, rx: 3.6, ry: 6.8 },
+    posteriorAlignmentTransform: POSTERIOR_REGION_ALIGNMENT_TRANSFORM,
+    anchors: [
+      { cx: 420, cy: 200, kind: 'ellipse', rx: 10, ry: 24 },
+      { cx: 604, cy: 200, kind: 'ellipse', rx: 10, ry: 24 },
     ],
   },
   {
@@ -1291,19 +1250,10 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Forearms', zh: '前臂' },
     tokens: ['forearm', 'wrist', '前臂', '手腕'],
     callout: { from: [624, 262], elbow: [642, 270], label: [650, 270], side: 'left' },
-    paths: [
-      'M399 229 C410 238 412 258 408 290 C405 320 403 345 400 360 C394 365 387 360 386 345 C383 315 383 270 385 250 C387 235 392 226 399 229 Z',
-      'M661 229 C650 238 648 258 652 290 C655 320 657 345 660 360 C666 365 673 360 674 345 C677 315 677 270 675 250 C673 235 668 226 661 229 Z',
-    ],
-    highlightPaths: [
-      'M390 235 C399 244 401 270 399 300 C396 325 393 350 391 360 C387 360 384 350 383 330 C382 300 383 260 384 240 Z',
-      'M670 235 C661 244 659 270 661 300 C664 325 667 350 669 360 C673 360 676 350 677 330 C678 300 677 260 676 240 Z',
-    ],
-    markers: [
-      { cx: 399, cy: 262, rx: 3.4, ry: 7.2 },
-      { cx: 394, cy: 316, rx: 3.4, ry: 7.2 },
-      { cx: 661, cy: 262, rx: 3.4, ry: 7.2 },
-      { cx: 666, cy: 316, rx: 3.4, ry: 7.2 },
+    posteriorAlignmentTransform: POSTERIOR_REGION_ALIGNMENT_TRANSFORM,
+    anchors: [
+      { cx: 410, cy: 270, kind: 'ellipse', rx: 10, ry: 28 },
+      { cx: 614, cy: 270, kind: 'ellipse', rx: 10, ry: 28 },
     ],
   },
   {
@@ -1311,17 +1261,10 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     label: { en: 'Lower Back', zh: '下背' },
     tokens: ['spine', 'erector', 'lower back', '竖脊肌', '腰'],
     callout: { from: [530, 246], elbow: [612, 271], label: [630, 275], side: 'left' },
-    paths: [
-      'M502 190 C509 222 510 262 505 314 C498 328 490 325 487 309 C487 263 490 221 496 193 Z',
-      'M522 190 C515 222 514 262 519 314 C526 328 534 325 537 309 C537 263 534 221 528 193 Z',
-    ],
-    highlightPaths: [
-      'M498 211 C507 239 508 278 504 310 C499 320 493 318 490 306 C490 266 493 234 498 211 Z',
-      'M526 211 C517 239 516 278 520 310 C525 320 531 318 534 306 C534 266 531 234 526 211 Z',
-    ],
-    markers: [
-      { cx: 500, cy: 258, rx: 4, ry: 8.4 },
-      { cx: 524, cy: 258, rx: 4, ry: 8.4 },
+    posteriorAlignmentTransform: POSTERIOR_REGION_ALIGNMENT_TRANSFORM,
+    anchors: [
+      { cx: 502, cy: 270, kind: 'ellipse', rx: 8, ry: 20 },
+      { cx: 522, cy: 270, kind: 'ellipse', rx: 8, ry: 20 },
     ],
   },
   {
@@ -1330,23 +1273,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['glute', 'hip', 'posterior chain', '臀'],
     callout: { from: [556, 360], elbow: [612, 374], label: [630, 378], side: 'left' },
     posteriorAlignmentTransform: POSTERIOR_GLUTE_REGION_ALIGNMENT_TRANSFORM,
-    paths: [
-      'M488 310 C512 304 532 322 530 358 C522 388 502 392 488 386 C474 372 472 332 488 310 Z',
-      'M570 310 C546 304 526 322 528 358 C536 388 556 392 570 386 C584 372 586 332 570 310 Z',
-    ],
-    highlightPaths: [
-      'M491 316 C512 311 529 327 527 357 C520 383 503 387 491 382 C479 370 477 335 491 316 Z',
-      'M567 316 C546 311 529 327 531 357 C538 383 555 387 567 382 C579 370 581 335 567 316 Z',
-    ],
-    fibers: [
-      'M492 335 C505 328 520 330 527 342',
-      'M525 342 C532 330 547 328 555 335',
-      'M490 362 C500 370 515 371 525 362',
-      'M527 362 C537 371 552 370 562 362',
-    ],
-    markers: [
-      { cx: 509, cy: 349, rx: 7, ry: 9 },
-      { cx: 548, cy: 349, rx: 7, ry: 9 },
+    anchors: [
+      { cx: 503, cy: 330, kind: 'ellipse', rx: 18, ry: 18 },
+      { cx: 541, cy: 330, kind: 'ellipse', rx: 18, ry: 18 },
     ],
   },
   {
@@ -1355,29 +1284,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['hamstring', 'posterior thigh', 'posterior chain', '腘绳肌', '大腿'],
     callout: { from: [576, 396], elbow: [612, 416], label: [630, 420], side: 'left' },
     posteriorAlignmentTransform: POSTERIOR_LEG_REGION_ALIGNMENT_TRANSFORM,
-    paths: [
-      'M512 354 C526 368 529 402 525 440 C519 440 513 440 508 440 C502 440 504 387 511 358 Z',
-      'M537 358 C547 379 547 413 542 440 C538 440 533 440 526 440 C522 440 524 386 532 360 Z',
-      'M547 358 C540 379 540 413 545 440 C549 440 554 440 561 440 C565 440 563 386 556 360 Z',
-      'M574 354 C562 368 558 402 563 440 C568 440 574 440 582 440 C587 440 584 387 576 358 Z',
-    ],
-    highlightPaths: [
-      'M512 362 C523 373 524 404 520 440 C516 440 511 440 508 440 C504 440 506 386 512 362 Z',
-      'M532 364 C542 384 541 415 537 440 C534 440 530 440 526 440 C523 440 526 388 532 364 Z',
-      'M556 364 C546 384 547 415 551 440 C554 440 558 440 562 440 C565 440 562 388 556 364 Z',
-      'M574 362 C563 373 562 404 566 440 C569 440 573 440 578 440 C582 440 580 386 574 362 Z',
-    ],
-    fibers: [
-      'M516 366 C520 393 519 429 513 440',
-      'M531 368 C535 397 534 434 528 440',
-      'M551 368 C548 397 549 434 556 440',
-      'M570 366 C566 393 567 429 576 440',
-    ],
-    markers: [
-      { cx: 524, cy: 390, rx: 4, ry: 4 },
-      { cx: 532, cy: 430, rx: 4, ry: 4 },
-      { cx: 554, cy: 390, rx: 4, ry: 4 },
-      { cx: 566, cy: 430, rx: 4, ry: 4 },
+    anchors: [
+      { cx: 510, cy: 395, kind: 'ellipse', rx: 12, ry: 32 },
+      { cx: 552, cy: 395, kind: 'ellipse', rx: 12, ry: 32 },
     ],
   },
   {
@@ -1386,25 +1295,9 @@ const REFERENCE_BODY_MEASURE_REGIONS = [
     tokens: ['calf', 'calves', 'gastrocnemius', 'soleus', 'ankle', '小腿', '腓肠肌', '踝'],
     callout: { from: [576, 456], elbow: [612, 472], label: [630, 476], side: 'left' },
     posteriorAlignmentTransform: POSTERIOR_LEG_REGION_ALIGNMENT_TRANSFORM,
-    paths: [
-      'M528 424 C540 436 541 462 535 486 C530 496 523 499 517 490 C514 466 516 440 522 426 Z',
-      'M565 424 C556 436 555 462 561 486 C566 496 573 499 579 490 C581 466 579 440 574 426 Z',
-    ],
-    highlightPaths: [
-      'M524 432 C535 444 536 464 531 484 C527 492 522 494 518 487 C516 466 518 444 524 432 Z',
-      'M568 432 C558 444 557 464 562 484 C566 492 571 494 575 487 C577 466 575 444 568 432 Z',
-    ],
-    fibers: [
-      'M526 430 C532 446 532 468 526 489',
-      'M537 432 C540 451 539 471 533 490',
-      'M563 432 C560 451 561 471 567 490',
-      'M573 430 C568 446 568 468 574 489',
-    ],
-    markers: [
-      { cx: 528, cy: 448, rx: 4, ry: 4 },
-      { cx: 532, cy: 478, rx: 4, ry: 4 },
-      { cx: 566, cy: 448, rx: 4, ry: 4 },
-      { cx: 570, cy: 478, rx: 4, ry: 4 },
+    anchors: [
+      { cx: 515, cy: 490, kind: 'ellipse', rx: 10, ry: 24 },
+      { cx: 547, cy: 490, kind: 'ellipse', rx: 10, ry: 24 },
     ],
   },
 ];
@@ -1472,15 +1365,21 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
     const isFocused = hoveredRegionKey === region.key;
     const isPosteriorRegion = region.callout.from[0] > REFERENCE_BODY_MEASURE_VIEWBOX.width / 2;
     const posteriorRegionTransform = isPosteriorRegion ? getPosteriorRegionAlignmentTransform(region) : undefined;
-    const hasCalibratedPosteriorHighlight = isPosteriorRegion && Boolean(region.highlightPaths?.length);
-    const visibleRegionPaths = hasCalibratedPosteriorHighlight ? region.highlightPaths : region.paths;
-    const hitTargetPaths = hasCalibratedPosteriorHighlight ? visibleRegionPaths : region.paths;
     const regionLabel = region.label[isZh ? 'zh' : 'en'];
     const regionInspection = inspection.get(region.key);
     const regionExerciseNames = (regionInspection?.exercises || []).map((item) => item.name).slice(0, 2).join(' / ');
     const regionAriaLabel = regionExerciseNames
       ? `${regionLabel}, ${bodyMeasureCopy.trainedByLabel || ''} ${regionExerciseNames}`.trim()
       : regionLabel;
+    const anchors = region.anchors || [];
+    // Compute a bounding hit-target rect that covers all anchors for pointer events
+    const allCx = anchors.map((a) => a.cx);
+    const allCy = anchors.map((a) => a.cy);
+    const hitR = 42; // half hit-area size in viewBox units
+    const hitX = allCx.length ? Math.min(...allCx) - hitR : 0;
+    const hitY = allCy.length ? Math.min(...allCy) - hitR : 0;
+    const hitW = allCx.length ? Math.max(...allCx) - Math.min(...allCx) + hitR * 2 : 0;
+    const hitH = allCy.length ? Math.max(...allCy) - Math.min(...allCy) + hitR * 2 : 0;
     return (
       <g
         key={region.key}
@@ -1488,9 +1387,7 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
         data-region={region.key}
         data-training-count={regionInspection?.exercises?.length || 0}
         data-view={isPosteriorRegion ? 'posterior' : 'anterior'}
-        data-highlight-geometry={hasCalibratedPosteriorHighlight ? 'posterior-calibrated' : undefined}
         transform={posteriorRegionTransform}
-        clipPath={isPosteriorRegion ? 'url(#mtBodyPosteriorPlate)' : 'url(#mtBodyClinicalClip)'}
         role="button"
         tabIndex={0}
         aria-label={regionAriaLabel}
@@ -1502,22 +1399,48 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
         onClick={() => toggleSelectedRegion(region.key)}
         onKeyDown={(event) => handleRegionKeyDown(event, region.key)}
       >
-        {hitTargetPaths.map((d, index) => (
-          <path
-            key={`${region.key}-hit-${index}`}
+        {/* Invisible hit-target rect spanning all anchor positions */}
+        {allCx.length > 0 && (
+          <rect
             className="mt-body-measure-hit-target"
-            d={d}
+            x={hitX} y={hitY} width={hitW} height={hitH}
+            rx={hitR}
             aria-hidden="true"
           />
+        )}
+        {/* Spotlight anchors: glow circle + shape marker */}
+        {anchors.map((anchor, index) => (
+          <g key={`${region.key}-anchor-${index}`} aria-hidden="true">
+            {/* Soft radial glow — fades from coral to transparent */}
+            <circle
+              className="mt-body-spotlight-glow"
+              cx={anchor.cx}
+              cy={anchor.cy}
+              r={42}
+              fill="url(#mtMuscleGlow)"
+            />
+            {/* Anchor marker — circle or ellipse */}
+            {anchor.kind === 'circle'
+              ? (
+                <circle
+                  className="mt-body-spotlight-marker"
+                  cx={anchor.cx}
+                  cy={anchor.cy}
+                  r={anchor.r || 8}
+                />
+              )
+              : (
+                <ellipse
+                  className="mt-body-spotlight-marker"
+                  cx={anchor.cx}
+                  cy={anchor.cy}
+                  rx={anchor.rx || 8}
+                  ry={anchor.ry || 14}
+                />
+              )
+            }
+          </g>
         ))}
-        {visibleRegionPaths.map((d, index) => (
-          <path
-            key={`${region.key}-path-${index}`}
-            className={hasCalibratedPosteriorHighlight ? 'mt-body-posterior-highlight-path' : undefined}
-            d={d}
-          />
-        ))}
-        {(region.fibers || []).map((d, index) => <path key={`${region.key}-fiber-${index}`} d={d} className="mt-body-muscle-fiber" />)}
       </g>
     );
   };
@@ -1525,6 +1448,7 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
   const renderRegionBed = (region) => {
     const isPosteriorRegion = region.callout.from[0] > REFERENCE_BODY_MEASURE_VIEWBOX.width / 2;
     const posteriorRegionTransform = isPosteriorRegion ? getPosteriorRegionAlignmentTransform(region) : undefined;
+    const anchors = region.anchors || [];
     return (
       <g
         key={`${region.key}-bed`}
@@ -1532,10 +1456,13 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
         data-region={region.key}
         data-view={isPosteriorRegion ? 'posterior' : 'anterior'}
         transform={posteriorRegionTransform}
-        clipPath={isPosteriorRegion ? 'url(#mtBodyPosteriorPlate)' : undefined}
         aria-hidden="true"
       >
-        {region.paths.map((d, index) => <path key={`${region.key}-bed-path-${index}`} d={d} />)}
+        {anchors.map((anchor, index) => (
+          anchor.kind === 'circle'
+            ? <circle key={`${region.key}-bed-${index}`} cx={anchor.cx} cy={anchor.cy} r={(anchor.r || 8) * 2.4} />
+            : <ellipse key={`${region.key}-bed-${index}`} cx={anchor.cx} cy={anchor.cy} rx={(anchor.rx || 8) * 2.2} ry={(anchor.ry || 14) * 2.2} />
+        ))}
       </g>
     );
   };
@@ -1557,6 +1484,12 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           <title id="mt-body-measure-title">{bodyMeasureCopy.title}</title>
           <desc id="mt-body-measure-desc">{bodyMeasureCopy.desc}</desc>
           <defs>
+            {/* Spotlight radial glow — coral at centre, transparent at edge */}
+            <radialGradient id="mtMuscleGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="var(--accent-coral-strong, #f07561)" stopOpacity="0.85" />
+              <stop offset="55%" stopColor="var(--accent-coral, #ffb4a7)" stopOpacity="0.42" />
+              <stop offset="100%" stopColor="var(--accent-coral, #ffb4a7)" stopOpacity="0" />
+            </radialGradient>
             <linearGradient id="mtBodyMeasureHot" x1="0" x2="1" y1="0" y2="1">
               <stop offset="0%" stopColor="currentColor" stopOpacity="0.98" />
               <stop offset="58%" stopColor="currentColor" stopOpacity="0.76" />
