@@ -16881,7 +16881,7 @@ body.theme-midnight .polarized-target-marker {
 }
 
 .mt-body-real-human-atlas .mt-body-figure-clean {
-  opacity: 0;
+  opacity: 0.32;
 }
 
 .mt-body-human-landmarks {
@@ -17025,6 +17025,103 @@ body.theme-midnight .polarized-target-marker {
   .mt-body-measure-region.is-active .mt-body-spotlight-glow,
   .mt-body-measure-region.is-focused .mt-body-spotlight-glow {
     transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MUSCLE ANATOMY SVG — polished gradient paths
+   Each muscle rendered as a separate <path> inside .muscle-anatomy-group.
+   Class on the group: is-idle | is-plan-active | is-focused | is-active
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Base muscle shape — warm beige-to-clay gradient, subtle anatomy line work */
+.muscle-anatomy-part {
+  fill: url(#mtMuscleIdleGradient);
+  stroke: rgba(120, 80, 60, 0.45); /* tokens-ok */
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+  transition: fill 220ms ease, opacity 220ms ease, filter 220ms ease;
+}
+
+/* Shine overlay — screen-blend radial highlight for dimensional depth */
+.muscle-anatomy-shine {
+  fill: url(#mtMuscleFiberShine);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  transition: opacity 220ms ease;
+}
+
+/* Plan-active: coral gradient, moderate visible */
+.muscle-anatomy-group.is-plan-active .muscle-anatomy-part {
+  fill: url(#mtMuscleHotGradient);
+  opacity: 0.82;
+  filter: drop-shadow(0 1px 1.4px rgba(106, 35, 22, 0.32)); /* tokens-ok */
+}
+
+.muscle-anatomy-group.is-plan-active .muscle-anatomy-shine {
+  opacity: 0.62;
+}
+
+/* Focused (hover): coral + stronger glow */
+.muscle-anatomy-group.is-focused .muscle-anatomy-part {
+  fill: url(#mtMuscleHotGradient);
+  opacity: 0.92;
+  filter: drop-shadow(0 1px 1.4px rgba(106, 35, 22, 0.4)) drop-shadow(0 0 6px color-mix(in srgb, var(--accent-coral-strong) 38%, transparent)); /* tokens-ok */
+}
+
+.muscle-anatomy-group.is-focused .muscle-anatomy-shine {
+  opacity: 0.7;
+}
+
+/* Active (selected): full coral, maximum depth */
+.muscle-anatomy-group.is-active .muscle-anatomy-part {
+  fill: url(#mtMuscleHotGradient);
+  opacity: 1;
+  filter: drop-shadow(0 1px 1.4px rgba(106, 35, 22, 0.5)) drop-shadow(0 0 8px color-mix(in srgb, var(--accent-coral-strong) 48%, transparent)); /* tokens-ok */
+}
+
+.muscle-anatomy-group.is-active .muscle-anatomy-shine {
+  opacity: 0.78;
+}
+
+/* ── Light-mode parity: coral reads on bright background ── */
+body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-part {
+  fill: url(#mtMuscleIdleGradient);
+  stroke: rgba(100, 60, 40, 0.38); /* tokens-ok */
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-group.is-plan-active .muscle-anatomy-part {
+  fill: url(#mtMuscleHotGradient);
+  opacity: 0.72;
+  filter: drop-shadow(0 1px 1.4px rgba(106, 35, 22, 0.28)); /* tokens-ok */
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-group.is-focused .muscle-anatomy-part {
+  fill: url(#mtMuscleHotGradient);
+  opacity: 0.84;
+  filter: drop-shadow(0 1px 1.4px rgba(106, 35, 22, 0.36)) drop-shadow(0 0 5px color-mix(in srgb, var(--accent-coral-strong) 32%, transparent)); /* tokens-ok */
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-group.is-active .muscle-anatomy-part {
+  fill: url(#mtMuscleHotGradient);
+  opacity: 0.92;
+  filter: drop-shadow(0 1px 1.4px rgba(106, 35, 22, 0.44)) drop-shadow(0 0 7px color-mix(in srgb, var(--accent-coral-strong) 42%, transparent)); /* tokens-ok */
+}
+
+/* Light mode shine is slightly reduced (already bright bg) */
+body:is(.theme-light, .theme-high-contrast-light) .muscle-anatomy-shine {
+  opacity: 0.32;
+}
+
+/* ── Reduced-motion: disable transitions and filter on muscle anatomy ── */
+@media (prefers-reduced-motion: reduce) {
+  .muscle-anatomy-part {
+    transition: none;
+    filter: none;
+  }
+  .muscle-anatomy-shine {
+    transition: none;
   }
 }
 

@@ -9,8 +9,7 @@ import HermesLogo from '../components/HermesLogo';
 import FooterNavLinks from '../components/FooterNavLinks';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import anatomyAnteriorGray from '../assets/anatomy/muscles-anterior-gray.png';
-import anatomyPosteriorGray from '../assets/anatomy/muscles-posterior-gray-unlabeled.png';
+import { MuscleAnatomySvg, buildRegionStates } from '../components/MuscleAnatomySvg';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -1064,7 +1063,6 @@ const REFERENCE_BODY_MEASURE_VIEWBOX = { width: 790, height: 580 };
  * and the posterior SVG/muscle regions share that fitted person-scale matrix
  * with legacy x-axis corrections on top.
  */
-const POSTERIOR_RASTER_ALIGNMENT_TRANSFORM = 'translate(0 0)';
 const POSTERIOR_SVG_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 32.3948031496 18.805511811)';
 const POSTERIOR_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 83.7 9.0)';
 const POSTERIOR_GLUTE_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 89.0 12.0)';
@@ -1336,6 +1334,8 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
     }
   }, [toggleSelectedRegion]);
   const highlightedRegions = selectedRegionKey ? new Set([selectedRegionKey]) : new Set();
+  const frontRegionStates = buildRegionStates(planRegions, hoveredRegionKey, selectedRegionKey, 'front');
+  const backRegionStates = buildRegionStates(planRegions, hoveredRegionKey, selectedRegionKey, 'back');
   const bodyMeasureCopy = copy || {};
   const activeRegionLabels = REFERENCE_BODY_MEASURE_REGIONS
     .filter((region) => (focusRegionKey ? region.key === focusRegionKey : planRegions.has(region.key)))
@@ -1408,39 +1408,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
             aria-hidden="true"
           />
         )}
-        {/* Spotlight anchors: glow circle + shape marker */}
-        {anchors.map((anchor, index) => (
-          <g key={`${region.key}-anchor-${index}`} aria-hidden="true">
-            {/* Soft radial glow — fades from coral to transparent */}
-            <circle
-              className="mt-body-spotlight-glow"
-              cx={anchor.cx}
-              cy={anchor.cy}
-              r={42}
-              fill="url(#mtMuscleGlow)"
-            />
-            {/* Anchor marker — circle or ellipse */}
-            {anchor.kind === 'circle'
-              ? (
-                <circle
-                  className="mt-body-spotlight-marker"
-                  cx={anchor.cx}
-                  cy={anchor.cy}
-                  r={anchor.r || 8}
-                />
-              )
-              : (
-                <ellipse
-                  className="mt-body-spotlight-marker"
-                  cx={anchor.cx}
-                  cy={anchor.cy}
-                  rx={anchor.rx || 8}
-                  ry={anchor.ry || 14}
-                />
-              )
-            }
-          </g>
-        ))}
       </g>
     );
   };
@@ -1484,7 +1451,25 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           <title id="mt-body-measure-title">{bodyMeasureCopy.title}</title>
           <desc id="mt-body-measure-desc">{bodyMeasureCopy.desc}</desc>
           <defs>
-            {/* Spotlight radial glow — coral at centre, transparent at edge */}
+            {/* ── Muscle anatomy polished gradients ── */}
+            {/* Idle state: warm beige-to-clay — reads as resting muscle, not flat gray */}
+            <linearGradient id="mtMuscleIdleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#e8c8b0" stopOpacity="0.78" />
+              <stop offset="55%" stopColor="#c9a98e" stopOpacity="0.82" />
+              <stop offset="100%" stopColor="#9c7c66" stopOpacity="0.85" />
+            </linearGradient>
+            {/* Active state: coral gradient — Hermes brand coral mapped to anatomical red */}
+            <linearGradient id="mtMuscleHotGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#f7906f" stopOpacity="0.95" />
+              <stop offset="55%" stopColor="#df5d3e" stopOpacity="0.98" />
+              <stop offset="100%" stopColor="#9c2f1f" stopOpacity="1" />
+            </linearGradient>
+            {/* Shine overlay: radial highlight from upper-left — dimensional muscle belly effect */}
+            <radialGradient id="mtMuscleFiberShine" cx="40%" cy="20%" r="80%">
+              <stop offset="0%" stopColor="#fff1e2" stopOpacity="0.42" />
+              <stop offset="100%" stopColor="#fff1e2" stopOpacity="0" />
+            </radialGradient>
+            {/* Spotlight radial glow — still used by hit-target regions */}
             <radialGradient id="mtMuscleGlow" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="var(--accent-coral-strong, #f07561)" stopOpacity="0.85" />
               <stop offset="55%" stopColor="var(--accent-coral, #ffb4a7)" stopOpacity="0.42" />
@@ -1558,20 +1543,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           {/* ── FRONT FIGURE ─────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.anterior}>
             <text x="190" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.anterior}</text>
-            <g className="mt-body-reference-image-layer" aria-hidden="true">
-              <image
-                href={anatomyAnteriorGray}
-                x="58"
-                y="42"
-                width="264"
-                height="508"
-                data-align-level="shared-anatomy-baseline"
-                data-visual-scale="frame-contained-slice"
-                preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#mtBodyAnteriorPlate)"
-                className="mt-body-reference-image"
-              />
-            </g>
             <g className="mt-body-figure-clean" aria-hidden="true">
               {/* single coherent body silhouette — anterior */}
               <path
@@ -1613,26 +1584,13 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
               <path className="mt-body-figure-contour" d="M164 295 C172 336 172 386 167 432 M216 295 C208 336 208 386 213 432" />
               <path className="mt-body-figure-contour" d="M143 435 C151 458 152 497 148 528 M237 435 C229 458 228 497 232 528" />
             </g>
+            {/* SVG anatomy paths — polished gradient fills, one path per muscle */}
+            <MuscleAnatomySvg view="front" regionStates={frontRegionStates} />
           </g>
 
           {/* ── BACK FIGURE ──────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.posterior}>
             <text x="570" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.posterior}</text>
-            <g className="mt-body-reference-image-layer" transform={POSTERIOR_RASTER_ALIGNMENT_TRANSFORM} aria-hidden="true">
-              <image
-                href={anatomyPosteriorGray}
-                x="411.12"
-                y="59.4"
-                width="370.2"
-                height="491.2"
-                data-align-level="shared-anatomy-baseline"
-                data-crop-align="posterior-body-axis-fitted"
-                data-visual-scale="posterior-matched-person-grid-fit"
-                preserveAspectRatio="xMidYMid meet"
-                clipPath="url(#mtBodyPosteriorPlate)"
-                className="mt-body-reference-image"
-              />
-            </g>
             <g className="mt-body-figure-clean" transform={POSTERIOR_SVG_ALIGNMENT_TRANSFORM} aria-hidden="true">
               {/* single coherent body silhouette — posterior */}
               <path
@@ -1669,6 +1627,8 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
               <path className="mt-body-figure-contour" d="M532 346 C542 385 542 437 536 481 M608 346 C598 385 598 437 604 481" />
               <path className="mt-body-figure-contour" d="M509 480 C517 500 517 526 513 548 M631 480 C623 500 623 526 627 548" />
             </g>
+            {/* SVG anatomy paths — polished gradient fills, one path per muscle */}
+            <MuscleAnatomySvg view="back" regionStates={backRegionStates} />
           </g>
 
           <g className="mt-body-measure-region-bed-layer" aria-hidden="true" clipPath="url(#mtBodyClinicalClip)">
