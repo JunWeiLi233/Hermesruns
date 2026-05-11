@@ -232,6 +232,12 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 !.codex/skills/architecture-diagram-generator/SKILL.md
 !.codex/skills/architecture-diagram-generator/assets/
 !.codex/skills/architecture-diagram-generator/assets/template.html
+!.codex/skills/vercel-react-best-practices/
+!.codex/skills/vercel-react-best-practices/SKILL.md
+!.codex/skills/vercel-react-best-practices/agents/
+!.codex/skills/vercel-react-best-practices/agents/openai.yaml
+!.codex/skills/vercel-react-best-practices/references/
+!.codex/skills/vercel-react-best-practices/references/hermes-adaptation.md
 .cursor/
 .opencode/
 !.cursor/
@@ -244,6 +250,19 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 !.opencode/commands/
 !.opencode/commands/auto-hermes.md
 !.opencode/commands/auto-hermes-max.md
+!.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/_TRIGGERS.md
+!.claude/agents/
+!.claude/agents/frontend-agent.md
+!.claude/skills/vercel-react-best-practices/
+!.claude/skills/vercel-react-best-practices/SKILL.md
+!.claude/skills/vercel-react-best-practices/agents/
+!.claude/skills/vercel-react-best-practices/agents/openai.yaml
+!.claude/skills/vercel-react-best-practices/references/
+!.claude/skills/vercel-react-best-practices/references/hermes-adaptation.md
 .opencode.json
 
 # Exclude sensitive parts of workflow core
@@ -262,3 +281,10 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 .tools/auto-hermes-task-meta.mjs
 .tools/auto-hermes-tools.test.mjs
 .tools/omx-auto-hermes-bridge.mjs
+
+# Playwright wrapper persistent state (cookies, localStorage per --state slot)
+.ai-sync/playwright-state/
+# Playwright install artifacts when used as a devDependency
+playwright-report/
+test-results/
+.playwright-cache/
