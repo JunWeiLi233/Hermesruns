@@ -257,6 +257,8 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 !.claude/skills/_TRIGGERS.md
 !.claude/agents/
 !.claude/agents/frontend-agent.md
+!.claude/commands/
+!.claude/commands/auto-hermes-self.md
 !.claude/skills/vercel-react-best-practices/
 !.claude/skills/vercel-react-best-practices/SKILL.md
 !.claude/skills/vercel-react-best-practices/agents/
