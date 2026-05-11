@@ -14,6 +14,8 @@ Execute in order. Calling `Agent` in step 4 is the actual launch — skipping it
 - Arguments → Concrete Scope. No arguments → Explorer Mode (launch `planning-agent`, wait for report).
 - Run `git log --oneline -10`, read `.ai-sync/AGENT_SYNC.md`. Exclude surfaces claimed by other agents. Absorb recent external changes.
 - If frontend lanes: bootstrap `bh` daemon (skip if unavailable).
+- If multiple frontend/browser lanes are active, read `C:\tmp\browser-harness-sessions.json` before launch. A lane must not take over another lane's page/session; if the target page is already owned or likely in use, open and claim a separate tab with `new_tab(targetUrl)` or a distinct `BU_NAME`.
+- If frontend lanes or website-audit fallback are in scope, load `.tools/auto-hermes-skills.mjs --json` and apply `web-quality-audit` from `https://officialskills.sh/addyosmani/skills/web-quality-audit` (GitHub: `https://github.com/addyosmani/web-quality-skills/tree/main/skills/web-quality-audit`) before accepting browser-visible quality findings.
 
 **1. Decompose into lanes.** Classify each sub-item `frontend-only` / `backend-only` / `cross-stack`. Must spawn matching agent types. Cross-stack → sequential pair or separate lanes with `dependsOn`. Apply lane count decision table from Dynamic Reassessment. Single lane: still run full ceremony. Wave model: lanes sharing contract files (translations, pom.xml) run in different waves.
 
@@ -27,6 +29,8 @@ Execute in order. Calling `Agent` in step 4 is the actual launch — skipping it
 
 **4. Launch wave-1 lanes.** Call `Agent` ONCE PER LANE in a SINGLE message with parallel blocks. Wave-1 = `parallelSafe: true` AND `dependsOn: []` AND no `ownedFiles` collision. Prompt: `"Lane <id>: <goal>. Owned files: <list>. Read brief at .ai-sync/auto-hermes-max-lanes/<laneId>.md. Follow Lane Agent Contract. <2-3 sentence design notes if needed>."` Agent types: `frontend-agent` (UI), `backend-agent` (services/schemas), `planning-agent` (Explorer), `reviewer-agent` (regression), `debugger` (diagnosis). Lanes default to main tree, never write TASKS.md/CONTEXT_LEDGER.md, use bash commands (`node` from PATH, forward slashes).
 
+Browser lane prompt addendum: "For browser proof, check `C:\tmp\browser-harness-sessions.json` and current page state first. If another agent owns or appears to use the target page, do not take over that page; open a separate tab with `new_tab(targetUrl)` or use a distinct `BU_NAME`, then record your tab/session label in the result packet. Alternative: if the target page is auth-walled or the user is using Chrome for other work, use the Microsoft Playwright wrapper `.tools/auto-hermes-playwright.mjs` (`goto` / `eval` / `screenshot` / `status` / `reset` / `doctor`) — it drives a managed headless Chromium with a persistent context at `.ai-sync/playwright-state/<state>/`, so signing in once with `--headed` makes every later round reuse that login. Use a distinct `--state <name>` per lane when lanes need disjoint sessions."
+
 **5. Wait for wave 1, verify, commit.** Do not poll or read transcript files. For approved lanes: run `lint` + `mvnw compile`, create `wip: auto-hermes-max wave 1 (<ids>)` commit.
 
 **6. Launch wave 2.** Deferred lanes whose `dependsOn` are satisfied and `ownedFiles` no longer collide. Before each wave, re-read AGENT_SYNC.md — drop lanes overlapping new active claims. Repeat until all report or remaining are deadlocked (mark `blocked: shared-contract-deadlock`, write to TASKS.md).
@@ -37,6 +41,7 @@ Execute in order. Calling `Agent` in step 4 is the actual launch — skipping it
 
 **9. Post-merge writeback:**
 - Runtime proof: frontend → `run-vite-build.mjs` + `verify-frontend-runtime-sync.mjs`; backend → `mvnw compile` + `verify-backend-runtime-sync.mjs`. CSS touched → `check-design-tokens.mjs` (exit 0). JSX/translations touched → `check-translations.mjs` (exit 0 for touched namespaces). Non-PASS → downgrade to `merged-source-only`, write must-fix.
+- Frontend/browser-visible merge proof should include `web-quality-audit` when applicable: performance, accessibility, SEO, best practices, browser proof, console state, and Lighthouse-style observations. This is advisory; Hermes build/runtime gates remain authoritative.
 - Update `.ai-sync/CONTEXT_LEDGER.md` (one capsule per touched surface).
 - Update `TASKS.md` (remove completed, append follow-ups from `mergeNotes`/`risks`).
 - Final commit: per CLAUDE.md checklist. Squash wave commits. Stage only product files.
