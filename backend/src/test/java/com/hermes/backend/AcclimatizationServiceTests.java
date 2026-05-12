@@ -3,12 +3,18 @@ package com.hermes.backend;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -137,6 +143,97 @@ class AcclimatizationServiceTests {
         assertThat(response.climateShockEvent()).isFalse();
         assertThat(response.pacePenaltySecPerKm()).isZero();
         assertThat(response.message()).isNull();
+    }
+
+    @Test
+    void buildContextReturnsUnavailableWhenOpenMeteoReturns429() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        when(activityPointRepository.findLatestLatLngByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{31.2304, 121.4737}));
+        when(activityRepository.findRunsBetween(any(), any(), any(), any())).thenReturn(List.of());
+        when(restTemplate.exchange(
+                ArgumentMatchers.<RequestEntity<?>>any(),
+                ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenThrow(HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS, "429 Too Many Requests",
+                null, null, StandardCharsets.UTF_8
+        ));
+
+        AcclimatizationService service = new AcclimatizationService(activityRepository, activityPointRepository, restTemplate);
+
+        AcclimatizationService.WeatherContextResponse response = service.buildContext(runner());
+
+        assertThat(response.available()).isFalse();
+        assertThat(response.message()).isEqualTo("Weather provider returned no dew point data.");
+    }
+
+    @Test
+    void subsequentCallIsThrottledAfter429() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        when(activityPointRepository.findLatestLatLngByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{31.2304, 121.4737}));
+        when(activityRepository.findRunsBetween(any(), any(), any(), any())).thenReturn(List.of());
+        when(restTemplate.exchange(
+                ArgumentMatchers.<RequestEntity<?>>any(),
+                ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        ))
+                // First call: 429
+                .thenThrow(HttpClientErrorException.create(
+                        HttpStatus.TOO_MANY_REQUESTS, "429 Too Many Requests",
+                        null, null, StandardCharsets.UTF_8
+                ))
+                // Second call (should be throttled and not hit the API, but if it does, return success)
+                .thenReturn(ResponseEntity.ok(archiveWeather(
+                        LocalDate.now().minusDays(2), LocalDate.now(),
+                        Map.of(LocalDate.now(), 12.0),
+                        12.0
+                )));
+
+        AcclimatizationService service = new AcclimatizationService(activityRepository, activityPointRepository, restTemplate);
+
+        // First call: gets 429, returns unavailable, rate limiter records the event
+        AcclimatizationService.WeatherContextResponse first = service.buildContext(runner());
+        assertThat(first.available()).isFalse();
+
+        // Second call: rate limiter should throttle (same service instance), returns unavailable
+        // Since the rate limiter has a 30s backoff, and both calls happen in the same test,
+        // the second call should be throttled without hitting the REST template.
+        AcclimatizationService.WeatherContextResponse second = service.buildContext(runner());
+        assertThat(second.available()).isFalse();
+
+        // The REST template should have been called exactly once (the first call)
+        verify(restTemplate).exchange(
+                ArgumentMatchers.<RequestEntity<?>>any(),
+                ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        );
+    }
+
+    @Test
+    void externalExceptionStillReturnsUnavailableGracefully() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        when(activityPointRepository.findLatestLatLngByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{31.2304, 121.4737}));
+        when(activityRepository.findRunsBetween(any(), any(), any(), any())).thenReturn(List.of());
+        when(restTemplate.exchange(
+                ArgumentMatchers.<RequestEntity<?>>any(),
+                ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenThrow(new RuntimeException("Connection reset"));
+
+        AcclimatizationService service = new AcclimatizationService(activityRepository, activityPointRepository, restTemplate);
+
+        AcclimatizationService.WeatherContextResponse response = service.buildContext(runner());
+
+        assertThat(response.available()).isFalse();
+        assertThat(response.message()).isEqualTo("Weather provider returned no dew point data.");
     }
 
     private Runner runner() {

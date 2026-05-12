@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -18,6 +18,16 @@ import { computeVdotTrend } from '../utils/vdot';
 import { buildAnalysisSnapshot, normalizeAnalysisList } from '../utils/analysisInsights';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
+const ANALYSIS_DAY_MS = 24 * 60 * 60 * 1000;
+const TRAINING_ZONE_BASIS_STYLE = {
+  display: 'block',
+  marginTop: '0.42rem',
+  color: 'rgba(91, 74, 64, 0.72)',
+  fontSize: 'clamp(0.72rem, 0.74vw, 0.82rem)',
+  fontWeight: 750,
+  letterSpacing: '0.035em',
+  lineHeight: 1.35,
+};
 
 function Gauge({ value, color }) {
   const clamped = Math.max(0, Math.min(1.8, Number(value || 0)));
@@ -36,6 +46,66 @@ function Gauge({ value, color }) {
   );
 }
 
+function RiskRing({ score, color }) {
+  const radius = 35;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.min(100, Math.max(0, Number(score) || 0));
+  const offset = circumference - (pct / 100) * circumference;
+  return (
+    <svg viewBox="0 0 100 100" className="analysis-injury-prevention-risk-ring-svg" aria-hidden="true">
+      <circle cx="50" cy="50" r={radius} className="analysis-injury-prevention-risk-ring-track" />
+      <circle
+        cx="50" cy="50"
+        r={radius}
+        className="analysis-injury-prevention-risk-ring-progress"
+        style={{ stroke: color, strokeDasharray: circumference, strokeDashoffset: offset }}
+      />
+      <text x="50" y="50" className="analysis-injury-prevention-risk-ring-center">
+        {score != null ? `${Math.round(score)}%` : '--'}
+      </text>
+    </svg>
+  );
+}
+
+function formatTrainingZoneBasisUpdated(value, t) {
+  const date = value instanceof Date ? value : new Date(value || 0);
+  if (!Number.isFinite(date.getTime())) return t('analysis.stitch_zone_basis_updated_recently');
+  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / ANALYSIS_DAY_MS));
+  if (days <= 0) return t('analysis.stitch_zone_basis_updated_today');
+  return t('analysis.stitch_zone_basis_updated_days', { count: days });
+}
+
+function buildTrainingZoneBasisLabel(snapshot, t) {
+  const bestVdot = Number(snapshot?.bestVdot);
+  if (!Number.isFinite(bestVdot) || bestVdot <= 0) {
+    return t('analysis.stitch_zone_basis_empty');
+  }
+
+  const windowEntries = Array.isArray(snapshot?.bestEstimate?.windowEntries)
+    ? snapshot.bestEstimate.windowEntries
+    : [];
+  const sampleCount = windowEntries.length
+    || Number(snapshot?.bestEstimate?.usedTopN || 0)
+    || (Array.isArray(snapshot?.entries) ? snapshot.entries.length : 0);
+  const latestEntry = windowEntries.reduce((latest, entry) => {
+    const date = entry?.date instanceof Date ? entry.date : new Date(entry?.date || 0);
+    if (!Number.isFinite(date.getTime())) return latest;
+    if (!latest || date.getTime() > latest.getTime()) return date;
+    return latest;
+  }, null);
+  const bestRun = snapshot?.bestEstimate?.bestRun;
+  const updated = formatTrainingZoneBasisUpdated(
+    latestEntry || bestRun?.startTime || bestRun?.startDate,
+    t,
+  );
+
+  return t('analysis.stitch_zone_basis', {
+    vdot: bestVdot.toFixed(1),
+    count: Math.max(1, sampleCount),
+    updated,
+  });
+}
+
 export default function Analysis() {
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
@@ -48,7 +118,72 @@ export default function Analysis() {
   const [runsState, setRunsState] = useState('loading');
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [injuryStatus, setInjuryStatus] = useState(null);
+  const [injuryStatusLoading, setInjuryStatusLoading] = useState(false);
+  const [injuryStatusError, setInjuryStatusError] = useState(false);
+  const [sorenessSubmitting, setSorenessSubmitting] = useState(false);
+  const [sorenessError, setSorenessError] = useState(null);
   const [hoveredVo2BarKey, setHoveredVo2BarKey] = useState(null);
+  const vo2BarsContainerRef = useRef(null);
+  const vo2TouchDismissTimerRef = useRef(null);
+  const vo2TouchActiveRef = useRef(false);
+
+  const clearVo2TouchTimer = useCallback(() => {
+    if (vo2TouchDismissTimerRef.current) {
+      clearTimeout(vo2TouchDismissTimerRef.current);
+      vo2TouchDismissTimerRef.current = null;
+    }
+  }, []);
+
+  const dismissVo2Tooltip = useCallback(() => {
+    clearVo2TouchTimer();
+    vo2TouchActiveRef.current = false;
+    setHoveredVo2BarKey(null);
+  }, [clearVo2TouchTimer]);
+
+  const handleVo2BarPointerDown = useCallback((event, key) => {
+    if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+      vo2TouchActiveRef.current = true;
+      setHoveredVo2BarKey(key);
+      clearVo2TouchTimer();
+      vo2TouchDismissTimerRef.current = setTimeout(() => {
+        vo2TouchActiveRef.current = false;
+        setHoveredVo2BarKey(null);
+      }, 3000);
+    }
+  }, [clearVo2TouchTimer]);
+
+  const handleVo2BarPointerEnter = useCallback((event, key) => {
+    if (event.pointerType === 'mouse') {
+      setHoveredVo2BarKey(key);
+    }
+  }, []);
+
+  const handleVo2BarPointerLeave = useCallback((event, key) => {
+    if (event.pointerType === 'mouse') {
+      setHoveredVo2BarKey((current) => (current === key ? null : current));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hoveredVo2BarKey) return undefined;
+    const handlePointerDownOutside = (event) => {
+      const container = vo2BarsContainerRef.current;
+      if (container && container.contains(event.target)) return;
+      dismissVo2Tooltip();
+    };
+    const handleScroll = () => {
+      if (vo2TouchActiveRef.current) dismissVo2Tooltip();
+    };
+    document.addEventListener('pointerdown', handlePointerDownOutside, true);
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDownOutside, true);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [hoveredVo2BarKey, dismissVo2Tooltip]);
+
+  useEffect(() => () => clearVo2TouchTimer(), [clearVo2TouchTimer]);
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
@@ -99,6 +234,27 @@ export default function Analysis() {
     };
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    if (!hasRuns) return;
+    let cancelled = false;
+    async function fetchInjuryStatus() {
+      setInjuryStatusLoading(true);
+      try {
+        const data = await apiJson('/api/injury-risk/status');
+        if (!cancelled) {
+          setInjuryStatus(data);
+          setInjuryStatusError(false);
+        }
+      } catch {
+        if (!cancelled) setInjuryStatusError(true);
+      } finally {
+        if (!cancelled) setInjuryStatusLoading(false);
+      }
+    }
+    fetchInjuryStatus();
+    return () => { cancelled = true; };
+  }, [hasRuns]);
+
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const bestVdot = snapshot.bestVdot;
   const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
@@ -112,6 +268,10 @@ export default function Analysis() {
   const marathonRow = snapshot.marathonRow;
   const marathonDelta = snapshot.marathonDeltaSeconds;
   const hasRuns = runs.length > 0;
+  const currentVo2Bar = vo2Bars.find((bar) => bar.current) || vo2Bars[vo2Bars.length - 1] || null;
+  const currentVdotLabel = currentVo2Bar?.value != null ? currentVo2Bar.value.toFixed(1) : '--';
+  const adjustedVdotLabel = currentVo2Bar?.hasAdjustment ? currentVo2Bar.adjustedValue.toFixed(1) : '--';
+  const trainingZoneBasisLabel = buildTrainingZoneBasisLabel(snapshot, t);
 
   const injuryKicker = t('analysis.stitch_injury_signal');
   const injuryTitle = t('analysis.stitch_injury_title');
@@ -159,6 +319,27 @@ export default function Analysis() {
       setNameModalOpen(false);
     } catch {
       // noop
+    }
+  }
+
+  async function handleSorenessLog(level) {
+    setSorenessSubmitting(true);
+    setSorenessError(null);
+    try {
+      await apiJson('/api/injury-risk/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level }),
+      });
+      setInjuryStatusLoading(true);
+      const data = await apiJson('/api/injury-risk/status');
+      setInjuryStatus(data);
+      setInjuryStatusError(false);
+    } catch {
+      setSorenessError(t('analysis.stitch_injury_prevention_log_error'));
+    } finally {
+      setSorenessSubmitting(false);
+      setInjuryStatusLoading(false);
     }
   }
 
@@ -278,8 +459,8 @@ export default function Analysis() {
             </section>
           ) : (
             <>
-              <section className="analysis-overview-grid analysis-overview-grid--hero">
-                <article className="analysis-overview-card analysis-overview-card--vo2">
+              <section className="analysis-overview-grid analysis-overview-grid--hero analysis-profile-cockpit">
+                <article className="analysis-overview-card analysis-overview-card--vo2 analysis-profile-primary">
                   <div className="analysis-overview-card-head">
                     <div>
                       <span className="analysis-overview-card-kicker">{t('analysis.stitch_vo2_kicker')}</span>
@@ -290,7 +471,7 @@ export default function Analysis() {
                       <span>{t('analysis.stitch_vo2_band')}</span>
                     </div>
                   </div>
-                  <div className="analysis-overview-vo2-bars">
+                  <div className="analysis-overview-vo2-bars" ref={vo2BarsContainerRef}>
                     {hoveredVo2Bar ? (
                       <div
                         className="analysis-overview-vo2-tooltip"
@@ -321,8 +502,9 @@ export default function Analysis() {
                         tabIndex={0}
                         role="img"
                         aria-label={`${bar.label}: VO2max ${bar.value != null ? bar.value.toFixed(1) : '--'}${bar.hasAdjustment ? `, Adjusted ${bar.adjustedValue.toFixed(1)}` : ''}`}
-                        onPointerEnter={() => setHoveredVo2BarKey(bar.key)}
-                        onPointerLeave={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
+                        onPointerDown={(event) => handleVo2BarPointerDown(event, bar.key)}
+                        onPointerEnter={(event) => handleVo2BarPointerEnter(event, bar.key)}
+                        onPointerLeave={(event) => handleVo2BarPointerLeave(event, bar.key)}
                         onFocus={() => setHoveredVo2BarKey(bar.key)}
                         onBlur={() => setHoveredVo2BarKey((current) => (current === bar.key ? null : current))}
                       >
@@ -356,12 +538,26 @@ export default function Analysis() {
                       </div>
                     )}
                   </div>
+                  <div className="analysis-profile-decision-spine" aria-label={t('profile.dashboard_nav_analysis')}>
+                    <div className="analysis-profile-decision-chip">
+                      <span>{t('analysis.vdot_raw')}</span>
+                      <strong>{currentVdotLabel}</strong>
+                    </div>
+                    <div className="analysis-profile-decision-chip">
+                      <span>{t('analysis.vdot_weather_adjusted')}</span>
+                      <strong>{adjustedVdotLabel}</strong>
+                    </div>
+                    <div className="analysis-profile-decision-chip">
+                      <span>{t('analysis.stitch_forecast_title')}</span>
+                      <strong>{marathonRow?.timeLabel || '--'}</strong>
+                    </div>
+                  </div>
                 </article>
 
-                <div className="analysis-overview-side-stack">
+                <div className="analysis-overview-side-stack analysis-profile-reference-grid">
                   <button
                     type="button"
-                    className="analysis-overview-card analysis-overview-card--load analysis-overview-card--interactive"
+                    className="analysis-overview-card analysis-overview-card--load analysis-profile-reference-card is-load analysis-overview-card--interactive"
                     onClick={() => navigate('/analysis/load-balance')}
                   >
                     <span className="analysis-overview-card-kicker">{t('analysis.stitch_acwr_title')}</span>
@@ -375,7 +571,7 @@ export default function Analysis() {
 
                   <button
                     type="button"
-                    className="analysis-overview-card analysis-overview-card--coach analysis-overview-card--interactive"
+                    className="analysis-overview-card analysis-overview-card--coach analysis-profile-reference-card is-coach analysis-overview-card--interactive"
                     onClick={() => navigate('/analysis/coach-insight')}
                   >
                     <div className="analysis-overview-coach-head">
@@ -388,7 +584,7 @@ export default function Analysis() {
                   </button>
 
                   {vdotTrend.hasData && (
-                    <article className="analysis-overview-card analysis-overview-card--insight analysis-overview-card--vdot-insight">
+                    <article className="analysis-overview-card analysis-overview-card--insight analysis-overview-card--vdot-insight analysis-profile-reference-card is-trend">
                       <div className="analysis-overview-card-head">
                         <div>
                           <span className="analysis-overview-card-kicker">{t('analysis.vdot_trend_insight_title')}</span>
@@ -410,10 +606,10 @@ export default function Analysis() {
                 </div>
               </section>
 
-              <section className="analysis-overview-grid analysis-overview-grid--summary">
+              <section className="analysis-overview-grid analysis-overview-grid--summary analysis-profile-bento-grid">
                 <button
                   type="button"
-                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--intensity analysis-overview-card--interactive"
+                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--intensity analysis-profile-bento-card analysis-overview-card--interactive"
                   onClick={() => navigate('/analysis/intensity')}
                 >
                   <span className="analysis-overview-card-kicker">{t('analysis.stitch_intensity_title')}</span>
@@ -439,7 +635,7 @@ export default function Analysis() {
 
                 <button
                   type="button"
-                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--injury analysis-overview-card--interactive"
+                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--injury analysis-profile-bento-card analysis-overview-card--interactive"
                   onClick={() => navigate('/analysis/injury-risk')}
                 >
                   <div className="analysis-overview-card-title-block">
@@ -462,7 +658,7 @@ export default function Analysis() {
 
                 <button
                   type="button"
-                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--forecast analysis-overview-card--interactive"
+                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--forecast analysis-profile-bento-card analysis-overview-card--interactive"
                   onClick={() => navigate('/prediction/marathon')}
                 >
                   <span className="analysis-overview-card-kicker">{t('analysis.stitch_forecast_title')}</span>
@@ -478,74 +674,200 @@ export default function Analysis() {
                 </button>
               </section>
 
-              <section className="analysis-overview-card analysis-overview-card--prediction-table analysis-overview-card--training-zones">
-                <div className="analysis-overview-table-head">
-                  <h2>{t('analysis.stitch_training_zones_title')}</h2>
-                </div>
-                <div className="analysis-overview-table-wrap">
-                  <table className="analysis-overview-table">
-                    <thead>
-                      <tr>
-                        <th>{t('analysis.stitch_zone_label')}</th>
-                        <th>{t('analysis.stitch_zone_pace')}</th>
-                        <th>{t('analysis.stitch_zone_purpose')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {trainingZones.map((zone) => (
-                        <tr key={zone.key}>
-                          <td><strong>{t(`analysis.stitch_zone_${zone.key}`)}</strong></td>
-                          <td className="is-accent">{zone.paceLabel}</td>
-                          <td>{t(`analysis.stitch_zone_${zone.key}_purpose`)}</td>
+              <section className="analysis-profile-table-grid" aria-label={t('profile.dashboard_nav_analysis')}>
+                <section className="analysis-overview-card analysis-overview-card--prediction-table analysis-overview-card--training-zones analysis-profile-table-card">
+                  <div className="analysis-overview-table-head">
+                    <h2>{t('analysis.stitch_training_zones_title')}</h2>
+                  </div>
+                  <div className="analysis-overview-table-wrap">
+                    <table className="analysis-overview-table">
+                      <thead>
+                        <tr>
+                          <th>{t('analysis.stitch_zone_label')}</th>
+                          <th>{t('analysis.stitch_zone_pace')}</th>
+                          <th>{t('analysis.stitch_zone_purpose')}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {trainingZones.map((zone) => (
+                          <tr key={zone.key}>
+                            <td><strong>{t(`analysis.stitch_zone_${zone.key}`)}</strong></td>
+                            <td className="is-accent">{zone.paceLabel}</td>
+                            <td>
+                              <span>{t(`analysis.stitch_zone_${zone.key}_purpose`)}</span>
+                              <span className="analysis-zone-basis-line" style={TRAINING_ZONE_BASIS_STYLE}>
+                                {trainingZoneBasisLabel}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="analysis-overview-card analysis-overview-card--prediction-table analysis-profile-table-card analysis-profile-table-card--predictions">
+                  <div className="analysis-overview-table-head">
+                    <h2>{t('analysis.stitch_predictions_title')}</h2>
+                  </div>
+                  <div className="analysis-overview-table-wrap">
+                    <table className="analysis-overview-table">
+                      <thead>
+                        <tr>
+                          <th>{t('analysis.stitch_event_distance')}</th>
+                          <th>{t('analysis.stitch_estimated_time')}</th>
+                          <th>{t(unit === 'mile' ? 'analysis.stitch_pace_per_mile' : 'analysis.stitch_pace_per_km')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {predictionRows.map((row) => (
+                          <tr
+                            key={row.key}
+                            className="clickable-row"
+                            role="link"
+                            tabIndex={0}
+                            aria-label={`${row.label} ${row.timeLabel} ${row.paceLabel}`}
+                            onClick={() => navigate(`/prediction/${row.key}`)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                navigate(`/prediction/${row.key}`);
+                              }
+                            }}
+                          >
+                            <td>{row.label}</td>
+                            <td className="is-accent">{row.timeLabel}</td>
+                            <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="analysis-overview-table-actions">
+                    <button type="button" className="runner-shell-inline-btn" onClick={() => setImportModalOpen(true)}>{t('analysis.stitch_import_data')}</button>
+                    <button type="button" className="runner-shell-inline-btn" onClick={() => navigate('/runs')}>{t('analysis.stitch_open_runs')}</button>
+                  </div>
+                </section>
               </section>
 
-              <section className="analysis-overview-card analysis-overview-card--prediction-table">
-                <div className="analysis-overview-table-head">
-                  <h2>{t('analysis.stitch_predictions_title')}</h2>
-                </div>
-                <div className="analysis-overview-table-wrap">
-                  <table className="analysis-overview-table">
-                    <thead>
-                      <tr>
-                        <th>{t('analysis.stitch_event_distance')}</th>
-                        <th>{t('analysis.stitch_estimated_time')}</th>
-                        <th>{t(unit === 'mile' ? 'analysis.stitch_pace_per_mile' : 'analysis.stitch_pace_per_km')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {predictionRows.map((row) => (
-                        <tr
-                          key={row.key}
-                          className="clickable-row"
-                          role="link"
-                          tabIndex={0}
-                          aria-label={`${row.label} ${row.timeLabel} ${row.paceLabel}`}
-                          onClick={() => navigate(`/prediction/${row.key}`)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              navigate(`/prediction/${row.key}`);
-                            }
-                          }}
+              {/* === Injury Prevention Dashboard === */}
+              {injuryStatusLoading && (
+                <section className="analysis-injury-prevention-section">
+                  <div className="analysis-injury-prevention-head">
+                    <h2>{t('analysis.stitch_injury_prevention_title')}</h2>
+                  </div>
+                  <div className="analysis-injury-prevention-status-loading">{t('analysis.stitch_loading')}</div>
+                </section>
+              )}
+              {injuryStatusError && !injuryStatusLoading && (
+                <section className="analysis-injury-prevention-section">
+                  <div className="analysis-injury-prevention-head">
+                    <h2>{t('analysis.stitch_injury_prevention_title')}</h2>
+                  </div>
+                  <div className="analysis-injury-prevention-status-error">{t('analysis.stitch_injury_prevention_error')}</div>
+                </section>
+              )}
+              {!injuryStatusLoading && !injuryStatusError && injuryStatus && (
+                <section className="analysis-injury-prevention-section" aria-label={t('analysis.stitch_injury_prevention_title')}>
+                  <div className="analysis-injury-prevention-head">
+                    <h2>{t('analysis.stitch_injury_prevention_title')}</h2>
+                    <p>{t('analysis.stitch_injury_prevention_subtitle')}</p>
+                  </div>
+                  <div className="analysis-overview-grid analysis-injury-prevention-grid">
+                    {/* Card 1: Combined Risk Score */}
+                    <div className="analysis-overview-card analysis-overview-card--metric">
+                      <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_risk_kicker')}</span>
+                      <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_risk_title')}</h3>
+                      <div className="analysis-injury-prevention-risk-ring-wrap">
+                        <RiskRing score={injuryStatus?.combinedRiskScore} color={(Number(injuryStatus?.combinedRiskScore) || 0) < 30 ? '#38a35e' : (Number(injuryStatus?.combinedRiskScore) || 0) < 60 ? '#d98c3a' : '#d94a3a'} />
+                        <div className="analysis-injury-prevention-risk-meta">
+                          <span className="analysis-injury-prevention-risk-label">
+                            {t(`analysis.stitch_injury_prevention_rec_${injuryStatus?.recommendation || 'ready'}`)}
+                          </span>
+                          <span className={cx('analysis-injury-prevention-rec', `is-${injuryStatus?.recommendation || 'ready'}`)}>
+                            {t(`analysis.stitch_injury_prevention_rec_${injuryStatus?.recommendation || 'ready'}`)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 2: ACWR Monitor */}
+                    <div className="analysis-overview-card analysis-overview-card--metric">
+                      <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_acwr_kicker')}</span>
+                      <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_acwr_title')}</h3>
+                      <div className="analysis-injury-prevention-acwr-body">
+                        <Gauge value={injuryStatus?.acwr || 0} color={(Number(injuryStatus?.acwr) || 0) < 1.0 ? '#38a35e' : (Number(injuryStatus?.acwr) || 0) <= 1.2 ? '#d98c3a' : '#d94a3a'} />
+                        <div className="analysis-injury-prevention-acwr-value">
+                          {injuryStatus?.acwr != null ? injuryStatus.acwr.toFixed(2) : '--'}
+                        </div>
+                        <div className={cx('analysis-injury-prevention-acwr-trend', injuryStatus?.acwrTrend === 'up' && 'is-up', injuryStatus?.acwrTrend === 'down' && 'is-down')}>
+                          <AppIcon name={injuryStatus?.acwrTrend === 'up' ? 'trending_up' : injuryStatus?.acwrTrend === 'down' ? 'trending_down' : 'trending_flat'} className="runner-dashboard-side-link-icon" />
+                          <span>{t(`analysis.stitch_injury_prevention_acwr_trend_${injuryStatus?.acwrTrend || 'flat'}`)}</span>
+                        </div>
+                        <div className="analysis-injury-prevention-acwr-zones">
+                          <span className={((Number(injuryStatus?.acwr) || 0) < 1.0) ? 'is-active' : ''}>{t('analysis.stitch_injury_prevention_acwr_zone_safe')}</span>
+                          <span className={((Number(injuryStatus?.acwr) || 0) >= 1.0 && (Number(injuryStatus?.acwr) || 0) <= 1.2) ? 'is-active-warn' : ''}>{t('analysis.stitch_injury_prevention_acwr_zone_caution')}</span>
+                          <span className={((Number(injuryStatus?.acwr) || 0) > 1.2) ? 'is-active-danger' : ''}>{t('analysis.stitch_injury_prevention_acwr_zone_danger')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Daily Soreness Check-in + Coach Advice */}
+                    <div className="analysis-overview-card analysis-overview-card--metric">
+                      <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_soreness_kicker')}</span>
+                      <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_soreness_title')}</h3>
+                      <div className="analysis-injury-prevention-soreness-actions">
+                        <button
+                          type="button"
+                          className={cx('analysis-injury-prevention-soreness-btn', 'is-low', (Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0]?.level === 'low') && 'is-active-low')}
+                          onClick={() => handleSorenessLog('low')}
+                          disabled={sorenessSubmitting}
                         >
-                          <td>{row.label}</td>
-                          <td className="is-accent">{row.timeLabel}</td>
-                          <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="analysis-overview-table-actions">
-                  <button type="button" className="runner-shell-inline-btn" onClick={() => setImportModalOpen(true)}>{t('analysis.stitch_import_data')}</button>
-                  <button type="button" className="runner-shell-inline-btn" onClick={() => navigate('/runs')}>{t('analysis.stitch_open_runs')}</button>
-                </div>
-              </section>
+                          {t('analysis.stitch_injury_prevention_soreness_low')}
+                        </button>
+                        <button
+                          type="button"
+                          className={cx('analysis-injury-prevention-soreness-btn', 'is-medium', (Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0]?.level === 'medium') && 'is-active-medium')}
+                          onClick={() => handleSorenessLog('medium')}
+                          disabled={sorenessSubmitting}
+                        >
+                          {t('analysis.stitch_injury_prevention_soreness_medium')}
+                        </button>
+                        <button
+                          type="button"
+                          className={cx('analysis-injury-prevention-soreness-btn', 'is-high', (Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0]?.level === 'high') && 'is-active-high')}
+                          onClick={() => handleSorenessLog('high')}
+                          disabled={sorenessSubmitting}
+                        >
+                          {t('analysis.stitch_injury_prevention_soreness_high')}
+                        </button>
+                      </div>
+                      {sorenessError && (
+                        <div className="analysis-injury-prevention-log-error">{sorenessError}</div>
+                      )}
+                      {Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0] ? (
+                        <div className="analysis-injury-prevention-soreness-meta">
+                          {t('analysis.stitch_injury_prevention_soreness_logged', { level: t(`analysis.stitch_injury_prevention_soreness_${injuryStatus.recentLogs[0].level}`) })}
+                        </div>
+                      ) : (
+                        <div className="analysis-injury-prevention-soreness-empty">
+                          {t('analysis.stitch_injury_prevention_coach_empty')}
+                        </div>
+                      )}
+                      <span className="analysis-overview-card-kicker" style={{ marginTop: '14px' }}>{t('analysis.stitch_injury_prevention_coach_kicker')}</span>
+                      {injuryStatus?.coachAdvice ? (
+                        <div className="analysis-injury-prevention-coach-advice">
+                          {injuryStatus.coachAdvice}
+                        </div>
+                      ) : (
+                        <div className="analysis-injury-prevention-coach-empty">
+                          {t('analysis.stitch_injury_prevention_coach_empty')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
 
               <footer className="runner-shell-footer">
                 <FooterNavLinks />

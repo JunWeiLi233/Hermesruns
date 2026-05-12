@@ -16,7 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ActivityControllerTests {
@@ -220,5 +222,123 @@ class ActivityControllerTests {
         java.util.Map<String, String> body = (java.util.Map<String, String>) response.getBody();
         assertNotNull(body.get("error"));
         assertNotNull(body.get("code"));
+    }
+
+    // --- Ownership-gating tests: ActivityPoint data must be runner-scoped ---
+
+    @Test
+    void getActivityPointsRejectsUnauthenticated() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getActivityPoints(1L, null);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        verifyNoInteractions(activityPointRepository);
+    }
+
+    @Test
+    void getActivityPointsRejectsCrossRunnerAccess() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        Runner runnerA = new Runner();
+        runnerA.setId(1L);
+        runnerA.setEmail("runnerA@hermes.test");
+
+        when(authService.findByAuthorizationHeader("Bearer token-a")).thenReturn(Optional.of(runnerA));
+        // Runner A tries to access runner B's activity
+        when(activityRepository.findByIdAndRunner(99L, runnerA)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getActivityPoints(99L, "Bearer token-a");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        // ActivityPointRepository must NOT be queried when ownership check fails
+        verify(activityPointRepository, never()).findLatLngByActivityIdOrdered(99L);
+    }
+
+    @Test
+    void getActivityAnalyticsRejectsUnauthenticated() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getActivityAnalytics(1L, null);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        verifyNoInteractions(activityPointRepository);
+    }
+
+    @Test
+    void getActivityAnalyticsRejectsCrossRunnerAccess() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        Runner runnerA = new Runner();
+        runnerA.setId(1L);
+        runnerA.setEmail("runnerA@hermes.test");
+
+        when(authService.findByAuthorizationHeader("Bearer token-a")).thenReturn(Optional.of(runnerA));
+        when(activityRepository.findByIdAndRunner(99L, runnerA)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getActivityAnalytics(99L, "Bearer token-a");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(activityPointRepository, never()).findAnalyticsSamplesByActivityIdOrdered(99L);
+    }
+
+    @Test
+    void getHeatmapRejectsUnauthenticated() {
+        AuthService authService = mock(AuthService.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService, mock(ActivityRepository.class), activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getHeatmapPoints(null, null);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        verifyNoInteractions(activityPointRepository);
     }
 }
