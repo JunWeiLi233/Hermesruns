@@ -309,7 +309,7 @@ async function runPrePublishGates(args, result, runCommand) {
 
     markStep(result, "backend", "running");
     runCommand(process.platform === "win32" ? "cmd" : "./mvnw", process.platform === "win32"
-      ? ["/c", "mvnw.cmd", "-q", "-DskipTests", "compile"]
+      ? ["/c", ".\\mvnw.cmd", "-q", "-DskipTests", "compile"]
       : ["-q", "-DskipTests", "compile"], { cwd: path.join(args.rootDir, "backend") });
     markStep(result, "backend", "completed");
 
