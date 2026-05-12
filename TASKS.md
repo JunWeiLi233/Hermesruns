@@ -63,6 +63,7 @@ Use this file as the working queue for AI agents.
 ## Active Tasks`
 
 ## Daily Log
+- 2026-05-01: [WorkflowBuilder] Verified loading/error/empty states, canvas aria-labels, and t() i18n were already fully implemented. Fixed pre-existing build failure (missing brand logo SVG imports in ShoeBrandLogo.jsx — fallback SVG generation already handles those brands). Frontend build PASS.
 - 2026-04-27: Added app-level React ErrorBoundary with localized fallback and reload action to prevent SPA white-screen on render crashes. Frontend build PASS, lint 0 errors (8 existing warnings), backend compile PASS, runtime HTTP 200 verified.
 - 2026-04-27: [Explorer] Added Spring Security defense-in-depth for admin routes via JwtAuthenticationFilter + hasRole("ADMIN") rule. Restricted CORS allowedHeaders from wildcard to explicit Authorization, Content-Type. Backend compile PASS.
 - 2026-04-24: Fixed pre-existing RaceCourseMapAiServiceTests regression from prompt builder extraction — replaced `ReflectionTestUtils.invokeMethod("buildAlignmentPrompt")` with direct `RaceCourseMapPromptBuilder.buildAlignmentPrompt()` calls. Backend compile PASS.
@@ -89,11 +90,12 @@ Use this file as the working queue for AI agents.
 
 ## Active Tasks
 
-- [ ] [code-review] Add loading, error, and empty states to Workflow Builder + a11y for canvas controls (MEDIUM)
+- [x] [code-review] Add loading, error, and empty states to Workflow Builder + a11y for canvas controls (MEDIUM)
   Files: `frontend/src/pages/WorkflowBuilder.jsx`, `frontend/src/components/workflow/WorkflowCanvas.jsx`, `frontend/src/components/workflow/InputNode.jsx`, `frontend/src/components/workflow/OutputNode.jsx`, `frontend/src/components/workflow/TransformNode.jsx`, `frontend/src/components/workflow/AgentNode.jsx`
   Context: WorkflowBuilder.jsx has zero loading/error/empty state feedback — if WorkflowCanvas fails or has no data, user sees a blank page. Workflow nodes and canvas have zero aria-* attributes — drag-and-drop canvas operations are completely inaccessible to keyboard/screen reader users. Inline ternary `lang === 'zh-CN' ? '天气' : 'Weather'` bypasses the t() i18n system.
   Done when: WorkflowBuilder shows loading spinner, error message with retry, and empty state with CTA. WorkflowCanvas and all node types have aria-labels for their interactive regions. Bilingual labels use t() keys consistently.
   Verify: `cd frontend && npm run build`
+  Note: Loading/error/empty states, aria-labels on canvas/nodes, and full bilingual t() coverage were already implemented. Fixed pre-existing build failure (missing brand logo SVG imports in ShoeBrandLogo.jsx). Frontend build PASS.
 
 - [x] [code-review] Add filter-chain auth rules to SecurityConfig and restrict CORS headers (MEDIUM)
   Files: `backend/src/main/java/com/hermes/backend/SecurityConfig.java`, `backend/src/main/java/com/hermes/backend/AppCorsConfig.java`, `backend/src/main/java/com/hermes/backend/JwtAuthenticationFilter.java`
