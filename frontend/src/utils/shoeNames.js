@@ -62,6 +62,40 @@ const MODEL_ZH_TOKEN_MAP = {
   pro: 'Pro',
 };
 
+const ZH_MODEL_REVERSE_MAP = {
+  '飞马': 'Pegasus',
+  '迈柔': 'Miler',
+  '稳程': 'Structure',
+  '菁华': 'Kinvara',
+  '向导': 'Guide',
+  '坦途': 'Tempus',
+  '自由': 'Freedom',
+  '驭途': 'Ride',
+  '胜利': 'Triumph',
+  '澎湃': 'Hurricane',
+  '浪潮': 'Axon',
+  '枪骑': 'Sinister',
+  '巡航': 'Cohesion',
+  '火鸟': 'Phoenix',
+  '啡迅': 'Endorphin Shift',
+  '啡速': 'Endorphin Speed',
+  '啡鹏': 'Endorphin Pro',
+  '全速': 'Endorphin Racer',
+  '啡翼': 'Endorphin Elite',
+  '幽灵': 'Ghost',
+  '甘油': 'Glycerin',
+  '启速': 'Launch',
+  '旋风': 'Levitate',
+  '烈风': 'Catamount',
+  '异爪': 'Deviate Nitro Elite',
+  '刃爪': 'Fast-R Nitro Elite',
+  '彪破精英': 'Deviate Nitro Elite',
+  '彪破': 'Deviate Nitro',
+  '彪放': 'Liberate Nitro',
+  '彪畅': 'ForeverRun Nitro',
+  '彪速': 'Velocity Nitro',
+};
+
 const PINYIN_CHAR_MAP = {
   '赤': 'chi', '焰': 'yan', '飞': 'fei', '电': 'dian', '绝': 'jue', '影': 'ying',
   '烈': 'lie', '骏': 'jun', '竞': 'jing', '速': 'su', '训': 'xun', '练': 'lian',
@@ -136,7 +170,11 @@ export function localizeShoeModel(model, lang = 'en') {
     });
     return parts.join(' ');
   }
-  if (hasChinese(raw)) return transliterateChineseToPinyin(raw);
+  if (hasChinese(raw)) {
+    const mapped = ZH_MODEL_REVERSE_MAP[raw];
+    if (mapped) return mapped;
+    return transliterateChineseToPinyin(raw);
+  }
   return raw;
 }
 
