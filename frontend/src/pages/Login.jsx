@@ -40,6 +40,50 @@ const authBrandSlides = [
       { value: 'GPS', labelKey: 'index.stitch_slide_3_stat_two' },
     ],
   },
+  {
+    id: 'heart-rate-detail',
+    kickerKey: 'index.stitch_slide_4_kicker',
+    lineOneKey: 'index.stitch_slide_4_line_one',
+    lineTwoKey: 'index.stitch_slide_4_line_two',
+    copyKey: 'index.stitch_slide_4_copy',
+    stats: [
+      { value: 'BPM', labelKey: 'index.stitch_slide_4_stat_one' },
+      { value: 'Drag', labelKey: 'index.stitch_slide_4_stat_two' },
+    ],
+  },
+  {
+    id: 'territory-polygons',
+    kickerKey: 'index.stitch_slide_5_kicker',
+    lineOneKey: 'index.stitch_slide_5_line_one',
+    lineTwoKey: 'index.stitch_slide_5_line_two',
+    copyKey: 'index.stitch_slide_5_copy',
+    stats: [
+      { value: 'km²', labelKey: 'index.stitch_slide_5_stat_one' },
+      { value: 'Loops', labelKey: 'index.stitch_slide_5_stat_two' },
+    ],
+  },
+  {
+    id: 'shoe-rotation',
+    kickerKey: 'index.stitch_slide_6_kicker',
+    lineOneKey: 'index.stitch_slide_6_line_one',
+    lineTwoKey: 'index.stitch_slide_6_line_two',
+    copyKey: 'index.stitch_slide_6_copy',
+    stats: [
+      { value: 'AI scan', labelKey: 'index.stitch_slide_6_stat_one' },
+      { value: '600km', labelKey: 'index.stitch_slide_6_stat_two' },
+    ],
+  },
+  {
+    id: 'course-map-ai',
+    kickerKey: 'index.stitch_slide_7_kicker',
+    lineOneKey: 'index.stitch_slide_7_line_one',
+    lineTwoKey: 'index.stitch_slide_7_line_two',
+    copyKey: 'index.stitch_slide_7_copy',
+    stats: [
+      { value: 'AI vision', labelKey: 'index.stitch_slide_7_stat_one' },
+      { value: 'Georef', labelKey: 'index.stitch_slide_7_stat_two' },
+    ],
+  },
 ];
 
 export default function Login() {
