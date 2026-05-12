@@ -3,6 +3,58 @@
 > A local-first runner analytics platform. **React** frontend, **Spring Boot** backend.
 > Combines daily training guidance, VDOT analysis, heatmaps, race planning, shoe management, and AI-powered import pipelines — all running on your own machine.
 
+---
+
+<a id="toc"></a>
+
+## 📚 Table of Contents · 目录
+
+### English
+- [What is Hermes?](#what-is-hermes)
+- [First Time Here? Start Here](#first-time-here-start-here)
+- [Project Tour: Where Lives What?](#project-tour)
+- [Quick Start (5 minutes)](#quick-start)
+- [How to Make Your First Code Change](#first-code-change)
+- [Architecture & Tech Stack](#architecture-stack)
+- [Feature Highlights](#feature-highlights)
+- [Web Routes](#web-routes)
+- [Analysis — How It Works](#analysis-how-it-works)
+- [Development Workflow](#development-workflow)
+- [Database](#database)
+- [Login Options](#login-options)
+- [AI-Agent Workflow](#ai-agent-workflow)
+- [Production Setup](#production-setup)
+- [Garmin Connect Import](#garmin-connect-import)
+- [File Auto-Import (Garmin / COROS)](#file-auto-import)
+- [Important Things to Remember](#important)
+- [Troubleshooting](#troubleshooting)
+- [Regression Checklist](#regression-checklist)
+- [Glossary](#glossary)
+
+### 中文
+- [Hermes 是什么？](#hermes-是什么)
+- [第一次来这里？从这里开始](#新手起点)
+- [项目导览：哪里放什么？](#项目导览)
+- [快速开始（5 分钟）](#中文-快速开始)
+- [如何提交第一次代码改动](#第一次代码改动)
+- [架构与技术栈](#中文-架构)
+- [功能亮点](#中文-功能亮点)
+- [Web 路由](#中文-web-路由)
+- [分析公式详解](#中文-分析公式)
+- [开发流程](#中文-开发流程)
+- [数据库](#中文-数据库)
+- [登录方式](#中文-登录方式)
+- [AI 智能体工作流](#中文-ai-工作流)
+- [生产部署](#中文-生产部署)
+- [Garmin Connect 导入](#中文-garmin-导入)
+- [文件自动导入（Garmin / COROS）](#中文-文件导入)
+- [重要事项](#中文-注意事项)
+- [常见问题](#中文-常见问题)
+- [回归测试清单](#中文-回归清单)
+- [术语表](#中文-术语表)
+
+---
+
 [English](#english) | [中文说明](#中文)
 
 ---
@@ -10,6 +62,8 @@
 <a id="english"></a>
 
 ## English
+
+<a id="what-is-hermes"></a>
 
 ### What is Hermes?
 
@@ -23,7 +77,89 @@ Hermes works with data from **Strava**, **Garmin Connect**, **COROS**, and manua
 
 **Better than Strava?** Hermes earns its place by being smarter (personalized coaching, not social feeds), more actionable (specific pace ranges, not generic recommendations), and more trustworthy (transparent methodology, no hidden algorithms).
 
+---
+
+<a id="first-time-here-start-here"></a>
+
+### First Time Here? Start Here
+
+Welcome. Here is the fastest path from zero to "I understand this project and I've changed something":
+
+1. **Read [What is Hermes?](#what-is-hermes)** — understand what you're building and who it's for. (5 min)
+2. **Run [Quick Start](#quick-start)** — get the app live on `localhost:8080`. (5 min)
+3. **Walk the [Project Tour](#project-tour)** — learn where every file type lives so you never have to guess. (5 min)
+4. **Make your first change** via [How to Make Your First Code Change](#first-code-change) — edit something, see it land. (10 min)
+5. **Read [Development Workflow](#development-workflow)** — learn the daily-driver commands for frontend, backend, and testing. (10 min)
+
+**Total: ~35 minutes from clone to "I edited something and saw it live."**
+
+No prior knowledge of Spring Boot, React, or sports science is required to make the first change. Each section below assumes you're arriving for the first time and explains the "why" alongside the "how".
+
+---
+
+<a id="project-tour"></a>
+
+### Project Tour: Where Lives What?
+
+Before you touch code, spend 5 minutes reading this map. It answers "where do I add a new page?", "where do I change copy?", and "where do I add a new API?" in under 30 seconds.
+
+```
+Hermes/
+│
+├── frontend/                    React 19 SPA (Vite, Chart.js, Leaflet)
+│   ├── src/pages/               One .jsx file per route — Today, Runs, Analysis, etc.
+│   │                            ADD A NEW PAGE: create a file here + register in App.jsx
+│   ├── src/components/          Shared UI: TopbarNotifications, AppIcon, charts, modals
+│   │                            ADD A SHARED WIDGET: create a component file here
+│   ├── src/utils/               Pure helper functions (formatting, math, route helpers)
+│   │                            No React imports here — these are plain JS utilities
+│   ├── src/i18n/                All user-visible copy lives here
+│   │   └── translations.js      Single file with `en` and `zh-CN` keys
+│   │                            CHANGE ANY LABEL OR TEXT: edit translations.js
+│   ├── src/data/                Static seed data (shoe catalog, etc.)
+│   └── src/styles/              style.css — one file. Design tokens at the top.
+│
+├── backend/                     Spring Boot 4 REST API + serves the built SPA
+│   └── src/main/java/com/hermes/backend/
+│       ├── controller/          REST endpoints — one controller per domain
+│       │                        ADD A NEW API ROUTE: create or edit a controller here
+│       ├── service/             Business logic — calculation, orchestration
+│       ├── entity/              JPA database entities (maps to DB tables)
+│       └── dto/                 Request/response shapes (what the API accepts/returns)
+│   └── src/main/resources/
+│       └── application.properties   Spring config, H2 path, CORS, JWT settings
+│
+├── .tools/                      Dev scripts — browser harness, auto-hermes loop engine,
+│                                translation checker, codex generator
+├── .claude/                     AI agent commands and skills (Claude Code prompts)
+├── .codex/                      Mirror for Codex runtime
+├── docs/                        Architecture diagrams, setup walkthroughs
+├── .ai-sync/                    Cross-agent coordination boards (gitignored where needed)
+│
+├── TASKS.md                     Shared task queue for AI agents
+├── AGENTS.md                    Agent personas, coach-voice rules, engineering standards
+├── CLAUDE.md                    Project brain — product vision, stack, conventions
+└── README.md                    This file
+```
+
+**Quick-answer cheat sheet:**
+
+| Question | Answer |
+|---|---|
+| Where do I add a new page? | `frontend/src/pages/NewPage.jsx` + route in `frontend/src/App.jsx` |
+| Where do I change a button label? | `frontend/src/i18n/translations.js` — find the key, edit both `en` and `zh-CN` |
+| Where do I add a new REST endpoint? | `backend/src/main/java/com/hermes/backend/controller/` |
+| Where does the database schema live? | `backend/src/main/java/com/hermes/backend/entity/` (JPA entities auto-migrate on start) |
+| Where is the main CSS file? | `frontend/src/styles/style.css` |
+| Where do I find the app config? | `backend/src/main/resources/application.properties` |
+
+---
+
+<a id="quick-start"></a>
+
 ### Quick Start
+
+**Why this matters for a new contributor:** This is your sanity check. If the app runs locally, your environment is set up correctly and you can start making changes.
 
 #### Windows
 
@@ -40,7 +176,9 @@ cd backend
 
 Open `http://localhost:8080`, sign up with email, and you're in. No database setup, no API keys, no configuration needed.
 
-> **Want the full experience?** See [Production Setup](#production-setup-postgresql--oauth--admin) for PostgreSQL, Strava/Google OAuth, Stripe billing, and email verification.
+> **Want the full experience?** See [Production Setup](#production-setup) for PostgreSQL, Strava/Google OAuth, Stripe billing, and email verification.
+
+---
 
 ### Platform-Specific Instructions
 
@@ -50,37 +188,147 @@ Hermes setup instructions are split by platform from now on:
 - **macOS / Linux users** should use Bash/Zsh examples, `./mvnw`, and exported environment variables.
 - When adding new setup steps, include both command forms whenever shell syntax differs.
 
-### Feature Highlights
+---
 
-| Area | What you get |
-|---|---|
-| **Today Run** | Daily coaching: readiness score, weather, personalized workout blueprint, shoe recommendation |
-| **Analysis** | VDOT (VO₂max estimate), training paces, effort scores, ACWR injury risk, recovery time, form tracking |
-| **Heatmap** | Full-screen GPS heatmap of all your runs with live totals |
-| **Runs** | Filterable run log with route maps, performance metrics, and drill-down detail |
-| **Shoes** | Inventory with mileage tracking, rotation insight, AI photo scan import, catalog browser |
-| **Races** | Interactive world map, 60+ race catalog, personal bests, countdowns, race-specific training |
-| **Schedule** | Weekly training planner |
-| **Import** | Strava sync, Garmin Connect pull, manual FIT/GPX/TCX/ZIP (including COROS and Huawei Health) |
-| **Settings** | Theme (light/midnight), language (en/zh-CN), units, connected services, batch import |
+<a id="first-code-change"></a>
 
-### Stack
+### How to Make Your First Code Change
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, React Router 7, Chart.js, Leaflet, Vite 8 |
-| Backend | Spring Boot 4, Spring Data JPA, Hibernate |
-| Database | H2 (zero-config default) or PostgreSQL |
-| Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0, email/password + verification |
-| AI | Gemini 2.5 Flash (shoe image scanning), Qwen (course-map route extraction) |
-| Payments | Stripe Checkout (Pro subscription) |
+**Why this matters for a new contributor:** Reading about a codebase is valuable; editing it cements your mental model. This section walks you through two real examples — one frontend, one backend — so you know exactly what touching the code feels like end-to-end.
 
-### Architecture
+#### Example A: Change a Label on the Profile Page (Frontend)
+
+This shows the full frontend loop: find text → edit → run dev server → see it live.
+
+**Step 1 — Find where the label string lives.**
+
+All user-visible text is in `frontend/src/i18n/translations.js`. Open it and search for the phrase you want to change (e.g. "Runner Hub"). You'll see both `en` and `zh-CN` entries. Edit both.
+
+```js
+// frontend/src/i18n/translations.js  (simplified excerpt)
+en: {
+  profile: {
+    title: "Runner Hub",      // ← change this
+    ...
+  }
+},
+"zh-CN": {
+  profile: {
+    title: "个人主页",          // ← and this
+    ...
+  }
+}
+```
+
+**Step 2 — Start the dev server.**
+
+```bash
+cd frontend
+npm install    # only needed the first time
+npm run dev    # → http://localhost:3000
+```
+
+The dev server hot-reloads — save the file and the browser refreshes automatically.
+
+**Step 3 — Verify the change visually.**
+
+Open `http://localhost:3000/profile` and confirm the new label appears in both languages (use the language toggle in Settings).
+
+**Step 4 — Check translations parity.**
+
+```bash
+node .tools/check-translations.mjs
+```
+
+This script verifies that every key in `en` also exists in `zh-CN` and vice versa. It must exit 0 before any commit involving copy changes.
+
+**Step 5 — Lint the file.**
+
+```bash
+cd frontend
+.\node_modules\eslint\bin\eslint.js src/i18n/translations.js
+```
+
+---
+
+#### Example B: Add a Field to the Runner Profile API Response (Backend)
+
+This shows the full backend loop: find the controller → add a field → compile → test the endpoint.
+
+**Step 1 — Find the controller.**
+
+Open `backend/src/main/java/com/hermes/backend/controller/ProfileController.java`. Locate the method that handles `GET /api/profile` (or similar). It returns a DTO.
+
+**Step 2 — Add the field to the DTO.**
+
+Open the DTO class that method returns (e.g. `ProfileDTO.java` in the `dto/` folder). Add your new field:
+
+```java
+// backend/.../dto/ProfileDTO.java
+public class ProfileDTO {
+    private String displayName;
+    private int totalRuns;
+    private double totalDistanceKm;
+    private String newField;  // ← add this
+    // ... getters and setters
+}
+```
+
+**Step 3 — Compile to catch errors.**
+
+```bash
+cd backend
+./mvnw -q -DskipTests compile
+```
+
+Fix any compilation errors before continuing.
+
+**Step 4 — Run the backend and test the endpoint.**
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+Once running, test via curl or your browser:
+
+```bash
+curl http://localhost:8080/api/profile -H "Authorization: Bearer <your-token>"
+```
+
+You should see `newField` in the JSON response.
+
+**Step 5 — Connect it in the frontend (optional).**
+
+The frontend calls this endpoint in `frontend/src/pages/Profile.jsx`. Search for the API call (usually `fetch('/api/profile')` or a helper from `frontend/src/utils/`), then use the new field in the JSX.
+
+---
+
+<a id="architecture-stack"></a>
+
+### Architecture & Tech Stack
+
+**Why this matters for a new contributor:** Understanding the two-process architecture prevents a common confusion — the frontend dev server (`:3000`) and the production setup (`:8080`) serve the same React app in different ways.
 
 ```
 frontend/          React 19 + Vite 8 — dev server on :3000, proxies API calls to :8080
 backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built frontend SPA
 ```
+
+**How the two fit together:**
+- In **development**: run `npm run dev` in `frontend/` for hot-reload. The Vite dev server proxies any `/api/...` call to the Spring Boot backend on `:8080`.
+- In **production**: run `npm run build` in `frontend/`, which drops the built bundle into `backend/src/main/resources/static/`. Spring Boot then serves both the API and the static files from `:8080`.
+
+#### Stack Table
+
+| Layer | Technology | Why |
+|---|---|---|
+| Frontend | React 19, React Router 7, Chart.js, Leaflet, Vite 8 | Fast SPA, rich charts, interactive maps |
+| Backend | Spring Boot 4, Spring Data JPA, Hibernate | Robust REST API, declarative ORM |
+| Database | H2 (zero-config default) or PostgreSQL | Zero setup for dev; production-grade for deploy |
+| Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0, email/password + verification | Multiple login paths, no friction for new users |
+| AI | Gemini 2.5 Flash (shoe image scanning), Qwen (course-map route extraction) | Automates tedious data entry |
+| Payments | Stripe Checkout (Pro subscription) | Simple, hosted checkout — no card data on your server |
 
 <!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS START -->
 ### Live Architecture Diagrams
@@ -100,7 +348,31 @@ Source artifact: [docs/architecture/saas-architecture.html](docs/architecture/sa
 
 ---
 
+<a id="feature-highlights"></a>
+
+### Feature Highlights
+
+**Why this matters for a new contributor:** Know what the app actually does before you add to it. Each area below is backed by a React page and a set of backend endpoints.
+
+| Area | What you get |
+|---|---|
+| **Today Run** | Daily coaching: readiness score, weather, personalized workout blueprint, shoe recommendation |
+| **Analysis** | VDOT (VO₂max estimate), training paces, effort scores, ACWR injury risk, recovery time, form tracking |
+| **Heatmap** | Full-screen GPS heatmap of all your runs with live totals |
+| **Runs** | Filterable run log with route maps, performance metrics, and drill-down detail |
+| **Shoes** | Inventory with mileage tracking, rotation insight, AI photo scan import, catalog browser |
+| **Races** | Interactive world map, 60+ race catalog, personal bests, countdowns, race-specific training |
+| **Schedule** | Weekly training planner |
+| **Import** | Strava sync, Garmin Connect pull, manual FIT/GPX/TCX/ZIP (including COROS and Huawei Health) |
+| **Settings** | Theme (light/midnight), language (en/zh-CN), units, connected services, batch import |
+
+---
+
+<a id="ai-agent-workflow"></a>
+
 ### AI-Agent Workflow
+
+**Why this matters for a new contributor:** Hermes ships with an AI-agent loop that picks tasks from a shared queue, implements them with specialist sub-teams, verifies, and promotes follow-up work. If you want to understand how the codebase evolves, or how to contribute AI-assisted improvements, this is the system to understand.
 
 Hermes includes an AI-agent workflow driven by **Claude Code** and **Gemini CLI** for autonomous development. The agents pick tasks from a shared queue, implement them with specialist sub-teams, verify, and promote follow-up work.
 
@@ -161,7 +433,11 @@ Hermes includes an AI-agent workflow driven by **Claude Code** and **Gemini CLI*
 
 ---
 
+<a id="web-routes"></a>
+
 ### Web Routes
+
+**Why this matters for a new contributor:** Each row here maps to a React page file in `frontend/src/pages/` and (for protected routes) a set of backend endpoints. Use this table to quickly find which file owns which URL.
 
 | Route | Page | Description |
 |---|---|---|
@@ -191,11 +467,15 @@ Hermes includes an AI-agent workflow driven by **Claude Code** and **Gemini CLI*
 
 ---
 
+<a id="analysis-how-it-works"></a>
+
 ### Analysis — How It Works
 
-All formulas come from Jack Daniels' *Running Formula* and peer-reviewed sports science. Hermes shows its work — every number has a traceable basis.
+**Why this matters for a new contributor:** Before you touch the analysis code, understand what each number means. These formulas are the scientific backbone of every coaching recommendation. All come from Jack Daniels' *Running Formula* and peer-reviewed sports science. Hermes shows its work — every number has a traceable basis.
 
 #### VDOT (Daniels' VO₂max Estimate)
+
+VDOT is a single number that captures your current aerobic fitness, derived from a recent race performance. A higher VDOT means faster paces. Hermes uses it to compute all training zones.
 
 From a race performance (distance in meters, time in minutes):
 
@@ -219,6 +499,8 @@ VDOT         = VO₂ / %VO₂max
 | Repetition | 111% | Speed and economy |
 
 #### Training Load — ACWR
+
+ACWR (Acute:Chronic Workload Ratio) is your injury risk meter. It compares your recent training load (last 7 days) to your long-term load (last 28 days). A sudden spike — training much harder than your baseline — predicts injury.
 
 EWMA-based injury risk tracking (Gabbett 2016, Hulin et al. 2014, Williams et al. 2017):
 
@@ -269,7 +551,11 @@ Fitter runner (higher VDOT) → faster recovery. Long runs (>90 min) add penalty
 
 ---
 
+<a id="production-setup"></a>
+
 ### Production Setup (PostgreSQL + OAuth + Admin)
+
+**Why this matters for a new contributor:** The default H2 database is file-backed and single-user — fine for local development, not suitable for a deployed server. This section covers what to configure when you're deploying Hermes for real use or a multi-user environment.
 
 #### Windows
 
@@ -339,7 +625,11 @@ Email/password sign-up sends a verification link via SMTP. Leave `SPRING_MAIL_HO
 
 ---
 
-### Development
+<a id="development-workflow"></a>
+
+### Development Workflow
+
+**Why this matters for a new contributor:** These are the exact commands you'll run every day. Bookmark this section.
 
 #### Prerequisites
 
@@ -400,9 +690,22 @@ cd backend
 ./mvnw -q -DskipTests compile     # compile check
 ```
 
+#### Translation Parity Check
+
+Run this after **any** user-visible copy change. Exit 0 required before commit.
+
+```bash
+node .tools/check-translations.mjs        # parity only
+node .tools/check-translations.mjs --all  # + bypass scan
+```
+
 ---
 
+<a id="database"></a>
+
 ### Database
+
+**Why this matters for a new contributor:** You don't need to set up anything for local development — H2 creates a file automatically. Switch to PostgreSQL when you're deploying or want to match production.
 
 #### H2 (default)
 
@@ -439,7 +742,11 @@ For macOS / Linux, use the PostgreSQL env block above and run the backend agains
 
 ---
 
+<a id="login-options"></a>
+
 ### Login Options
+
+**Why this matters for a new contributor:** You can start with email login immediately — no API keys needed. Set up OAuth when you want to test Strava or Google login locally.
 
 | Method | Setup Required |
 |---|---|
@@ -462,6 +769,8 @@ $env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
 .\start_hermes.bat
 ```
 
+`start_hermes.bat` forwards shell-set `APP_LOCAL_SHARED_RUNNER_*` values into the backend window, so this works without editing `Hermes.local.env.ps1`.
+
 macOS / Linux:
 
 ```bash
@@ -476,7 +785,11 @@ The bootstrap is local-safe: it is disabled by default, skipped in production, a
 
 ---
 
+<a id="garmin-connect-import"></a>
+
 ### Garmin Connect Import
+
+**Why this matters for a new contributor:** This feature lets a runner pull activities directly from their Garmin account without exporting files manually. It uses a third-party Python library (`garth`) for SSO login.
 
 Pull activities directly from your Garmin Connect account — no manual file export.
 
@@ -490,7 +803,11 @@ Uses [GarminDB](https://github.com/tcgoetz/GarminDB)'s `garth` library for SSO l
 
 ---
 
+<a id="file-auto-import"></a>
+
 ### File Auto-Import (Garmin / COROS)
+
+**Why this matters for a new contributor:** Drop-folder import lets a runner copy files from their device and have them appear in Hermes automatically — no manual upload UI needed. This is the zero-friction path for devices that export FIT files.
 
 Supports `GPX`, `TCX`, `FIT`, `ZIP`. Automatic folder watching.
 
@@ -501,7 +818,9 @@ Supports `GPX`, `TCX`, `FIT`, `ZIP`. Automatic folder watching.
 
 ---
 
-### Important
+<a id="important"></a>
+
+### Important Things to Remember
 
 - **Keep the terminal open** while using the app
 - **Restart the backend** after configuration changes
@@ -509,6 +828,8 @@ Supports `GPX`, `TCX`, `FIT`, `ZIP`. Automatic folder watching.
 - **Use a strong `APP_DATA_ENCRYPTION_KEY`** — it protects stored Strava tokens
 
 ---
+
+<a id="troubleshooting"></a>
 
 ### Troubleshooting
 
@@ -520,6 +841,8 @@ Supports `GPX`, `TCX`, `FIT`, `ZIP`. Automatic folder watching.
 | Frontend changes not showing | Run `npm run build` in `frontend/`, then refresh |
 
 ---
+
+<a id="regression-checklist"></a>
 
 ### Regression Checklist
 
@@ -533,6 +856,31 @@ Run after changes to auth, import, upload, or third-party integrations.
 
 ---
 
+<a id="glossary"></a>
+
+### Glossary
+
+New to some of these terms? This table covers the vocabulary you'll encounter across the codebase and docs.
+
+| Term | What it means |
+|---|---|
+| **VDOT** | A single number representing your aerobic fitness, derived from a race performance (Jack Daniels' formula). Used to compute all training zone paces. |
+| **ACWR** | Acute:Chronic Workload Ratio. Compares recent load (7 days) to baseline load (28 days). Values above 1.5 signal elevated injury risk. |
+| **EWMA** | Exponentially Weighted Moving Average. A smoothing formula that gives more weight to recent data — used to compute ACWR. |
+| **Vite** | The frontend build tool. In dev mode it serves the React app with hot-reload; in prod mode it bundles and optimizes the static output. |
+| **JPA** | Java Persistence API. Lets you write Java classes (entities) that map to database tables without writing SQL directly. |
+| **Spring Boot** | The backend framework. Handles HTTP routing, dependency injection, and database connection. You mostly write controllers and services — Spring handles the wiring. |
+| **JWT** | JSON Web Token. A signed token issued after login. The frontend includes it in every API request (`Authorization: Bearer <token>`) to prove identity. |
+| **Pro tier** | A paid subscription that unlocks higher AI scan quota (shoe photo scanning). Managed via Stripe. |
+| **Hermes runner** | The user of the app — a runner whose data is stored and analyzed. Not to be confused with the Hermes backend process. |
+| **The Hermes brain** | The file `CLAUDE.md` — the product vision, stack conventions, and rules all AI agents read before doing any work in the repo. |
+| **TASKS.md** | The shared task queue. AI agents pick from `## Active Tasks` and promote follow-ups. Human contributors can add tasks here too. |
+| **Effort Score** | Hermes' measure of how hard a run was. Combines duration and intensity (VO₂ fraction). A threshold run scores ~100/hour. |
+| **Coach-voice** | The writing style Hermes uses: direct, specific, second-person. "Your easy pace today is 5:42–6:10/km." Not "Recommended easy pace range." |
+| **H2** | An embedded Java database. Used by default in development — no installation needed. The database file lives at `backend/hermes_db_v2.mv.db`. |
+
+---
+
 ---
 
 <a id="中文"></a>
@@ -543,15 +891,279 @@ Hermes 是一个本地运行的**个人跑步教练**平台 — **React** 前端
 
 从 Strava、Garmin Connect、COROS 导入跑步数据，热力图可视化路线，追踪 VDOT 进步，管理跑鞋与赛事，获取丹尼尔斯训练配速。所有数据留在你的机器上。
 
-### 快速开始（30 秒）
+---
+
+<a id="hermes-是什么"></a>
+
+### Hermes 是什么？
+
+Hermes 是你本地运行的**私人跑步教练**，分析你的跑步数据，回答三个每位跑者都在问的问题：
+
+1. **今天要跑吗？跑多累？** — 每日准备度、天气、训练蓝图、跑鞋推荐
+2. **我在进步吗？** — VDOT 追踪、训练负荷（ACWR）、比赛预测、恢复时间估算
+3. **今天穿哪双鞋？** — 跑鞋库存、里程追踪、AI 照片扫描导入
+
+支持 **Strava**、**Garmin Connect**、**COROS** 以及手动文件导入（FIT/GPX/TCX/ZIP）。所有分析在本机完成，不上传至第三方。
+
+**比 Strava 好在哪？** Hermes 更聪明（个性化教练指导，而非社交动态）、更可操作（精确到具体配速区间，而非笼统建议）、更透明（所有公式可追溯，没有黑盒算法）。
+
+---
+
+<a id="新手起点"></a>
+
+### 第一次来这里？从这里开始
+
+欢迎。这是从零开始到"我理解了这个项目并且改了点东西"的最快路径：
+
+1. **读 [Hermes 是什么？](#hermes-是什么)** — 了解你在构建什么，为谁而建。（5 分钟）
+2. **跑一遍[快速开始](#中文-快速开始)** — 让应用在 `localhost:8080` 跑起来。（5 分钟）
+3. **走一遍[项目导览](#项目导览)** — 知道每类文件放在哪，再也不用猜。（5 分钟）
+4. **按[如何提交第一次代码改动](#第一次代码改动)做一次** — 改点东西，看它生效。（10 分钟）
+5. **读[开发流程](#中文-开发流程)** — 掌握前端、后端、测试的日常命令。（10 分钟）
+
+**合计约 35 分钟，从克隆到"我改了东西并且看到它生效"。**
+
+不需要提前了解 Spring Boot、React 或运动科学。每个章节都会解释"为什么"，而不只是"怎么做"。
+
+---
+
+<a id="项目导览"></a>
+
+### 项目导览：哪里放什么？
+
+动手之前，花 5 分钟读这张地图。它能在 30 秒内回答你"新页面加在哪""文案改在哪""新接口写在哪"。
+
+```
+Hermes/
+│
+├── frontend/                    React 19 SPA（Vite、Chart.js、Leaflet）
+│   ├── src/pages/               每个路由对应一个 .jsx 文件 — 今日训练、跑步记录、分析等
+│   │                            新增页面：在这里建文件 + 在 App.jsx 中注册路由
+│   ├── src/components/          共享 UI：TopbarNotifications、AppIcon、图表、弹窗
+│   │                            新增共享组件：在这里创建文件
+│   ├── src/utils/               纯工具函数（格式化、计算、路由辅助）
+│   │                            这里没有 React import — 都是纯 JS
+│   ├── src/i18n/                所有用户可见文案都在这里
+│   │   └── translations.js      一个文件，包含 `en` 和 `zh-CN` 两套键值
+│   │                            修改任何标签或文字：编辑 translations.js
+│   ├── src/data/                静态种子数据（跑鞋目录等）
+│   └── src/styles/              style.css — 一个文件。顶部是设计变量。
+│
+├── backend/                     Spring Boot 4 REST API + 托管构建后的前端 SPA
+│   └── src/main/java/com/hermes/backend/
+│       ├── controller/          REST 接口 — 每个业务域一个 Controller
+│       │                        新增 API 路由：在这里创建或修改 Controller
+│       ├── service/             业务逻辑 — 计算、编排
+│       ├── entity/              JPA 实体（映射到数据库表）
+│       └── dto/                 请求/响应格式（API 接受/返回的数据结构）
+│   └── src/main/resources/
+│       └── application.properties   Spring 配置、H2 路径、CORS、JWT 设置
+│
+├── .tools/                      开发脚本 — 浏览器控制、auto-hermes 循环引擎、翻译校验
+├── .claude/                     AI 智能体命令和技能（Claude Code 提示词）
+├── .codex/                      Codex 运行时的镜像
+├── docs/                        架构图、安装说明
+├── .ai-sync/                    跨智能体协调看板（部分已加入 .gitignore）
+│
+├── TASKS.md                     AI 智能体的共享任务队列
+├── AGENTS.md                    智能体人设、教练语气规则、工程标准
+├── CLAUDE.md                    项目大脑 — 产品愿景、技术栈、规范约定
+└── README.md                    本文件
+```
+
+**快速查询表：**
+
+| 问题 | 答案 |
+|---|---|
+| 在哪里新增页面？ | `frontend/src/pages/NewPage.jsx` + 在 `frontend/src/App.jsx` 注册路由 |
+| 在哪里修改按钮文字？ | `frontend/src/i18n/translations.js` — 找到对应键，同时修改 `en` 和 `zh-CN` |
+| 在哪里新增 REST 接口？ | `backend/src/main/java/com/hermes/backend/controller/` |
+| 数据库表结构在哪里？ | `backend/src/main/java/com/hermes/backend/entity/`（JPA 实体，启动时自动迁移） |
+| 主 CSS 文件在哪里？ | `frontend/src/styles/style.css` |
+| 应用配置在哪里？ | `backend/src/main/resources/application.properties` |
+
+---
+
+<a id="中文-快速开始"></a>
+
+### 快速开始（5 分钟）
+
+**对新贡献者的意义：** 这是你的验证步骤。应用能在本地跑起来，说明环境配置正确，可以开始改代码了。
+
+#### Windows
 
 ```powershell
 .\start_hermes.bat
 ```
 
+#### macOS / Linux
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
 打开 `http://localhost:8080`，邮箱注册即可使用。无需配置数据库、API 密钥。
 
+> **想体验完整功能？** 参考[生产部署](#中文-生产部署)配置 PostgreSQL、Strava/Google OAuth、Stripe 计费和邮箱验证。
+
+---
+
+### 平台说明
+
+- **Windows 用户**：使用 PowerShell 示例、`.bat` 启动器和 `Hermes.local.env.ps1`。
+- **macOS / Linux 用户**：使用 Bash/Zsh 示例、`./mvnw` 和导出的环境变量。
+- 新增安装步骤时，当 shell 语法不同时，请同时提供两种命令形式。
+
+---
+
+<a id="第一次代码改动"></a>
+
+### 如何提交第一次代码改动
+
+**对新贡献者的意义：** 读代码有价值，改代码才能真正建立认知。这里通过两个真实例子——一个前端、一个后端——让你完整体验动代码的感觉。
+
+#### 示例 A：修改个人主页的标签文字（前端）
+
+完整的前端循环：找文本 → 修改 → 启动开发服务器 → 看到生效。
+
+**第一步 — 找到标签字符串的位置。**
+
+所有用户可见的文字都在 `frontend/src/i18n/translations.js`。打开文件，搜索你想修改的词语（例如"Runner Hub"）。你会看到 `en` 和 `zh-CN` 两个对应条目。两个都要改。
+
+```js
+// frontend/src/i18n/translations.js（简化示例）
+en: {
+  profile: {
+    title: "Runner Hub",      // ← 改这里
+    ...
+  }
+},
+"zh-CN": {
+  profile: {
+    title: "个人主页",          // ← 也改这里
+    ...
+  }
+}
+```
+
+**第二步 — 启动开发服务器。**
+
+```bash
+cd frontend
+npm install    # 只有第一次需要
+npm run dev    # → http://localhost:3000
+```
+
+开发服务器支持热重载 — 保存文件后浏览器自动刷新。
+
+**第三步 — 在浏览器中验证改动。**
+
+打开 `http://localhost:3000/profile`，确认新标签在两种语言下都正确显示（在设置中切换语言）。
+
+**第四步 — 检查翻译完整性。**
+
+```bash
+node .tools/check-translations.mjs
+```
+
+该脚本验证 `en` 里的每个键在 `zh-CN` 里都存在，反之亦然。涉及文案改动的提交必须在这一步通过后才能提交。
+
+**第五步 — 对文件做 lint 检查。**
+
+```bash
+cd frontend
+.\node_modules\eslint\bin\eslint.js src/i18n/translations.js
+```
+
+---
+
+#### 示例 B：在个人资料 API 响应中新增字段（后端）
+
+完整的后端循环：找 Controller → 新增字段 → 编译 → 测试接口。
+
+**第一步 — 找到 Controller。**
+
+打开 `backend/src/main/java/com/hermes/backend/controller/ProfileController.java`，找到处理 `GET /api/profile` 的方法。它返回一个 DTO 对象。
+
+**第二步 — 在 DTO 中新增字段。**
+
+打开该方法返回的 DTO 类（例如 `dto/` 目录下的 `ProfileDTO.java`），新增你的字段：
+
+```java
+// backend/.../dto/ProfileDTO.java
+public class ProfileDTO {
+    private String displayName;
+    private int totalRuns;
+    private double totalDistanceKm;
+    private String newField;  // ← 新增这行
+    // ... getter 和 setter
+}
+```
+
+**第三步 — 编译，检查有无报错。**
+
+```bash
+cd backend
+./mvnw -q -DskipTests compile
+```
+
+有编译错误先修完再继续。
+
+**第四步 — 启动后端，测试接口。**
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+启动后用 curl 或浏览器测试：
+
+```bash
+curl http://localhost:8080/api/profile -H "Authorization: Bearer <你的token>"
+```
+
+响应的 JSON 中应出现 `newField`。
+
+**第五步 — 在前端消费新字段（可选）。**
+
+前端在 `frontend/src/pages/Profile.jsx` 中调用这个接口。搜索 API 调用（通常是 `fetch('/api/profile')` 或 `frontend/src/utils/` 里的封装），然后在 JSX 中使用新字段。
+
+---
+
+<a id="中文-架构"></a>
+
+### 架构与技术栈
+
+**对新贡献者的意义：** 理解"两进程"架构可以避免一个常见困惑 — 前端开发服务器（`:3000`）和生产模式（`:8080`）用不同的方式提供同一个 React 应用。
+
+```
+frontend/          React 19 + Vite 8 — 开发服务器运行在 :3000，将 API 请求代理到 :8080
+backend/           Spring Boot 4 + JPA — REST API 在 :8080，同时托管构建后的前端 SPA
+```
+
+**两者如何协作：**
+- **开发模式**：在 `frontend/` 运行 `npm run dev`，支持热重载。Vite 开发服务器将所有 `/api/...` 请求代理到 `:8080` 的 Spring Boot 后端。
+- **生产模式**：在 `frontend/` 运行 `npm run build`，构建输出放入 `backend/src/main/resources/static/`。Spring Boot 同时提供 API 和静态文件，都在 `:8080`。
+
+#### 技术栈
+
+| 层级 | 技术 | 用途 |
+|---|---|---|
+| 前端 | React 19, React Router 7, Chart.js, Leaflet, Vite 8 | 快速 SPA、丰富图表、交互式地图 |
+| 后端 | Spring Boot 4, Spring Data JPA, Hibernate | 健壮的 REST API、声明式 ORM |
+| 数据库 | H2（默认零配置）或 PostgreSQL | 开发零配置；生产级部署用 PostgreSQL |
+| 认证 | JWT, Google OAuth 2.0, Strava OAuth 2.0, 邮箱/密码+验证 | 多种登录方式，降低新用户门槛 |
+| AI | Gemini 2.5 Flash（跑鞋图片扫描）, Qwen（赛道地图路线提取） | 自动化繁琐的数据录入 |
+| 支付 | Stripe Checkout（Pro 订阅）| 简单的托管结账流程，服务器不接触卡号 |
+
+---
+
+<a id="中文-功能亮点"></a>
+
 ### 功能亮点
+
+**对新贡献者的意义：** 动手之前先了解应用能做什么。下面每个模块都对应一个 React 页面和一组后端接口。
 
 | 模块 | 功能 |
 |---|---|
@@ -561,20 +1173,394 @@ Hermes 是一个本地运行的**个人跑步教练**平台 — **React** 前端
 | **跑步记录** | 可筛选列表，路线地图，运动指标，详情下钻 |
 | **跑鞋管理** | 库存追踪、里程管理、AI 拍照扫描、目录浏览 |
 | **赛事中心** | 交互式世界地图、60+ 赛事目录、个人最佳、倒计时 |
+| **训练计划** | 每周训练规划器 |
 | **数据导入** | Strava 同步、Garmin Connect 拉取、手动 FIT/GPX/TCX/ZIP 导入 |
+| **设置** | 主题（亮色/午夜）、语言（en/zh-CN）、单位、已连接服务 |
 
-### 技术栈
+---
 
-| 层级 | 技术 |
+<a id="中文-web-路由"></a>
+
+### Web 路由
+
+**对新贡献者的意义：** 这里每一行都对应 `frontend/src/pages/` 里的一个 React 页面文件，以及（对于受保护路由）一组后端接口。用这张表快速找到某个 URL 对应哪个文件。
+
+| 路由 | 页面 | 功能 |
+|---|---|---|
+| `/` | 首页 | 公开首页，含登录/注册入口 |
+| `/login` | 登录 | 邮箱/密码、Strava OAuth、Google OAuth |
+| `/signup` | 注册 | 注册账号 + 邮箱验证 |
+| `/terms`, `/privacy` | 法律页面 | 公开的服务条款和隐私政策 |
+| `/admin` | 管理员登录 | 系统管理员登录入口 |
+| `/dashboard` | 管理面板 | 运维状态、KPI 看板、用户管理、任务队列、审计日志 |
+| `/profile` | 个人主页 | 准备度、指标摘要、个人纪录、数据导入 |
+| `/runs` | 跑步历史 | 可筛选/排序/分页列表 |
+| `/run/:id` | 跑步详情 | 路线地图、运动指标、路线分析 |
+| `/analysis` | 深度分析 | VDOT、训练配速、ACWR、恢复分析 |
+| `/analysis/vo2max` | VO₂ Max 详情 | 趋势下钻 |
+| `/analysis/:insightKey` | 洞察详情 | 伤病风险、强度、教练洞察、负荷均衡 |
+| `/prediction/:distKey` | 预测详情 | 特定距离的比赛预测 |
+| `/heatmap` | 热力图 | 全屏 GPS 热力图，实时统计 |
+| `/today-run` | 今日训练 | 每日教练：准备度、天气、训练、跑鞋 |
+| `/shoes` | 跑鞋管理 | 库存、里程追踪、AI 扫描、目录 |
+| `/shoes/add` | 添加跑鞋 | 引导式添加跑鞋流程 |
+| `/shoe-catalog` | 跑鞋目录 | 浏览跑鞋数据库 |
+| `/races` | 赛事中心 | 世界地图、60+ 赛事、个人最佳 |
+| `/schedule` | 训练计划 | 每周训练规划器 |
+| `/muscle-training` | 肌肉训练 | 肌肉解剖图、训练计划、记录 |
+| `/rewards` | 成就 | 成就徽章、进度追踪 |
+| `/settings` | 设置 | 主题、语言、单位、已连接服务 |
+
+---
+
+<a id="中文-分析公式"></a>
+
+### 分析公式详解
+
+**对新贡献者的意义：** 动手改分析代码之前，先理解每个数字的含义。这些公式是所有教练建议的科学基础，全部来自 Jack Daniels《丹尼尔斯跑步方程式》及运动生理学文献。Hermes 的所有数字都有可追溯的依据。
+
+#### VDOT（Daniels' VO₂max 估算）
+
+VDOT 是一个捕捉你当前有氧能力的单一数值，由最近的比赛成绩推算。VDOT 越高，配速越快。Hermes 用它计算所有训练区间配速。
+
+通过比赛成绩（距离单位：米，时间单位：分钟）：
+
+```
+velocity     = distance / time                              (m/min)
+VO₂          = -4.60 + 0.182258 × v + 0.000104 × v²        (ml/kg/min)
+%VO₂max      = 0.8 + 0.1894393 × e^(-0.012778 × t) + 0.2989558 × e^(-0.1932605 × t)
+VDOT         = VO₂ / %VO₂max
+```
+
+**当前 VDOT**：使用最近 **90 天**内表现，优先 ≥3km 距离，取**前三个最佳** VDOT 的均值。
+
+#### 训练配速（由 VDOT 推算）
+
+| 区间 | %VO₂max | 目的 |
+|---|---|---|
+| 轻松跑 | 54–62% | 有氧基础、恢复 |
+| 马拉松配速 | 78% | 比赛专项耐力 |
+| 乳酸阈 | 85% | 乳酸清除 |
+| 间歇 | 96% | VO₂max 刺激 |
+| 重复跑 | 111% | 速度与经济性 |
+
+#### 训练负荷 — ACWR
+
+ACWR（急性/慢性工作负荷比）是你的伤病风险表。它将近期训练负荷（近 7 天）与长期基础负荷（近 28 天）作对比。突然飙升 — 训练量远超基线 — 预示受伤风险上升。
+
+基于 EWMA 的伤病风险追踪（Gabbett 2016，Hulin et al. 2014，Williams et al. 2017）：
+
+```
+急性  λ = 2/(7+1) = 0.25   （7天）
+慢性  λ = 2/(28+1) = 0.069 （28天）
+ACWR = 急性 EWMA / 慢性 EWMA
+```
+
+| ACWR | 区间 | 含义 |
+|---|---|---|
+| < 0.80 | 训练不足 | 刺激不够 |
+| 0.80–1.30 | 甜蜜区 | 最佳负荷 |
+| 1.30–1.50 | 预警 | 伤病风险上升 |
+| > 1.50 | 危险 | 减量 |
+
+#### 训练强度评分
+
+```
+intensityRatio = vo₂Fraction / 0.85
+effortScore    = duration_hours × intensityRatio² × 100
+```
+
+`vo₂Fraction` 由心率或配速推算。乳酸阈强度的跑步约 100 分/小时。
+
+#### 恢复时间估算
+
+```
+durationFactor  = (duration > 90 min) ? 1 + 0.005 × (duration - 90) : 1.0
+adjustedScore   = effortScore × durationFactor
+baseHours       = 0.45 × adjustedScore^0.85
+fitnessDiscount = max(0.80, 1.10 - VDOT / 200)
+recoveryHours   = min(96, baseHours × fitnessDiscount)
+```
+
+体能越强（VDOT 越高）恢复越快。超过 90 分钟的长跑有额外惩罚。上限：96 小时。
+
+#### Daniels 训练区间
+
+| 区间 | VO₂ 比例 | 标签 |
+|---|---|---|
+| 恢复跑 | < 59% | 轻松恢复慢跑 |
+| 轻松跑 | 59–75% | 有氧基础 |
+| 马拉松配速 | 75–83% | 马拉松配速 |
+| 乳酸阈 | 83–92% | 节奏跑/乳酸阈 |
+| 间歇 | 92–105% | VO₂max 间歇 |
+| 重复跑 | > 105% | 冲刺/经济性 |
+
+---
+
+<a id="中文-生产部署"></a>
+
+### 生产部署（PostgreSQL + OAuth + 管理员账号）
+
+**对新贡献者的意义：** 默认的 H2 数据库是文件存储、单用户模式 — 本地开发没问题，但不适合正式部署。本节介绍将 Hermes 部署到真实多用户环境时需要配置哪些内容。
+
+#### Windows
+
+```powershell
+.\start_hermes_postgres.ps1
+```
+
+`start_hermes_postgres.ps1` 是主启动器，从 `Hermes.local.env.ps1` 读取密钥。
+
+#### macOS / Linux
+
+```bash
+export APP_DB_URL='jdbc:postgresql://localhost:5432/hermes'
+export APP_DB_USERNAME='hermes'
+export APP_DB_PASSWORD='<你的密码>'
+export STRAVA_CLIENT_ID='<你的strava-client-id>'
+export STRAVA_CLIENT_SECRET='<你的strava-client-secret>'
+export APP_DATA_ENCRYPTION_KEY='<长随机十六进制密钥>'
+cd backend
+./mvnw spring-boot:run
+```
+
+只有当你的 shell、IDE 或进程管理器在启动 Spring Boot 前明确加载 `.env` 时才使用 `.env` 文件。详细变量参考见 [docs/setup.md](docs/setup.md)。
+
+#### 核心配置
+
+| 类别 | 变量 | 用途 |
+|---|---|---|
+| 数据库 | `APP_DB_URL`, `APP_DB_USERNAME`, `APP_DB_PASSWORD` | PostgreSQL 连接 |
+| Strava OAuth | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `APP_DATA_ENCRYPTION_KEY` | Strava 登录 + 活动同步 |
+| Google OAuth | `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET`, `APP_GOOGLE_REDIRECT_URI` | Google 登录 |
+| 管理员 | `APP_BOOTSTRAP_ADMIN_EMAIL`, `APP_BOOTSTRAP_ADMIN_PASSWORD` | 启动时创建管理员账号 |
+
+#### Stripe 计费（可选）
+
+通过 Stripe Checkout 出售 **Pro**（AI 扫描配额）。
+
+1. 在 [Stripe Dashboard](https://dashboard.stripe.com/) 创建一个包含一次性**价格**的**产品**
+2. 将 `STRIPE_PRICE_PRO_MONTHLY` 设为价格 ID（`price_...`）
+3. 设置 `STRIPE_SECRET_KEY`（API 密钥）和 `STRIPE_WEBHOOK_SECRET`（webhook 签名密钥）
+4. 将 `APP_PUBLIC_BASE_URL` 设为你的站点 URL（如 `https://app.example.com`）
+5. 可选：设置 `APP_BILLING_PRICE_LABEL`（如 `¥68/月`）
+
+本地测试：`stripe listen --forward-to localhost:8080/api/billing/webhook`
+
+#### 邮箱验证
+
+邮箱/密码注册时会通过 SMTP 发送验证链接。开发阶段将 `SPRING_MAIL_HOST` 留空可跳过验证。
+
+| 变量 | 用途 |
 |---|---|
-| 前端 | React 19, React Router 7, Chart.js, Leaflet, Vite 8 |
-| 后端 | Spring Boot 4, Spring Data JPA, Hibernate |
-| 数据库 | H2（默认零配置）或 PostgreSQL |
-| 认证 | JWT, Google OAuth 2.0, Strava OAuth 2.0, 邮箱+验证 |
-| AI | Gemini 2.5 Flash（跑鞋图片扫描）, Qwen（赛道地图路线提取）|
-| 支付 | Stripe Checkout（Pro 订阅）|
+| `SPRING_MAIL_HOST` | SMTP 服务器（留空 = 跳过验证） |
+| `SPRING_MAIL_PORT` | 通常是 `587` |
+| `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | SMTP 凭据 |
+| `APP_MAIL_FROM` | 发件人地址 |
+| `APP_PUBLIC_BASE_URL` | 用于生成验证链接 |
 
-### AI 智能体命令
+#### 公有云安全清单
+
+- **`HERMES_ENV=production`** — 要求设置 `STRAVA_WEBHOOK_VERIFY_TOKEN` 为一个长随机值
+- **TLS** — 在反向代理处终止 HTTPS。只有全流量 HTTPS 时才将 `APP_ENABLE_HSTS=true`
+- **反向代理** — `server.forward-headers-strategy=framework` 已设置；配置代理发送 `X-Forwarded-*`
+- **CORS** — 前端和后端不同源时设置 `APP_CORS_ALLOWED_ORIGINS`
+- **数据库** — 生产环境用 PostgreSQL；绝不将 H2 暴露到网络
+- **Webhook** — Strava/Garmin 按 IP 限速；Garmin 回调限制为 `*.garmin.com`；Stripe 使用签名验证
+- **错误** — 默认错误页面不包含堆栈信息；成熟部署请用 `APP_JPA_DDL_AUTO=validate` 加迁移脚本
+
+---
+
+<a id="中文-开发流程"></a>
+
+### 开发流程
+
+**对新贡献者的意义：** 这些是你每天都会用到的命令。把这一节收藏起来。
+
+#### 环境要求
+
+- **Java 17+** — 推荐 [Adoptium Temurin 17 LTS](https://adoptium.net)
+- **Node.js 18+** — [nodejs.org](https://nodejs.org)
+
+#### 前端开发
+
+Windows：
+
+```powershell
+cd frontend
+npm install
+npm run dev        # → http://localhost:3000（热重载，API 代理到 :8080）
+```
+
+macOS / Linux：
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:3000（热重载，API 代理到 :8080）
+```
+
+#### 生产构建
+
+Windows：
+
+```powershell
+cd frontend
+npm run build      # → backend/src/main/resources/static/
+```
+
+macOS / Linux：
+
+```bash
+cd frontend
+npm run build      # backend/src/main/resources/static/
+```
+
+#### 后端
+
+Windows：
+
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run        # http://localhost:8080
+.\mvnw.cmd test                   # 运行测试
+.\mvnw.cmd -q -DskipTests compile # 编译检查
+```
+
+macOS / Linux：
+
+```bash
+cd backend
+./mvnw spring-boot:run            # http://localhost:8080
+./mvnw test                       # 运行测试
+./mvnw -q -DskipTests compile     # 编译检查
+```
+
+#### 翻译完整性检查
+
+**涉及文案改动后必须运行。** 提交前必须通过（exit 0）。
+
+```bash
+node .tools/check-translations.mjs        # 仅检查键值完整性
+node .tools/check-translations.mjs --all  # + 扫描绕过写法
+```
+
+---
+
+<a id="中文-数据库"></a>
+
+### 数据库
+
+**对新贡献者的意义：** 本地开发不需要任何配置 — H2 会自动创建文件。需要与生产环境一致或正式部署时再切换到 PostgreSQL。
+
+#### H2（默认）
+
+零配置。数据库文件自动创建在 `backend/hermes_db_v2.mv.db`。
+
+#### PostgreSQL
+
+Windows：
+
+```powershell
+$env:APP_DB_URL      = "jdbc:postgresql://localhost:5432/hermes"
+$env:APP_DB_USERNAME = "hermes"
+$env:APP_DB_PASSWORD = "<你的密码>"
+.\start_hermes.bat
+```
+
+macOS / Linux：
+
+```bash
+export APP_DB_URL='jdbc:postgresql://localhost:5432/hermes'
+export APP_DB_USERNAME='hermes'
+export APP_DB_PASSWORD='<你的密码>'
+cd backend
+./mvnw spring-boot:run
+```
+
+#### H2 迁移至 PostgreSQL
+
+```powershell
+.\migrate_h2_to_postgres.bat
+```
+
+macOS / Linux 用户请使用上方的 PostgreSQL 环境变量块，直接以 PostgreSQL 模式运行后端。当前迁移脚本仅适用于 Windows。
+
+---
+
+<a id="中文-登录方式"></a>
+
+### 登录方式
+
+**对新贡献者的意义：** 邮箱登录无需任何 API 密钥，立即可用。需要测试 Strava 或 Google 登录时再配置 OAuth。
+
+| 方式 | 所需配置 |
+|---|---|
+| 邮箱 | 无 — 注册后直接使用 |
+| 管理员 | 设置 `APP_BOOTSTRAP_ADMIN_EMAIL` / `APP_BOOTSTRAP_ADMIN_PASSWORD` |
+| Google | Windows：配置 `Hermes.local.env.ps1`；macOS/Linux：导出 `APP_GOOGLE_CLIENT_ID`、`APP_GOOGLE_CLIENT_SECRET`、`APP_GOOGLE_REDIRECT_URI` |
+| Strava | Windows：配置 `Hermes.local.env.ps1`；macOS/Linux：导出 `STRAVA_CLIENT_ID`、`STRAVA_CLIENT_SECRET`、`STRAVA_REDIRECT_URI`、`APP_DATA_ENCRYPTION_KEY` |
+
+#### 本地共享测试账号（面向贡献者）
+
+Hermes 可以引导启动一个本地专用的演示账号，预置了跑鞋和跑步数据：
+`strava+140971747@hermes.local` / `HermesLocal1!`
+
+Windows：
+
+```powershell
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
+$env:APP_LOCAL_SHARED_RUNNER_EMAIL = "strava+140971747@hermes.local"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+.\start_hermes.bat
+```
+
+`start_hermes.bat` 会将 shell 中设置的 `APP_LOCAL_SHARED_RUNNER_*` 变量传入后端窗口，无需修改 `Hermes.local.env.ps1`。
+
+macOS / Linux：
+
+```bash
+export APP_LOCAL_SHARED_RUNNER_ENABLED=true
+export APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
+export APP_LOCAL_SHARED_RUNNER_PASSWORD='HermesLocal1!'
+cd backend
+./mvnw spring-boot:run
+```
+
+该引导机制是本地安全的：默认禁用、生产环境跳过，只有在该账号没有任何活动数据时才会种入模拟跑鞋和跑步记录。
+
+---
+
+<a id="中文-ai-工作流"></a>
+
+### AI 智能体工作流
+
+**对新贡献者的意义：** Hermes 内置了一套 AI 智能体循环，由 **Claude Code** 和 **Gemini CLI** 驱动，从共享队列中领取任务、由专业子团队实现、验证并推进后续工作。如果你想了解代码库的演进方式，或者想以 AI 辅助的方式贡献改进，这就是你需要理解的系统。
+
+#### 安装 CLI 工具
+
+```bash
+npm install -g @anthropic-ai/claude-code
+npm install -g @google/gemini-cli
+```
+
+#### 配置本地密钥
+
+Windows：
+
+```powershell
+Copy-Item Hermes.local.env.example.ps1 Hermes.local.env.ps1
+notepad Hermes.local.env.ps1
+```
+
+macOS / Linux：
+
+```bash
+cp .env.example .env
+${EDITOR:-nano} .env
+```
+
+#### Claude Code 命令
 
 | 命令 | 功能 |
 |---|---|
@@ -584,66 +1570,123 @@ Hermes 是一个本地运行的**个人跑步教练**平台 — **React** 前端
 | `/auto-hermes-tech-debt` | 全局技术债审计 |
 | `/auto-hermes-security` | 安全审计（认证、配置、运行时、代码）|
 | `/auto-hermes-market` | 并行市场调研 + SEO 支持通道 |
+| `/auto-hermes-attack` | 高风险界面的弹性/崩溃模拟 |
+| `/auto-hermes-structure-update` | 结构改进轮次 |
 | `/auto-hermes-find-shoe` | 网络调研跑鞋品牌并更新目录 |
-| `/auto-hermes-language` | 前端文案润色（中英文同步）|
+| `/auto-hermes-language` | 前端文案润色（中英文同步强制执行）|
 | `/auto-hermes-push-main` | 安全发布到 `github.com/520HXC/run` |
+| `/auto-hermes-submit-main` | 从嵌套仓库备份优先 cherry-pick |
+| `/auto-ship` | 以共享 git 策略运行 TASKS.md 队列 |
+| `/deploy` | 准备 Hermes 部署 |
+| `/fix-issue` | 修复 GitHub Issue |
+| `/pr-review` | 审查 Pull Request |
+| `/frontend-design` | 应用 Hermes UI 设计规范 |
+| `/optimize-context` | 在大规模执行前生成最小工作简报 |
+| `/caveman` | 低 token 响应模式 |
 
-### Web 路由
+#### AI 智能体关键文件
 
-| 路由 | 页面 | 功能 |
-|---|---|---|
-| `/` | 首页 | 公开首页，含登录/注册入口 |
-| `/login` | 登录 | 邮箱/密码、Strava OAuth、Google OAuth |
-| `/signup` | 注册 | 注册账号 + 邮箱验证 |
-| `/admin` | 管理员登录 | 系统管理员登录 |
-| `/dashboard` | 管理面板 | 运维状态、KPI 看板、用户管理、任务队列、审计日志 |
-| `/profile` | 个人主页 | 准备度、指标摘要、个人纪录、数据导入 |
-| `/runs` | 跑步历史 | 可筛选/排序/分页列表 |
-| `/run/:id` | 跑步详情 | 路线地图、运动指标、路线分析 |
-| `/analysis` | 深度分析 | VDOT、训练配速、ACWR、恢复分析 |
-| `/today-run` | 今日训练 | 每日教练：准备度、天气、训练、跑鞋 |
-| `/shoes` | 跑鞋管理 | 库存、里程追踪、AI 扫描、目录 |
-| `/races` | 赛事中心 | 世界地图、60+ 赛事、个人最佳 |
-| `/settings` | 设置 | 主题、语言、单位、已连接服务 |
+| 文件 | 用途 |
+|---|---|
+| `TASKS.md` | 共享任务队列 — 查看智能体正在做什么，或者添加新任务 |
+| `.ai-sync/CONTEXT_LEDGER.md` | 各界面的持久决策和上下文摘要 |
+| `.ai-sync/AGENT_SYNC.md` | 跨智能体协调看板 |
+| `AGENTS.md` | 智能体人设、教练语气规则、工程标准 |
+| `CLAUDE.md` | 项目大脑 — 产品愿景、技术栈、规范约定 |
 
-### 分析公式
+---
 
-所有公式来源于 Jack Daniels《丹尼尔斯跑步方程式》及运动生理学文献。
+<a id="中文-garmin-导入"></a>
 
-**VDOT**：通过比赛成绩估算有氧能力。使用最近 **90 天**内表现，优先 ≥3km 距离，取**前三个最佳** VDOT 的均值。
+### Garmin Connect 导入
 
-**ACWR**（急性/慢性工作负荷比）：使用 EWMA 追踪伤病风险 — 急性 λ=0.25（7天），慢性 λ=0.069（28天）。ACWR < 0.80 训练不足，0.80-1.30 最佳区间，>1.50 危险。
+**对新贡献者的意义：** 该功能让跑者无需手动导出文件，直接从 Garmin 账号拉取活动数据。底层使用第三方 Python 库（`garth`）完成 SSO 登录。
 
-**恢复时间**：基于训练负荷和 VDOT 估算，上限 96 小时。VDOT 越高恢复越快，超过 90 分钟的长跑有额外惩罚。
+直接从 Garmin Connect 账号拉取活动 — 无需手动导出文件。
 
-### 生产部署
-
-```powershell
-.\start_hermes_postgres.ps1
+```bash
+pip install -r .tools/requirements-garmin.txt
 ```
 
-编辑该文件配置 PostgreSQL、Strava/Google OAuth、管理员账号。详细配置说明见上方英文部分。
+然后进入 **个人主页 → Garmin Connect → 从 Garmin 导入**。凭据仅用于当前会话，**不会存储**。
 
-### 数据库
+使用 [GarminDB](https://github.com/tcgoetz/GarminDB) 的 `garth` 库完成 SSO 登录。重复活动自动跳过。
 
-| 方案 | 说明 |
-|---|---|
-| H2（默认）| 零配置，文件自动生成 |
-| PostgreSQL | 安装 PG 15+，创建 `hermes` 数据库，配置连接信息 |
-| 迁移 | `.\migrate_h2_to_postgres.bat` |
+---
 
-### 注意事项
+<a id="中文-文件导入"></a>
+
+### 文件自动导入（Garmin / COROS）
+
+**对新贡献者的意义：** 投放文件夹导入让跑者把设备上的文件复制过来后，数据就自动出现在 Hermes 里 — 无需手动上传界面。这是导出 FIT 文件的设备的零摩擦路径。
+
+支持 `GPX`、`TCX`、`FIT`、`ZIP`。自动监控文件夹。
+
+1. 将 `.tools/hermes_sync_config.example.json` 复制为 `.tools/hermes_sync_config.json`
+2. 填入你的 Hermes 邮箱/密码
+3. 将文件拖入 `imports/garmin` 或 `imports/coros`
+4. 启动 Hermes — 处理完成的文件移至 `imports/processed/`
+
+---
+
+<a id="中文-注意事项"></a>
+
+### 重要事项
 
 - **保持终端窗口打开**，关闭则后端停止
 - **修改配置后需重启后端**
-- **不要把密钥提交到 Git**
-- **`APP_DATA_ENCRYPTION_KEY` 请使用强密钥**
+- **不要把密钥提交到 Git** — 用环境变量
+- **`APP_DATA_ENCRYPTION_KEY` 请使用强密钥** — 它保护存储的 Strava Token
+
+---
+
+<a id="中文-常见问题"></a>
 
 ### 常见问题
 
-| 问题 | 解决 |
+| 问题 | 解决方案 |
 |---|---|
-| `ERR_CONNECTION_REFUSED` | 运行 `.\start_hermes.bat` |
-| `java` 找不到 | 安装 Java 17：https://adoptium.net |
+| `ERR_CONNECTION_REFUSED` | Windows：运行 `.\start_hermes.bat`；macOS/Linux：`cd backend && ./mvnw spring-boot:run` |
+| `java` 找不到 | 安装 Java 17：[adoptium.net](https://adoptium.net) |
 | OAuth 回调失败 | 确认后端运行在 `localhost:8080`，回调地址完全匹配 |
-| 前端修改未生效 | 运行 `npm run build`，刷新页面 |
+| 前端修改未生效 | 运行 `npm run build`，然后刷新页面 |
+| 翻译检查失败 | 运行 `node .tools/check-translations.mjs`，补全缺失的键值对 |
+
+---
+
+<a id="中文-回归清单"></a>
+
+### 回归测试清单
+
+修改认证、导入、上传或第三方集成后运行。
+
+1. **过期会话**：让 API 返回 `401`，此时页面上有未保存的编辑 → 应跳转到 `/login?return=<path>&reason=expired` 并显示提示
+2. **部分批量导入**：同时上传有效和无效文件 → 应返回 `200`，列出 `rejectedFiles`，弹窗保持打开
+3. **天气接口中断**：阻断 `api.open-meteo.com` → 天气栏显示"天气不可用"，页面其余部分正常加载
+4. **分析接口错误**：让分析接口返回 `500` → 跑步详情页显示内联错误卡片和"重新加载"按钮
+5. **文件数量上限**：提交超过 50 个文件 → 后端返回 `400` 并说明限制，前端在导入弹窗中展示
+
+---
+
+<a id="中文-术语表"></a>
+
+### 术语表
+
+对某些术语不熟悉？下表涵盖了代码库和文档中你会遇到的词汇。
+
+| 术语 | 含义 |
+|---|---|
+| **VDOT** | 通过比赛成绩推算的有氧能力单一指标（Jack Daniels 公式）。用于计算所有训练区间配速。 |
+| **ACWR** | 急性/慢性工作负荷比。近期负荷（7天）与基础负荷（28天）的比值。超过 1.5 表示伤病风险上升。 |
+| **EWMA** | 指数加权移动平均。一种给近期数据赋予更高权重的平滑公式 — 用于计算 ACWR。 |
+| **Vite** | 前端构建工具。开发模式提供热重载的 React 应用；生产模式打包并优化静态输出。 |
+| **JPA** | Java Persistence API。让你无需直接写 SQL，通过 Java 类（实体）映射数据库表。 |
+| **Spring Boot** | 后端框架。处理 HTTP 路由、依赖注入和数据库连接。你主要写 Controller 和 Service，Spring 负责串联。 |
+| **JWT** | JSON Web Token。登录后签发的令牌。前端在每次 API 请求中携带它（`Authorization: Bearer <token>`）来证明身份。 |
+| **Pro 订阅** | 付费订阅，解锁更高的 AI 扫描配额（跑鞋照片扫描）。通过 Stripe 管理。 |
+| **Hermes 跑者** | 应用的使用者 — 一位在 Hermes 中存储和分析数据的跑者。区别于 Hermes 后端进程本身。 |
+| **项目大脑** | `CLAUDE.md` 文件 — 所有 AI 智能体在仓库中开展任何工作前都会读取的产品愿景、技术栈规范和规则。 |
+| **TASKS.md** | 共享任务队列。AI 智能体从 `## Active Tasks` 中领取任务并推进后续工作。人工贡献者也可以在这里添加任务。 |
+| **训练强度评分** | Hermes 衡量一次跑步强度的指标。综合时长和强度（VO₂ 比例）。乳酸阈强度约 100 分/小时。 |
+| **教练语气** | Hermes 使用的写作风格：直接、具体、第二人称。例如"你今天的轻松跑配速是 5:42–6:10/km"，而非"建议轻松跑配速区间"。 |
+| **H2** | 内嵌 Java 数据库。开发阶段默认使用 — 无需安装。数据库文件在 `backend/hermes_db_v2.mv.db`。 |
