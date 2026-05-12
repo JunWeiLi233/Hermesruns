@@ -3,6 +3,41 @@ package com.hermes.backend;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+/**
+ * A single GPS sample within an activity.
+ *
+ * <h3>Transitive ownership model</h3>
+ * This entity has <strong>no direct {@code runnerId}</strong> column. Ownership flows transitively:
+ * <pre>
+ *   ActivityPoint &rarr; Activity &rarr; Runner
+ * </pre>
+ *
+ * <h3>Security rule (mandatory for every new query)</h3>
+ * Any query or endpoint that returns {@code ActivityPoint} data <strong>must</strong> verify
+ * runner ownership through the {@link Activity} parent. There are two acceptable patterns:
+ *
+ * <ol>
+ *   <li><strong>Runner-scoped query</strong> &mdash; the JPQL/SQL joins through
+ *       {@code Activity} and filters by {@code activity.runner = :runner} or
+ *       {@code a.runner_id = :runnerId}. This is self-contained and preferred.</li>
+ *   <li><strong>Caller-verified</strong> &mdash; the query filters only by
+ *       {@code activityId}, but the caller has already verified that the activity
+ *       belongs to the authenticated runner (e.g. via
+ *       {@code ActivityRepository#findByIdAndRunner}). Every call site using this
+ *       pattern must document the verification step in a comment.</li>
+ * </ol>
+ *
+ * <p>The {@link com.fasterxml.jackson.annotation.JsonIgnore} annotation on
+ * {@link #getActivity()} prevents the full Activity graph from serializing into
+ * API responses, which would risk leaking cross-runner data.</p>
+ *
+ * <p>New repository methods that skip the Activity join are a <strong>security
+ * regression</strong> unless every caller is audited and documented. Never add a
+ * query that returns ActivityPoints without a runner gate.</p>
+ *
+ * @see ActivityPointRepository
+ * @see ActivityController
+ */
 @Entity
 @Table(
         name = "activity_points",
