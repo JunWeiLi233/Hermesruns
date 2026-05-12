@@ -17029,60 +17029,82 @@ body.theme-midnight .polarized-target-marker {
 }
 
 /* ── Pixel-trace muscle highlight fills ────────────────────────── */
-/* Rendered as <rect> elements clipped to per-muscle SVG paths.    */
+/* Rendered as traced muscle paths so the highlight follows anatomy rather than a rectangular paint box. */
 /* Light mode: multiply blends coral over the light anatomy photo. */
 /* Dark mode: hard-light blends coral over the dark anatomy photo. */
-.mt-muscle-pixel-fill {
-  fill: var(--accent-coral-strong);
+.mt-muscle-pixel-highlight {
+  fill: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 78%, rgba(255, 232, 220, 0.34));
+  stroke: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 78%, var(--surface-card, #fffaf7));
+  stroke-width: 1.12;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+  stroke-linecap: round;
   opacity: 0;
   mix-blend-mode: multiply;
-  transition: opacity var(--transition, 220ms ease);
+  transition:
+    opacity var(--transition, 220ms ease),
+    fill var(--transition, 220ms ease),
+    stroke var(--transition, 220ms ease);
   pointer-events: none;
 }
 
-.mt-muscle-pixel-fill.is-plan-active {
-  opacity: 0.42;
+.mt-muscle-pixel-highlight.is-plan-active {
+  fill: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 54%, rgba(255, 238, 229, 0.46));
+  stroke: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 48%, transparent);
+  opacity: 0.24;
 }
 
-.mt-muscle-pixel-fill.is-focused {
-  opacity: 0.68;
+.mt-muscle-pixel-highlight.is-focused {
+  fill: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 68%, rgba(255, 235, 226, 0.38));
+  stroke: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 72%, var(--surface-card, #fffaf7));
+  opacity: 0.46;
 }
 
-.mt-muscle-pixel-fill.is-active {
-  opacity: 0.88;
+.mt-muscle-pixel-highlight.is-active {
+  fill: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 86%, #ffdacd);
+  stroke: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 82%, #fffaf7);
+  opacity: 0.82;
+  mix-blend-mode: normal;
 }
 
-/* Dark mode: switch blend to hard-light so the coral shows on dark backgrounds */
-body.theme-midnight .mt-muscle-pixel-fill,
-[data-theme="midnight"] .mt-muscle-pixel-fill,
-[data-theme="high-contrast"] .mt-muscle-pixel-fill,
-body.theme-high-contrast .mt-muscle-pixel-fill {
+.mt-muscle-pixel-highlight.is-active.is-focused {
+  opacity: 0.9;
+}
+
+/* Dark mode: switch blend to hard-light so the coral stays legible on the dark anatomy plate. */
+body.theme-midnight .mt-muscle-pixel-highlight,
+[data-theme="midnight"] .mt-muscle-pixel-highlight,
+[data-theme="high-contrast"] .mt-muscle-pixel-highlight,
+body.theme-high-contrast .mt-muscle-pixel-highlight {
+  fill: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 76%, #ffe2d8);
+  stroke: color-mix(in srgb, var(--accent-coral-strong, #f2664f) 70%, #f8f1eb);
   mix-blend-mode: hard-light;
 }
 
-body.theme-midnight .mt-muscle-pixel-fill.is-plan-active,
-[data-theme="midnight"] .mt-muscle-pixel-fill.is-plan-active,
-[data-theme="high-contrast"] .mt-muscle-pixel-fill.is-plan-active,
-body.theme-high-contrast .mt-muscle-pixel-fill.is-plan-active {
-  opacity: 0.55;
+body.theme-midnight .mt-muscle-pixel-highlight.is-plan-active,
+[data-theme="midnight"] .mt-muscle-pixel-highlight.is-plan-active,
+[data-theme="high-contrast"] .mt-muscle-pixel-highlight.is-plan-active,
+body.theme-high-contrast .mt-muscle-pixel-highlight.is-plan-active {
+  opacity: 0.34;
 }
 
-body.theme-midnight .mt-muscle-pixel-fill.is-focused,
-[data-theme="midnight"] .mt-muscle-pixel-fill.is-focused,
-[data-theme="high-contrast"] .mt-muscle-pixel-fill.is-focused,
-body.theme-high-contrast .mt-muscle-pixel-fill.is-focused {
-  opacity: 0.80;
+body.theme-midnight .mt-muscle-pixel-highlight.is-focused,
+[data-theme="midnight"] .mt-muscle-pixel-highlight.is-focused,
+[data-theme="high-contrast"] .mt-muscle-pixel-highlight.is-focused,
+body.theme-high-contrast .mt-muscle-pixel-highlight.is-focused {
+  opacity: 0.58;
 }
 
-body.theme-midnight .mt-muscle-pixel-fill.is-active,
-[data-theme="midnight"] .mt-muscle-pixel-fill.is-active,
-[data-theme="high-contrast"] .mt-muscle-pixel-fill.is-active,
-body.theme-high-contrast .mt-muscle-pixel-fill.is-active {
-  opacity: 0.95;
+body.theme-midnight .mt-muscle-pixel-highlight.is-active,
+[data-theme="midnight"] .mt-muscle-pixel-highlight.is-active,
+[data-theme="high-contrast"] .mt-muscle-pixel-highlight.is-active,
+body.theme-high-contrast .mt-muscle-pixel-highlight.is-active {
+  opacity: 0.9;
+  mix-blend-mode: normal;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mt-muscle-pixel-fill {
+  .mt-muscle-pixel-highlight {
     transition: none;
   }
 }
@@ -29988,6 +30010,336 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 
 .analysis-overview-table-actions {
   padding: 18px 24px 22px;
+}
+
+/* === Injury Prevention Dashboard === */
+.analysis-injury-prevention-section {
+  margin-top: 24px;
+}
+
+.analysis-injury-prevention-head {
+  padding: 0 6px 16px;
+}
+
+.analysis-injury-prevention-head h2 {
+  margin: 0;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text-strong);
+}
+
+.analysis-injury-prevention-head p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.analysis-injury-prevention-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* --- Risk Ring --- */
+.analysis-injury-prevention-risk-ring-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+  flex: 1;
+}
+
+.analysis-injury-prevention-risk-ring-svg {
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+}
+
+.analysis-injury-prevention-risk-ring-track {
+  fill: none;
+  stroke: var(--line-soft);
+  stroke-width: 7;
+}
+
+.analysis-injury-prevention-risk-ring-progress {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.analysis-injury-prevention-risk-ring-center {
+  fill: var(--text-strong);
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.analysis-injury-prevention-risk-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.analysis-injury-prevention-risk-label {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.analysis-injury-prevention-rec {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px; /* tokens-ok */
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.analysis-injury-prevention-rec.is-ready {
+  background: rgba(56, 163, 94, 0.16);
+  color: #38a35e;
+}
+
+.analysis-injury-prevention-rec.is-caution {
+  background: rgba(217, 140, 58, 0.16);
+  color: #d98c3a;
+}
+
+.analysis-injury-prevention-rec.is-rest {
+  background: rgba(217, 74, 58, 0.16);
+  color: #d94a3a;
+}
+
+/* --- ACWR Gauge --- */
+.analysis-injury-prevention-acwr-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+  gap: 6px;
+}
+
+.analysis-injury-prevention-acwr-value {
+  font-family: "Manrope", var(--font-display);
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: var(--text-strong);
+  line-height: 1;
+}
+
+.analysis-injury-prevention-acwr-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.analysis-injury-prevention-acwr-trend.is-up {
+  color: #d94a3a;
+}
+
+.analysis-injury-prevention-acwr-trend.is-down {
+  color: #38a35e;
+}
+
+.analysis-injury-prevention-acwr-zones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  gap: 6px; /* tokens-ok */
+  margin-top: 4px;
+  padding: 0 8px;
+}
+
+.analysis-injury-prevention-acwr-zones span {
+  text-align: center;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px 0;
+  border-radius: 4px;
+  color: var(--text-muted);
+  background: var(--bg-glass);
+}
+
+.analysis-injury-prevention-acwr-zones span.is-active {
+  color: #38a35e;
+  background: rgba(56, 163, 94, 0.14);
+}
+
+.analysis-injury-prevention-acwr-zones span.is-active-warn {
+  color: #d98c3a;
+  background: rgba(217, 140, 58, 0.14);
+}
+
+.analysis-injury-prevention-acwr-zones span.is-active-danger {
+  color: #d94a3a;
+  background: rgba(217, 74, 58, 0.14);
+}
+
+/* --- Soreness Logger --- */
+.analysis-injury-prevention-soreness-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.analysis-injury-prevention-soreness-btn {
+  min-height: 38px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+}
+
+.analysis-injury-prevention-soreness-btn:hover:not(:disabled) {
+  border-color: var(--accent-coral);
+  color: var(--text-strong);
+}
+
+.analysis-injury-prevention-soreness-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.analysis-injury-prevention-soreness-btn.is-low {
+  border-color: rgba(56, 163, 94, 0.3);
+  color: #38a35e;
+}
+
+.analysis-injury-prevention-soreness-btn.is-low:hover:not(:disabled) {
+  background: rgba(56, 163, 94, 0.1);
+}
+
+.analysis-injury-prevention-soreness-btn.is-medium {
+  border-color: rgba(217, 140, 58, 0.3);
+  color: #d98c3a;
+}
+
+.analysis-injury-prevention-soreness-btn.is-medium:hover:not(:disabled) {
+  background: rgba(217, 140, 58, 0.1);
+}
+
+.analysis-injury-prevention-soreness-btn.is-high {
+  border-color: rgba(217, 74, 58, 0.3);
+  color: #d94a3a;
+}
+
+.analysis-injury-prevention-soreness-btn.is-high:hover:not(:disabled) {
+  background: rgba(217, 74, 58, 0.1);
+}
+
+.analysis-injury-prevention-soreness-btn.is-active-low {
+  background: rgba(56, 163, 94, 0.14); /* tokens-ok */
+  border-color: #38a35e;
+  color: #38a35e;
+}
+
+.analysis-injury-prevention-soreness-btn.is-active-medium {
+  background: rgba(217, 140, 58, 0.14); /* tokens-ok */
+  border-color: #d98c3a;
+  color: #d98c3a;
+}
+
+.analysis-injury-prevention-soreness-btn.is-active-high {
+  background: rgba(217, 74, 58, 0.14); /* tokens-ok */
+  border-color: #d94a3a;
+  color: #d94a3a;
+}
+
+.analysis-injury-prevention-soreness-meta {
+  margin-top: 12px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.analysis-injury-prevention-soreness-meta strong {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.analysis-injury-prevention-soreness-empty {
+  margin-top: 12px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* --- Coach Advice --- */
+.analysis-injury-prevention-coach-advice {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: var(--text-strong);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.analysis-injury-prevention-coach-empty {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.analysis-injury-prevention-log-error {
+  margin-top: 8px;
+  font-size: 0.66rem;
+  color: #d94a3a;
+}
+
+.analysis-injury-prevention-status-error {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: #d94a3a;
+  line-height: 1.4;
+}
+
+.analysis-injury-prevention-status-loading {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 1100px) {
+  .analysis-injury-prevention-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-injury-prevention-card {
+    min-height: auto;
+  }
 }
 
 .runner-shell-inline-btn {
@@ -45023,6 +45375,79 @@ body.theme-light .analysis-overview-status-pill.is-warn {
 body.theme-light .analysis-overview-status-pill.is-danger {
   background: rgba(255, 123, 105, 0.18);
   color: #b64638;
+}
+
+/* --- Injury Prevention Light Mode --- */
+body.theme-light .analysis-injury-prevention-rec.is-ready {
+  background: rgba(56, 163, 94, 0.22);
+  color: #219653;
+}
+
+body.theme-light .analysis-injury-prevention-rec.is-caution {
+  background: rgba(217, 140, 58, 0.22);
+  color: #b87528;
+}
+
+body.theme-light .analysis-injury-prevention-rec.is-rest {
+  background: rgba(217, 74, 58, 0.22);
+  color: #c04333;
+}
+
+body.theme-light .analysis-injury-prevention-acwr-zones span.is-active {
+  background: rgba(56, 163, 94, 0.24);
+  color: #219653;
+}
+
+body.theme-light .analysis-injury-prevention-acwr-zones span.is-active-warn {
+  background: rgba(217, 140, 58, 0.24);
+  color: #b87528;
+}
+
+body.theme-light .analysis-injury-prevention-acwr-zones span.is-active-danger {
+  background: rgba(217, 74, 58, 0.24);
+  color: #c04333;
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-low {
+  border-color: rgba(56, 163, 94, 0.36);
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-low:hover:not(:disabled) {
+  background: rgba(56, 163, 94, 0.12);
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-medium {
+  border-color: rgba(217, 140, 58, 0.36);
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-medium:hover:not(:disabled) {
+  background: rgba(217, 140, 58, 0.12);
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-high {
+  border-color: rgba(217, 74, 58, 0.36);
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-high:hover:not(:disabled) {
+  background: rgba(217, 74, 58, 0.12);
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-active-low {
+  background: rgba(56, 163, 94, 0.18); /* tokens-ok */
+  border-color: #219653;
+  color: #219653;
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-active-medium {
+  background: rgba(217, 140, 58, 0.18); /* tokens-ok */
+  border-color: #b87528;
+  color: #b87528;
+}
+
+body.theme-light .analysis-injury-prevention-soreness-btn.is-active-high {
+  background: rgba(217, 74, 58, 0.18); /* tokens-ok */
+  border-color: #c04333;
+  color: #c04333;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-hero,
