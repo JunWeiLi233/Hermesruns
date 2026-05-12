@@ -12,6 +12,7 @@
 ### English
 - [What is Hermes?](#what-is-hermes)
 - [First Time Here? Start Here](#first-time-here-start-here)
+- [Use the Built-in Mock Account](#mock-account)
 - [Project Tour: Where Lives What?](#project-tour)
 - [Quick Start (5 minutes)](#quick-start)
 - [How to Make Your First Code Change](#first-code-change)
@@ -23,6 +24,8 @@
 - [Database](#database)
 - [Login Options](#login-options)
 - [AI-Agent Workflow](#ai-agent-workflow)
+  - [Choosing the Right /auto-hermes-* Command](#choose-command)
+  - [Embedded Skills: When They Help](#skills)
 - [Production Setup](#production-setup)
 - [Garmin Connect Import](#garmin-connect-import)
 - [File Auto-Import (Garmin / COROS)](#file-auto-import)
@@ -34,6 +37,7 @@
 ### 中文
 - [Hermes 是什么？](#hermes-是什么)
 - [第一次来这里？从这里开始](#新手起点)
+- [使用内置模拟账号](#中文-模拟账号)
 - [项目导览：哪里放什么？](#项目导览)
 - [快速开始（5 分钟）](#中文-快速开始)
 - [如何提交第一次代码改动](#第一次代码改动)
@@ -45,6 +49,8 @@
 - [数据库](#中文-数据库)
 - [登录方式](#中文-登录方式)
 - [AI 智能体工作流](#中文-ai-工作流)
+  - [如何选择正确的 /auto-hermes-* 命令](#中文-选择命令)
+  - [内置技能：什么时候用得上](#中文-技能)
 - [生产部署](#中文-生产部署)
 - [Garmin Connect 导入](#中文-garmin-导入)
 - [文件自动导入（Garmin / COROS）](#中文-文件导入)
@@ -94,6 +100,82 @@ Welcome. Here is the fastest path from zero to "I understand this project and I'
 **Total: ~35 minutes from clone to "I edited something and saw it live."**
 
 No prior knowledge of Spring Boot, React, or sports science is required to make the first change. Each section below assumes you're arriving for the first time and explains the "why" alongside the "how".
+
+> **First action for new contributors:** Before recording any activities, log in with the **[built-in mock account](#mock-account)** to see every Hermes feature pre-loaded with realistic data. It takes 30 seconds and lets you explore the full app immediately.
+
+---
+
+<a id="mock-account"></a>
+
+### Use the Built-in Mock Account
+
+**Why this matters for a new contributor:** Hermes analyzes *your* running data — but you don't have any yet. The mock account gives you a pre-seeded local runner with shoes and run history, so every page (Profile, Runs, Analysis, Today Run, Shoes) shows real content the moment you log in. No Strava connection, no file imports needed.
+
+> **Credentials at a glance**
+>
+> Email: `strava+140971747@hermes.local`
+> Password: `HermesLocal1!`
+
+#### How to enable
+
+**Windows** — copy the example env file then start Hermes:
+
+```powershell
+Copy-Item Hermes.local.env.example.ps1 Hermes.local.env.ps1
+.\start_hermes.bat
+```
+
+`start_hermes.bat` reads `Hermes.local.env.ps1` automatically. The file already includes:
+
+```powershell
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED  = "true"
+$env:APP_LOCAL_SHARED_RUNNER_EMAIL    = "strava+140971747@hermes.local"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+```
+
+Alternatively, set the vars inline without editing any file:
+
+```powershell
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
+.\start_hermes.bat
+```
+
+**macOS / Linux** — copy the example env file then start the backend:
+
+```bash
+cp .env.example .env
+export APP_LOCAL_SHARED_RUNNER_ENABLED=true
+cd backend
+./mvnw spring-boot:run
+```
+
+The relevant lines in `.env.example` (already present):
+
+```bash
+APP_LOCAL_SHARED_RUNNER_ENABLED=true
+APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
+APP_LOCAL_SHARED_RUNNER_PASSWORD=HermesLocal1!
+```
+
+#### What you get
+
+Once logged in with the mock account you can immediately explore:
+
+| Page | What you'll see |
+|---|---|
+| `/profile` | Runner Hub with readiness, recent run summary, mileage stats |
+| `/runs` | Seeded run history with routes and metrics |
+| `/analysis` | VDOT card, ACWR load chart, training paces |
+| `/today-run` | Daily coaching recommendation with pace ranges |
+| `/shoes` | Pre-loaded shoe inventory with mileage tracking |
+
+> **Local-safe.** The mock account is disabled by default and skipped entirely in production. Never use these credentials outside your local machine.
+
+#### For AI-agent contributors
+
+The auto-hermes verification scripts use this account to check auth-walled pages without needing real Strava credentials. Scripts like `.tools/one-shot-muscle-inspect.mjs` and `.tools/one-shot-shoes-add-inspect.mjs` log in as `strava+140971747@hermes.local` via Playwright — this is how the auto-hermes lanes verify that a page works end-to-end after a change.
+
+→ For the full configuration reference and advanced options, see [Local Shared Runner for Contributors](#login-options).
 
 ---
 
@@ -376,6 +458,60 @@ Source artifact: [docs/architecture/saas-architecture.html](docs/architecture/sa
 
 Hermes includes an AI-agent workflow driven by **Claude Code** and **Gemini CLI** for autonomous development. The agents pick tasks from a shared queue, implement them with specialist sub-teams, verify, and promote follow-up work.
 
+<a id="choose-command"></a>
+
+#### Choosing the Right /auto-hermes-* Command
+
+Use this table to decide which command to run. All commands read `TASKS.md` as their shared task queue.
+
+| If you want to… | Use this command | What happens |
+|---|---|---|
+| Pick up the next task from `TASKS.md`, single-thread, with verification gates | `/auto-hermes` | Reads `TASKS.md`, picks the highest-priority item, runs PM → Builder → Reviewer → Tech-Debt-Reviewer with verification at each step. Stops after one bounded round. |
+| Keep iterating until everything's done | `/auto-hermes-self` | Same as `/auto-hermes` but doesn't stop on a successful round. Loops through the queue and self-promotes follow-ups until the queue is exhausted, a human-loop gate fires, or context pressure hits. Use for "drive it home overnight". |
+| Spin up specialists in parallel for one big feature with disjoint owned files | `/auto-hermes-max` | Decomposes the work into lanes (frontend / backend / tests / etc.), spawns one specialist per lane in parallel, then runs a merge gate to reconcile. Good for cross-stack features. |
+| Find tech debt across the codebase | `/auto-hermes-tech-debt` | Audits the repo and writes findings as bounded tasks into `TASKS.md`. |
+| Run a security audit | `/auto-hermes-security` | Sweeps auth, OAuth, billing, webhooks, and admin surfaces. |
+| Smoke-test resilience (auth expired, weather outage, malformed file) | `/auto-hermes-attack` | Synthetic failure-mode probe — non-destructive. |
+| Research running-shoe brands/series and update the catalog | `/auto-hermes-find-shoe` | Web search → series-level catalog additions. |
+| Polish frontend copy so the product sounds coach-like, not AI-generic | `/auto-hermes-language` | Routes UI copy through coach-voice review with zh-CN/en sync enforced. |
+| Push the branch and open a PR into `github.com/520HXC/run` | `/auto-hermes-push-main` | Full gates (lint, compile, runtime proof, identity check), then push + PR. |
+| Apply Hermes UI standards to one specific surface | `/frontend-design` | Loads the frontend-design skill and Hermes design tokens, then runs a single bounded UI round. |
+| Generate a minimal working brief before broad execution | `/optimize-context` | Writes `.ai-codex/optimized-claude.md` with the smallest useful context slice. Saves tokens for the actual round. |
+| Cap response token count for tight sessions | `/caveman` | Switches the session into terse mode (`lite` by default). |
+
+##### Argument vs. self-loop mode
+
+Most commands accept an optional argument that becomes the concrete task scope:
+
+- **With an argument** — `/auto-hermes Add a tooltip to the VDOT card on /analysis` — the command works on exactly that scope and stops after one bounded round.
+- **Without an argument** — `/auto-hermes` — the command enters self-loop mode and picks the next item from `TASKS.md`.
+
+##### Three first-time examples
+
+**1. Add a button to the Profile page**
+
+```
+/auto-hermes Add a Strava reconnect button to /profile that calls POST /api/auth/strava/reconnect.
+```
+
+What happens: Claude reads the task scope → PM picks the frontend-only surface → Builder lane edits `Profile.jsx` and the backend controller → frontend runtime proof gate runs (`verify-frontend-runtime-sync.mjs`) → Reviewer signs off. One bounded round, stops cleanly.
+
+**2. Audit and fix accessibility on /today-run**
+
+```
+/auto-hermes-self Run accessibility audit on /today-run and fix any contrast or aria-label issues.
+```
+
+What happens: First round audits the page and writes findings into `TASKS.md`. The self-loop immediately picks the first finding as the next task, fixes it, verifies, and continues until the queue is empty. No manual "go again" needed.
+
+**3. Add a new metric across the stack**
+
+```
+/auto-hermes-max Add a 'sleep score' field that the backend exposes and Today Run renders next to readiness.
+```
+
+What happens: `/auto-hermes-max` decomposes the work into disjoint lanes — one agent owns the JPA entity + controller, another owns `TodayRun.jsx` + translations. They run in parallel, write results to `.ai-sync/auto-hermes-max-results/`, then the merge gate reconciles and runs lint + compile. Result: a full-stack change in roughly one wall-clock round.
+
 #### Setup
 
 1. Install the CLI tools:
@@ -430,6 +566,59 @@ Hermes includes an AI-agent workflow driven by **Claude Code** and **Gemini CLI*
 | `.ai-sync/AGENT_SYNC.md` | Cross-agent coordination board |
 | `AGENTS.md` | Agent personas, coach-voice rules, engineering standards |
 | `CLAUDE.md` | Project brain — product vision, stack, conventions |
+
+---
+
+<a id="skills"></a>
+
+### Embedded Skills: When They Help
+
+Skills are bundles of expert knowledge — Markdown prompt files at `.claude/skills/<name>/SKILL.md` — that Claude Code loads on demand. They auto-trigger from the workflow commands (for example, `/auto-hermes` triggers `frontend-design` when the round touches a UI surface), or you can invoke them by name directly in a prompt: `use the taste-soft skill to redesign /profile`.
+
+Authority order: Hermes runtime proof > approved live surface > the skill's recommendations. A skill never overrides a layout the user has already accepted.
+
+To inspect any skill yourself:
+```bash
+ls .claude/skills/<name>/        # shows SKILL.md plus any helper files
+cat .claude/skills/<name>/SKILL.md   # shows the full prompt the skill loads
+```
+
+#### Frontend design skills
+
+These are the skills the user called out specifically — use them when the default output looks cheap, crowded, or AI-generic.
+
+| Skill | Best for | Try it like |
+|---|---|---|
+| `frontend-design` | Default Hermes UI work. Loads Hermes-specific design tokens, coach-voice copy rules, and mobile-first conventions. Auto-triggers on every UI round. | `/frontend-design Make the AnalysisInsightDetail page feel less crowded.` |
+| `taste-skill` | Senior UI/UX baseline. Strict metric-based rules, component architecture, hardware-accelerated CSS. Good "first pass" tasteful default. | `Apply taste-skill to /shoes/add and clean up the empty-state copy.` |
+| `taste-soft` | High-end agency look — premium fonts, generous spacing, gentle shadows, subtle motion. Use when "the AI version looks cheap". | `Apply taste-soft to the Landing hero so it stops looking generic.` |
+| `taste-minimalist` | Clean editorial look. Warm monochrome, flat bento grids, no gradients, no heavy shadows. Use for content-heavy pages. | `Apply taste-minimalist to the Race Center grid.` |
+| `taste-brutalist` | Swiss-typographic + military-terminal look. Rigid grid, extreme contrast. Good for data-dense dashboards or editorial portfolios. | `Apply taste-brutalist to /dashboard/audit.` |
+| `taste-redesign` | Upgrade an existing surface to "premium" without breaking it. Audits → identifies AI-generic patterns → fixes. | `Use taste-redesign on /profile to upgrade the daily summary card.` |
+| `taste-image-to-code` | Image-first workflow. Generates a reference image, analyzes it, then writes code to match. Best when "make it look like the photo I shared". | `Use taste-image-to-code with reference task-images/ref.jpg to redesign /today-run.` |
+| `taste-stitch` | Generates `DESIGN.md` files that enforce premium design standards (used downstream by other tools). | `Generate a DESIGN.md for /races using taste-stitch.` |
+| `taste-output` | Enforces complete, unabridged code generation. Bans placeholder patterns. Apply when long-output truncation is a problem. | `Use taste-output to rewrite the full Schedule.jsx without truncation.` |
+| `taste-gpt` | Elite UX/UI + advanced GSAP motion. Use only for highly directed premium web experiences with heavy animation. | `Use taste-gpt for the landing-page hero scroll experience.` |
+| `ui-ux-pro-max` | UI/UX design intelligence — 50+ styles, 161 palettes, 57 font pairings, 99 UX guidelines. Big lookup library. Auto-triggers at the PM lock step before a frontend round. | (auto-triggers; or `Use ui-ux-pro-max to suggest a dark-mode palette.`) |
+| `vercel-react-best-practices` | Vercel's React + Next.js performance guidance translated to the Vite stack. Use for rerender bugs, hydration issues, and bundle-shape decisions. | `Use vercel-react-best-practices to audit Profile.jsx for unnecessary rerenders.` |
+
+#### Workflow skills
+
+| Skill | Best for |
+|---|---|
+| `loop-mode` | Low-token `TASKS.md` execution. Auto-fires when `/auto-hermes-self` or `/auto-hermes` enters queue mode. |
+| `handoff-state` | Write a compact resume-checkpoint when another agent should pick up later. |
+| `mem0` | Persist durable per-agent memory across sessions (e.g. attack-simulator remembers prior findings). |
+| `translation-sync` | Keep zh-CN and en in parity. Auto-fires on any UI copy change. |
+| `define-problem-fix-auto` | When the user gives a vague "fix this", load this skill to extract a precise problem statement first. |
+| `plays-role-senior-engineer` | Forces senior-engineer tone — asks "is this the right thing to build?" before "is the code correct?". |
+
+#### Output style skills
+
+| Skill | Best for |
+|---|---|
+| `caveman` | Terse low-token responses. Default level is `lite`. Apply when usage or server pressure makes shorter replies useful. |
+| `auto-hermes-push-main` | Guarded publish workflow — runs all gates, pushes, opens a PR. Auto-triggers from `/auto-hermes-push-main`. |
 
 ---
 
@@ -757,6 +946,8 @@ For macOS / Linux, use the PostgreSQL env block above and run the backend agains
 
 #### Local Shared Runner for Contributors
 
+→ Short setup guide at [Use the Built-in Mock Account](#mock-account) — start there if you're new.
+
 Hermes can bootstrap a local-only demo account with seeded shoes and runs:
 `strava+140971747@hermes.local` / `HermesLocal1!`
 
@@ -924,6 +1115,80 @@ Hermes 是你本地运行的**私人跑步教练**，分析你的跑步数据，
 **合计约 35 分钟，从克隆到"我改了东西并且看到它生效"。**
 
 不需要提前了解 Spring Boot、React 或运动科学。每个章节都会解释"为什么"，而不只是"怎么做"。
+
+> **新贡献者的第一步：** 在导入任何活动数据之前，先用**[内置模拟账号](#中文-模拟账号)**登录，立刻看到所有功能都有真实数据填充。只需 30 秒，即可全面探索 Hermes。
+
+---
+
+<a id="中文-模拟账号"></a>
+
+### 使用内置模拟账号
+
+**对新贡献者的意义：** Hermes 分析你的跑步数据 — 但你还没有数据。模拟账号提供了一个预置跑鞋和跑步记录的本地跑者，一登录就能在每个页面（个人主页、跑步记录、分析、今日训练、跑鞋）看到真实内容，无需连接 Strava，无需导入文件。
+
+> **登录凭据**
+>
+> 邮箱：`strava+140971747@hermes.local`
+> 密码：`HermesLocal1!`
+
+#### 如何启用
+
+**Windows** — 复制示例配置文件，然后启动 Hermes：
+
+```powershell
+Copy-Item Hermes.local.env.example.ps1 Hermes.local.env.ps1
+.\start_hermes.bat
+```
+
+`start_hermes.bat` 会自动读取 `Hermes.local.env.ps1`。该文件已包含以下内容：
+
+```powershell
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED  = "true"
+$env:APP_LOCAL_SHARED_RUNNER_EMAIL    = "strava+140971747@hermes.local"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+```
+
+也可以不修改文件，直接内联设置变量：
+
+```powershell
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
+.\start_hermes.bat
+```
+
+**macOS / Linux** — 复制示例配置文件，然后启动后端：
+
+```bash
+cp .env.example .env
+export APP_LOCAL_SHARED_RUNNER_ENABLED=true
+cd backend
+./mvnw spring-boot:run
+```
+
+`.env.example` 中已包含以下相关行：
+
+```bash
+APP_LOCAL_SHARED_RUNNER_ENABLED=true
+APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
+APP_LOCAL_SHARED_RUNNER_PASSWORD=HermesLocal1!
+```
+
+#### 登录后你能看到什么
+
+| 页面 | 预置内容 |
+|---|---|
+| `/profile` | 个人主页，含准备度评分、近期跑步摘要和里程统计 |
+| `/runs` | 预置跑步历史，包含路线和指标 |
+| `/analysis` | VDOT 卡片、ACWR 负荷图表、训练配速 |
+| `/today-run` | 每日教练建议，含配速区间 |
+| `/shoes` | 预加载跑鞋库存，包含里程追踪 |
+
+> **本地安全。** 模拟账号默认禁用，生产环境完全跳过。请勿在本机以外的任何地方使用这些凭据。
+
+#### 面向 AI 智能体贡献者
+
+auto-hermes 验证脚本使用该账号检查需登录的页面，无需真实 Strava 凭据。`.tools/one-shot-muscle-inspect.mjs` 和 `.tools/one-shot-shoes-add-inspect.mjs` 等脚本通过 Playwright 以 `strava+140971747@hermes.local` 登录 — 这正是 auto-hermes 各通道在每次改动后验证页面端到端可用性的方式。
+
+→ 完整配置参考和高级选项，请参阅[本地共享测试账号（面向贡献者）](#中文-登录方式)。
 
 ---
 
@@ -1503,6 +1768,8 @@ macOS / Linux 用户请使用上方的 PostgreSQL 环境变量块，直接以 Po
 
 #### 本地共享测试账号（面向贡献者）
 
+→ 新手快速入口请参阅[使用内置模拟账号](#中文-模拟账号)。
+
 Hermes 可以引导启动一个本地专用的演示账号，预置了跑鞋和跑步数据：
 `strava+140971747@hermes.local` / `HermesLocal1!`
 
@@ -1536,6 +1803,60 @@ cd backend
 ### AI 智能体工作流
 
 **对新贡献者的意义：** Hermes 内置了一套 AI 智能体循环，由 **Claude Code** 和 **Gemini CLI** 驱动，从共享队列中领取任务、由专业子团队实现、验证并推进后续工作。如果你想了解代码库的演进方式，或者想以 AI 辅助的方式贡献改进，这就是你需要理解的系统。
+
+<a id="中文-选择命令"></a>
+
+#### 如何选择正确的 /auto-hermes-* 命令
+
+所有命令都以 `TASKS.md` 作为共享任务队列，用下表决定该用哪个：
+
+| 你想做什么 | 用这个命令 | 会发生什么 |
+|---|---|---|
+| 从 `TASKS.md` 领取下一个任务，单线程执行，带验证闸门 | `/auto-hermes` | 读取 `TASKS.md`，选出优先级最高的任务，依次运行 PM → Builder → Reviewer → Tech-Debt-Reviewer 并在每步验证。一个有界轮次后停止。 |
+| 持续迭代直到所有任务完成 | `/auto-hermes-self` | 与 `/auto-hermes` 相同，但成功一轮后不停止。循环处理队列并自动推进后续任务，直到队列清空、触发人工介入闸门或 context 压力过大。适合"让它跑一夜"的场景。 |
+| 为一个大功能并行启动多个专家，各自负责不重叠的文件 | `/auto-hermes-max` | 将工作分解为若干通道（前端 / 后端 / 测试等），每个通道并行启动一名专家，最后通过合并闸门协调。适合跨栈功能。 |
+| 发现全局技术债 | `/auto-hermes-tech-debt` | 审计代码库，将发现结果作为有界任务写入 `TASKS.md`。 |
+| 运行安全审计 | `/auto-hermes-security` | 扫描认证、OAuth、计费、Webhook 和管理界面。 |
+| 压力测试弹性（过期认证、天气接口中断、文件格式错误） | `/auto-hermes-attack` | 合成故障模式探测 — 非破坏性。 |
+| 调研跑鞋品牌/系列并更新目录 | `/auto-hermes-find-shoe` | 网络搜索 → 系列级目录更新。 |
+| 让前端文案听起来像教练而非 AI 模板 | `/auto-hermes-language` | 通过教练语气审查，强制执行中英文同步。 |
+| 推送分支并向 `github.com/520HXC/run` 发起 PR | `/auto-hermes-push-main` | 全量闸门（lint、编译、运行时验证、身份检查），然后推送 + 发起 PR。 |
+| 对某个具体界面应用 Hermes UI 规范 | `/frontend-design` | 加载 frontend-design 技能和 Hermes 设计令牌，运行一个有界 UI 轮次。 |
+| 在大规模执行前生成最小工作简报 | `/optimize-context` | 将最小有用上下文切片写入 `.ai-codex/optimized-claude.md`，为正式轮次节省 token。 |
+| 压缩响应 token 用量 | `/caveman` | 切换为简洁模式（默认 `lite` 级别）。 |
+
+##### 带参数 vs. 自循环模式
+
+大多数命令接受一个可选参数作为具体任务范围：
+
+- **带参数** — `/auto-hermes 在 /analysis 的 VDOT 卡片上添加一个 tooltip` — 命令只处理该范围，一个有界轮次后停止。
+- **不带参数** — `/auto-hermes` — 命令进入自循环模式，从 `TASKS.md` 中领取下一个任务。
+
+##### 三个新手示例
+
+**1. 为个人主页新增一个按钮**
+
+```
+/auto-hermes 在 /profile 上添加一个 Strava 重连按钮，调用 POST /api/auth/strava/reconnect。
+```
+
+流程：Claude 读取任务范围 → PM 选定前端界面 → Builder 通道修改 `Profile.jsx` 和后端 Controller → 前端运行时验证闸门运行（`verify-frontend-runtime-sync.mjs`）→ Reviewer 签核。一个有界轮次，干净结束。
+
+**2. 审计并修复 /today-run 的无障碍问题**
+
+```
+/auto-hermes-self 对 /today-run 做无障碍审计，修复所有对比度和 aria-label 问题。
+```
+
+流程：第一轮审计页面，将发现写入 `TASKS.md`。自循环立刻把第一个发现作为下一个任务领取，修复后验证，然后继续处理，直到队列清空。无需手动"再跑一次"。
+
+**3. 跨栈新增一个指标**
+
+```
+/auto-hermes-max 新增一个"睡眠评分"字段，后端暴露该字段，Today Run 在准备度旁边显示它。
+```
+
+流程：`/auto-hermes-max` 将工作分解为不重叠的通道 — 一个智能体负责 JPA 实体 + Controller，另一个负责 `TodayRun.jsx` + 翻译。并行运行，结果写入 `.ai-sync/auto-hermes-max-results/`，合并闸门协调后运行 lint + 编译。一个时钟轮次内完成跨栈改动。
 
 #### 安装 CLI 工具
 
@@ -1593,6 +1914,59 @@ ${EDITOR:-nano} .env
 | `.ai-sync/AGENT_SYNC.md` | 跨智能体协调看板 |
 | `AGENTS.md` | 智能体人设、教练语气规则、工程标准 |
 | `CLAUDE.md` | 项目大脑 — 产品愿景、技术栈、规范约定 |
+
+---
+
+<a id="中文-技能"></a>
+
+### 内置技能：什么时候用得上
+
+技能是专家知识包 — 位于 `.claude/skills/<name>/SKILL.md` 的 Markdown 提示词文件，供 Claude Code 按需加载。它们会由工作流命令自动触发（例如 `/auto-hermes` 在轮次涉及 UI 界面时自动触发 `frontend-design`），也可以在提示词里直接按名称调用：`用 taste-soft 技能重新设计 /profile`。
+
+权威顺序：Hermes 运行时验证 > 已接受的线上界面结构 > 技能建议。技能不会覆盖用户已接受的布局。
+
+查看任意技能：
+```bash
+ls .claude/skills/<name>/           # 显示 SKILL.md 及辅助文件
+cat .claude/skills/<name>/SKILL.md  # 显示技能加载的完整提示词
+```
+
+#### 前端设计技能
+
+这些是用户重点提到的技能 — 当默认输出显得廉价、拥挤或 AI 模板感强时使用。
+
+| 技能 | 最适合 | 调用示例 |
+|---|---|---|
+| `frontend-design` | 默认 Hermes UI 工作。加载 Hermes 专属设计令牌、教练语气文案规则和移动优先规范。每次 UI 轮次自动触发。 | `/frontend-design 让 AnalysisInsightDetail 页面不那么拥挤。` |
+| `taste-skill` | 资深 UI/UX 基准线。严格的指标规则、组件架构、硬件加速 CSS。好的"初次优化"默认选择。 | `对 /shoes/add 应用 taste-skill，清理空状态文案。` |
+| `taste-soft` | 高端机构风格 — 高级字体、宽松间距、柔和阴影、细腻动效。当"AI 版本看起来很廉价"时使用。 | `对 Landing 主区域应用 taste-soft，让它不再显得平庸。` |
+| `taste-minimalist` | 干净的编辑风格。温暖单色调、扁平 bento 网格、无渐变、无重阴影。适合内容密集的页面。 | `对 Race Center 网格应用 taste-minimalist。` |
+| `taste-brutalist` | 瑞士字体 + 军事终端风格。严格网格、极致对比。适合数据密集的 dashboard 或编辑类作品。 | `对 /dashboard/audit 应用 taste-brutalist。` |
+| `taste-redesign` | 在不破坏现有结构的前提下将界面升级为"高端"。审计 → 识别 AI 通用模式 → 修复。 | `用 taste-redesign 升级 /profile 上的每日摘要卡片。` |
+| `taste-image-to-code` | 图片优先工作流。生成参考图、分析后编写匹配代码。最适合"照着我分享的图片做"的场景。 | `用 taste-image-to-code 配合参考图 task-images/ref.jpg 重新设计 /today-run。` |
+| `taste-stitch` | 生成 `DESIGN.md` 文件，强制执行高端设计标准（供其他工具下游使用）。 | `用 taste-stitch 为 /races 生成 DESIGN.md。` |
+| `taste-output` | 强制完整、无截断的代码生成。禁止占位符模式。当长输出被截断时使用。 | `用 taste-output 完整重写 Schedule.jsx，不允许截断。` |
+| `taste-gpt` | 精英 UX/UI + 高级 GSAP 动效。仅用于方向明确的高端 Web 体验（重度动画）。 | `用 taste-gpt 制作 Landing 页面 hero 区域的滚动体验。` |
+| `ui-ux-pro-max` | UI/UX 设计知识库 — 50+ 种风格、161 种调色板、57 种字体搭配、99 条 UX 准则。大型查询库。前端轮次 PM 锁定步骤自动触发。 | （自动触发；或 `用 ui-ux-pro-max 建议一套深色模式调色板。`） |
+| `vercel-react-best-practices` | Vercel 的 React + Next.js 性能指南，适配 Vite 技术栈。用于重渲染 bug、水合问题和 bundle 结构决策。 | `用 vercel-react-best-practices 审查 Profile.jsx 的不必要重渲染。` |
+
+#### 工作流技能
+
+| 技能 | 最适合 |
+|---|---|
+| `loop-mode` | 低 token 的 `TASKS.md` 执行。`/auto-hermes-self` 或 `/auto-hermes` 进入队列模式时自动触发。 |
+| `handoff-state` | 当另一个智能体需要接手时，写入简洁的恢复检查点。 |
+| `mem0` | 跨会话持久化每个智能体的记忆（例如 attack-simulator 记住以往发现的问题）。 |
+| `translation-sync` | 保持 zh-CN 和 en 键值一致。任何 UI 文案改动时自动触发。 |
+| `define-problem-fix-auto` | 当用户给出模糊的"修复这个"时，加载此技能先提炼出精确的问题陈述。 |
+| `plays-role-senior-engineer` | 强制资深工程师语气 — 在"代码对不对"之前先问"该不该做这件事"。 |
+
+#### 输出风格技能
+
+| 技能 | 最适合 |
+|---|---|
+| `caveman` | 简洁低 token 响应。默认 `lite` 级别。当用量或服务器压力让简短回复更实用时使用。 |
+| `auto-hermes-push-main` | 有保护的发布工作流 — 运行全量闸门、推送、发起 PR。由 `/auto-hermes-push-main` 自动触发。 |
 
 ---
 
