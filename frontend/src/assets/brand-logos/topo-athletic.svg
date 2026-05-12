@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120" role="img" aria-label="Topo Athletic logo">
+  <path fill="#f36f21" d="M45 42c20-18 54-18 73 0-20 9-35 23-45 43-12-19-21-33-28-43Z"/>
+  <path fill="#f36f21" d="M91 42c20-18 54-18 73 0-20 9-35 23-45 43-12-19-21-33-28-43Z" opacity=".78"/>
+  <circle cx="176" cy="42" r="13" fill="#f36f21"/>
+  <text x="156" y="105" text-anchor="middle" fill="#111827" font-family="Arial Black, Arial, sans-serif" font-size="32" font-weight="900">TOPO ATHLETIC</text>
+</svg>

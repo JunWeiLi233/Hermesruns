@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 150" role="img" aria-label="Under Armour logo">
+  <path fill="#111827" d="M39 39c32-18 67-19 91 7 24-26 59-25 91-7-12 22-39 34-72 30v13c33-4 60 8 72 30-32 18-67 19-91-7-24 26-59 25-91 7 12-22 39-34 72-30V69c-33 4-60-8-72-30Z"/>
+  <path fill="#fff" d="M111 47h38v56h-38z"/>
+  <path fill="#111827" d="M121 55h18v40h-18z"/>
+  <text x="130" y="141" text-anchor="middle" fill="#111827" font-family="Arial Black, Arial, sans-serif" font-size="22" font-weight="900">UNDER ARMOUR</text>
+</svg>
