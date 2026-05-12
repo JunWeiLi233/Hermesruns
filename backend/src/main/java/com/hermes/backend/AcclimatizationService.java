@@ -1,14 +1,21 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -16,21 +23,40 @@ import java.util.*;
 
 @Service
 public class AcclimatizationService {
+    private static final Logger log = LoggerFactory.getLogger(AcclimatizationService.class);
+
     private static final double DEFAULT_BASELINE_DEW_POINT_C = 15.0;
     private static final double SHOCK_DELTA_THRESHOLD_C = 4.0;
     private static final double PENALTY_TRIGGER_DEW_POINT_C = 15.0;
     private static final int BASE_PENALTY_SEC_PER_KM_PER_DEGREE = 12;
+    private static final Duration DEW_POINT_CACHE_TTL = Duration.ofHours(24);
+    private static final String OPEN_METEO_ENDPOINT = "archive";
 
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
     private final RestTemplate restTemplate;
+    private final TtlCacheStore cacheStore;
+    private final OpenMeteoRateLimiter rateLimiter;
+
+    @Autowired
+    public AcclimatizationService(ActivityRepository activityRepository,
+                                  ActivityPointRepository activityPointRepository,
+                                  RestTemplate restTemplate,
+                                  TtlCacheStore cacheStore,
+                                  OpenMeteoRateLimiter rateLimiter) {
+        this.activityRepository = activityRepository;
+        this.activityPointRepository = activityPointRepository;
+        this.restTemplate = restTemplate;
+        this.cacheStore = cacheStore;
+        this.rateLimiter = rateLimiter;
+    }
 
     public AcclimatizationService(ActivityRepository activityRepository,
                                   ActivityPointRepository activityPointRepository,
                                   RestTemplate restTemplate) {
-        this.activityRepository = activityRepository;
-        this.activityPointRepository = activityPointRepository;
-        this.restTemplate = restTemplate;
+        this(activityRepository, activityPointRepository, restTemplate,
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()),
+                new OpenMeteoRateLimiter());
     }
 
     public WeatherContextResponse buildContext(Runner runner) {
@@ -115,6 +141,17 @@ public class AcclimatizationService {
     }
 
     private DewPointSeries fetchDewPointSeries(double lat, double lon, LocalDate start, LocalDate end) {
+        String cacheKey = dewPointCacheKey(lat, lon, start, end);
+        DewPointSeriesCache cached = cacheStore.get("open-meteo-dew-point", cacheKey, DewPointSeriesCache.class).orElse(null);
+        if (cached != null) {
+            return cached.toSeries();
+        }
+
+        if (rateLimiter.shouldThrottle(OPEN_METEO_ENDPOINT)) {
+            log.debug("Open-Meteo archive API is currently throttled; skipping dew-point fetch for ({}, {})", lat, lon);
+            return null;
+        }
+
         URI uri = UriComponentsBuilder
                 .fromUriString("https://archive-api.open-meteo.com/v1/archive")
                 .queryParam("latitude", lat)
@@ -126,32 +163,53 @@ public class AcclimatizationService {
                 .build()
                 .toUri();
 
-        RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, uri);
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                request,
-                new ParameterizedTypeReference<>() {}
-        );
+        try {
+            RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, uri);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    request,
+                    new ParameterizedTypeReference<>() {}
+            );
 
-        Map<String, Object> body = response.getBody();
-        if (body == null || !(body.get("daily") instanceof Map<?, ?> daily)) {
+            rateLimiter.recordSuccess(OPEN_METEO_ENDPOINT);
+
+            Map<String, Object> body = response.getBody();
+            if (body == null || !(body.get("daily") instanceof Map<?, ?> daily)) {
+                return null;
+            }
+
+            Object timesObj = daily.get("time");
+            Object dewObj = daily.get("dew_point_2m_mean");
+            if (!(timesObj instanceof List<?> times) || !(dewObj instanceof List<?> dews) || times.isEmpty()) {
+                return null;
+            }
+
+            Map<LocalDate, Double> out = new HashMap<>();
+            int n = Math.min(times.size(), dews.size());
+            for (int i = 0; i < n; i++) {
+                Object t = times.get(i);
+                Object d = dews.get(i);
+                if (!(t instanceof String ts) || !(d instanceof Number dew)) continue;
+                out.put(LocalDate.parse(ts), dew.doubleValue());
+            }
+            DewPointSeries series = new DewPointSeries(out);
+            cacheStore.put("open-meteo-dew-point", cacheKey, DewPointSeriesCache.from(series), DEW_POINT_CACHE_TTL);
+            return series;
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 429) {
+                rateLimiter.recordRateLimited(OPEN_METEO_ENDPOINT);
+                log.warn("Open-Meteo archive API returned 429 Too Many Requests; subsequent calls in this window are throttled.");
+            } else {
+                log.warn("Open-Meteo archive API returned HTTP {}: {}", e.getStatusCode().value(), e.getMessage());
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("Open-Meteo archive API call failed: {}", e.getMessage());
             return null;
         }
+    }
 
-        Object timesObj = daily.get("time");
-        Object dewObj = daily.get("dew_point_2m_mean");
-        if (!(timesObj instanceof List<?> times) || !(dewObj instanceof List<?> dews) || times.isEmpty()) {
-            return null;
-        }
-
-        Map<LocalDate, Double> out = new HashMap<>();
-        int n = Math.min(times.size(), dews.size());
-        for (int i = 0; i < n; i++) {
-            Object t = times.get(i);
-            Object d = dews.get(i);
-            if (!(t instanceof String ts) || !(d instanceof Number dew)) continue;
-            out.put(LocalDate.parse(ts), dew.doubleValue());
-        }
-        return new DewPointSeries(out);
+    private String dewPointCacheKey(double lat, double lon, LocalDate start, LocalDate end) {
+        return String.format(Locale.ROOT, "%.3f|%.3f|%s|%s", lat, lon, start, end);
     }
 
     private double computeBaseline(Map<LocalDate, Double> series, Set<LocalDate> runDates) {
@@ -218,6 +276,27 @@ public class AcclimatizationService {
     }
 
     private record DewPointSeries(Map<LocalDate, Double> dailyDewPointC) {}
+
+    private record DewPointSeriesCache(Map<String, Double> dailyDewPointC) {
+        private static DewPointSeriesCache from(DewPointSeries series) {
+            Map<String, Double> values = new LinkedHashMap<>();
+            for (Map.Entry<LocalDate, Double> entry : series.dailyDewPointC().entrySet()) {
+                values.put(entry.getKey().toString(), entry.getValue());
+            }
+            return new DewPointSeriesCache(values);
+        }
+
+        private DewPointSeries toSeries() {
+            Map<LocalDate, Double> values = new HashMap<>();
+            if (dailyDewPointC != null) {
+                for (Map.Entry<String, Double> entry : dailyDewPointC.entrySet()) {
+                    values.put(LocalDate.parse(entry.getKey()), entry.getValue());
+                }
+            }
+            return new DewPointSeries(values);
+        }
+    }
+
     private record AcclimatizationProgress(int dayIndex, double penaltyFactor, String status) {}
 
     public record WeatherContextResponse(
