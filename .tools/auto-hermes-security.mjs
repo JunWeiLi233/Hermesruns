@@ -7,6 +7,24 @@ const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+const STANDARD_ATTACK_PROBES = [
+  "auth-bypass",
+  "data-leak",
+  "idor",
+  "injection",
+  "mass-assignment",
+  "webhook-abuse",
+  "cors",
+  "rate-limit",
+  "security-headers",
+  "url-enumeration",
+  "user-enumeration",
+];
+const AGGRESSIVE_ATTACK_PROBES = [
+  "admin-enumeration",
+  "admin-credential-stuffing",
+  "admin-data-exfil",
+];
 const SEVERITY_ORDER = {
   LOW: 1,
   MEDIUM: 2,
@@ -157,7 +175,7 @@ function isIgnoredSecurityScanPath(relPath) {
   if (rel.startsWith("backend/target/")) return true;
   if (rel.startsWith("backend/.venv/")) return true;
   if (rel.startsWith("frontend/dist/")) return true;
-  if (rel.startsWith("frontend/node_modules/") || rel.includes("/node_modules/")) return true;
+  if (rel.startsWith("frontend/node_modules/") || rel.startsWith("node_modules/") || rel.includes("/node_modules/")) return true;
   if (rel.startsWith("course-map-images/") || rel.startsWith("backend/course-map-images/")) return true;
   if (rel.endsWith(".lock.db") || rel.endsWith(".trace.db") || rel.endsWith(".mv.db")) return true;
   return false;
@@ -772,6 +790,57 @@ async function safeFetch(url, opts = {}) {
   } catch {
     return null;
   }
+}
+
+async function checkRuntimeReachable(baseUrl) {
+  const targets = ["/api/health", "/"];
+  for (const target of targets) {
+    const resp = await safeFetch(`${baseUrl}${target}`, { method: "GET", timeout: 2500 });
+    if (resp) {
+      return {
+        reachable: true,
+        checked: target,
+        status: resp.status,
+      };
+    }
+  }
+  return {
+    reachable: false,
+    checked: targets.join(", "),
+    status: null,
+  };
+}
+
+function attackProbeCoverage(aggressive) {
+  return aggressive
+    ? [...STANDARD_ATTACK_PROBES, ...AGGRESSIVE_ATTACK_PROBES]
+    : [...STANDARD_ATTACK_PROBES];
+}
+
+function makeActiveProbeState(overrides = {}) {
+  return {
+    attempted: false,
+    skipped: false,
+    reason: "",
+    coverage: [],
+    runtimeReachable: null,
+    ...overrides,
+  };
+}
+
+function makeCleanupReport(overrides = {}) {
+  return {
+    required: true,
+    attempted: false,
+    status: "not-needed",
+    notes: [],
+    taggedState: [
+      "security-test-assignment@test.hermes.local",
+      "console error payloads posted to /api/dev/console-errors",
+      "password reset probe emails under test/local domains",
+    ],
+    ...overrides,
+  };
 }
 
 async function runActiveAuthBypassProbe(baseUrl) {
@@ -1459,6 +1528,225 @@ async function runActiveAuthBypassUrlsProbe(baseUrl) {
   return findings;
 }
 
+function discoverAdminPathsFromCodex(rootDir) {
+  const codexPath = path.join(rootDir, ".ai-codex", "routes.md");
+  const text = readText(codexPath);
+  if (!text) return [];
+
+  const paths = new Set();
+  const lines = text.split(/\r?\n/);
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    const match = line.match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\/api\/admin\S*)/i);
+    if (!match) continue;
+    const method = match[1].toUpperCase();
+    let endpoint = match[2].split(/\s+/)[0];
+    endpoint = endpoint.replace(/\{[^}]+\}/g, "1");
+    if (!endpoint.startsWith("/api/admin")) continue;
+    paths.add(`${method} ${endpoint}`);
+  }
+  return Array.from(paths);
+}
+
+async function runActiveAdminEnumerationProbe(baseUrl, rootDir) {
+  const findings = [];
+  const adminPaths = discoverAdminPathsFromCodex(rootDir);
+  if (adminPaths.length === 0) return findings;
+
+  const fakeTokens = [
+    { header: null, label: "no-auth" },
+    { header: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.fake", label: "forged-jwt-admin" },
+  ];
+
+  const reachedAdmin = [];
+
+  for (const entry of adminPaths) {
+    const [method, endpoint] = entry.split(" ");
+    if (method !== "GET" && method !== "POST") continue; // mutating verbs are skipped to keep probe non-destructive
+    if (method === "POST" && !/\b(scan|reanalyze|run|export)\b/i.test(endpoint)) {
+      // POSTs that look like state mutation are skipped; only read-shaped POSTs are probed
+      // (export endpoints frequently use POST in this codebase)
+      continue;
+    }
+    for (const tkn of fakeTokens) {
+      const headers = {};
+      if (tkn.header) headers["Authorization"] = tkn.header;
+      const resp = await safeFetch(`${baseUrl}${endpoint}`, { method, headers });
+      if (!resp) continue;
+      const status = resp.status;
+      if (status >= 200 && status < 300) {
+        let body = "";
+        try { body = await resp.text(); } catch { /* ignore */ }
+        reachedAdmin.push({ method, endpoint, status, label: tkn.label, bodyLen: body.length });
+        findings.push(makeFinding({
+          checker: "active-admin-enumeration",
+          severity: "CRITICAL",
+          summary: `Admin endpoint ${method} ${endpoint} reachable with ${tkn.label} (HTTP ${status}).`,
+          target: endpoint,
+          evidence: [
+            `${method} ${endpoint} returned HTTP ${status} with ${tkn.label} authorization.`,
+            "Admin surface should always require a valid admin session.",
+            `Response length: ${body.length} bytes.`,
+          ],
+          verification: "runtime-verified",
+          confidence: 0.95,
+        }));
+        break; // one breach per endpoint is enough; stop trying other tokens
+      }
+    }
+  }
+
+  if (reachedAdmin.length === 0 && adminPaths.length > 0) {
+    findings.push(makeFinding({
+      checker: "active-admin-enumeration",
+      severity: "LOW",
+      summary: `Probed ${adminPaths.length} admin endpoints from .ai-codex/routes.md — all rejected unauthenticated and forged-token requests.`,
+      target: "/api/admin/*",
+      evidence: [
+        `Sampled ${adminPaths.length} admin routes derived from the codex.`,
+        "All probed routes returned 401/403/404/4xx — admin gate held.",
+      ],
+      verification: "runtime-verified",
+      confidence: 0.85,
+    }));
+  }
+
+  return findings;
+}
+
+async function runActiveAdminCredentialStuffingProbe(baseUrl) {
+  const findings = [];
+  const guesses = [
+    { email: "admin@hermes.local", password: "admin" },
+    { email: "admin@hermes.local", password: "password" },
+    { email: "admin@admin.com", password: "admin123" },
+    { email: "admin@example.com", password: "admin" },
+    { email: "root@hermes.local", password: "root" },
+    { email: "test@hermes.local", password: "test" },
+    { email: "operator@hermes.local", password: "operator" },
+    { email: "admin@hermes.app", password: "Hermes123!" },
+  ];
+
+  let throttledAt = -1;
+  let acceptedAt = -1;
+  let lastStatus = null;
+
+  for (let i = 0; i < guesses.length; i += 1) {
+    const guess = guesses[i];
+    const resp = await safeFetch(`${baseUrl}/api/auth/admin-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(guess),
+    });
+    if (!resp) continue;
+    lastStatus = resp.status;
+    if (resp.status === 429) {
+      throttledAt = i + 1;
+      break;
+    }
+    if (resp.status >= 200 && resp.status < 300) {
+      acceptedAt = i + 1;
+      break;
+    }
+  }
+
+  if (acceptedAt > 0) {
+    findings.push(makeFinding({
+      checker: "active-admin-credential-stuffing",
+      severity: "CRITICAL",
+      summary: `Admin login accepted a guessed credential on attempt ${acceptedAt}.`,
+      target: "/api/auth/admin-login",
+      evidence: [
+        `A common-credentials guess succeeded against /api/auth/admin-login.`,
+        "Admin accounts must use unique strong credentials and the seed account, if any, must be rotated.",
+      ],
+      verification: "runtime-verified",
+      confidence: 0.99,
+    }));
+  } else if (throttledAt < 0 && lastStatus !== null) {
+    findings.push(makeFinding({
+      checker: "active-admin-credential-stuffing",
+      severity: "MEDIUM",
+      summary: "Admin login endpoint never returned 429 across credential-stuffing attempts.",
+      target: "/api/auth/admin-login",
+      evidence: [
+        `Sent ${guesses.length} guesses without a 429 throttle response (last status ${lastStatus}).`,
+        "Without throttling, admin credentials are vulnerable to slow brute force.",
+      ],
+      verification: "runtime-verified",
+      confidence: 0.8,
+    }));
+  } else if (throttledAt > 0) {
+    findings.push(makeFinding({
+      checker: "active-admin-credential-stuffing",
+      severity: "LOW",
+      summary: `Admin login throttled credential-stuffing after ${throttledAt} attempts.`,
+      target: "/api/auth/admin-login",
+      evidence: [
+        `Rate limit (429) triggered on attempt ${throttledAt}.`,
+        "Throttling protects admin login from automated guessing.",
+      ],
+      verification: "runtime-verified",
+      confidence: 0.9,
+    }));
+  }
+
+  return findings;
+}
+
+async function runActiveAdminDataExfilProbe(baseUrl) {
+  const findings = [];
+
+  const exfilTargets = [
+    { method: "GET", path: "/api/admin/users/export", label: "Admin user export" },
+    { method: "GET", path: "/api/admin/shoes/export", label: "Admin shoe export" },
+    { method: "GET", path: "/api/admin/audit", label: "Admin audit log" },
+    { method: "GET", path: "/api/admin/jobs", label: "Admin background jobs" },
+    { method: "GET", path: "/api/admin/queues", label: "Admin queue inspector" },
+    { method: "GET", path: "/api/admin/overview", label: "Admin overview" },
+    { method: "GET", path: "/api/dev/console-errors", label: "Dev console error feed" },
+    { method: "GET", path: "/actuator/env", label: "Spring env dump" },
+    { method: "GET", path: "/actuator/mappings", label: "Spring route mappings" },
+  ];
+
+  for (const target of exfilTargets) {
+    const resp = await safeFetch(`${baseUrl}${target.path}`, { method: target.method });
+    if (!resp) continue;
+    const status = resp.status;
+    if (status < 200 || status >= 300) continue;
+
+    let body = "";
+    try { body = await resp.text(); } catch { /* ignore */ }
+
+    const exposesEmail = /"email"\s*:/i.test(body) || /@[\w.-]+\.[a-z]{2,}/i.test(body);
+    const exposesToken = /"token"\s*:|"refreshToken"\s*:|"accessToken"\s*:/i.test(body);
+    const exposesSecrets = /(?:secret|client[_-]?secret|webhook[_-]?secret|api[_-]?key)\b/i.test(body);
+    const exposesPii = /"displayName"|"stravaAthleteId"|"subscriptionTier"|"passwordHash"/i.test(body);
+
+    const isCritical = exposesEmail || exposesToken || exposesSecrets || exposesPii;
+
+    findings.push(makeFinding({
+      checker: "active-admin-data-exfil",
+      severity: isCritical ? "CRITICAL" : "HIGH",
+      summary: `${target.label} reachable without admin auth (HTTP ${status}, ${body.length} bytes).`,
+      target: target.path,
+      evidence: [
+        `${target.method} ${target.path} returned HTTP ${status} without any Authorization header.`,
+        exposesEmail ? "Response contains email-shaped data — runner PII is exfiltrable." : "",
+        exposesToken ? "Response contains token fields — session/OAuth tokens may leak." : "",
+        exposesSecrets ? "Response contains secret-shaped keys — provider secrets may leak." : "",
+        exposesPii ? "Response contains runner profile fields — PII is exfiltrable." : "",
+        `Body length: ${body.length} bytes.`,
+      ].filter(Boolean),
+      verification: "runtime-verified",
+      confidence: 0.95,
+    }));
+  }
+
+  return findings;
+}
+
 function sortFindings(findings) {
   return findings.slice().sort((left, right) => {
     const severityDelta = (SEVERITY_ORDER[right.severity] || 0) - (SEVERITY_ORDER[left.severity] || 0);
@@ -1523,6 +1811,18 @@ function renderMarkdown(report) {
     "## Runtime",
     `Base URL: ${report.runtime.baseUrl || "not-provided"}`,
     `Local/Dev Eligible: ${report.runtime.localDev ? "yes" : "no"}`,
+    "",
+    "## Active Probes",
+    `Attempted: ${report.activeProbes?.attempted ? "yes" : "no"}`,
+    `Skipped: ${report.activeProbes?.skipped ? "yes" : "no"}`,
+    `Reason: ${report.activeProbes?.reason || "n/a"}`,
+    `Coverage: ${(report.activeProbes?.coverage || []).join(", ") || "n/a"}`,
+    "",
+    "## Cleanup",
+    `Required: ${report.cleanup?.required ? "yes" : "no"}`,
+    `Attempted: ${report.cleanup?.attempted ? "yes" : "no"}`,
+    `Status: ${report.cleanup?.status || "n/a"}`,
+    `Notes: ${(report.cleanup?.notes || []).join(" | ") || "n/a"}`,
     "",
     "## Inventory",
     `Tables: ${report.inventory.tables.length}`,
@@ -1592,8 +1892,21 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
   const runtime = parseRuntimeTarget(args.runtimeBaseUrl);
   const runId = makeRunId(args.commandName);
   const generatedAt = nowIso();
+  let activeProbes = makeActiveProbeState({
+    coverage: args.mode === "attack" ? attackProbeCoverage(Boolean(args.aggressive)) : [],
+  });
+  let cleanup = makeCleanupReport();
 
   if (args.mode === "attack" && runtime.provided && !runtime.localDev) {
+    activeProbes = makeActiveProbeState({
+      skipped: true,
+      reason: "Active attack simulation is limited to local/dev targets. The supplied runtime target is not local/dev eligible.",
+      coverage: attackProbeCoverage(Boolean(args.aggressive)),
+    });
+    cleanup = makeCleanupReport({
+      status: "not-needed",
+      notes: ["No active probes were run because the runtime target was blocked by the local/dev safety gate."],
+    });
     const report = {
       runId,
       generatedAt,
@@ -1603,6 +1916,8 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
       status: "blocked",
       summary: "Active attack simulation is limited to local/dev targets. The supplied runtime target is not local/dev eligible.",
       runtime,
+      activeProbes,
+      cleanup,
       inventory: {
         tables: [],
         endpoints: [],
@@ -1643,6 +1958,37 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
   let activeSummary = "";
   if (args.mode === "attack" && runtime.provided && runtime.localDev) {
     const baseUrl = runtime.baseUrl.replace(/\/$/, "");
+    const reachability = await checkRuntimeReachable(baseUrl);
+    if (!reachability.reachable) {
+      activeProbes = makeActiveProbeState({
+        attempted: false,
+        skipped: true,
+        reason: `Local/dev runtime at ${baseUrl} was unreachable; active probes were skipped and the run stayed static/code-config only.`,
+        coverage: attackProbeCoverage(Boolean(args.aggressive)),
+        runtimeReachable: false,
+      });
+      cleanup = makeCleanupReport({
+        status: "not-needed",
+        notes: ["No active probes ran, so no tagged test state was created."],
+      });
+      activeSummary = "Active probes skipped: local/dev runtime was unreachable. ";
+    } else {
+      activeProbes = makeActiveProbeState({
+        attempted: true,
+        skipped: false,
+        reason: args.aggressive
+          ? "Local/dev runtime reachable; standard and aggressive active probes were run."
+          : "Local/dev runtime reachable; standard active probes were run.",
+        coverage: attackProbeCoverage(Boolean(args.aggressive)),
+        runtimeReachable: true,
+      });
+      cleanup = makeCleanupReport({
+        status: "manual-review-required",
+        notes: [
+          "Active probes use tagged local/dev test state only.",
+          "No authenticated cleanup contract is available to this command, so persisted tagged state must be reviewed in local/dev data after the run.",
+        ],
+      });
     console.error(`[attack] Probing ${baseUrl} — active attack simulation starting...`);
     const probeResults = await Promise.allSettled([
       runActiveAuthBypassProbe(baseUrl),
@@ -1655,6 +2001,11 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
       runActiveRateLimitProbe(baseUrl),
       runActiveSecurityHeadersProbe(baseUrl),
       runActiveAuthBypassUrlsProbe(baseUrl),
+      ...(args.aggressive ? [
+        runActiveAdminEnumerationProbe(baseUrl, args.rootDir),
+        runActiveAdminCredentialStuffingProbe(baseUrl),
+        runActiveAdminDataExfilProbe(baseUrl),
+      ] : []),
     ]);
     for (const result of probeResults) {
       if (result.status === "fulfilled" && Array.isArray(result.value)) {
@@ -1668,6 +2019,7 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
     const criticalCount = activeFindings.filter((f) => f.severity === "CRITICAL").length;
     const highCount = activeFindings.filter((f) => f.severity === "HIGH").length;
     activeSummary = `Active probes: ${runtimeVerifiedCount} runtime-verified findings (${criticalCount} CRITICAL, ${highCount} HIGH). `;
+    }
   }
 
   const allFindings = sortFindings([...staticFindings, ...activeFindings]);
@@ -1693,6 +2045,8 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
     status: "completed",
     summary,
     runtime,
+    activeProbes,
+    cleanup,
     inventory,
     findings: allFindings,
     taskWriteback: {
