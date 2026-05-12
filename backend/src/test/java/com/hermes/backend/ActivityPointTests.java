@@ -1,6 +1,10 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Method;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ActivityPointTests {
@@ -78,5 +82,67 @@ class ActivityPointTests {
         assertEquals(100.0, p.getElevationMeters());
         assertEquals(102.0, p.getElevationRawMeters());
         assertEquals(99.0, p.getElevationCorrectedMeters());
+    }
+
+    // --- Ownership structure tests ---
+
+    @Test
+    void noDirectRunnerIdField() throws Exception {
+        // ActivityPoint must NOT have a direct runnerId field.
+        // Ownership flows transitively: ActivityPoint -> Activity -> Runner.
+        // A direct runnerId would create a bypass path around the Activity ownership check.
+        var fields = ActivityPoint.class.getDeclaredFields();
+        for (var field : fields) {
+            assertFalse(
+                    field.getName().equalsIgnoreCase("runnerId")
+                            || field.getName().equalsIgnoreCase("runner"),
+                    "ActivityPoint must not have a direct runner reference. "
+                            + "Found field: " + field.getName()
+            );
+        }
+    }
+
+    @Test
+    void getActivityIsJsonIgnored() throws Exception {
+        // The getActivity() method must be annotated with @JsonIgnore
+        // to prevent the full Activity graph from leaking into API responses.
+        // Without this, cross-runner data could be exposed through serialization.
+        Method getter = ActivityPoint.class.getMethod("getActivity");
+        JsonIgnore annotation = getter.getAnnotation(JsonIgnore.class);
+        assertNotNull(annotation,
+                "getActivity() must be annotated with @JsonIgnore. "
+                        + "Without it, the Activity graph (including runner data) "
+                        + "could leak into serialized API responses.");
+    }
+
+    @Test
+    void activityFieldIsRequired() throws Exception {
+        // The activity relationship must be non-optional (nullable = false).
+        // An orphaned ActivityPoint without an Activity is a data integrity risk.
+        var field = ActivityPoint.class.getDeclaredField("activity");
+        var joinColumn = field.getAnnotation(jakarta.persistence.JoinColumn.class);
+        assertNotNull(joinColumn, "activity field must have @JoinColumn");
+        assertFalse(joinColumn.nullable(),
+                "activity relationship must be non-nullable. "
+                        + "Orphaned points without a parent Activity are a data integrity risk.");
+    }
+
+    @Test
+    void transitiveOwnershipChainIsIntact() {
+        // Verify the ownership chain structurally:
+        // ActivityPoint knows Activity, Activity knows Runner.
+        // This is the foundation of the security model.
+        Activity activity = new Activity();
+        Runner runner = new Runner();
+        runner.setId(42L);
+        activity.setRunner(runner);
+
+        ActivityPoint point = new ActivityPoint();
+        point.setActivity(activity);
+
+        assertNotNull(point.getActivity(), "ActivityPoint must reference an Activity");
+        assertNotNull(point.getActivity().getRunner(), "Activity must reference a Runner");
+        assertEquals(42L, point.getActivity().getRunner().getId(),
+                "Transitive ownership chain: ActivityPoint -> Activity -> Runner must be intact");
     }
 }
