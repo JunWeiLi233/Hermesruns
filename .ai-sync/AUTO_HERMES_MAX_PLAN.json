@@ -1,37 +1,31 @@
 {
-  "generatedAt": "2026-04-24T00:00:00.000Z",
+  "generatedAt": "2026-05-12T08:00:00.000Z",
   "iteration": 1,
-  "maxIterations": 3,
-  "parentGoal": "Security fixes + backend tech debt batch",
+  "parentGoal": "Find official English names for Chinese shoe model names in shoeCatalog.js (Nike, Saucony, Brooks, Puma), update catalog entries, and add reverse mappings to shoeNames.js MODEL_ZH_TOKEN_MAP",
+  "preserve": [
+    "All existing English model names in shoeCatalog.js",
+    "All Chinese brand models (李宁, 安踏, 中国乔丹, 必迈, 特步, 鸿星尔克, 匹克, 多威, 马孔多, 沃兰迪, 大鲶, 361°) — keep Chinese-only names",
+    "MODEL_ZH_TOKEN_MAP English→Chinese forward mappings in shoeNames.js",
+    "Category and type data for every model entry",
+    "The duplicate entries (e.g., Pegasus and 飞马 both exist) — we collapse duplicates by removing the Chinese-name entry when the English equivalent already exists"
+  ],
+  "laneSelection": {
+    "strategy": "single",
+    "laneCount": 1,
+    "rationale": "Single bounded data file update — all changes in shoeCatalog.js + shoeNames.js owned by one lane"
+  },
   "lanes": [
     {
-      "id": "lane-1-strava-webhook",
-      "scope": "Fix Strava webhook to reject unauthenticated forged activity events",
-      "files": ["backend/src/main/java/com/hermes/backend/StravaWebhookController.java"],
-      "status": "pending",
-      "priority": 1,
-      "effort": "medium"
-    },
-    {
-      "id": "lane-2-password-reset",
-      "scope": "Fix password reset endpoint to prevent user enumeration",
-      "files": ["backend/src/main/java/com/hermes/backend/LoginController.java"],
-      "status": "pending",
-      "priority": 2,
-      "effort": "small"
-    },
-    {
-      "id": "lane-3-tech-debt",
-      "scope": "Batch backend tech debt: Activity tests, ShoeImageController split, AdminPortalService deps",
-      "files": [
-        "backend/src/main/java/com/hermes/backend/Activity.java",
-        "backend/src/test/java/com/hermes/backend/ActivityTests.java",
-        "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
-        "backend/src/main/java/com/hermes/backend/AdminPortalService.java"
+      "laneId": "shoe-chinese-to-english",
+      "goal": "Research official English names for Chinese shoe model names in global brands, update shoeCatalog.js, add reverse Chinese→English mappings to shoeNames.js MODEL_ZH_TOKEN_MAP, remove duplicate entries where English name already exists in catalog",
+      "ownedFiles": [
+        "frontend/src/data/shoeCatalog.js",
+        "frontend/src/utils/shoeNames.js"
       ],
-      "status": "pending",
-      "priority": 3,
-      "effort": "medium"
+      "effort": "medium",
+      "parallelSafe": true,
+      "dependsOn": [],
+      "dependencyMode": "parallel-ready"
     }
   ]
 }
