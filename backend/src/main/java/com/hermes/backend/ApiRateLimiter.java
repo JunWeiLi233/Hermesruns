@@ -1,62 +1,41 @@
 package com.hermes.backend;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Clock;
+import java.time.Duration;
 
 /**
  * Simple fixed-window rate limiter.
  * <p>
- * In-memory only: good for single-instance deployments. For multi-instance, use Redis/WAF.
- * Stale windows are evicted when they expire to prevent unbounded memory growth.
+ * Uses the shared rate-limit store, which can be backed by Redis when enabled
+ * and otherwise falls back to local memory for development and single-instance runs.
  * </p>
  */
 @Component
 public class ApiRateLimiter {
-    private static final class Window {
-        int count;
-        long windowStartEpochSec;
+    private final FixedWindowRateLimitStore rateLimitStore;
+
+    @Autowired
+    public ApiRateLimiter(FixedWindowRateLimitStore rateLimitStore) {
+        this.rateLimitStore = rateLimitStore;
     }
 
-    private static final int MAX_WINDOWS = 50_000;
-    private final ConcurrentHashMap<String, Window> windows = new ConcurrentHashMap<>();
+    public ApiRateLimiter() {
+        this(FixedWindowRateLimitStore.inMemoryForTests(Clock.systemUTC()));
+    }
 
     public boolean allow(String key, int maxPerWindow, long windowSeconds) {
-        if (key == null || key.isBlank()) key = "unknown";
-        final String k = key;
-
-        if (windows.size() > MAX_WINDOWS) {
-            evictStaleWindows(windowSeconds);
-        }
-
-        Window w = windows.computeIfAbsent(k, ignored -> new Window());
-        long now = Instant.now().getEpochSecond();
-        synchronized (w) {
-            if (now - w.windowStartEpochSec >= windowSeconds) {
-                w.count = 0;
-                w.windowStartEpochSec = now;
-            }
-            if (w.count >= maxPerWindow) {
-                return false;
-            }
-            w.count++;
-            return true;
-        }
+        return rateLimitStore.allow("api", key, maxPerWindow, Duration.ofSeconds(Math.max(1L, windowSeconds)));
     }
 
     private void evictStaleWindows(long windowSeconds) {
-        long now = Instant.now().getEpochSecond();
-        windows.entrySet().removeIf(entry -> {
-            Window w = entry.getValue();
-            synchronized (w) {
-                return now - w.windowStartEpochSec >= windowSeconds;
-            }
-        });
+        rateLimitStore.evictStaleWindows(Duration.ofSeconds(Math.max(1L, windowSeconds)));
     }
 
     int windowCount() {
-        return windows.size();
+        return rateLimitStore.localWindowCountForTests();
     }
 }
 

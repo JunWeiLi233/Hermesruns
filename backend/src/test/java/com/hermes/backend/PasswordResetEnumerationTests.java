@@ -161,7 +161,8 @@ class PasswordResetEnumerationTests {
                 mock(VerificationResendLimiter.class),
                 limiter,
                 resetService,
-                mock(ApiRateLimiter.class)
+                mock(ApiRateLimiter.class),
+                mock(RecaptchaVerifier.class)
         );
     }
 

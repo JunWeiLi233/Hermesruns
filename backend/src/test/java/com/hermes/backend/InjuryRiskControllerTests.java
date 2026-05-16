@@ -3,9 +3,10 @@ package com.hermes.backend;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -19,9 +20,9 @@ class InjuryRiskControllerTests {
     void logSorenessRejectsMissingAuthorization() {
         AuthService authService = mock(AuthService.class);
         when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
-        InjuryRiskController controller = new InjuryRiskController(authService, mock(InjuryRiskService.class));
+        InjuryRiskController controller = new InjuryRiskController(mock(InjuryRiskService.class), authService);
 
-        ResponseEntity<?> response = controller.logSoreness(null, null);
+        ResponseEntity<?> response = controller.logSoreness(Map.of("level", "LOW"), request(null));
 
         assertError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
     }
@@ -31,11 +32,11 @@ class InjuryRiskControllerTests {
         AuthService authService = mock(AuthService.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
-        InjuryRiskController controller = new InjuryRiskController(authService, mock(InjuryRiskService.class));
+        InjuryRiskController controller = new InjuryRiskController(mock(InjuryRiskService.class), authService);
 
-        ResponseEntity<?> response = controller.logSoreness("Bearer token", null);
+        ResponseEntity<?> response = controller.logSoreness(null, request("Bearer token"));
 
-        assertError(response, HttpStatus.BAD_REQUEST, "level is required (low, medium, or high).");
+        assertError(response, HttpStatus.BAD_REQUEST, "level is required (LOW, MEDIUM, or HIGH).");
     }
 
     @Test
@@ -43,12 +44,13 @@ class InjuryRiskControllerTests {
         AuthService authService = mock(AuthService.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
-        InjuryRiskController controller = new InjuryRiskController(authService, mock(InjuryRiskService.class));
+        InjuryRiskController controller = new InjuryRiskController(mock(InjuryRiskService.class), authService);
 
-        ResponseEntity<?> response = controller.logSoreness("Bearer token",
-                new InjuryRiskController.SorenessLogRequest("extreme", null));
+        ResponseEntity<?> response = controller.logSoreness(
+                Map.of("level", "extreme"),
+                request("Bearer token"));
 
-        assertError(response, HttpStatus.BAD_REQUEST, "level must be one of: low, medium, high.");
+        assertError(response, HttpStatus.BAD_REQUEST, "level must be LOW, MEDIUM, or HIGH.");
     }
 
     @Test
@@ -56,18 +58,22 @@ class InjuryRiskControllerTests {
         AuthService authService = mock(AuthService.class);
         InjuryRiskService injuryRiskService = mock(InjuryRiskService.class);
         Runner runner = runner();
-        LocalDateTime now = LocalDateTime.now();
-        InjuryRiskService.InjuryLogResponse expected = new InjuryRiskService.InjuryLogResponse(
-                1L, "high", now, 55, 1.18, "Your training load is elevated and you reported high soreness. Cut volume by 20% today and prioritize sleep.");
+        SorenessLog expected = new SorenessLog(runner, LocalDate.now(), "HIGH", "Hamstring tight");
+        expected.setId(1L);
+        expected.setCreatedAt(LocalDateTime.now());
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
-        when(injuryRiskService.logSoreness(runner, "high", "Hamstring tight")).thenReturn(expected);
-        InjuryRiskController controller = new InjuryRiskController(authService, injuryRiskService);
+        when(injuryRiskService.logSoreness(runner, "HIGH", "Hamstring tight")).thenReturn(expected);
+        InjuryRiskController controller = new InjuryRiskController(injuryRiskService, authService);
 
-        ResponseEntity<?> response = controller.logSoreness("Bearer token",
-                new InjuryRiskController.SorenessLogRequest("high", "Hamstring tight"));
+        ResponseEntity<?> response = controller.logSoreness(
+                Map.of("level", "high", "notes", "Hamstring tight"),
+                request("Bearer token"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(expected);
+        assertThat(response.getBody()).isInstanceOf(Map.class);
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+        assertThat(body.get("id")).isEqualTo(1L);
+        assertThat(body.get("level")).isEqualTo("HIGH");
     }
 
     @Test
@@ -75,11 +81,12 @@ class InjuryRiskControllerTests {
         AuthService authService = mock(AuthService.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
-        InjuryRiskController controller = new InjuryRiskController(authService, mock(InjuryRiskService.class));
+        InjuryRiskController controller = new InjuryRiskController(mock(InjuryRiskService.class), authService);
 
         String longNotes = "x".repeat(501);
-        ResponseEntity<?> response = controller.logSoreness("Bearer token",
-                new InjuryRiskController.SorenessLogRequest("medium", longNotes));
+        ResponseEntity<?> response = controller.logSoreness(
+                Map.of("level", "medium", "notes", longNotes),
+                request("Bearer token"));
 
         assertError(response, HttpStatus.BAD_REQUEST, "notes must be 500 characters or fewer.");
     }
@@ -88,9 +95,9 @@ class InjuryRiskControllerTests {
     void getStatusRejectsMissingAuthorization() {
         AuthService authService = mock(AuthService.class);
         when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
-        InjuryRiskController controller = new InjuryRiskController(authService, mock(InjuryRiskService.class));
+        InjuryRiskController controller = new InjuryRiskController(mock(InjuryRiskService.class), authService);
 
-        ResponseEntity<?> response = controller.getStatus(null);
+        ResponseEntity<?> response = controller.getStatus(request(null));
 
         assertError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
     }
@@ -100,21 +107,17 @@ class InjuryRiskControllerTests {
         AuthService authService = mock(AuthService.class);
         InjuryRiskService injuryRiskService = mock(InjuryRiskService.class);
         Runner runner = runner();
-        InjuryRiskService.InjuryStatusResponse status = new InjuryRiskService.InjuryStatusResponse(
-                65, 1.12, "rising", List.of(),
-                "ACWR is in the safe zone but trending up. Keep easy days easy.",
-                "ready");
+        InjuryRiskService.InjuryRiskAssessment status = new InjuryRiskService.InjuryRiskAssessment(
+                1.12, "LOW", "LOW", "Keep easy days easy.");
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
-        when(injuryRiskService.getStatus(runner)).thenReturn(status);
-        InjuryRiskController controller = new InjuryRiskController(authService, injuryRiskService);
+        when(injuryRiskService.getRiskAssessment(runner)).thenReturn(status);
+        InjuryRiskController controller = new InjuryRiskController(injuryRiskService, authService);
 
-        ResponseEntity<?> response = controller.getStatus("Bearer token");
+        ResponseEntity<?> response = controller.getStatus(request("Bearer token"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(status);
     }
-
-    // --- helpers ---
 
     private Runner runner() {
         Runner runner = new Runner();
@@ -122,6 +125,14 @@ class InjuryRiskControllerTests {
         runner.setEmail("runner@hermes.test");
         runner.setRole("USER");
         return runner;
+    }
+
+    private MockHttpServletRequest request(String authHeader) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        if (authHeader != null) {
+            request.addHeader("Authorization", authHeader);
+        }
+        return request;
     }
 
     @SuppressWarnings("unchecked")

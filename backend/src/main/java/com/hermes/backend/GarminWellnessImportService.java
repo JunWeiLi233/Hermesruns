@@ -77,7 +77,7 @@ public class GarminWellnessImportService {
             try {
                 runImport(runner, email, password, clampedDays, tracker);
             } catch (Exception e) {
-                tracker.markFailed("Wellness import failed: " + safeMessage(e));
+                markDownloadFailure(tracker, "Wellness import failed: " + safeMessage(e), Map.of());
             }
         });
 
@@ -90,6 +90,11 @@ public class GarminWellnessImportService {
             return WellnessSyncStatus.idle();
         }
         return tracker.snapshot();
+    }
+
+    public long getRateLimitRetryAfterSeconds(Long runnerId) {
+        WellnessSyncTracker tracker = syncStates.get(runnerId);
+        return tracker == null ? 0 : tracker.retryAfterSeconds();
     }
 
     @SuppressWarnings("unchecked")
@@ -105,7 +110,7 @@ public class GarminWellnessImportService {
             Boolean success = (Boolean) result.get("success");
             if (!Boolean.TRUE.equals(success)) {
                 String error = (String) result.get("error");
-                tracker.markFailed(error != null ? error : "Garmin wellness download failed.");
+                markDownloadFailure(tracker, error != null ? error : "Garmin wellness download failed.", result);
                 return;
             }
 
@@ -259,12 +264,24 @@ public class GarminWellnessImportService {
 
             tracker.markCompleted(null);
         } catch (Exception e) {
-            tracker.markFailed("Wellness import failed: " + safeMessage(e));
+            markDownloadFailure(tracker, "Wellness import failed: " + safeMessage(e), Map.of());
         } finally {
             if (tempDir != null) {
                 deleteTempDir(tempDir);
             }
         }
+    }
+
+    private void markDownloadFailure(WellnessSyncTracker tracker, String message, Map<String, Object> result) {
+        Object errorCode = result == null ? null : result.get("errorCode");
+        if (GarminRateLimitSupport.isRateLimited(errorCode, message)) {
+            long retryAfterSeconds = GarminRateLimitSupport.retryAfterSeconds(
+                    result == null ? null : result.get("retryAfterSeconds")
+            );
+            tracker.markRateLimited(GarminRateLimitSupport.message(retryAfterSeconds), retryAfterSeconds);
+            return;
+        }
+        tracker.markFailed(message);
     }
 
     private void updateCoachFromWellness(Runner runner) {
@@ -434,10 +451,11 @@ public class GarminWellnessImportService {
             int stressSaved,
             int bodySaved,
             String message,
-            boolean active
+            boolean active,
+            long retryAfterSeconds
     ) {
         static WellnessSyncStatus idle() {
-            return new WellnessSyncStatus("IDLE", 0, 0, 0, 0, 0, 0, 0, null, false);
+            return new WellnessSyncStatus("IDLE", 0, 0, 0, 0, 0, 0, 0, null, false, 0);
         }
     }
 
@@ -451,10 +469,12 @@ public class GarminWellnessImportService {
         private int stressSaved;
         private int bodySaved;
         private String message;
+        private long cooldownUntilMs;
         private long lastUpdatedMs = System.currentTimeMillis();
 
         synchronized boolean tryBegin() {
             if ("RUNNING".equals(status)) return false;
+            if (retryAfterSeconds() > 0) return false;
             status = "RUNNING";
             daysFetched = 0;
             daysPersisted = 0;
@@ -464,6 +484,7 @@ public class GarminWellnessImportService {
             stressSaved = 0;
             bodySaved = 0;
             message = null;
+            cooldownUntilMs = 0;
             return true;
         }
 
@@ -478,12 +499,21 @@ public class GarminWellnessImportService {
         synchronized void markCompleted(String msg) {
             status = "COMPLETED";
             message = msg;
+            cooldownUntilMs = 0;
             lastUpdatedMs = System.currentTimeMillis();
         }
 
         synchronized void markFailed(String msg) {
             status = "FAILED";
             message = msg;
+            cooldownUntilMs = 0;
+            lastUpdatedMs = System.currentTimeMillis();
+        }
+
+        synchronized void markRateLimited(String msg, long retryAfterSeconds) {
+            status = "RATE_LIMITED";
+            message = msg;
+            cooldownUntilMs = System.currentTimeMillis() + (retryAfterSeconds * 1000);
             lastUpdatedMs = System.currentTimeMillis();
         }
 
@@ -495,8 +525,16 @@ public class GarminWellnessImportService {
             return new WellnessSyncStatus(
                     status, daysFetched, daysPersisted,
                     wellnessSaved, sleepSaved, hrvSaved, stressSaved, bodySaved,
-                    message, "RUNNING".equals(status)
+                    message, "RUNNING".equals(status), retryAfterSeconds()
             );
+        }
+
+        synchronized long retryAfterSeconds() {
+            long remainingMs = cooldownUntilMs - System.currentTimeMillis();
+            if (remainingMs <= 0) {
+                return 0;
+            }
+            return (long) Math.ceil(remainingMs / 1000.0);
         }
     }
 }

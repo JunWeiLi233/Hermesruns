@@ -11,6 +11,9 @@ public record UserAdminDto(
         boolean emailVerified,
         String createdAt,
         boolean stravaLinked,
-        long noteCount
+        long noteCount,
+        int shoeScanUsed,
+        int shoeScanLimit,
+        int shoeScanRemaining
 ) {
 }

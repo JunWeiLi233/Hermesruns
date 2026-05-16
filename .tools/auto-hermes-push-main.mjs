@@ -276,6 +276,20 @@ function runNpmScript(runCommand, cwd, scriptName) {
   return runCommand("npm", ["run", scriptName], { cwd });
 }
 
+function existingPublishArtifactPaths(rootDir, result) {
+  const candidates = [
+    ".ai-sync/AUTO_HERMES_DOCKER_GATE.json",
+    ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
+  ];
+  if (result.securityReportId) {
+    candidates.push(
+      `.ai-sync/security-reports/${result.securityReportId}.json`,
+      `.ai-sync/security-reports/${result.securityReportId}.md`,
+    );
+  }
+  return candidates.filter((candidate) => fs.existsSync(resolveFromRoot(rootDir, candidate)));
+}
+
 function markStep(result, id, status, extra = {}) {
   const item = result.steps.find((candidate) => candidate.id === id);
   if (item) Object.assign(item, { status }, extra);
@@ -408,6 +422,8 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
     markStep(result, "commit", "running");
     const statusAfterDocs = runGit(runCommand, args.rootDir, ["status", "--short", "--untracked-files=all"]);
     if (statusAfterDocs.trim()) {
+      const artifactPaths = existingPublishArtifactPaths(args.rootDir, result);
+      if (artifactPaths.length) runGit(runCommand, args.rootDir, ["add", "-f", "--", ...artifactPaths]);
       runCommand("powershell", ["-File", resolveFromRoot(args.rootDir, ".tools/auto-commit.ps1"), "-Message", args.message], { cwd: args.rootDir });
       markStep(result, "commit", "completed");
     } else {

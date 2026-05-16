@@ -70,14 +70,59 @@ public class AdminRacePortalController {
             Double lat = adminService.readOptionalDouble(body, "lat");
             Double lng = adminService.readOptionalDouble(body, "lng");
             Double distanceKm = adminService.readOptionalDouble(body, "distanceKm");
-            RaceCourseMapResult result = adminService.getRaceCourseMapService().scanPendingCourseMap(
-                    raceId, raceName, city, country, website, lat, lng, distanceKm, adminOptional.get().getEmail());
-            adminService.getAdminAuditService().log(adminOptional.get(), "race_course_map.pending_scanned", "race_course_map", raceId, "Scanned pending race course map");
-            return ResponseEntity.ok(result);
+            AdminBackgroundJob job = adminBackgroundJobService.createJob(
+                    "COURSE_MAP_PREVIEW_SCAN",
+                    "admin_manual",
+                    adminOptional.get(),
+                    "Queued course-map source scan.",
+                    Map.of("raceId", raceId, "action", "scan")
+            );
+            Runner admin = adminOptional.get();
+            adminBackgroundJobService.runCourseMapScanAsync(job, 1, () -> {
+                AtomicReference<List<CourseMapScanStep>> scanSteps = new AtomicReference<>(List.of());
+                try {
+                    RaceCourseMapResult result;
+                    try (CourseMapScanWatcher.ScanScope ignored = courseMapScanWatcher.watch(
+                            raceId,
+                            "scan",
+                            steps -> {
+                                scanSteps.set(steps);
+                                adminBackgroundJobService.updateDetails(job, courseMapJobDetails(raceId, "scan", steps));
+                            }
+                    )) {
+                        result = adminService.getRaceCourseMapService().scanPendingCourseMap(
+                                raceId, raceName, city, country, website, lat, lng, distanceKm, admin.getEmail());
+                        scanSteps.set(courseMapScanWatcher.currentSteps());
+                    }
+                    safeAuditLog(admin, "race_course_map.pending_scanned", "race_course_map", raceId, "Scanned pending race course map");
+                    adminBackgroundJobService.markCompleted(
+                            job,
+                            1,
+                            0,
+                            result.summary(),
+                            courseMapJobDetails(
+                                    raceId,
+                                    "scan",
+                                    scanSteps.get(),
+                                    "courseMapDetected", result.courseMapDetected(),
+                                    "confidence", result.confidence()
+                            )
+                    );
+                } catch (Exception ex) {
+                    log.error("Admin course-map source scan failed for raceId={}", raceId, ex);
+                    String failureSummary = "Course-map source scan failed: " + safeMessage(ex);
+                    safeMarkPendingCourseMapScanFailed(raceId, failureSummary, admin.getEmail());
+                    adminBackgroundJobService.markCompleted(
+                            job,
+                            0,
+                            1,
+                            failureSummary,
+                            courseMapJobDetails(raceId, "scan", scanSteps.get(), "error", safeMessage(ex))
+                    );
+                }
+            });
+            return ResponseEntity.accepted().body(Map.of("jobId", job.getId()));
         } catch (IllegalArgumentException ex) {
-            if ("race_course_map_pending_missing".equals(ex.getMessage())) {
-                return AdminApiResponses.error(HttpStatus.NOT_FOUND, ex.getMessage(), "race_course_map_pending_missing");
-            }
             return AdminApiResponses.error(HttpStatus.BAD_REQUEST, ex.getMessage(), "invalid_race_course_map");
         }
     }
@@ -102,15 +147,45 @@ public class AdminRacePortalController {
                     "COURSE_MAP_PREVIEW_UPLOAD",
                     "admin_manual",
                     adminOptional.get(),
-                    "Queued course-map preview upload.",
-                    Map.of("raceId", raceId, "action", "upload")
+                    "Queued course-map preview upload and FIFO scan.",
+                    Map.of("raceId", raceId, "action", "upload_scan")
             );
             Runner admin = adminOptional.get();
-            adminBackgroundJobService.runAsync(job, 1, () -> {
+            adminBackgroundJobService.runCourseMapScanAsync(job, 1, () -> {
+                AtomicReference<List<CourseMapScanStep>> scanSteps = new AtomicReference<>(List.of());
                 try {
-                    RaceCourseMapResult result = adminService.getRaceCourseMapService().uploadPendingCourseMap(
+                    RaceCourseMapResult uploadResult = adminService.getRaceCourseMapService().uploadPendingCourseMap(
                             raceId, raceName, city, country, website, lat, lng, distanceKm, imageUrl, admin.getEmail());
                     safeAuditLog(admin, "race_course_map.pending_uploaded", "race_course_map", raceId, "Uploaded pending race course map");
+                    adminBackgroundJobService.updateDetails(
+                            job,
+                            courseMapJobDetails(
+                                    raceId,
+                                    "upload_scan",
+                                    List.of(),
+                                    "uploadStored", true,
+                                    "uploadConfidence", uploadResult.confidence()
+                            )
+                    );
+                    RaceCourseMapResult result;
+                    try (CourseMapScanWatcher.ScanScope ignored = courseMapScanWatcher.watch(
+                            raceId,
+                            "upload_scan",
+                            steps -> {
+                                scanSteps.set(steps);
+                                adminBackgroundJobService.updateDetails(job, courseMapJobDetails(
+                                        raceId,
+                                        "upload_scan",
+                                        steps,
+                                        "uploadStored", true
+                                ));
+                            }
+                    )) {
+                        result = adminService.getRaceCourseMapService().reanalyzePendingCourseMap(
+                                raceId, raceName, city, country, website, lat, lng, distanceKm, admin.getEmail());
+                        scanSteps.set(courseMapScanWatcher.currentSteps());
+                    }
+                    safeAuditLog(admin, "race_course_map.pending_auto_scanned", "race_course_map", raceId, "Auto-scanned uploaded pending race course map");
                     adminBackgroundJobService.markCompleted(
                             job,
                             1,
@@ -118,20 +193,23 @@ public class AdminRacePortalController {
                             result.summary(),
                             courseMapJobDetails(
                                     raceId,
-                                    "upload",
-                                    List.of(),
+                                    "upload_scan",
+                                    scanSteps.get(),
+                                    "uploadStored", true,
                                     "courseMapDetected", result.courseMapDetected(),
                                     "confidence", result.confidence()
                             )
                     );
                 } catch (Exception ex) {
-                    log.error("Admin course-map upload failed for raceId={}", raceId, ex);
+                    log.error("Admin course-map upload/scan failed for raceId={}", raceId, ex);
+                    String failureSummary = "Course-map upload scan failed: " + safeMessage(ex);
+                    safeMarkPendingCourseMapScanFailed(raceId, failureSummary, admin.getEmail());
                     adminBackgroundJobService.markCompleted(
                             job,
                             0,
                             1,
-                            "Course-map upload failed: " + safeMessage(ex),
-                            courseMapJobDetails(raceId, "upload", List.of(), "error", safeMessage(ex))
+                            failureSummary,
+                            courseMapJobDetails(raceId, "upload_scan", scanSteps.get(), "error", safeMessage(ex))
                     );
                 }
             });
@@ -165,7 +243,7 @@ public class AdminRacePortalController {
                     Map.of("raceId", raceId, "action", "reanalyze")
             );
             Runner admin = adminOptional.get();
-            adminBackgroundJobService.runAsync(job, 1, () -> {
+            adminBackgroundJobService.runCourseMapScanAsync(job, 1, () -> {
                 AtomicReference<List<CourseMapScanStep>> scanSteps = new AtomicReference<>(List.of());
                 try {
                     RaceCourseMapResult result;
@@ -197,11 +275,13 @@ public class AdminRacePortalController {
                     );
                 } catch (Exception ex) {
                     log.error("Admin course-map reanalyze failed for raceId={}", raceId, ex);
+                    String failureSummary = "Course-map re-analysis failed: " + safeMessage(ex);
+                    safeMarkPendingCourseMapScanFailed(raceId, failureSummary, admin.getEmail());
                     adminBackgroundJobService.markCompleted(
                             job,
                             0,
                             1,
-                            "Course-map re-analysis failed: " + safeMessage(ex),
+                            failureSummary,
                             courseMapJobDetails(raceId, "reanalyze", scanSteps.get(), "error", safeMessage(ex))
                     );
                 }
@@ -256,6 +336,14 @@ public class AdminRacePortalController {
             adminService.getAdminAuditService().log(actor, action, targetType, targetId, summary);
         } catch (Exception ex) {
             log.error("Admin audit log failed for action={} targetType={} targetId={}", action, targetType, targetId, ex);
+        }
+    }
+
+    private void safeMarkPendingCourseMapScanFailed(String raceId, String summary, String actorEmail) {
+        try {
+            adminService.getRaceCourseMapService().markPendingCourseMapScanFailed(raceId, summary, actorEmail);
+        } catch (Exception ex) {
+            log.warn("Failed to persist course-map scan failure summary for raceId={}", raceId, ex);
         }
     }
 
