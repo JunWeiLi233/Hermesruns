@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LoginController {
     private static final Logger log = LoggerFactory.getLogger(LoginController.class);
     private static final Set<String> LOGIN_FIELDS = Set.of("email", "password");
+    private static final Set<String> SIGNUP_FIELDS = Set.of("email", "password", "captchaToken");
     private static final Set<String> EMAIL_ONLY_FIELDS = Set.of("email");
     private static final Set<String> PASSWORD_RESET_CONFIRM_FIELDS = Set.of("token", "password");
     private static final Set<String> ADMIN_SUBSCRIPTION_FIELDS = Set.of("action", "months");
@@ -40,6 +41,7 @@ public class LoginController {
     private final PasswordResetLimiter passwordResetLimiter;
     private final PasswordResetService passwordResetService;
     private final ApiRateLimiter apiRateLimiter;
+    private final RecaptchaVerifier recaptchaVerifier;
 
     @Value("${app.billing.public-base-url:http://localhost:8080}")
     private String publicBaseUrl;
@@ -50,7 +52,8 @@ public class LoginController {
                            VerificationResendLimiter verificationResendLimiter,
                            PasswordResetLimiter passwordResetLimiter,
                            PasswordResetService passwordResetService,
-                           ApiRateLimiter apiRateLimiter) {
+                           ApiRateLimiter apiRateLimiter,
+                           RecaptchaVerifier recaptchaVerifier) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.rateLimiter = rateLimiter;
@@ -61,6 +64,7 @@ public class LoginController {
         this.passwordResetLimiter = passwordResetLimiter;
         this.passwordResetService = passwordResetService;
         this.apiRateLimiter = apiRateLimiter;
+        this.recaptchaVerifier = recaptchaVerifier;
     }
 
     // ==========================================
@@ -200,7 +204,7 @@ public class LoginController {
         String normalizedEmail;
         String rawPassword;
         try {
-            RequestBodyValidator.rejectUnexpectedFields(body, LOGIN_FIELDS);
+            RequestBodyValidator.rejectUnexpectedFields(body, SIGNUP_FIELDS);
             normalizedEmail = authService.normalizeEmail(RequestBodyValidator.requiredString(body, "email", 254));
             rawPassword = RequestBodyValidator.requiredString(body, "password", 512);
         } catch (IllegalArgumentException ex) {
@@ -222,6 +226,12 @@ public class LoginController {
             err.put("code", "WEAK_PASSWORD");
             err.put("failedRules", pw.failedRuleIds());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+        }
+
+        // reCAPTCHA v3 verification
+        String captchaToken = body != null ? (String) body.getOrDefault("captchaToken", "") : "";
+        if (!recaptchaVerifier.verify(captchaToken, "signup")) {
+            return error(HttpStatus.BAD_REQUEST, "reCAPTCHA verification failed. Refresh and try again.");
         }
 
         Optional<Runner> existingByEmail = runnerRepository.findByEmailIgnoreCase(normalizedEmail);

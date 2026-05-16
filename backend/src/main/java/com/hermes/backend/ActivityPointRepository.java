@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -188,6 +189,22 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("targetPointsPerActivity") int targetPointsPerActivity
     );
 
+    /**
+     * Returns [elapsedSeconds, heartRate] pairs for all stored points that have both values.
+     * Returns only up to 10 000 samples (dense per-second data from FIT/GPX/Strava streams).
+     * If the activity has no HR data the result is an empty list.
+     */
+    @Query(value = """
+            select p.elapsed_seconds, p.heart_rate
+            from activity_points p
+            where p.activity_id = :activityId
+              and p.heart_rate is not null
+              and p.elapsed_seconds is not null
+            order by p.sequence_index asc
+            limit 10000
+            """, nativeQuery = true)
+    List<Object[]> findHrSamplesByActivityIdOrdered(@Param("activityId") Long activityId);
+
     @Query(value = """
             with ranked_points as (
                 select
@@ -226,6 +243,70 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("activityType") String activityType,
             @Param("excludedActivityIds") List<Long> excludedActivityIds,
             @Param("targetPointsPerActivity") int targetPointsPerActivity,
+            @Param("limitValue") int limitValue
+    );
+
+    @Query("""
+            select
+              runner.id,
+              runner.displayName,
+              runner.stravaUsername,
+              p.latitude,
+              p.longitude,
+              activity.id,
+              coalesce(activity.startTime, activity.createdAt)
+            from ActivityPoint p
+            join p.activity activity
+            join activity.runner runner
+            where activity.activityType = :activityType
+              and runner.deleted = false
+            order by coalesce(activity.startTime, activity.createdAt) desc, activity.id desc, p.sequenceIndex asc
+            """)
+    List<Object[]> findTerritorySamples(
+            @Param("activityType") ActivityType activityType,
+            Pageable pageable
+    );
+
+    @Query(value = """
+            with recent_points as (
+              select
+                ap.latitude as latitude,
+                ap.longitude as longitude
+              from activity_points ap
+              join activities a on ap.activity_id = a.id
+              where a.runner_id = :runnerId
+                and a.activity_type = :activityType
+                and ap.latitude between -90 and 90
+                and ap.longitude between -180 and 180
+              order by coalesce(a.start_time, a.created_at) desc, a.id desc, ap.sequence_index asc
+              limit :sampleLimit
+            ),
+            source_points as (
+              select
+                floor(latitude / :cellDegrees) as lat_cell,
+                floor(longitude / :cellDegrees) as lng_cell,
+                latitude,
+                longitude
+              from recent_points
+            )
+            select
+              lat_cell,
+              lng_cell,
+              avg(latitude) as center_lat,
+              avg(longitude) as center_lng,
+              count(*) as sample_count
+            from source_points
+            group by lat_cell, lng_cell
+            having count(*) >= :minSamples
+            order by count(*) asc
+            limit :limitValue
+            """, nativeQuery = true)
+    List<Object[]> findTerritorySeedCellsByRunner(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType,
+            @Param("cellDegrees") double cellDegrees,
+            @Param("minSamples") int minSamples,
+            @Param("sampleLimit") int sampleLimit,
             @Param("limitValue") int limitValue
     );
 }

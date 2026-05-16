@@ -34,6 +34,8 @@ deepseek*.token
 claude*.env
 claude*.key
 claude*.token
+.tools/claude-code.ps1
+.tools/claude-deepseek.ps1
 .tools/*deepseek*local*.ps1
 .tools/*claude*local*.ps1
 
@@ -68,6 +70,8 @@ backend/.mvn/repository/
 backend/*.mv.db
 backend/*.lock.db
 backend/*.trace.db
+*.mv.db
+*.trace.db
 backend/HELP.md
 
 # local / prod overrides (often contain secrets)
@@ -85,6 +89,15 @@ migration_export/
 
 # Debug/probe files
 backend/probe.java
+debug_split.js
+fix_encoding.js
+split_translations_safe.js
+test_load_7b.py
+backend_qwen_boot.cmd
+prompt-input*.json
+adidas-search.png
+territory_*.png
+tmp/
 
 # One-time migration tools
 .tools/H2AddColumn.java
@@ -215,6 +228,14 @@ ALLOW_LIST_TERMINAL_COMMANDS.txt
 TRANSLATION_WORKFLOW.md
 frontend/VISUAL_QA_LIGHT_SYSTEM.md
 .omx/
+.oh-my-openagent/
+.opencode-devcontainers/
+.opencode-dynamic-context-pruning/
+.opencode-kratos-mcp/
+.opencode-mem/
+.opencode-notifier/
+.opencode-worktree/
+.superpowers/brainstorm/
 
 # Workflow core
 .codex/

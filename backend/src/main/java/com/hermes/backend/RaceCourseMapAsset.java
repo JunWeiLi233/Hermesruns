@@ -59,6 +59,11 @@ public class RaceCourseMapAsset {
     private LocalDateTime liveUpdatedAt;
     private String liveUpdatedByEmail;
 
+    @Column(columnDefinition = "text")
+    private String localRouteArtifactRef;
+    private LocalDateTime localRouteUpdatedAt;
+    private String localRouteUpdatedByEmail;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -132,6 +137,12 @@ public class RaceCourseMapAsset {
     public void setLiveUpdatedAt(LocalDateTime liveUpdatedAt) { this.liveUpdatedAt = liveUpdatedAt; }
     public String getLiveUpdatedByEmail() { return liveUpdatedByEmail; }
     public void setLiveUpdatedByEmail(String liveUpdatedByEmail) { this.liveUpdatedByEmail = liveUpdatedByEmail; }
+    public String getLocalRouteArtifactRef() { return localRouteArtifactRef; }
+    public void setLocalRouteArtifactRef(String localRouteArtifactRef) { this.localRouteArtifactRef = localRouteArtifactRef; }
+    public LocalDateTime getLocalRouteUpdatedAt() { return localRouteUpdatedAt; }
+    public void setLocalRouteUpdatedAt(LocalDateTime localRouteUpdatedAt) { this.localRouteUpdatedAt = localRouteUpdatedAt; }
+    public String getLocalRouteUpdatedByEmail() { return localRouteUpdatedByEmail; }
+    public void setLocalRouteUpdatedByEmail(String localRouteUpdatedByEmail) { this.localRouteUpdatedByEmail = localRouteUpdatedByEmail; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

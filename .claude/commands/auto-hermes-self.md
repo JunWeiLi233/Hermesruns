@@ -13,7 +13,8 @@ Run [`_session-start.md`](_session-start.md).
 
 ## Loop Entry
 1. **Refresh state:** `node .tools/auto-hermes-self-loop.mjs --write --runtime claude`
-2. Read `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md`. `Next Action: stop` means finish actions if product files changed, then stop. `claude-execute-round` means run the integrity gate, then execute the round.
+2. Read `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md` and `.ai-sync/error.md`. `Next Action: stop` means finish actions if product files changed, then stop. `claude-execute-round` means run the integrity gate, then execute the round.
+3. If `.ai-sync/error.md` has open `blocker` or `error` loader entries, repair those before normal product work or let round-close promote the loader repair task.
 
 ## Pre-Round Ralph Integrity Gate
 
@@ -25,6 +26,7 @@ Verify the loop ability is intact before each round. If a previous task broke lo
 | Scripts parse | `node --check .tools/auto-hermes-self-loop.mjs && node --check .tools/auto-hermes-loop.mjs && node --check .tools/auto-hermes-teamwork.mjs && node --check .tools/auto-hermes-browser.mjs` | syntax error |
 | Contract intact | `node .tools/auto-hermes-self-loop.mjs --write --runtime claude --dry-run`, then verify `.ai-sync/AUTO_HERMES_SELF_LOOP.json` has `selfExecutionContract == "claude-self-executing"` | not claude-self-executing |
 | Protocol present | `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md` contains `## Claude Self-Loop Protocol (Active Execution)`, `claude-execute-round`, and `Browser Harness Skill` | missing |
+| Loader ledger present | `.ai-sync/error.md` exists and is parseable after `.tools/auto-hermes-error-ledger.mjs --scan --write` | open blocker/error loader entries |
 
 **On failure:** apply the minimal targeted fix to restore the previous working state. This gate authorizes self-repair of the Ralph mechanism. Record as `ralph-integrity-fix: <what>` in round-close evidence.
 
@@ -185,6 +187,17 @@ node .tools/auto-hermes-teamwork.mjs close \
   --commits "<comma-separated short hashes if committed>" \
   --notes "<one-line summary of round outcome>"
 ```
+
+**Clean up screenshot evidence.** Browser-harness / Playwright screenshots written to `task-images/` during the round are working-set artifacts, not durable proof — the result packet and the teamwork board already record the path strings. Once the board is closed and the round-close packet is written, delete the screenshots this round produced:
+
+```bash
+# Delete only the JPG/PNG/JSON files THIS round wrote to task-images/.
+# Use a round-prefixed glob (e.g. all files matching the round id or lane id).
+# Example for a round named muscle-precise-2026-05-12:
+rm -f task-images/muscle-precise-* task-images/<lane>-* task-images/inspect-*.json
+```
+
+Do not blanket-`rm task-images/*` — other rounds in flight may still need their screenshots. Match by lane/round prefix only. `task-images/` is gitignored; nothing here is committed.
 
 ### Step 9 — Round-close writeback
 

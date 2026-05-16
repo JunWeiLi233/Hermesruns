@@ -38,6 +38,10 @@ class OAuthControllerTests {
         return (ParameterizedTypeReference) any(ParameterizedTypeReference.class);
     }
 
+    private static <T> T orMock(T value, Class<T> type) {
+        return value == null ? mock(type) : value;
+    }
+
     private static class TestOAuthController extends com.hermes.backend.OAuthController {
         TestOAuthController(
                 RunnerRepository runnerRepository,
@@ -51,7 +55,9 @@ class OAuthControllerTests {
                 StravaSyncService stravaSyncService
         ) {
             super(runnerRepository, authService, activityRepository, secretEncryptionService,
-                    aiUsageService, restTemplate, systemConfigService, stravaTokenService, stravaSyncService);
+                    aiUsageService, restTemplate, systemConfigService,
+                    orMock(stravaTokenService, StravaTokenService.class),
+                    orMock(stravaSyncService, StravaSyncService.class));
         }
     }
 
