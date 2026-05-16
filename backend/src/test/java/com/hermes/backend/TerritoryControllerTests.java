@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -65,6 +67,110 @@ class TerritoryControllerTests {
                 .andExpect(jsonPath("$.available").exists());
     }
 
+    @Test
+    void existingTerritoryEndpointReturnsScoreBasedControlFields() throws Exception {
+        Runner active = createRunner("territory-score-active@test.local");
+        Runner rival = createRunner("territory-score-rival@test.local");
+        Activity activeActivity = createActivity(active);
+        Activity rivalActivity = createActivity(rival);
+
+        seedTerritorySamples(rivalActivity, 37.822, -122.250, 8);
+        seedTerritorySamples(activeActivity, 37.8221, -122.2501, 5);
+
+        mockMvc.perform(get("/api/territory")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.territories[0].contested").value(true))
+                .andExpect(jsonPath("$.territories[0].challengerName").value("You"))
+                .andExpect(jsonPath("$.territories[0].ownerScore").isNumber())
+                .andExpect(jsonPath("$.territories[0].challengerScore").isNumber())
+                .andExpect(jsonPath("$.territories[0].activeScore").isNumber())
+                .andExpect(jsonPath("$.territories[0].controlPct").isNumber())
+                .andExpect(jsonPath("$.territories[0].samplesToContest").isNumber())
+                .andExpect(jsonPath("$.zones[0].controlPct").isNumber())
+                .andExpect(jsonPath("$.zones[0].samplesToContest").isNumber())
+                .andExpect(jsonPath("$.nextTarget.samplesToContest").isNumber());
+    }
+
+    @Test
+    void territoryEndpointUsesNewestCoverageAsCellOwnerEvenWithFewerSamples() throws Exception {
+        Runner active = createRunner("territory-latest-fill-active@test.local");
+        Runner rival = createRunner("territory-latest-fill-rival@test.local");
+        rival.setDisplayName("Late Fill Rival");
+        runnerRepository.save(rival);
+
+        Activity activeActivity = createActivity(active);
+        activeActivity.setStartTime(LocalDateTime.now().minusHours(3));
+        activityRepository.save(activeActivity);
+        seedTerritorySamples(activeActivity, 37.822, -122.250, 18);
+
+        Activity rivalActivity = createActivity(rival);
+        rivalActivity.setStartTime(LocalDateTime.now().minusMinutes(5));
+        activityRepository.save(rivalActivity);
+        seedTerritorySamples(rivalActivity, 37.82202, -122.24998, 3);
+
+        mockMvc.perform(get("/api/territory")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.territories[0].ownerName").value("Late Fill Rival"))
+                .andExpect(jsonPath("$.territories[0].challengerName").value("You"))
+                .andExpect(jsonPath("$.territories[0].sampleCount").value(21))
+                .andExpect(jsonPath("$.leaderboard[0].name").value("Late Fill Rival"));
+    }
+
+    @Test
+    void territoryEndpointReusesCachedMapForRepeatedPageLoads() throws Exception {
+        Runner runner = createRunner("territory-map-cache@test.local");
+        Activity activity = createActivity(runner);
+        seedTerritorySamples(activity, 37.822, -122.250, 6);
+
+        mockMvc.perform(get("/api/territory")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.territories[0].sampleCount").value(6));
+
+        activityPointRepository.deleteByActivity(activity);
+        activityPointRepository.flush();
+
+        mockMvc.perform(get("/api/territory")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.territories[0].sampleCount").value(6));
+    }
+
+    @Test
+    void territoryEndpointRefreshesCachedMapWhenRivalRunnerAddsSamples() throws Exception {
+        Runner active = createRunner("territory-map-cache-active@test.local");
+        Activity activeActivity = createActivity(active);
+        seedTerritorySamples(activeActivity, 37.822, -122.250, 18);
+
+        mockMvc.perform(get("/api/territory")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.leaderboard.length()").value(1))
+                .andExpect(jsonPath("$.territories[0].ownerName").value("You"));
+
+        Runner rival = createRunner("territory-map-cache-rival@test.local");
+        rival.setDisplayName("Cache Rival");
+        runnerRepository.save(rival);
+        Activity rivalActivity = createActivity(rival);
+        seedTerritorySamples(rivalActivity, 37.82202, -122.24998, 24);
+
+        mockMvc.perform(get("/api/territory")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true))
+                .andExpect(jsonPath("$.leaderboard.length()").value(2))
+                .andExpect(jsonPath("$.territories[0].ownerName").value("Cache Rival"))
+                .andExpect(jsonPath("$.territories[0].contested").value(true))
+                .andExpect(jsonPath("$.territories[0].challengerName").value("You"));
+    }
+
     // -----------------------------------------------------------------------
     // GET /api/territory/polygons — auth guard
     // -----------------------------------------------------------------------
@@ -94,7 +200,7 @@ class TerritoryControllerTests {
     // GET /api/territory/polygons — runner with pre-persisted polygons
     // -----------------------------------------------------------------------
     @Test
-    void polygonsEndpointReturnsPersistentPolygonsForRunner() throws Exception {
+    void polygonsEndpointIgnoresLegacyCoordinateRowsWithoutRoutePoints() throws Exception {
         Runner runner = createRunner("territory-has-polygons@test.local");
         Activity activity = createActivity(runner);
 
@@ -110,10 +216,397 @@ class TerritoryControllerTests {
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.polygons").isArray())
+                .andExpect(jsonPath("$.polygons").isEmpty())
+                .andExpect(jsonPath("$.polygonCount").value(0))
+                .andExpect(jsonPath("$.totalAreaSquareMeters").value(0.0));
+    }
+
+    @Test
+    void polygonsEndpointRecomputesLegacyRowsWhenRoutePointsExist() throws Exception {
+        Runner runner = createRunner("territory-legacy-recompute@test.local");
+        Activity activity = createActivity(runner);
+        seedOutAndBackRoute(activity, 37.822, -122.25);
+
+        TerritoryPolygon legacyPolygon = new TerritoryPolygon();
+        legacyPolygon.setUserId(runner.getId());
+        legacyPolygon.setActivityId(activity.getId());
+        legacyPolygon.setCoordinates("37.822,-122.250;37.823,-122.250;37.823,-122.249;37.822,-122.250");
+        legacyPolygon.setAreaSquareMeters(12345.0);
+        territoryPolygonRepository.save(legacyPolygon);
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons").isEmpty())
+                .andExpect(jsonPath("$.polygonCount").value(0))
+                .andExpect(jsonPath("$.backfillInProgress").value(true))
+                .andExpect(jsonPath("$.pendingActivityCount").value(1));
+
+        List<TerritoryPolygon> rows = territoryPolygonRepository.findAll().stream()
+                .filter(p -> p.getActivityId().equals(activity.getId()))
+                .toList();
+        org.assertj.core.api.Assertions.assertThat(rows).hasSize(1);
+        org.assertj.core.api.Assertions.assertThat(TerritoryPolygonComputer.decodeMaskCells(rows.get(0).getCoordinates()).cells())
+                .isEmpty();
+    }
+
+    @Test
+    void polygonsEndpointBackfillsRouteFootprintsForExistingRuns() throws Exception {
+        Runner runner = createRunner("territory-backfill@test.local");
+        Activity activity = createActivity(runner);
+        seedOutAndBackRoute(activity, 37.822, -122.25);
+        territoryService.computePolygonsForActivity(activity.getId());
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.polygonCount").value(1))
-                .andExpect(jsonPath("$.totalAreaSquareMeters").value(12345.0))
                 .andExpect(jsonPath("$.polygons[0].activityId").value(activity.getId()))
-                .andExpect(jsonPath("$.polygons[0].areaSquareMeters").value(12345.0));
+                .andExpect(jsonPath("$.polygons[0].areaSquareMeters").isNumber())
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
+                .andExpect(jsonPath("$.polygons[0].cells").isArray())
+                .andExpect(jsonPath("$.polygons[0].cells[0].latitude").isNumber())
+                .andExpect(jsonPath("$.polygons[0].cells[0].longitude").isNumber())
+                .andExpect(jsonPath("$.polygons[0].routeTraces").isArray())
+                .andExpect(jsonPath("$.polygons[0].routeTraces[0].activityId").value(activity.getId()))
+                .andExpect(jsonPath("$.polygons[0].routeTraces[0].routeRadiusMeters").isNumber())
+                .andExpect(jsonPath("$.polygons[0].routeTraces[0].points[0].latitude").isNumber())
+                .andExpect(jsonPath("$.polygons[0].routeTraces[0].points[0].longitude").isNumber());
+    }
+
+    @Test
+    void polygonsEndpointReturnsOneConcreteUnionMaskInsteadOfPerRunBlocks() throws Exception {
+        Runner runner = createRunner("territory-union-mask@test.local");
+        Activity firstActivity = createActivity(runner);
+        Activity secondActivity = createActivity(runner);
+
+        seedCompactOutAndBackRoute(firstActivity, 37.822, -122.250);
+        seedCompactOutAndBackRoute(secondActivity, 37.82204, -122.25002);
+        territoryService.computePolygonsForActivity(firstActivity.getId());
+        territoryService.computePolygonsForActivity(secondActivity.getId());
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygonCount").value(1))
+                .andExpect(jsonPath("$.polygons.length()").value(1))
+                .andExpect(jsonPath("$.polygons[0].activityId").doesNotExist())
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
+                .andExpect(jsonPath("$.polygons[0].cells").isArray());
+    }
+
+    @Test
+    void polygonsEndpointDoesNotKeepWarmingForRunsWithoutGpsPoints() throws Exception {
+        Runner runner = createRunner("territory-no-gps-run@test.local");
+        createActivity(runner);
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons").isEmpty())
+                .andExpect(jsonPath("$.polygonCount").value(0))
+                .andExpect(jsonPath("$.backfillInProgress").value(false))
+                .andExpect(jsonPath("$.pendingActivityCount").value(0));
+    }
+
+    @Test
+    void polygonsEndpointFillsInteriorVoidsInUnionMask() throws Exception {
+        Runner runner = createRunner("territory-union-hole-fill@test.local");
+        Activity activity = createActivity(runner);
+        double baseLat = 37.822;
+        double baseLng = -122.250;
+        double cellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double latStep = cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+        List<TerritoryPolygonComputer.MaskCell> ring = new ArrayList<>();
+        for (int y = -2; y <= 2; y += 1) {
+            for (int x = -2; x <= 2; x += 1) {
+                if (Math.abs(x) != 2 && Math.abs(y) != 2) {
+                    continue;
+                }
+                ring.add(new TerritoryPolygonComputer.MaskCell(baseLat + y * latStep, baseLng + x * lngStep));
+            }
+        }
+
+        TerritoryPolygon polygon = new TerritoryPolygon();
+        polygon.setUserId(runner.getId());
+        polygon.setActivityId(activity.getId());
+        polygon.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(ring, cellMeters));
+        polygon.setAreaSquareMeters(ring.size() * cellMeters * cellMeters);
+        territoryPolygonRepository.save(polygon);
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
+                .andExpect(jsonPath("$.polygons[0].cells.length()").value(25));
+    }
+
+    @Test
+    void polygonsEndpointDoesNotLetOneCoarseMaskDownsampleTheWholeUnion() throws Exception {
+        Runner runner = createRunner("territory-coarse-union@test.local");
+        Activity fineActivity = createActivity(runner);
+        Activity coarseActivity = createActivity(runner);
+
+        double baseLat = 37.822;
+        double baseLng = -122.250;
+
+        TerritoryPolygon fineMask = new TerritoryPolygon();
+        fineMask.setUserId(runner.getId());
+        fineMask.setActivityId(fineActivity.getId());
+        fineMask.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                List.of(new TerritoryPolygonComputer.MaskCell(baseLat, baseLng)),
+                TerritoryPolygonComputer.LAND_MASK_CELL_METERS
+        ));
+        fineMask.setAreaSquareMeters(TerritoryPolygonComputer.LAND_MASK_CELL_METERS * TerritoryPolygonComputer.LAND_MASK_CELL_METERS);
+        territoryPolygonRepository.save(fineMask);
+
+        double coarseCellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS * 4;
+        double coarseLatStep = coarseCellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double coarseLngStep = coarseLatStep / Math.cos(Math.toRadians(baseLat));
+        TerritoryPolygon coarseMask = new TerritoryPolygon();
+        coarseMask.setUserId(runner.getId());
+        coarseMask.setActivityId(coarseActivity.getId());
+        coarseMask.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                List.of(new TerritoryPolygonComputer.MaskCell(baseLat + coarseLatStep, baseLng + coarseLngStep)),
+                coarseCellMeters
+        ));
+        coarseMask.setAreaSquareMeters(coarseCellMeters * coarseCellMeters);
+        territoryPolygonRepository.save(coarseMask);
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
+                .andExpect(jsonPath("$.polygons[0].cellMeters").value(TerritoryPolygonComputer.LAND_MASK_CELL_METERS));
+    }
+
+    @Test
+    void polygonsEndpointBackfillsAndReturnsEveryRunNotOnlyRecentBatch() throws Exception {
+        Runner runner = createRunner("territory-all-runs@test.local");
+        int totalRuns = 205;
+
+        for (int i = 0; i < totalRuns; i++) {
+            Activity activity = createActivity(runner);
+            activity.setStartTime(LocalDateTime.now().minusDays(i));
+            activityRepository.save(activity);
+            seedCompactOutAndBackRoute(activity, 37.700 + i * 0.00003, -122.250);
+            territoryService.computePolygonsForActivity(activity.getId());
+        }
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygonCount").value(1))
+                .andExpect(jsonPath("$.polygons").isArray())
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
+                .andExpect(jsonPath("$.polygons[0].cells[0].latitude").isNumber());
+
+        List<TerritoryPolygon> rows = territoryPolygonRepository.findAll().stream()
+                .filter(p -> runner.getId().equals(p.getUserId()))
+                .toList();
+        org.assertj.core.api.Assertions.assertThat(rows).hasSize(totalRuns);
+        org.assertj.core.api.Assertions.assertThat(rows)
+                .allSatisfy(row -> org.assertj.core.api.Assertions
+                        .assertThat(TerritoryPolygonComputer.decodeMaskCells(row.getCoordinates()).cells())
+                .isNotEmpty());
+    }
+
+    @Test
+    void polygonsEndpointIncludesRivalLandMasksWithoutRivalRouteTraces() throws Exception {
+        Runner active = createRunner("territory-active-only@test.local");
+        Runner rival = createRunner("territory-rival-excluded@test.local");
+        rival.setDisplayName("Concrete Rival");
+        runnerRepository.save(rival);
+        Activity activeActivity = createActivity(active);
+        Activity rivalActivity = createActivity(rival);
+        activeActivity.setStartTime(LocalDateTime.now().minusHours(2));
+        rivalActivity.setStartTime(LocalDateTime.now().minusHours(1));
+        activityRepository.save(activeActivity);
+        activityRepository.save(rivalActivity);
+
+        seedCompactOutAndBackRoute(activeActivity, 37.822, -122.250);
+        seedCompactOutAndBackRoute(rivalActivity, 37.824, -122.250);
+        territoryService.computePolygonsForActivity(activeActivity.getId());
+        territoryService.computePolygonsForActivity(rivalActivity.getId());
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Concrete Rival')]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Concrete Rival')].active").value(hasItem(false)))
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Concrete Rival')].shapeType").value(hasItem("land-mask")))
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Concrete Rival')].routeTraces").value(hasItem(empty())))
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")].ownerName").value(hasItem("You")))
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")].active").value(hasItem(true)))
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")].cells").isNotEmpty());
+
+        List<TerritoryPolygon> activeRows = territoryPolygonRepository.findAll().stream()
+                .filter(p -> active.getId().equals(p.getUserId()))
+                .toList();
+        org.assertj.core.api.Assertions.assertThat(activeRows).hasSize(1);
+        org.assertj.core.api.Assertions.assertThat(activeRows.get(0).getActivityId())
+                .isEqualTo(activeActivity.getId());
+        org.assertj.core.api.Assertions.assertThat(activeRows.get(0).getActivityId())
+                .isNotEqualTo(rivalActivity.getId());
+    }
+
+    @Test
+    void polygonsEndpointIncludesEveryRegisteredRunnerLandMaskOnWorldMap() throws Exception {
+        Runner active = createRunner("territory-world-active@test.local");
+        Runner nearbyRival = createRunner("territory-world-nearby@test.local");
+        nearbyRival.setDisplayName("Nearby Concrete Rival");
+        runnerRepository.save(nearbyRival);
+        Runner distantRival = createRunner("territory-world-distant@test.local");
+        distantRival.setDisplayName("Distant Concrete Rival");
+        runnerRepository.save(distantRival);
+
+        Activity activeActivity = createActivity(active);
+        activeActivity.setStartTime(LocalDateTime.now().minusHours(3));
+        Activity nearbyActivity = createActivity(nearbyRival);
+        nearbyActivity.setStartTime(LocalDateTime.now().minusHours(2));
+        Activity distantActivity = createActivity(distantRival);
+        distantActivity.setStartTime(LocalDateTime.now().minusHours(1));
+        activityRepository.save(activeActivity);
+        activityRepository.save(nearbyActivity);
+        activityRepository.save(distantActivity);
+
+        seedCompactOutAndBackRoute(activeActivity, 37.822, -122.250);
+        seedCompactOutAndBackRoute(nearbyActivity, 37.824, -122.250);
+        seedCompactOutAndBackRoute(distantActivity, 40.7128, -74.0060);
+        territoryService.computePolygonsForActivity(activeActivity.getId());
+        territoryService.computePolygonsForActivity(nearbyActivity.getId());
+        territoryService.computePolygonsForActivity(distantActivity.getId());
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Distant Concrete Rival')]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Distant Concrete Rival')].active").value(hasItem(false)))
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Nearby Concrete Rival')]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Nearby Concrete Rival')].active").value(hasItem(false)))
+                .andExpect(jsonPath("$.polygons[?(@.active == true)].ownerName").value(hasItem("You")));
+    }
+
+    @Test
+    void polygonsEndpointRecolorsOverlappedConcreteLandToNewestRunner() throws Exception {
+        Runner active = createRunner("territory-concrete-fill-active@test.local");
+        Runner rival = createRunner("territory-concrete-fill-rival@test.local");
+        rival.setDisplayName("Latest Concrete Rival");
+        runnerRepository.save(rival);
+
+        Activity activeActivity = createActivity(active);
+        activeActivity.setStartTime(LocalDateTime.now().minusHours(2));
+        activityRepository.save(activeActivity);
+        seedCompactOutAndBackRoute(activeActivity, 37.822, -122.250);
+        territoryService.computePolygonsForActivity(activeActivity.getId());
+
+        Activity rivalActivity = createActivity(rival);
+        rivalActivity.setStartTime(LocalDateTime.now().minusMinutes(5));
+        activityRepository.save(rivalActivity);
+        seedCompactOutAndBackRoute(rivalActivity, 37.822, -122.250);
+        territoryService.computePolygonsForActivity(rivalActivity.getId());
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')].active").value(hasItem(false)))
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')].color").value(hasItem("#5b9cf5")))
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')].cells").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")]").isEmpty());
+    }
+
+    @Test
+    void polygonsEndpointRefreshesCachedOwnershipWhenNewerRivalMaskAppears() throws Exception {
+        Runner active = createRunner("territory-cache-fill-active@test.local");
+        Runner rival = createRunner("territory-cache-fill-rival@test.local");
+        rival.setDisplayName("Cache Fill Rival");
+        runnerRepository.save(rival);
+
+        Activity activeActivity = createActivity(active);
+        activeActivity.setStartTime(LocalDateTime.now().minusHours(2));
+        activityRepository.save(activeActivity);
+        seedCompactOutAndBackRoute(activeActivity, 37.822, -122.250);
+        territoryService.computePolygonsForActivity(activeActivity.getId());
+
+        Activity rivalActivity = createActivity(rival);
+        rivalActivity.setStartTime(LocalDateTime.now().minusMinutes(5));
+        activityRepository.save(rivalActivity);
+        seedCompactOutAndBackRoute(rivalActivity, 37.822, -122.250);
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.active == true)].ownerName").value(hasItem("You")))
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Cache Fill Rival')]").isEmpty());
+
+        territoryService.computePolygonsForActivity(rivalActivity.getId());
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.active == true)]").isEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Cache Fill Rival')]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Cache Fill Rival')].active").value(hasItem(false)))
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")]").isEmpty());
+    }
+
+    @Test
+    void polygonsEndpointInvalidatesCachedResponseWhenLandMaskRowsChange() throws Exception {
+        Runner runner = createRunner("territory-cache-repeat@test.local");
+        Activity activity = createActivity(runner);
+        seedCompactOutAndBackRoute(activity, 37.822, -122.250);
+        territoryService.computePolygonsForActivity(activity.getId());
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygonCount").value(1))
+                .andExpect(jsonPath("$.polygons[0].activityId").value(activity.getId()))
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"));
+
+        List<TerritoryPolygon> rows = territoryPolygonRepository.findAll().stream()
+                .filter(p -> runner.getId().equals(p.getUserId()))
+                .toList();
+        org.assertj.core.api.Assertions.assertThat(rows).hasSize(1);
+
+        territoryPolygonRepository.deleteAll(rows);
+        territoryPolygonRepository.flush();
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygonCount").value(0))
+                .andExpect(jsonPath("$.polygons").isEmpty())
+                .andExpect(jsonPath("$.backfillInProgress").value(true))
+                .andExpect(jsonPath("$.pendingActivityCount").value(1));
+
+        List<TerritoryPolygon> rowsAfterSecondLoad = territoryPolygonRepository.findAll().stream()
+                .filter(p -> runner.getId().equals(p.getUserId()))
+                .toList();
+        org.assertj.core.api.Assertions.assertThat(rowsAfterSecondLoad).isEmpty();
+    }
+
+    @Test
+    void polygonsEndpointDoesNotSynchronouslyBackfillColdHistoricalRuns() throws Exception {
+        Runner runner = createRunner("territory-cold-load@test.local");
+        int totalRuns = 9;
+
+        for (int i = 0; i < totalRuns; i++) {
+            Activity activity = createActivity(runner);
+            activity.setStartTime(LocalDateTime.now().minusDays(i));
+            activityRepository.save(activity);
+            seedCompactOutAndBackRoute(activity, 37.900 + i * 0.00003, -122.250);
+        }
+
+        mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons").isEmpty())
+                .andExpect(jsonPath("$.polygonCount").value(0))
+                .andExpect(jsonPath("$.backfillInProgress").value(true))
+                .andExpect(jsonPath("$.pendingActivityCount").value(totalRuns));
     }
 
     // -----------------------------------------------------------------------
@@ -141,10 +634,10 @@ class TerritoryControllerTests {
     }
 
     // -----------------------------------------------------------------------
-    // computePolygonsForActivity produces nothing for an out-and-back
+    // computePolygonsForActivity produces a route-footprint territory for an out-and-back
     // -----------------------------------------------------------------------
     @Test
-    void computePolygonsForActivityCreatesNothingForOutAndBack() {
+    void computePolygonsForActivityCreatesRouteFootprintForOutAndBack() {
         Runner runner = createRunner("territory-oab@test.local");
         Activity activity = createActivity(runner);
 
@@ -156,7 +649,32 @@ class TerritoryControllerTests {
                 .filter(p -> p.getActivityId().equals(activity.getId()))
                 .toList();
 
-        org.assertj.core.api.Assertions.assertThat(polygons).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(polygons).hasSize(1);
+        org.assertj.core.api.Assertions.assertThat(polygons.get(0).getAreaSquareMeters())
+                .isGreaterThan(TerritoryPolygonComputer.MIN_AREA_SQ_METERS);
+        org.assertj.core.api.Assertions.assertThat(TerritoryPolygonComputer.decodeMaskCells(polygons.get(0).getCoordinates()).cells())
+                .hasSizeGreaterThan(8);
+        org.assertj.core.api.Assertions.assertThat(TerritoryPolygonComputer.decodeCoordinates(polygons.get(0).getCoordinates()))
+                .isEmpty();
+    }
+
+    @Test
+    void computePolygonsForActivityReplacesExistingLandMaskForSameActivity() {
+        Runner runner = createRunner("territory-idempotent@test.local");
+        Activity activity = createActivity(runner);
+
+        seedOutAndBackRoute(activity, 37.822, -122.25);
+
+        territoryService.computePolygonsForActivity(activity.getId());
+        territoryService.computePolygonsForActivity(activity.getId());
+
+        List<TerritoryPolygon> polygons = territoryPolygonRepository.findAll().stream()
+                .filter(p -> p.getActivityId().equals(activity.getId()))
+                .toList();
+
+        org.assertj.core.api.Assertions.assertThat(polygons).hasSize(1);
+        org.assertj.core.api.Assertions.assertThat(TerritoryPolygonComputer.decodeMaskCells(polygons.get(0).getCoordinates()).cells())
+                .isNotEmpty();
     }
 
     // -----------------------------------------------------------------------
@@ -233,6 +751,44 @@ class TerritoryControllerTests {
             pt.setLatitude(baseLat + i * 0.0001);
             pt.setLongitude(baseLng);
             pt.setElapsedSeconds(idx * 5);
+            points.add(pt);
+        }
+        activityPointRepository.saveAll(points);
+    }
+
+    private void seedCompactOutAndBackRoute(Activity activity, double baseLat, double baseLng) {
+        List<ActivityPoint> points = new ArrayList<>();
+        int idx = 0;
+        for (int i = 0; i <= 16; i++) {
+            ActivityPoint pt = new ActivityPoint();
+            pt.setActivity(activity);
+            pt.setSequenceIndex(idx++);
+            pt.setLatitude(baseLat + i * 0.00008);
+            pt.setLongitude(baseLng);
+            pt.setElapsedSeconds(idx * 5);
+            points.add(pt);
+        }
+        for (int i = 15; i >= 0; i--) {
+            ActivityPoint pt = new ActivityPoint();
+            pt.setActivity(activity);
+            pt.setSequenceIndex(idx++);
+            pt.setLatitude(baseLat + i * 0.00008);
+            pt.setLongitude(baseLng);
+            pt.setElapsedSeconds(idx * 5);
+            points.add(pt);
+        }
+        activityPointRepository.saveAll(points);
+    }
+
+    private void seedTerritorySamples(Activity activity, double baseLat, double baseLng, int count) {
+        List<ActivityPoint> points = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            ActivityPoint pt = new ActivityPoint();
+            pt.setActivity(activity);
+            pt.setSequenceIndex(i);
+            pt.setLatitude(baseLat + i * 0.00001);
+            pt.setLongitude(baseLng + i * 0.00001);
+            pt.setElapsedSeconds(i * 5);
             points.add(pt);
         }
         activityPointRepository.saveAll(points);

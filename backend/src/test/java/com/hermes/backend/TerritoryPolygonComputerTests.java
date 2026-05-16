@@ -78,6 +78,100 @@ class TerritoryPolygonComputerTests {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    void routeTerritoryReturnsFootprintForOutAndBackRun() {
+        List<double[]> outAndBack = new ArrayList<>();
+        double baseLat = 37.822;
+        double baseLng = -122.25;
+        for (int i = 0; i <= 100; i++) {
+            outAndBack.add(new double[]{baseLat + i * 0.0001, baseLng});
+        }
+        for (int i = 99; i >= 0; i--) {
+            outAndBack.add(new double[]{baseLat + i * 0.0001, baseLng});
+        }
+
+        List<TerritoryPolygonComputer.DetectedPolygon> result = computer.detectTerritories(outAndBack);
+
+        assertThat(result).hasSize(1);
+        TerritoryPolygonComputer.DetectedPolygon footprint = result.get(0);
+        assertThat(footprint.points()).hasSizeGreaterThan(8);
+        assertThat(footprint.points().get(0)).containsExactly(footprint.points().get(footprint.points().size() - 1));
+        assertThat(footprint.areaSquareMeters()).isGreaterThan(TerritoryPolygonComputer.MIN_AREA_SQ_METERS);
+    }
+
+    @Test
+    void routeTerritoryKeepsTrueLoopShapeWhenClosedLoopExists() {
+        List<double[]> route = circularRoute(37.822, -122.25, 200.0, 60);
+
+        List<TerritoryPolygonComputer.DetectedPolygon> loops = computer.detectLoops(route);
+        List<TerritoryPolygonComputer.DetectedPolygon> territories = computer.detectTerritories(route);
+
+        assertThat(territories).hasSize(1);
+        assertThat(territories.get(0).areaSquareMeters()).isEqualTo(loops.get(0).areaSquareMeters());
+        assertThat(territories.get(0).points()).hasSameSizeAs(loops.get(0).points());
+    }
+
+    @Test
+    void landMaskClosedRouteFloodFillsConcreteInteriorCells() {
+        double baseLat = 37.822;
+        double baseLng = -122.25;
+        double sideMeters = 240.0;
+        double latStep = sideMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+        List<double[]> route = new ArrayList<>();
+        addSegment(route, baseLat, baseLng, baseLat, baseLng + lngStep, 18);
+        addSegment(route, baseLat, baseLng + lngStep, baseLat + latStep, baseLng + lngStep, 18);
+        addSegment(route, baseLat + latStep, baseLng + lngStep, baseLat + latStep, baseLng, 18);
+        addSegment(route, baseLat + latStep, baseLng, baseLat, baseLng, 18);
+
+        List<TerritoryPolygonComputer.DetectedTerritoryMask> masks = computer.detectTerritoryMasks(route);
+
+        assertThat(masks).hasSize(1);
+        TerritoryPolygonComputer.DetectedTerritoryMask mask = masks.get(0);
+        assertThat(mask.cells()).hasSizeGreaterThan(80);
+        assertThat(mask.areaSquareMeters()).isGreaterThan(40_000.0);
+        assertThat(maskContains(mask, baseLat + latStep / 2.0, baseLng + lngStep / 2.0)).isTrue();
+        assertThat(maskContains(mask, baseLat + latStep * 1.5, baseLng + lngStep * 1.5)).isFalse();
+    }
+
+    @Test
+    void landMaskNearClosedRouteSealsEndpointGapBeforeFloodFill() {
+        double baseLat = 37.822;
+        double baseLng = -122.25;
+        double sideMeters = 260.0;
+        double gapMeters = 79.0;
+        double latStep = sideMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double gapLat = gapMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+        List<double[]> route = new ArrayList<>();
+        addSegment(route, baseLat, baseLng, baseLat, baseLng + lngStep, 18);
+        addSegment(route, baseLat, baseLng + lngStep, baseLat + latStep, baseLng + lngStep, 18);
+        addSegment(route, baseLat + latStep, baseLng + lngStep, baseLat + latStep, baseLng, 18);
+        addSegment(route, baseLat + latStep, baseLng, baseLat + gapLat, baseLng, 14);
+
+        List<TerritoryPolygonComputer.DetectedTerritoryMask> masks = computer.detectTerritoryMasks(route);
+
+        assertThat(masks).hasSize(1);
+        TerritoryPolygonComputer.DetectedTerritoryMask mask = masks.get(0);
+        assertThat(maskContains(mask, baseLat + latStep / 2.0, baseLng + lngStep / 2.0)).isTrue();
+    }
+
+    @Test
+    void landMaskOpenRouteDoesNotFloodFillOutsideTheRoute() {
+        List<double[]> route = new ArrayList<>();
+        double baseLat = 37.822;
+        double baseLng = -122.25;
+        for (int i = 0; i <= 80; i++) {
+            route.add(new double[]{baseLat + i * 0.00008, baseLng});
+        }
+
+        TerritoryPolygonComputer.DetectedTerritoryMask mask = computer.detectTerritoryMasks(route).get(0);
+
+        assertThat(mask.cells()).isNotEmpty();
+        assertThat(maskContains(mask, baseLat + 0.0032, baseLng)).isTrue();
+        assertThat(maskContains(mask, baseLat + 0.0032, baseLng + 0.0015)).isFalse();
+    }
+
     // -----------------------------------------------------------------------
     // Test: two distinct loops return two polygons
     // -----------------------------------------------------------------------
@@ -104,6 +198,38 @@ class TerritoryPolygonComputerTests {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).areaSquareMeters()).isGreaterThan(TerritoryPolygonComputer.MIN_AREA_SQ_METERS);
         assertThat(result.get(1).areaSquareMeters()).isGreaterThan(TerritoryPolygonComputer.MIN_AREA_SQ_METERS);
+    }
+
+    private static void addSegment(List<double[]> points,
+                                   double startLat,
+                                   double startLng,
+                                   double endLat,
+                                   double endLng,
+                                   int steps) {
+        for (int i = 0; i <= steps; i++) {
+            if (!points.isEmpty() && i == 0) {
+                continue;
+            }
+            double pct = i / (double) steps;
+            points.add(new double[]{
+                    startLat + (endLat - startLat) * pct,
+                    startLng + (endLng - startLng) * pct
+            });
+        }
+    }
+
+    private static boolean maskContains(TerritoryPolygonComputer.DetectedTerritoryMask mask, double lat, double lng) {
+        return mask.cells().stream().anyMatch(cell ->
+                TerritoryPolygonComputer.distanceMeters(cell.latitude(), cell.longitude(), lat, lng) <= mask.cellMeters() * 0.8
+        );
+    }
+
+    @Test
+    void staleMaskEncodingDoesNotDecodeAsLegacyPolygonCoordinates() {
+        String staleMask = "mask:v1:16|37.822,-122.25;37.823,-122.25";
+
+        assertThat(TerritoryPolygonComputer.decodeMaskCells(staleMask).cells()).isEmpty();
+        assertThat(TerritoryPolygonComputer.decodeCoordinates(staleMask)).isEmpty();
     }
 
     // -----------------------------------------------------------------------

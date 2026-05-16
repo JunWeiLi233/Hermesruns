@@ -1,7 +1,11 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,6 +13,8 @@ import java.util.Map;
 
 @Service
 public class PersonalRecordService {
+    private static final Duration PERSONAL_RECORD_CACHE_TTL = Duration.ofMinutes(10);
+
     private static final List<DistanceDefinition> DISTANCE_DEFINITIONS = List.of(
             new DistanceDefinition("1km", 1.0),
             new DistanceDefinition("3km", 3.0),
@@ -20,16 +26,34 @@ public class PersonalRecordService {
 
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
+    private final TtlCacheStore cacheStore;
+
+    @Autowired
+    public PersonalRecordService(
+            ActivityRepository activityRepository,
+            ActivityPointRepository activityPointRepository,
+            TtlCacheStore cacheStore
+    ) {
+        this.activityRepository = activityRepository;
+        this.activityPointRepository = activityPointRepository;
+        this.cacheStore = cacheStore;
+    }
 
     public PersonalRecordService(
             ActivityRepository activityRepository,
             ActivityPointRepository activityPointRepository
     ) {
-        this.activityRepository = activityRepository;
-        this.activityPointRepository = activityPointRepository;
+        this(activityRepository, activityPointRepository,
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     public PersonalRecordsResponse buildForRunner(Runner runner) {
+        String cacheKey = String.valueOf(runner.getId());
+        PersonalRecordsResponse cached = cacheStore.get("personal-records", cacheKey, PersonalRecordsResponse.class).orElse(null);
+        if (cached != null) {
+            return cached;
+        }
+
         List<Activity> runs = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
         Map<String, DistanceRecord> records = new LinkedHashMap<>();
         SummaryRecord longestRun = null;
@@ -99,13 +123,15 @@ public class PersonalRecordService {
             }
         }
 
-        return new PersonalRecordsResponse(
+        PersonalRecordsResponse response = new PersonalRecordsResponse(
                 DISTANCE_DEFINITIONS,
                 records,
                 longestRun,
                 fastestPace,
                 mostElevation
         );
+        cacheStore.put("personal-records", cacheKey, response, PERSONAL_RECORD_CACHE_TTL);
+        return response;
     }
 
     private DistanceRecord computeDistanceRecord(

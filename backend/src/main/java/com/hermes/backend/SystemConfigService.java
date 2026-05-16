@@ -40,6 +40,14 @@ public class SystemConfigService {
     private String aiModel;
     @Value("${app.ai.provider:gemini}")
     private String aiProvider;
+    @Value("${app.ai.course-map.provider:qwen-local}")
+    private String courseMapAiProvider;
+    @Value("${app.ai.agent.provider:}")
+    private String aiAgentProvider;
+    @Value("${app.ai.agent.letta.base-url:}")
+    private String lettaBaseUrl;
+    @Value("${app.ai.agent.letta.agent-id:}")
+    private String lettaAgentId;
 
     // Billing / Stripe
     @Value("${app.billing.stripe.secret-key:}")
@@ -100,6 +108,24 @@ public class SystemConfigService {
         return isPresent(aiApiKey);
     }
 
+    public boolean isCourseMapAiConfigured() {
+        String provider = courseMapAiProvider == null
+                ? ""
+                : courseMapAiProvider.trim().toLowerCase(java.util.Locale.ROOT);
+        if (provider.isBlank() || "qwen-local".equals(provider) || "local-qwen".equals(provider) || "qwen".equals(provider)) {
+            return true;
+        }
+        return isAiConfigured();
+    }
+
+    public boolean isAiAgentConfigured() {
+        String provider = aiAgentProvider == null ? "" : aiAgentProvider.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!"letta".equals(provider)) {
+            return false;
+        }
+        return isPresent(lettaBaseUrl) && isPresent(lettaAgentId);
+    }
+
     public boolean isCheckoutFullyConfigured() {
         return isPresent(stripeSecretKey) && isPresent(stripePriceProMonthly);
     }
@@ -118,6 +144,10 @@ public class SystemConfigService {
         ai.put("configured", isAiConfigured());
         ai.put("provider", aiProvider);
         ai.put("model", aiModel);
+        ai.put("courseMapConfigured", isCourseMapAiConfigured());
+        ai.put("courseMapProvider", courseMapAiProvider);
+        ai.put("agentConfigured", isAiAgentConfigured());
+        ai.put("agentProvider", aiAgentProvider == null ? "" : aiAgentProvider);
         root.put("ai", ai);
 
         Map<String, Object> billing = new LinkedHashMap<>();

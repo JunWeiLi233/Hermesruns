@@ -290,7 +290,7 @@ class ActivityControllerTests {
 
         when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
 
-        ResponseEntity<?> response = controller.getActivityAnalytics(1L, null);
+        ResponseEntity<?> response = controller.getActivityAnalytics(1L, null, null);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         verifyNoInteractions(activityPointRepository);
@@ -316,7 +316,7 @@ class ActivityControllerTests {
         when(authService.findByAuthorizationHeader("Bearer token-a")).thenReturn(Optional.of(runnerA));
         when(activityRepository.findByIdAndRunner(99L, runnerA)).thenReturn(Optional.empty());
 
-        ResponseEntity<?> response = controller.getActivityAnalytics(99L, "Bearer token-a");
+        ResponseEntity<?> response = controller.getActivityAnalytics(99L, "Bearer token-a", null);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         verify(activityPointRepository, never()).findAnalyticsSamplesByActivityIdOrdered(99L);

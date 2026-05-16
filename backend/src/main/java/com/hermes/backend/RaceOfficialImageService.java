@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -9,12 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,27 +48,33 @@ public class RaceOfficialImageService {
     );
 
     private final RestTemplate restTemplate;
-    private final Map<String, CachedImage> cache = new ConcurrentHashMap<>();
+    private final TtlCacheStore cacheStore;
+
+    @Autowired
+    public RaceOfficialImageService(RestTemplate restTemplate, TtlCacheStore cacheStore) {
+        this.restTemplate = restTemplate;
+        this.cacheStore = cacheStore;
+    }
 
     public RaceOfficialImageService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+        this(restTemplate, TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     public String resolveOfficialImage(String websiteUrl) {
         String safeWebsite = SafeUrlValidator.validateHttpUrlOrNull(websiteUrl, MAX_URL_LENGTH, "officialWebsite");
         if (safeWebsite == null) return null;
 
-        CachedImage cached = cache.get(safeWebsite);
-        if (cached != null && !cached.isExpired()) {
+        CachedImage cached = cacheStore.get("race-official-image", safeWebsite, CachedImage.class).orElse(null);
+        if (cached != null) {
             String cachedImage = sanitizeResolvedImage(cached.imageUrl());
             if (cachedImage != null || cached.imageUrl() == null) {
                 return cachedImage;
             }
-            cache.remove(safeWebsite);
+            cacheStore.evict("race-official-image", safeWebsite);
         }
 
         String resolved = fetchPrimaryImage(safeWebsite);
-        cache.put(safeWebsite, new CachedImage(resolved, Instant.now().plus(CACHE_TTL)));
+        cacheStore.put("race-official-image", safeWebsite, new CachedImage(resolved), CACHE_TTL);
         return resolved;
     }
 
@@ -167,9 +173,6 @@ public class RaceOfficialImageService {
         }
     }
 
-    private record CachedImage(String imageUrl, Instant expiresAt) {
-        private boolean isExpired() {
-            return Instant.now().isAfter(expiresAt);
-        }
+    private record CachedImage(String imageUrl) {
     }
 }
