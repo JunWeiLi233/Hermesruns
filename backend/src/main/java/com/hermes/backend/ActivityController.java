@@ -1,13 +1,20 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -21,6 +28,8 @@ public class ActivityController {
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
     private static final int ROUTE_PREVIEW_POINT_LIMIT = ActivityAnalyticsHelper.ROUTE_PREVIEW_POINT_LIMIT;
     private static final int MAX_ROUTE_PREVIEW_PATH_LENGTH = 255;
+    private static final int MAX_ANALYSIS_SUMMARY_LIMIT = 500;
+    private static final Duration ACTIVITY_ANALYTICS_CACHE_TTL = Duration.ofMinutes(10);
 
     private final AuthService authService;
     private final ActivityRepository activityRepository;
@@ -31,14 +40,17 @@ public class ActivityController {
     private final AcclimatizationService acclimatizationService;
     private final ReadinessService readinessService;
     private final RestTemplate restTemplate;
+    private final TtlCacheStore cacheStore;
 
+    @Autowired
     public ActivityController(AuthService authService, ActivityRepository activityRepository,
                               ActivityPointRepository activityPointRepository, RunnerRepository runnerRepository,
                               SecretEncryptionService secretEncryptionService,
                               ElevationCorrectionService elevationCorrectionService,
                               AcclimatizationService acclimatizationService,
                               ReadinessService readinessService,
-                              RestTemplate restTemplate) {
+                              RestTemplate restTemplate,
+                              TtlCacheStore cacheStore) {
         this.authService = authService;
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
@@ -48,6 +60,19 @@ public class ActivityController {
         this.acclimatizationService = acclimatizationService;
         this.readinessService = readinessService;
         this.restTemplate = restTemplate;
+        this.cacheStore = cacheStore;
+    }
+
+    public ActivityController(AuthService authService, ActivityRepository activityRepository,
+                              ActivityPointRepository activityPointRepository, RunnerRepository runnerRepository,
+                              SecretEncryptionService secretEncryptionService,
+                              ElevationCorrectionService elevationCorrectionService,
+                              AcclimatizationService acclimatizationService,
+                              ReadinessService readinessService,
+                              RestTemplate restTemplate) {
+        this(authService, activityRepository, activityPointRepository, runnerRepository, secretEncryptionService,
+                elevationCorrectionService, acclimatizationService, readinessService, restTemplate,
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     @GetMapping
@@ -64,31 +89,66 @@ public class ActivityController {
     }
 
     @GetMapping("/analysis")
-    public ResponseEntity<?> getAnalysisRuns(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<?> getAnalysisRuns(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "limit", required = false) Integer limit
+    ) {
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
 
         if (activeUser.isEmpty()) {
             return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
 
+        int boundedLimit = normalizeAnalysisSummaryLimit(limit);
         List<ActivityRepository.AnalysisActivitySummaryProjection> runs =
-                activityRepository.findAnalysisSummariesByRunnerAndActivityType(activeUser.get(), ActivityType.RUN);
+                boundedLimit > 0
+                        ? activityRepository.findAnalysisSummariesByRunnerAndActivityType(
+                                activeUser.get(),
+                                ActivityType.RUN,
+                                PageRequest.of(0, boundedLimit)
+                        )
+                        : activityRepository.findAnalysisSummariesByRunnerAndActivityType(activeUser.get(), ActivityType.RUN);
         List<AnalysisActivitySummary> response = runs.stream()
-                .map(run -> new AnalysisActivitySummary(
-                        run.getId(),
-                        run.getName(),
-                        run.getDistanceKm(),
-                        run.getDistanceMeters(),
-                        run.getMovingTimeSeconds(),
-                        run.getStartDate(),
-                        run.getStartTime(),
-                        run.getAverageHeartRate(),
-                        run.getMaxHeartRate(),
-                        run.getAverageCadence(),
-                        run.getMaxSpeedMps()
-                ))
+                .map(run -> {
+                    ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.fromRawFields(
+                            run.getDistanceKm(),
+                            run.getDistanceMeters(),
+                            run.getMovingTimeSeconds(),
+                            null,
+                            run.getPacePenaltySecPerKm(),
+                            run.getWeatherAdjusted()
+                    );
+                    return new AnalysisActivitySummary(
+                            run.getId(),
+                            run.getName(),
+                            run.getDistanceKm(),
+                            run.getDistanceMeters(),
+                            run.getMovingTimeSeconds(),
+                            run.getStartDate(),
+                            run.getStartTime(),
+                            run.getAverageHeartRate(),
+                            run.getMaxHeartRate(),
+                            run.getAverageCadence(),
+                            run.getMaxSpeedMps(),
+                            correction.pacePenaltySecPerKm(),
+                            correction.weatherAdjusted(),
+                            correction.weatherAdjustedMovingTimeSeconds(),
+                            correction.weatherAdjustedPaceSecPerKm(),
+                            correction.weatherCorrectionFactor()
+                    );
+                })
                 .toList();
         return ResponseEntity.ok(response);
+    }
+
+    private int normalizeAnalysisSummaryLimit(Integer limit) {
+        if (limit == null) {
+            return 0;
+        }
+        if (limit <= 0) {
+            return 0;
+        }
+        return Math.min(limit, MAX_ANALYSIS_SUMMARY_LIMIT);
     }
 
     @GetMapping("/heatmap")
@@ -168,7 +228,8 @@ public class ActivityController {
     @GetMapping("/{id}/analytics")
     public ResponseEntity<?> getActivityAnalytics(
             @PathVariable Long id,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage) {
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
         if (activeUser.isEmpty()) {
             return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
@@ -179,6 +240,8 @@ public class ActivityController {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         Activity activity = activityOpt.get();
+        String responseLanguage = normalizeResponseLanguage(acceptLanguage);
+        String analyticsCacheKey = activeUser.get().getId() + ":" + activity.getId() + ":" + responseLanguage;
 
         if (!activityPointRepository.existsByActivity(activity) && activity.getStravaId() != null) {
             String stravaToken = resolveRunnerStravaAccessToken(activeUser.get());
@@ -190,9 +253,19 @@ public class ActivityController {
             }
         }
 
+        Optional<Map<String, Object>> cached = cacheStore.get(
+                "activity-analytics",
+                analyticsCacheKey,
+                new TypeReference<>() {}
+        );
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
+
         List<Object[]> rows = activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(activity.getId());
         if (rows.isEmpty()) {
-            return ResponseEntity.ok(new ActivityAnalyticsHelper.PostRunAnalytics(List.of(), List.of(), null, null, null, null, null, null));
+            ActivityAnalyticsHelper.PostRunAnalytics response = new ActivityAnalyticsHelper.PostRunAnalytics(List.of(), List.of(), null, null, null, null, null, null);
+            return ResponseEntity.ok(response);
         }
 
         List<ActivityAnalyticsHelper.SamplePoint> pts = new ArrayList<>(rows.size());
@@ -210,21 +283,44 @@ public class ActivityController {
         }
         ActivityAnalyticsHelper.normalizeSamples(pts, activity);
 
-        ActivityAnalyticsHelper.PostRunDebrief debrief = buildPostRunDebrief(activity, pts);
+        ActivityAnalyticsHelper.PostRunDebrief debrief = buildPostRunDebrief(activity, pts, responseLanguage);
 
-        return ResponseEntity.ok(new ActivityAnalyticsHelper.PostRunAnalytics(
-                ActivityAnalyticsHelper.buildLapBreakdown(pts),
-                ActivityAnalyticsHelper.buildElevationProfile(pts),
-                ActivityAnalyticsHelper.averageCadence(pts, activity),
-                ActivityAnalyticsHelper.averageStrideMeters(pts),
-                ActivityAnalyticsHelper.computeCardiacDrift(pts),
-                ActivityAnalyticsHelper.minElevation(pts),
-                ActivityAnalyticsHelper.maxElevation(pts),
-                debrief
-        ));
+        List<ActivityAnalyticsHelper.LapBreakdown> rawLaps = ActivityAnalyticsHelper.buildLapBreakdown(pts);
+        List<ActivityLap> enrichedLaps = rawLaps.stream().map(lap -> {
+            double startM = (lap.lapIndex() - 1) * 1000.0;
+            double endM = lap.lapIndex() * 1000.0;
+            Double elevGain = ActivityLap.computeElevationGain(pts, startM, endM);
+            return new ActivityLap(
+                    lap.lapIndex(),
+                    lap.distanceKm(),
+                    lap.durationSeconds(),
+                    lap.pace(),
+                    lap.averageHeartRate(),
+                    lap.averageCadence(),
+                    elevGain
+            );
+        }).toList();
+
+        Map<String, Object> analyticsResponse = new LinkedHashMap<>();
+        analyticsResponse.put("laps", enrichedLaps);
+        analyticsResponse.put("elevationProfile", ActivityAnalyticsHelper.buildElevationProfile(pts));
+        analyticsResponse.put("averageCadence", ActivityAnalyticsHelper.averageCadence(pts, activity));
+        analyticsResponse.put("averageStrideLengthMeters", ActivityAnalyticsHelper.averageStrideMeters(pts));
+        analyticsResponse.put("cardiacDrift", ActivityAnalyticsHelper.computeCardiacDrift(pts));
+        analyticsResponse.put("minElevationMeters", ActivityAnalyticsHelper.minElevation(pts));
+        analyticsResponse.put("maxElevationMeters", ActivityAnalyticsHelper.maxElevation(pts));
+        analyticsResponse.put("debrief", debrief);
+
+        cacheStore.put("activity-analytics", analyticsCacheKey, analyticsResponse, ACTIVITY_ANALYTICS_CACHE_TTL);
+        return ResponseEntity.ok(analyticsResponse);
     }
 
-    private ActivityAnalyticsHelper.PostRunDebrief buildPostRunDebrief(Activity activity, List<ActivityAnalyticsHelper.SamplePoint> pts) {
+    private static String normalizeResponseLanguage(String acceptLanguage) {
+        if (acceptLanguage == null || acceptLanguage.isBlank()) return "en";
+        return acceptLanguage.toLowerCase(Locale.ROOT).contains("zh") ? "zh-CN" : "en";
+    }
+
+    private ActivityAnalyticsHelper.PostRunDebrief buildPostRunDebrief(Activity activity, List<ActivityAnalyticsHelper.SamplePoint> pts, String responseLanguage) {
         if (activity.getRunner() == null) return null;
         
         java.time.LocalDate runDate = activity.getStartTime() != null 
@@ -235,37 +331,181 @@ public class ActivityController {
 
         ReadinessService.ReadinessDay readiness = readinessService.getDailyReadiness(activity.getRunner(), runDate);
         ActivityAnalyticsHelper.CardiacDrift drift = ActivityAnalyticsHelper.computeCardiacDrift(pts);
+        boolean zh = "zh-CN".equals(responseLanguage);
 
         StringBuilder interpretation = new StringBuilder();
         String nextDayGuidance;
 
         if (readiness.score() >= 80) {
-            interpretation.append("You started this run with high readiness (").append(readiness.score()).append("%). ");
+            interpretation.append(zh ? "\u4f60\u5728\u8f83\u9ad8\u7684\u8dd1\u524d\u72b6\u6001\u4e0b\u5f00\u59cb\u8fd9\u6b21\u8bad\u7ec3\uff08" : "You started this run with high readiness (")
+                    .append(readiness.score())
+                    .append(zh ? "%\uff09\u3002 " : "%). ");
             if (drift != null && drift.driftPercent() < 5) {
-                interpretation.append("Your cardiovascular system responded excellently with minimal drift.");
-                nextDayGuidance = "Green light for tomorrow's planned session.";
+                interpretation.append(zh ? "\u5fc3\u8840\u7ba1\u7cfb\u7edf\u53cd\u9988\u5f88\u597d\uff0c\u5fc3\u7387\u6f02\u79fb\u5f88\u5c0f\u3002" : "Your cardiovascular system responded excellently with minimal drift.");
+                nextDayGuidance = zh ? "\u660e\u5929\u53ef\u4ee5\u6309\u8ba1\u5212\u63a8\u8fdb\u8bad\u7ec3\u3002" : "Green light for tomorrow's planned session.";
             } else if (drift != null && drift.driftPercent() > 10) {
-                interpretation.append("However, we saw higher than expected cardiac drift, suggesting the effort was more taxing than usual.");
-                nextDayGuidance = "Consider a slightly easier effort tomorrow to absorb today's work.";
+                interpretation.append(zh ? "\u4e0d\u8fc7\u5fc3\u7387\u6f02\u79fb\u9ad8\u4e8e\u9884\u671f\uff0c\u8bf4\u660e\u8fd9\u6b21\u8d1f\u8377\u6bd4\u5e73\u65f6\u66f4\u91cd\u3002" : "However, we saw higher than expected cardiac drift, suggesting the effort was more taxing than usual.");
+                nextDayGuidance = zh ? "\u660e\u5929\u5efa\u8bae\u7a0d\u5fae\u964d\u4f4e\u5f3a\u5ea6\uff0c\u8ba9\u8eab\u4f53\u5438\u6536\u4eca\u5929\u7684\u8bad\u7ec3\u3002" : "Consider a slightly easier effort tomorrow to absorb today's work.";
             } else {
-                interpretation.append("The body handled the workload as expected.");
-                nextDayGuidance = "Continue with your scheduled training block.";
+                interpretation.append(zh ? "\u8eab\u4f53\u5bf9\u8fd9\u6b21\u8bad\u7ec3\u8d1f\u8377\u7684\u627f\u53d7\u7b26\u5408\u9884\u671f\u3002" : "The body handled the workload as expected.");
+                nextDayGuidance = zh ? "\u7ee7\u7eed\u6309\u5f53\u524d\u8bad\u7ec3\u5b89\u6392\u63a8\u8fdb\u3002" : "Continue with your scheduled training block.";
             }
         } else if (readiness.score() < 60) {
-            interpretation.append("You pushed through significant fatigue today (Readiness: ").append(readiness.score()).append("%). ");
+            interpretation.append(zh ? "\u4f60\u4eca\u5929\u662f\u5728\u660e\u663e\u75b2\u52b3\u4e0b\u5b8c\u6210\u8bad\u7ec3\uff08\u72b6\u6001\uff1a" : "You pushed through significant fatigue today (Readiness: ")
+                    .append(readiness.score())
+                    .append(zh ? "%\uff09\u3002 " : "%). ");
             if (drift != null && drift.driftPercent() > 8) {
-                interpretation.append("The high cardiac drift confirms your body is under stress.");
-                nextDayGuidance = "Mandatory easy day or rest recommended tomorrow.";
+                interpretation.append(zh ? "\u8f83\u9ad8\u7684\u5fc3\u7387\u6f02\u79fb\u786e\u8ba4\u8eab\u4f53\u6b63\u627f\u53d7\u538b\u529b\u3002" : "The high cardiac drift confirms your body is under stress.");
+                nextDayGuidance = zh ? "\u660e\u5929\u5efa\u8bae\u5f3a\u5236\u8f7b\u677e\u8dd1\u6216\u4f11\u606f\u3002" : "Mandatory easy day or rest recommended tomorrow.";
             } else {
-                interpretation.append("Impressively, your efficiency held up despite the low readiness signal.");
-                nextDayGuidance = "Prioritize sleep tonight to stay on track.";
+                interpretation.append(zh ? "\u5c3d\u7ba1\u8dd1\u524d\u72b6\u6001\u504f\u4f4e\uff0c\u4f60\u7684\u6548\u7387\u4ecd\u4fdd\u6301\u5f97\u4e0d\u9519\u3002" : "Impressively, your efficiency held up despite the low readiness signal.");
+                nextDayGuidance = zh ? "\u4eca\u665a\u4f18\u5148\u4fdd\u8bc1\u7761\u7720\uff0c\u5e2e\u52a9\u8bad\u7ec3\u8282\u594f\u56de\u5230\u6b63\u8f68\u3002" : "Prioritize sleep tonight to stay on track.";
             }
         } else {
-            interpretation.append("A solid effort on a baseline readiness day (").append(readiness.score()).append("%).");
-            nextDayGuidance = "Listen to your body tomorrow morning before pushing hard.";
+            interpretation.append(zh ? "\u8fd9\u6b21\u662f\u5728\u57fa\u7840\u72b6\u6001\u4e0b\u5b8c\u6210\u7684\u4e00\u6b21\u624e\u5b9e\u8bad\u7ec3\uff08" : "A solid effort on a baseline readiness day (")
+                    .append(readiness.score())
+                    .append(zh ? "%\uff09\u3002" : "%).");
+            nextDayGuidance = zh ? "\u660e\u65e9\u5148\u542c\u8eab\u4f53\u53cd\u9988\uff0c\u518d\u51b3\u5b9a\u662f\u5426\u63a8\u8fdb\u9ad8\u5f3a\u5ea6\u8bad\u7ec3\u3002" : "Listen to your body tomorrow morning before pushing hard.";
         }
 
         return new ActivityAnalyticsHelper.PostRunDebrief(interpretation.toString(), readiness.score(), nextDayGuidance);
+    }
+
+    /**
+     * GET /api/activities/{id}/hr-samples
+     *
+     * Returns per-second heart-rate samples stored for this activity.
+     * Response: [ { "t": <elapsedSeconds>, "bpm": <heartRate> }, ... ]
+     *
+     * If the activity has no per-point HR data (summary-only import), returns an empty list.
+     * The endpoint does NOT downsample; up to 10 000 points are returned directly from DB.
+     * Frontend should render the full series as a dense line chart.
+     */
+    @GetMapping("/{id}/hr-samples")
+    public ResponseEntity<?> getHeartRateSamples(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
+        if (activeUser.isEmpty()) {
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
+        }
+
+        Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
+        if (activityOpt.isEmpty()) {
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
+        }
+
+        List<Object[]> rows = activityPointRepository.findHrSamplesByActivityIdOrdered(id);
+        List<Map<String, Integer>> samples = new ArrayList<>(rows.size());
+        for (Object[] row : rows) {
+            if (row == null || row.length < 2 || row[0] == null || row[1] == null) continue;
+            Map<String, Integer> sample = new LinkedHashMap<>();
+            sample.put("t", ((Number) row[0]).intValue());
+            sample.put("bpm", ((Number) row[1]).intValue());
+            samples.add(sample);
+        }
+        return ResponseEntity.ok(samples);
+    }
+
+    /**
+     * GET /api/activities/{id}/improvement
+     *
+     * Returns a pace-improvement metric comparing this run against the runner's last 5 runs
+     * in the same distance bucket (±15%). Requires at least 3 baseline runs before this run.
+     *
+     * Response when available:
+     * { baseRunCount, available: true, paceDeltaSecondsPerKm, paceImproved, distanceBucket, basis }
+     *
+     * Response when insufficient data:
+     * { baseRunCount, available: false, paceDeltaSecondsPerKm: null, paceImproved: null,
+     *   distanceBucket, basis }
+     */
+    @GetMapping("/{id}/improvement")
+    public ResponseEntity<?> getImprovementMetric(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
+        if (activeUser.isEmpty()) {
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
+        }
+
+        Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
+        if (activityOpt.isEmpty()) {
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
+        }
+
+        Activity activity = activityOpt.get();
+        double distKm = activity.getDistanceKm() > 0
+                ? activity.getDistanceKm()
+                : (activity.getDistanceMeters() != null ? activity.getDistanceMeters() / 1000.0 : 0.0);
+        long movingSec = activity.getMovingTimeSeconds() > 0
+                ? activity.getMovingTimeSeconds()
+                : (activity.getDurationSeconds() != null ? activity.getDurationSeconds() : 0L);
+
+        if (distKm <= 0 || movingSec <= 0) {
+            return ResponseEntity.ok(new ActivityImprovementMetric(0, false, null, null,
+                    "unknown", "Insufficient data for this activity."));
+        }
+
+        double thisPaceSecPerKm = movingSec / distKm;
+        double minKm = distKm * 0.85;
+        double maxKm = distKm * 1.15;
+        String bucket = String.format(Locale.ROOT, "%.0f–%.0f km",
+                Math.floor(minKm), Math.ceil(maxKm));
+
+        java.time.LocalDateTime beforeTime = activity.getStartTime() != null
+                ? activity.getStartTime()
+                : activity.getCreatedAt();
+        if (beforeTime == null) beforeTime = java.time.LocalDateTime.now();
+
+        org.springframework.data.domain.Page<Activity> baselinePage =
+                activityRepository.findRecentRunsInDistanceBucket(
+                        activeUser.get(),
+                        ActivityType.RUN,
+                        beforeTime,
+                        minKm,
+                        maxKm,
+                        org.springframework.data.domain.PageRequest.of(0, 5)
+                );
+
+        List<Activity> baseline = baselinePage.getContent();
+        int baseRunCount = baseline.size();
+
+        if (baseRunCount < 3) {
+            return ResponseEntity.ok(new ActivityImprovementMetric(baseRunCount, false, null, null,
+                    bucket, "last 5 runs of similar distance"));
+        }
+
+        double avgBaselinePace = baseline.stream()
+                .mapToDouble(a -> {
+                    double dk = a.getDistanceKm() > 0 ? a.getDistanceKm()
+                            : (a.getDistanceMeters() != null ? a.getDistanceMeters() / 1000.0 : 0.0);
+                    long ms = a.getMovingTimeSeconds() > 0 ? a.getMovingTimeSeconds()
+                            : (a.getDurationSeconds() != null ? a.getDurationSeconds() : 0L);
+                    return (dk > 0 && ms > 0) ? ms / dk : 0.0;
+                })
+                .filter(p -> p > 0)
+                .average()
+                .orElse(0.0);
+
+        if (avgBaselinePace <= 0) {
+            return ResponseEntity.ok(new ActivityImprovementMetric(baseRunCount, false, null, null,
+                    bucket, "last 5 runs of similar distance"));
+        }
+
+        double delta = ActivityAnalyticsHelper.round2(thisPaceSecPerKm - avgBaselinePace);
+        boolean improved = delta < 0;
+
+        return ResponseEntity.ok(new ActivityImprovementMetric(
+                baseRunCount,
+                true,
+                delta,
+                improved,
+                bucket,
+                "last " + baseRunCount + " runs of similar distance"
+        ));
     }
 
     @GetMapping("/{id}/elevation/status")
@@ -353,6 +593,7 @@ public class ActivityController {
 
     private Map<String, Object> toRunFeedItem(Activity activity) {
         Map<String, Object> body = new java.util.LinkedHashMap<>();
+        ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.from(activity);
         body.put("id", activity.getId());
         body.put("name", activity.getName());
         body.put("stravaId", activity.getStravaId());
@@ -374,6 +615,11 @@ public class ActivityController {
         body.put("averageWatts", activity.getAverageWatts());
         body.put("maxSpeedMps", activity.getMaxSpeedMps());
         body.put("sufferScore", activity.getSufferScore());
+        body.put("pacePenaltySecPerKm", correction.pacePenaltySecPerKm());
+        body.put("weatherAdjusted", correction.weatherAdjusted());
+        body.put("weatherAdjustedMovingTimeSeconds", correction.weatherAdjustedMovingTimeSeconds());
+        body.put("weatherAdjustedPaceSecPerKm", correction.weatherAdjustedPaceSecPerKm());
+        body.put("weatherCorrectionFactor", correction.weatherCorrectionFactor());
         body.put("shoeId", activity.getShoeId());
         body.put("shoeName", activity.getShoeName());
         body.put("routePreview", hasRoutePreview(activity)
@@ -657,6 +903,11 @@ public class ActivityController {
             Double averageHeartRate,
             Double maxHeartRate,
             Double averageCadence,
-            Double maxSpeedMps
+            Double maxSpeedMps,
+            Integer pacePenaltySecPerKm,
+            Boolean weatherAdjusted,
+            Integer weatherAdjustedMovingTimeSeconds,
+            Double weatherAdjustedPaceSecPerKm,
+            Double weatherCorrectionFactor
     ) {}
 }

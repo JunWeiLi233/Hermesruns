@@ -264,13 +264,11 @@ class BackendStressTests {
 
         assertThat(totalAllowed.get()).isEqualTo(keyCount * maxPerWindow);
 
-        Field windowsField = ApiRateLimiter.class.getDeclaredField("windows");
-        windowsField.setAccessible(true);
-        ConcurrentHashMap<?, ?> windows = (ConcurrentHashMap<?, ?>) windowsField.get(limiter);
-        assertThat(windows.size()).isEqualTo(keyCount);
+        int windows = limiter.windowCount();
+        assertThat(windows).isEqualTo(keyCount);
 
-        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows.size()
-                + " window entries after " + keyCount + " distinct keys. No eviction policy exists.");
+        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows
+                + " window entries after " + keyCount + " distinct keys.");
     }
 
     @Test
@@ -283,13 +281,10 @@ class BackendStressTests {
             limiter.allow("ip|" + i + ".0.0.0|GET|/api/test", 300, 60);
         }
 
-        Field windowsField = ApiRateLimiter.class.getDeclaredField("windows");
-        windowsField.setAccessible(true);
-        ConcurrentHashMap<?, ?> windows = (ConcurrentHashMap<?, ?>) windowsField.get(limiter);
+        int windows = limiter.windowCount();
+        assertThat(windows).isEqualTo(adversarialKeyCount);
 
-        assertThat(windows.size()).isEqualTo(adversarialKeyCount);
-
-        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows.size()
+        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows
                 + " window entries after " + adversarialKeyCount + " adversarial keys.");
 
         limiter.allow("ip|new|GET|/api/test", 300, 60);

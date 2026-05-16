@@ -8,6 +8,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -78,7 +79,7 @@ class RoutePlannerServiceTests {
     // --- Fallback route ---
 
     @Test
-    void fallbackRouteShouldGenerateWaypointsWhenOsmIsEmpty() {
+    void fallbackRouteShouldReturnNoDrawableWaypointsWhenOsmIsEmpty() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("");
 
@@ -86,13 +87,14 @@ class RoutePlannerServiceTests {
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 5.0, "rolling");
 
         assertThat(result).isNotNull();
-        assertThat(result.waypoints).isNotEmpty();
-        assertThat(result.actualDistanceKm).isPositive();
+        assertThat(result.waypoints).isEmpty();
+        assertThat(result.actualDistanceKm).isZero();
         assertThat(result.estimatedTimeMinutes).isPositive();
+        assertThat(result.streetGraphBacked).isFalse();
     }
 
     @Test
-    void fallbackRouteShouldHandleRestClientFailure() {
+    void fallbackRouteShouldReturnNoDrawableWaypointsOnRestClientFailure() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenThrow(new RestClientException("Connection refused"));
@@ -101,8 +103,9 @@ class RoutePlannerServiceTests {
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 10.0, "flat");
 
         assertThat(result).isNotNull();
-        assertThat(result.waypoints).isNotEmpty();
-        assertThat(result.waypoints.size()).isGreaterThanOrEqualTo(8);
+        assertThat(result.waypoints).isEmpty();
+        assertThat(result.actualDistanceKm).isZero();
+        assertThat(result.streetGraphBacked).isFalse();
     }
 
     @Test
@@ -224,14 +227,17 @@ class RoutePlannerServiceTests {
         RoutePlannerService service = new RoutePlannerService();
         Map<Long, RoutePlannerService.GraphNode> graph = service.buildGraph(elements);
 
-        // 3 from way1 + 2 from way2 = 5 total nodes (synthetic IDs, no dedup)
-        assertThat(graph).hasSize(5);
+        // The shared coordinate at the start of both ways is one graph intersection.
+        assertThat(graph).hasSize(4);
         // Each node should have at least 1 neighbor (except endpoints)
         long neighborCount = graph.values().stream()
                 .mapToLong(n -> n.neighbors.size())
                 .sum();
         // 2 edges in way1 (bidirectional = 4 connections) + 1 edge in way2 (bidirectional = 2) = 6
         assertThat(neighborCount).isEqualTo(6);
+
+        assertThat(graph.values())
+                .anySatisfy(node -> assertThat(node.neighbors).hasSize(2));
     }
 
     @Test
@@ -293,6 +299,19 @@ class RoutePlannerServiceTests {
         // Path should start and end at -1
         assertThat(result.path.get(0)).isEqualTo(-1L);
         assertThat(result.path.get(result.path.size() - 1)).isEqualTo(-1L);
+        assertThat(RoutePlannerService.hasRunnableRouteShape(pathWaypoints(graph, result.path))).isTrue();
+    }
+
+    @Test
+    void aStarSearchShouldKeepSearchingPastStraightLineOnlyRoutes() {
+        RoutePlannerService service = new RoutePlannerService();
+        Map<Long, RoutePlannerService.GraphNode> graph = buildGridGraph(0.001, 0.001, 1, 5);
+
+        RoutePlannerService.AStarResult result = service.aStarSearch(
+                graph, -1L, 650.0, "rolling"
+        );
+
+        assertThat(result).isNull();
     }
 
     @Test
@@ -322,10 +341,11 @@ class RoutePlannerServiceTests {
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
 
-        // Just verify flat preference doesn't throw
+        // Empty OSM data should not fabricate drawable street geometry.
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 3.0, "flat");
         assertThat(result).isNotNull();
-        assertThat(result.waypoints).isNotEmpty();
+        assertThat(result.waypoints).isEmpty();
+        assertThat(result.streetGraphBacked).isFalse();
     }
 
     @Test
@@ -337,6 +357,67 @@ class RoutePlannerServiceTests {
 
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 3.0, "hilly");
         assertThat(result).isNotNull();
+    }
+
+    @Test
+    void routeShapeGuardShouldRejectStraightOutAndBack() {
+        List<double[]> straightOutAndBack = List.of(
+                new double[]{40.7000, -74.0000},
+                new double[]{40.7040, -73.9960},
+                new double[]{40.7080, -73.9920},
+                new double[]{40.7120, -73.9880},
+                new double[]{40.7080, -73.9920},
+                new double[]{40.7040, -73.9960},
+                new double[]{40.7000, -74.0000}
+        );
+
+        assertThat(RoutePlannerService.hasRunnableRouteShape(straightOutAndBack)).isFalse();
+    }
+
+    @Test
+    void routeShapeGuardShouldAcceptBlockLoop() {
+        List<double[]> blockLoop = List.of(
+                new double[]{40.7000, -74.0000},
+                new double[]{40.7000, -73.9985},
+                new double[]{40.7012, -73.9985},
+                new double[]{40.7012, -74.0000},
+                new double[]{40.7000, -74.0000}
+        );
+
+        assertThat(RoutePlannerService.hasRunnableRouteShape(blockLoop)).isTrue();
+    }
+
+    @Test
+    void planRouteShouldNotReturnDrawableRouteForSingleStraightWay() {
+        String osmResponse = """
+                {
+                  "elements": [
+                    {
+                      "type": "way", "id": 11,
+                      "geometry": [
+                        {"lat": 40.7000, "lon": -74.0000},
+                        {"lat": 40.7010, "lon": -73.9990},
+                        {"lat": 40.7020, "lon": -73.9980},
+                        {"lat": 40.7030, "lon": -73.9970},
+                        {"lat": 40.7040, "lon": -73.9960}
+                      ],
+                      "tags": {"highway": "residential"}
+                    }
+                  ]
+                }
+                """;
+
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(osmResponse);
+
+        RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
+        RoutePlannerService.RoutePlanResult result = service.planRoute(
+                40.7000, -74.0000, 0.9, "rolling"
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.streetGraphBacked).isFalse();
+        assertThat(result.waypoints).isEmpty();
     }
 
     @Test
@@ -426,8 +507,8 @@ class RoutePlannerServiceTests {
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 5.0, "rolling");
 
-        // Fallback routes have perfect accuracy (out-and-back matches target exactly)
-        assertThat(result.distanceAccuracy).isGreaterThanOrEqualTo(0.8);
+        assertThat(result.distanceAccuracy).isZero();
+        assertThat(result.streetGraphBacked).isFalse();
     }
 
     // --- Helper: build a grid graph for testing ---
@@ -487,5 +568,13 @@ class RoutePlannerServiceTests {
         }
 
         return graph;
+    }
+
+    private List<double[]> pathWaypoints(Map<Long, RoutePlannerService.GraphNode> graph, List<Long> path) {
+        return path.stream()
+                .map(graph::get)
+                .filter(Objects::nonNull)
+                .map(node -> new double[]{node.lat, node.lng})
+                .toList();
     }
 }

@@ -213,9 +213,6 @@ public class RaceCourseMapImageService {
     public String buildDisplayablePreviewImageUrl(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) return imageUrl;
         if (isImageDataUrl(imageUrl)) return imageUrl;
-        if (isLocalCourseMapReference(imageUrl)) {
-            return LOCAL_COURSE_MAP_IMAGE_ENDPOINT + URLEncoder.encode(imageUrl, StandardCharsets.UTF_8);
-        }
         RaceCourseMapService.ResolvedCandidateAsset resolved = resolveUploadedReference(imageUrl);
         if (resolved == null || resolved.imageBytes() == null || resolved.imageBytes().length == 0) return imageUrl;
         String mediaType = detectMediaTypeFromBytes(resolved.imageBytes(), imageUrl);
@@ -677,25 +674,6 @@ public class RaceCourseMapImageService {
                 && bytes[10] == 'i'
                 && bytes[11] == 'f';
         return (looksLikeWebp || looksLikeAvif) && bytes.length >= 1024;
-    }
-
-    // Preprocess raw image bytes for Qwen course-map analysis:
-    // resize → enhance contrast → sharpen → encode as PNG
-    public byte[] preprocessImageBytesForQwen(byte[] imageBytes, String mediaType) {
-        if (imageBytes == null || imageBytes.length == 0) return imageBytes;
-        BufferedImage decoded = decodeImage(imageBytes);
-        if (decoded == null) return imageBytes;
-        try {
-            BufferedImage resized = QwenImagePreprocessor.resizeIfNeeded(decoded, QwenImagePreprocessor.DEFAULT_QWEN_MAX_DIMENSION);
-            BufferedImage enhanced = QwenImagePreprocessor.enhanceContrast(resized);
-            BufferedImage sharpened = QwenImagePreprocessor.sharpen(enhanced);
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            ImageIO.write(sharpened, "png", output);
-            byte[] encodedBytes = output.toByteArray();
-            return encodedBytes.length > 0 ? encodedBytes : imageBytes;
-        } catch (Exception ignored) {
-            return imageBytes; // fallback to original on any processing error
-        }
     }
 
     // Write JPEG with explicit quality setting — ImageIO.write default is ~0.75,

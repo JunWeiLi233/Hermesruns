@@ -193,7 +193,7 @@ class StravaWebhookControllerTests {
     }
 
     @Test
-    void handleEventReturnsReceivedWhenRunnerIsMissing() {
+    void handleEventRejectsActivityWhenRunnerIsMissing() {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         StravaSyncService stravaSyncService = mock(StravaSyncService.class);
         when(runnerRepository.findByStravaAthleteId(321L)).thenReturn(Optional.empty());
@@ -206,8 +206,8 @@ class StravaWebhookControllerTests {
                 "object_id", 98765L
         )), null);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).isEqualTo("UNKNOWN_OWNER");
         verify(stravaSyncService, never()).syncStravaActivityById(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
         verify(stravaSyncService, never()).deleteStravaActivity(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyLong());
     }

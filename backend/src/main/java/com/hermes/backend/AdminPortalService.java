@@ -26,6 +26,7 @@ public class AdminPortalService {
     private final AuthService authService;
     private final AdminAuditService adminAuditService;
     private final AiUsageService aiUsageService;
+    private final QuotaService quotaService;
     private final ShoeAdminAggregateService shoeAdminAggregateService;
     private final StravaAutoSyncScheduler stravaAutoSyncScheduler;
     private final RaceCourseMapService raceCourseMapService;
@@ -41,6 +42,7 @@ public class AdminPortalService {
             AuthService authService,
             AdminAuditService adminAuditService,
             AiUsageService aiUsageService,
+            QuotaService quotaService,
             ShoeAdminAggregateService shoeAdminAggregateService,
             StravaAutoSyncScheduler stravaAutoSyncScheduler,
             RaceCourseMapService raceCourseMapService
@@ -55,6 +57,7 @@ public class AdminPortalService {
         this.authService = authService;
         this.adminAuditService = adminAuditService;
         this.aiUsageService = aiUsageService;
+        this.quotaService = quotaService;
         this.shoeAdminAggregateService = shoeAdminAggregateService;
         this.stravaAutoSyncScheduler = stravaAutoSyncScheduler;
         this.raceCourseMapService = raceCourseMapService;
@@ -70,6 +73,7 @@ public class AdminPortalService {
     public AuthService getAuthService() { return authService; }
     public AdminAuditService getAdminAuditService() { return adminAuditService; }
     public AiUsageService getAiUsageService() { return aiUsageService; }
+    public QuotaService getQuotaService() { return quotaService; }
     public ShoeAdminAggregateService getShoeAdminAggregateService() { return shoeAdminAggregateService; }
     public StravaAutoSyncScheduler getStravaAutoSyncScheduler() { return stravaAutoSyncScheduler; }
     public RaceCourseMapService getRaceCourseMapService() { return raceCourseMapService; }
@@ -150,6 +154,7 @@ public class AdminPortalService {
     }
 
     public UserAdminDto toUserDto(Runner runner, long noteCount) {
+        Map<String, Object> shoeQuota = shoeScanQuota(runner);
         return new UserAdminDto(
                 runner.getId(),
                 runner.getEmail(),
@@ -161,8 +166,40 @@ public class AdminPortalService {
                 runner.isEmailVerified(),
                 runner.getCreatedAt() == null ? null : runner.getCreatedAt().toString(),
                 runner.getStravaAthleteId() != null,
-                noteCount
+                noteCount,
+                intValue(shoeQuota.get("used"), 0),
+                intValue(shoeQuota.get("limit"), 0),
+                intValue(shoeQuota.get("remaining"), 0)
         );
+    }
+
+    private Map<String, Object> shoeScanQuota(Runner runner) {
+        if (runner == null || quotaService == null) {
+            return Map.of("used", 0, "limit", 0, "remaining", 0);
+        }
+        Object raw = quotaService.getQuotaStatus(runner).get("shoeScan");
+        if (raw instanceof Map<?, ?> map) {
+            Map<String, Object> typed = new LinkedHashMap<>();
+            typed.put("used", map.get("used"));
+            typed.put("limit", map.get("limit"));
+            typed.put("remaining", map.get("remaining"));
+            return typed;
+        }
+        return Map.of("used", 0, "limit", 0, "remaining", 0);
+    }
+
+    private int intValue(Object value, int fallback) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String stringValue) {
+            try {
+                return Integer.parseInt(stringValue.trim());
+            } catch (Exception ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
     }
 
     public ShoeAdminDto toShoeDto(Shoe shoe) {

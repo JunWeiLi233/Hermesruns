@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -246,6 +247,26 @@ public class RaceController {
             return error(HttpStatus.BAD_REQUEST, error.getMessage());
         } catch (Exception error) {
             return ResponseEntity.ok(emptyCourseMapPayload());
+        }
+    }
+
+    @GetMapping("/course-map-image")
+    public ResponseEntity<?> courseMapImage(@RequestParam("ref") String imageReference) {
+        try {
+            RaceCourseMapImageService.DisplayableCourseMapImage image =
+                    raceCourseMapService.resolveDisplayableLocalImage(imageReference);
+            if (image == null || image.imageBytes() == null || image.imageBytes().length == 0) {
+                return ResponseEntity.notFound().build();
+            }
+            String mediaType = image.mediaType() == null || image.mediaType().isBlank()
+                    ? "image/jpeg"
+                    : image.mediaType();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(mediaType))
+                    .header("Cache-Control", "public, max-age=604800, immutable")
+                    .body(image.imageBytes());
+        } catch (Exception error) {
+            return ResponseEntity.notFound().build();
         }
     }
 

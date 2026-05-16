@@ -3,6 +3,7 @@ package com.hermes.backend;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -11,12 +12,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class QwenRouteParameterClient {
+    private static final int MIN_ANCHOR_POINTS = 4;
+    private static final int MAX_ANCHOR_POINTS = 10;
+
     private final ObjectMapper objectMapper;
+    private final QwenPersistentWorkerClient persistentWorkerClient;
 
     @Value("${app.route-extraction.python-command:}")
     private String pythonExecutable;
@@ -36,10 +43,19 @@ public class QwenRouteParameterClient {
     @Value("${app.route-extraction.qwen.timeout-seconds:120}")
     private long timeoutSeconds;
 
+    @Value("${app.route-extraction.qwen.persistent-worker.enabled:true}")
+    private boolean persistentWorkerEnabled;
+
     private PythonVenvResolver venvResolver;
 
     public QwenRouteParameterClient(ObjectMapper objectMapper) {
+        this(objectMapper, null);
+    }
+
+    @Autowired
+    public QwenRouteParameterClient(ObjectMapper objectMapper, QwenPersistentWorkerClient persistentWorkerClient) {
         this.objectMapper = objectMapper;
+        this.persistentWorkerClient = persistentWorkerClient;
     }
 
     @PostConstruct
@@ -59,6 +75,26 @@ public class QwenRouteParameterClient {
             Double distanceKm
     ) {
         validateImageFile(imageFilePath);
+        if (shouldUsePersistentWorker()) {
+            try {
+                String stdout = persistentWorkerClient.invokeJson(
+                        QwenPersistentWorkerClient.WorkerRequest.routeParameters(
+                                imageFilePath,
+                                raceName,
+                                city,
+                                country,
+                                distanceKm,
+                                resolveModelId(),
+                                resolveDeviceMap(),
+                                cacheDir
+                        ),
+                        Duration.ofSeconds(resolveTimeoutSeconds())
+                );
+                return parseRouteParameters(stdout);
+            } catch (QwenPersistentWorkerClient.WorkerUnavailableException ignored) {
+                // Fall back to the previous one-shot script path when the warm worker cannot start.
+            }
+        }
         List<String> command = buildPythonCommand(imageFilePath, raceName, city, country, distanceKm);
         Process process;
         try {
@@ -102,38 +138,34 @@ public class QwenRouteParameterClient {
             JsonNode root = objectMapper.readTree(stdoutJson);
             String routeHexColor = normalizeRouteHexColor(root.path("routeHexColor").asText(null));
             if (routeHexColor == null) {
-                routeHexColor = "#FF0000";
+                throw new IllegalStateException("Qwen route-parameter response must include routeHexColor in #RRGGBB form.");
             }
 
             JsonNode anchorPointsNode = root.path("anchorPoints");
-            List<String> anchorPoints = new ArrayList<>(4);
+            List<String> anchorPoints = new ArrayList<>(MAX_ANCHOR_POINTS);
+            Set<String> seenAnchorKeys = new LinkedHashSet<>();
             if (anchorPointsNode.isArray()) {
                 for (JsonNode anchorPointNode : anchorPointsNode) {
                     if (!anchorPointNode.isTextual()) {
                         continue;
                     }
                     String anchorPoint = anchorPointNode.asText().trim();
-                    if (!anchorPoint.isBlank()) {
+                    String anchorKey = anchorPoint.toLowerCase(Locale.ROOT);
+                    if (!anchorPoint.isBlank() && seenAnchorKeys.add(anchorKey)) {
                         anchorPoints.add(anchorPoint);
+                    }
+                    if (anchorPoints.size() == MAX_ANCHOR_POINTS) {
+                        break;
                     }
                 }
             }
-            if (anchorPoints.size() != 4) {
-                anchorPoints = fallbackBoundsAnchorLabels();
+            if (anchorPoints.size() < MIN_ANCHOR_POINTS) {
+                throw new IllegalStateException("Qwen route-parameter response must include at least 4 anchorPoints.");
             }
             return new RouteParametersDTO(routeHexColor, anchorPoints);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to parse Qwen route-parameter JSON.", e);
         }
-    }
-
-    private List<String> fallbackBoundsAnchorLabels() {
-        return List.of(
-                "route bounds northwest",
-                "route bounds northeast",
-                "route bounds southeast",
-                "route bounds southwest"
-        );
     }
 
     private List<String> buildPythonCommand(
@@ -144,7 +176,7 @@ public class QwenRouteParameterClient {
             Double distanceKm
     ) {
         List<String> command = new ArrayList<>();
-        command.add(venvResolver.resolvePythonCommand("extract_route_parameters_qwen.py"));
+        command.add(resolveVenvResolver().resolvePythonCommand("extract_route_parameters_qwen.py"));
         command.add(resolvePythonScriptPath());
         command.add("--image");
         command.add(imageFilePath);
@@ -211,6 +243,17 @@ public class QwenRouteParameterClient {
 
     private long resolveTimeoutSeconds() {
         return timeoutSeconds <= 0 ? 120 : timeoutSeconds;
+    }
+
+    private PythonVenvResolver resolveVenvResolver() {
+        if (venvResolver == null) {
+            venvResolver = new PythonVenvResolver(pythonExecutable, pythonScriptPath);
+        }
+        return venvResolver;
+    }
+
+    private boolean shouldUsePersistentWorker() {
+        return persistentWorkerEnabled && persistentWorkerClient != null;
     }
 
     private String normalizeRouteHexColor(String rawValue) {
