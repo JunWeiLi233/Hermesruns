@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,23 @@ class ShoeControllerTests {
                                       ActivityRepository actRepo,
                                       ShoeIdentityService identSvc) {
         return new ShoeController(auth, shoeRepo, actRepo, identSvc);
+    }
+
+    private ShoeController controller(AuthService auth, ShoeRepository shoeRepo,
+                                      ActivityRepository actRepo,
+                                      ShoeIdentityService identSvc,
+                                      ShoeCatalogModelRepository catalogRepo) {
+        return new ShoeController(auth, shoeRepo, actRepo, identSvc, catalogRepo);
+    }
+
+    private ShoeCatalogModel catalogModel(String brandName, String modelName, String type) {
+        ShoeCatalogBrand brand = new ShoeCatalogBrand();
+        brand.setName(brandName);
+        ShoeCatalogModel model = new ShoeCatalogModel();
+        model.setBrand(brand);
+        model.setName(modelName);
+        model.setType(type);
+        return model;
     }
 
     private ShoeController defaultController(AuthService auth) {
@@ -97,6 +116,91 @@ class ShoeControllerTests {
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody()).isInstanceOf(List.class);
         assertThat((List<?>) resp.getBody()).hasSize(1);
+    }
+
+    @Test
+    void listShoesAddsRotationSurfaceAndLastWearMetadata() {
+        AuthService auth = mock(AuthService.class);
+        ShoeRepository shoeRepo = mock(ShoeRepository.class);
+        ActivityRepository actRepo = mock(ActivityRepository.class);
+        ShoeIdentityService identSvc = mock(ShoeIdentityService.class);
+        ShoeCatalogModelRepository catalogRepo = mock(ShoeCatalogModelRepository.class);
+        Runner runner = runner();
+        Shoe shoe = shoe(10L, runner);
+        shoe.setBrand("HOKA");
+        shoe.setModel("Speedgoat 6");
+        LocalDateTime lastWorn = LocalDateTime.now().minusDays(4);
+
+        when(auth.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(shoeRepo.findByRunnerAndRetiredFalseOrderByCreatedAtDesc(runner)).thenReturn(List.of(shoe));
+        when(actRepo.sumDistanceKmByRunner(runner)).thenReturn(Collections.emptyList());
+        when(actRepo.findLastUsedDateByRunner(runner)).thenReturn(List.<Object[]>of(new Object[] { 10L, lastWorn }));
+        when(catalogRepo.findAll()).thenReturn(List.of(catalogModel("HOKA", "Speedgoat 6", "trail")));
+
+        ResponseEntity<?> resp = controller(auth, shoeRepo, actRepo, identSvc, catalogRepo)
+                .listShoes("Bearer token", false);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        @SuppressWarnings("unchecked")
+        List<Shoe> body = (List<Shoe>) resp.getBody();
+        Shoe enriched = body.get(0);
+        assertThat(enriched.getType()).isEqualTo("trail");
+        assertThat(enriched.getSurfaceType()).isEqualTo("trail");
+        assertThat(enriched.getLastWornAt()).isEqualTo(lastWorn);
+        assertThat(enriched.getDaysSinceLastWear()).isBetween(3, 5);
+    }
+
+    @Test
+    void recommendationInfersTrailSurfaceFromTodaysScheduledWorkout() {
+        AuthService auth = mock(AuthService.class);
+        ShoeRepository shoeRepo = mock(ShoeRepository.class);
+        ActivityRepository actRepo = mock(ActivityRepository.class);
+        ShoeIdentityService identSvc = mock(ShoeIdentityService.class);
+        ShoeCatalogModelRepository catalogRepo = mock(ShoeCatalogModelRepository.class);
+        ShoeTracker shoeTracker = mock(ShoeTracker.class);
+        CoachScheduledWorkoutRepository scheduleRepo = mock(CoachScheduledWorkoutRepository.class);
+        Runner runner = runner();
+        Shoe recommended = shoe(11L, runner);
+        recommended.setBrand("Saucony");
+        recommended.setModel("Peregrine 14");
+        recommended.setType("trail");
+        recommended.setSurfaceType("trail");
+        recommended.setCurrentDistanceKm(30.0);
+        recommended.setMaxDistanceKm(650.0);
+        recommended.setDaysSinceLastWear(6);
+        CoachScheduledWorkout workout = new CoachScheduledWorkout();
+        workout.setRunner(runner);
+        workout.setScheduledDate(LocalDate.now());
+        workout.setWorkoutType(CoachWorkoutType.EASY);
+        workout.setNotes("Trail route on soft surface");
+
+        when(auth.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(scheduleRepo.findByRunnerAndScheduledDate(runner, LocalDate.now())).thenReturn(Optional.of(workout));
+        when(shoeTracker.recommendShoe(runner, CoachWorkoutType.EASY, "trail")).thenReturn(Optional.of(recommended));
+
+        ResponseEntity<?> resp = new ShoeController(
+                auth,
+                shoeRepo,
+                actRepo,
+                identSvc,
+                catalogRepo,
+                shoeTracker,
+                scheduleRepo
+        ).recommendation("Bearer token", null);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) resp.getBody();
+        assertThat(body)
+                .containsEntry("targetSurface", "trail")
+                .containsEntry("targetSurfaceSource", "schedule")
+                .containsEntry("scheduledWorkoutType", CoachWorkoutType.EASY.name());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> shoe = (Map<String, Object>) body.get("recommendedShoe");
+        assertThat(shoe)
+                .containsEntry("id", 11L)
+                .containsEntry("surfaceType", "trail")
+                .containsEntry("daysSinceLastWear", 6);
     }
 
     @Test
@@ -407,6 +511,52 @@ class ShoeControllerTests {
 
         Shoe body = (Shoe) resp.getBody();
         assertThat(body.getCurrentDistanceKm()).isEqualTo(350.0);
+    }
+
+    @Test
+    void updateShoeRetiredTrueSetsRetiredDate() {
+        AuthService auth = mock(AuthService.class);
+        ShoeRepository shoeRepo = mock(ShoeRepository.class);
+        ActivityRepository actRepo = mock(ActivityRepository.class);
+        ShoeIdentityService identSvc = mock(ShoeIdentityService.class);
+        Runner runner = runner();
+        Shoe existing = shoe(5L, runner);
+
+        when(auth.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(shoeRepo.findByIdAndRunner(5L, runner)).thenReturn(Optional.of(existing));
+        when(shoeRepo.save(any(Shoe.class))).thenReturn(existing);
+        when(actRepo.sumDistanceKmByShoeId(5L)).thenReturn(0.0);
+
+        ResponseEntity<?> resp = controller(auth, shoeRepo, actRepo, identSvc)
+                .updateShoe(5L, "Bearer token", Map.of("retired", true));
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(existing.isRetired()).isTrue();
+        assertThat(existing.getRetiredDate()).isNotNull();
+    }
+
+    @Test
+    void updateShoeRetiredFalseClearsRetiredDate() {
+        AuthService auth = mock(AuthService.class);
+        ShoeRepository shoeRepo = mock(ShoeRepository.class);
+        ActivityRepository actRepo = mock(ActivityRepository.class);
+        ShoeIdentityService identSvc = mock(ShoeIdentityService.class);
+        Runner runner = runner();
+        Shoe existing = shoe(5L, runner);
+        existing.setRetired(true);
+        existing.setRetiredDate(LocalDateTime.now().minusDays(14));
+
+        when(auth.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(shoeRepo.findByIdAndRunner(5L, runner)).thenReturn(Optional.of(existing));
+        when(shoeRepo.save(any(Shoe.class))).thenReturn(existing);
+        when(actRepo.sumDistanceKmByShoeId(5L)).thenReturn(0.0);
+
+        ResponseEntity<?> resp = controller(auth, shoeRepo, actRepo, identSvc)
+                .updateShoe(5L, "Bearer token", Map.of("retired", false));
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(existing.isRetired()).isFalse();
+        assertThat(existing.getRetiredDate()).isNull();
     }
 
     // ---------------------------------------------------------------------------

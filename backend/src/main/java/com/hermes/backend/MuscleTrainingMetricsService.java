@@ -33,30 +33,37 @@ public class MuscleTrainingMetricsService {
             AutomatedCoachService.CoachStateDto coachState,
             MuscleTrainingPreference preference
     ) {
-        double vol7 = runsWithinDays(runs, 7).stream().mapToDouble(this::distanceKm).sum();
-        double vol28 = runsWithinDays(runs, 28).stream().mapToDouble(this::distanceKm).sum();
+        return buildMetrics(runs, coachState, preference, List.of());
+    }
+
+    public PlanMetrics buildMetrics(
+            List<Activity> runs,
+            AutomatedCoachService.CoachStateDto coachState,
+            MuscleTrainingPreference preference,
+            List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule
+    ) {
+        double vol7 = coachState != null ? coachState.volumeKm7d() : 0;
+        double vol28 = coachState != null ? coachState.volumeKm28d() : 0;
+        if (vol7 <= 0) {
+            vol7 = runsWithinDays(runs, 7).stream().mapToDouble(this::distanceKm).sum();
+        }
+        if (vol28 <= 0) {
+            vol28 = runsWithinDays(runs, 28).stream().mapToDouble(this::distanceKm).sum();
+        }
 
         Double acwr = computeAcwr(runs);
         int hardCount = countRecentHardRuns(runs, coachState);
 
-        String recoveryGate = "OPEN";
-        if (acwr != null && acwr > 1.45) recoveryGate = "PROTECT_ACWR_SPIKE";
-        else if (hardCount >= 3) recoveryGate = "PROTECT_RECOVERY_PHASE";
-
-        String loadStatus = "OPTIMAL";
-        if (acwr != null) {
-            if (acwr > 1.5) loadStatus = "DANGER";
-            else if (acwr > 1.25) loadStatus = "HIGH";
-            else if (acwr < 0.75) loadStatus = "LOW";
+        String recoveryGate = deriveRecoveryGate(coachState);
+        if ("OPEN".equals(recoveryGate)) {
+            if (acwr != null && acwr > 1.45) recoveryGate = "PROTECT";
+            else if (hardCount >= 3) recoveryGate = "PROTECT";
         }
 
-        boolean raceWeek = false;
-        LocalDate nextKeyRunDate = null;
-        String nextKeyRunType = null;
-        LocalDate nextLongRunDate = null;
-        Double nextLongRunKm = null;
+        boolean conservativeMode = runsWithinDays(runs, 28).size() < 3 || vol7 < 8;
 
-        if (coachState.activeBlock() != null) {
+        boolean raceWeek = false;
+        if (coachState != null && coachState.activeBlock() != null) {
             LocalDate raceDate = coachState.activeBlock().targetRaceDate();
             if (raceDate != null) {
                 long daysToRace = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), raceDate);
@@ -64,26 +71,134 @@ public class MuscleTrainingMetricsService {
             }
         }
 
-        int recSessions = preference.getPreferredStrengthDays().size();
-        if (recSessions == 0) recSessions = 2;
+        String loadStatus = deriveLoadStatus(vol28, acwr, raceWeek, conservativeMode);
+        int recSessions = deriveRecommendedSessions(vol7, vol28, acwr, recoveryGate, raceWeek, conservativeMode, preference);
+
+        AutomatedCoachService.CoachScheduledWorkoutDto nextKeyRun = schedule.stream()
+                .filter(day -> isKeyRun(day.workoutType()))
+                .findFirst()
+                .orElse(null);
+        AutomatedCoachService.CoachScheduledWorkoutDto nextLongRun = schedule.stream()
+                .filter(day -> isLongRun(day.workoutType()))
+                .findFirst()
+                .orElse(null);
 
         return new PlanMetrics(
                 round1(vol7),
                 round1(vol28),
                 acwr != null ? round2(acwr) : null,
-                coachState.highIntensityRatioLast7d(),
+                coachState != null ? coachState.highIntensityRatioLast7d() : null,
                 recoveryGate,
                 loadStatus,
-                acwr != null && acwr > 1.3,
+                conservativeMode,
                 raceWeek,
                 recSessions,
-                preference.getExperienceLevel().name(),
-                nextKeyRunDate,
-                nextKeyRunType,
-                nextLongRunDate,
-                nextLongRunKm,
+                deriveCurrentFocus(preference, loadStatus, recoveryGate),
+                nextKeyRun != null ? nextKeyRun.scheduledDate() : null,
+                nextKeyRun != null ? nextKeyRun.workoutType() : null,
+                nextLongRun != null ? nextLongRun.scheduledDate() : null,
+                nextLongRun != null ? nextLongRun.plannedDistanceKm() : null,
                 hardCount
         );
+    }
+
+    private int deriveRecommendedSessions(
+            double volume7d,
+            double volume28d,
+            Double acwr,
+            String recoveryGate,
+            boolean raceWeek,
+            boolean conservativeMode,
+            MuscleTrainingPreference preference
+    ) {
+        if ("PROTECT".equals(recoveryGate) && raceWeek) {
+            return 0;
+        }
+        if (raceWeek || "PROTECT".equals(recoveryGate) || (acwr != null && acwr > 1.35)) {
+            return 1;
+        }
+        if (conservativeMode || volume28d < 60 || volume7d < 15) {
+            return 1;
+        }
+
+        int sessions = volume28d < 180 ? 2 : 3;
+        if ("CAUTION".equals(recoveryGate) || (acwr != null && acwr > 1.18)) {
+            sessions = Math.min(sessions, 2);
+        }
+        if (preference.getNoisePreference() == MuscleTrainingPreference.NoisePreference.QUIET_ONLY) {
+            sessions = Math.min(sessions, 2);
+        }
+        if (preference.getSessionMinutes() < 25) {
+            sessions = Math.min(sessions, 2);
+        }
+        return sessions;
+    }
+
+    private String deriveLoadStatus(double volume28d, Double acwr, boolean raceWeek, boolean conservativeMode) {
+        if (raceWeek) {
+            return "RACE_WEEK";
+        }
+        if (conservativeMode) {
+            return "CONSERVATIVE";
+        }
+        if (acwr != null && acwr > 1.3) {
+            return "SPIKING";
+        }
+        if (volume28d >= 200) {
+            return "HIGH_VOLUME";
+        }
+        return "STEADY";
+    }
+
+    private String deriveRecoveryGate(AutomatedCoachService.CoachStateDto coachState) {
+        if (coachState == null) {
+            return "OPEN";
+        }
+        Integer baseline = coachState.baselineRestingHr();
+        Integer lastNight = coachState.lastNightRestingHr();
+        Integer sleepScore = coachState.lastSleepScore();
+
+        if (baseline != null && lastNight != null && baseline > 0) {
+            if (lastNight > baseline * 1.08) {
+                return "PROTECT";
+            }
+            if (lastNight > baseline * 1.04) {
+                return "CAUTION";
+            }
+        }
+        if (sleepScore != null) {
+            if (sleepScore < 45) {
+                return "PROTECT";
+            }
+            if (sleepScore < 65) {
+                return "CAUTION";
+            }
+        }
+        return "OPEN";
+    }
+
+    private String deriveCurrentFocus(MuscleTrainingPreference preference, String loadStatus, String recoveryGate) {
+        if ("PROTECT".equals(recoveryGate) || "RACE_WEEK".equals(loadStatus)) {
+            return "RECOVERY_CAPACITY";
+        }
+        if (preference.getNoisePreference() == MuscleTrainingPreference.NoisePreference.QUIET_ONLY) {
+            return "QUIET_POSTERIOR_CHAIN";
+        }
+        if ("HIGH_VOLUME".equals(loadStatus)) {
+            return "ELASTIC_STIFFNESS";
+        }
+        return "POSTERIOR_CHAIN_STABILITY";
+    }
+
+    private boolean isKeyRun(String workoutType) {
+        return Objects.equals(workoutType, MuscleTrainingCheckIn.RunType.QUALITY.name())
+                || Objects.equals(workoutType, CoachWorkoutType.THRESHOLD.name())
+                || Objects.equals(workoutType, CoachWorkoutType.TEMPO.name())
+                || Objects.equals(workoutType, CoachWorkoutType.INTERVALS.name());
+    }
+
+    private boolean isLongRun(String workoutType) {
+        return Objects.equals(workoutType, CoachWorkoutType.LONG_RUN.name());
     }
 
     private Double computeAcwr(List<Activity> runs) {
@@ -135,7 +250,7 @@ public class MuscleTrainingMetricsService {
     }
 
     private int countRecentHardRuns(List<Activity> runs, AutomatedCoachService.CoachStateDto coachState) {
-        double hrMax = coachState.profileMaxHeartRateBpm() != null && coachState.profileMaxHeartRateBpm() >= 130
+        double hrMax = coachState != null && coachState.profileMaxHeartRateBpm() != null && coachState.profileMaxHeartRateBpm() >= 130
                 ? CoachHrZoneClassifier.clampHrMax(coachState.profileMaxHeartRateBpm())
                 : 185;
 

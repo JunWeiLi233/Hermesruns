@@ -22,4 +22,21 @@ class SecurityHeadersFilterTests {
         assertThat(csp).contains("img-src");
         assertThat(csp).contains("blob:");
     }
+
+    @Test
+    void contentSecurityPolicyAllowsRecaptchaAssetsUsedBySignup() throws Exception {
+        SecurityHeadersFilter filter = new SecurityHeadersFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/signup");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        String csp = response.getHeader("Content-Security-Policy");
+        assertThat(csp).contains("script-src");
+        assertThat(csp).contains("https://www.google.com/recaptcha/");
+        assertThat(csp).contains("https://www.gstatic.com/recaptcha/");
+        assertThat(csp).contains("frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/");
+        assertThat(csp).contains("connect-src");
+        assertThat(csp).contains("https://www.google.com/recaptcha/");
+    }
 }

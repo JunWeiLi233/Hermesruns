@@ -116,6 +116,13 @@ No prior knowledge of Spring Boot, React, or sports science is required to make 
 > Email: `strava+140971747@hermes.local`
 > Password: `HermesLocal1!`
 
+> **Reserved territory rival**
+>
+> Email: `territory-rival@hermes.local`
+> Password: `HermesRival1!`
+>
+> This second local-only account is reserved for Territory testing. Its simulated runs intentionally overlap the shared runner's later routes with denser GPS samples, so `/territory` can show real contested/conquered land instead of a single-account happy path. Do not repurpose it for normal demos.
+
 #### How to enable
 
 **Windows** — copy the example env file then start Hermes:
@@ -168,6 +175,7 @@ Once logged in with the mock account you can immediately explore:
 | `/analysis` | VDOT card, ACWR load chart, training paces |
 | `/today-run` | Daily coaching recommendation with pace ranges |
 | `/shoes` | Pre-loaded shoe inventory with mileage tracking |
+| `/territory` | Real conquest conflicts between the shared runner and reserved territory rival |
 
 > **Local-safe.** The mock account is disabled by default and skipped entirely in production. Never use these credentials outside your local machine.
 
@@ -408,7 +416,7 @@ backend/           Spring Boot 4 + JPA — REST API on :8080, serves the built f
 | Frontend | React 19, React Router 7, Chart.js, Leaflet, Vite 8 | Fast SPA, rich charts, interactive maps |
 | Backend | Spring Boot 4, Spring Data JPA, Hibernate | Robust REST API, declarative ORM |
 | Database | H2 (zero-config default) or PostgreSQL | Zero setup for dev; production-grade for deploy |
-| Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0, email/password + verification | Multiple login paths, no friction for new users |
+| Auth | JWT sessions, Google OAuth 2.0, Strava OAuth 2.0, email/password + verification, reCAPTCHA v3 | Multiple login paths, no friction for new users; bot protection on signup |
 | AI | Gemini 2.5 Flash (shoe image scanning), Qwen (course-map route extraction) | Automates tedious data entry |
 | Payments | Stripe Checkout (Pro subscription) | Simple, hosted checkout — no card data on your server |
 
@@ -777,6 +785,7 @@ Use `.env` only when your shell, IDE, or process manager explicitly loads it bef
 | Strava OAuth | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `APP_DATA_ENCRYPTION_KEY` | Strava login + activity sync |
 | Google OAuth | `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET`, `APP_GOOGLE_REDIRECT_URI` | Google login |
 | Admin | `APP_BOOTSTRAP_ADMIN_EMAIL`, `APP_BOOTSTRAP_ADMIN_PASSWORD` | Admin account created on startup |
+| reCAPTCHA v3 | `RECAPTCHA_SECRET_KEY`, `RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 bot protection on signup |
 
 #### Stripe Billing (optional)
 
@@ -810,6 +819,7 @@ Email/password sign-up sends a verification link via SMTP. Leave `SPRING_MAIL_HO
 - **CORS** — Set `APP_CORS_ALLOWED_ORIGINS` if frontend is on a different origin
 - **Database** — Use PostgreSQL in production; never expose H2 to the network
 - **Webhooks** — Strava/Garmin rate-limited per IP; Garmin callback restricted to `*.garmin.com`; Stripe uses signature verification
+- **Anti-bot** — Signup is protected by reCAPTCHA v3. Set `RECAPTCHA_SECRET_KEY` + `RECAPTCHA_SITE_KEY` from the [reCAPTCHA admin console](https://www.google.com/recaptcha/admin); `HERMES_ENV=production` fails fast without both keys, while local development skips reCAPTCHA when it is not configured.
 - **Errors** — Default error pages omit stack traces; use `APP_JPA_DDL_AUTO=validate` + migrations for mature deployments
 
 ---
@@ -951,12 +961,20 @@ For macOS / Linux, use the PostgreSQL env block above and run the backend agains
 Hermes can bootstrap a local-only demo account with seeded shoes and runs:
 `strava+140971747@hermes.local` / `HermesLocal1!`
 
+It also reserves a territory-conflict test account:
+`territory-rival@hermes.local` / `HermesRival1!`
+
+That rival account is only for the real land-conquer game. Its seeded GPS routes overlap the shared runner's routes with denser samples so local `/territory` testing can verify contested ownership and capture behavior.
+
 Windows:
 
 ```powershell
 $env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
 $env:APP_LOCAL_SHARED_RUNNER_EMAIL = "strava+140971747@hermes.local"
 $env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+$env:APP_LOCAL_TERRITORY_RIVAL_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_RIVAL_EMAIL = "territory-rival@hermes.local"
+$env:APP_LOCAL_TERRITORY_RIVAL_PASSWORD = "HermesRival1!"
 .\start_hermes.bat
 ```
 
@@ -968,6 +986,9 @@ macOS / Linux:
 export APP_LOCAL_SHARED_RUNNER_ENABLED=true
 export APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
 export APP_LOCAL_SHARED_RUNNER_PASSWORD='HermesLocal1!'
+export APP_LOCAL_TERRITORY_RIVAL_ENABLED=true
+export APP_LOCAL_TERRITORY_RIVAL_EMAIL=territory-rival@hermes.local
+export APP_LOCAL_TERRITORY_RIVAL_PASSWORD='HermesRival1!'
 cd backend
 ./mvnw spring-boot:run
 ```
@@ -1418,7 +1439,7 @@ backend/           Spring Boot 4 + JPA — REST API 在 :8080，同时托管构�
 | 前端 | React 19, React Router 7, Chart.js, Leaflet, Vite 8 | 快速 SPA、丰富图表、交互式地图 |
 | 后端 | Spring Boot 4, Spring Data JPA, Hibernate | 健壮的 REST API、声明式 ORM |
 | 数据库 | H2（默认零配置）或 PostgreSQL | 开发零配置；生产级部署用 PostgreSQL |
-| 认证 | JWT, Google OAuth 2.0, Strava OAuth 2.0, 邮箱/密码+验证 | 多种登录方式，降低新用户门槛 |
+| 认证 | JWT, Google OAuth 2.0, Strava OAuth 2.0, 邮箱/密码+验证, reCAPTCHA v3 | 多种登录方式，降低新用户门槛；注册页机器人防护 |
 | AI | Gemini 2.5 Flash（跑鞋图片扫描）, Qwen（赛道地图路线提取） | 自动化繁琐的数据录入 |
 | 支付 | Stripe Checkout（Pro 订阅）| 简单的托管结账流程，服务器不接触卡号 |
 
@@ -1599,6 +1620,7 @@ cd backend
 | Strava OAuth | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI`, `APP_DATA_ENCRYPTION_KEY` | Strava 登录 + 活动同步 |
 | Google OAuth | `APP_GOOGLE_CLIENT_ID`, `APP_GOOGLE_CLIENT_SECRET`, `APP_GOOGLE_REDIRECT_URI` | Google 登录 |
 | 管理员 | `APP_BOOTSTRAP_ADMIN_EMAIL`, `APP_BOOTSTRAP_ADMIN_PASSWORD` | 启动时创建管理员账号 |
+| reCAPTCHA v3 | `RECAPTCHA_SECRET_KEY`, `RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 防机器人注册保护 |
 
 #### Stripe 计费（可选）
 
@@ -1632,6 +1654,7 @@ cd backend
 - **CORS** — 前端和后端不同源时设置 `APP_CORS_ALLOWED_ORIGINS`
 - **数据库** — 生产环境用 PostgreSQL；绝不将 H2 暴露到网络
 - **Webhook** — Strava/Garmin 按 IP 限速；Garmin 回调限制为 `*.garmin.com`；Stripe 使用签名验证
+- **防机器人** — 注册页使用 reCAPTCHA v3 保护。在 [reCAPTCHA 管理控制台](https://www.google.com/recaptcha/admin) 获取 `RECAPTCHA_SECRET_KEY` + `RECAPTCHA_SITE_KEY`；`HERMES_ENV=production` 缺少任一密钥会启动失败，本地开发未配置时跳过 reCAPTCHA。
 - **错误** — 默认错误页面不包含堆栈信息；成熟部署请用 `APP_JPA_DDL_AUTO=validate` 加迁移脚本
 
 ---

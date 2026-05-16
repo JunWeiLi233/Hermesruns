@@ -1,8 +1,10 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -14,14 +16,12 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,10 +46,16 @@ public class RaceElevationProfileService {
             "logo", "icon", "badge", "sponsor", "partner", "facebook", "instagram", "hero", "banner"
     );
     private final RestTemplate restTemplate;
-    private final Map<String, CachedResult> cache = new ConcurrentHashMap<>();
+    private final TtlCacheStore cacheStore;
+
+    @Autowired
+    public RaceElevationProfileService(RestTemplate restTemplate, TtlCacheStore cacheStore) {
+        this.restTemplate = restTemplate;
+        this.cacheStore = cacheStore;
+    }
 
     public RaceElevationProfileService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+        this(restTemplate, TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     public RaceElevationProfileResult resolveProfile(String raceName, String city, String country, String websiteUrl) {
@@ -59,13 +65,13 @@ public class RaceElevationProfileService {
                 normalize(country),
                 normalize(websiteUrl)
         );
-        CachedResult cached = cache.get(cacheKey);
-        if (cached != null && !cached.isExpired() && !shouldRefresh(cached.result())) {
+        CachedResult cached = cacheStore.get("race-elevation-profile", cacheKey, CachedResult.class).orElse(null);
+        if (cached != null && !shouldRefresh(cached.result())) {
             return cached.result();
         }
 
         RaceElevationProfileResult resolved = doResolveProfile(raceName, city, country, websiteUrl);
-        cache.put(cacheKey, new CachedResult(resolved, Instant.now().plus(CACHE_TTL)));
+        cacheStore.put("race-elevation-profile", cacheKey, new CachedResult(resolved), CACHE_TTL);
         return resolved;
     }
 
@@ -480,9 +486,6 @@ public class RaceElevationProfileService {
 
     private record LocalizedTerms(String profileQuery) {}
 
-    private record CachedResult(RaceElevationProfileResult result, Instant expiresAt) {
-        private boolean isExpired() {
-            return Instant.now().isAfter(expiresAt);
-        }
+    private record CachedResult(RaceElevationProfileResult result) {
     }
 }

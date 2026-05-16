@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
 
 @Service
@@ -22,23 +25,37 @@ public class RoutePlannerService {
     private static final double MAX_OVERPASS_RADIUS_M = 25_000.0;
     private static final int MAX_GRAPH_NODES = 3_000;
     private static final double RUNNING_SPEED_KPH = 10.0;
+    private static final double GRAPH_COORDINATE_SCALE = 10_000_000.0;
+    private static final double DISTANCE_BUCKET_M = 50.0;
+    private static final int MIN_ROUTE_SHAPE_POINTS = 4;
+    private static final int MIN_ROUTE_DIRECTION_CHANGES = 2;
+    private static final double MIN_ROUTE_TURN_SEGMENT_M = 20.0;
+    private static final double MIN_ROUTE_TURN_DEGREES = 25.0;
+    private static final double MAX_ROUTE_TURN_DEGREES = 155.0;
 
     private static final double ELEVATION_WEIGHT_FLAT = 5.0;
     private static final double ELEVATION_WEIGHT_ROLLING = 2.0;
     private static final double ELEVATION_WEIGHT_HILLY = 0.2;
+    private static final Duration OVERPASS_CACHE_TTL = Duration.ofHours(12);
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final TtlCacheStore cacheStore;
 
     public RoutePlannerService() {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
+        this(new RestTemplate(), new ObjectMapper());
     }
 
     /** Constructor for testing. */
     public RoutePlannerService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+        this(restTemplate, objectMapper, TtlCacheStore.inMemoryForTests(objectMapper.copy(), Clock.systemUTC()));
+    }
+
+    @Autowired
+    public RoutePlannerService(RestTemplate restTemplate, ObjectMapper objectMapper, TtlCacheStore cacheStore) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.cacheStore = cacheStore;
     }
 
     /**
@@ -84,7 +101,7 @@ public class RoutePlannerService {
             return generateFallbackRoute(startLat, startLng, targetDistanceKm);
         }
 
-        // Step 4: Run modified A* search for a loop route
+        // Step 4: Run A* search for a loop route
         AStarResult aStarResult = aStarSearch(graph, startNodeId, targetDistanceM, pref);
         if (aStarResult == null || aStarResult.path == null || aStarResult.path.size() < 2) {
             log.warn("A* search found no valid route; using fallback.");
@@ -105,13 +122,18 @@ public class RoutePlannerService {
         double totalClimbM = computeElevationGain(elevations);
         double actualDistanceKm = aStarResult.totalDistanceM / 1000.0;
         int estimatedTimeMin = (int) Math.round(actualDistanceKm / RUNNING_SPEED_KPH * 60.0);
+        if (!hasRunnableRouteShape(waypoints)) {
+            log.warn("A* route collapsed into a straight/out-and-back shape; returning no drawable route.");
+            return generateFallbackRoute(startLat, startLng, targetDistanceKm);
+        }
 
         return new RoutePlanResult(
                 waypoints,
                 actualDistanceKm,
                 totalClimbM,
                 estimatedTimeMin,
-                aStarResult.totalDistanceM / targetDistanceM
+                aStarResult.totalDistanceM / targetDistanceM,
+                true
         );
     }
 
@@ -174,15 +196,17 @@ public class RoutePlannerService {
         public final double elevationGainMeters;
         public final int estimatedTimeMinutes;
         public final double distanceAccuracy;
+        public final boolean streetGraphBacked;
 
         public RoutePlanResult(List<double[]> waypoints, double actualDistanceKm,
                                double elevationGainMeters, int estimatedTimeMinutes,
-                               double distanceAccuracy) {
+                               double distanceAccuracy, boolean streetGraphBacked) {
             this.waypoints = waypoints;
             this.actualDistanceKm = actualDistanceKm;
             this.elevationGainMeters = elevationGainMeters;
             this.estimatedTimeMinutes = estimatedTimeMinutes;
             this.distanceAccuracy = distanceAccuracy;
+            this.streetGraphBacked = streetGraphBacked;
         }
     }
 
@@ -201,10 +225,15 @@ public class RoutePlannerService {
         String url = "https://overpass-api.de/api/interpreter?data=" + query;
 
         try {
+            Optional<String> cachedResponse = cacheStore.get("overpass", url, String.class);
+            if (cachedResponse.isPresent()) {
+                return parseOverpassResponse(cachedResponse.get());
+            }
             String response = restTemplate.getForObject(url, String.class);
             if (response == null || response.isBlank()) {
                 return List.of();
             }
+            cacheStore.put("overpass", url, response, OVERPASS_CACHE_TTL);
             return parseOverpassResponse(response);
         } catch (RestClientException e) {
             log.warn("Overpass API call failed: {}", e.getMessage());
@@ -269,8 +298,8 @@ public class RoutePlannerService {
     // --- Graph building ---
 
     Map<Long, GraphNode> buildGraph(List<OsmElement> elements) {
-        // First pass: collect all nodes from way geometries
         Map<Long, GraphNode> graph = new HashMap<>();
+        Map<String, Long> coordinateIndex = new HashMap<>();
         long syntheticId = -1;
 
         for (OsmElement el : elements) {
@@ -282,9 +311,17 @@ public class RoutePlannerService {
             for (double[] pt : el.geometry) {
                 double lat = pt[0];
                 double lng = pt[1];
-                long nid = syntheticId--;
-                GraphNode node = new GraphNode(nid, lat, lng, Double.NaN);
-                graph.put(nid, node);
+                String coordinateKey = coordinateKey(lat, lng);
+                Long existingId = coordinateIndex.get(coordinateKey);
+                GraphNode node;
+                if (existingId != null) {
+                    node = graph.get(existingId);
+                } else {
+                    long nid = syntheticId--;
+                    node = new GraphNode(nid, lat, lng, Double.NaN);
+                    graph.put(nid, node);
+                    coordinateIndex.put(coordinateKey, nid);
+                }
                 wayNodes.add(node);
 
                 if (graph.size() > MAX_GRAPH_NODES) {
@@ -328,22 +365,26 @@ public class RoutePlannerService {
         double toleranceM = targetDistanceM * DISTANCE_TOLERANCE_FACTOR;
         double elevationWeight = getElevationWeight(elevationPref);
 
-        // Priority queue: states ordered by f = g + h
-        // State: [nodeId, g(distSoFar), f_score, parentNodeId, depth]
         PriorityQueue<SearchState> openSet = new PriorityQueue<>(
                 Comparator.comparingDouble(s -> s.fScore));
 
-        // Track best (nodeId, distSoFar) states for each node+rounded distance bucket
-        // to allow revisiting nodes at different distances
+        // Track the best preference-adjusted cost for each node and distance bucket so the search can
+        // revisit intersections at meaningfully different route lengths without exploding state count.
         Map<String, Double> bestG = new HashMap<>();
-        Map<String, Long> cameFrom = new HashMap<>();
-        Map<String, Double> distSoFar = new HashMap<>();
 
-        long searchId = System.nanoTime();
-        SearchState initial = new SearchState(startNodeId, 0.0, heuristic(0.0, 0.0, targetDistanceM), null, 0);
+        SearchState initial = new SearchState(
+                startNodeId,
+                0.0,
+                0.0,
+                0.0,
+                heuristic(0.0, 0.0, targetDistanceM),
+                null,
+                0,
+                null,
+                0
+        );
         openSet.add(initial);
-        bestG.put(stateKey(startNodeId, 0), 0.0);
-        distSoFar.put(stateKey(startNodeId, 0), 0.0);
+        bestG.put(stateKey(startNodeId, 0, 0, null), 0.0);
 
         SearchState bestGoalState = null;
         double bestGoalScore = Double.POSITIVE_INFINITY;
@@ -355,62 +396,65 @@ public class RoutePlannerService {
             if (current == null) continue;
 
             long nodeId = current.nodeId;
-            double g = current.g;
             GraphNode node = graph.get(nodeId);
             if (node == null) continue;
 
-            // Goal test: can we return to start and be within tolerance?
-            double distToStart = haversineM(node.lat, node.lng, startNode.lat, startNode.lng);
-            double totalDist = g + distToStart;
-            double distError = Math.abs(totalDist - targetDistanceM);
-
-            if (distError <= toleranceM && g > 0) {
-                double score = distError + distToStart * 0.1;
-                if (score < bestGoalScore) {
-                    bestGoalScore = score;
-                    bestGoalState = current;
+            if (nodeId == startNodeId && current.depth > 1) {
+                double distError = Math.abs(current.distanceM - targetDistanceM);
+                if (distError <= toleranceM && current.directionChanges >= MIN_ROUTE_DIRECTION_CHANGES) {
+                    double score = scoreGoal(current, targetDistanceM, elevationPref);
+                    if (score < bestGoalScore) {
+                        bestGoalScore = score;
+                        bestGoalState = current;
+                    }
                 }
-                // Continue searching for potentially better routes
             }
 
-            // Also check if we should stop: if we found a goal and all remaining states have f > best goal f
             if (bestGoalState != null && current.fScore > bestGoalScore + toleranceM) {
                 break;
             }
 
-            // Expand neighbors
             for (GraphNode.Edge edge : node.neighbors) {
                 GraphNode neighbor = graph.get(edge.targetId);
                 if (neighbor == null) continue;
 
                 double edgeCost = edge.distanceM + elevationWeight * Math.max(0, edge.elevationGainM);
-                double newG = g + edgeCost;
+                double newDistanceM = current.distanceM + edge.distanceM;
+                double newRouteCost = current.routeCost + edgeCost;
+                double newElevationGainM = current.elevationGainM + Math.max(0, edge.elevationGainM);
+                double edgeBearing = segmentBearingDegrees(node, neighbor);
+                int newDirectionChanges = current.directionChanges
+                        + directionChangeIncrement(current.previousBearing, edgeBearing, edge.distanceM);
 
-                // Cap search depth by distance
-                if (newG > targetDistanceM * 2.5) continue;
+                if (newDistanceM > targetDistanceM * 2.5) continue;
 
-                // Prevent revisiting start too early
-                if (edge.targetId == startNodeId && newG < targetDistanceM * 0.5) continue;
+                if (edge.targetId == startNodeId && newDistanceM < targetDistanceM * 0.5) continue;
 
-                // Discretize distance for state revisiting
-                double distBucket = Math.round(newG / 50.0) * 50.0;
-                String key = stateKey(edge.targetId, distBucket);
+                double distBucket = Math.round(newDistanceM / DISTANCE_BUCKET_M) * DISTANCE_BUCKET_M;
+                String key = stateKey(edge.targetId, distBucket, newDirectionChanges, edgeBearing);
 
                 Double prevBestG = bestG.get(key);
-                if (prevBestG != null && prevBestG <= newG) continue;
+                if (prevBestG != null && prevBestG <= newRouteCost) continue;
 
-                double h = heuristic(newG, distToStart, targetDistanceM);
-                // For the heuristic, we need distance from neighbor to start
-                double neighborDistToStart = haversineM(neighbor.lat, neighbor.lng, startNode.lat, startNode.lng);
-                h = heuristic(newG, neighborDistToStart, targetDistanceM);
+                double neighborDistToStart = edge.targetId == startNodeId
+                        ? 0.0
+                        : haversineM(neighbor.lat, neighbor.lng, startNode.lat, startNode.lng);
+                double h = heuristic(newDistanceM, neighborDistToStart, targetDistanceM);
+                double fScore = newRouteCost + h;
+                bestG.put(key, newRouteCost);
 
-                double fScore = newG + h;
-                bestG.put(key, newG);
-                distSoFar.put(key, newG);
-
-                SearchState next = new SearchState(edge.targetId, newG, fScore, nodeId, current.depth + 1);
+                SearchState next = new SearchState(
+                        edge.targetId,
+                        newDistanceM,
+                        newRouteCost,
+                        newElevationGainM,
+                        fScore,
+                        current,
+                        current.depth + 1,
+                        edgeBearing,
+                        newDirectionChanges
+                );
                 openSet.add(next);
-                cameFrom.put(stateKey(edge.targetId, distBucket), nodeId);
             }
         }
 
@@ -420,92 +464,18 @@ public class RoutePlannerService {
             return null;
         }
 
-        // Reconstruct path from bestGoalState back to start
-        List<Long> path = new ArrayList<>();
-        // We need to reconstruct from the best goal state
-        // Since we didn't store parent chain per state, we need a different approach
-
-        // Simplified reconstruction: trace back through cameFrom using the node chain
-        // Actually, let me store the parent chain directly in SearchState
-        return reconstructPath(graph, startNodeId, bestGoalState, cameFrom, distSoFar);
+        return reconstructPath(bestGoalState);
     }
 
-    private AStarResult reconstructPath(Map<Long, GraphNode> graph, Long startNodeId,
-                                         SearchState goalState,
-                                         Map<String, Long> cameFrom,
-                                         Map<String, Double> distSoFar) {
-        // Reconstruct by tracing back from goal to start using the cameFrom map
-        // and the distance buckets
+    private AStarResult reconstructPath(SearchState goalState) {
         List<Long> path = new ArrayList<>();
-        long currentId = goalState.nodeId;
-        double currentDist = goalState.g;
-
-        path.add(currentId);
-
-        // Walk back to start
-        Set<Long> visited = new HashSet<>();
-        visited.add(currentId);
-
-        while (currentId != startNodeId) {
-            double distBucket = Math.round(currentDist / 50.0) * 50.0;
-            String key = stateKey(currentId, distBucket);
-            Long parentId = cameFrom.get(key);
-
-            if (parentId == null) {
-                // Try nearby distance buckets
-                boolean found = false;
-                for (double offset = -50; offset <= 50; offset += 50) {
-                    String altKey = stateKey(currentId, distBucket + offset);
-                    parentId = cameFrom.get(altKey);
-                    if (parentId != null) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) break;
-            }
-
-            if (visited.contains(parentId)) break; // cycle detected
-            visited.add(parentId);
-
-            GraphNode parent = graph.get(parentId);
-            GraphNode current = graph.get(currentId);
-            if (parent != null && current != null) {
-                currentDist -= haversineM(parent.lat, parent.lng, current.lat, current.lng);
-            }
-
-            path.add(parentId);
-            currentId = parentId;
+        SearchState current = goalState;
+        while (current != null) {
+            path.add(current.nodeId);
+            current = current.parent;
         }
-
-        // Ensure path ends at start
-        if (!path.isEmpty() && path.get(path.size() - 1) != startNodeId) {
-            path.add(startNodeId);
-        }
-
-        // Reverse to get start -> goal
         Collections.reverse(path);
-
-        // Compute actual total distance
-        double totalDist = 0.0;
-        for (int i = 0; i < path.size() - 1; i++) {
-            GraphNode a = graph.get(path.get(i));
-            GraphNode b = graph.get(path.get(i + 1));
-            if (a != null && b != null) {
-                totalDist += haversineM(a.lat, a.lng, b.lat, b.lng);
-            }
-        }
-        // Add return to start
-        if (path.size() >= 2) {
-            GraphNode last = graph.get(path.get(path.size() - 1));
-            GraphNode start = graph.get(startNodeId);
-            if (last != null && start != null) {
-                totalDist += haversineM(last.lat, last.lng, start.lat, start.lng);
-                path.add(startNodeId);
-            }
-        }
-
-        return new AStarResult(path, totalDist);
+        return new AStarResult(path, goalState.distanceM);
     }
 
     // --- Helpers ---
@@ -523,8 +493,24 @@ public class RoutePlannerService {
         };
     }
 
-    private String stateKey(long nodeId, double distBucket) {
-        return nodeId + "_" + ((long) distBucket);
+    private String stateKey(long nodeId, double distBucket, int directionChanges, Double previousBearing) {
+        int shapeBucket = Math.min(directionChanges, MIN_ROUTE_DIRECTION_CHANGES);
+        int bearingBucket = previousBearing == null ? -1 : (int) Math.round(previousBearing / 45.0) % 8;
+        return nodeId + "_" + ((long) distBucket) + "_" + shapeBucket + "_" + bearingBucket;
+    }
+
+    private String coordinateKey(double lat, double lng) {
+        long roundedLat = Math.round(lat * GRAPH_COORDINATE_SCALE);
+        long roundedLng = Math.round(lng * GRAPH_COORDINATE_SCALE);
+        return roundedLat + ":" + roundedLng;
+    }
+
+    private double scoreGoal(SearchState state, double targetDistanceM, String elevationPref) {
+        double distanceError = Math.abs(state.distanceM - targetDistanceM);
+        if ("hilly".equals(elevationPref)) {
+            return distanceError - (state.elevationGainM * 0.25);
+        }
+        return distanceError + getElevationWeight(elevationPref) * state.elevationGainM;
     }
 
     // --- Distance & elevation utilities ---
@@ -555,76 +541,111 @@ public class RoutePlannerService {
         return gain;
     }
 
-    // --- Fallback: out-and-back route when OSM data is sparse ---
-
-    RoutePlanResult generateFallbackRoute(double startLat, double startLng, double targetDistanceKm) {
-        double targetDistanceM = targetDistanceKm * 1000.0;
-        double halfDist = targetDistanceM / 2.0;
-
-        // Generate a simple out-and-back route in the direction of east/northeast
-        double bearing = Math.toRadians(45);
-        int numPoints = Math.max(4, (int) Math.round(targetDistanceKm * 4));
-        List<double[]> waypoints = new ArrayList<>();
-
-        double lat = startLat;
-        double lng = startLng;
-        double stepDist = halfDist / numPoints;
-
-        // Out leg
-        for (int i = 0; i <= numPoints; i++) {
-            waypoints.add(new double[]{lat, lng});
-            if (i < numPoints) {
-                double[] next = destinationPoint(lat, lng, stepDist, bearing);
-                lat = next[0];
-                lng = next[1];
-            }
+    static boolean hasRunnableRouteShape(List<double[]> waypoints) {
+        if (waypoints == null || waypoints.size() < MIN_ROUTE_SHAPE_POINTS) {
+            return false;
         }
-
-        // Back leg
-        bearing = (bearing + Math.PI) % (2 * Math.PI);
-        for (int i = 0; i < numPoints; i++) {
-            double[] next = destinationPoint(lat, lng, stepDist, bearing);
-            lat = next[0];
-            lng = next[1];
-            waypoints.add(new double[]{lat, lng});
-        }
-
-        double actualDistKm = targetDistanceKm;
-        int estimatedTimeMin = (int) Math.round(targetDistanceKm / RUNNING_SPEED_KPH * 60.0);
-
-        log.info("Generated fallback out-and-back route with {} waypoints.", waypoints.size());
-        return new RoutePlanResult(waypoints, actualDistKm, 0.0, estimatedTimeMin, 1.0);
+        return countMeaningfulDirectionChanges(waypoints) >= MIN_ROUTE_DIRECTION_CHANGES;
     }
 
-    private double[] destinationPoint(double lat, double lng, double distanceM, double bearingRad) {
-        double angularDist = distanceM / EARTH_RADIUS_M;
-        double lat1 = Math.toRadians(lat);
-        double lng1 = Math.toRadians(lng);
+    private static int countMeaningfulDirectionChanges(List<double[]> waypoints) {
+        Double previousBearing = null;
+        int turnCount = 0;
 
-        double lat2 = Math.asin(Math.sin(lat1) * Math.cos(angularDist)
-                + Math.cos(lat1) * Math.sin(angularDist) * Math.cos(bearingRad));
-        double lng2 = lng1 + Math.atan2(
-                Math.sin(bearingRad) * Math.sin(angularDist) * Math.cos(lat1),
-                Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2));
+        for (int i = 1; i < waypoints.size(); i++) {
+            double[] previous = waypoints.get(i - 1);
+            double[] current = waypoints.get(i);
+            if (previous == null || current == null || previous.length < 2 || current.length < 2) {
+                continue;
+            }
 
-        return new double[]{Math.toDegrees(lat2), Math.toDegrees(lng2)};
+            double segmentMeters = haversineMStatic(previous[0], previous[1], current[0], current[1]);
+            if (segmentMeters < MIN_ROUTE_TURN_SEGMENT_M) {
+                continue;
+            }
+
+            double bearing = segmentBearingDegrees(previous, current);
+            if (previousBearing != null) {
+                double delta = turnDeltaDegrees(previousBearing, bearing);
+                if (delta >= MIN_ROUTE_TURN_DEGREES && delta <= MAX_ROUTE_TURN_DEGREES) {
+                    turnCount++;
+                }
+            }
+            previousBearing = bearing;
+        }
+
+        return turnCount;
+    }
+
+    private static double segmentBearingDegrees(double[] previous, double[] current) {
+        double averageLat = Math.toRadians((previous[0] + current[0]) / 2.0);
+        double deltaLat = current[0] - previous[0];
+        double deltaLng = (current[1] - previous[1]) * Math.cos(averageLat);
+        return (Math.toDegrees(Math.atan2(deltaLng, deltaLat)) + 360.0) % 360.0;
+    }
+
+    private static double segmentBearingDegrees(GraphNode previous, GraphNode current) {
+        double averageLat = Math.toRadians((previous.lat + current.lat) / 2.0);
+        double deltaLat = current.lat - previous.lat;
+        double deltaLng = (current.lng - previous.lng) * Math.cos(averageLat);
+        return (Math.toDegrees(Math.atan2(deltaLng, deltaLat)) + 360.0) % 360.0;
+    }
+
+    private static int directionChangeIncrement(Double previousBearing, double currentBearing, double segmentMeters) {
+        if (previousBearing == null || segmentMeters < MIN_ROUTE_TURN_SEGMENT_M) {
+            return 0;
+        }
+        double delta = turnDeltaDegrees(previousBearing, currentBearing);
+        return delta >= MIN_ROUTE_TURN_DEGREES && delta <= MAX_ROUTE_TURN_DEGREES ? 1 : 0;
+    }
+
+    private static double turnDeltaDegrees(double previousBearing, double currentBearing) {
+        return Math.abs(((currentBearing - previousBearing + 540.0) % 360.0) - 180.0);
+    }
+
+    private static double haversineMStatic(double lat1, double lng1, double lat2, double lng2) {
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return EARTH_RADIUS_M * c;
+    }
+
+    // --- Fallback: no geometry when OSM data cannot prove a street route ---
+
+    RoutePlanResult generateFallbackRoute(double startLat, double startLng, double targetDistanceKm) {
+        int estimatedTimeMin = (int) Math.round(targetDistanceKm / RUNNING_SPEED_KPH * 60.0);
+        log.info("No street-graph route available near ({}, {}); returning no drawable route.", startLat, startLng);
+        return new RoutePlanResult(List.of(), 0.0, 0.0, estimatedTimeMin, 0.0, false);
     }
 
     // --- Inner class for A* search state ---
 
     static class SearchState {
         final long nodeId;
-        final double g;
+        final double distanceM;
+        final double routeCost;
+        final double elevationGainM;
         final double fScore;
-        final Long parentNodeId;
+        final SearchState parent;
         final int depth;
+        final Double previousBearing;
+        final int directionChanges;
 
-        SearchState(long nodeId, double g, double fScore, Long parentNodeId, int depth) {
+        SearchState(long nodeId, double distanceM, double routeCost, double elevationGainM,
+                    double fScore, SearchState parent, int depth,
+                    Double previousBearing, int directionChanges) {
             this.nodeId = nodeId;
-            this.g = g;
+            this.distanceM = distanceM;
+            this.routeCost = routeCost;
+            this.elevationGainM = elevationGainM;
             this.fScore = fScore;
-            this.parentNodeId = parentNodeId;
+            this.parent = parent;
             this.depth = depth;
+            this.previousBearing = previousBearing;
+            this.directionChanges = directionChanges;
         }
     }
 }

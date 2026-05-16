@@ -70,6 +70,8 @@ public class AdminRouteExtractionController {
                         request.city(),
                         request.country(),
                         request.officialWebsite(),
+                        request.resolvedLatitude(),
+                        request.resolvedLongitude(),
                         request.distanceKm(),
                         request.imageFilePath()
                 );

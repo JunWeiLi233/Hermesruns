@@ -33,7 +33,7 @@ public class PlannedRoute {
     @Column(nullable = false, length = 20)
     private String elevationPreference;
 
-    @Column(nullable = false, columnDefinition = "CLOB")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String waypoints;
 
     @Column(nullable = false)

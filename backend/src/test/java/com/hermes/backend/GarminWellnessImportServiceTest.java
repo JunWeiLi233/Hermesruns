@@ -59,6 +59,21 @@ class GarminWellnessImportServiceTest {
     }
 
     @Test
+    void wellnessSyncTrackerRateLimitCooldownBlocksImmediateRetry() {
+        GarminWellnessImportService.WellnessSyncTracker tracker = new GarminWellnessImportService.WellnessSyncTracker();
+        tracker.tryBegin();
+        tracker.markRateLimited("Garmin is temporarily rate limiting login attempts.", 900);
+
+        GarminWellnessImportService.WellnessSyncStatus snapshot = tracker.snapshot();
+
+        assertThat(snapshot.active()).isFalse();
+        assertThat(snapshot.status()).isEqualTo("RATE_LIMITED");
+        assertThat(snapshot.message()).contains("temporarily rate limiting");
+        assertThat(snapshot.retryAfterSeconds()).isBetween(1L, 900L);
+        assertThat(tracker.tryBegin()).isFalse();
+    }
+
+    @Test
     void wellnessSyncTrackerCanBeReusedAfterCompletion() {
         GarminWellnessImportService.WellnessSyncTracker tracker = new GarminWellnessImportService.WellnessSyncTracker();
         tracker.tryBegin();

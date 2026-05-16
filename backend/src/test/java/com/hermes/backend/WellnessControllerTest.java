@@ -20,13 +20,22 @@ class WellnessControllerTest {
 
     private AppleHealthImportService appleHealthImportService;
     private GoogleHealthImportService googleHealthImportService;
+    private AuthService authService;
+    private ReadinessService readinessService;
     private WellnessController controller;
 
     @BeforeEach
     void setUp() {
         appleHealthImportService = mock(AppleHealthImportService.class);
         googleHealthImportService = mock(GoogleHealthImportService.class);
-        controller = new WellnessController(appleHealthImportService, googleHealthImportService);
+        authService = mock(AuthService.class);
+        readinessService = mock(ReadinessService.class);
+        controller = new WellnessController(
+                appleHealthImportService,
+                googleHealthImportService,
+                authService,
+                mock(RunnerRepository.class)
+        );
     }
 
     @Test

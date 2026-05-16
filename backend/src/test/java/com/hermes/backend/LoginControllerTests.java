@@ -176,14 +176,13 @@ class LoginControllerTests {
         when(authService.findByAuthorizationHeader("Bearer admin-token")).thenReturn(Optional.of(admin));
         when(authService.isAdmin(admin)).thenReturn(true);
         when(runnerRepository.findByDeletedFalseOrderByIdAsc()).thenReturn(List.of(broken));
-        when(runnerRepository.save(broken)).thenReturn(broken);
         LoginController controller = controller(runnerRepository, authService, mock(LoginRateLimiter.class));
 
         ResponseEntity<?> response = controller.getAllRunners("Bearer admin-token");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isInstanceOf(List.class);
-        verify(runnerRepository).save(broken);
+        verify(runnerRepository).saveAll(List.of(broken));
         assertThat(broken.getRole()).isEqualTo("USER");
     }
 
@@ -224,7 +223,8 @@ class LoginControllerTests {
                 verificationResendLimiter,
                 passwordResetLimiter,
                 passwordResetService,
-                apiRateLimiter
+                apiRateLimiter,
+                mock(RecaptchaVerifier.class)
         );
     }
 
