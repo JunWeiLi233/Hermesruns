@@ -6,6 +6,10 @@ name: auto-hermes-max
 
 `/auto-hermes-max` is a launcher and merger. It decomposes, plans, launches lanes, merges, reassesses. It never writes code, picks tasks, or asks the user. All implementation happens inside lane agents.
 
+## Shared Trace-To-Skill Signal
+
+Read `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md` or `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json` before routing lanes. Treat this evidence as a `soft-signal` for workflow/process evolution only; it can guide lane shape and review emphasis, but it is not a hard blocker for ordinary product work.
+
 ## MANDATORY: Coordinator Action Sequence
 
 Execute in order. Calling `Agent` in step 4 is the actual launch — skipping it means `/auto-hermes-max` did not run.
