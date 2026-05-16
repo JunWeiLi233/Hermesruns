@@ -15,13 +15,7 @@ public class WeatherAdjustedFitnessService {
         for (Activity activity : activities) {
             if (activity.getActivityType() != ActivityType.RUN) continue;
 
-            Integer penalty = activity.getPacePenaltySecPerKm();
-            if (penalty == null) {
-                // If not cached, we could calculate it on the fly,
-                // but that might be expensive if many activities lack it.
-                // For now, assume it might be null and default to 0 or try to calc if recent.
-                penalty = 0;
-            }
+            ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.from(activity);
 
             adjustedEntries.add(new AdjustedActivityEntry(
                 activity.getId(),
@@ -29,7 +23,11 @@ public class WeatherAdjustedFitnessService {
                 resolvedDistanceKm(activity),
                 resolvedMovingTimeSeconds(activity),
                 activity.getAverageHeartRate(),
-                penalty
+                correction.pacePenaltySecPerKm(),
+                correction.weatherAdjusted(),
+                correction.weatherAdjustedMovingTimeSeconds(),
+                correction.weatherAdjustedPaceSecPerKm(),
+                correction.weatherCorrectionFactor()
             ));
         }
 
@@ -62,6 +60,10 @@ public class WeatherAdjustedFitnessService {
         double distanceKm,
         int movingTimeSeconds,
         Double averageHeartRate,
-        int pacePenaltySecPerKm
+        int pacePenaltySecPerKm,
+        boolean weatherAdjusted,
+        Integer weatherAdjustedMovingTimeSeconds,
+        Double weatherAdjustedPaceSecPerKm,
+        Double weatherCorrectionFactor
     ) {}
 }

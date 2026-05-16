@@ -33,6 +33,12 @@ public class ProductionSecurityValidator {
     @Value("${app.billing.public-base-url:}")
     private String publicBaseUrl;
 
+    @Value("${recaptcha.secret-key:}")
+    private String recaptchaSecretKey;
+
+    @Value("${recaptcha.site-key:}")
+    private String recaptchaSiteKey;
+
     @PostConstruct
     void validate() {
         if (!isProduction()) {
@@ -43,6 +49,18 @@ public class ProductionSecurityValidator {
         validateCorsOrigins();
         validatePublicBaseUrl();
         validateStravaWebhookToken();
+        validateRecaptchaKeys();
+    }
+
+    private void validateRecaptchaKeys() {
+        if (recaptchaSecretKey == null || recaptchaSecretKey.isBlank()) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: set RECAPTCHA_SECRET_KEY so signup bot protection is active.");
+        }
+        if (recaptchaSiteKey == null || recaptchaSiteKey.isBlank()) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: set RECAPTCHA_SITE_KEY so signup can generate verification tokens.");
+        }
     }
 
     private void validateStravaWebhookToken() {

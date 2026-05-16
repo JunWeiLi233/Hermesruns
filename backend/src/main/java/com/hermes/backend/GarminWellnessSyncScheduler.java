@@ -98,6 +98,14 @@ public class GarminWellnessSyncScheduler {
                     continue;
                 }
 
+                long retryAfterSeconds = wellnessImportService.getRateLimitRetryAfterSeconds(runner.getId());
+                if (retryAfterSeconds > 0) {
+                    log.warn("Garmin wellness auto-sync: skipping runner {} during Garmin rate-limit cooldown", runner.getId());
+                    failed++;
+                    failures.add(failureRecord(runner, GarminRateLimitSupport.message(retryAfterSeconds)));
+                    continue;
+                }
+
                 int daysBack = runner.getGarminWellnessLastSyncedAt() == null ? 90 : 7;
 
                 boolean started = wellnessImportService.startWellnessImport(runner, email, decryptedPassword, daysBack);

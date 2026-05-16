@@ -42,7 +42,7 @@ class MarathonRoutePipelineServiceTests {
         MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult georefResult =
                 new MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult(
                         routeParams, Collections.emptyList(), Collections.emptyList(), null, Collections.emptyList());
-        when(georeferencingService.georeferenceRoute(any(), any(), any(), any(), any())).thenReturn(georefResult);
+        when(georeferencingService.georeferenceRoute(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(georefResult);
 
         // Mocking Step 4
         MarathonRouteMatchAndExportService.MarathonRouteMatchAndExportResult matchExportResult =
@@ -53,12 +53,22 @@ class MarathonRoutePipelineServiceTests {
 
         MarathonRoutePipelineService.PipelineResult result = pipelineService.runPipeline(
                 new Runner(),
-                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 42.195, "path/to/img.png");
+                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 52.5200, 13.4050, 42.195, "path/to/img.png");
 
         assertNotNull(result);
         assertEquals(extractionResult, result.extractionResult());
         assertEquals(georefResult, result.georefResult());
         assertEquals(matchExportResult, result.matchExportResult());
+        verify(georeferencingService).georeferenceRoute(
+                "path/to/img.png",
+                "Berlin Marathon",
+                "Berlin",
+                "Germany",
+                extractionResult,
+                52.5200,
+                13.4050,
+                42.195
+        );
     }
 
     @Test
@@ -67,7 +77,7 @@ class MarathonRoutePipelineServiceTests {
 
         assertThatThrownBy(() -> pipelineService.runPipeline(
                 new Runner(),
-                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 42.195, "path/to/img.png"))
+                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 52.5200, 13.4050, 42.195, "path/to/img.png"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("disabled");
 

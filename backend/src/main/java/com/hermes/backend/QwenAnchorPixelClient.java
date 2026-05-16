@@ -3,9 +3,12 @@ package com.hermes.backend;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,7 +20,11 @@ import java.util.Locale;
 
 @Service
 public class QwenAnchorPixelClient {
+    private static final int MIN_ANCHOR_POINTS = 4;
+    private static final int MAX_ANCHOR_POINTS = 10;
+
     private final ObjectMapper objectMapper;
+    private final QwenPersistentWorkerClient persistentWorkerClient;
 
     @Value("${app.route-extraction.python-command:}")
     private String pythonExecutable;
@@ -37,10 +44,19 @@ public class QwenAnchorPixelClient {
     @Value("${app.route-extraction.qwen.timeout-seconds:120}")
     private long timeoutSeconds;
 
+    @Value("${app.route-extraction.qwen.persistent-worker.enabled:true}")
+    private boolean persistentWorkerEnabled;
+
     private PythonVenvResolver venvResolver;
 
     public QwenAnchorPixelClient(ObjectMapper objectMapper) {
+        this(objectMapper, null);
+    }
+
+    @Autowired
+    public QwenAnchorPixelClient(ObjectMapper objectMapper, QwenPersistentWorkerClient persistentWorkerClient) {
         this.objectMapper = objectMapper;
+        this.persistentWorkerClient = persistentWorkerClient;
     }
 
     @PostConstruct
@@ -63,6 +79,25 @@ public class QwenAnchorPixelClient {
         validateImageFile(actualImagePath);
 
         try {
+            if (shouldUsePersistentWorker()) {
+                try {
+                    String stdout = persistentWorkerClient.invokeJson(
+                            QwenPersistentWorkerClient.WorkerRequest.anchorPixels(
+                                    actualImagePath,
+                                    anchorLabels,
+                                    resolveModelId(),
+                                    resolveDeviceMap(),
+                                    cacheDir
+                            ),
+                            Duration.ofSeconds(resolveTimeoutSeconds())
+                    );
+                    List<RouteAnchorPixelPointDTO> parsed = parseAnchorPixels(stdout, anchorLabels);
+                    validateAnchorPixelsInsideImage(actualImagePath, parsed);
+                    return parsed;
+                } catch (QwenPersistentWorkerClient.WorkerUnavailableException ignored) {
+                    // Fall back to the previous one-shot script path when the warm worker cannot start.
+                }
+            }
             List<String> command = buildPythonCommand(actualImagePath, anchorLabels);
             Process process;
             try {
@@ -85,7 +120,9 @@ public class QwenAnchorPixelClient {
                 if (output.stdout().isBlank()) {
                     throw new IllegalStateException("Qwen anchor-pixel extraction produced no stdout JSON.");
                 }
-                return parseAnchorPixels(output.stdout(), anchorLabels);
+                List<RouteAnchorPixelPointDTO> parsed = parseAnchorPixels(output.stdout(), anchorLabels);
+                validateAnchorPixelsInsideImage(actualImagePath, parsed);
+                return parsed;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Qwen anchor-pixel extraction was interrupted.", e);
@@ -102,6 +139,28 @@ public class QwenAnchorPixelClient {
         }
     }
 
+    private void validateAnchorPixelsInsideImage(String imageFilePath, List<RouteAnchorPixelPointDTO> anchors) {
+        if (anchors == null || anchors.isEmpty()) {
+            return;
+        }
+        BufferedImage image;
+        try {
+            image = ImageIO.read(Path.of(imageFilePath).toFile());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to validate Qwen anchor-pixel image bounds.", e);
+        }
+        if (image == null) {
+            return;
+        }
+        int width = image.getWidth();
+        int height = image.getHeight();
+        for (RouteAnchorPixelPointDTO anchor : anchors) {
+            if (anchor.x() < 0 || anchor.y() < 0 || anchor.x() >= width || anchor.y() >= height) {
+                throw new IllegalStateException("Qwen anchor-pixel response contained coordinates outside image bounds.");
+            }
+        }
+    }
+
     protected Process startPythonProcess(List<String> command) throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.redirectErrorStream(false);
@@ -113,11 +172,11 @@ public class QwenAnchorPixelClient {
         try {
             JsonNode root = objectMapper.readTree(stdoutJson);
             JsonNode anchorsNode = root.path("anchors");
-            if (!anchorsNode.isArray() || anchorsNode.size() != 4) {
-                throw new IllegalStateException("Qwen anchor-pixel response must include anchors as exactly 4 objects.");
+            if (!anchorsNode.isArray() || anchorsNode.size() != expectedLabels.size()) {
+                throw new IllegalStateException("Qwen anchor-pixel response must include one anchor object per requested label.");
             }
 
-            List<RouteAnchorPixelPointDTO> anchors = new ArrayList<>(4);
+            List<RouteAnchorPixelPointDTO> anchors = new ArrayList<>(expectedLabels.size());
             for (int index = 0; index < anchorsNode.size(); index++) {
                 JsonNode anchorNode = anchorsNode.get(index);
                 String expectedLabel = expectedLabels.get(index);
@@ -143,7 +202,7 @@ public class QwenAnchorPixelClient {
 
     private List<String> buildPythonCommand(String imageFilePath, List<String> anchorLabels) {
         List<String> command = new ArrayList<>();
-        command.add(venvResolver.resolvePythonCommand("extract_anchor_pixels_qwen.py"));
+        command.add(resolveVenvResolver().resolvePythonCommand("extract_anchor_pixels_qwen.py"));
         command.add(resolvePythonScriptPath());
         command.add("--image");
         command.add(imageFilePath);
@@ -167,10 +226,10 @@ public class QwenAnchorPixelClient {
             throw new IllegalArgumentException("Route parameters are required.");
         }
         List<String> anchorPoints = routeParameters.anchorPoints();
-        if (anchorPoints == null || anchorPoints.size() != 4) {
-            throw new IllegalArgumentException("Route parameters must include exactly 4 anchor labels.");
+        if (anchorPoints == null || anchorPoints.size() < MIN_ANCHOR_POINTS || anchorPoints.size() > MAX_ANCHOR_POINTS) {
+            throw new IllegalArgumentException("Route parameters must include between 4 and 10 anchor labels.");
         }
-        List<String> normalized = new ArrayList<>(4);
+        List<String> normalized = new ArrayList<>(anchorPoints.size());
         for (String anchorPoint : anchorPoints) {
             String label = anchorPoint == null ? "" : anchorPoint.trim();
             if (label.isBlank()) {
@@ -241,5 +300,16 @@ public class QwenAnchorPixelClient {
 
     private long resolveTimeoutSeconds() {
         return timeoutSeconds <= 0 ? 120 : timeoutSeconds;
+    }
+
+    private PythonVenvResolver resolveVenvResolver() {
+        if (venvResolver == null) {
+            venvResolver = new PythonVenvResolver(pythonExecutable, pythonScriptPath);
+        }
+        return venvResolver;
+    }
+
+    private boolean shouldUsePersistentWorker() {
+        return persistentWorkerEnabled && persistentWorkerClient != null;
     }
 }

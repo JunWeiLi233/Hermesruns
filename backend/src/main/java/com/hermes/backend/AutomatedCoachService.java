@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -125,7 +127,11 @@ public class AutomatedCoachService {
         LocalDate today = LocalDate.now();
         List<CoachScheduledWorkout> rows = coachScheduledWorkoutRepository
                 .findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(runner, today, today.plusDays(d - 1L));
-        return rows.stream().map(AutomatedCoachService::toScheduledDto).toList();
+        CoachRunnerState state = getOrCreateState(runner);
+        return rows.stream()
+                .map(row -> today.equals(row.getScheduledDate()) ? applyReadinessGate(state, row) : row)
+                .map(AutomatedCoachService::toScheduledDto)
+                .toList();
     }
 
     @Transactional
@@ -149,11 +155,13 @@ public class AutomatedCoachService {
         CoachScheduledWorkout adjusted = applyReadinessGate(state, row);
         CoachRouteRecommendationDto routeRecommendation = coachRouteService.buildRouteRecommendation(runner, adjusted, rows);
         
-        CoachRecommendedShoeDto shoeRec = shoeTracker.recommendShoe(runner, adjusted.getWorkoutType())
+        String preferredSurface = inferScheduledSurface(adjusted);
+        CoachRecommendedShoeDto shoeRec = shoeTracker.recommendShoe(runner, adjusted.getWorkoutType(), preferredSurface)
                 .map(s -> new CoachRecommendedShoeDto(
                         s.getId(), s.getBrand(), s.getModel(), s.getNickname(), s.getPhotoUrl(),
-                        s.getCurrentDistanceKm(), s.getMaxDistanceKm(),
-                        "Best match for " + adjusted.getWorkoutType() + " workout"
+                        s.getCurrentDistanceKm(), s.getMaxDistanceKm(), s.getType(), s.getSurfaceType(),
+                        s.getLastWornAt(), s.getDaysSinceLastWear(),
+                        recommendedShoeReason(adjusted.getWorkoutType(), preferredSurface)
                 ))
                 .orElse(null);
 
@@ -256,13 +264,14 @@ public class AutomatedCoachService {
             if (!ts.isBefore(from7)) {
                 vol7 += dist;
                 Double maxHrRow = a.getMaxHeartRate();
+                int durationMinutes = durationMinutes(a);
                 if (maxHrRow == null || maxHrRow == 0 || hrMax == 0) {
-                    unknown += a.getDurationSeconds() / 60;
+                    unknown += durationMinutes;
                 } else {
                     double peakPct = maxHrRow / hrMax;
-                    if (peakPct < 0.80) low += a.getDurationSeconds() / 60;
-                    else if (peakPct < 0.88) grey += a.getDurationSeconds() / 60;
-                    else high += a.getDurationSeconds() / 60;
+                    if (peakPct < 0.80) low += durationMinutes;
+                    else if (peakPct < 0.88) grey += durationMinutes;
+                    else high += durationMinutes;
                 }
             }
         }
@@ -279,6 +288,14 @@ public class AutomatedCoachService {
         state.setHighMileageGrinder(vol28 > HIGH_MILEAGE_KM_28D);
         state.setLastAggregatedAt(LocalDateTime.now());
         coachRunnerStateRepository.save(state);
+    }
+
+    private int durationMinutes(RunMetricsProjection activity) {
+        Long durationSeconds = activity.getDurationSeconds();
+        if (durationSeconds == null || durationSeconds <= 0) {
+            return 0;
+        }
+        return (int) (durationSeconds / 60);
     }
 
     private void checkGreyZoneFeedback(Runner runner, Activity activity) {
@@ -322,9 +339,26 @@ public class AutomatedCoachService {
             }
 
             if (!toCreate.isEmpty()) {
-                coachScheduledWorkoutRepository.saveAll(toCreate);
+                try {
+                    coachScheduledWorkoutRepository.saveAll(toCreate);
+                } catch (DataIntegrityViolationException race) {
+                    if (!hasScheduleHorizon(runner, today, horizonEnd, days)) {
+                        throw race;
+                    }
+                    log.debug("Recovered coach schedule horizon race for runner {}", runner.getId());
+                }
             }
         }
+    }
+
+    private boolean hasScheduleHorizon(Runner runner, LocalDate start, LocalDate end, int days) {
+        Set<LocalDate> recoveredDates = new HashSet<>();
+        for (CoachScheduledWorkout existing : coachScheduledWorkoutRepository.findByRunnerAndScheduledDateBetween(runner, start, end)) {
+            if (existing.getScheduledDate() != null) {
+                recoveredDates.add(existing.getScheduledDate());
+            }
+        }
+        return recoveredDates.size() >= days;
     }
 
     private CoachScheduledWorkout buildDefaultDay(Runner runner, LocalDate date) {
@@ -391,7 +425,9 @@ public class AutomatedCoachService {
     private CoachScheduledWorkout applyReadinessGate(CoachRunnerState state, CoachScheduledWorkout workout) {
         if (workout.getWorkoutType() == CoachWorkoutType.REST || workout.isReadinessAdjusted()) return workout;
 
-        ReadinessService.ReadinessResult readiness = readinessService.compute(state);
+        Runner runner = state.getRunner() != null ? state.getRunner() : workout.getRunner();
+        LocalDate readinessDate = workout.getScheduledDate() != null ? workout.getScheduledDate() : LocalDate.now();
+        ReadinessService.ReadinessResult readiness = resolveReadiness(runner, state, readinessDate);
         state.setReadinessScore(readiness.score());
         state.setReadinessVerdict(readiness.verdict());
         coachRunnerStateRepository.save(state);
@@ -435,7 +471,11 @@ public class AutomatedCoachService {
         return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
             CoachRunnerState s = new CoachRunnerState();
             s.setRunner(runner);
-            return coachRunnerStateRepository.save(s);
+            try {
+                return coachRunnerStateRepository.save(s);
+            } catch (DataIntegrityViolationException race) {
+                return coachRunnerStateRepository.findByRunner(runner).orElseThrow(() -> race);
+            }
         });
     }
 
@@ -469,7 +509,7 @@ public class AutomatedCoachService {
 
 private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachScheduledWorkout todayWorkout) {
         CoachStaminaDto stamina = buildStaminaDto(runner, s, todayWorkout);
-        ReadinessService.ReadinessResult readiness = readinessService.compute(s);
+        ReadinessService.ReadinessResult readiness = resolveReadiness(runner, s, LocalDate.now());
         return new CoachStateDto(
                 s.getVolumeKm7d(), s.getVolumeKm28d(), s.getMinutesLowZ1Z2Last7d(),
                 s.getMinutesGreyZ3Last7d(), s.getMinutesHighZ4Z5Last7d(), s.getMinutesUnknownHrLast7d(),
@@ -483,6 +523,18 @@ private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachSchedul
                         b.getRaceDistanceKm(), b.getTargetRaceDate(), b.getWeekIndex(), b.getCurrentLongRunKm(), b.getName()
                 )).orElse(null)
         );
+    }
+
+    private ReadinessService.ReadinessResult resolveReadiness(Runner runner, CoachRunnerState state, LocalDate date) {
+        ReadinessService.MultiSourceReadinessSnapshot snapshot = readinessService.resolveReadinessSnapshot(runner, state, date);
+        if (snapshot != null && snapshot.readiness() != null) {
+            return snapshot.readiness();
+        }
+        int score = state.getReadinessScore() != null ? state.getReadinessScore() : 75;
+        String verdict = state.getReadinessVerdict() != null ? state.getReadinessVerdict() : "GO";
+        int sleep = state.getLastSleepScore() != null ? state.getLastSleepScore() : score;
+        int stress = state.getLastStressScore() != null ? Math.max(0, 100 - state.getLastStressScore()) : score;
+        return new ReadinessService.ReadinessResult(score, verdict, sleep, score, score, stress);
     }
 
     private CoachStaminaDto buildStaminaDto(Runner runner, CoachRunnerState state, CoachScheduledWorkout todayWorkout) {
@@ -513,6 +565,22 @@ private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachSchedul
         return new CoachStaminaDto(score, recoveryCap, targetPace, targetHr, direction);
     }
 
+    private String inferScheduledSurface(CoachScheduledWorkout workout) {
+        if (workout == null || workout.getNotes() == null) return null;
+        String notes = workout.getNotes().toLowerCase(Locale.ROOT);
+        if (notes.contains("trail")) return "trail";
+        if (notes.contains("road")) return "road";
+        return null;
+    }
+
+    private String recommendedShoeReason(CoachWorkoutType workoutType, String preferredSurface) {
+        String workoutLabel = workoutType == null ? "today's run" : workoutType + " workout";
+        if (preferredSurface == null || preferredSurface.isBlank()) {
+            return "Best match for " + workoutLabel;
+        }
+        return "Best match for " + preferredSurface + " surface and " + workoutLabel;
+    }
+
     // --- DTOs ---
     public record CoachStaminaDto(int scorePercent, int recoveryCapPercent, Integer targetPaceSecondsPerKm, Integer targetHeartRateBpm, String direction) {}
 
@@ -538,7 +606,8 @@ private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachSchedul
 
     public record CoachRecommendedShoeDto(
             Long id, String brand, String model, String nickname, String photoUrl,
-            Double currentDistanceKm, Double maxDistanceKm, String recommendationReason
+            Double currentDistanceKm, Double maxDistanceKm, String type, String surfaceType,
+            LocalDateTime lastWornAt, Integer daysSinceLastWear, String recommendationReason
     ) {}
 
     public record CoachTodayDto(
