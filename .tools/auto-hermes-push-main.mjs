@@ -423,7 +423,7 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
     const statusAfterDocs = runGit(runCommand, args.rootDir, ["status", "--short", "--untracked-files=all"]);
     if (statusAfterDocs.trim()) {
       const artifactPaths = existingPublishArtifactPaths(args.rootDir, result);
-      if (artifactPaths.length) runGit(runCommand, args.rootDir, ["add", "--", ...artifactPaths]);
+      if (artifactPaths.length) runGit(runCommand, args.rootDir, ["add", "-f", "--", ...artifactPaths]);
       runCommand("powershell", ["-File", resolveFromRoot(args.rootDir, ".tools/auto-commit.ps1"), "-Message", args.message], { cwd: args.rootDir });
       markStep(result, "commit", "completed");
     } else {
