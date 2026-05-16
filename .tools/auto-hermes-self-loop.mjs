@@ -44,7 +44,7 @@ const CODEX_LIVE_CHILD_AGENT_POLICY = {
 };
 const RALPH_LOOP_STRENGTH = {
   mode: "strict-ralph-loop",
-  completionPromise: "continue until a real stop gate fires; never treat one successful bounded round as natural completion; Claude Code is the executor and must actively re-enter the loop after each round",
+  completionPromise: "continue until a real stop gate fires; never treat one successful bounded round as natural completion; the configured executor-backed runtime must actively re-enter the loop after each round",
   requiredRoundEvidence: [
     "verify-result pass with fresh command evidence",
     "runtime-proof pass when source changes affect a live/runtime surface",
@@ -85,6 +85,7 @@ const RALPH_LOOP_STRENGTH = {
     enabled: true,
     description: "Before every round, verify the Ralph self-loop ability is intact. If the previous task changed loop-critical files and broke the loop, fix it before proceeding.",
     loopCriticalFiles: [
+      ".codex/commands/auto-hermes-self.md",
       ".claude/commands/auto-hermes-self.md",
       ".tools/auto-hermes-self-loop.mjs",
       ".tools/auto-hermes-loop.mjs",
@@ -102,13 +103,13 @@ const RALPH_LOOP_STRENGTH = {
       },
       {
         id: "contract-check",
-        description: "Verify the self execution contract is still claude-self-executing.",
-        command: "node .tools/auto-hermes-self-loop.mjs --write --runtime claude --dry-run; verify selfExecutionContract === 'claude-self-executing' in .ai-sync/AUTO_HERMES_SELF_LOOP.json",
+        description: "Verify the self execution contract matches the selected runtime.",
+        command: "node .tools/auto-hermes-self-loop.mjs --write --runtime <runtime> --dry-run; verify selfExecutionContract matches the selected runtime in .ai-sync/AUTO_HERMES_SELF_LOOP.json",
       },
       {
         id: "protocol-check",
         description: "Verify the coordinator brief still contains the active execution protocol.",
-        command: "grep 'Claude Self-Loop Protocol (Active Execution)' .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md && grep 'claude-execute-round' .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md",
+        command: "grep 'Self-Loop Protocol (Active Execution)' .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md",
       },
     ],
     fixPolicy: {
@@ -594,6 +595,22 @@ function writeSelfArtifacts(args, state) {
           "Loop body:",
           ...RALPH_LOOP_STRENGTH.claudeSelfExecution.loopBody.map((step) => `  ${step}`),
           `Context pressure policy: ${RALPH_LOOP_STRENGTH.claudeSelfExecution.contextPressurePolicy}`,
+        ]
+      : []),
+    ...(normalizeRuntime(state.selfExecutionRuntime || state.runtime) === "codex"
+      ? [
+          "",
+          "## Codex Self-Loop Protocol (Active Execution)",
+          "Description: Codex runs through the executor-backed self-loop owner, executes or delegates authorized bounded rounds, records real gate evidence, and re-enters without waiting for user input until a true stop gate fires.",
+          "Loop body:",
+          "  read coordinator brief for current work unit",
+          "  read controller JSON for subagent plan, route, files, and verification contract",
+          "  run pre-round Ralph integrity gate for loop-critical files",
+          "  execute locally or delegate authorized disjoint lanes",
+          "  run required verification and runtime proof when needed",
+          "  run review/merge gate with an explicit verdict",
+          "  run round-close with real evidence",
+          "  re-run self-loop owner and continue on loop-owner-execute-round or codex-coordinator-execute-round",
         ]
       : []),
     "",
