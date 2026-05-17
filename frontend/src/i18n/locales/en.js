@@ -171,6 +171,8 @@ export default {
       "cinematic_compare_local": "Works offline",
       "cinematic_compare_noise": "No social noise",
       "cinematic_compare_bilingual": "Bilingual EN/ZH",
+      "cinematic_compare_social": "Strava",
+      "cinematic_compare_device": "Runna",
       "cinematic_compare_strava": "Strava",
       "cinematic_compare_runna": "Runna",
       "cinematic_cta_kicker": "Start",
