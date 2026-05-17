@@ -34,12 +34,15 @@ See [`.claude/skills/_TRIGGERS.md`](../skills/_TRIGGERS.md). Authority order: He
 - UI/UX Pro Max design-system source: `https://github.com/nextlevelbuilder/ui-ux-pro-max-skill` — industry-tailored design systems, 161 color palettes, 57 font pairings, 161 product types, 99 UX guidelines, 25 chart types, 10 stacks. Already installed locally as the `ui-ux-pro-max` skill. CLI alternative: `npm install -g uipro-cli && uipro init --ai claude`.
 - Hermes manifest: `.tools/auto-hermes-skills.mjs`
 - Local install targets when vendored or manually installed: `.codex/skills/multi-agent-patterns/`, `.codex/skills/evaluation/`, `.codex/skills/prompt-engineering/`, `.codex/superpowers/skills/brainstorming/`, and `.codex/skills/web-quality-audit/`
+- Loader error ledger: `.ai-sync/error.md`, maintained by `.tools/auto-hermes-error-ledger.mjs`. Record skill/plugin/local loader failures there; round-close scans it and promotes open `blocker` or `error` entries into repair work before normal continuation.
 
 At command start, run:
 
 ```powershell
 & 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-skills.mjs --json
 ```
+
+Also read `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md` or `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json` as a `soft-signal` only. Use it for evidence-backed workflow/process adjustments, not as a hard blocker on normal product work.
 
 Use `multi-agent-patterns` when a round mentions multi-agent design, supervisor/orchestrator control, peer-to-peer/swarm handoffs, hierarchical delegation, sub-agents, agent handoffs, context isolation, or parallel agent execution.
 
@@ -244,7 +247,7 @@ On L5 stop, run auto-commit if **product source files** changed (`frontend/src/`
 NOT product source (never trigger commit): `.ai-sync/`, `.claude/`, `.ai-codex/`, `TASKS.md`, `CLAUDE.md`, `AGENTS.md`, `PRODUCT.md`, task images, loop guides.
 
 - Local commit when gates pass.
-- Push only on real publish need + push gates pass + fresh Docker gate (`node .tools/auto-hermes-docker-gate.mjs --write`).
+- Push only on real publish need + push gates pass + fresh Docker gate (`node .tools/auto-hermes-docker-gate.mjs --write`). Push or submit to main repository requires this Docker gate; it blocks publish paths only and does not block normal local auto-commit.
 - `finishing-a-development-branch` skill only on explicit user request.
 
 ## Shared Lifecycle
