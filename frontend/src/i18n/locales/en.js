@@ -1,4 +1,4 @@
-export default {
+﻿export default {
     "common": {
       "app_crashed_title": "Something went wrong",
       "app_crashed_body": "Reload the page and try again. If this keeps happening, come back in a moment.",
@@ -2413,7 +2413,16 @@ export default {
       "intel_course_coastal_hilly_body": "Scenic coastline sections and rolling terrain add hidden fatigue, so this usually rewards a conservative opening half.",
       "intel_course_trail_hilly_title": "High-climb challenge course",
       "intel_course_trail_hilly_body": "This profile asks for much more climbing control and strength than a standard road marathon, not just raw flat-course speed.",
-      "detail_course_profile": "Elevation Profile"
+      "detail_course_profile": "Elevation Profile",
+      "filter_strip_label": "Filter races",
+      "filter_distance_label": "Filter by distance",
+      "filter_month_label": "Filter by month",
+      "filter_month_all": "All months",
+      "filter_dist_all": "All distances",
+      "filter_dist_marathon": "Marathon",
+      "filter_dist_half": "Half",
+      "filter_dist_10k": "10K",
+      "filter_dist_5k": "5K"
     },
     "runs": {
       "title": "Hermes | Recent Runs",
@@ -2887,7 +2896,16 @@ export default {
       "stitch_support": "Support",
       "stitch_settings": "Settings",
       "stitch_today_label": "Today",
-      "stitch_week_dose_label": "Week dose",
+      "stitch_guide_title": "Strength guide",
+      "stitch_guide_subtitle": "Start with the coach decision, then check the run context, then use the muscle map only when you want the why.",
+      "stitch_guide_decision_title": "Read the decision",
+      "stitch_guide_decision_body_active": "Hermes cleared strength today and keeps the set list below.",
+      "stitch_guide_decision_body_rest": "Hermes is protecting your run freshness today.",
+      "stitch_guide_runway_title": "Check the runway",
+      "stitch_guide_map_title": "Explore the muscles",
+      "stitch_guide_adjust_checkin": "Adjust today's check-in",
+      "stitch_anatomy_explore_title": "Explore muscles after the decision",
+      "stitch_anatomy_explore_hint": "Use the map to understand what the plan protects or trains. The daily action is already summarized above.",      "stitch_week_dose_label": "Week dose",
       "stitch_week_align_label": "Aligned with your run plan",
       "stitch_decision_label": "Coach decision",
       "stitch_next_run_label": "Runway",

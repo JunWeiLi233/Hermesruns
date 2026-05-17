@@ -1,4 +1,4 @@
-export default {
+﻿export default {
     "common": {
       "app_crashed_title": "页面暂时出了点问题",
       "app_crashed_body": "请刷新页面重试。如果问题持续出现，请稍后再回来。",
@@ -2412,7 +2412,16 @@ export default {
       "intel_course_coastal_hilly_body": "风景强、节奏碎，海边路段和上下坡会放大体感消耗，更适合保守开局。",
       "intel_course_trail_hilly_title": "硬型爬升赛道",
       "intel_course_trail_hilly_body": "这类赛道对爬升能力和下坡控制要求更高，绝不是单纯按平路全马配速去跑。",
-      "detail_course_profile": "路线海拔"
+      "detail_course_profile": "路线海拔",
+      "filter_strip_label": "筛选赛事",
+      "filter_distance_label": "按距离筛选",
+      "filter_month_label": "按月份筛选",
+      "filter_month_all": "全部月份",
+      "filter_dist_all": "全部距离",
+      "filter_dist_marathon": "全程马拉松",
+      "filter_dist_half": "半程马拉松",
+      "filter_dist_10k": "10公里",
+      "filter_dist_5k": "5公里"
     },
     "runs": {
       "title": "Hermes | 跑步历史",
@@ -3035,7 +3044,16 @@ export default {
       "stitch_support": "帮助",
       "stitch_settings": "设置",
       "stitch_today_label": "今天",
-      "stitch_week_dose_label": "本周剂量",
+      "stitch_guide_title": "力量引导",
+      "stitch_guide_subtitle": "先看教练决策，再看跑步衔接，最后需要原因时再打开肌肉图。",
+      "stitch_guide_decision_title": "先看决策",
+      "stitch_guide_decision_body_active": "Hermes 已允许今天做力量，动作清单在下方。",
+      "stitch_guide_decision_body_rest": "Hermes 今天优先保护你的跑步新鲜度。",
+      "stitch_guide_runway_title": "确认跑步衔接",
+      "stitch_guide_map_title": "查看肌肉重点",
+      "stitch_guide_adjust_checkin": "调整今日记录",
+      "stitch_anatomy_explore_title": "决策之后再看肌肉",
+      "stitch_anatomy_explore_hint": "用肌肉图理解今天保护或训练的区域。今日行动已经在上方总结。",      "stitch_week_dose_label": "本周剂量",
       "stitch_week_align_label": "已对齐你的跑步计划",
       "stitch_decision_label": "教练决策",
       "stitch_next_run_label": "跑步衔接",
