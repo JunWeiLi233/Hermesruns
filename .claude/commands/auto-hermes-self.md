@@ -58,10 +58,23 @@ Pick the team roster from the task surface using this decision table. The coordi
 
 **Codex prohibition:** never call Codex, codex-local, or Codex subagents from inside this loop.
 
-**Frontend design skill triggers** (mandatory when the surface is `Frontend-only UI/CSS/i18n change`, `Cross-stack feature` with UI delta, or `Browser-visible quality work`):
+**Frontend design skill stack** (mandatory when the surface is `Frontend-only UI/CSS/i18n change`, `Cross-stack feature` with UI delta, or `Browser-visible quality work`).
 
-- `ui-ux-pro-max` (installed locally; upstream `https://github.com/nextlevelbuilder/ui-ux-pro-max-skill`) — apply at the PM lock step before the `frontend` lane writes any UI. Pull surface-relevant patterns (palette, type pair, interaction patterns) into the lane brief's `visual goal` and `preserve list`. Authority order is strict: current live Hermes surface → explicit user reference → `design.md` → skill recommendations. The skill never overrides an approved layout.
-- `impeccable` (upstream `https://github.com/pbakaus/impeccable`) — apply as a polish/audit step *after* the implementer reports done and *before* the reviewer lane. Run `npx impeccable detect frontend/src/<surface-glob>` or `/impeccable audit <surface>` (when the local bundle is installed). Treat output as `soft-signal`: cherry-pick anti-pattern hits (purple gradient, nested card, gray-on-color, default font stack, hollow motion) that match the touched surface; route accessibility hits to `accesslint`, color/spacing hits to the design-token gate, UX-writing hits to `translation-sync` + coach-voice review. Do not let Impeccable findings block a round on their own — they feed the reviewer, not replace it.
+Apply the skills below in authority order — earlier skills override later skills when they disagree.
+
+1. **`frontend-design` (Hermes baseline; always fires first for any UI change).** Apply at the PM lock step before the `frontend` lane writes any UI. This is the Hermes design-system source-of-truth: design tokens (`--accent-coral`, `--surface-1`, `--text-strong`, radius / spacing tokens), coach-voice copy rules, mobile-first at ≤390px, and the page-structure conventions already shipped on `Today Run`, `Profile`, `Analysis`. Source: `.claude/skills/frontend-design/SKILL.md`. Authority: highest after the live approved surface — never contradict its tokens or coach-voice rules.
+
+2. **`taste-skill` (senior UI/UX engineer baseline).** Apply when the round needs a quality floor — strict component architecture, CSS hardware acceleration, metric-based layout rules. Default Taste skill. Shapes structure where `frontend-design` shapes tokens + voice.
+
+3. **`ui-ux-pro-max` (design intelligence library).** Apply at the PM lock when the round (1) starts a new surface, component, or page, (2) refactors visual structure, (3) chooses or revisits a color/typography system for a runner-facing route, or (4) needs an industry-tailored design baseline. Pull only surface-relevant slices (palette, type pair, interaction patterns). Authority order is strict: current live Hermes surface → explicit user reference → `design.md` → `frontend-design` → `taste-skill` → `ui-ux-pro-max` recommendations. The skill never overrides an approved layout. If the skill suggests a stack switch (Tailwind, shadcn), discard — Hermes stack is React 19 + plain CSS, fixed.
+
+4. **`vercel-react-best-practices` (React 19 perf).** Apply during the Builder phase when the round writes or reviews `frontend/src/**` React code — rerender bugs, hydration issues, bundle-shape, memoization. Translate any Next.js-only advice to the Vite stack.
+
+5. **`accesslint` (a11y review).** Apply when the round adds or changes any interactive surface (form, modal, menu, keyboard control, icon-only button, image, focusable region). Run on changed JSX before the reviewer lane. WCAG defects = must-fix; missing labels and keyboard traps are not soft-signals.
+
+6. **`impeccable` (polish / anti-pattern audit).** Apply *after* the implementer reports done and *before* the reviewer lane. Run `npx impeccable detect frontend/src/<surface-glob>` or `/impeccable audit <surface>` (when the local bundle is installed). Treat output as `soft-signal`: cherry-pick anti-pattern hits (purple gradient, nested card, gray-on-color, default font stack, hollow motion) that match the touched surface; route accessibility hits to `accesslint`, color/spacing hits to the design-token gate, UX-writing hits to `translation-sync` + coach-voice review. Do not let Impeccable findings block a round on their own — they feed the reviewer, not replace it.
+
+**Explicit-call-only Taste sub-skills.** These never auto-fire. Apply ONLY when the user directly names the skill or asks for that visual style: `taste-soft` (agency look), `taste-minimalist` (clean editorial), `taste-brutalist` (Swiss + military terminal), `taste-redesign` (premium upgrade of existing surface), `taste-image-to-code` (match this reference), `taste-stitch` (DESIGN.md spec), `taste-output` (full file no truncation), `taste-gpt` (GSAP-heavy motion). Default Taste skill is `taste-skill`. Never auto-stack multiple Taste sub-skills on the same round.
 
 ### Step 3 — Open the Teamwork Board
 

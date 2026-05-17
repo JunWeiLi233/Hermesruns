@@ -101,7 +101,21 @@ Apply this advisory checklist before accepting frontend or website-audit quality
 - Prioritize user-impact issues over score chasing.
 - Treat runtime proof, `run-vite-build.mjs`, translation parity, design-token checks, and Hermes source-truth rules as higher authority.
 
-Use `impeccable` when a round changes typography, color, spacing, motion, interaction, responsive behavior, or UX copy on a visible Hermes surface — or when reviewing a freshly built UI for design tells that read as generic AI output (purple gradients, nested cards, overused fonts, gray text on colored backgrounds).
+### Frontend design skill stack (apply in this order, every UI round)
+
+A frontend round in Hermes touches **multiple** frontend-design skills. The order below is the authority hierarchy — earlier skills override later skills when they disagree.
+
+**1 — `frontend-design` (Hermes-specific, always fires first for any UI change).** Apply at the PM lock step before the Builder writes any UI. This is the canonical Hermes UI baseline: design tokens (`--accent-coral`, `--surface-1`, `--text-strong`, radius/spacing tokens), coach-voice copy rules, mobile-first conventions at ≤390px, and the page-structure conventions already shipped on `Today Run`, `Profile`, `Analysis`. Source: `.claude/skills/frontend-design/SKILL.md`. Authority: HIGHEST after the live approved surface — this is the Hermes design system itself; do not contradict it.
+
+**2 — `taste-skill` (senior UI/UX engineer baseline).** Apply when the round needs a quality floor — strict component architecture, CSS hardware acceleration, metric-based layout rules. Treat as default Taste skill. Don't conflict with `frontend-design` tokens; `taste-skill` shapes structure, `frontend-design` shapes tokens + voice.
+
+**3 — `ui-ux-pro-max` (design intelligence library).** Apply at the PM lock when the round (1) starts a new surface/component/page, (2) refactors visual structure, (3) chooses or revisits a color/typography system, or (4) needs an industry-tailored design baseline. Pull only the surface-relevant slices (palette, type pair, interaction patterns) — never import a generic dashboard template wholesale. Authority: current live Hermes surface → explicit user reference → `design.md` → `frontend-design` → `taste-skill` → `ui-ux-pro-max`. If the skill suggests a stack switch (Tailwind, shadcn), discard — Hermes stack is React 19 + plain CSS, fixed.
+
+**4 — `vercel-react-best-practices` (React 19 perf guidance).** Apply when the round writes or reviews `frontend/src/**` React code — rerender bugs, hydration issues, bundle-shape decisions, memoization. Translate any Next.js-only advice to the existing Vite stack. Use during the Builder phase, not at PM lock.
+
+**5 — `accesslint` (a11y review).** Apply when the round adds or changes any interactive surface: form, modal, menu, keyboard-driven control, icon-only button, image, focusable canvas region. Run on the changed JSX before the reviewer lane. WCAG-style defects = must-fix; missing labels and broken keyboard traps are not soft-signals.
+
+**6 — `impeccable` (polish + anti-pattern audit).** Apply *after* the Builder reports done and *before* the reviewer lane.
 
 Apply this advisory checklist before locking a frontend visual round and after the implementation:
 
@@ -111,15 +125,20 @@ Apply this advisory checklist before locking a frontend visual round and after t
 - Do not let Impeccable override `design.md`, the approved live Hermes surface, or an explicit user reference. Hermes authority order still applies.
 - For polish-only rounds, prefer `/impeccable polish <surface>` after the Builder step and before the reviewer pass.
 
-Use `ui-ux-pro-max` when a round (1) starts a new surface, component, or page, (2) refactors visual structure, (3) chooses or revisits a color/typography system for a runner-facing route, or (4) needs an industry-tailored design baseline (runner analytics / coach product / fintech-adjacent billing flow) before locking the PM plan.
+### Explicit-call-only Taste sub-skills
 
-Apply this advisory checklist before locking the PM plan or starting a new surface:
+The following skills do NOT auto-fire. Apply ONLY when the user directly names the skill or asks for that visual style:
 
-- Treat the locally installed `ui-ux-pro-max` skill as the canonical entry point; `https://github.com/nextlevelbuilder/ui-ux-pro-max-skill` is the upstream for reference and updates.
-- Authority order is strict: current live Hermes surface → explicit user reference → `design.md` → `ui-ux-pro-max` recommendations. The skill never overrides an approved layout.
-- Pull only the surface-relevant slices (palette, type pair, interaction patterns) — do not import a generic dashboard template wholesale.
-- After choosing patterns, write them into the PM lock (`surface / visual goal / preserve list / round type / reference source`) so the Builder cannot drift.
-- If the skill suggests a stack switch (e.g. Tailwind, shadcn) that conflicts with the Hermes React 19 + plain CSS stack, discard the suggestion — Hermes stack is fixed.
+- `taste-soft` — high-end agency look (premium fonts, generous spacing, gentle shadows, subtle motion). Trigger phrase: "make it look expensive", "soft / agency style".
+- `taste-minimalist` — clean editorial (warm monochrome, flat bento grids, no gradients, no heavy shadows). Trigger phrase: "minimalist", "editorial", "clean".
+- `taste-brutalist` — Swiss-typographic + military terminal (rigid grids, extreme type contrast). Trigger phrase: "brutalist", "dashboard / data-heavy".
+- `taste-redesign` — premium upgrade of existing surface without breaking it (audits → identifies AI-generic patterns → fixes). Trigger phrase: "redesign", "make this premium", "upgrade this page".
+- `taste-image-to-code` — image-first design-to-code. Trigger phrase: "make it look like this image", "match this reference".
+- `taste-stitch` — generates DESIGN.md spec files. Trigger phrase: "DESIGN.md", "design spec".
+- `taste-output` — enforces complete unabridged code (bans placeholder patterns). Trigger phrase: "full file", "no truncation".
+- `taste-gpt` — heavy GSAP motion + AIDA-structured premium web. Trigger phrase: "GSAP", "motion-heavy hero".
+
+If the user doesn't name one of these, the default Taste skill is `taste-skill`. Never auto-stack multiple Taste sub-skills on the same round.
 
 Skill guidance is advisory. Hermes queue ownership, human gate, runtime proof, verification-before-completion, source-truth, stop rules, and finish behavior remain authoritative.
 
