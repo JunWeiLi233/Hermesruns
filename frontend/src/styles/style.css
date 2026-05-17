@@ -10704,7 +10704,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 .race-center-section-head {
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 18px;
+    margin-bottom: 28px;
 }
 
 .race-center-section-head h2,
@@ -10735,10 +10735,10 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 .race-center-pb-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
+    gap: 18px;
 }
 
-.race-center-pb-card,
+/* Legacy calendar-card style (kept for backward compat) */
 .race-center-calendar-card {
     position: relative;
     overflow: hidden;
@@ -10746,26 +10746,69 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     background: #1d1c1b;
 }
 
+/* --- PB scoreboard tiles (new visual language) --- */
 .race-center-pb-card {
-    min-height: 174px;
-    padding: 22px 20px;
-    transition: background 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+    padding: 28px 24px;
+    border-radius: var(--radius-xl);
+    background: rgba(29, 28, 27, 0.9); /* tokens-ok — dark tile surface; cinematic dark; matches convention */
+    border: 1px solid rgba(229, 226, 225, 0.07); /* tokens-ok — subtle tile border; matches agenda border convention */
+    transition: background var(--transition), border-color var(--transition);
 }
 
 .race-center-pb-card:hover {
-    background: #232120;
+    background: rgba(38, 36, 35, 0.98); /* tokens-ok — slightly lighter hover state; same dark-surface convention */
+    border-color: rgba(229, 226, 225, 0.12); /* tokens-ok — subtle hover border lift; no token */
 }
 
-.race-center-pb-card.is-featured {
-    background: rgba(240, 117, 97, 0.08);
-    box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.14);
+/* Marathon featured tile — 2-wide on desktop */
+.race-center-pb-card--featured {
+    grid-column: span 2;
+    background: rgba(240, 117, 97, 0.06); /* tokens-ok — coral tint surface for featured; mirrors .race-center-country-chip.is-active pattern */
+    border-color: rgba(240, 117, 97, 0.14); /* tokens-ok — coral subtle border; mirrors old .race-center-pb-card.is-featured */
 }
 
-.race-center-pb-copy {
-    position: relative;
-    z-index: 1;
+.race-center-pb-card--featured:hover {
+    background: rgba(240, 117, 97, 0.1); /* tokens-ok — stronger coral tint on hover; same convention */
 }
 
+.race-center-pb-distance {
+    display: block;
+    color: var(--accent-coral);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.race-center-pb-time {
+    display: block;
+    color: #ffffff;
+    font-family: "JetBrains Mono", "Roboto Mono", ui-monospace, monospace; /* tokens-ok — monospace font stack; no design token for font-mono yet */
+    font-size: clamp(2rem, 2.8vw, 2.8rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.race-center-pb-race-meta {
+    margin: 12px 0 0;
+    color: rgba(229, 226, 225, 0.4); /* tokens-ok — muted race/date metadata; page-level convention */
+    font-size: 0.72rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Legacy pb-copy and pb-meta for backward compat */
 .race-center-pb-copy p,
 .race-center-discovery-tag,
 .race-center-calendar-course span {
@@ -10885,11 +10928,115 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     height: 14px;
 }
 
-/* --- Discovery grid — 3-col redesign --- */
+/* --- Discovery grid — 2-col editorial --- */
 .race-center-discovery-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px;
+    margin-top: 28px;
+}
+
+/* --- Featured (hero) race card — editorial lead --- */
+.race-center-featured-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--bg-glass); /* tokens-ok — uses bg-glass token */
+    margin-top: 24px;
+}
+
+.race-center-featured-image-wrap {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    background: transparent;
+}
+
+.race-center-featured-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+    will-change: transform;
+}
+
+.race-center-featured-card:hover .race-center-featured-image {
+    transform: scale(1.025);
+}
+
+.race-center-featured-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(10, 10, 10, 0.04) 0%,
+        rgba(10, 10, 10, 0.72) 100%
+    ); /* tokens-ok — dark gradient overlay on image; no token for gradient stops */
+}
+
+.race-center-featured-tag {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(10, 10, 10, 0.76); /* tokens-ok — dark glass on image; mirrors .race-center-card-tag */
+    backdrop-filter: blur(14px);
+    color: var(--accent-coral);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.race-center-featured-body {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px 24px 24px;
+    pointer-events: none;
+}
+
+.race-center-featured-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.race-center-featured-name {
+    margin: 0 0 6px;
+    color: #ffffff;
+    font-family: "Manrope", var(--font-display);
+    font-size: clamp(1.6rem, 2.8vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); /* tokens-ok — text-shadow on image for legibility; no token */
+}
+
+.race-center-featured-location {
+    margin: 0;
+    color: rgba(229, 226, 225, 0.72); /* tokens-ok — muted text on dark image overlay; matches page convention */
+    font-size: 0.88rem;
+    line-height: 1.5;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5); /* tokens-ok — legibility shadow on image; no token */
+}
+
+.race-center-featured-footer {
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(29, 28, 27, 0.96); /* tokens-ok — cinematic dark footer bar under image; no token for exact shade */
 }
 
 /* Legacy 2-col card styles (kept for backward compat with any lingering refs) */
@@ -10970,7 +11117,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 
 .race-center-card-image-wrap {
     position: relative;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
     border: 0;
     padding: 0;
@@ -11012,7 +11159,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     display: flex;
     flex-direction: column;
     flex: 1;
-    padding: 16px 18px 18px;
+    padding: 20px 22px 24px;
 }
 
 .race-center-card-meta {
@@ -11129,7 +11276,7 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
 .race-center-load-more-wrap {
     display: flex;
     justify-content: center;
-    padding: 32px 0 8px;
+    padding: 48px 0 16px;
 }
 
 .race-center-load-more {
@@ -11159,6 +11306,140 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     transform: translateY(-1px);
 }
 
+/* --- Section divider rule --- */
+.race-center-section-divider {
+    height: 1px;
+    background: rgba(229, 226, 225, 0.08); /* tokens-ok — faint divider on dark; no token for this alpha rule */
+    margin-bottom: 48px;
+}
+
+/* --- Section subtitle (muted one-liner under h2) --- */
+.race-center-section-subtitle {
+    margin: 4px 0 0;
+    color: rgba(229, 226, 225, 0.38); /* tokens-ok — muted secondary text on dark; page-level convention */
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.race-center-section-verified {
+    color: rgba(229, 226, 225, 0.3);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* --- Section increased vertical rhythm --- */
+.race-center-section {
+    margin-top: 96px;
+}
+
+/* --- Agenda list (saved calendar) --- */
+.race-center-agenda {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: rgba(17, 17, 16, 0.72); /* tokens-ok — dark agenda surface; slightly distinct from page background; no token */
+    border: 1px solid rgba(229, 226, 225, 0.06); /* tokens-ok — subtle border on agenda container; no token */
+}
+
+.race-center-agenda-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 96px;
+    padding: 22px 28px;
+    border-bottom: 1px solid rgba(229, 226, 225, 0.07); /* tokens-ok — thin row separator; matches .race-center-section-divider convention */
+}
+
+.race-center-agenda-row:last-child {
+    border-bottom: none;
+}
+
+.race-center-agenda-countdown {
+    flex: 0 0 120px;
+    display: flex;
+    align-items: center;
+}
+
+.race-center-agenda-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(240, 117, 97, 0.12); /* tokens-ok — coral alpha tint chip; mirrors .race-center-country-chip.is-active */
+    color: var(--accent-coral);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.race-center-agenda-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.race-center-agenda-name {
+    display: block;
+    color: #ffffff;
+    font-size: 0.96rem;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.race-center-agenda-sub {
+    margin: 4px 0 0;
+    color: rgba(229, 226, 225, 0.46); /* tokens-ok — muted metadata text; page-level convention */
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.race-center-agenda-side {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.race-center-agenda-status {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06); /* tokens-ok — subtle pill surface on dark; mirrors filter chip convention */
+    color: rgba(229, 226, 225, 0.58); /* tokens-ok — muted pill text; page-level convention */
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.race-center-agenda-empty {
+    display: flex;
+    align-items: center;
+    min-height: 96px;
+    padding: 24px 28px;
+}
+
+.race-center-agenda-empty-text {
+    color: rgba(229, 226, 225, 0.36); /* tokens-ok — very muted empty-state text; page-level convention */
+    font-size: 0.88rem;
+    font-style: italic;
+}
+
+/* --- Calendar section visual separation --- */
+.race-center-calendar {
+    background: transparent;
+}
+
+/* Legacy calendar card and list styles (kept for any lingering refs) */
 .race-center-calendar-card {
     padding: 10px;
     background: #111110;
@@ -11188,6 +11469,11 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     gap: 16px;
     padding: 18px 12px;
     border-radius: 18px;
+}
+
+/* --- PB scoreboard section --- */
+.race-center-pb-section {
+    padding-bottom: 80px;
 }
 
 .race-detail-page {
@@ -12565,9 +12851,20 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-playbook-btn.is-s
 }
 
 @media (max-width: 980px) {
-    .race-center-pb-grid,
+    .race-center-pb-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .race-center-pb-card--featured {
+        grid-column: span 2;
+    }
+
     .race-center-discovery-grid {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .race-center-featured-image-wrap {
+        aspect-ratio: 16 / 9;
     }
 
     .race-center-calendar-row {
@@ -12577,6 +12874,10 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-playbook-btn.is-s
 
     .race-center-calendar-row-side {
         justify-content: space-between;
+    }
+
+    .race-center-agenda-countdown {
+        flex: 0 0 100px;
     }
 }
 
@@ -12612,9 +12913,37 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-playbook-btn.is-s
     }
 
     .race-center-hero-actions,
-    .race-center-pb-grid,
     .race-center-discovery-grid {
         grid-template-columns: 1fr;
+    }
+
+    .race-center-pb-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .race-center-pb-card--featured {
+        grid-column: span 2;
+    }
+
+    .race-center-featured-image-wrap {
+        aspect-ratio: 4 / 3;
+    }
+
+    .race-center-featured-name {
+        font-size: clamp(1.3rem, 5vw, 1.8rem);
+    }
+
+    .race-center-agenda-row {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+
+    .race-center-agenda-countdown {
+        flex: 0 0 90px;
+    }
+
+    .race-center-agenda-status {
+        display: none;
     }
 
     .race-center-primary-btn,
@@ -48154,6 +48483,100 @@ body.theme-light .races-dashboard-page .race-center-secondary-btn {
   background: rgba(255, 255, 255, 0.82);
   color: var(--text-strong);
   box-shadow: 0 10px 22px rgba(44, 47, 48, 0.05);
+}
+
+/* Light-mode: featured card + agenda + PB scoreboard overrides */
+body.theme-light .races-dashboard-page .race-center-featured-card {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(44, 47, 48, 0.08);
+}
+
+body.theme-light .races-dashboard-page .race-center-featured-footer {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+body.theme-light .races-dashboard-page .race-center-featured-name {
+  text-shadow: 0 2px 10px rgba(44, 47, 48, 0.5);
+}
+
+body.theme-light .races-dashboard-page .race-center-featured-location {
+  text-shadow: 0 1px 6px rgba(44, 47, 48, 0.4);
+}
+
+body.theme-light .races-dashboard-page .race-center-section-divider {
+  background: rgba(44, 47, 48, 0.1);
+}
+
+body.theme-light .races-dashboard-page .race-center-section-subtitle {
+  color: var(--text-muted);
+}
+
+body.theme-light .races-dashboard-page .race-center-section-verified {
+  color: var(--text-muted);
+}
+
+body.theme-light .races-dashboard-page .race-center-agenda {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(44, 47, 48, 0.08);
+  box-shadow: 0 14px 30px rgba(44, 47, 48, 0.05);
+}
+
+body.theme-light .races-dashboard-page .race-center-agenda-row {
+  border-bottom-color: rgba(44, 47, 48, 0.08);
+}
+
+body.theme-light .races-dashboard-page .race-center-agenda-chip {
+  background: rgba(160, 57, 42, 0.1);
+  color: var(--brand-accent);
+}
+
+body.theme-light .races-dashboard-page .race-center-agenda-name {
+  color: var(--text-strong);
+}
+
+body.theme-light .races-dashboard-page .race-center-agenda-sub {
+  color: var(--text-muted);
+}
+
+body.theme-light .races-dashboard-page .race-center-agenda-status {
+  background: rgba(44, 47, 48, 0.07);
+  color: var(--text-muted);
+}
+
+body.theme-light .races-dashboard-page .race-center-agenda-empty-text {
+  color: var(--text-muted);
+}
+
+body.theme-light .races-dashboard-page .race-center-pb-card {
+  background:
+    radial-gradient(circle at top right, rgba(252, 126, 105, 0.06), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 241, 242, 0.98));
+  border-color: rgba(44, 47, 48, 0.08);
+  box-shadow: 0 14px 30px rgba(44, 47, 48, 0.05);
+}
+
+body.theme-light .races-dashboard-page .race-center-pb-card:hover {
+  box-shadow: 0 20px 36px rgba(44, 47, 48, 0.09);
+  border-color: rgba(44, 47, 48, 0.12);
+}
+
+body.theme-light .races-dashboard-page .race-center-pb-card--featured {
+  background:
+    linear-gradient(135deg, rgba(252, 126, 105, 0.14), rgba(255, 255, 255, 0.98) 52%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 241, 242, 0.98));
+  border-color: rgba(160, 57, 42, 0.14);
+}
+
+body.theme-light .races-dashboard-page .race-center-pb-distance {
+  color: var(--brand-accent);
+}
+
+body.theme-light .races-dashboard-page .race-center-pb-time {
+  color: var(--text-strong);
+}
+
+body.theme-light .races-dashboard-page .race-center-pb-race-meta {
+  color: var(--text-muted);
 }
 
 body.theme-light .analysis-vo2-kinetic-dashboard {
