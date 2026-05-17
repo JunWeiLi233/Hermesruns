@@ -171,6 +171,8 @@ export default {
       "cinematic_compare_local": "本地计算可用",
       "cinematic_compare_noise": "无社交噪音",
       "cinematic_compare_bilingual": "中英双语",
+      "cinematic_compare_social": "Strava",
+      "cinematic_compare_device": "Runna",
       "cinematic_compare_strava": "Strava",
       "cinematic_compare_runna": "Runna",
       "cinematic_cta_kicker": "开始",
