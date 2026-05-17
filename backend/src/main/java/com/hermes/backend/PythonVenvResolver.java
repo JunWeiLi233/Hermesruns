@@ -39,4 +39,11 @@ public class PythonVenvResolver {
         }
         return "python";
     }
+
+    public String resolveScriptPath(String fallbackScriptName) {
+        if (pythonScriptPath != null && !pythonScriptPath.isBlank()) {
+            return pythonScriptPath.trim();
+        }
+        return fallbackScriptName;
+    }
 }

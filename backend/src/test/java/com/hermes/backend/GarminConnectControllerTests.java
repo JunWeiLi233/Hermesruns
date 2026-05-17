@@ -12,7 +12,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class GarminConnectControllerTests {
@@ -75,6 +77,25 @@ class GarminConnectControllerTests {
     }
 
     @Test
+    void startImportReturnsTooManyRequestsDuringGarminRateLimitCooldown() {
+        when(authService.findByAuthorizationHeader(anyString())).thenReturn(Optional.of(runner));
+        when(importService.getRateLimitRetryAfterSeconds(runner.getId())).thenReturn(900L);
+
+        ResponseEntity<?> response = controller.startImport("Bearer token", Map.of(
+                "garminEmail", "test@test.com",
+                "garminPassword", "pass"
+        ));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("900");
+        assertThat(response.getBody()).isInstanceOf(Map.class);
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+        assertThat(body.get("error")).asString().contains("temporarily rate limiting");
+        assertThat(body.get("retryAfterSeconds")).isEqualTo(900L);
+        verify(importService, never()).startImport(any(), anyString(), anyString(), anyInt());
+    }
+
+    @Test
     void startImportReturnsStartedPayloadForValidRequest() {
         when(authService.findByAuthorizationHeader(anyString())).thenReturn(Optional.of(runner));
         when(importService.startImport(any(), any(), any(), anyInt())).thenReturn(true);
@@ -99,7 +120,7 @@ class GarminConnectControllerTests {
     void getImportStatusReturnsTrackedStatusForAuthenticatedRunner() {
         when(authService.findByAuthorizationHeader(anyString())).thenReturn(Optional.of(runner));
         when(importService.getStatus(runner.getId())).thenReturn(new GarminConnectImportService.GarminSyncStatus(
-                "RUNNING", 5, 2, 0, 0, null, true));
+                "RUNNING", 5, 2, 0, 0, null, true, 0));
 
         ResponseEntity<?> response = controller.getImportStatus("Bearer token");
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -108,5 +129,24 @@ class GarminConnectControllerTests {
                 (GarminConnectImportService.GarminSyncStatus) response.getBody();
         assertThat(body.status()).isEqualTo("RUNNING");
         assertThat(body.importedRuns()).isEqualTo(5);
+    }
+
+    @Test
+    void startWellnessImportReturnsTooManyRequestsDuringGarminRateLimitCooldown() {
+        runner.setGarminConnectEmail("test@test.com");
+        runner.setGarminConnectPasswordEncrypted("encrypted");
+        when(authService.findByAuthorizationHeader(anyString())).thenReturn(Optional.of(runner));
+        when(encryptionService.decrypt("encrypted")).thenReturn("pass");
+        when(wellnessService.getRateLimitRetryAfterSeconds(runner.getId())).thenReturn(600L);
+
+        ResponseEntity<?> response = controller.startWellnessImport("Bearer token", Map.of("daysBack", 7));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("600");
+        assertThat(response.getBody()).isInstanceOf(Map.class);
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+        assertThat(body.get("error")).asString().contains("temporarily rate limiting");
+        assertThat(body.get("retryAfterSeconds")).isEqualTo(600L);
+        verify(wellnessService, never()).startWellnessImport(any(), anyString(), anyString(), anyInt());
     }
 }

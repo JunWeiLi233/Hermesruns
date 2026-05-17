@@ -271,6 +271,7 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 !.opencode/commands/
 !.opencode/commands/auto-hermes.md
 !.opencode/commands/auto-hermes-max.md
+!.opencode/commands/auto-hermes-self.md
 !.claude/
 .claude/*
 !.claude/skills/

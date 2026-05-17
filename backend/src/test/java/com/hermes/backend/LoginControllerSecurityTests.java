@@ -120,7 +120,8 @@ class LoginControllerSecurityTests {
                 mock(VerificationResendLimiter.class),
                 mock(PasswordResetLimiter.class),
                 mock(PasswordResetService.class),
-                mock(ApiRateLimiter.class)
+                mock(ApiRateLimiter.class),
+                mock(RecaptchaVerifier.class)
         );
     }
 

@@ -74,27 +74,33 @@ public class RoutePlannerController {
                     elevationPreference
             );
 
-            // Persist the planned route
-            PlannedRoute saved = new PlannedRoute();
-            saved.setRunner(runner);
-            saved.setStartLat(request.startLat());
-            saved.setStartLng(request.startLng());
-            saved.setTargetDistanceKm(request.targetDistanceKm());
-            saved.setElevationPreference(elevationPreference);
-            saved.setWaypoints(toWaypointsJson(result.waypoints));
-            saved.setActualDistanceKm(result.actualDistanceKm);
-            saved.setElevationGainMeters(result.elevationGainMeters);
-            saved.setEstimatedTimeMinutes(result.estimatedTimeMinutes);
-            saved.setCreatedAt(LocalDateTime.now());
-            plannedRouteRepository.save(saved);
+            PlannedRoute saved = null;
+            if (result.streetGraphBacked && result.waypoints != null && result.waypoints.size() >= 2) {
+                saved = new PlannedRoute();
+                saved.setRunner(runner);
+                saved.setStartLat(request.startLat());
+                saved.setStartLng(request.startLng());
+                saved.setTargetDistanceKm(request.targetDistanceKm());
+                saved.setElevationPreference(elevationPreference);
+                saved.setWaypoints(toWaypointsJson(result.waypoints));
+                saved.setActualDistanceKm(result.actualDistanceKm);
+                saved.setElevationGainMeters(result.elevationGainMeters);
+                saved.setEstimatedTimeMinutes(result.estimatedTimeMinutes);
+                saved.setCreatedAt(LocalDateTime.now());
+                plannedRouteRepository.save(saved);
+            }
 
             Map<String, Object> response = new HashMap<>();
-            response.put("id", saved.getId());
+            response.put("id", saved != null ? saved.getId() : null);
             response.put("waypoints", result.waypoints);
             response.put("actualDistanceKm", round2(result.actualDistanceKm));
             response.put("elevationGainMeters", round2(result.elevationGainMeters));
             response.put("estimatedTimeMinutes", result.estimatedTimeMinutes);
             response.put("distanceAccuracy", round2(result.distanceAccuracy));
+            response.put("streetGraphBacked", result.streetGraphBacked);
+            if (!result.streetGraphBacked) {
+                response.put("message", "No street-graph route was available near that start point.");
+            }
 
             return ResponseEntity.ok(response);
 
@@ -130,6 +136,7 @@ public class RoutePlannerController {
                 map.put("elevationGainMeters", round2(r.getElevationGainMeters()));
                 map.put("estimatedTimeMinutes", r.getEstimatedTimeMinutes());
                 map.put("createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : null);
+                map.put("streetGraphBacked", true);
                 try {
                     map.put("waypoints", objectMapper.readValue(r.getWaypoints(), List.class));
                 } catch (JsonProcessingException e) {

@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class GoogleGeocodingClientTests {
@@ -51,9 +52,9 @@ class GoogleGeocodingClientTests {
         ReflectionTestUtils.setField(client, "geocodingUrl", "https://maps.googleapis.com/maps/api/geocode/json");
 
         List<GeocodedAnchorPointDTO> result = client.geocodeAnchorPoints(
-                "Boston Marathon",
-                "Boston",
-                "United States",
+                "Berlin Marathon",
+                "Berlin",
+                "Germany",
                 List.of("Start Line", "River Crossing", "Downtown Turn", "Finish Arch")
         );
 
@@ -74,15 +75,15 @@ class GoogleGeocodingClientTests {
                         org.assertj.core.groups.Tuple.tuple(45.30, -74.10)
                 );
 
-        assertThat(extractAddressQuery(urlHolder[0])).isEqualTo("Start Line, Boston Marathon, Boston, United States");
-        assertThat(extractAddressQuery(urlHolder[1])).isEqualTo("River Crossing, Boston Marathon, Boston, United States");
-        assertThat(extractAddressQuery(urlHolder[2])).isEqualTo("Downtown Turn, Boston Marathon, Boston, United States");
-        assertThat(extractAddressQuery(urlHolder[3])).isEqualTo("Finish Arch, Boston Marathon, Boston, United States");
+        assertThat(extractAddressQuery(urlHolder[0])).isEqualTo("Start Line, Berlin Marathon, Berlin, Germany");
+        assertThat(extractAddressQuery(urlHolder[1])).isEqualTo("River Crossing, Berlin Marathon, Berlin, Germany");
+        assertThat(extractAddressQuery(urlHolder[2])).isEqualTo("Downtown Turn, Berlin Marathon, Berlin, Germany");
+        assertThat(extractAddressQuery(urlHolder[3])).isEqualTo("Finish Arch, Berlin Marathon, Berlin, Germany");
         assertThat(urlHolder[0]).contains("key=test-key");
     }
 
     @Test
-    void geocodeAnchorPointsRejectsAnythingOtherThanExactlyFourLabels() {
+    void geocodeAnchorPointsRejectsFewerThanFourLabels() {
         GoogleGeocodingClient client = new GoogleGeocodingClient(mock(RestTemplate.class));
         ReflectionTestUtils.setField(client, "apiKey", "test-key");
 
@@ -93,7 +94,7 @@ class GoogleGeocodingClientTests {
                 List.of("Start", "Turn", "Finish")
         ))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("exactly 4");
+                .hasMessageContaining("between 4 and 10");
     }
 
     @Test
@@ -129,6 +130,82 @@ class GoogleGeocodingClientTests {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("River Crossing")
                 .hasMessageContaining("ZERO_RESULTS");
+    }
+
+    @Test
+    void geocodeAnchorPointsResolvesBostonCourseTownAnchorsLocallyBeforeGoogle() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        GoogleGeocodingClient client = new GoogleGeocodingClient(restTemplate);
+        ReflectionTestUtils.setField(client, "apiKey", "test-key");
+
+        List<GeocodedAnchorPointDTO> result = client.geocodeAnchorPoints(
+                "Boston Marathon",
+                "Boston",
+                "United States",
+                List.of("Start", "Ashland", "Wellesley", "Finish")
+        );
+
+        assertThat(result)
+                .extracting(GeocodedAnchorPointDTO::formattedAddress)
+                .containsExactly(
+                        "Boston Marathon start line, Hopkinton, MA, United States",
+                        "Ashland, MA, United States",
+                        "Wellesley, MA, United States",
+                        "Boston Marathon finish, Boylston Street, Boston, MA, United States"
+                );
+        assertThat(result.get(1).latitude()).isBetween(42.20, 42.30);
+        assertThat(result.get(1).longitude()).isBetween(-71.50, -71.40);
+        verifyNoInteractions(restTemplate);
+    }
+
+    @Test
+    void geocodeAnchorPointsResolvesSixBostonCourseTownAnchorsLocallyBeforeGoogle() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        GoogleGeocodingClient client = new GoogleGeocodingClient(restTemplate);
+        ReflectionTestUtils.setField(client, "apiKey", "test-key");
+
+        List<GeocodedAnchorPointDTO> result = client.geocodeAnchorPoints(
+                "Boston Marathon",
+                "Boston",
+                "United States",
+                List.of("Start", "Ashland", "Framingham", "Wellesley", "Newton", "Finish")
+        );
+
+        assertThat(result)
+                .extracting(GeocodedAnchorPointDTO::formattedAddress)
+                .containsExactly(
+                        "Boston Marathon start line, Hopkinton, MA, United States",
+                        "Ashland, MA, United States",
+                        "Framingham, MA, United States",
+                        "Wellesley, MA, United States",
+                        "Newton Hills, Newton, MA, United States",
+                        "Boston Marathon finish, Boylston Street, Boston, MA, United States"
+                );
+        verifyNoInteractions(restTemplate);
+    }
+
+    @Test
+    void localRouteBoundsAnchorsIncludesBostonMarathonCorridor() {
+        GoogleGeocodingClient client = new GoogleGeocodingClient(mock(RestTemplate.class));
+
+        List<GeocodedAnchorPointDTO> bounds = client.localRouteBoundsAnchors(
+                "Boston Marathon",
+                "Boston",
+                "United States"
+        );
+
+        assertThat(bounds).hasSize(4);
+        assertThat(bounds)
+                .extracting(GeocodedAnchorPointDTO::formattedAddress)
+                .containsOnly("Boston Marathon local route bounds");
+        assertThat(bounds)
+                .extracting(GeocodedAnchorPointDTO::latitude)
+                .anySatisfy(latitude -> assertThat(latitude).isGreaterThan(42.34))
+                .anySatisfy(latitude -> assertThat(latitude).isLessThan(42.23));
+        assertThat(bounds)
+                .extracting(GeocodedAnchorPointDTO::longitude)
+                .anySatisfy(longitude -> assertThat(longitude).isLessThan(-71.50))
+                .anySatisfy(longitude -> assertThat(longitude).isGreaterThan(-71.09));
     }
 
     private String extractAddressQuery(String url) {

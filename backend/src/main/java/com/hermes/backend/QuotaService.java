@@ -25,7 +25,7 @@ public class QuotaService {
 
     public QuotaService(
             RunnerRepository runnerRepository,
-            @Value("${app.quota.free.shoe-scan:2}") int freeShoeScanLimit,
+            @Value("${app.quota.free.shoe-scan:3}") int freeShoeScanLimit,
             @Value("${app.quota.free.muscle-plan:0}") int freeMusclePlanLimit) {
         this.runnerRepository = runnerRepository;
         this.freeShoeScanLimit = Math.max(0, freeShoeScanLimit);

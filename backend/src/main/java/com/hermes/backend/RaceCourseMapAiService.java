@@ -114,6 +114,36 @@ public class RaceCourseMapAiService {
             RaceCourseMapService.PromptRaceType raceType,
             String mediaType
     ) {
+        return analyzeCandidate(
+                imageReference,
+                imageBytes,
+                raceName,
+                city,
+                country,
+                latitude,
+                longitude,
+                distanceKm,
+                forceRouteExtraction,
+                raceType,
+                mediaType,
+                false
+        );
+    }
+
+    public RaceCourseMapService.CourseMapAlignment analyzeCandidate(
+            String imageReference,
+            byte[] imageBytes,
+            String raceName,
+            String city,
+            String country,
+            Double latitude,
+            Double longitude,
+            Double distanceKm,
+            boolean forceRouteExtraction,
+            RaceCourseMapService.PromptRaceType raceType,
+            String mediaType,
+            boolean preserveRejectedAlignment
+    ) {
         scanWatcher.beginStep("qwen.build_prompt", "Building Qwen alignment prompt with race context.");
         String promptText = promptBuilder.buildAlignmentPrompt(raceName, city, country, latitude, longitude, distanceKm, forceRouteExtraction, raceType, null);
         scanWatcher.completeStep("qwen.build_prompt", "SUCCESS", "Alignment prompt built.", Map.of(
@@ -153,6 +183,13 @@ public class RaceCourseMapAiService {
                 "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
                 "isCourseMap", alignment.isCourseMap()
         ));
+        if (!alignment.isCourseMap()) {
+            scanWatcher.beginStep("qwen.decision", "Final alignment decision - Qwen did not detect a course map.");
+            scanWatcher.completeStep("qwen.decision", "SUCCESS", "Non-course-map response accepted without rescue pass.", Map.of(
+                    "confidence", alignment.confidence()
+            ));
+            return alignment;
+        }
 
         scanWatcher.beginStep("qwen.geometry_check", "Running route geometry diagnosis on Qwen alignment.");
         RaceCourseMapService.RouteGeometryDiagnosis diagnosis = geometryService.diagnoseRouteGeometry(alignment.routePoints(), raceType, distanceKm);
@@ -236,7 +273,7 @@ public class RaceCourseMapAiService {
         if (corrected == null) {
             scanWatcher.completeStep("qwen.rescue", "FAILED", "Corrective Qwen pass returned no parseable alignment.");
             scanWatcher.record("qwen.rescue_parse_failed", "FAILED", "Corrective Qwen pass returned no parseable alignment.");
-            return null;
+            return preserveRejectedAlignment ? alignment : null;
         }
         RaceCourseMapGeometryService.AlignmentPlausibilityVerdict correctedPlausibility =
                 geometryService.assessAlignmentPlausibility(
@@ -261,7 +298,7 @@ public class RaceCourseMapAiService {
                     "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
                     "reason", correctedGeography.reason()
             ));
-            return null;
+            return preserveRejectedAlignment ? alignment : null;
         }
         if (!correctedPlausibility.plausible()) {
             if (isUsableLowerDensityCorrectiveRoute(corrected, correctedPlausibility.reason(), distanceKm)
@@ -282,7 +319,7 @@ public class RaceCourseMapAiService {
                 return corrected;
             }
             if (isUsableLowerDensityCorrectiveRoute(alignment, rescueReason, distanceKm)
-                    && originalScore > correctedScore) {
+                    && originalScore >= correctedScore) {
                 rescueOutcome = "SUCCESS: original lower-density route preserved (corrective regressed)";
                 scanWatcher.completeStep("qwen.rescue", "SUCCESS", "Corrective Qwen pass regressed, so Hermes kept the lower-density original route.", Map.of(
                         "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
@@ -307,7 +344,7 @@ public class RaceCourseMapAiService {
                 "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
                 "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason()
             ));
-            return null;
+            return preserveRejectedAlignment ? alignment : null;
         }
         rescueOutcome = "SUCCESS: corrected alignment scored against original";
         scanWatcher.completeStep("qwen.rescue", "SUCCESS", "Corrective Qwen pass scored against the original alignment.", Map.of(
@@ -381,7 +418,7 @@ public class RaceCourseMapAiService {
 
     private List<KnownCourseGeographyProfile> knownCourseGeographyProfiles() {
         return List.of(
-                new KnownCourseGeographyProfile("New York City Marathon", List.of("new york", "nyc"), 40.5800, 40.8600, -74.0800, -73.9200),
+                new KnownCourseGeographyProfile("New York City Marathon", List.of("new york", "nyc"), 40.5800, 40.8600, -74.1800, -73.9200),
                 new KnownCourseGeographyProfile("Chicago Marathon", List.of("chicago"), 41.7650, 41.9900, -87.7200, -87.5900),
                 new KnownCourseGeographyProfile("Boston Marathon", List.of("boston"), 42.2050, 42.3700, -71.5450, -71.0350),
                 new KnownCourseGeographyProfile("Paris Marathon", List.of("paris"), 48.8150, 48.8950, 2.2500, 2.4700),

@@ -65,6 +65,62 @@ class QwenRouteParameterClientTests {
     }
 
     @Test
+    void parseRouteParametersKeepsVisibleAnchorSetsBetweenFourAndTen() {
+        QwenRouteParameterClient client = new QwenRouteParameterClient(new ObjectMapper());
+
+        RouteParametersDTO result = client.parseRouteParameters("""
+                {
+                  "routeHexColor": "#00ff88",
+                  "anchorPoints": [
+                    "start arch",
+                    "river bend",
+                    "downtown turn",
+                    "north park",
+                    "stadium loop",
+                    "finish gantry"
+                  ]
+                }
+                """);
+
+        assertThat(result.routeHexColor()).isEqualTo("#00FF88");
+        assertThat(result.anchorPoints()).containsExactly(
+                "start arch",
+                "river bend",
+                "downtown turn",
+                "north park",
+                "stadium loop",
+                "finish gantry"
+        );
+    }
+
+    @Test
+    void parseRouteParametersRejectsMissingRouteColorInsteadOfGuessingRed() {
+        QwenRouteParameterClient client = new QwenRouteParameterClient(new ObjectMapper());
+
+        assertThatThrownBy(() -> client.parseRouteParameters("""
+                {
+                  "anchorPoints": ["Start", "Bridge", "Park", "Finish"]
+                }
+                """))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("routeHexColor");
+    }
+
+    @Test
+    void parseRouteParametersRejectsTooFewAnchorsInsteadOfUsingSyntheticBounds() {
+        QwenRouteParameterClient client = new QwenRouteParameterClient(new ObjectMapper());
+
+        assertThatThrownBy(() -> client.parseRouteParameters("""
+                {
+                  "routeHexColor": "#ff0000",
+                  "anchorPoints": ["Start", "Finish"]
+                }
+                """))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("at least 4");
+    }
+
+    @Test
     void extractRouteParametersRaisesHelpfulErrorWhenWorkerFails(@TempDir Path tempDir) throws Exception {
         Path imagePath = tempDir.resolve("course.png");
         Files.write(imagePath, new byte[] {1, 2, 3, 4});

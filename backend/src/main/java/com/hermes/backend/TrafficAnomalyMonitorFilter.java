@@ -14,11 +14,10 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
 
 /**
- * Lightweight suspicious traffic detector (in-memory).
+ * Lightweight suspicious traffic detector.
  * Logs bursts of 4xx/5xx/429 for a single IP so operators can spot abuse.
  */
 @Component
@@ -31,16 +30,11 @@ public class TrafficAnomalyMonitorFilter implements Filter {
     private static final int WARN_429_PER_MIN = 10;
     private static final int WARN_5XX_PER_MIN = 5;
 
-    private static final class Counter {
-        long windowStartEpochSec;
-        int any;
-        int s4xx;
-        int s429;
-        int s5xx;
-        boolean warned;
-    }
+    private final TrafficAnomalyStore trafficAnomalyStore;
 
-    private final ConcurrentHashMap<String, Counter> byIp = new ConcurrentHashMap<>();
+    public TrafficAnomalyMonitorFilter(TrafficAnomalyStore trafficAnomalyStore) {
+        this.trafficAnomalyStore = trafficAnomalyStore;
+    }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -54,33 +48,20 @@ public class TrafficAnomalyMonitorFilter implements Filter {
 
         int status = res.getStatus();
         String ip = RequestIpResolver.clientIp(req);
-        long now = Instant.now().getEpochSecond();
-
-        Counter c = byIp.computeIfAbsent(ip, k -> new Counter());
-        synchronized (c) {
-            if (now - c.windowStartEpochSec > WINDOW_SECONDS) {
-                c.windowStartEpochSec = now;
-                c.any = 0;
-                c.s4xx = 0;
-                c.s429 = 0;
-                c.s5xx = 0;
-                c.warned = false;
-            }
-
-            c.any++;
-            if (status >= 500) c.s5xx++;
-            else if (status == 429) c.s429++;
-            else if (status >= 400) c.s4xx++;
-
-            if (!c.warned && (c.s4xx >= WARN_4XX_PER_MIN || c.s429 >= WARN_429_PER_MIN || c.s5xx >= WARN_5XX_PER_MIN)) {
-                c.warned = true;
-                String path = req.getRequestURI();
-                String method = req.getMethod();
-                String ua = req.getHeader("User-Agent");
-                log.warn("Suspicious traffic burst ip={} method={} path={} any={} 4xx={} 429={} 5xx={} ua={}",
-                        ip, method, path, c.any, c.s4xx, c.s429, c.s5xx, ua);
-            }
+        TrafficAnomalyStore.Snapshot snapshot = trafficAnomalyStore.record(
+                ip,
+                status,
+                Duration.ofSeconds(WINDOW_SECONDS),
+                WARN_4XX_PER_MIN,
+                WARN_429_PER_MIN,
+                WARN_5XX_PER_MIN
+        );
+        if (snapshot.warning()) {
+            String path = req.getRequestURI();
+            String method = req.getMethod();
+            String ua = req.getHeader("User-Agent");
+            log.warn("Suspicious traffic burst ip={} method={} path={} any={} 4xx={} 429={} 5xx={} ua={}",
+                    ip, method, path, snapshot.any(), snapshot.s4xx(), snapshot.s429(), snapshot.s5xx(), ua);
         }
     }
 }
-

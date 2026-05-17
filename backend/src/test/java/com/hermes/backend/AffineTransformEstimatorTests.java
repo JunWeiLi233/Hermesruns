@@ -37,7 +37,35 @@ class AffineTransformEstimatorTests {
     }
 
     @Test
-    void estimateTransformRequiresExactlyFourAnchorPairs() {
+    void estimateTransformFitsSixAnchorPairsToAffineCoefficients() {
+        AffineTransformEstimator estimator = new AffineTransformEstimator();
+        List<TestPixelAnchor> pixelAnchors = List.of(
+                new TestPixelAnchor(10, 20),
+                new TestPixelAnchor(50, 20),
+                new TestPixelAnchor(10, 70),
+                new TestPixelAnchor(60, 90),
+                new TestPixelAnchor(80, 45),
+                new TestPixelAnchor(35, 105)
+        );
+        List<TestGeoAnchor> geoAnchors = pixelAnchors.stream()
+                .map(anchor -> new TestGeoAnchor(
+                        40.0 + (0.01 * anchor.x()) + (0.02 * anchor.y()),
+                        -73.0 + (-0.03 * anchor.x()) + (0.04 * anchor.y())
+                ))
+                .toList();
+
+        AffineTransformCoefficientsDTO result = estimator.estimateTransform(pixelAnchors, geoAnchors);
+
+        assertThat(result.latitudeXCoefficient()).isCloseTo(0.01, within(1.0e-9));
+        assertThat(result.latitudeYCoefficient()).isCloseTo(0.02, within(1.0e-9));
+        assertThat(result.latitudeIntercept()).isCloseTo(40.0, within(1.0e-9));
+        assertThat(result.longitudeXCoefficient()).isCloseTo(-0.03, within(1.0e-9));
+        assertThat(result.longitudeYCoefficient()).isCloseTo(0.04, within(1.0e-9));
+        assertThat(result.longitudeIntercept()).isCloseTo(-73.0, within(1.0e-9));
+    }
+
+    @Test
+    void estimateTransformRequiresAtLeastFourAnchorPairs() {
         AffineTransformEstimator estimator = new AffineTransformEstimator();
 
         assertThatThrownBy(() -> estimator.estimateTransform(
@@ -53,7 +81,7 @@ class AffineTransformEstimatorTests {
                 )
         ))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("exactly 4");
+                .hasMessageContaining("at least 4");
     }
 
     @Test
