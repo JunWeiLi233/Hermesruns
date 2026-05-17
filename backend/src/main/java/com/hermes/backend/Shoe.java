@@ -41,6 +41,18 @@ public class Shoe {
     @Transient
     private Double currentDistanceKm;
 
+    @Transient
+    private String type;
+
+    @Transient
+    private String surfaceType;
+
+    @Transient
+    private LocalDateTime lastWornAt;
+
+    @Transient
+    private Integer daysSinceLastWear;
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
@@ -94,4 +106,16 @@ public class Shoe {
 
     public Double getCurrentDistanceKm() { return currentDistanceKm; }
     public void setCurrentDistanceKm(Double currentDistanceKm) { this.currentDistanceKm = currentDistanceKm; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public String getSurfaceType() { return surfaceType; }
+    public void setSurfaceType(String surfaceType) { this.surfaceType = surfaceType; }
+
+    public LocalDateTime getLastWornAt() { return lastWornAt; }
+    public void setLastWornAt(LocalDateTime lastWornAt) { this.lastWornAt = lastWornAt; }
+
+    public Integer getDaysSinceLastWear() { return daysSinceLastWear; }
+    public void setDaysSinceLastWear(Integer daysSinceLastWear) { this.daysSinceLastWear = daysSinceLastWear; }
 }

@@ -138,6 +138,36 @@ class ShoeQueryNormalizationServiceTests {
         assertEquals("AI normalization is not configured.", error.getMessage());
     }
 
+    @Test
+    void normalizeCanUseConfiguredLettaAgent() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        LettaAgentClient lettaAgentClient = mock(LettaAgentClient.class);
+        when(lettaAgentClient.isConfigured()).thenReturn(true);
+        when(lettaAgentClient.sendUserMessage(any(String.class))).thenReturn("""
+                {
+                  "brand": "Nike",
+                  "model": "Pegasus 41",
+                  "searchString": "Nike Pegasus 41"
+                }
+                """);
+
+        ShoeQueryNormalizationService service = new ShoeQueryNormalizationService(
+                restTemplate,
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                systemConfigService,
+                lettaAgentClient
+        );
+        setField(service, "aiAgentProvider", "letta");
+
+        ShoeMetadataDto metadata = service.normalize("Nike Peg 41");
+
+        assertEquals("Nike", metadata.brand());
+        assertEquals("Pegasus 41", metadata.model());
+        assertEquals("Nike Pegasus 41", metadata.searchString());
+        verify(lettaAgentClient).sendUserMessage(any(String.class));
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

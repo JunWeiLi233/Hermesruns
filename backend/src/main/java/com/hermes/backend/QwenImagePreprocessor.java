@@ -7,6 +7,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
 import java.awt.image.RescaleOp;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -190,6 +192,31 @@ final class QwenImagePreprocessor {
         Kernel kernel = new Kernel(3, 3, MILD_SHARPEN_KERNEL);
         ConvolveOp op = new ConvolveOp(kernel, ConvolveOp.EDGE_NO_OP, null);
         return op.filter(workImage, null);
+    }
+
+    // Apply the Qwen preprocessing pipeline (resize → contrast → sharpen → PNG) to raw image bytes.
+    // Returns the original bytes when decoding or re-encoding fails so the alignment call can still proceed.
+    static byte[] preprocessBytes(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return imageBytes;
+        }
+        try {
+            BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (decoded == null) {
+                return imageBytes;
+            }
+            BufferedImage resized = resizeIfNeeded(decoded, DEFAULT_QWEN_MAX_DIMENSION);
+            BufferedImage enhanced = enhanceContrast(resized);
+            BufferedImage sharpened = sharpen(enhanced);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (!ImageIO.write(sharpened, "png", output)) {
+                return imageBytes;
+            }
+            byte[] encoded = output.toByteArray();
+            return encoded.length > 0 ? encoded : imageBytes;
+        } catch (Exception ignored) {
+            return imageBytes;
+        }
     }
 
     static void deleteQuietly(PreparedImage preparedImage) {

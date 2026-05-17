@@ -82,12 +82,6 @@ function Get-PathPolicy {
     if ($normalized -eq '.env.example') {
         return New-PolicyResult -Path $normalized -Bucket 'publishable' -Reason 'Placeholder environment documentation may ship; real .env files remain blocked.'
     }
-    if ($normalized -eq 'Hermes.local.env.example.ps1') {
-        return New-PolicyResult -Path $normalized -Bucket 'publishable' -Reason 'Placeholder local environment documentation may ship; real local env files remain blocked.'
-    }
-    if ($normalized -in @('course-map-images/.gitignore', 'backend/course-map-images/.gitignore')) {
-        return New-PolicyResult -Path $normalized -Bucket 'publishable' -Reason 'Tracked placeholder keeps local course-map image directories present without publishing images.'
-    }
 
     # Shared AI workflow files - NOW PUBLISHABLE
     $sharedAiWorkflowRegexes = @(
@@ -187,29 +181,14 @@ function Get-PathPolicy {
     $publishableRegexes = @(
         '^README\.md$',
         '^docs/architecture/',
-        '^docs/auto-hermes/',
-        '^docs/repo-rules/',
-        '^docs/features\.md$',
-        '^docs/setup\.md$',
-        '^docs/superpowers/specs/',
         '^\.gitignore$',
-        '^\.github/prompts/auto-hermes-[^/]+\.prompt\.md$',
-        '^\.github/workflows/',
-        '^\.cursor/rules/',
-        '^\.opencode/commands/auto-hermes[^/]*\.md$',
         '^design\.md$',
         '^DESIGN_VERSIONS\.md$',
         '^\.github/prompts/auto-hermes-push-main\.prompt\.md$',
         '^TICKET\.md$',
-        '^docker-compose\.yml$',
-        '^package\.json$',
-        '^package-lock\.json$',
-        '^start_hermes\.bat$',
-        '^frontend/(src|public|index\.html|package\.json|package-lock\.json|vite\.config.*|eslint\.config.*|scripts/)',
+        '^frontend/(src|public|package\.json|package-lock\.json|vite\.config.*|eslint\.config.*|scripts/)',
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',
-        '^backend/course-map-images/\.gitignore$',
-        '^shoe-image-service/',
-        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-[^/]+\.(mjs|test\.mjs)|refresh-architecture-diagrams\.(mjs|test\.mjs)|browser-harness-auto\.(ps1|test\.mjs)|check-coordinator-drift\.mjs|check-design-tokens\.mjs|start-browser-harness-chrome\.ps1|startHermesSharedRunnerEnv\.smoke\.test\.js|langchain-memory\.(mjs|test\.mjs)|mem0-bridge\.mjs|garmin_connect_download\.py|garmin_wellness_download\.py)$'
+        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.(mjs|test\.mjs)|auto-hermes-push-main\.(mjs|test\.mjs)|auto-hermes-tech-debt\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$'
     )
 
     foreach ($pattern in $publishableRegexes) {

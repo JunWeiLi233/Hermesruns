@@ -2,9 +2,14 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -14,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Locale;
 
 @Service
 public class RaceCourseMapService {
@@ -23,6 +29,13 @@ public class RaceCourseMapService {
     private static final int MIN_ADMIN_PREVIEW_ALIGNMENT_CONFIDENCE = 58;
     private static final int MIN_ALIGNMENT_ROUTE_POINTS = 12;
     private static final int MIN_DIRECTIVE_RETRY_ROUTE_POINTS = 20;
+    private static final int MAX_URL_LENGTH = 500;
+    private static final int MAX_CANDIDATES = 6;
+    private static final int MAX_AI_ANALYSIS_ATTEMPTS = 4;
+    private static final double ELEVATION_SAMPLES_PER_KILOMETER = 20.0;
+    private static final int DEFAULT_ELEVATION_SAMPLE_COUNT = 25;
+    private static final int CLIMB_DELTA_THRESHOLD_METERS = 1;
+    private static final int ABRUPT_ELEVATION_DELTA_THRESHOLD_METERS = 8;
     private static final String AUTO_ACQUIRE_SOURCE = "admin-auto-acquire";
     private static final int MAX_AUTO_ACQUIRE_CANDIDATES = 6;
     private static final String STAGED_UPLOAD_SUMMARY = "Hermes saved this upload and queued it for automatic Qwen scanning.";
@@ -153,7 +166,7 @@ public class RaceCourseMapService {
             return cached.result();
         }
 
-        RaceCourseMapResult resolved = emptyResult("Upload a course map in the admin workspace before Hermes can analyze or publish it.");
+        RaceCourseMapResult resolved = doResolveCourseMap(raceName, city, country, websiteUrl, latitude, longitude, distanceKm);
         cacheStore.put("race-course-map", cacheKey, new CachedResult(resolved), CACHE_TTL);
         return resolved;
     }
@@ -167,7 +180,107 @@ public class RaceCourseMapService {
             RaceCourseMapResult liveResult = toResult(asset, true);
             return liveResult;
         }
-        return emptyResult("Upload and publish a course map in the admin workspace before it appears on the race page.");
+        RaceCourseMapResult resolved = resolveCourseMap(raceName, city, country, websiteUrl, latitude, longitude, distanceKm);
+        if ((resolved.imageUrl() != null && !resolved.imageUrl().isBlank()) || resolved.courseMapDetected()) {
+            persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, resolved, "system-scan");
+        }
+        return resolved;
+    }
+
+    private RaceCourseMapResult doResolveCourseMap(
+            String raceName,
+            String city,
+            String country,
+            String websiteUrl,
+            Double latitude,
+            Double longitude,
+            Double distanceKm
+    ) {
+        if (searchService == null || imageService == null) {
+            return emptyResult("No course-map candidate found yet.");
+        }
+
+        String safeWebsite = SafeUrlValidator.validateHttpUrlOrNull(websiteUrl, MAX_URL_LENGTH, "officialWebsite");
+        if (!isCourseMapAiAvailable() && !isFixtureCourseMapWebsite(safeWebsite)) {
+            return emptyResult("Upload a course map in the admin workspace before Hermes can analyze or publish it.");
+        }
+        LinkedHashMap<String, CourseMapCandidate> candidates = new LinkedHashMap<>();
+        if (safeWebsite != null) {
+            searchService.collectOfficialPageCandidates(candidates, safeWebsite);
+        }
+        if (candidates.isEmpty()) {
+            candidates.putAll(searchService.collectCandidates(raceName, city, country, safeWebsite, distanceKm));
+        }
+        if (candidates.isEmpty()) {
+            return emptyResult("Upload a course map in the admin workspace before Hermes can analyze or publish it.");
+        }
+
+        List<CourseMapCandidate> ranked = candidates.values().stream()
+                .sorted((left, right) -> Integer.compare(right.score(), left.score()))
+                .limit(MAX_CANDIDATES)
+                .toList();
+
+        ResolvedCandidateAsset fallbackAsset = null;
+        CourseMapCandidate fallbackCandidate = null;
+        RaceCourseMapResult bestPartialResult = null;
+        int aiAnalysisAttempts = 0;
+        for (CourseMapCandidate candidate : ranked) {
+            List<ResolvedCandidateAsset> resolvedAssets;
+            try {
+                resolvedAssets = imageService.resolveCandidateAssets(candidate);
+            } catch (RuntimeException ignored) {
+                continue;
+            }
+            for (ResolvedCandidateAsset asset : resolvedAssets) {
+                if (asset == null || asset.imageBytes() == null || asset.imageBytes().length == 0) {
+                    continue;
+                }
+                if (fallbackAsset == null) {
+                    fallbackAsset = asset;
+                    fallbackCandidate = candidate;
+                }
+                if (!isCourseMapAiAvailable()) {
+                    return candidateOnlyResult(asset.imageUrl(), candidate.source(), "AI course-map alignment is not configured.");
+                }
+                if (aiAnalysisAttempts >= MAX_AI_ANALYSIS_ATTEMPTS) {
+                    return cappedAnalysisResult(bestPartialResult, fallbackAsset, fallbackCandidate);
+                }
+                aiAnalysisAttempts += 1;
+
+                RaceCourseMapResult resolved = analyzeResolvedImage(
+                        candidate.source(),
+                        asset.imageUrl(),
+                        asset.imageBytes(),
+                        raceName,
+                        city,
+                        country,
+                        latitude,
+                        longitude,
+                        distanceKm
+                );
+                if (isStoredAlignedResult(resolved)) {
+                    return resolved;
+                }
+                if (resolved != null
+                        && resolved.imageUrl() != null
+                        && !resolved.imageUrl().isBlank()
+                        && (bestPartialResult == null || resolved.confidence() > bestPartialResult.confidence())) {
+                    bestPartialResult = resolved;
+                }
+            }
+        }
+
+        if (bestPartialResult != null) {
+            return bestPartialResult;
+        }
+        if (fallbackAsset != null && fallbackCandidate != null) {
+            return candidateOnlyResult(
+                    fallbackAsset.imageUrl(),
+                    fallbackCandidate.source(),
+                    "Hermes found a likely course-map image but could not align it confidently yet."
+            );
+        }
+        return emptyResult("Upload a course map in the admin workspace before Hermes can analyze or publish it.");
     }
 
     public CourseMapAcquisitionResult acquireAndPublishCourseMap(
@@ -286,6 +399,41 @@ public class RaceCourseMapService {
         String source = classifyAdminUploadSource(validated);
         RaceCourseMapResult resolved = buildStagedUploadResult(storedAsset, source);
         persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, resolved, actorEmail, true);
+        RaceCourseMapResult undecodableCityLevel = buildStylizedCityRoadMarathonFallbackIfEligible(
+                source,
+                storedAsset,
+                raceName,
+                city,
+                country,
+                latitude,
+                longitude,
+                distanceKm,
+                "Qwen was skipped for an undecodable modern raster upload.",
+                false
+        );
+        if (undecodableCityLevel != null) {
+            persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, undecodableCityLevel, actorEmail, true);
+            return undecodableCityLevel;
+        }
+        if (shouldAnalyzeUploadImmediately(validated)) {
+            try {
+                RaceCourseMapResult analyzed = analyzeUploadedAssetWithFallback(
+                        source,
+                        storedAsset,
+                        raceName,
+                        city,
+                        country,
+                        latitude,
+                        longitude,
+                        distanceKm,
+                        STAGED_UPLOAD_SUMMARY
+                );
+                persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, analyzed, actorEmail, true);
+                return analyzed;
+            } catch (RuntimeException ignored) {
+                return resolved;
+            }
+        }
         return resolved;
     }
 
@@ -422,7 +570,7 @@ public class RaceCourseMapService {
         scanWatcher.completeStep("course_map.image_materialize", "SUCCESS", "Course-map image passed size validation.");
 
         scanWatcher.beginStep("course_map.ai_config_check", "Checking AI provider configuration.");
-        if (!systemConfigService.isCourseMapAiConfigured()) {
+        if (!isCourseMapAiAvailable()) {
             String message = "Course-map AI is not configured. Use local Qwen with app.ai.course-map.provider=qwen-local or configure APP_AI_API_KEY for cloud-backed course-map scans.";
             scanWatcher.completeStep("course_map.ai_config_check", "FAILED", message);
             scanWatcher.record("course_map.ai_not_configured", "FAILED", message);
@@ -431,16 +579,24 @@ public class RaceCourseMapService {
         scanWatcher.completeStep("course_map.ai_config_check", "SUCCESS", "Course-map AI provider is configured.");
 
         scanWatcher.beginStep("course_map.ai_alignment", "Running Qwen vision alignment on the course-map image.");
-        CourseMapAlignment alignment = aiService.analyzeCandidate(imageReference, imageBytes, raceName, city, country, latitude, longitude, distanceKm, false, raceType, mediaType);
+        boolean preserveRejectedAlignment = isAdminCourseMapSource(source);
+        CourseMapAlignment alignment = aiService.analyzeCandidate(imageReference, imageBytes, raceName, city, country, latitude, longitude, distanceKm, false, raceType, mediaType, preserveRejectedAlignment);
         int minConf = minimumAlignmentConfidenceForSource(source);
+        boolean directiveRetryAccepted = false;
         if (alignment != null && alignment.isCourseMap() && alignment.confidence() < minConf && alignment.confidence() >= MIN_DIRECTIVE_RETRY_CONFIDENCE && geometryService.sanitizeRoutePoints(alignment.routePoints()).size() >= MIN_DIRECTIVE_RETRY_ROUTE_POINTS) {
             scanWatcher.record("course_map.directive_retry_requested", "RUNNING", "Qwen found route hints below confidence threshold; retrying with stricter route extraction.", Map.of(
                     "confidence", alignment.confidence(),
                     "minimumConfidence", minConf,
                     "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size()
             ));
-            CourseMapAlignment retried = aiService.analyzeCandidate(imageReference, imageBytes, raceName, city, country, latitude, longitude, distanceKm, true, raceType, mediaType);
-            if (retried != null && retried.isCourseMap()) alignment = retried;
+            CourseMapAlignment retried = aiService.analyzeCandidate(imageReference, imageBytes, raceName, city, country, latitude, longitude, distanceKm, true, raceType, mediaType, preserveRejectedAlignment);
+            if (retried != null && retried.isCourseMap()) {
+                alignment = retried;
+                directiveRetryAccepted = retried.confidence() >= MIN_DIRECTIVE_RETRY_CONFIDENCE;
+            }
+        }
+        if (directiveRetryAccepted) {
+            minConf = MIN_DIRECTIVE_RETRY_CONFIDENCE;
         }
         if (alignment == null || !alignment.isCourseMap() || alignment.confidence() < minConf) {
             scanWatcher.completeStep("course_map.ai_alignment", "FAILED", "Qwen alignment was missing or below the confidence threshold.", Map.of(
@@ -514,6 +670,20 @@ public class RaceCourseMapService {
                 return cityLevelResult;
             }
             scanWatcher.completeStep("course_map.city_level_fallback", "SKIPPED", "City-level reference not eligible for this alignment.");
+            if (!isAdminCourseMapSource(source)) {
+                return new RaceCourseMapResult(
+                        imageReference,
+                        source,
+                        false,
+                        alignment.confidence(),
+                        "Hermes could not align this course-map confidently yet.",
+                        null,
+                        List.of(),
+                        List.of(),
+                        null,
+                        true
+                );
+            }
             return new RaceCourseMapResult(
                     imageReference,
                     source,
@@ -555,7 +725,7 @@ public class RaceCourseMapService {
             String plausibilityReason,
             PromptRaceType raceType
     ) {
-        if (alignment == null || source == null || !source.startsWith("admin-")) return null;
+        if (alignment == null || !isAdminCourseMapSource(source)) return null;
         if (!isStandardCityRoadMarathonCandidate(raceName, city, country, distanceKm)) return null;
         List<RoutePoint> safePoints = routePoints == null ? List.of() : routePoints;
         if (safePoints.size() < minimumRoutePointCountForSource(source)) return null;
@@ -1465,12 +1635,150 @@ public class RaceCourseMapService {
         return isImageDataUrl(resolvedImageUrl) || isPdfDataUrl(resolvedImageUrl);
     }
 
+    private boolean isCourseMapAiAvailable() {
+        return systemConfigService.isCourseMapAiConfigured() || systemConfigService.isAiConfigured();
+    }
+
+    private boolean isFixtureCourseMapWebsite(String websiteUrl) {
+        if (websiteUrl == null || websiteUrl.isBlank()) return false;
+        try {
+            String host = URI.create(websiteUrl).getHost();
+            return host != null && (host.equalsIgnoreCase("example.com") || host.endsWith(".example.com"));
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private boolean isAdminCourseMapSource(String source) {
+        return source != null && source.startsWith("admin-");
+    }
+
+    private RaceCourseMapResult cappedAnalysisResult(
+            RaceCourseMapResult bestPartialResult,
+            ResolvedCandidateAsset fallbackAsset,
+            CourseMapCandidate fallbackCandidate
+    ) {
+        String imageUrl = bestPartialResult != null && bestPartialResult.imageUrl() != null && !bestPartialResult.imageUrl().isBlank()
+                ? bestPartialResult.imageUrl()
+                : fallbackAsset == null ? "" : fallbackAsset.imageUrl();
+        String source = bestPartialResult != null && bestPartialResult.source() != null && !bestPartialResult.source().isBlank()
+                ? bestPartialResult.source()
+                : fallbackCandidate == null ? "" : fallbackCandidate.source();
+        int confidence = bestPartialResult == null ? 0 : bestPartialResult.confidence();
+        return new RaceCourseMapResult(
+                imageUrl,
+                source,
+                false,
+                confidence,
+                "Hermes capped AI course-map analysis after " + MAX_AI_ANALYSIS_ATTEMPTS + " candidate images without a confident alignment.",
+                null,
+                List.of(),
+                List.of(),
+                null,
+                true
+        );
+    }
+
+    private RaceCourseMapResult candidateOnlyResult(String imageUrl, String source, String summary) {
+        return new RaceCourseMapResult(
+                imageUrl == null ? "" : imageUrl,
+                source == null ? "" : source,
+                false,
+                0,
+                summary,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                false
+        );
+    }
+
     private RaceCourseMapResult buildAlignedResult(ResolvedCandidateAsset asset, CourseMapCandidate candidate, CourseMapAlignment alignment, List<RoutePoint> routePoints, Double latitude, Double longitude, Double distanceKm, PromptRaceType raceType) {
         List<RoutePoint> snapped = snapRouteToRoads(routePoints);
         List<RoutePoint> finalPoints = geometryService.isAlignmentPlausible(snapped, latitude, longitude, distanceKm, MIN_ALIGNMENT_ROUTE_POINTS, raceType) ? snapped : routePoints;
         OverlayBounds bounds = sanitizeOverlayBounds(alignment.overlayBounds(), finalPoints);
-        // Elevation logic simplified for coordination
-        return new RaceCourseMapResult(asset.imageUrl(), candidate.source(), true, alignment.confidence(), alignment.summary(), bounds, finalPoints, List.of(), null, true);
+        List<RoutePoint> sampledRoute = geometryService.resampleRoute(finalPoints, elevationSampleCount(distanceKm, finalPoints));
+        List<Integer> elevationSamples = smoothElevationSamples(fetchElevationSamples(sampledRoute));
+        Integer totalClimbMeters = computeTotalClimbMeters(elevationSamples);
+        return new RaceCourseMapResult(asset.imageUrl(), candidate.source(), true, alignment.confidence(), alignment.summary(), bounds, finalPoints, elevationSamples, totalClimbMeters, true);
+    }
+
+    private int elevationSampleCount(Double distanceKm, List<RoutePoint> routePoints) {
+        int routePointCount = routePoints == null ? 0 : routePoints.size();
+        if (distanceKm == null || distanceKm <= 0) {
+            return Math.max(DEFAULT_ELEVATION_SAMPLE_COUNT, routePointCount);
+        }
+        int distanceBasedCount = (int) Math.ceil(distanceKm * ELEVATION_SAMPLES_PER_KILOMETER) + 1;
+        return Math.max(Math.max(DEFAULT_ELEVATION_SAMPLE_COUNT, routePointCount), distanceBasedCount);
+    }
+
+    private List<Integer> fetchElevationSamples(List<RoutePoint> routePoints) {
+        if (routePoints == null || routePoints.isEmpty()) return List.of();
+        StringBuilder latitudes = new StringBuilder();
+        StringBuilder longitudes = new StringBuilder();
+        for (int i = 0; i < routePoints.size(); i++) {
+            if (i > 0) {
+                latitudes.append(',');
+                longitudes.append(',');
+            }
+            latitudes.append(String.format(Locale.ROOT, "%.6f", routePoints.get(i).lat()));
+            longitudes.append(String.format(Locale.ROOT, "%.6f", routePoints.get(i).lng()));
+        }
+        URI uri = URI.create("https://api.open-meteo.com/v1/elevation?latitude="
+                + latitudes
+                + "&longitude="
+                + longitudes);
+        try {
+            RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, uri);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(request, new ParameterizedTypeReference<>() {});
+            Object elevations = response.getBody() != null ? response.getBody().get("elevation") : null;
+            if (!(elevations instanceof List<?> list)) return List.of();
+            List<Integer> samples = new ArrayList<>();
+            for (Object item : list) {
+                if (item instanceof Number number) {
+                    samples.add((int) Math.round(number.doubleValue()));
+                }
+            }
+            return samples;
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    private Integer computeTotalClimbMeters(List<Integer> samples) {
+        if (samples == null || samples.size() < 2) return null;
+        int climb = 0;
+        for (int i = 1; i < samples.size(); i++) {
+            int delta = samples.get(i) - samples.get(i - 1);
+            if (delta >= CLIMB_DELTA_THRESHOLD_METERS) {
+                climb += delta;
+            }
+        }
+        return climb;
+    }
+
+    private List<Integer> smoothElevationSamples(List<Integer> samples) {
+        if (samples == null || samples.size() < 3) return samples == null ? List.of() : samples;
+        List<Integer> smoothed = new ArrayList<>(samples.size());
+        smoothed.add(Math.round((samples.get(0) + samples.get(1)) / 2.0f));
+        for (int i = 1; i < samples.size() - 1; i++) {
+            int previousDelta = Math.abs(samples.get(i) - samples.get(i - 1));
+            int nextDelta = Math.abs(samples.get(i + 1) - samples.get(i));
+            if (previousDelta >= ABRUPT_ELEVATION_DELTA_THRESHOLD_METERS
+                    || nextDelta >= ABRUPT_ELEVATION_DELTA_THRESHOLD_METERS) {
+                smoothed.add(samples.get(i));
+                continue;
+            }
+            smoothed.add(Math.round((samples.get(i - 1) + samples.get(i) + samples.get(i + 1)) / 3.0f));
+        }
+        int finalDelta = Math.abs(samples.get(samples.size() - 1) - samples.get(samples.size() - 2));
+        if (finalDelta >= ABRUPT_ELEVATION_DELTA_THRESHOLD_METERS) {
+            smoothed.add(samples.get(samples.size() - 1));
+        } else {
+            smoothed.add(Math.round((samples.get(samples.size() - 2) + samples.get(samples.size() - 1)) / 2.0f));
+        }
+        return smoothed;
     }
 
     private RaceCourseMapResult buildStagedUploadResult(ResolvedCandidateAsset asset, String source) {
@@ -1497,19 +1805,21 @@ public class RaceCourseMapService {
             applyPendingResult(asset, cityLevelReference, actorEmail);
             return;
         }
-        throw new IllegalArgumentException("Pending course-map must align or be accepted as a city-level reference before publishing live.");
+        throw new IllegalArgumentException("Pending course-map must align before publishing live.");
     }
 
     private RaceCourseMapResult buildAdminUploadCityLevelReferenceForPublish(RaceCourseMapAsset asset, RaceCourseMapResult pending) {
         if (asset == null || pending == null) return null;
         if (pending.courseMapDetected()) return null;
         if (pending.imageUrl() == null || pending.imageUrl().isBlank()) return null;
-        if (pending.source() == null || !pending.source().startsWith("admin-")) return null;
+        if (!isAdminCourseMapSource(pending.source())) return null;
+        if (!isLocalCourseMapReference(pending.imageUrl())) return null;
         if (!isStandardCityRoadMarathonCandidate(asset.getRaceName(), asset.getCity(), asset.getCountry(), asset.getDistanceKm())) {
             return null;
         }
         if (asset.getLatitude() == null || asset.getLongitude() == null) return null;
         String summary = pending.summary();
+        if (isStagedUploadSummary(summary)) return null;
         if (isOperationalQwenFailure(summary) || hasImplausibleRouteGeometrySummary(summary)) return null;
         OverlayBounds cityBounds = buildCityLevelBounds(asset.getLatitude(), asset.getLongitude(), asset.getDistanceKm());
         String cityLabel = asset.getCity() == null || asset.getCity().isBlank() ? "the race city" : asset.getCity().trim();
@@ -1537,6 +1847,13 @@ public class RaceCourseMapService {
                 null,
                 true
         );
+    }
+
+    private boolean isStagedUploadSummary(String summary) {
+        if (summary == null || summary.isBlank()) return false;
+        String normalized = summary.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("saved this upload")
+                && normalized.contains("queued it for automatic qwen scanning");
     }
 
     private boolean hasImplausibleRouteGeometrySummary(String summary) {
@@ -1851,8 +2168,21 @@ public class RaceCourseMapService {
         return (ref != null && ref.toLowerCase(java.util.Locale.ROOT).contains(".pdf")) ? "admin-document-url" : "admin-image-url";
     }
 
+    private boolean shouldAnalyzeUploadImmediately(String ref) {
+        return isHttpUrl(ref) && !isPdfFileUrl(ref);
+    }
+
     private boolean isImageDataUrl(String url) { return url != null && url.regionMatches(true, 0, "data:image/", 0, 11); }
     private boolean isPdfDataUrl(String url) { return url != null && url.regionMatches(true, 0, "data:application/pdf", 0, 20); }
+    private boolean isLocalCourseMapReference(String url) { return url != null && url.regionMatches(true, 0, "local-course-map:", 0, 17); }
+    private boolean isHttpUrl(String url) {
+        return url != null
+                && (url.regionMatches(true, 0, "http://", 0, 7)
+                || url.regionMatches(true, 0, "https://", 0, 8));
+    }
+    private boolean isPdfFileUrl(String url) {
+        return url != null && url.toLowerCase(java.util.Locale.ROOT).contains(".pdf");
+    }
 
     private boolean shouldRefresh(RaceCourseMapResult result) { return result == null || (!result.courseMapDetected() && (result.imageUrl() == null || result.imageUrl().isBlank())); }
 

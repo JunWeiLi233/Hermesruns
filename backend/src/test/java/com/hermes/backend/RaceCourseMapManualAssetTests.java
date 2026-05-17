@@ -14,6 +14,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
@@ -486,7 +487,7 @@ class RaceCourseMapManualAssetTests {
                         rawBreadcrumbs
                 );
         when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
-        when(georeferencingService.georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult)))
+        when(georeferencingService.georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195)))
                 .thenReturn(georefResult);
 
         RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService);
@@ -509,7 +510,165 @@ class RaceCourseMapManualAssetTests {
         assertThat(result.overlayBounds()).isNotNull();
         assertThat(result.summary()).contains("extraction");
         verify(extractionService).extractRoutePath(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(42.195));
-        verify(georeferencingService).georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult));
+        verify(georeferencingService).georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
+    }
+
+    @Test
+    void uploadPendingCourseMapPublishesOfficialBostonUploadWhenVisibleRouteMatchesKnownCourse() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        MarathonRouteExtractionService extractionService = mock(MarathonRouteExtractionService.class);
+        MarathonRouteGeoreferencingService georeferencingService = mock(MarathonRouteGeoreferencingService.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(repository.findByRaceId("boston-2026")).thenReturn(Optional.of(pendingBostonUploadAsset()));
+
+        when(restTemplate.exchange(
+                eq("https://cdn.example.com/boston-official-course-map.gif"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(bostonOfficialGif()));
+        when(restTemplate.exchange(
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(ResponseEntity.ok(geminiDetectedButEmptyAlignmentResponse()));
+
+        RouteParametersDTO routeParameters = new RouteParametersDTO("#FDD835", List.of("Hopkinton", "Framingham", "Wellesley", "Finish"));
+        RoutePathExtractionResultDTO extractionResult = new RoutePathExtractionResultDTO(
+                routeParameters,
+                List.of(new RoutePixelPointDTO(115, 396), new RoutePixelPointDTO(300, 282), new RoutePixelPointDTO(500, 232), new RoutePixelPointDTO(908, 90)),
+                2_205,
+                5_640,
+                1_183,
+                "target",
+                List.of()
+        );
+        when(extractionService.extractRoutePath(anyString(), eq("Boston Marathon"), eq("Boston"), eq("United States"), eq(42.195)))
+                .thenReturn(extractionResult);
+
+        List<RawBreadcrumbPointDTO> rawBreadcrumbs = List.of(
+                new RawBreadcrumbPointDTO(42.2295, -71.5218),
+                new RawBreadcrumbPointDTO(42.2450, -71.4950),
+                new RawBreadcrumbPointDTO(42.2612, -71.4634),
+                new RawBreadcrumbPointDTO(42.2793, -71.4162),
+                new RawBreadcrumbPointDTO(42.2834, -71.3495),
+                new RawBreadcrumbPointDTO(42.2965, -71.2926),
+                new RawBreadcrumbPointDTO(42.3100, -71.2450),
+                new RawBreadcrumbPointDTO(42.3389, -71.2092),
+                new RawBreadcrumbPointDTO(42.3318, -71.1212),
+                new RawBreadcrumbPointDTO(42.3499, -71.0784)
+        );
+        MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult georefResult =
+                new MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult(
+                        routeParameters,
+                        List.of(new RouteAnchorPixelPointDTO("Hopkinton", 115, 396), new RouteAnchorPixelPointDTO("Finish", 908, 90)),
+                        List.of(new GeocodedAnchorPointDTO("Hopkinton", 42.2295, -71.5218, "Hopkinton"), new GeocodedAnchorPointDTO("Finish", 42.3499, -71.0784, "Finish")),
+                        new AffineTransformCoefficientsDTO(1, 0, 0, 0, 1, 0),
+                        rawBreadcrumbs
+                );
+        when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
+        when(georeferencingService.georeferenceRoute(anyString(), eq("Boston Marathon"), eq("Boston"), eq("United States"), eq(extractionResult), eq(42.3601), eq(-71.0589), eq(42.195)))
+                .thenReturn(georefResult);
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService);
+
+        RaceCourseMapResult result = service.reanalyzePendingCourseMap(
+                "boston-2026",
+                "Boston Marathon",
+                "Boston",
+                "United States",
+                "https://www.baa.org/",
+                42.3601,
+                -71.0589,
+                42.195,
+                "admin@hermes.test"
+        );
+
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(rawBreadcrumbs.size());
+        assertThat(result.overlayBounds()).isNotNull();
+        assertThat(result.overlayBounds().west()).isLessThan(-71.45);
+        assertThat(result.overlayBounds().east()).isGreaterThan(-71.11);
+        assertThat(result.routePoints().get(0).lat()).isCloseTo(42.2295, org.assertj.core.data.Offset.offset(0.01));
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).lng()).isCloseTo(-71.0784, org.assertj.core.data.Offset.offset(0.01));
+        assertThat(result.summary()).contains("extraction pipeline fallback");
+    }
+
+    @Test
+    void uploadPendingCourseMapRejectsBostonRectangleFallbackGeometry() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        MarathonRouteExtractionService extractionService = mock(MarathonRouteExtractionService.class);
+        MarathonRouteGeoreferencingService georeferencingService = mock(MarathonRouteGeoreferencingService.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(repository.findByRaceId("boston-2026")).thenReturn(Optional.of(pendingBostonUploadAsset()));
+
+        when(restTemplate.exchange(
+                eq("https://cdn.example.com/boston-official-course-map.gif"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(bostonOfficialGif()));
+        when(restTemplate.exchange(
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(ResponseEntity.ok(geminiDetectedButEmptyAlignmentResponse()));
+
+        RouteParametersDTO routeParameters = new RouteParametersDTO("#FDD835", List.of("Hopkinton", "Framingham", "Wellesley", "Finish"));
+        RoutePathExtractionResultDTO extractionResult = new RoutePathExtractionResultDTO(
+                routeParameters,
+                List.of(new RoutePixelPointDTO(100, 100), new RoutePixelPointDTO(200, 100), new RoutePixelPointDTO(200, 200), new RoutePixelPointDTO(100, 200)),
+                4,
+                400,
+                80,
+                "target",
+                List.of()
+        );
+        when(extractionService.extractRoutePath(anyString(), eq("Boston Marathon"), eq("Boston"), eq("United States"), eq(42.195)))
+                .thenReturn(extractionResult);
+
+        List<RawBreadcrumbPointDTO> rectangleBreadcrumbs = List.of(
+                new RawBreadcrumbPointDTO(42.2700, -71.3300),
+                new RawBreadcrumbPointDTO(42.2700, -71.2100),
+                new RawBreadcrumbPointDTO(42.3400, -71.2100),
+                new RawBreadcrumbPointDTO(42.3400, -71.3300),
+                new RawBreadcrumbPointDTO(42.2700, -71.3300)
+        );
+        MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult georefResult =
+                new MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult(
+                        routeParameters,
+                        List.of(),
+                        List.of(),
+                        new AffineTransformCoefficientsDTO(1, 0, 0, 0, 1, 0),
+                        rectangleBreadcrumbs
+                );
+        when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
+        when(georeferencingService.georeferenceRoute(anyString(), eq("Boston Marathon"), eq("Boston"), eq("United States"), eq(extractionResult), eq(42.3601), eq(-71.0589), eq(42.195)))
+                .thenReturn(georefResult);
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService);
+
+        RaceCourseMapResult result = service.reanalyzePendingCourseMap(
+                "boston-2026",
+                "Boston Marathon",
+                "Boston",
+                "United States",
+                "https://www.baa.org/",
+                42.3601,
+                -71.0589,
+                42.195,
+                "admin@hermes.test"
+        );
+
+        assertThat(result.routePoints()).isEmpty();
+        assertThat(result.overlayBounds()).isNull();
+        assertThat(result.summary()).doesNotContain("extraction pipeline fallback after");
     }
 
     @Test
@@ -603,7 +762,7 @@ class RaceCourseMapManualAssetTests {
         when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
         doThrow(new IllegalStateException(
                 "Google geocoding failed for anchor 'Start' with status REQUEST_DENIED. Query: Start, Chicago Marathon, Chicago, United States"
-        )).when(georeferencingService).georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult));
+        )).when(georeferencingService).georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
 
         RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService);
 
@@ -698,6 +857,30 @@ class RaceCourseMapManualAssetTests {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         ImageIO.write(image, "png", output);
         return output.toByteArray();
+    }
+
+    private byte[] bostonOfficialGif() throws Exception {
+        try (InputStream inputStream = RaceCourseMapManualAssetTests.class.getResourceAsStream("/course-maps/boston-official-course-map.gif")) {
+            assertThat(inputStream).isNotNull();
+            return inputStream.readAllBytes();
+        }
+    }
+
+    private RaceCourseMapAsset pendingBostonUploadAsset() {
+        RaceCourseMapAsset storedAsset = new RaceCourseMapAsset();
+        storedAsset.setRaceId("boston-2026");
+        storedAsset.setRaceName("Boston Marathon");
+        storedAsset.setCity("Boston");
+        storedAsset.setCountry("United States");
+        storedAsset.setOfficialWebsite("https://www.baa.org/");
+        storedAsset.setLatitude(42.3601);
+        storedAsset.setLongitude(-71.0589);
+        storedAsset.setDistanceKm(42.195);
+        storedAsset.setPendingImageUrl("https://cdn.example.com/boston-official-course-map.gif");
+        storedAsset.setPendingSource("admin-image-url");
+        storedAsset.setPendingSummary("Hermes saved this upload and queued it for automatic Qwen scanning.");
+        storedAsset.setPendingUpdatedAt(LocalDateTime.now());
+        return storedAsset;
     }
 
     private byte[] stylizedRoutePng() throws Exception {

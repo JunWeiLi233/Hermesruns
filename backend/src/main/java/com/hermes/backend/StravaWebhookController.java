@@ -106,6 +106,21 @@ public class StravaWebhookController {
         log.info("Strava webhook event: object_type={}, aspect_type={}, owner_id={}, object_id={}",
                 objectType, aspectType, ownerId, objectId);
 
+        // Athlete updates and non-activity objects do not trigger runner work, so
+        // acknowledge them before spending a repository lookup on owner validation.
+        if ("athlete".equals(objectType) && "update".equals(aspectType)) {
+            Map<String, Object> updates = map(event.get("updates"));
+            if (updates != null && "true".equals(str(updates.get("authorized"))) == false) {
+                log.info("Strava deauthorization for athlete {}", ownerId);
+                // Don't delete data - just log it. User can re-connect.
+            }
+            return ResponseEntity.ok("EVENT_RECEIVED");
+        }
+
+        if (!"activity".equals(objectType) || objectId == null) {
+            return ResponseEntity.ok("EVENT_RECEIVED");
+        }
+
         // Verify the owner_id corresponds to a known registered runner.
         // Forged events with arbitrary owner_ids are rejected synchronously
         // before any async processing or resource consumption occurs.

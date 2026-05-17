@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,6 +21,13 @@ public class BingImageScraper {
 
     private static final Pattern MEDIA_URL_PATTERN =
             Pattern.compile("mediaurl=(https?%3a%2f%2f[^&\"]+)", Pattern.CASE_INSENSITIVE);
+    private static final int SINGLE_IMAGE_CANDIDATE_LIMIT = 12;
+    private static final int SEARCH_CANDIDATE_MULTIPLIER = 4;
+    private static final long MAX_PIXEL_FILTER_IMAGE_BYTES = 5L * 1024L * 1024L;
+    private static final List<String> POSITIVE_METADATA_TERMS = List.of(
+            "shoe", "shoes", "running", "runner", "sneaker", "sneakers", "trainer", "white-background", "product");
+    private static final List<String> NEGATIVE_METADATA_TERMS = List.of(
+            "logo", "box", "outfit", "person", "people", "review", "article", "blog", "banner", "poster", "wallpaper");
 
     private static final Map<String, String> BRAND_DOMAINS = Map.ofEntries(
             Map.entry("nike", "nike.com"),
@@ -51,9 +59,16 @@ public class BingImageScraper {
     );
 
     private final RestTemplate restTemplate;
+    private final ShoeImagePixelAnalyzer shoeImagePixelAnalyzer;
 
+    @Autowired
     public BingImageScraper(RestTemplate restTemplate) {
+        this(restTemplate, new ShoeImagePixelAnalyzer());
+    }
+
+    BingImageScraper(RestTemplate restTemplate, ShoeImagePixelAnalyzer shoeImagePixelAnalyzer) {
         this.restTemplate = restTemplate;
+        this.shoeImagePixelAnalyzer = shoeImagePixelAnalyzer;
     }
 
     public List<String> searchShoeImageCandidates(String brand, String model) {
@@ -130,7 +145,8 @@ public class BingImageScraper {
             if (html == null || html.length() < 100) return urls;
 
             Matcher matcher = MEDIA_URL_PATTERN.matcher(html);
-            while (matcher.find() && urls.size() < maxResults) {
+            int candidateLimit = Math.max(maxResults, maxResults * SEARCH_CANDIDATE_MULTIPLIER);
+            while (matcher.find() && urls.size() < candidateLimit) {
                 String url = java.net.URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
                 if (isImageFileUrl(url) && !urls.contains(url)) {
                     urls.add(url);
@@ -139,7 +155,7 @@ public class BingImageScraper {
         } catch (Exception e) {
             logger.warn("Multi-image fetch failed: {}", e.getMessage(), e);
         }
-        return urls;
+        return filterShoeImageUrls(urls, maxResults);
     }
 
     public String fetchAndParse(String searchUrl) {
@@ -151,14 +167,106 @@ public class BingImageScraper {
             }
 
             Matcher matcher = MEDIA_URL_PATTERN.matcher(html);
-            while (matcher.find()) {
+            List<String> candidates = new ArrayList<>();
+            while (matcher.find() && candidates.size() < SINGLE_IMAGE_CANDIDATE_LIMIT) {
                 String url = java.net.URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
-                if (isImageFileUrl(url)) return url;
+                if (isImageFileUrl(url) && !candidates.contains(url)) {
+                    candidates.add(url);
+                }
             }
+            List<String> filtered = filterShoeImageUrls(candidates, 1);
+            if (!filtered.isEmpty()) return filtered.get(0);
         } catch (Exception e) {
             logger.warn("Image fetch failed for {}: {}", searchUrl, e.getMessage(), e);
         }
         return null;
+    }
+
+    private List<String> filterShoeImageUrls(List<String> urls, int maxResults) {
+        if (urls == null || urls.isEmpty() || maxResults <= 0) {
+            return List.of();
+        }
+
+        List<String> candidates = new ArrayList<>(new LinkedHashSet<>(urls));
+        candidates.sort((left, right) -> Integer.compare(metadataScore(right), metadataScore(left)));
+
+        List<String> filtered = new ArrayList<>();
+        for (String url : candidates) {
+            if (filtered.size() >= maxResults) {
+                break;
+            }
+            if (passesShoeImageGate(url)) {
+                filtered.add(url);
+            }
+        }
+        return filtered;
+    }
+
+    private boolean passesShoeImageGate(String url) {
+        try {
+            byte[] imageBytes = fetchCandidateImageBytes(url);
+            if (imageBytes.length == 0) {
+                return false;
+            }
+
+            ShoeImagePixelAnalyzer.Analysis analysis = shoeImagePixelAnalyzer.analyze(imageBytes);
+            if (!analysis.looksLikeShoe()) {
+                logger.debug("Rejected shoe image candidate {}: {}", url, analysis.reason());
+            }
+            return analysis.looksLikeShoe();
+        } catch (Exception ex) {
+            logger.debug("Unable to pixel-filter shoe image candidate {}: {}", url, ex.getMessage());
+            return false;
+        }
+    }
+
+    private byte[] fetchCandidateImageBytes(String url) {
+        String safeUrl = SafeUrlValidator.validateHttpUrlOrNull(url, 2000, "imageUrl");
+        if (safeUrl == null) {
+            return new byte[0];
+        }
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.set("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        headers.set("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+
+        org.springframework.http.ResponseEntity<byte[]> response = restTemplate.exchange(
+                safeUrl,
+                org.springframework.http.HttpMethod.GET,
+                new org.springframework.http.HttpEntity<>(headers),
+                byte[].class);
+
+        byte[] body = response.getBody();
+        if (body == null || body.length == 0 || body.length > MAX_PIXEL_FILTER_IMAGE_BYTES) {
+            return new byte[0];
+        }
+
+        org.springframework.http.MediaType contentType = response.getHeaders().getContentType();
+        if (contentType != null && !contentType.toString().toLowerCase().startsWith("image/")) {
+            return new byte[0];
+        }
+        return body;
+    }
+
+    private int metadataScore(String url) {
+        String lower = url == null ? "" : url.toLowerCase();
+        int score = 0;
+        for (String term : POSITIVE_METADATA_TERMS) {
+            if (lower.contains(term)) {
+                score += 2;
+            }
+        }
+        for (String term : NEGATIVE_METADATA_TERMS) {
+            if (lower.contains(term)) {
+                score -= 4;
+            }
+        }
+        if (lower.contains("product") || lower.contains("white")) {
+            score += 1;
+        }
+        return score;
     }
 
     private String fetchBingHtml(String searchUrl) {

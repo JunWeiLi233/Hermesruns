@@ -1,7 +1,9 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpEntity;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -34,15 +37,23 @@ public class MapTileController {
 
     private final RestTemplate restTemplate;
     private final String publicBaseUrl;
+    private final TtlCacheStore cacheStore;
     private final Map<String, CachedTile> tileCache = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<CachedTile>> inFlightTiles = new ConcurrentHashMap<>();
 
+    @Autowired
     public MapTileController(
             RestTemplate restTemplate,
-            @Value("${app.billing.public-base-url:http://localhost:8080}") String publicBaseUrl
+            @Value("${app.billing.public-base-url:http://localhost:8080}") String publicBaseUrl,
+            TtlCacheStore cacheStore
     ) {
         this.restTemplate = restTemplate;
         this.publicBaseUrl = publicBaseUrl;
+        this.cacheStore = cacheStore;
+    }
+
+    public MapTileController(RestTemplate restTemplate, String publicBaseUrl) {
+        this(restTemplate, publicBaseUrl, TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     @GetMapping("/tiles/{z}/{x}/{y}.png")
@@ -54,7 +65,9 @@ public class MapTileController {
         String url = "https://tile.openstreetmap.org/" + z + "/" + x + "/" + y + ".png";
         log.info("Tile request: z={}, x={}, y={}", z, x, y);
         
-        CachedTile cached = tileCache.get(url);
+        CachedTile cached = cacheStore.get("map-tile", url, CachedTileCacheValue.class)
+                .map(value -> new CachedTile(value.body(), value.contentType(), Instant.now().plus(TILE_CACHE_TTL)))
+                .orElseGet(() -> tileCache.get(url));
         if (cached != null && !cached.isExpired()) {
             return okResponse(cached);
         }
@@ -96,9 +109,10 @@ public class MapTileController {
             }
 
             MediaType contentType = upstream.getHeaders().getContentType();
-            MediaType resolvedContentType = contentType == null ? MediaType.IMAGE_PNG : contentType;
+            String resolvedContentType = (contentType == null ? MediaType.IMAGE_PNG : contentType).toString();
             CachedTile resolvedTile = new CachedTile(body, resolvedContentType, Instant.now().plus(TILE_CACHE_TTL));
             tileCache.put(url, resolvedTile);
+            cacheStore.put("map-tile", url, new CachedTileCacheValue(body, resolvedContentType), TILE_CACHE_TTL);
             inFlight.complete(resolvedTile);
             log.info("Tile fetched and cached: {}", url);
             return okResponse(resolvedTile);
@@ -113,7 +127,7 @@ public class MapTileController {
 
     private ResponseEntity<byte[]> okResponse(CachedTile tile) {
         return ResponseEntity.status(HttpStatus.OK)
-                .contentType(tile.contentType())
+                .contentType(tile.mediaType())
                 .cacheControl(CacheControl.maxAge(6, TimeUnit.HOURS).cachePublic())
                 .body(tile.body());
     }
@@ -126,7 +140,7 @@ public class MapTileController {
 
     private ResponseEntity<byte[]> staleResponse(CachedTile tile) {
         return ResponseEntity.status(HttpStatus.OK)
-                .contentType(tile.contentType())
+                .contentType(tile.mediaType())
                 .cacheControl(CacheControl.maxAge(5, TimeUnit.MINUTES).cachePublic())
                 .body(tile.body());
     }
@@ -156,9 +170,20 @@ public class MapTileController {
         }
     }
 
-    private record CachedTile(byte[] body, MediaType contentType, Instant expiresAt) {
+    private record CachedTile(byte[] body, String contentType, Instant expiresAt) {
+        private MediaType mediaType() {
+            try {
+                return MediaType.parseMediaType(contentType);
+            } catch (Exception ignored) {
+                return MediaType.IMAGE_PNG;
+            }
+        }
+
         private boolean isExpired() {
             return Instant.now().isAfter(expiresAt);
         }
+    }
+
+    private record CachedTileCacheValue(byte[] body, String contentType) {
     }
 }

@@ -66,6 +66,12 @@ public class OAuthController {
     @Value("${app.strava.redirect-uri:http://localhost:8080/api/auth/strava/callback}")
     private String stravaRedirectUri;
 
+    @Value("${recaptcha.site-key:}")
+    private String recaptchaSiteKey;
+
+    @Value("${recaptcha.secret-key:}")
+    private String recaptchaSecretKey;
+
     public OAuthController(RunnerRepository runnerRepository, AuthService authService,
                            ActivityRepository activityRepository,
                            SecretEncryptionService secretEncryptionService, AiUsageService aiUsageService,
@@ -87,11 +93,18 @@ public class OAuthController {
     // ── Auth providers ──────────────────────────────────────────────
 
     @GetMapping("/auth/providers")
-    public ResponseEntity<Map<String, Boolean>> getAuthProviders() {
-        Map<String, Boolean> response = new HashMap<>();
+    public ResponseEntity<Map<String, Object>> getAuthProviders() {
+        Map<String, Object> response = new HashMap<>();
         response.put("googleConfigured", systemConfigService.isGoogleConfigured());
         response.put("stravaConfigured", systemConfigService.isStravaConfigured());
+        response.put("recaptchaSiteKey", recaptchaSiteKey);
+        response.put("recaptchaRequired", hasText(recaptchaSecretKey));
+        response.put("recaptchaConfigured", hasText(recaptchaSecretKey) && hasText(recaptchaSiteKey));
         return ResponseEntity.ok(response);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     @GetMapping("/auth/strava/status")
@@ -471,6 +484,13 @@ public class OAuthController {
                     "started", false,
                     "status", "RELINK_REQUIRED",
                     "message", "Strava authorization expired. Please relink your account."
+            ));
+        }
+        if (accessToken == null || accessToken.isBlank()) {
+            return ResponseEntity.ok(Map.of(
+                    "started", false,
+                    "status", "NOT_LINKED",
+                    "message", "No Strava account linked."
             ));
         }
 

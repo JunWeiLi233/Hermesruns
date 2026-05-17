@@ -479,7 +479,7 @@ public class ShoeImageController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("available", available);
         if (available) {
-            result.putAll(aiUsageService.getUsageStatus(user.get()));
+            result.putAll(buildShoeScanUsageStatus(user.get()));
         }
         return ResponseEntity.ok(result);
     }
@@ -489,7 +489,7 @@ public class ShoeImageController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
-        return ResponseEntity.ok(aiUsageService.getUsageStatus(user.get()));
+        return ResponseEntity.ok(buildShoeScanUsageStatus(user.get()));
     }
 
     @PostMapping("/scan-image")
@@ -519,8 +519,9 @@ public class ShoeImageController {
         if (!quotaService.isPro(runner)) {
             // Step 1: Check feature quota (premium feature gating for free users)
             if (!quotaService.canUseFeature(runner, "shoe-scan")) {
-                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                        .body(quotaService.quotaExceededError(runner, "shoe-scan"));
+                Map<String, Object> errorBody = new LinkedHashMap<>(quotaService.quotaExceededError(runner, "shoe-scan"));
+                errorBody.putAll(buildShoeScanUsageStatus(runner));
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
             }
 
             // Step 2: Check and atomically reserve AI daily usage quota
@@ -528,7 +529,7 @@ public class ShoeImageController {
             if (aiQuotaError != null) {
                 Map<String, Object> errorBody = new LinkedHashMap<>();
                 errorBody.put("error", aiQuotaError);
-                errorBody.putAll(aiUsageService.getUsageStatus(runner));
+                errorBody.putAll(buildShoeScanUsageStatus(runner));
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
             }
 
@@ -555,7 +556,10 @@ public class ShoeImageController {
             String text = aiShoeScanService.callAi(base64, mediaType);
 
             if (text == null) {
-                return ResponseEntity.ok(Map.of("shoes", List.of()));
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("shoes", List.of());
+                result.putAll(buildShoeScanUsageStatus(runner));
+                return ResponseEntity.ok(result);
             }
 
             // Extract JSON array from text (may have surrounding text)
@@ -565,11 +569,14 @@ public class ShoeImageController {
                 String jsonArray = text.substring(start, end + 1);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("raw", jsonArray);
-                result.putAll(aiUsageService.getUsageStatus(runner));
+                result.putAll(buildShoeScanUsageStatus(runner));
                 return ResponseEntity.ok(result);
             }
 
-            return ResponseEntity.ok(Map.of("shoes", List.of()));
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("shoes", List.of());
+            result.putAll(buildShoeScanUsageStatus(runner));
+            return ResponseEntity.ok(result);
 
         } catch (HttpStatusCodeException e) {
             logger.error("AI API error {}: {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
@@ -580,6 +587,48 @@ public class ShoeImageController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to analyze image. Please try again."));
         }
+    }
+
+    private Map<String, Object> buildShoeScanUsageStatus(Runner runner) {
+        Map<String, Object> status = new LinkedHashMap<>(aiUsageService.getUsageStatus(runner));
+        if (runner == null || Boolean.TRUE.equals(status.get("unlimited")) || Boolean.TRUE.equals(status.get("admin"))) {
+            return status;
+        }
+
+        Map<String, Object> quotaStatus = quotaService.getQuotaStatus(runner);
+        Object shoeScanRaw = quotaStatus.get("shoeScan");
+        if (!(shoeScanRaw instanceof Map<?, ?> shoeScan)) {
+            return status;
+        }
+
+        int featureUsed = intValue(shoeScan.get("used"), 0);
+        int featureLimit = intValue(shoeScan.get("limit"), 0);
+        int featureRemaining = intValue(shoeScan.get("remaining"), Math.max(0, featureLimit - featureUsed));
+        int dailyRemaining = intValue(status.get("scansRemaining"), featureRemaining);
+
+        status.put("quotaType", "user_free");
+        status.put("scansRemaining", Math.max(0, Math.min(featureRemaining, dailyRemaining)));
+        status.put("monthlyLimit", featureLimit);
+        status.put("monthlyUsed", featureUsed);
+        status.put("userFreeTotal", featureLimit);
+        status.put("featureQuotaLimit", featureLimit);
+        status.put("featureQuotaUsed", featureUsed);
+        status.put("featureQuotaRemaining", featureRemaining);
+        return status;
+    }
+
+    private int intValue(Object value, int fallback) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String stringValue) {
+            try {
+                return Integer.parseInt(stringValue.trim());
+            } catch (Exception ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
     }
 
 }
