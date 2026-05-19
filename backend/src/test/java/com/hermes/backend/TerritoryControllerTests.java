@@ -1,16 +1,21 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -48,6 +53,22 @@ class TerritoryControllerTests {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    /**
+     * The Spring boot application context seeds a "Hermes Temporal Rival" runner with demo activities
+     * whose computed land masks are visible to every viewer. Tests that assert specific polygon counts
+     * or empty states would otherwise see those rival polygons leak in. Clearing the table before each
+     * test (the @Transactional rollback restores it) gives every test a deterministic clean slate.
+     * Tests that need rival polygons (e.g. polygonsEndpointIncludesRivalLandMasksWithoutRivalRouteTraces)
+     * construct their own rival runner explicitly, so this clear is safe for them too.
+     */
+    @BeforeEach
+    void clearPreSeededTerritoryPolygons() {
+        territoryPolygonRepository.deleteAll();
+    }
 
     // -----------------------------------------------------------------------
     // Existing /api/territory endpoint must remain intact
@@ -553,6 +574,73 @@ class TerritoryControllerTests {
     }
 
     @Test
+    void polygonsEndpointDoesNotLetOlderLoopRefillNewerConsumedInteriorCell() throws Exception {
+        Runner active = createRunner("territory-loop-consume-active@test.local");
+        Runner rival = createRunner("territory-loop-consume-rival@test.local");
+        rival.setDisplayName("Loop Consumer");
+        runnerRepository.save(rival);
+
+        Activity activeActivity = createActivity(active);
+        activeActivity.setStartTime(LocalDateTime.now().minusHours(2));
+        activityRepository.save(activeActivity);
+
+        Activity rivalActivity = createActivity(rival);
+        rivalActivity.setStartTime(LocalDateTime.now().minusMinutes(5));
+        activityRepository.save(rivalActivity);
+
+        double baseLat = 37.822;
+        double baseLng = -122.250;
+        double cellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double latStep = cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+
+        List<TerritoryPolygonComputer.MaskCell> olderLoopRing = new ArrayList<>();
+        for (int y = -2; y <= 2; y += 1) {
+            for (int x = -2; x <= 2; x += 1) {
+                if (Math.abs(x) != 2 && Math.abs(y) != 2) {
+                    continue;
+                }
+                olderLoopRing.add(new TerritoryPolygonComputer.MaskCell(baseLat + y * latStep, baseLng + x * lngStep));
+            }
+        }
+
+        TerritoryPolygon activeLoop = new TerritoryPolygon();
+        activeLoop.setUserId(active.getId());
+        activeLoop.setActivityId(activeActivity.getId());
+        activeLoop.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(olderLoopRing, cellMeters));
+        activeLoop.setAreaSquareMeters(olderLoopRing.size() * cellMeters * cellMeters);
+        territoryPolygonRepository.save(activeLoop);
+
+        TerritoryPolygon rivalCenterCapture = new TerritoryPolygon();
+        rivalCenterCapture.setUserId(rival.getId());
+        rivalCenterCapture.setActivityId(rivalActivity.getId());
+        rivalCenterCapture.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                List.of(new TerritoryPolygonComputer.MaskCell(baseLat, baseLng)),
+                cellMeters
+        ));
+        rivalCenterCapture.setAreaSquareMeters(cellMeters * cellMeters);
+        territoryPolygonRepository.save(rivalCenterCapture);
+
+        MvcResult result = mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Loop Consumer')]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.active == true)]").isNotEmpty())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode activePolygon = firstPolygonByActive(root, true);
+        JsonNode rivalPolygon = firstPolygonByOwner(root, "Loop Consumer");
+
+        assertThat(activePolygon).isNotNull();
+        assertThat(rivalPolygon).isNotNull();
+        assertThat(activePolygon.path("cells")).hasSize(24);
+        assertThat(rivalPolygon.path("cells")).hasSize(1);
+        assertThat(containsExactMaskCell(activePolygon.path("cells"), baseLat, baseLng)).isFalse();
+        assertThat(containsExactMaskCell(rivalPolygon.path("cells"), baseLat, baseLng)).isTrue();
+    }
+
+    @Test
     void polygonsEndpointInvalidatesCachedResponseWhenLandMaskRowsChange() throws Exception {
         Runner runner = createRunner("territory-cache-repeat@test.local");
         Activity activity = createActivity(runner);
@@ -796,5 +884,37 @@ class TerritoryControllerTests {
 
     private String bearer(Runner runner) {
         return "Bearer " + authService.issueSessionToken(runner);
+    }
+
+    private static JsonNode firstPolygonByActive(JsonNode root, boolean active) {
+        for (JsonNode polygon : root.path("polygons")) {
+            if (polygon.path("active").asBoolean(false) == active) {
+                return polygon;
+            }
+        }
+        return null;
+    }
+
+    private static JsonNode firstPolygonByOwner(JsonNode root, String ownerName) {
+        for (JsonNode polygon : root.path("polygons")) {
+            if (ownerName.equals(polygon.path("ownerName").asText())) {
+                return polygon;
+            }
+        }
+        return null;
+    }
+
+    private static boolean containsExactMaskCell(JsonNode cells, double latitude, double longitude) {
+        for (JsonNode cell : cells) {
+            double cellLat = cell.path("latitude").asDouble(Double.NaN);
+            double cellLng = cell.path("longitude").asDouble(Double.NaN);
+            if (Double.isFinite(cellLat)
+                    && Double.isFinite(cellLng)
+                    && Math.abs(cellLat - latitude) <= 0.000001
+                    && Math.abs(cellLng - longitude) <= 0.000001) {
+                return true;
+            }
+        }
+        return false;
     }
 }

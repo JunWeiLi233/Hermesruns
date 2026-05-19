@@ -210,6 +210,7 @@ export default function ShoeCatalog() {
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
+    { key: 'territory', icon: 'territory', label: t('profile.dashboard_nav_territory') || 'Territory', route: '/territory' },
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
@@ -390,7 +391,6 @@ export default function ShoeCatalog() {
                       placeholder={t('shoes.catalog_search_placeholder')}
                       value={searchQuery}
                       onChange={(e) => {
-                        if (selectedBrand) setSelectedBrand(null);
                         setSearchQuery(e.target.value);
                       }}
                     />

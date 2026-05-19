@@ -10,6 +10,7 @@ import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
@@ -234,6 +235,25 @@ export default function Analysis() {
     };
   }, [isAuthenticated, navigate]);
 
+  const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
+  const bestVdot = snapshot.bestVdot;
+  const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
+  const trainingLoad = snapshot.trainingLoad;
+  const loadZone = snapshot.loadZone;
+  const loadZoneTone = loadZone.tone === 'cool' ? 'muted' : loadZone.tone;
+  const analysisLoadTheme = loadZone.tone === 'danger' ? 'red' : loadZone.tone === 'warn' ? 'yellow' : 'green';
+  const polarized = snapshot.polarized;
+  const injury = snapshot.injury;
+  const predictionRows = normalizeAnalysisList(snapshot.predictionRows);
+  const trainingZones = normalizeAnalysisList(snapshot.trainingZones);
+  const marathonRow = snapshot.marathonRow;
+  const marathonDelta = snapshot.marathonDeltaSeconds;
+  const hasRuns = runs.length > 0;
+  const currentVo2Bar = vo2Bars.find((bar) => bar.current) || vo2Bars[vo2Bars.length - 1] || null;
+  const currentVdotLabel = currentVo2Bar?.value != null ? currentVo2Bar.value.toFixed(1) : '--';
+  const adjustedVdotLabel = currentVo2Bar?.hasAdjustment ? currentVo2Bar.adjustedValue.toFixed(1) : '--';
+  const trainingZoneBasisLabel = buildTrainingZoneBasisLabel(snapshot, t);
+
   useEffect(() => {
     if (!hasRuns) return;
     let cancelled = false;
@@ -254,24 +274,6 @@ export default function Analysis() {
     fetchInjuryStatus();
     return () => { cancelled = true; };
   }, [hasRuns]);
-
-  const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
-  const bestVdot = snapshot.bestVdot;
-  const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
-  const trainingLoad = snapshot.trainingLoad;
-  const loadZone = snapshot.loadZone;
-  const loadZoneTone = loadZone.tone === 'cool' ? 'muted' : loadZone.tone;
-  const polarized = snapshot.polarized;
-  const injury = snapshot.injury;
-  const predictionRows = normalizeAnalysisList(snapshot.predictionRows);
-  const trainingZones = normalizeAnalysisList(snapshot.trainingZones);
-  const marathonRow = snapshot.marathonRow;
-  const marathonDelta = snapshot.marathonDeltaSeconds;
-  const hasRuns = runs.length > 0;
-  const currentVo2Bar = vo2Bars.find((bar) => bar.current) || vo2Bars[vo2Bars.length - 1] || null;
-  const currentVdotLabel = currentVo2Bar?.value != null ? currentVo2Bar.value.toFixed(1) : '--';
-  const adjustedVdotLabel = currentVo2Bar?.hasAdjustment ? currentVo2Bar.adjustedValue.toFixed(1) : '--';
-  const trainingZoneBasisLabel = buildTrainingZoneBasisLabel(snapshot, t);
 
   const injuryKicker = t('analysis.stitch_injury_signal');
   const injuryTitle = t('analysis.stitch_injury_title');
@@ -344,7 +346,10 @@ export default function Analysis() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page analysis-page-shell${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div
+      className={`runner-shell-page runner-dashboard-page analysis-page-shell${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}
+      data-analysis-load-theme={analysisLoadTheme}
+    >
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -387,9 +392,11 @@ export default function Analysis() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_analysis')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_analysis')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">

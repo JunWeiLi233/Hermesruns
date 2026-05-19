@@ -948,6 +948,8 @@
       "heading": "My Badges",
       "page_copy": "Every badge captures a training milestone. Unlock what you have earned and see what to chase next.",
       "badges_earned_label": "unlocked",
+      "locked_badges_label": "locked",
+      "runs_logged_label": "runs logged",
       "earned_badge": "Unlocked",
       "earned_title": "Earned Badges",
       "earned_empty": "Import more runs and Hermes will start lighting these up automatically.",

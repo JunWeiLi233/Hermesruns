@@ -1701,10 +1701,8 @@ const Dashboard = memo(function Dashboard() {
 
   const selectedCourseMapItem = useMemo(() => {
     const queueItem = courseMapQueueItems.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null;
-    if (getCourseMapRaceId(courseMapDetail) === selectedCourseMapId) {
-      return buildCourseMapWorkspaceSource({ queueItem, detail: courseMapDetail });
-    }
-    return queueItem;
+    const selectedDetail = getCourseMapRaceId(courseMapDetail) === selectedCourseMapId ? courseMapDetail : null;
+    return selectedDetail ? buildCourseMapWorkspaceSource({ queueItem, detail: selectedDetail }) : queueItem;
   }, [courseMapDetail, courseMapQueueItems, selectedCourseMapId]);
 
   const pendingCourseMapPreview = useMemo(

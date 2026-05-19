@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
-import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
-import TopbarNotifications from '../components/TopbarNotifications';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -19,96 +17,18 @@ async function loadLeaflet() {
   return leafletPromise;
 }
 
-const COPY = {
+const MAP_CHROME_COPY = {
   en: {
-    pageName: 'Territory',
-    loading: 'Building territory map',
+    pageTitle: 'Territory',
+    recenter: 'Recenter',
+    viewRuns: 'View runs',
     settings: 'Open settings',
-    todayRun: 'Open today run',
-    demoMode: 'Demo territory',
-    liveMode: 'Live territory',
-    yourTerritory: 'Your territory',
-    streets: 'GPS segments',
-    coverage: 'Coverage',
-    rank: 'Rank',
-    allTerritories: 'All',
-    myTerritory: 'Mine',
-    contested: 'Contested',
-    unclaimed: 'Unclaimed',
-    leaderboard: 'Territory leaderboard',
-    zones: 'Zones & contests',
-    nextTarget: 'Coach pick — next conquest',
-    recent: 'Recently captured',
-    contests: 'Active contests',
-    cities: 'Cities covered',
-    claimed: 'Secured',
-    by: 'vs',
-    owner: 'Held by',
-    difficulty: 'Effort',
-    planRun: 'Plan the route',
-    noTarget: 'Keep stacking GPS runs to unlock a meaningful conquest target.',
-    secureHint: 'Run 2 more segments in this zone to lock it down.',
-    noCities: 'Sync GPS runs in more places and Hermes will rank every city you touch.',
-    briefKicker: 'Conquered space',
-    briefHeld: 'zones secured',
-    briefContested: 'under contest',
-    briefRank: 'of',
-    // Polygon brief copy
-    conqueredSpace: 'Conquered space',
-    closedLoopRuns: 'closed-loop runs',
-    polygonEmptyTitle: 'Conquered space',
-    polygonEmptyDesc: 'Run a closed loop — start and end within ~80 m of each other — and your shape lights up here. Out-and-back routes don\'t enclose territory.',
-    polygonEmptyAction: 'View runs',
-    polygonDoubleCountNote: 'Sum of polygon areas; overlapping runs may double-count.',
-    showZoneView: 'Show zone view',
-    hideZoneView: 'Hide zone view',
-    polygonViewLabel: 'Polygon view',
-    zoneViewLabel: 'Zone view',
   },
   'zh-CN': {
-    pageName: '领地',
-    loading: '正在生成领地地图',
+    pageTitle: '领地',
+    recenter: '重新居中',
+    viewRuns: '查看跑步记录',
     settings: '打开设置',
-    todayRun: '打开今日训练',
-    demoMode: '演示领地',
-    liveMode: '实时领地',
-    yourTerritory: '你的领地',
-    streets: 'GPS 路段',
-    coverage: '覆盖率',
-    rank: '排名',
-    allTerritories: '全部',
-    myTerritory: '我的',
-    contested: '争夺中',
-    unclaimed: '未占领',
-    leaderboard: '领地排行榜',
-    zones: '区域与争夺',
-    nextTarget: '教练建议 — 下个占领目标',
-    recent: '最近占领',
-    contests: '正在争夺',
-    cities: '覆盖城市',
-    claimed: '已稳固',
-    by: 'vs',
-    owner: '持有者',
-    difficulty: '难度',
-    planRun: '规划路线',
-    noTarget: '继续积累 GPS 跑步，Hermes 会生成更有意义的争夺目标。',
-    secureHint: '再跑 2 个这个区域内的路段，就能稳住这块领地。',
-    noCities: '在更多城市同步 GPS 跑步后，Hermes 会为你统计每座城市的领地。',
-    briefKicker: '征服空间',
-    briefHeld: '个区域已稳固',
-    briefContested: '个正在争夺',
-    briefRank: '/',
-    // Polygon brief copy
-    conqueredSpace: '征服空间',
-    closedLoopRuns: '条环形路线',
-    polygonEmptyTitle: '征服空间',
-    polygonEmptyDesc: '跑一条环形路线——起点和终点相距不超过 80 米——你的形状就会在这里点亮。往返路线不会圈出领地。',
-    polygonEmptyAction: '查看跑步记录',
-    polygonDoubleCountNote: '面积为各多边形之和；重叠路线可能重复计算。',
-    showZoneView: '显示区域视图',
-    hideZoneView: '隐藏区域视图',
-    polygonViewLabel: '多边形视图',
-    zoneViewLabel: '区域视图',
   },
 };
 
@@ -159,19 +79,25 @@ const DEMO_TERRITORY = {
   ],
 };
 
-function getCopy(lang, key) {
-  return (COPY[lang] || COPY.en)[key] || COPY.en[key] || key;
-}
-
-function getDisplayName(profile, fallback) {
-  const displayName = typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
-  const emailName = typeof profile?.email === 'string' ? profile.email.split('@')[0] : '';
-  const raw = displayName || emailName || String(fallback || '');
-  return raw.replace(/^./, (char) => char.toUpperCase());
-}
 
 function safeColor(color, fallback = '#f07561') {
   return /^#[0-9a-f]{6}$/i.test(String(color || '')) ? color : fallback;
+}
+
+function mapChromeCopy(lang, key) {
+  return MAP_CHROME_COPY[lang]?.[key] || MAP_CHROME_COPY.en[key] || key;
+}
+
+function formatCoordinate(value, positiveSuffix, negativeSuffix) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return `0.000°${positiveSuffix}`;
+  return `${Math.abs(numeric).toFixed(3)}°${numeric >= 0 ? positiveSuffix : negativeSuffix}`;
+}
+
+function formatCenterLabel(center) {
+  const lat = formatCoordinate(center?.latitude, 'N', 'S');
+  const lng = formatCoordinate(center?.longitude, 'E', 'W');
+  return `${lat} / ${lng}`;
 }
 
 function isOwnedByActive(cell) {
@@ -215,11 +141,255 @@ function getCoralStroke() {
   return getComputedStyle(document.documentElement).getPropertyValue('--accent-coral-strong').trim() || '#f07561';
 }
 
-function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }) {
+const MAX_MASK_CELLS_TO_RENDER = 14000;
+const TERRITORY_POLYGON_REFRESH_MS = 2500;
+const METERS_PER_DEG_LAT = 111_320;
+const LAND_MASK_TILE_OVERLAP_RATIO = 0.18;
+
+function hasCoordinatePolygon(poly) {
+  return Array.isArray(poly?.coordinates) && poly.coordinates.length >= 3;
+}
+
+function hasCellMaskPolygon(poly) {
+  return Array.isArray(poly?.cells) && poly.cells.length > 0;
+}
+
+function shouldRefreshTerritoryPolygons(polygonsData) {
+  const pendingActivityCount = Number(polygonsData?.pendingActivityCount || 0);
+  return Boolean(polygonsData?.backfillInProgress || pendingActivityCount > 0);
+}
+
+function sealedMaskTileBounds(latitude, longitude, tileMeters, cosLat) {
+  const tileExpansion = 1 + LAND_MASK_TILE_OVERLAP_RATIO;
+  const halfLat = ((tileMeters / METERS_PER_DEG_LAT) / 2) * tileExpansion;
+  const halfLng = ((tileMeters / (METERS_PER_DEG_LAT * cosLat)) / 2) * tileExpansion;
+  return [
+    [latitude - halfLat, longitude - halfLng],
+    [latitude + halfLat, longitude + halfLng],
+  ];
+}
+
+function aggregateMaskCells(cells, cellMeters) {
+  const validCells = (Array.isArray(cells) ? cells : [])
+    .map((cell) => ({
+      latitude: Number(cell?.latitude),
+      longitude: Number(cell?.longitude),
+    }))
+    .filter((cell) => Number.isFinite(cell.latitude) && Number.isFinite(cell.longitude));
+
+  if (!validCells.length) return [];
+
+  const sourceCellMeters = Number(cellMeters);
+  const baseCellMeters = Number.isFinite(sourceCellMeters) && sourceCellMeters > 0 ? sourceCellMeters : 36;
+  const bucketScale = Math.max(1, Math.ceil(Math.sqrt(validCells.length / MAX_MASK_CELLS_TO_RENDER)));
+  const tileMeters = baseCellMeters * bucketScale;
+  const refLat = validCells[0].latitude;
+  const cosLat = Math.max(1e-6, Math.abs(Math.cos((refLat * Math.PI) / 180)));
+  const tiles = new Map();
+
+  validCells.forEach((cell) => {
+    const gridY = Math.round((cell.latitude * METERS_PER_DEG_LAT) / tileMeters);
+    const gridX = Math.round((cell.longitude * METERS_PER_DEG_LAT * cosLat) / tileMeters);
+    const key = `${gridY}:${gridX}`;
+    if (tiles.has(key)) return;
+
+    const latitude = (gridY * tileMeters) / METERS_PER_DEG_LAT;
+    const longitude = (gridX * tileMeters) / (METERS_PER_DEG_LAT * cosLat);
+    tiles.set(key, {
+      gridX,
+      gridY,
+      latitude,
+      longitude,
+      tileMeters,
+      cosLat,
+      bounds: sealedMaskTileBounds(latitude, longitude, tileMeters, cosLat),
+    });
+  });
+
+  return Array.from(tiles.values());
+}
+
+function maskVertexKey(vertex) {
+  return `${vertex.x}:${vertex.y}`;
+}
+
+function maskVertexToLatLng(vertex, tileMeters, cosLat) {
+  return [
+    ((vertex.y / 2) * tileMeters) / METERS_PER_DEG_LAT,
+    ((vertex.x / 2) * tileMeters) / (METERS_PER_DEG_LAT * cosLat),
+  ];
+}
+
+function maskBoundaryLoops(tiles) {
+  if (!Array.isArray(tiles) || !tiles.length) return [];
+
+  const tileMeters = Number(tiles[0]?.tileMeters);
+  const cosLat = Number(tiles[0]?.cosLat);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(cosLat) || cosLat <= 0) return [];
+
+  const occupied = new Set(
+    tiles
+      .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY))
+      .map((tile) => `${tile.gridY}:${tile.gridX}`),
+  );
+  const edgeRecords = [];
+
+  const addEdge = (from, to) => {
+    edgeRecords.push({
+      key: `${maskVertexKey(from)}>${maskVertexKey(to)}`,
+      from,
+      to,
+    });
+  };
+
+  tiles.forEach((tile) => {
+    if (!Number.isFinite(tile?.gridX) || !Number.isFinite(tile?.gridY)) return;
+
+    const { gridX, gridY } = tile;
+    const west = (gridX * 2) - 1;
+    const east = (gridX * 2) + 1;
+    const south = (gridY * 2) - 1;
+    const north = (gridY * 2) + 1;
+
+    if (!occupied.has(`${gridY + 1}:${gridX}`)) addEdge({ x: west, y: north }, { x: east, y: north });
+    if (!occupied.has(`${gridY}:${gridX + 1}`)) addEdge({ x: east, y: north }, { x: east, y: south });
+    if (!occupied.has(`${gridY - 1}:${gridX}`)) addEdge({ x: east, y: south }, { x: west, y: south });
+    if (!occupied.has(`${gridY}:${gridX - 1}`)) addEdge({ x: west, y: south }, { x: west, y: north });
+  });
+
+  const remaining = new Map(edgeRecords.map((edge) => [edge.key, edge]));
+  const edgesByStart = new Map();
+  edgeRecords.forEach((edge) => {
+    const startKey = maskVertexKey(edge.from);
+    const edges = edgesByStart.get(startKey) || [];
+    edges.push(edge);
+    edgesByStart.set(startKey, edges);
+  });
+
+  const loops = [];
+  while (remaining.size > 0) {
+    let edge = remaining.values().next().value;
+    const startKey = maskVertexKey(edge.from);
+    const loop = [];
+    let guard = 0;
+
+    while (edge && remaining.has(edge.key) && guard < edgeRecords.length + 2) {
+      guard += 1;
+      const endpoint = edge.to;
+      loop.push(maskVertexToLatLng(edge.from, tileMeters, cosLat));
+      remaining.delete(edge.key);
+
+      const endpointKey = maskVertexKey(endpoint);
+      if (endpointKey === startKey) {
+        loop.push(maskVertexToLatLng(endpoint, tileMeters, cosLat));
+        break;
+      }
+
+      edge = (edgesByStart.get(endpointKey) || []).find((candidate) => remaining.has(candidate.key));
+      if (!edge) {
+        loop.push(maskVertexToLatLng(endpoint, tileMeters, cosLat));
+      }
+    }
+
+    if (loop.length >= 4) {
+      loops.push(loop);
+    }
+  }
+
+  return loops;
+}
+
+function routeTraceLatLngs(trace) {
+  return (Array.isArray(trace?.points) ? trace.points : [])
+    .map((point) => [Number(point?.latitude), Number(point?.longitude)])
+    .filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude));
+}
+
+/**
+ * Groups mask cells into connected components (4-neighbour adjacency on the source grid) and
+ * returns one centroid per cluster. Used to anchor a pixel-radius marker per cluster so the
+ * territory stays visible when zooming far enough out that the geographic-meter tiles become
+ * sub-pixel and disappear from the Leaflet canvas.
+ */
+function buildOwnedClusters(cells, cellMeters) {
+  if (!Array.isArray(cells) || cells.length === 0) return [];
+  const meters = Number(cellMeters);
+  if (!Number.isFinite(meters) || meters <= 0) return [];
+
+  const refLat = Number(cells[0]?.latitude);
+  if (!Number.isFinite(refLat)) return [];
+  const cosLat = Math.max(1e-6, Math.abs(Math.cos((refLat * Math.PI) / 180)));
+
+  const positions = new Map();
+  const grid = new Array(cells.length);
+  for (let i = 0; i < cells.length; i += 1) {
+    const lat = Number(cells[i]?.latitude);
+    const lng = Number(cells[i]?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      grid[i] = null;
+      continue;
+    }
+    const gx = Math.round((lng * METERS_PER_DEG_LAT * cosLat) / meters);
+    const gy = Math.round((lat * METERS_PER_DEG_LAT) / meters);
+    positions.set(`${gx}:${gy}`, i);
+    grid[i] = { gx, gy, lat, lng };
+  }
+
+  const parent = new Int32Array(cells.length);
+  for (let i = 0; i < parent.length; i += 1) parent[i] = i;
+  const find = (x) => {
+    let cur = x;
+    while (parent[cur] !== cur) {
+      parent[cur] = parent[parent[cur]];
+      cur = parent[cur];
+    }
+    return cur;
+  };
+  const union = (a, b) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+
+  for (let i = 0; i < grid.length; i += 1) {
+    const c = grid[i];
+    if (!c) continue;
+    const east = positions.get(`${c.gx + 1}:${c.gy}`);
+    const north = positions.get(`${c.gx}:${c.gy + 1}`);
+    if (Number.isInteger(east)) union(i, east);
+    if (Number.isInteger(north)) union(i, north);
+  }
+
+  const clusterMap = new Map();
+  for (let i = 0; i < grid.length; i += 1) {
+    const c = grid[i];
+    if (!c) continue;
+    const root = find(i);
+    let cluster = clusterMap.get(root);
+    if (!cluster) {
+      cluster = { sumLat: 0, sumLng: 0, count: 0 };
+      clusterMap.set(root, cluster);
+    }
+    cluster.sumLat += c.lat;
+    cluster.sumLng += c.lng;
+    cluster.count += 1;
+  }
+
+  return Array.from(clusterMap.values())
+    .map((cluster) => ({
+      lat: cluster.sumLat / cluster.count,
+      lng: cluster.sumLng / cluster.count,
+      count: cluster.count,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, recenterSignal }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const layerRef = useRef(null);
   const polygonLayerRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -235,27 +405,31 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }
         zoom: center.zoom || 14,
         zoomControl: false,
         attributionControl: false,
+        preferCanvas: true,
       });
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
         maxZoom: 20,
+        className: 'territory-real-world-tile',
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       }).addTo(map);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
       mapInstanceRef.current = map;
+      setMapReady(true);
     }
 
     mountMap();
     return () => {
       cancelled = true;
+      setMapReady(false);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
-  }, [territory]);
+  }, []);
 
   // Paint zone/territory polygons (existing zone view)
   useEffect(() => {
@@ -263,13 +437,15 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }
 
     async function paintTerritories() {
       const map = mapInstanceRef.current;
-      if (!map) return;
+      if (!mapReady || !map) return;
       const L = await loadLeaflet();
       if (cancelled) return;
 
       if (layerRef.current) {
         layerRef.current.remove();
+        layerRef.current = null;
       }
+      if (showPolygons) return;
       const layer = L.layerGroup().addTo(map);
       const cells = Array.isArray(territory?.territories) ? territory.territories : [];
       const visibleCells = cells.filter((cell) => {
@@ -277,7 +453,7 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }
         if (filter === 'contested') return cell.contested;
         if (filter === 'unclaimed') return !cell.ownerName;
         return true;
-      });
+      }).filter((cell) => Array.isArray(cell?.polygon) && cell.polygon.length >= 3);
 
       visibleCells.forEach((cell) => {
         const color = safeColor(cell.color);
@@ -316,7 +492,7 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }
     return () => {
       cancelled = true;
     };
-  }, [territory, filter, leaderboard]);
+  }, [territory, filter, leaderboard, mapReady, showPolygons]);
 
   // Paint closed-loop polygons from /api/territory/polygons
   useEffect(() => {
@@ -324,7 +500,7 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }
 
     async function paintPolygons() {
       const map = mapInstanceRef.current;
-      if (!map) return;
+      if (!mapReady || !map) return;
       const L = await loadLeaflet();
       if (cancelled) return;
 
@@ -340,16 +516,88 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }
 
       const allCoords = [];
       polygons.forEach((poly) => {
-        if (!Array.isArray(poly.coordinates) || poly.coordinates.length < 3) return;
         const areaKm2 = ((poly.areaSquareMeters || 0) / 1_000_000).toFixed(2);
-        L.polygon(poly.coordinates, {
-          color: strokeColor,
-          weight: 2,
-          opacity: 0.88,
-          fillColor: strokeColor,
-          fillOpacity: 0.22,
-        }).bindTooltip(`${areaKm2} km²`).addTo(layer);
-        poly.coordinates.forEach((coord) => allCoords.push(coord));
+        const color = safeColor(poly.color, strokeColor);
+
+        if (hasCoordinatePolygon(poly)) {
+          L.polygon(poly.coordinates, {
+            color,
+            weight: 2,
+            opacity: 0.88,
+            fillColor: color,
+            fillOpacity: 0.22,
+          }).bindTooltip(`${areaKm2} km虏`).addTo(layer);
+          poly.coordinates.forEach((coord) => allCoords.push(coord));
+          return;
+        }
+
+        if (!hasCellMaskPolygon(poly)) return;
+
+        const tiles = aggregateMaskCells(poly.cells, poly.cellMeters);
+        (Array.isArray(poly.routeTraces) ? poly.routeTraces : []).forEach((trace) => {
+          const points = routeTraceLatLngs(trace);
+          if (points.length < 2) return;
+          points.forEach((coord) => allCoords.push(coord));
+        });
+
+        // Anchor circleMarkers per connected cluster — pixel-radius shapes that keep the
+        // territory visible at very low zoom levels where the geographic-meter tiles below
+        // become sub-pixel and stop painting. Added before tiles so the tile fill covers them
+        // at high zoom (Leaflet canvas draws shapes in add order).
+        buildOwnedClusters(poly.cells, poly.cellMeters).forEach((cluster) => {
+          const radius = Math.max(4, Math.min(10, Math.sqrt(cluster.count) * 0.45));
+          L.circleMarker([cluster.lat, cluster.lng], {
+            radius,
+            fillColor: color,
+            color: 'rgba(13, 13, 13, 0.55)',
+            weight: 1.25,
+            opacity: 0.9,
+            fillOpacity: poly.active ? 0.85 : 0.5,
+            interactive: false,
+            className: 'terr-land-mask-anchor',
+          }).addTo(layer);
+        });
+
+        tiles.forEach((tile) => {
+          const coord = [tile.latitude, tile.longitude];
+          allCoords.push(coord);
+          L.rectangle(tile.bounds, {
+            color,
+            weight: 0,
+            stroke: false,
+            fillColor: color,
+            fillOpacity: poly.active ? 0.9 : 0.46,
+            interactive: false,
+            className: 'terr-land-mask-tile',
+          }).addTo(layer);
+        });
+
+        const shouldDrawConcreteBorder = !poly.active || tiles.length >= 1500;
+        if (shouldDrawConcreteBorder) {
+          maskBoundaryLoops(tiles).forEach((loop) => {
+            L.polyline(loop, {
+              color,
+              weight: poly.active ? 8 : 6,
+              opacity: poly.active ? 0.16 : 0.11,
+              lineCap: 'round',
+              lineJoin: 'round',
+              smoothFactor: 1.35,
+              interactive: false,
+              className: 'terr-land-mask-border-halo',
+            }).addTo(layer);
+
+            L.polyline(loop, {
+              color,
+              weight: poly.active ? 2.75 : 2.1,
+              opacity: poly.active ? 0.8 : 0.62,
+              lineCap: 'round',
+              lineJoin: 'round',
+              smoothFactor: 1.35,
+              interactive: false,
+              className: 'terr-land-mask-border',
+            }).addTo(layer);
+          });
+        }
       });
 
       if (allCoords.length > 0) {
@@ -366,36 +614,37 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons }
     return () => {
       cancelled = true;
     };
-  }, [polygons, showPolygons]);
+  }, [polygons, showPolygons, mapReady, recenterSignal]);
 
   return <div ref={mapRef} className="terr-leaflet-map" />;
 }
 
 export default function Territory() {
-  const { isAuthenticated } = useAuth();
-  const { t, lang } = useI18n();
   const navigate = useNavigate();
-  const wt = (key) => getCopy(lang, key);
-
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [profile, setProfile] = useState(null);
-  const [territory, setTerritory] = useState(DEMO_TERRITORY);
-  const [loadState, setLoadState] = useState('loading');
-  const [filter, setFilter] = useState('all');
-
-  // Polygon state
+  const { isAuthenticated, authHydrated } = useAuth();
+  const { t, lang } = useI18n();
+  const [territory, setTerritory] = useState(null);
   const [polygonData, setPolygonData] = useState(null);
-  const [showZoneView, setShowZoneView] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [recenterSignal, setRecenterSignal] = useState(0);
 
   useEffect(() => {
+    if (!authHydrated) {
+      return;
+    }
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
 
     let cancelled = false;
+    let polygonRefreshTimer = null;
     async function loadTerritoryData() {
-      setLoadState('loading');
+      if (polygonRefreshTimer) {
+        window.clearTimeout(polygonRefreshTimer);
+        polygonRefreshTimer = null;
+      }
+
       try {
         const [profileData, territoryData, polygonsData] = await Promise.all([
           apiJson('/api/profile/me').catch(() => null),
@@ -406,11 +655,13 @@ export default function Territory() {
         setProfile(profileData && typeof profileData === 'object' ? profileData : null);
         setTerritory(territoryData?.available ? territoryData : DEMO_TERRITORY);
         setPolygonData(polygonsData && typeof polygonsData === 'object' ? polygonsData : null);
-        setLoadState('ready');
+
+        if (shouldRefreshTerritoryPolygons(polygonsData)) {
+          polygonRefreshTimer = window.setTimeout(loadTerritoryData, TERRITORY_POLYGON_REFRESH_MS);
+        }
       } catch {
         if (!cancelled) {
           setTerritory(DEMO_TERRITORY);
-          setLoadState('ready');
         }
       }
     }
@@ -418,365 +669,91 @@ export default function Territory() {
     loadTerritoryData();
     return () => {
       cancelled = true;
+      if (polygonRefreshTimer) {
+        window.clearTimeout(polygonRefreshTimer);
+      }
     };
-  }, [isAuthenticated, navigate]);
+  }, [authHydrated, isAuthenticated, navigate]);
 
+  const leaderboard = territory?.leaderboard?.length ? territory.leaderboard : DEMO_TERRITORY.leaderboard;
+  const polygons = useMemo(() => polygonData?.polygons || [], [polygonData]);
   const navItems = useMemo(
     () => getRunnerShellNavItems({ t, lang, activeKey: 'territory' }),
     [lang, t],
   );
-  const initials = getDisplayName(profile, t('profile.default_name')).slice(0, 1).toUpperCase();
-  const summary = territory?.summary || DEMO_TERRITORY.summary;
-  const leaderboard = territory?.leaderboard?.length ? territory.leaderboard : DEMO_TERRITORY.leaderboard;
-  const zones = territory?.zones?.length ? territory.zones : DEMO_TERRITORY.zones;
-  const recentCaptures = territory?.recentCaptures?.length ? territory.recentCaptures : DEMO_TERRITORY.recentCaptures;
-  const activeContests = zones.filter((zone) => zone.contested);
-  const cities = territory?.cities?.length ? territory.cities : DEMO_TERRITORY.cities;
-  const modeLabel = loadState === 'loading' ? wt('loading') : (territory?.mode === 'live' ? wt('liveMode') : wt('demoMode'));
-
-  const myZones = zones.filter((z) => z.ownerName === 'You' || isOwnedByActive(z));
-  const myContested = zones.filter((z) => z.contested && (z.ownerName === 'You' || z.challengerName === 'You'));
-
-  const targetDescription = territory?.nextTarget
-    ? (lang === 'zh-CN'
-      ? `再获得 ${territory.nextTarget.samplesToContest} 个 GPS 采样点，就能从 ${territory.nextTarget.ownerName} 手里争夺这块区域。把它接到一次轻松跑里，不需要额外硬冲。`
-      : `${territory.nextTarget.samplesToContest} more GPS samples puts you in contest range against ${territory.nextTarget.ownerName}. Fold it into an easy route — no separate workout needed.`)
-    : wt('noTarget');
-
-  // Polygon-derived values
-  const polygons = useMemo(() => polygonData?.polygons || [], [polygonData]);
-  const totalAreaSqm = polygonData?.totalAreaSquareMeters || 0;
-  const polygonCount = polygonData?.polygonCount || 0;
-  const totalAreaKm2 = (totalAreaSqm / 1_000_000).toFixed(1);
-  const hasPolygons = polygonCount > 0;
-
-  // Today's polygon: check if any polygon was created today
-  const todayPolygon = useMemo(() => {
-    if (!polygons.length) return null;
-    const today = new Date().toISOString().slice(0, 10);
-    return polygons.find((p) => p.createdAt && String(p.createdAt).slice(0, 10) === today) || null;
-  }, [polygons]);
-
-  const todayAreaKm2 = todayPolygon
-    ? ((todayPolygon.areaSquareMeters || 0) / 1_000_000).toFixed(1)
-    : null;
-
-  // Coach-voice insight for polygon brief
-  const polygonInsight = useMemo(() => {
-    if (!hasPolygons) return null;
-    if (lang === 'zh-CN') {
-      const base = `你的征服空间 — 共 ${totalAreaKm2} km²，来自 ${polygonCount} 条环形路线。`;
-      return todayAreaKm2
-        ? `${base}今天的路线新增了 ${todayAreaKm2} km²。`
-        : base;
-    }
-    const base = `Your conquered space — ${totalAreaKm2} km² across ${polygonCount} closed-loop ${polygonCount === 1 ? 'run' : 'runs'}.`;
-    return todayAreaKm2
-      ? `${base} Today's run added ${todayAreaKm2} km².`
-      : base;
-  }, [hasPolygons, totalAreaKm2, polygonCount, todayAreaKm2, lang]);
+  const tc = (key) => mapChromeCopy(lang, key);
+  const center = territory?.center || DEMO_TERRITORY.center;
+  const initials = String(profile?.displayName || profile?.email || 'H').trim().slice(0, 1).toUpperCase() || 'H';
 
   return (
-    <div className={`runner-shell-page territory-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="runner-shell-sidebar">
-        <div className="runner-shell-brand runner-dashboard-brand">
-          <div className="runner-dashboard-brand-copy">
-            <HermesLogo dark />
-            <span>{wt('pageName')}</span>
-          </div>
-          <button
-            type="button"
-            className="runner-dashboard-sidebar-toggle"
-            onClick={() => setIsSidebarCollapsed((current) => !current)}
-            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
-            aria-pressed={isSidebarCollapsed}
-          >
-            <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
-          </button>
-        </div>
-
-        <nav className="runner-shell-side-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
-              onClick={() => navigate(item.route)}
-            >
-              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
-              <span className="runner-dashboard-side-link-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
-            <span className="runner-dashboard-workout-glyph" aria-hidden="true">+</span>
-            <span className="runner-dashboard-workout-btn-label">{wt('todayRun')}</span>
-          </button>
-        </div>
-      </aside>
-
+    <div className="runner-shell-page territory-page territory-heatmap-outline territory-map-only runner-dashboard-page">
       <main className="runner-shell-main">
-        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
-          <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{wt('pageName')}</span>
-              <span className="territory-mode-pill">{modeLabel}</span>
-            </div>
-          </div>
-          <div className="runner-shell-topbar-actions">
-            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
-              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
-              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={wt('settings')}>
-                <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
-              </button>
-              <button type="button" className="runner-shell-avatar" aria-label={getDisplayName(profile, t('profile.default_name'))} onClick={() => navigate('/profile')}>
-                {initials}
-              </button>
-            </div>
-          </div>
-        </header>
-
         <div className="runner-shell-canvas territory-canvas">
+          <section className="terr-map-section terr-map-section--lands-only" aria-label="Territory land map">
+            <div className="terr-map-topbar terr-map-titlebar" aria-label={tc('pageTitle')}>
+              <div className="terr-map-brand-pill terr-map-brand-pill--static" aria-label={`Hermes ${tc('pageTitle')}`}>
+                <HermesLogo dark />
+                <strong>{tc('pageTitle')}</strong>
+              </div>
 
-          {/* Coach brief — above the fold answer — polygon-first */}
-          <section className="terr-brief">
-            <div className="terr-brief-kicker">
-              <AppIcon name="territory" className="terr-brief-icon" />
-              <span>{wt('conqueredSpace')}</span>
-            </div>
-
-            {hasPolygons ? (
-              <>
-                <div className="terr-brief-kpis">
-                  <div className="terr-brief-kpi terr-brief-kpi--area">
-                    <strong>{totalAreaKm2}<small> km²</small></strong>
-                    <span>{wt('conqueredSpace')}</span>
-                  </div>
-                  <div className="terr-brief-kpi">
-                    <strong>{polygonCount}<small> {wt('closedLoopRuns')}</small></strong>
-                    <span>{wt('yourTerritory')}</span>
-                  </div>
-                  {todayAreaKm2 && (
-                    <div className="terr-brief-kpi terr-brief-kpi--area">
-                      <strong>+{todayAreaKm2}<small> km²</small></strong>
-                      <span>{lang === 'zh-CN' ? '今日新增' : 'Today added'}</span>
-                    </div>
-                  )}
-                  <div className="terr-brief-kpi">
-                    <strong>{myZones.length}<small> {wt('briefHeld')}</small></strong>
-                    <span>{wt('coverage')} {summary.coveragePct}%</span>
-                  </div>
-                  {myContested.length > 0 && (
-                    <div className="terr-brief-kpi terr-brief-kpi--alert">
-                      <strong>{myContested.length}<small> {wt('briefContested')}</small></strong>
-                      <span>{myContested.map((z) => z.name).join(', ')}</span>
-                    </div>
-                  )}
+              <button
+                type="button"
+                className="terr-map-sector-pill terr-map-recenter-pill"
+                onClick={() => setRecenterSignal((value) => value + 1)}
+                aria-label={tc('recenter')}
+              >
+                <AppIcon name="search" className="terr-map-pill-icon" />
+                <div className="terr-map-sector-copy">
+                  <span>{tc('recenter')}</span>
+                  <strong>{formatCenterLabel(center)}</strong>
                 </div>
-                {polygonInsight && (
-                  <p className="terr-brief-insight">{polygonInsight}</p>
-                )}
-                <p className="terr-brief-double-count-note">{wt('polygonDoubleCountNote')}</p>
-              </>
-            ) : (
-              <div className="terr-brief-empty-polygons">
-                <p className="terr-brief-empty-desc">{wt('polygonEmptyDesc')}</p>
+              </button>
+
+              <div className="terr-map-action-strip">
+                <button type="button" className="terr-map-secondary-btn" onClick={() => navigate('/runs')}>
+                  {tc('viewRuns')}
+                </button>
+                <button type="button" className="terr-map-primary-btn" onClick={() => navigate('/settings')}>
+                  {tc('settings')}
+                </button>
                 <button
                   type="button"
-                  className="terr-brief-empty-cta"
-                  onClick={() => navigate('/runs')}
+                  className="runner-shell-avatar terr-map-avatar"
+                  onClick={() => navigate('/profile')}
+                  aria-label={t('profile.dashboard_nav_dashboard') || 'Profile'}
                 >
-                  {wt('polygonEmptyAction')}
+                  {initials}
                 </button>
               </div>
-            )}
-          </section>
+            </div>
 
-          {/* Map section */}
-          <section className="terr-map-section">
-            <TerritoryMap
-              territory={territory}
-              filter={filter}
-              leaderboard={leaderboard}
-              polygons={polygons}
-              showPolygons={!showZoneView}
-            />
-
-            <div className="terr-overlay-filters">
-              {/* Polygon / zone view toggle pill */}
-              <button
-                type="button"
-                className={`terr-pill terr-pill--view-toggle${showZoneView ? '' : ' is-active'}`}
-                onClick={() => setShowZoneView(false)}
-                aria-pressed={!showZoneView}
-              >
-                {wt('polygonViewLabel')}
-              </button>
-              <button
-                type="button"
-                className={`terr-pill terr-pill--view-toggle${showZoneView ? ' is-active' : ''}`}
-                onClick={() => setShowZoneView(true)}
-                aria-pressed={showZoneView}
-              >
-                {wt('zoneViewLabel')}
-              </button>
-
-              {/* Zone filter pills — visible only in zone view */}
-              {showZoneView && [
-                ['all', wt('allTerritories')],
-                ['mine', wt('myTerritory')],
-                ['contested', wt('contested')],
-                ['unclaimed', wt('unclaimed')],
-              ].map(([key, label]) => (
-                <button key={key} type="button" className={`terr-pill${filter === key ? ' is-active' : ''}`} onClick={() => setFilter(key)}>
-                  {label}
+            <nav className="terr-map-utility-rail terr-map-utility-rail--navigation-only" aria-label={t('profile.dashboard_nav_territory') || 'Territory navigation'}>
+              {navItems.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`terr-map-utility-btn${item.active ? ' is-active' : ''}`}
+                  onClick={() => navigate(item.route)}
+                  aria-label={item.label}
+                  title={item.label}
+                >
+                  <AppIcon name={item.icon} className="terr-map-utility-icon" />
                 </button>
               ))}
-            </div>
+            </nav>
 
-            <div className="terr-overlay-legend">
-              {leaderboard.slice(0, 6).map((runner) => (
-                <span key={runner.id} className="terr-legend-item">
-                  <span className="terr-legend-dot" style={{ background: safeColor(runner.color) }} />
-                  {String(runner.name || '').split('(')[0].trim()}
-                </span>
-              ))}
-            </div>
+            <TerritoryMap
+              territory={territory}
+              filter="all"
+              leaderboard={leaderboard}
+              polygons={polygons}
+              showPolygons
+              recenterSignal={recenterSignal}
+            />
           </section>
-
-          {/* Zone/grid view — secondary, behind disclosure */}
-          {showZoneView && (
-            <section className="terr-below-grid">
-              <article className="terr-card terr-leaderboard">
-                <span className="section-label terr-section-label">{wt('leaderboard')}</span>
-                <div className="terr-lb-list">
-                  {leaderboard.map((runner, index) => (
-                    <div key={runner.id} className={`terr-lb-row${runner.active ? ' is-you' : ''}`}>
-                      <span className="terr-lb-rank">#{index + 1}</span>
-                      <span className="terr-lb-swatch" style={{ background: safeColor(runner.color) }} />
-                      <div className="terr-lb-info">
-                        <strong>{runner.name}</strong>
-                        <span>{runner.sampleCount} {wt('streets')} · {runner.coveragePct}%</span>
-                      </div>
-                      <strong className="terr-lb-area">{runner.areaKm2} km²</strong>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="terr-card terr-zones-card">
-                <span className="section-label terr-section-label">{wt('zones')}</span>
-                <div className="terr-zone-list">
-                  {zones.map((zone) => (
-                    <div key={zone.id} className={`terr-zone-row${zone.contested ? ' is-contested' : ''}`}>
-                      <span className="terr-zone-swatch" style={{ background: safeColor(zone.color) }} />
-                      <div className="terr-zone-info">
-                        <strong>{zone.name}</strong>
-                        <span>{zone.ownerName} · {zone.areaKm2 || 0} km²</span>
-                      </div>
-                      <span className={`terr-mini-pill${zone.contested ? ' is-warning' : ' is-accent'}`}>
-                        {zone.contested ? `${wt('contested')} ${wt('by')} ${zone.challengerName || 'rival'}` : wt('claimed')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="terr-card terr-target-card">
-                <span className="section-label terr-section-label">{wt('nextTarget')}</span>
-                {territory?.nextTarget ? (
-                  <>
-                    <h3>{territory.nextTarget.name}</h3>
-                    <p>{targetDescription}</p>
-                    <div className="terr-target-meta">
-                      <span>{territory.nextTarget.areaKm2} km²</span>
-                      <span>{wt('owner')}: {territory.nextTarget.ownerName}</span>
-                      <span>{wt('difficulty')}: {territory.nextTarget.difficulty}</span>
-                    </div>
-                    <button type="button" className="today-run-stitch-primary-btn terr-target-button" onClick={() => navigate('/schedule')}>
-                      {wt('planRun')}
-                    </button>
-                  </>
-                ) : (
-                  <div className="terr-target-empty">
-                    <p>{wt('noTarget')}</p>
-                    <button type="button" className="today-run-stitch-primary-btn terr-target-button" onClick={() => navigate('/runs')}>
-                      {lang === 'zh-CN' ? '查看跑步记录' : 'View my runs'}
-                    </button>
-                  </div>
-                )}
-              </article>
-
-              <article className="terr-card terr-recent-card">
-                <span className="section-label terr-section-label">{wt('recent')}</span>
-                <div className="terr-recent-list">
-                  {recentCaptures.map((capture) => (
-                    <div key={`${capture.name}-${capture.dateLabel}`} className="terr-recent-row">
-                      <AppIcon name="territory" />
-                      <div className="terr-recent-info">
-                        <strong>{capture.name}</strong>
-                        <span>{capture.dateLabel} · {capture.km ? `${capture.km} km` : `${capture.sampleCount} ${wt('streets')}`}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="terr-card terr-contests-card">
-                <span className="section-label terr-section-label">{wt('contests')}</span>
-                {(activeContests.length ? activeContests : zones.slice(0, 2)).map((zone) => {
-                  const share = contestShare(zone);
-                  const challengerColor = safeColor(
-                    leaderboard.find((runner) => zone.challengerName && runner.name?.includes(zone.challengerName === 'You' ? 'You' : zone.challengerName))?.color,
-                    '#5b9cf5',
-                  );
-                  return (
-                    <div key={`contest-${zone.id}`} className="terr-contest-block">
-                      <div className="terr-contest-head">
-                        <span className="terr-zone-swatch" style={{ background: safeColor(zone.color) }} />
-                        <h4>{zone.name}</h4>
-                        <span className="terr-mini-pill is-warning">{zone.contested ? wt('contested') : wt('claimed')}</span>
-                      </div>
-                      <div className="terr-contest-bar">
-                        <div className="terr-bar-side" style={{ flex: share.owner }}>
-                          <span style={{ background: safeColor(zone.color) }} />
-                          <small>{zone.ownerName} · {share.owner}%</small>
-                        </div>
-                        <div className="terr-bar-side" style={{ flex: share.challenger }}>
-                          <span style={{ background: challengerColor }} />
-                          <small>{zone.challengerName || wt('contested')} · {share.challenger}%</small>
-                        </div>
-                      </div>
-                      <p className="terr-contest-hint">{wt('secureHint')}</p>
-                    </div>
-                  );
-                })}
-              </article>
-
-              <article className="terr-card terr-cities-card">
-                <span className="section-label terr-section-label">{wt('cities')}</span>
-                <div className="terr-cities-list">
-                  {cities.length ? cities.map((city) => (
-                    <div key={city.city || city.name} className="terr-city-row">
-                      <div className="terr-city-info">
-                        <strong>{city.city || city.name}</strong>
-                        <span>{city.streets || city.sampleCount || 0} {wt('streets')} · {city.coveragePct || 0}%</span>
-                      </div>
-                      <strong className="terr-city-area">{city.areaKm2 || city.area || 0} km²</strong>
-                    </div>
-                  )) : <p className="terr-empty-copy">{wt('noCities')}</p>}
-                </div>
-              </article>
-            </section>
-          )}
-
-          <footer className="runner-shell-footer runner-dashboard-footer">
-            <FooterNavLinks />
-          </footer>
         </div>
       </main>
     </div>
   );
 }
+

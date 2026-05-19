@@ -21,8 +21,14 @@ assert.match(
 
 assert.match(
   racesDetailSource,
-  /const hasAlignedRoute = mapTrust\.trustedOverlay && courseMapData\.routeAvailable && routeMapPoints\.length > 1;/,
-  'RacesDetail should only render the AI route line when the frontend trust gate considers the alignment trustworthy enough for the runner-facing basemap.',
+  /const hasAlignedRoute = mapTrust\.trustedRouteGeometry && courseMapData\.routeAvailable && routeMapPoints\.length > 1;/,
+  'RacesDetail should only render the AI route line when the frontend trust gate considers the route geometry trustworthy enough for the runner-facing basemap.',
+);
+
+assert.match(
+  racesDetailSource,
+  /const hasTrustedCourseMapOverlay = hasAlignedRoute && mapTrust\.trustedOverlay;/,
+  'RacesDetail should require stricter overlay trust before painting the transparent course-map image above the real basemap.',
 );
 
 assert.match(
