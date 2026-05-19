@@ -9,7 +9,7 @@ import java.util.Map;
 @Service
 public class RecaptchaVerifier {
 
-    @Value("${recaptcha.secret-key}")
+    @Value("${recaptcha.secret-key:}")
     private String secretKey;
 
     @Value("${recaptcha.threshold:0.5}")

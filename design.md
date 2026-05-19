@@ -8,6 +8,33 @@ It defines one design language with two explicit runtime expressions:
 
 `/auto-hermes` must treat this file as mode-aware design authority, not as a dark-only mood board.
 
+## 0. Auto-Hermes Frontend Skill Wiring
+
+`/auto-hermes` must route non-trivial frontend design work through this design authority plus the installed frontend design skills. This file owns the final Hermes visual decision; skills are execution lenses that sharpen the work without replacing Hermes-specific product judgment.
+
+Required skill stack for non-trivial frontend rounds:
+- `hermes-dev`: repo workflow, runtime proof, and Hermes preservation rules.
+- `design-taste-frontend`: anti-generic UI constraints, asymmetric composition, calibrated color, motion discipline, responsive collapse, and performance guardrails.
+- `frontend-design`: bold concept selection and production-grade visual execution when a route, component, landing page, dashboard, or design surface is being built or restyled.
+- `ui-ux-pro-max`: supporting design research only after this file is read; keep only recommendations that fit Kinetic Editorial and runner value.
+- `browser` or `browser-harness`: live visual proof for touched routes, including desktop/mobile layout, contrast, overflow, and interaction state.
+- `hermes-translation-sync`: required when user-visible copy changes.
+- `accesslint` or `vercel-web-interface-guidelines`: use when the work touches forms, controls, focus states, ARIA, labels, keyboard behavior, or complex responsive UI.
+
+Auto-Hermes command integration:
+- `.tools/auto-hermes-skills.mjs --json` is the durable manifest for the frontend design skill stack.
+- `.tools/auto-hermes-controller.mjs` must include that manifest in `designContext` for frontend `design-review` rounds.
+- `.tools/auto-hermes-loop.mjs` must carry the selected skill stack into the worker prompt before UI implementation.
+- If a listed skill is unavailable in the active runtime, the worker must say so plainly and use the nearest verified fallback, never pretend the skill ran.
+
+Conflict order for frontend design rounds:
+1. explicit user request and supplied reference
+2. verified live runtime state and browser evidence
+3. `design.md`
+4. surface memory in `.ai-sync/CONTEXT_LEDGER.md`
+5. installed frontend design skills
+6. generic design taste or model preference
+
 ## 1. Creative North Star
 
 Hermes should not look like a generic SaaS dashboard in either theme.
@@ -76,8 +103,9 @@ Prefer:
 ### 3.2 Typography Pairing
 
 Use:
-- `Manrope` for display and headline authority
-- `Inter` for body, metadata, and controls
+- `Outfit` or `Manrope` for display and headline authority
+- `Manrope`, `Satoshi`, or a similarly high-quality sans for body, metadata, and controls when available
+- existing route typography only when preserving a mature surface or avoiding a risky broad cascade
 
 Typography should create hierarchy through:
 - scale contrast
@@ -86,6 +114,11 @@ Typography should create hierarchy through:
 - restraint
 
 Do not rely on bolding alone.
+
+Avoid:
+- defaulting to Inter, Arial, Roboto, or system stacks for new premium Hermes surfaces
+- oversized centered H1s that dominate the decision the runner needs to make
+- serif typography on dashboard or logged-in software UI surfaces unless a user-provided reference explicitly demands it
 
 ### 3.3 Cinematic Hierarchy
 
@@ -119,6 +152,18 @@ A design change is good only if it improves one or more of:
 - next-action usefulness
 
 Decorative polish without runner value is not enough.
+
+### 3.6 Anti-Generic Frontend Rules
+
+New or meaningfully redesigned Hermes UI must avoid common AI-default patterns:
+- no centered hero plus equal three-card feature row when the target surface needs decision hierarchy
+- no purple/blue neon SaaS palette unless explicitly requested by the user
+- no pure black slabs; use charcoal, warm paper, vellum, or tonal surface steps
+- no emoji icons in production UI; use real SVG/icon components
+- no heavy default shadows or glow as the main separation mechanism
+- no layout motion that animates `top`, `left`, `width`, or `height`; use `transform` and `opacity`
+- no mobile design that depends on desktop asymmetry; collapse high-variance grids to a strict single column below tablet widths
+- no decorative redesign that removes loading, empty, error, focus, label, or contrast states
 
 ## 4. Dark Mode: The Cinematic Athlete
 
@@ -320,6 +365,15 @@ Examples:
 
 For non-trivial frontend rounds, `/auto-hermes` must review design with theme-awareness.
 
+Before implementation, `/auto-hermes` must lock and carry forward:
+- target surface
+- target mode: `dark`, `light`, or `dual-mode`
+- visual goal
+- preserve list
+- round type: `visual-bug`, `interaction-bug`, `structural-redesign`, or `mimic-implementation`
+- reference source: user reference, `design.md`, current approved live surface, or generated reference
+- active frontend skill stack from `.tools/auto-hermes-skills.mjs`
+
 If the round is `dark` or `light` only, the reviewer must still ask:
 - did this break readability in the opposite mode if the selector is shared?
 
@@ -336,6 +390,8 @@ Automatic must-fix triggers for theme work:
 - gauges, chart labels, pills, or helper copy becoming unreadable
 - shared card families switching mode in one route but not another equivalent route
 - borders reappearing as a substitute for tonal separation
+- generic centered hero/card-wall patterns replacing a stronger approved Hermes hierarchy
+- unverified frontend design claims without live browser or browser-harness evidence
 
 ## 8. Implementation Guidance For Shared Tokens
 

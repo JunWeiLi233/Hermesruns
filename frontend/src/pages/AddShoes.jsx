@@ -7,6 +7,7 @@ import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import shoeCatalog from '../data/shoeCatalog';
@@ -192,10 +193,14 @@ export default function AddShoes() {
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
+    { key: 'territory', icon: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory' },
+    { key: 'weather_engine', icon: 'thermostat', label: t('profile.dashboard_nav_weather_engine'), route: '/weather' },
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
     { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
+    { key: 'rewards', icon: 'workspace_premium', label: t('rewards.top_title'), route: '/rewards' },
+    { key: 'workflows', icon: 'account_tree', label: t('profile.dashboard_nav_workflows'), route: '/workflows' },
   ];
 
   const browserBrands = useMemo(() => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)), [catalog]);
@@ -379,13 +384,13 @@ export default function AddShoes() {
       <main className="runner-shell-main add-shoes-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
-              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')} aria-label={t('profile.dashboard_nav_dashboard')}>HERMES</button>
-              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/shoes')} aria-label={t('profile.dashboard_nav_shoes')}>
-                {t('profile.dashboard_nav_shoes')}
-              </button>
-              <span className="runner-shell-topnav-link is-section is-active">{t('shoes.add_page_title')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              parentLabel={t('profile.dashboard_nav_shoes')}
+              parentRoute="/shoes"
+              activeLabel={t('shoes.add_page_title')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions">

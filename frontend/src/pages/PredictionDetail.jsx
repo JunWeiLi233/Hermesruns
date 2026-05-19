@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import {
@@ -334,10 +335,13 @@ export default function PredictionDetail() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/analysis')}>{t('profile.dashboard_nav_analysis')}</button>
-              <span className="runner-shell-topnav-link is-section is-active">{title}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              parentLabel={t('profile.dashboard_nav_analysis')}
+              parentRoute="/analysis"
+              activeLabel={title}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">

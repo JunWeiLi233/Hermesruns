@@ -1,13 +1,15 @@
-import { Component, useEffect, useState } from 'react';
+import { Component, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import WorkflowCanvas from '../components/workflow/WorkflowCanvas';
 import useWorkflowStore from '../stores/useWorkflowStore';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 
 class WorkflowCanvasBoundary extends Component {
   constructor(props) {
@@ -35,7 +37,7 @@ class WorkflowCanvasBoundary extends Component {
 export default function WorkflowBuilder() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isCanvasLoading, setIsCanvasLoading] = useState(true);
   const [canvasError, setCanvasError] = useState(null);
@@ -46,6 +48,11 @@ export default function WorkflowBuilder() {
   const displayName = user?.displayName || user?.email || '';
   const initials = displayName.split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2);
   const isCanvasEmpty = !isCanvasLoading && !canvasError && nodes.length === 0;
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'workflows',
+  }), [lang, t]);
 
   useEffect(() => {
     setIsCanvasLoading(true);
@@ -99,17 +106,7 @@ export default function WorkflowBuilder() {
         </div>
 
         <nav className="runner-shell-side-nav">
-          {[
-            { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-            { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-            { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-            { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-            { key: 'weather_engine', label: t('profile.dashboard_nav_weather'), route: '/weather', icon: 'thermostat' },
-            { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-            { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-            { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
-            { key: 'workflows', label: t('profile.dashboard_nav_workflows'), route: '/workflows', icon: 'account_tree', active: true },
-          ].map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
@@ -138,9 +135,11 @@ export default function WorkflowBuilder() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_workflows')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_workflows')}
+              navigate={navigate}
+            />
           </div>
 
           <div className="runner-shell-topbar-actions">
