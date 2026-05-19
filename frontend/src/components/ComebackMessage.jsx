@@ -8,42 +8,42 @@ const ComebackMessage = ({ daysOff, onDismiss }) => {
   if (!daysOff || daysOff < 3) return null;
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 dark:shadow-none mb-6">
-      {/* Decorative background sparkles */}
-      <div className="absolute top-0 right-0 -mr-4 -mt-4 opacity-20">
-        <Sparkles className="w-24 h-24" />
+    <div className="runner-comeback-card">
+      <div className="runner-comeback-card__orb" aria-hidden="true">
+        <Sparkles className="runner-comeback-card__orb-icon" />
       </div>
-      
-      <button 
+      <button
+        type="button"
         onClick={onDismiss}
-        className="absolute top-4 right-4 p-1 hover:bg-white/10 rounded-full transition-colors"
+        className="runner-comeback-card__close"
+        aria-label={t('profile.close')}
       >
-        <X className="w-4 h-4" />
+        <X className="runner-comeback-card__close-icon" />
       </button>
 
-      <div className="relative z-10">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="p-1.5 bg-white/20 rounded-lg">
-            <Sparkles className="w-4 h-4 text-white" />
+      <div className="runner-comeback-card__body">
+        <div className="runner-comeback-card__eyebrow-row">
+          <div className="runner-comeback-card__glyph" aria-hidden="true">
+            <Sparkles className="runner-comeback-card__glyph-icon" />
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-indigo-100">
+          <span className="runner-comeback-card__eyebrow">
             {t('profile.comeback_eyebrow')}
           </span>
         </div>
-        
-        <h3 className="text-xl font-black mb-2 leading-tight">
+
+        <h3 className="runner-comeback-card__title">
           {t('profile.comeback_title', { days: daysOff })}
         </h3>
-        
-        <p className="text-sm text-indigo-50 leading-relaxed max-w-md">
+
+        <p className="runner-comeback-card__copy">
           {t('profile.comeback_body')}
         </p>
-        
-        <div className="mt-5 flex gap-3">
-          <div className="px-4 py-2 bg-white text-indigo-600 rounded-xl text-xs font-bold shadow-sm cursor-default">
+
+        <div className="runner-comeback-card__tips">
+          <div className="runner-comeback-card__tip is-primary">
             {t('profile.comeback_tip_1')}
           </div>
-          <div className="px-4 py-2 bg-white/10 text-white border border-white/20 rounded-xl text-xs font-bold cursor-default">
+          <div className="runner-comeback-card__tip">
             {t('profile.comeback_tip_2')}
           </div>
         </div>

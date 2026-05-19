@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -7,6 +7,7 @@ import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import Modal from '../components/Modal';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration, formatPace } from '../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
@@ -57,6 +58,22 @@ const DISCOVERY_VISUALS = [
 
 const OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST = new Set(['boston-marathon']);
 
+const DISTANCE_FILTERS = [
+  { key: 'all', labelKey: 'races.filter_dist_all' },
+  { key: 'marathon', labelKey: 'races.filter_dist_marathon', minKm: 42, maxKm: 43 },
+  { key: 'half', labelKey: 'races.filter_dist_half', minKm: 20, maxKm: 22 },
+  { key: '10k', labelKey: 'races.filter_dist_10k', minKm: 9.5, maxKm: 10.5 },
+  { key: '5k', labelKey: 'races.filter_dist_5k', minKm: 4.5, maxKm: 5.5 },
+];
+
+const MONTH_LABELS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS_ZH = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+
+const PAGE_SIZE_FEATURED = 1;
+const PAGE_SIZE_INITIAL = 7; // 1 featured + 6 grid cards
+const PAGE_SIZE_GRID_INITIAL = 6; // cards shown in grid below featured
+const PAGE_SIZE_MORE = 8;
+
 function getRaceCardImage(race, officialDiscoveryImages) {
   if (!race) return DISCOVERY_VISUALS[0].image;
   if (!OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST.has(race.id) && officialDiscoveryImages?.[race.id]) {
@@ -85,13 +102,6 @@ function formatDistanceLabelSafe(distanceKm, t, lang) {
   return `${distanceKm.toFixed(1)} km`;
 }
 
-function getCourseDescriptorSafe(race, t) {
-  const notes = String(race?.notes || '').trim();
-  if (notes) return notes;
-  if (race?.organization) return race.organization;
-  if (race?.registrationStatus) return t(`races.status_${race.registrationStatus.toLowerCase()}`);
-  return t('races.target_race');
-}
 
 function buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang) {
   if (!nextRace) {
@@ -137,6 +147,174 @@ function getDiscoveryTag(race, fallbackTag) {
   return fallbackTag;
 }
 
+// Memoized race card component to avoid rerenders on filter/pagination changes
+const RaceCard = memo(function RaceCard({
+  race,
+  officialDiscoveryImages,
+  lang,
+  t,
+  onNavigate,
+  onAddToPlan,
+  onImageError,
+}) {
+  const imgSrc = getRaceCardImage(race, officialDiscoveryImages);
+  const raceName = getLocalizedRaceLabel(race, lang);
+  const raceLocation = getLocalizedRaceLocation(race, lang);
+  const distanceLabel = formatDistanceLabelSafe(Number(race.distanceKm || 0), t, lang);
+  const monthLabel = lang === 'en'
+    ? MONTH_LABELS_EN[(race.month || 1) - 1]
+    : MONTH_LABELS_ZH[(race.month || 1) - 1];
+
+  return (
+    <article className="race-center-card" data-race-card>
+      <button
+        type="button"
+        className="race-center-card-image-wrap"
+        onClick={() => onNavigate(race, imgSrc)}
+        aria-label={t('races.detail_open_card', { name: raceName })}
+      >
+        <img
+          className="race-center-card-image"
+          src={imgSrc}
+          alt={raceName}
+          loading="lazy"
+          decoding="async"
+          onError={(e) => onImageError(e, race)}
+        />
+        <span className="race-center-card-tag">
+          {t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}
+        </span>
+      </button>
+      <div className="race-center-card-body">
+        <div className="race-center-card-meta">
+          <span className="race-center-card-distance">{distanceLabel}</span>
+          <span className="race-center-card-month">{monthLabel}</span>
+        </div>
+        <h3 className="race-center-card-name">{raceName}</h3>
+        <p className="race-center-card-location">{raceLocation}</p>
+        <button
+          type="button"
+          className="race-center-card-cta"
+          onClick={() => onAddToPlan(race)}
+          aria-label={t('races.add_from_catalog')}
+        >
+          {t('races.add_from_catalog')}
+        </button>
+      </div>
+    </article>
+  );
+});
+
+// Memoized featured race card — editorial hero card for discovery section
+const FeaturedRaceCard = memo(function FeaturedRaceCard({
+  race,
+  officialDiscoveryImages,
+  lang,
+  t,
+  onNavigate,
+  onAddToPlan,
+  onImageError,
+}) {
+  const imgSrc = getRaceCardImage(race, officialDiscoveryImages);
+  const raceName = getLocalizedRaceLabel(race, lang);
+  const raceLocation = getLocalizedRaceLocation(race, lang);
+  const distanceLabel = formatDistanceLabelSafe(Number(race.distanceKm || 0), t, lang);
+  const monthLabel = lang === 'en'
+    ? MONTH_LABELS_EN[(race.month || 1) - 1]
+    : MONTH_LABELS_ZH[(race.month || 1) - 1];
+
+  return (
+    <article className="race-center-featured-card">
+      <button
+        type="button"
+        className="race-center-featured-image-wrap"
+        onClick={() => onNavigate(race, imgSrc)}
+        aria-label={t('races.detail_open_card', { name: raceName })}
+      >
+        <img
+          className="race-center-featured-image"
+          src={imgSrc}
+          alt={raceName}
+          loading="eager"
+          decoding="async"
+          onError={(e) => onImageError(e, race)}
+        />
+        <div className="race-center-featured-overlay" aria-hidden="true" />
+        <span className="race-center-featured-tag">
+          {t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}
+        </span>
+        <div className="race-center-featured-body">
+          <div className="race-center-featured-meta">
+            <span className="race-center-card-distance">{distanceLabel}</span>
+            <span className="race-center-card-month">{monthLabel}</span>
+          </div>
+          <h3 className="race-center-featured-name">{raceName}</h3>
+          <p className="race-center-featured-location">{raceLocation}</p>
+        </div>
+      </button>
+      <div className="race-center-featured-footer">
+        <button
+          type="button"
+          className="race-center-card-cta"
+          onClick={() => onAddToPlan(race)}
+          aria-label={t('races.add_from_catalog')}
+        >
+          {t('races.add_from_catalog')}
+        </button>
+      </div>
+    </article>
+  );
+});
+
+// Memoized agenda row for saved calendar section
+const AgendaRow = memo(function AgendaRow({
+  race,
+  lang,
+  t,
+  onEdit,
+  onAddCatalog,
+}) {
+  const isTrackedRace = race.id != null;
+  const countdownDays = Number(race.countdownDays || 0);
+  const dateLabel = isTrackedRace
+    ? formatRaceDate(race.eventDate, lang)
+    : t('races.typical_month', { month: race.month });
+  const distanceLabel = formatDistanceLabelSafe(Number(race.distanceKm || 0), t, lang);
+  const raceName = getLocalizedRaceLabel(race, lang);
+  const statusKey = race.registrationStatus ? race.registrationStatus.toLowerCase() : 'interested';
+
+  const countdownChip = isTrackedRace && countdownDays >= 0
+    ? (lang === 'en' ? `T-${countdownDays} days` : `T-${countdownDays}天`)
+    : null;
+
+  return (
+    <article className="race-center-agenda-row">
+      {countdownChip ? (
+        <div className="race-center-agenda-countdown">
+          <span className="race-center-agenda-chip">{countdownChip}</span>
+        </div>
+      ) : (
+        <div className="race-center-agenda-countdown" aria-hidden="true" />
+      )}
+      <div className="race-center-agenda-info">
+        <strong className="race-center-agenda-name">{raceName}</strong>
+        <p className="race-center-agenda-sub">{distanceLabel} · {dateLabel}</p>
+      </div>
+      <div className="race-center-agenda-side">
+        <span className="race-center-agenda-status">{t(`races.status_${statusKey}`)}</span>
+        <button
+          type="button"
+          className="race-center-chevron"
+          onClick={() => (isTrackedRace ? onEdit(race) : onAddCatalog(race))}
+          aria-label={isTrackedRace ? t('races.edit_button') : t('races.add_from_catalog')}
+        >
+          <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
+        </button>
+      </div>
+    </article>
+  );
+});
+
 const Races = memo(function Races() {
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
@@ -154,6 +332,9 @@ const Races = memo(function Races() {
   const [formStatus, setFormStatus] = useState('');
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('All');
+  const [selectedDistance, setSelectedDistance] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState(0); // 0 = all months
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE_INITIAL);
   const [officialDiscoveryImages, setOfficialDiscoveryImages] = useState({});
   const [isCountryStripExpanded, setIsCountryStripExpanded] = useState(false);
   const [countryStripMetrics, setCountryStripMetrics] = useState({ collapsed: 0, expanded: 0 });
@@ -308,11 +489,27 @@ const Races = memo(function Races() {
 
   const nextRace = upcomingRaces[0] || null;
 
+  // Build month filter options from actual catalog months
+  const availableMonths = useMemo(() => {
+    const monthSet = new Set(standardCityRoadMarathonCatalog.map((r) => r.month));
+    return Array.from(monthSet).sort((a, b) => a - b);
+  }, []);
+
   const filteredCatalog = useMemo(() => {
     const query = catalogQuery.trim().toLowerCase();
+    const distFilter = DISTANCE_FILTERS.find((d) => d.key === selectedDistance);
+
     return standardCityRoadMarathonCatalog.filter((race) => {
-      const matchesCountry = selectedCountry === 'All' || race.country === selectedCountry;
-      if (!matchesCountry) return false;
+      // Country filter
+      if (selectedCountry !== 'All' && race.country !== selectedCountry) return false;
+      // Distance filter
+      if (distFilter && distFilter.minKm != null) {
+        const km = Number(race.distanceKm || 0);
+        if (km < distFilter.minKm || km > distFilter.maxKm) return false;
+      }
+      // Month filter
+      if (selectedMonth !== 0 && race.month !== selectedMonth) return false;
+      // Text search
       if (!query) return true;
       const localizedName = getLocalizedRaceLabel(race, lang).toLowerCase();
       const localizedCity = getLocalizedCityLabel(race.city, lang).toLowerCase();
@@ -329,7 +526,12 @@ const Races = memo(function Races() {
         || (race.organization || '').toLowerCase().includes(query)
         || (race.program || '').toLowerCase().includes(query);
     });
-  }, [catalogQuery, lang, selectedCountry]);
+  }, [catalogQuery, lang, selectedCountry, selectedDistance, selectedMonth]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE_INITIAL);
+  }, [selectedCountry, selectedDistance, selectedMonth, catalogQuery]);
 
   const discoveryCards = useMemo(() => {
     return filteredCatalog.map((race, index) => ({
@@ -337,6 +539,13 @@ const Races = memo(function Races() {
       visual: DISCOVERY_VISUALS[index % DISCOVERY_VISUALS.length],
     }));
   }, [filteredCatalog]);
+
+  // Featured card = first card; grid cards = next (visibleCount - 1)
+  const featuredCard = useMemo(() => discoveryCards[0] || null, [discoveryCards]);
+  const visibleCards = useMemo(() => discoveryCards.slice(1, visibleCount), [discoveryCards, visibleCount]);
+
+  const remainingCount = discoveryCards.length - visibleCount;
+  const loadMoreCount = Math.min(remainingCount, PAGE_SIZE_MORE);
 
   const discoverySummary = useMemo(() => {
     const countLabel = t('races.catalog_results_count', { count: discoveryCards.length });
@@ -363,7 +572,8 @@ const Races = memo(function Races() {
 
   useEffect(() => {
     let cancelled = false;
-    const candidates = discoveryCards.filter((race) => !(race.id in officialDiscoveryImages));
+    const allVisible = featuredCard ? [featuredCard, ...visibleCards] : visibleCards;
+    const candidates = allVisible.filter((race) => !(race.id in officialDiscoveryImages));
     if (candidates.length === 0) return undefined;
 
     async function loadOfficialImages() {
@@ -379,7 +589,7 @@ const Races = memo(function Races() {
     return () => {
       cancelled = true;
     };
-  }, [discoveryCards, officialDiscoveryImages]);
+  }, [visibleCards, featuredCard, officialDiscoveryImages]);
 
   const selectedCalendar = useMemo(() => {
     return races.slice(0, 3);
@@ -454,6 +664,45 @@ const Races = memo(function Races() {
     activeKey: 'races',
   }), [lang, t]);
 
+  // useCallback handlers for RaceCard to prevent unnecessary re-renders
+  const handleNavigateToRace = useCallback((race, imgSrc) => {
+    navigate(`/races/details/${race.id}`, {
+      state: { race, image: imgSrc },
+    });
+  }, [navigate]);
+
+  const handleAddToPlan = useCallback((race) => {
+    addCatalogRace(race);
+  // addCatalogRace only uses state setters (stable refs); omitting it is intentional
+  }, []);
+
+  const handleImageError = useCallback((e, race) => {
+    e.target.onerror = null;
+    e.target.src = race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image;
+    setOfficialDiscoveryImages((prev) => {
+      const next = { ...prev };
+      delete next[race.id];
+      return next;
+    });
+    invalidateRaceImageCache(race);
+  }, []);
+
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount((prev) => prev + PAGE_SIZE_MORE);
+  }, []);
+
+  const handleCountryChip = useCallback((key) => {
+    setSelectedCountry(key);
+  }, []);
+
+  const handleDistanceChip = useCallback((key) => {
+    setSelectedDistance(key);
+  }, []);
+
+  const handleMonthChip = useCallback((month) => {
+    setSelectedMonth(month);
+  }, []);
+
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('races.loading')}</div></div>;
   }
@@ -475,7 +724,7 @@ const Races = memo(function Races() {
               type="button"
               className="runner-dashboard-sidebar-toggle"
               onClick={() => setIsSidebarCollapsed((current) => !current)}
-            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
+              aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
               aria-pressed={isSidebarCollapsed}
             >
               <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
@@ -513,14 +762,16 @@ const Races = memo(function Races() {
         <main className="runner-shell-main">
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
-              <div className="runner-shell-topnav">
-                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_races')}</span>
-              </div>
+              <RunnerShellTopNav
+                navItems={navItems}
+                activeLabel={t('profile.dashboard_nav_races')}
+                navigate={navigate}
+              />
             </div>
 
             <div className="runner-shell-topbar-actions">
               <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
-              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+                <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
                 <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
@@ -533,223 +784,270 @@ const Races = memo(function Races() {
 
           <div className="runner-shell-canvas">
             <div className="race-center-content">
-            <section className="race-center-hero">
-              <img
-                className="race-center-hero-image"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuB78fsh0TuTwYg8E6RO30Lf-s3-wZGlNHFslrkPJEaZ63kAXeJavUv8FTkLm8X4MmNmXvIP8h2ANynDlJSAxFONBGVTf5CApOoTZiOY6Px4FTXMQb-peyv0k5NH4Mn7WrFSsnd3QHb4_lhQ_vTJF1NT9rT2WY0RWHipYpvljdFvLF0quFElRw6AzNMpRNQMAHMEGLxuNiPagbF3sTun3hlWrjHErakRoJblPn33eVPLmDsl4NPltD-tD_DofI-iIDaJ8EYj77OAXA1S"
-                alt={t('races.stitch_hero_image_alt')}
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="race-center-hero-overlay" />
-              <div className="race-center-hero-body">
-                <div className="race-center-hero-chip">
-                  <span className="race-center-hero-chip-dot" aria-hidden="true" />
-                  <span>{t('races.stitch_next_major_event')}</span>
-                </div>
 
-                <h1>
-                  <span>{heroLabel}</span>
-                  <span className="race-center-hero-accent">
-                    {nextRace ? t('races.stitch_days_to') : ''}
-                  </span>
-                  <span>{heroFocus}</span>
-                </h1>
-
-                <p>{heroSummary}</p>
-
-                <div className="race-center-hero-actions">
-                  <button type="button" className="race-center-primary-btn" onClick={() => navigate('/schedule')} aria-label={t('races.stitch_view_training_plan')}>
-                    {t('races.stitch_view_training_plan')}
-                  </button>
-                  <button type="button" className="race-center-secondary-btn" onClick={() => (nextRace ? openEditModal(nextRace) : openCreateModal())} aria-label={nextRace ? t('races.stitch_race_details') : t('races.add_button')}>
-                    {nextRace ? t('races.stitch_race_details') : t('races.add_button')}
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <section className="race-center-section">
-              <div className="race-center-section-head">
-                <h2>{t('races.stitch_personal_bests')}</h2>
-                <span>{t('races.stitch_verified_data')}</span>
-              </div>
-
-              <div className="race-center-pb-grid">
-                {raceTargets.map((target) => (
-                  <article key={target.key} className={`race-center-pb-card${target.key === 'marathon' ? ' is-featured' : ''}`}>
-                    <div className="race-center-pb-copy">
-                      <p>{target.label}</p>
-                      <strong>{target.best ? formatDuration(target.best.timeSeconds) : '--'}</strong>
-                      <div className="race-center-pb-meta">
-                        <AppIcon name={target.icon} className="runner-dashboard-side-link-icon" />
-                        <span>
-                          {target.best
-                            ? `${formatRaceDate(target.best.date, lang, { month: 'short', year: 'numeric' })} · ${target.best.provider}`
-                            : t('races.stitch_pb_empty_meta')}
-                        </span>
-                      </div>
-                    </div>
-                    <AppIcon name={target.icon} className="race-center-pb-mark" />
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="race-center-section">
-              <div className="race-center-section-head race-center-section-head--split">
-                <h2>{t('races.stitch_discovery_title')}</h2>
-                <button type="button" className="race-center-inline-link" onClick={() => document.getElementById('race-center-calendar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} aria-label={t('races.stitch_explore_calendar')}>
-                  {t('races.stitch_explore_calendar')}
-                </button>
-              </div>
-
-              <div className="race-center-discovery-toolbar">
-                <input
-                  type="text"
-                  value={catalogQuery}
-                  onChange={(event) => setCatalogQuery(event.target.value)}
-                  placeholder={t('races.catalog_search_placeholder')}
-                  aria-label={t('races.catalog_search_placeholder')}
+              {/* Hero — countdown + training summary */}
+              <section className="race-center-hero">
+                <img
+                  className="race-center-hero-image"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuB78fsh0TuTwYg8E6RO30Lf-s3-wZGlNHFslrkPJEaZ63kAXeJavUv8FTkLm8X4MmNmXvIP8h2ANynDlJSAxFONBGVTf5CApOoTZiOY6Px4FTXMQb-peyv0k5NH4Mn7WrFSsnd3QHb4_lhQ_vTJF1NT9rT2WY0RWHipYpvljdFvLF0quFElRw6AzNMpRNQMAHMEGLxuNiPagbF3sTun3hlWrjHErakRoJblPn33eVPLmDsl4NPltD-tD_DofI-iIDaJ8EYj77OAXA1S"
+                  alt={t('races.stitch_hero_image_alt')}
+                  loading="lazy"
+                  decoding="async"
                 />
-                <div className="race-center-country-filter">
-                  <div
-                    ref={countryStripRef}
-                    className={`race-center-country-strip${isCountryStripExpanded ? ' is-expanded' : ' is-collapsed'}`}
-                    style={countryStripStyle}
-                  >
-                    {countryFilterOptions.map((country, index) => (
+                <div className="race-center-hero-overlay" />
+                <div className="race-center-hero-body">
+                  <div className="race-center-hero-chip">
+                    <span className="race-center-hero-chip-dot" aria-hidden="true" />
+                    <span>{t('races.stitch_next_major_event')}</span>
+                  </div>
+
+                  <h1>
+                    <span>{heroLabel}</span>
+                    <span className="race-center-hero-accent">
+                      {nextRace ? t('races.stitch_days_to') : ''}
+                    </span>
+                    <span>{heroFocus}</span>
+                  </h1>
+
+                  <p>{heroSummary}</p>
+
+                  <div className="race-center-hero-actions">
+                    <button type="button" className="race-center-primary-btn" onClick={() => navigate('/schedule')} aria-label={t('races.stitch_view_training_plan')}>
+                      {t('races.stitch_view_training_plan')}
+                    </button>
+                    <button type="button" className="race-center-secondary-btn" onClick={() => (nextRace ? openEditModal(nextRace) : openCreateModal())} aria-label={nextRace ? t('races.stitch_race_details') : t('races.add_button')}>
+                      {nextRace ? t('races.stitch_race_details') : t('races.add_button')}
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* Discovery section — editorial hero + 2-col grid */}
+              <section className="race-center-section race-center-discovery">
+                <div className="race-center-section-head race-center-section-head--split">
+                  <div>
+                    <h2>{t('races.stitch_discovery_title')}</h2>
+                    <p className="race-center-section-subtitle">{t('races.discovery_subtitle')}</p>
+                  </div>
+                  <span>{discoverySummary}</span>
+                </div>
+
+                {/* Search bar */}
+                <div className="race-center-discovery-toolbar">
+                  <input
+                    type="text"
+                    value={catalogQuery}
+                    onChange={(event) => setCatalogQuery(event.target.value)}
+                    placeholder={t('races.catalog_search_placeholder')}
+                    aria-label={t('races.catalog_search_placeholder')}
+                  />
+                </div>
+
+                {/* Pinned filter strip */}
+                <div className="race-center-filter-strip" role="group" aria-label={t('races.filter_strip_label')}>
+                  {/* Country chips */}
+                  <div className="race-center-filter-group">
+                    <div
+                      ref={countryStripRef}
+                      className={`race-center-country-strip${isCountryStripExpanded ? ' is-expanded' : ' is-collapsed'}`}
+                      style={countryStripStyle}
+                    >
+                      {countryFilterOptions.map((country, index) => (
+                        <button
+                          key={country.key}
+                          ref={(node) => {
+                            countryChipRefs.current[index] = node;
+                          }}
+                          type="button"
+                          className={`race-center-country-chip${selectedCountry === country.key ? ' is-active' : ''}`}
+                          onClick={() => handleCountryChip(country.key)}
+                          aria-label={country.label}
+                          aria-pressed={selectedCountry === country.key}
+                        >
+                          {country.label}
+                        </button>
+                      ))}
+                    </div>
+                    {shouldShowCountryToggle ? (
                       <button
-                        key={country.key}
-                        ref={(node) => {
-                          countryChipRefs.current[index] = node;
-                        }}
                         type="button"
-                        className={`race-center-country-chip${selectedCountry === country.key ? ' is-active' : ''}`}
-                        onClick={() => setSelectedCountry(country.key)}
-                        aria-label={country.label}
+                        className="race-center-country-toggle"
+                        onClick={() => setIsCountryStripExpanded((current) => !current)}
+                        aria-expanded={isCountryStripExpanded}
+                        aria-label={getCountryToggleLabel(isCountryStripExpanded, t)}
                       >
-                        {country.label}
+                        <span>{getCountryToggleLabel(isCountryStripExpanded, t)}</span>
+                        <AppIcon
+                          name={isCountryStripExpanded ? 'expand_less' : 'expand_more'}
+                          className="runner-dashboard-side-link-icon"
+                        />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* Distance chips */}
+                  <div className="race-center-filter-row" role="group" aria-label={t('races.filter_distance_label')}>
+                    {DISTANCE_FILTERS.map((dist) => (
+                      <button
+                        key={dist.key}
+                        type="button"
+                        className={`race-center-filter-chip${selectedDistance === dist.key ? ' is-active' : ''}`}
+                        onClick={() => handleDistanceChip(dist.key)}
+                        aria-pressed={selectedDistance === dist.key}
+                        aria-label={t(dist.labelKey)}
+                      >
+                        {t(dist.labelKey)}
                       </button>
                     ))}
                   </div>
-                  {shouldShowCountryToggle ? (
+
+                  {/* Month chips */}
+                  <div className="race-center-filter-row" role="group" aria-label={t('races.filter_month_label')}>
                     <button
                       type="button"
-                      className="race-center-country-toggle"
-                      onClick={() => setIsCountryStripExpanded((current) => !current)}
-                      aria-expanded={isCountryStripExpanded}
-                      aria-label={getCountryToggleLabel(isCountryStripExpanded, t)}
+                      className={`race-center-filter-chip${selectedMonth === 0 ? ' is-active' : ''}`}
+                      onClick={() => handleMonthChip(0)}
+                      aria-pressed={selectedMonth === 0}
+                      aria-label={t('races.filter_month_all')}
                     >
-                      <span>{getCountryToggleLabel(isCountryStripExpanded, t)}</span>
-                      <AppIcon
-                        name={isCountryStripExpanded ? 'expand_less' : 'expand_more'}
-                        className="runner-dashboard-side-link-icon"
-                      />
+                      {t('races.filter_month_all')}
                     </button>
-                  ) : null}
+                    {availableMonths.map((month) => {
+                      const label = lang === 'en' ? MONTH_LABELS_EN[month - 1] : MONTH_LABELS_ZH[month - 1];
+                      return (
+                        <button
+                          key={month}
+                          type="button"
+                          className={`race-center-filter-chip${selectedMonth === month ? ' is-active' : ''}`}
+                          onClick={() => handleMonthChip(month)}
+                          aria-pressed={selectedMonth === month}
+                          aria-label={label}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              <div className="race-center-section-head">
-                <span>{discoverySummary}</span>
-              </div>
-
-              <div className="race-center-discovery-grid">
-                {discoveryCards.length === 0 ? (
+                {/* Editorial grid: featured hero + 2-col grid */}
+                {!featuredCard ? (
                   <div className="race-center-calendar-empty">
                     <strong>{t('races.catalog_empty')}</strong>
                     <p>{discoverySummary}</p>
                   </div>
                 ) : (
-                  discoveryCards.map((race) => (
-                    <article key={race.id} className="race-center-discovery-card">
-                      <button
-                        type="button"
-                        className="race-center-discovery-image-wrap"
-                        onClick={() => navigate(`/races/details/${race.id}`, {
-                          state: { race, image: getRaceCardImage(race, officialDiscoveryImages) },
-                        })}
-                        aria-label={t('races.detail_open_card', { name: getLocalizedRaceLabel(race, lang) })}
-                      >
-                        <img className="race-center-discovery-image" src={getRaceCardImage(race, officialDiscoveryImages)} alt={getLocalizedRaceLabel(race, lang)} loading="lazy" decoding="async" onError={(e) => { e.target.onerror = null; e.target.src = race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image; setOfficialDiscoveryImages((prev) => { const next = { ...prev }; delete next[race.id]; return next; }); invalidateRaceImageCache(race); }} />
-                        <span className="race-center-discovery-tag">{t(`races.discovery_tag_${getDiscoveryTag(race, race.visual.tag).toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}</span>
-                      </button>
-                      <div className="race-center-discovery-copy">
-                        <h3>{getLocalizedRaceLabel(race, lang)}</h3>
-                        <p>{t('races.stitch_discovery_copy', { location: getLocalizedRaceLocation(race, lang), distance: race.distanceKm.toFixed(1) })}</p>
-                        <div className="race-center-discovery-meta">
-                          <span>{t('races.typical_month', { month: race.month })}</span>
-                          <span>{t(`races.discovery_meta_${race.visual.meta.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}</span>
-                        </div>
-                        <button type="button" className="race-center-inline-action" onClick={() => addCatalogRace(race)} aria-label={t('races.add_from_catalog')}>
-                          {t('races.add_from_catalog')}
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-            </section>
+                  <>
+                    {/* Featured hero card */}
+                    <FeaturedRaceCard
+                      race={featuredCard}
+                      officialDiscoveryImages={officialDiscoveryImages}
+                      lang={lang}
+                      t={t}
+                      onNavigate={handleNavigateToRace}
+                      onAddToPlan={handleAddToPlan}
+                      onImageError={handleImageError}
+                    />
 
-            <section id="race-center-calendar" className="race-center-section">
-              <div className="race-center-calendar-card">
-                <div className="race-center-calendar-head">
-                  <h3>{t('races.stitch_selected_calendar')}</h3>
+                    {/* 2-col grid of remaining cards */}
+                    {visibleCards.length > 0 && (
+                      <div className="race-center-discovery-grid">
+                        {visibleCards.map((race) => (
+                          <RaceCard
+                            key={race.id}
+                            race={race}
+                            officialDiscoveryImages={officialDiscoveryImages}
+                            lang={lang}
+                            t={t}
+                            onNavigate={handleNavigateToRace}
+                            onAddToPlan={handleAddToPlan}
+                            onImageError={handleImageError}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Load more */}
+                {remainingCount > 0 && (
+                  <div className="race-center-load-more-wrap">
+                    <button
+                      type="button"
+                      className="race-center-load-more"
+                      onClick={handleLoadMore}
+                      aria-label={t('races.catalog_load_more', { count: loadMoreCount })}
+                    >
+                      {t('races.catalog_load_more', { count: loadMoreCount })}
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              {/* Saved calendar — agenda list, no photos */}
+              <section id="race-center-calendar" className="race-center-section race-center-calendar">
+                <div className="race-center-section-divider" aria-hidden="true" />
+                <div className="race-center-section-head">
+                  <div>
+                    <h2>{t('races.stitch_selected_calendar')}</h2>
+                    <p className="race-center-section-subtitle">{t('races.calendar_subtitle')}</p>
+                  </div>
                   <button type="button" className="race-center-inline-link" onClick={openCreateModal} aria-label={t('races.add_button')}>
                     {t('races.add_button')}
                   </button>
                 </div>
 
-                {selectedCalendar.length === 0 ? (
-                  <div className="race-center-calendar-empty">
-                    <strong>{t('races.empty')}</strong>
-                    <p>{t('races.add_first_race')}</p>
-                  </div>
-                ) : (
-                  <div className="race-center-calendar-list">
-                    {selectedCalendar.map((race) => {
-                      const isTrackedRace = race.id != null;
-                      const dateLabel = isTrackedRace
-                        ? formatRaceDate(race.eventDate, lang)
-                        : t('races.typical_month', { month: race.month });
+                <div className="race-center-agenda">
+                  {selectedCalendar.length === 0 ? (
+                    <div className="race-center-agenda-empty">
+                      <span className="race-center-agenda-empty-text">{t('races.agenda_empty')}</span>
+                    </div>
+                  ) : (
+                    selectedCalendar.map((race) => (
+                      <AgendaRow
+                        key={race.id || race.name}
+                        race={race}
+                        lang={lang}
+                        t={t}
+                        onEdit={openEditModal}
+                        onAddCatalog={addCatalogRace}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
 
-                      return (
-                        <article key={race.id || race.name} className="race-center-calendar-row">
-                          <div className="race-center-calendar-row-main">
-                            <div className="race-center-calendar-icon">
-                              <AppIcon name="map" className="runner-dashboard-side-link-icon" />
-                            </div>
-                            <div>
-                              <strong>{getLocalizedRaceLabel(race, lang)}</strong>
-                              <p>{`${dateLabel} · ${getLocalizedRaceLocation(race, lang)}`}</p>
-                            </div>
-                          </div>
-
-                          <div className="race-center-calendar-row-side">
-                            <div className="race-center-calendar-course">
-                              <strong>{getCourseDescriptorSafe(race, t)}</strong>
-                              <span>{t('races.stitch_course_type')}</span>
-                            </div>
-                            <button
-                              type="button"
-                              className="race-center-chevron"
-                              onClick={() => (isTrackedRace ? openEditModal(race) : addCatalogRace(race))}
-                              aria-label={isTrackedRace ? t('races.edit_button') : t('races.add_from_catalog')}
-                            >
-                              <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
-                            </button>
-                          </div>
-                        </article>
-                      );
-                    })}
+              {/* Personal bests — scoreboard data tiles, no photos */}
+              <section className="race-center-section race-center-pb-section">
+                <div className="race-center-section-divider" aria-hidden="true" />
+                <div className="race-center-section-head">
+                  <div>
+                    <h2>{t('races.stitch_personal_bests')}</h2>
+                    <p className="race-center-section-subtitle">{t('races.pb_subtitle')}</p>
                   </div>
-                )}
-              </div>
-            </section>
-            <footer className="runner-shell-footer runner-dashboard-footer">
-              <FooterNavLinks />
-            </footer>
+                  <span className="race-center-section-verified">{t('races.stitch_verified_data')}</span>
+                </div>
+
+                <div className="race-center-pb-grid">
+                  {raceTargets.map((target) => (
+                    <article key={target.key} className={`race-center-pb-card${target.key === 'marathon' ? ' race-center-pb-card--featured' : ''}`}>
+                      <span className="race-center-pb-distance">{target.label}</span>
+                      <strong className="race-center-pb-time">
+                        {target.best ? formatDuration(target.best.timeSeconds) : '--'}
+                      </strong>
+                      <p className="race-center-pb-race-meta">
+                        {target.best
+                          ? `${target.best.runName} · ${formatRaceDate(target.best.date, lang, { month: 'short', year: 'numeric' })}`
+                          : t('races.stitch_pb_empty_meta')}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <footer className="runner-shell-footer runner-dashboard-footer">
+                <FooterNavLinks />
+              </footer>
             </div>
           </div>
         </main>
@@ -770,7 +1068,7 @@ const Races = memo(function Races() {
           <input type="date" value={form.eventDate} onChange={(event) => setForm((prev) => ({ ...prev, eventDate: event.target.value }))} required />
 
           <label className="modal-label">{t('races.form_distance')}</label>
-          <input type="number" min="1" step="0.1" value={form.distanceKm} onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
+          <input type="number" min="1" step="any" value={form.distanceKm} onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
 
           <label className="modal-label">{t('races.form_status')}</label>
           <select value={form.registrationStatus} onChange={(event) => setForm((prev) => ({ ...prev, registrationStatus: event.target.value }))}>

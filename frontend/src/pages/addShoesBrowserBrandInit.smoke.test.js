@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(path.join(here, 'AddShoes.jsx'), 'utf8');
+const source = readFileSync(path.join(here, 'AddShoes.jsx'), 'utf8').replace(/\r\n/g, '\n');
 
 const browserBrandDecl = source.indexOf('const browserBrand = useMemo(');
 const browserBrandEffect = source.indexOf('useEffect(() => {\n    if (!browserBrand) return;');

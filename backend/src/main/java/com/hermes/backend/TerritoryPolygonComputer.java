@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 
@@ -34,11 +35,11 @@ public class TerritoryPolygonComputer {
     /** Route-footprint buffer used when a run does not form a true closed loop. */
     static final double ROUTE_FOOTPRINT_BUFFER_METERS = 45.0;
 
-    /** Concrete map-mask resolution. Smaller values are more precise but create more cells. */
-    static final double LAND_MASK_CELL_METERS = 16.0;
+    /** Concrete map-mask resolution. Smaller values keep single-line conquest close to the actual route. */
+    static final double LAND_MASK_CELL_METERS = 8.0;
 
-    /** Painted route thickness: the runner's path becomes the flood-fill boundary and claimed corridor. */
-    static final double LAND_MASK_ROUTE_RADIUS_METERS = 22.0;
+    /** Painted route thickness: open routes claim a road-like strip; closed loops still fill the enclosed land. */
+    static final double LAND_MASK_ROUTE_RADIUS_METERS = 6.0;
 
     /** Hard cap so long rural runs do not create unbounded in-memory masks. */
     private static final int MAX_LAND_MASK_GRID_CELLS = 24_000;
@@ -49,7 +50,11 @@ public class TerritoryPolygonComputer {
 
     private static final String LAND_MASK_ANY_PREFIX = "mask:";
 
-    private static final String LAND_MASK_PREFIX = "mask:v2:";
+    // Bumped from v5 -> v6 when the route-painter and loop interior-fill algorithms changed:
+    // any row written by the older brush left wall gaps on adaptive grids (visible as a route
+    // "breaking into pieces" on the map). Decoding now treats every "mask:v5:..." row as empty so
+    // the backfill scheduler recomputes it with the current algorithm.
+    private static final String LAND_MASK_PREFIX = "mask:v6:";
 
     /** Minimum usable GPS samples before a route can claim fallback territory. */
     private static final int MIN_ROUTE_FOOTPRINT_POINTS = 8;
@@ -122,6 +127,11 @@ public class TerritoryPolygonComputer {
             paintRouteSegment(routeWall, grid, projected.get(i - 1), projected.get(i));
         }
         paintEndpointClosure(routeWall, grid, projected);
+
+        List<DetectedPolygon> detectedLoops = detectLoops(points);
+        paintDetectedLoopClosures(routeWall, grid, points, projected, detectedLoops);
+        fillDetectedLoopInteriors(routeWall, grid, points, projected, detectedLoops);
+        fillEndpointClosureInterior(routeWall, grid, projected);
 
         boolean[] outside = floodOutside(grid, routeWall);
         List<MaskCell> cells = new ArrayList<>();
@@ -290,11 +300,161 @@ public class TerritoryPolygonComputer {
         }
     }
 
+    private void paintDetectedLoopClosures(boolean[] routeWall,
+                                           LandMaskGrid grid,
+                                           List<double[]> points,
+                                           List<ProjectedPoint> projected,
+                                           List<DetectedPolygon> loops) {
+        for (DetectedPolygon loop : loops) {
+            List<double[]> loopPoints = loop.points();
+            if (loopPoints == null || loopPoints.size() < 2) {
+                continue;
+            }
+            int startIndex = indexOfPoint(points, loopPoints.get(0), 0);
+            int endIndex = indexOfPoint(points, loopPoints.get(loopPoints.size() - 1), Math.max(0, startIndex));
+            if (startIndex >= 0 && endIndex >= 0 && startIndex < projected.size() && endIndex < projected.size()) {
+                paintRouteSegment(routeWall, grid, projected.get(endIndex), projected.get(startIndex));
+            }
+        }
+    }
+
+    /**
+     * Scanline-fills the interior of every detected closed sub-loop directly onto the route wall.
+     *
+     * <p>This is the definitive fix for "I ran a loop but the inside is not occupied." The flood-fill
+     * approach relies on the painted wall being airtight; even a one-cell gap lets the outside leak in
+     * and leaves the interior unmarked. By rasterising the polygon interior explicitly we no longer
+     * depend on flood-fill robustness for loop-enclosed area.</p>
+     */
+    private void fillDetectedLoopInteriors(boolean[] routeWall,
+                                           LandMaskGrid grid,
+                                           List<double[]> points,
+                                           List<ProjectedPoint> projected,
+                                           List<DetectedPolygon> loops) {
+        for (DetectedPolygon loop : loops) {
+            List<double[]> loopPoints = loop.points();
+            if (loopPoints == null || loopPoints.size() < 3) {
+                continue;
+            }
+            int startIndex = indexOfPoint(points, loopPoints.get(0), 0);
+            int endIndex = indexOfPoint(points, loopPoints.get(loopPoints.size() - 1), Math.max(0, startIndex));
+            if (startIndex < 0 || endIndex <= startIndex + 1 || endIndex >= projected.size()) {
+                continue;
+            }
+            List<ProjectedPoint> polygon = new ArrayList<>(endIndex - startIndex + 1);
+            for (int i = startIndex; i <= endIndex; i += 1) {
+                polygon.add(projected.get(i));
+            }
+            fillPolygonInterior(routeWall, grid, polygon);
+        }
+    }
+
+    /**
+     * If the route starts and ends within {@link #CLOSE_DISTANCE_METERS} of each other, treat the
+     * whole route as a closed polygon and scanline-fill its interior. Handles the exact A->B->C->D->A
+     * case the user described where {@link #detectLoops} may yield a loop spanning the whole route,
+     * and also safely no-ops for out-and-back routes because the resulting polygon has zero
+     * even-odd interior.
+     */
+    private static void fillEndpointClosureInterior(boolean[] routeWall,
+                                                    LandMaskGrid grid,
+                                                    List<ProjectedPoint> projected) {
+        if (projected.size() < LOOKBACK_MIN + 1) {
+            return;
+        }
+        ProjectedPoint first = projected.get(0);
+        ProjectedPoint last = projected.get(projected.size() - 1);
+        if (projectedDistance(first, last) > CLOSE_DISTANCE_METERS) {
+            return;
+        }
+        fillPolygonInterior(routeWall, grid, projected);
+    }
+
+    /**
+     * Scanline rasterises the interior of a closed polygon (using the even-odd rule) into the route
+     * wall grid. Self-intersecting polygons are handled by the standard even-odd parity logic, so
+     * degenerate (zero-area) traces such as out-and-back paths add no interior cells.
+     */
+    private static void fillPolygonInterior(boolean[] routeWall, LandMaskGrid grid, List<ProjectedPoint> poly) {
+        int n = poly.size();
+        if (n < 3) {
+            return;
+        }
+
+        double minY = Double.POSITIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+        for (ProjectedPoint p : poly) {
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+        }
+
+        int gyStart = Math.max(0, grid.toGridY(minY));
+        int gyEnd = Math.min(grid.height - 1, grid.toGridY(maxY));
+
+        List<Double> intersections = new ArrayList<>();
+        for (int gy = gyStart; gy <= gyEnd; gy += 1) {
+            double rayY = grid.originY + (gy + 0.5) * grid.cellMeters;
+            intersections.clear();
+            for (int i = 0; i < n; i += 1) {
+                ProjectedPoint a = poly.get(i);
+                ProjectedPoint b = poly.get((i + 1) % n);
+                boolean aAbove = a.y > rayY;
+                boolean bAbove = b.y > rayY;
+                if (aAbove == bAbove) {
+                    continue;
+                }
+                double dy = b.y - a.y;
+                if (dy == 0.0) {
+                    continue;
+                }
+                double t = (rayY - a.y) / dy;
+                intersections.add(a.x + t * (b.x - a.x));
+            }
+            if (intersections.size() < 2) {
+                continue;
+            }
+            Collections.sort(intersections);
+            for (int k = 0; k + 1 < intersections.size(); k += 2) {
+                int gxStart = Math.max(0, grid.toGridX(intersections.get(k)));
+                int gxEnd = Math.min(grid.width - 1, grid.toGridX(intersections.get(k + 1)));
+                for (int gx = gxStart; gx <= gxEnd; gx += 1) {
+                    routeWall[grid.index(gx, gy)] = true;
+                }
+            }
+        }
+    }
+
+    private static int indexOfPoint(List<double[]> points, double[] target, int start) {
+        if (points == null || target == null || target.length < 2) {
+            return -1;
+        }
+        for (int i = Math.max(0, start); i < points.size(); i += 1) {
+            double[] point = points.get(i);
+            if (point != null
+                    && point.length >= 2
+                    && Double.compare(point[0], target[0]) == 0
+                    && Double.compare(point[1], target[1]) == 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private static void paintRoutePoint(boolean[] routeWall, LandMaskGrid grid, ProjectedPoint point) {
         int centerX = grid.toGridX(point.x);
         int centerY = grid.toGridY(point.y);
-        int radiusCells = Math.max(1, (int) Math.ceil((LAND_MASK_ROUTE_RADIUS_METERS + grid.cellMeters * 0.5) / grid.cellMeters));
-        double paintRadius = LAND_MASK_ROUTE_RADIUS_METERS + grid.cellMeters * 0.75;
+        // Always mark the cell containing the route point. Guarantees a contiguous corridor along the
+        // route even when the adaptive grid cellMeters grows large enough that the disk brush below
+        // would otherwise miss neighbours of the point's own cell, which previously caused long
+        // routes to "break down into pieces" on the rendered map.
+        if (grid.inBounds(centerX, centerY)) {
+            routeWall[grid.index(centerX, centerY)] = true;
+        }
+        // Scale the disk brush with the grid resolution so the painted wall stays at least one cell
+        // thick on either side of the route. This keeps closed loops sealed (no flood-fill leak into
+        // the interior) when LandMaskGrid adapts cellMeters upward for large bounding boxes.
+        double paintRadius = Math.max(LAND_MASK_ROUTE_RADIUS_METERS, grid.cellMeters * 0.75);
+        int radiusCells = Math.max(1, (int) Math.ceil((paintRadius + grid.cellMeters * 0.5) / grid.cellMeters));
         for (int y = centerY - radiusCells; y <= centerY + radiusCells; y += 1) {
             for (int x = centerX - radiusCells; x <= centerX + radiusCells; x += 1) {
                 if (!grid.inBounds(x, y)) {

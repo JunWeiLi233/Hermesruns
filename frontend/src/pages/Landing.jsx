@@ -5,8 +5,8 @@ import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl } from '../api';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 
-function RevealSection({ children, className = '', delay = 0 }) {
-  const { ref, isVisible } = useScrollReveal({ threshold: 0.16, rootMargin: '0px' });
+function RevealSection({ children, className = '', delay = 0, initialVisible = false }) {
+  const { ref, isVisible } = useScrollReveal({ threshold: 0.16, rootMargin: '0px', initialVisible });
   return (
     <div
       ref={ref}
@@ -213,27 +213,52 @@ export default function Landing() {
     ['#compare', t('landing.cinematic_nav_compare')],
   ];
 
-  const features = [
-    { icon: 'vdot', title: t('landing.cinematic_ticker_vdot'), desc: t('landing.cinematic_answer_2_body') },
-    { icon: 'zones', title: t('landing.cinematic_ticker_paces'), desc: t('landing.cinematic_hero_text') },
-    { icon: 'sync', title: t('landing.cinematic_ticker_logged'), desc: t('landing.feature_analytics_desc') },
-    { icon: 'chart', title: t('landing.cinematic_ticker_acwr'), desc: t('landing.cinematic_answer_1_body') },
-    { icon: 'shoe', title: t('landing.cinematic_ticker_shoes'), desc: t('landing.cinematic_answer_3_body') },
-    { icon: 'globe', title: t('landing.cinematic_ticker_marathon'), desc: t('landing.cinematic_races_copy') },
+  const commandCards = [
+    {
+      number: '01',
+      icon: 'zones',
+      title: t('landing.cinematic_answer_1_title'),
+      body: t('landing.cinematic_answer_1_body'),
+      metric: '4:21',
+    },
+    {
+      number: '02',
+      icon: 'vdot',
+      title: t('landing.cinematic_answer_2_title'),
+      body: t('landing.cinematic_answer_2_body'),
+      metric: '58.4',
+    },
+    {
+      number: '03',
+      icon: 'shoe',
+      title: t('landing.cinematic_answer_3_title'),
+      body: t('landing.cinematic_answer_3_body'),
+      metric: '68%',
+    },
   ];
 
-  const paces = [
-    [t('landing.cinematic_zone_easy'), '5:42'],
-    [t('landing.cinematic_zone_marathon'), '4:36'],
-    [t('landing.cinematic_zone_threshold'), '4:21', true],
-    [t('landing.cinematic_zone_vo2'), '3:52'],
-  ];
+  const heroWorkout = {
+    type: t('landing.cinematic_zone_threshold'),
+    distance: '8 km',
+    count: '8',
+    shoe: 'Endorphin Speed 4',
+  };
+
+  const formulaValues = {
+    vdot: '58.4',
+    acwr: '0.82',
+    h: '18',
+    count: '6',
+    date: '2026-05-17',
+    distance: heroWorkout.distance,
+    pace: '4:21 /km',
+  };
 
   const formulaRows = [
-    [t('landing.cinematic_formula_vdot_label'), t('landing.cinematic_formula_vdot')],
-    [t('landing.cinematic_formula_acwr_label'), t('landing.cinematic_formula_acwr')],
-    [t('landing.cinematic_formula_recovery_label'), t('landing.cinematic_formula_recovery')],
-    [t('landing.cinematic_formula_paces_label'), t('landing.cinematic_formula_paces')],
+    [t('landing.cinematic_formula_vdot_label'), t('landing.cinematic_formula_vdot', formulaValues)],
+    [t('landing.cinematic_formula_acwr_label'), t('landing.cinematic_formula_acwr', formulaValues)],
+    [t('landing.cinematic_formula_recovery_label'), t('landing.cinematic_formula_recovery', formulaValues)],
+    [t('landing.cinematic_formula_paces_label'), t('landing.cinematic_formula_paces', formulaValues)],
   ];
 
   const races = [
@@ -311,9 +336,9 @@ export default function Landing() {
           </div>
 
           <PageWidth className="landing-cinematic-hero-inner">
-            <RevealSection className="landing-cinematic-hero-grid">
-              <div className="landing-cinematic-hero-copy">
-                <span className="landing-cinematic-kicker">{t('landing.badge')}</span>
+            <RevealSection className="landing-cinematic-hero-grid landing-command-hero" initialVisible>
+              <div className="landing-cinematic-hero-copy landing-command-copy">
+                <span className="landing-cinematic-kicker landing-command-kicker">{t('landing.badge')}</span>
                 <h1 className="landing-cinematic-hero-title">
                   <span>{t('landing.cinematic_hero_line_1')}</span>
                   <span>{t('landing.cinematic_hero_line_2')}</span>
@@ -337,71 +362,41 @@ export default function Landing() {
                   <span>{t('landing.cinematic_trust_method')}</span>
                 </div>
               </div>
-
-              <aside className="landing-cinematic-hud" aria-label={t('landing.cinematic_hud_label')}>
-                <div className="landing-cinematic-hud-top">
-                  <span>{t('landing.cinematic_hud_today')}</span>
-                  <span>{t('landing.cinematic_hud_weather')}</span>
-                </div>
-
-                <div className="landing-cinematic-hud-main">
-                  <div className="landing-cinematic-gauge">
-                    <ReadinessRing value={82} />
-                    <div>
-                      <strong>82</strong>
-                      <span>{t('landing.cinematic_hud_ready')}</span>
-                    </div>
-                  </div>
-
-                  <div className="landing-cinematic-prescription">
-                    <span className="landing-cinematic-tag">{t('landing.cinematic_hud_workout_tag')}</span>
-                    <h2>{t('landing.cinematic_hud_workout_title')}</h2>
-                    <p>{t('landing.cinematic_hud_workout_copy')}</p>
-                    <div className="landing-cinematic-paces">
-                      {paces.map(([label, pace, active]) => (
-                        <div key={label} className={active ? 'is-active' : ''}>
-                          <span>{label}</span>
-                          <strong>{pace}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="landing-cinematic-hud-foot">
-                  <div>
-                    <span>{t('landing.cinematic_hud_shoe_label')}</span>
-                    <strong>{t('landing.cinematic_hud_shoe')}</strong>
-                  </div>
-                  <div>
-                    <span>{t('landing.cinematic_hud_vdot_label')}</span>
-                    <strong>58.4 <em>+0.7</em></strong>
-                  </div>
-                </div>
-              </aside>
             </RevealSection>
           </PageWidth>
         </section>
 
         {/* ── 2. Feature Grid ── */}
-        <section id="features" className="landing-cinematic-features">
-          <PageWidth>
-            <RevealSection className="landing-cinematic-section-head">
-              <span className="landing-cinematic-kicker">{t('landing.cinematic_ticker_label')}</span>
-              <h2>{t('landing.cinematic_answers_title')} <span>{t('landing.cinematic_answers_title_muted')}</span></h2>
+        <section id="features" className="landing-command-deck">
+          <PageWidth className="landing-command-deck-grid">
+            <RevealSection className="landing-command-card-stack">
+              {commandCards.map((card) => (
+                <article key={card.number} className="landing-command-card">
+                  <div className="landing-command-card-index">
+                    <span>{card.number}</span>
+                    <LandingGlyph name={card.icon} />
+                  </div>
+                  <small>{t('landing.cinematic_ticker_label')}</small>
+                  <h3>{card.title}</h3>
+                  <p>{card.body}</p>
+                  <strong>{card.metric}</strong>
+                </article>
+              ))}
             </RevealSection>
 
-            <div className="landing-cinematic-feature-grid">
-              {features.map((f, i) => (
-                <RevealSection key={f.title} delay={i * 40} className="landing-cinematic-feature-card">
-                  <div className="landing-cinematic-feature-icon">
-                    <LandingGlyph name={f.icon} />
+            <RevealSection className="landing-command-rhythm" delay={90}>
+              <span className="landing-cinematic-kicker">{t('landing.cinematic_formula_kicker')}</span>
+              <h2>{t('landing.cinematic_formula_title')}</h2>
+              <p>{t('landing.cinematic_formula_copy')}</p>
+              <div className="landing-command-rhythm-list">
+                {formulaRows.map(([label, copy], index) => (
+                  <div key={label} style={{ '--rhythm-index': index }}>
+                    <span>{label}</span>
+                    <p>{copy}</p>
                   </div>
-                  <h3>{f.title}</h3>
-                  <p>{f.desc}</p>
-                </RevealSection>
-              ))}
-            </div>
+                ))}
+              </div>
+            </RevealSection>
           </PageWidth>
         </section>
 
@@ -504,7 +499,7 @@ export default function Landing() {
               <div className="landing-cinematic-paper-foot">
                 <div>
                   <span>{t('landing.cinematic_formula_last_input')}</span>
-                  <strong>{t('landing.cinematic_formula_last_input_value')}</strong>
+                  <strong>{t('landing.cinematic_formula_last_input_value', formulaValues)}</strong>
                 </div>
                 <div>
                   <span>{t('landing.cinematic_formula_result')}</span>
@@ -660,3 +655,4 @@ export default function Landing() {
     </div>
   );
 }
+

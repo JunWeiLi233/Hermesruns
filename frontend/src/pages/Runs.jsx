@@ -1,5 +1,4 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { List } from 'react-window';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -10,6 +9,7 @@ import { formatDate, formatDistance, formatDuration, formatPace } from '../utils
 import HermesLogo from '../components/HermesLogo';
 import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
@@ -98,19 +98,16 @@ function RoutePreviewThumb({ preview, provider, runName }) {
   );
 }
 
-const RUN_CARD_HEIGHT = 142;
+const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;
+const RECENT_RUNS_LOAD_BATCH_SIZE = 6;
 
-function RunRow({ index, style, data }) {
-  const { runs, t, lang, routePreviewFallbacks, onOpen } = data;
-  const run = runs[index];
-  if (!run) return null;
-
+function RunCard({ run, t, lang, routePreviewFallbacks, onOpen }) {
   const provider = run.provider || t('runs.manual_import');
   const runName = run.name || t('runs.default_run_name');
   const preview = run.routePreview || routePreviewFallbacks[run.id] || null;
 
   return (
-    <article style={style} className="recent-runs-card" onClick={() => onOpen(run)}>
+    <article className="recent-runs-card" onClick={() => onOpen(run)}>
       <RoutePreviewThumb preview={preview} provider={provider} runName={runName} />
       <div className="recent-runs-card-body">
         <div className="recent-runs-card-top">
@@ -156,7 +153,9 @@ const Runs = memo(function Runs() {
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const [importStatus, setImportStatus] = useState('');
   const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
+  const [visibleRunsCount, setVisibleRunsCount] = useState(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
   const routePreviewInflightRef = useRef(new Set());
+  const loadMoreSentinelRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -314,10 +313,10 @@ const Runs = memo(function Runs() {
     if (activeMode === 'month' && selectedMonth == null && monthsWithData.length) setSelectedMonth(monthsWithData[monthsWithData.length - 1]);
   }, [activeMode, monthsWithData, selectedMonth]);
 
-  const routePreviewRuns = useMemo(
-    () => filteredRuns.slice(0, 50).filter((run) => !run.routePreview),
-    [filteredRuns],
-  );
+  useEffect(() => {
+    setVisibleRunsCount(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
+  }, [activeMode, allRuns.length, runsSort, searchQuery, selectedMonth, selectedYear]);
+
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
   const monthNames = t('runs.months').split(',');
@@ -337,6 +336,15 @@ const Runs = memo(function Runs() {
   const avgPaceText = filteredRuns.length > 0
     ? formatPace(filteredDistanceKm, filteredTimeSeconds, lang)
     : t('runs.pace_zero');
+  const visibleRuns = useMemo(
+    () => filteredRuns.slice(0, visibleRunsCount),
+    [filteredRuns, visibleRunsCount],
+  );
+  const routePreviewRuns = useMemo(
+    () => visibleRuns.slice(0, 50).filter((run) => !run.routePreview),
+    [visibleRuns],
+  );
+  const hasMoreRuns = visibleRunsCount < filteredRuns.length;
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
@@ -381,6 +389,24 @@ const Runs = memo(function Runs() {
     sessionStorage.setItem('hermes_selected_run', JSON.stringify(run));
     navigate(`/run/${run.id || ''}`);
   }
+
+  useEffect(() => {
+    if (!hasMoreRuns || loadState !== 'ready') return undefined;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
+    }, {
+      root: null,
+      rootMargin: '240px 0px 360px',
+      threshold: 0.01,
+    });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filteredRuns.length, hasMoreRuns, loadState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -543,9 +569,11 @@ const Runs = memo(function Runs() {
         <main className="runner-shell-main">
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
-              <div className="runner-shell-topnav">
-                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
-              </div>
+              <RunnerShellTopNav
+                navItems={navItems}
+                activeLabel={t('profile.dashboard_nav_activities')}
+                navigate={navigate}
+              />
             </div>
             <div className="runner-shell-topbar-actions">
               <div className="runner-shell-topbar-profile-actions">
@@ -701,9 +729,11 @@ const Runs = memo(function Runs() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_activities')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
@@ -792,14 +822,25 @@ const Runs = memo(function Runs() {
           {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
           {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
           {loadState === 'ready' && filteredRuns.length > 0 ? (
-              <List
-                rowComponent={RunRow}
-                rowCount={filteredRuns.length}
-                rowHeight={RUN_CARD_HEIGHT}
-                rowProps={{ runs: filteredRuns, t, lang, routePreviewFallbacks, onOpen: openRun }}
-                style={{ height: Math.min(filteredRuns.length * RUN_CARD_HEIGHT, 560), width: '100%' }}
-                className="recent-runs-virtual-list"
-              />
+              <>
+                <div className="recent-runs-page-list">
+                  {visibleRuns.map((run) => (
+                    <RunCard
+                      key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
+                      run={run}
+                      t={t}
+                      lang={lang}
+                      routePreviewFallbacks={routePreviewFallbacks}
+                      onOpen={openRun}
+                    />
+                  ))}
+                </div>
+                {hasMoreRuns ? (
+                  <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
+                    <span>{t('runs.loading')}</span>
+                  </div>
+                ) : null}
+              </>
             ) : null}
             </section>
             <footer className="runner-shell-footer runner-dashboard-footer">

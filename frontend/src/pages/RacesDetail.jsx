@@ -8,6 +8,7 @@ import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import TopbarUserMenu from '../components/TopbarUserMenu';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
@@ -586,10 +587,14 @@ export default function RacesDetail() {
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
+    { key: 'territory', icon: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory' },
+    { key: 'weather_engine', icon: 'thermostat', label: t('profile.dashboard_nav_weather_engine'), route: '/weather' },
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes' },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races', active: true },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
     { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
+    { key: 'rewards', icon: 'workspace_premium', label: t('rewards.top_title'), route: '/rewards' },
+    { key: 'workflows', icon: 'account_tree', label: t('profile.dashboard_nav_workflows'), route: '/workflows' },
   ];
 
   const heroImage = resolvedHeroImage || race?.heroImage || race?.image || DEFAULT_HERO_IMAGE;
@@ -988,7 +993,7 @@ export default function RacesDetail() {
       if (tileFallbackTimer) {
         clearTimeout(tileFallbackTimer);
       }
-      if (routeMapInstanceRef.current === createdMap) {
+      if (createdMap && routeMapInstanceRef.current === createdMap) {
         routeMapInstanceRef.current.remove();
         routeMapInstanceRef.current = null;
       } else if (createdMap) {
@@ -1043,15 +1048,13 @@ export default function RacesDetail() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar race-detail-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
-              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>
-                HERMES
-              </button>
-              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/races')}>
-                {t('profile.dashboard_nav_races')}
-              </button>
-              <span className="runner-shell-topnav-link is-section is-active">{topnavTitle}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              parentLabel={t('profile.dashboard_nav_races')}
+              parentRoute="/races"
+              activeLabel={topnavTitle}
+              navigate={navigate}
+            />
           </div>
 
           <div className="runner-shell-topbar-actions">

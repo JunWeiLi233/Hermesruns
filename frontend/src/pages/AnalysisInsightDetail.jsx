@@ -8,10 +8,11 @@ import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration } from '../utils/format';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } from '../utils/analysisInsights';
-import TopbarNotifications from '../components/TopbarNotifications';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -1326,10 +1327,14 @@ export default function AnalysisInsightDetail() {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights', active: true },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
+    { key: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory', icon: 'territory' },
+    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
     { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
+    { key: 'rewards', label: t('rewards.top_title'), route: '/rewards', icon: 'workspace_premium' },
+    { key: 'workflows', label: t('profile.dashboard_nav_workflows'), route: '/workflows', icon: 'account_tree' },
   ];
   const topnavTitle = detail.title;
 
@@ -1394,13 +1399,13 @@ export default function AnalysisInsightDetail() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
-              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>HERMES</button>
-              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/analysis')}>
-                {t('profile.dashboard_nav_analysis')}
-              </button>
-              <span className="runner-shell-topnav-link is-section is-active">{topnavTitle}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              parentLabel={t('profile.dashboard_nav_analysis')}
+              parentRoute="/analysis"
+              activeLabel={topnavTitle}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions">
