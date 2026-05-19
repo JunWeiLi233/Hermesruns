@@ -12,7 +12,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ProfileControllerTests {
@@ -270,10 +269,66 @@ class ProfileControllerTests {
         assertThat(body.activities()).isEmpty();
         assertThat(body.races()).isEmpty();
         assertThat(body.quota()).isEqualTo(Map.of());
+        assertThat(body.deferredEnrichment()).isFalse();
     }
 
     @Test
-    void profileDashboardDefersExpensiveEnrichmentForFastFirstPaint() {
+    void profileDashboardGracefullyFallsBackWhenBatchEnrichmentFails() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        PersonalRecordService personalRecordService = mock(PersonalRecordService.class);
+        QuotaService quotaService = mock(QuotaService.class);
+        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
+        RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
+        MuscleTrainingPlannerService muscleTrainingPlannerService = mock(MuscleTrainingPlannerService.class);
+        Runner runner = runner();
+        Activity activity = new Activity();
+        activity.setId(85L);
+        activity.setName("Fallback-safe run");
+        activity.setDistanceKm(10.0);
+        activity.setMovingTimeSeconds(3100);
+        activity.setStartTime(LocalDateTime.of(2026, 4, 30, 6, 15));
+
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(personalRecordService.buildForRunner(runner)).thenThrow(new IllegalStateException("records unavailable"));
+        when(quotaService.getQuotaStatus(runner)).thenThrow(new IllegalStateException("quota unavailable"));
+        when(automatedCoachService.getCoachState(runner)).thenThrow(new IllegalStateException("coach state unavailable"));
+        when(automatedCoachService.getTodayWithReadiness(runner)).thenThrow(new IllegalStateException("today unavailable"));
+        when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenThrow(new IllegalStateException("races unavailable"));
+        when(muscleTrainingPlannerService.getPlan(runner, null, List.of())).thenThrow(new IllegalStateException("muscle plan unavailable"));
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                personalRecordService,
+                quotaService,
+                automatedCoachService,
+                raceEventRepository,
+                muscleTrainingPlannerService,
+                mock(AcclimatizationService.class),
+                mock(ShoeRepository.class)
+        );
+
+        ResponseEntity<?> response = controller.profileDashboard("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(ProfileController.ProfileDashboardResponse.class);
+        ProfileController.ProfileDashboardResponse body = (ProfileController.ProfileDashboardResponse) response.getBody();
+        assertThat(body.activities()).hasSize(1);
+        assertThat(body.coachState()).isNull();
+        assertThat(body.coachToday()).isNull();
+        assertThat(body.personalRecords()).isNull();
+        assertThat(body.races()).isEmpty();
+        assertThat(body.musclePlan()).isNull();
+        assertThat(body.quota()).isEqualTo(Map.of());
+        assertThat(body.deferredEnrichment()).isFalse();
+    }
+
+    @Test
+    void profileDashboardReturnsBatchEnrichmentForAuthenticatedRunner() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         PersonalRecordService personalRecordService = mock(PersonalRecordService.class);
@@ -284,13 +339,68 @@ class ProfileControllerTests {
         Runner runner = runner();
         Activity activity = new Activity();
         activity.setId(84L);
-        activity.setName("Fast first paint run");
+        activity.setName("Batch dashboard run");
         activity.setDistanceKm(6.4);
         activity.setMovingTimeSeconds(1900);
         activity.setStartTime(LocalDateTime.of(2026, 4, 29, 6, 0));
+        AutomatedCoachService.CoachStateDto coachState = new AutomatedCoachService.CoachStateDto(
+                52.4, 194.8, 118,
+                16, 8, 0,
+                0.18, false,
+                48, 50, 79, 68, 15,
+                "steady", 86,
+                82, "GREEN",
+                80, 74, 83, 72,
+                190, 49, null,
+                null
+        );
+        AutomatedCoachService.CoachTodayDto coachToday = new AutomatedCoachService.CoachTodayDto(
+                null,
+                coachState,
+                null,
+                null
+        );
+        PersonalRecordService.PersonalRecordsResponse personalRecords = new PersonalRecordService.PersonalRecordsResponse(
+                List.of(),
+                Map.of("5k", new PersonalRecordService.DistanceRecord(
+                        "5k",
+                        5.0,
+                        1320,
+                        264.0,
+                        "2026-04-29T06:00:00",
+                        "Batch dashboard run",
+                        activity.getId(),
+                        activity.getDistanceKm(),
+                        false
+                )),
+                null,
+                null,
+                null
+        );
+        Map<String, Object> quota = Map.of("pro", false);
+        List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule = List.of(
+                new AutomatedCoachService.CoachScheduledWorkoutDto(
+                        LocalDateTime.of(2026, 4, 29, 6, 0).toLocalDate(),
+                        "EASY",
+                        6.4,
+                        40,
+                        false,
+                        "Keep it smooth",
+                        null,
+                        false
+                )
+        );
+        MusclePlanDto musclePlan = new MusclePlanDto(null, List.of(), List.of(), List.of(), null, "COACH_SCHEDULE");
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(personalRecordService.buildForRunner(runner)).thenReturn(personalRecords);
+        when(quotaService.getQuotaStatus(runner)).thenReturn(quota);
+        when(automatedCoachService.getCoachState(runner)).thenReturn(coachState);
+        when(automatedCoachService.getTodayWithReadiness(runner)).thenReturn(coachToday);
+        when(automatedCoachService.getSchedule(runner, 7)).thenReturn(schedule);
+        when(muscleTrainingPlannerService.getPlan(runner, coachState, schedule)).thenReturn(musclePlan);
+        when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
                 authService,
                 mock(RunnerRepository.class),
@@ -311,14 +421,20 @@ class ProfileControllerTests {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ProfileController.ProfileDashboardResponse body = (ProfileController.ProfileDashboardResponse) response.getBody();
         assertThat(body.activities()).hasSize(1);
-        assertThat(body.coachState()).isNull();
-        assertThat(body.coachToday()).isNull();
-        assertThat(body.personalRecords()).isNull();
+        assertThat(body.coachState()).isEqualTo(coachState);
+        assertThat(body.coachToday()).isEqualTo(coachToday);
+        assertThat(body.personalRecords()).isEqualTo(personalRecords);
         assertThat(body.races()).isEmpty();
-        assertThat(body.musclePlan()).isNull();
-        assertThat(body.quota()).isEqualTo(Map.of());
-        assertThat(body.deferredEnrichment()).isTrue();
-        verifyNoInteractions(personalRecordService, quotaService, automatedCoachService, raceEventRepository, muscleTrainingPlannerService);
+        assertThat(body.musclePlan()).isEqualTo(musclePlan);
+        assertThat(body.quota()).isEqualTo(quota);
+        assertThat(body.deferredEnrichment()).isFalse();
+        verify(personalRecordService).buildForRunner(runner);
+        verify(quotaService).getQuotaStatus(runner);
+        verify(automatedCoachService).getCoachState(runner);
+        verify(automatedCoachService).getTodayWithReadiness(runner);
+        verify(automatedCoachService).getSchedule(runner, 7);
+        verify(raceEventRepository).findByRunnerOrderByEventDateAsc(runner);
+        verify(muscleTrainingPlannerService).getPlan(runner, coachState, schedule);
     }
 
     @Test
@@ -365,6 +481,17 @@ class ProfileControllerTests {
     }
 
     @Test
+    void todayDashboardRejectsMissingAuthorization() {
+        AuthService authService = mock(AuthService.class);
+        when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
+        ProfileController controller = controller(authService);
+
+        ResponseEntity<?> response = controller.todayDashboard(null);
+
+        assertError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
+    }
+
+    @Test
     void todayDashboardReturnsEmptyDefaultsForAuthenticatedRunner() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
@@ -399,6 +526,98 @@ class ProfileControllerTests {
         assertThat(body.activities()).isEmpty();
         assertThat(body.races()).isEmpty();
         assertThat(body.shoes()).isEmpty();
+    }
+
+    @Test
+    void todayDashboardReturnsBatchPayloadForAuthenticatedRunner() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
+        ShoeRepository shoeRepository = mock(ShoeRepository.class);
+        Runner runner = runner();
+        Activity activity = new Activity();
+        activity.setId(86L);
+        activity.setName("Today dashboard run");
+        activity.setDistanceKm(7.2);
+        activity.setMovingTimeSeconds(2280);
+        activity.setStartTime(LocalDateTime.of(2026, 5, 1, 6, 45));
+        Shoe shoe = new Shoe();
+        shoe.setId(12L);
+        shoe.setModel("Race Companion");
+        shoe.setBrand("Hermes");
+        shoe.setRetired(false);
+        shoe.setInitialDistanceKm(120.5);
+        shoe.setCreatedAt(LocalDateTime.of(2026, 4, 1, 9, 0));
+        AutomatedCoachService.CoachStateDto coachState = new AutomatedCoachService.CoachStateDto(
+                48.9, 182.4, 112,
+                15, 8, 0,
+                0.92, false,
+                47, 49, 82, 69, 12,
+                "ready", 88,
+                84, "GREEN",
+                81, 75, 85, 73,
+                188, 50, null,
+                null
+        );
+        AutomatedCoachService.CoachTodayDto coachToday = new AutomatedCoachService.CoachTodayDto(
+                null,
+                coachState,
+                null,
+                null
+        );
+        AcclimatizationService.WeatherContextResponse weatherContext =
+                new AcclimatizationService.WeatherContextResponse(
+                        true,
+                        37.822,
+                        -122.25,
+                        18.2,
+                        14.1,
+                        4.1,
+                        true,
+                        3.0,
+                        12,
+                        4,
+                        0.72,
+                        "moderate",
+                        "Heat adjustment active"
+                );
+
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(activityRepository.sumDistanceKmByRunner(runner)).thenReturn(List.<Object[]>of(new Object[]{12L, 43.25}));
+        when(automatedCoachService.getTodayWithReadiness(runner)).thenReturn(coachToday);
+        when(acclimatizationService.buildContext(runner)).thenReturn(weatherContext);
+        when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
+        when(shoeRepository.findByRunnerAndRetiredFalseOrderByCreatedAtDesc(runner)).thenReturn(List.of(shoe));
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class),
+                automatedCoachService,
+                raceEventRepository,
+                mock(MuscleTrainingPlannerService.class),
+                acclimatizationService,
+                shoeRepository
+        );
+
+        ResponseEntity<?> response = controller.todayDashboard("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(ProfileController.TodayDashboardResponse.class);
+        ProfileController.TodayDashboardResponse body = (ProfileController.TodayDashboardResponse) response.getBody();
+        assertThat(body.profile().email()).isEqualTo("runner@hermes.test");
+        assertThat(body.activities()).hasSize(1);
+        assertThat(body.coachToday()).isEqualTo(coachToday);
+        assertThat(body.weather()).isEqualTo(weatherContext);
+        assertThat(body.races()).isEmpty();
+        assertThat(body.shoes()).hasSize(1);
+        assertThat(body.shoes().get(0).getCurrentDistanceKm()).isEqualTo(163.75);
     }
 
     private ProfileController controller(AuthService authService) {

@@ -10,11 +10,11 @@ import { parseSignupStatusQuery } from '../utils/stravaLinking';
 const SIGNUP_STITCH_COPY = {
   'zh-CN': {
     login_nav: '返回登录',
-    hero_line_one: '提高你的',
-    hero_line_two: '每一步',
-    hero_line_three: '表现。',
-    hero_copy: '把训练记录、表现判断和下一步建议放进同一个入口。连接 Strava 后，Hermes 会把新的跑步数据持续带回你的训练面板。',
-    standard: '数字节律',
+    hero_line_one: '从下一次',
+    hero_line_two: '聪明训练',
+    hero_line_three: '开始。',
+    hero_copy: '创建账号，把跑步记录、恢复状态、跑鞋里程和比赛目标汇成每天一个清晰训练决定。现在连接 Strava，或先用邮箱注册，稍后再补充数据。',
+    standard: '跑者优先设置',
     strava_cta: '使用 Strava 继续',
     email_divider: '或使用邮箱',
     email_label: '跑者邮箱',
@@ -35,11 +35,11 @@ const SIGNUP_STITCH_COPY = {
   },
   en: {
     login_nav: 'Back to login',
-    hero_line_one: 'Elevate your',
-    hero_line_two: 'every',
-    hero_line_three: 'stride.',
-    hero_copy: 'Bring training history, performance signals, and the next best action into one entry point. Once Strava is connected, Hermes keeps pulling fresh run data back into your coaching dashboard.',
-    standard: 'Digital pulse',
+    hero_line_one: 'Start with',
+    hero_line_two: 'your next',
+    hero_line_three: 'smart run.',
+    hero_copy: 'Create the account that turns runs, recovery, shoes, and race goals into one daily training decision. Connect Strava now or start with email and add data later.',
+    standard: 'Runner-first setup',
     strava_cta: 'Continue with Strava',
     email_divider: 'or use email',
     email_label: 'Runner email',
@@ -56,7 +56,7 @@ const SIGNUP_STITCH_COPY = {
     footer_terms: 'Terms',
     footer_privacy: 'Privacy',
     footer_contact: 'Contact',
-    footer_copy: 'A better training entry point for serious runners.',
+    footer_copy: 'A daily training entry point for runners who care about the next decision.',
   },
 };
 

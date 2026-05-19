@@ -190,7 +190,7 @@ function formatCoordinate(value, positiveSuffix, negativeSuffix) {
 }
 
 export default function Heatmap() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authHydrated } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -208,6 +208,9 @@ export default function Heatmap() {
   const mapInstanceRef = useRef(null);
 
   useEffect(() => {
+    if (!authHydrated) {
+      return;
+    }
     if (!isAuthenticated) {
       navigate('/login');
       return;
@@ -231,10 +234,10 @@ export default function Heatmap() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate]);
+  }, [authHydrated, isAuthenticated, navigate]);
 
   useEffect(() => {
-    if (!isAuthenticated) return undefined;
+    if (!authHydrated || !isAuthenticated) return undefined;
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 12000);
@@ -271,7 +274,7 @@ export default function Heatmap() {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [isAuthenticated, heatmapReloadToken]);
+  }, [authHydrated, isAuthenticated, heatmapReloadToken]);
 
   useEffect(() => {
     loadLeafletModules().catch(() => {

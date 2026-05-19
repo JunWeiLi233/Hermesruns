@@ -29,7 +29,7 @@ public class MuscleTrainingPlannerService {
         this.activityRepository = activityRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public MuscleProfileDto getProfile(Runner runner) {
         return profileService.getProfile(runner);
     }
@@ -54,7 +54,7 @@ public class MuscleTrainingPlannerService {
         checkInService.clearTodayCheckIn(runner);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public MusclePlanDto getPlan(
             Runner runner,
             AutomatedCoachService.CoachStateDto coachState,

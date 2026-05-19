@@ -948,6 +948,8 @@
       "heading": "我的徽章",
       "page_copy": "每一枚徽章都记录着你的训练里程碑，解锁它们，看看接下来还能冲击哪些目标。",
       "badges_earned_label": "枚已解锁",
+      "locked_badges_label": "尚未解锁",
+      "runs_logged_label": "已记录跑步",
       "earned_title": "已解锁徽章",
       "earned_empty": "继续导入跑步记录后，这里会自动点亮你的奖励。",
       "upcoming_title": "接下来可冲击",

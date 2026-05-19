@@ -11,6 +11,33 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-05-19-01
+Date: 2026-05-19
+Surface: Schedule light-mode text contrast on `/schedule`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/scheduleContrast.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a route-scoped light-theme contrast repair for the Schedule hero and next-session card so the main weekly title, target/completed volume values, and upcoming-session heading stay dark on warm white cards even when broader runner-card rules apply later in the cascade.
+Why: The live Schedule page rendered several primary words in near-white text on a white background, making the hero and next-up title hard to read.
+Rollback target: `working tree before this change`
+Notes: Added `scheduleContrast.smoke.test.js` to guard the Schedule-only contrast selectors.
+
+### Version: DV-2026-05-18-02
+Date: 2026-05-18
+Surface: Shoes locker and Add Shoes catalog grids on `/shoes` and `/shoes/add`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a profile-aligned Shoes grid visibility pass that gives the locker cards, rotation signal panels, filter/action strips, brand grids, model grids, form fields, placeholders, and empty states explicit warm-paper foreground/background tokens in light mode plus matching dark-mode tokens. The repair targets the real runtime classes `.shoes-dashboard-page` and `.add-shoes-page`, keeping the existing Shoes/Add Shoes structure and data wiring while preventing inherited near-white dark-theme text from disappearing on warm light cards.
+Why: Several Shoes grids and card sub-surfaces could become visually invisible after the Profile-aligned redesign because dark-theme text, placeholders, and translucent grid cards were still cascading onto light warm-paper panels, and some older profile-aligned selectors were scoped to a wrapper that the current Shoes runtime does not emit.
+Rollback target: `working tree before this change`
+Notes: Added `shoesGridVisibility.smoke.test.js` to guard the route-scoped contrast repair selectors and the live Shoes/Add Shoes class hooks.
+
+### Version: DV-2026-05-18-01
+Date: 2026-05-18
+Surface: Rewards / `/rewards` milestone ledger
+Files: `frontend/src/pages/Rewards.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/en.js`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `.ai-sync/CONTEXT_LEDGER.md`, `DESIGN_VERSIONS.md`
+What changed: Reworked the Rewards first fold into an asymmetric milestone ledger that keeps the live earned/all badge progress while promoting `upcomingRewards[0]` into a dedicated closest-next-unlock rail. The page now exposes earned, locked, and logged-run metrics above the existing earned/upcoming badge grids, preserving the shared runner shell and live `buildRewardShowcase` ordering.
+Why: The previous Rewards page showed the correct data but made the next achievable badge feel like one generic upcoming card instead of the primary runner decision for the page.
+Rollback target: `working tree before this change`
+Notes: Focused verification passed with `node frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `node frontend/src/utils/rewardsShellMarker.smoke.test.js`, `node --check frontend/src/i18n/locales/en.js`, and `node --check frontend/src/i18n/locales/zh-CN.js`. Full frontend build is currently blocked before Rewards compilation by missing pre-existing Muscle Training imports: `frontend/src/assets/anatomy/muscles-anterior-gray.png` and `frontend/src/assets/anatomy/muscles-posterior-gray-unlabeled.png`.
+
 ### Version: DV-2026-04-29-03
 Date: 2026-04-29
 Surface: Add Shoes / `/shoes/add` Chinese running-brand logos
@@ -2169,3 +2196,174 @@ What changed: Reworked the Profile opening surface into the approved Coach Cockp
 Why: The user chose option A for the profile redesign and explicitly asked to remember the original version.
 Rollback target: `DV-2026-04-29-05`
 Notes: This is a top-fold presentation change only. It preserves the batch-first dashboard data loading, quick-preview data model, calibrated race predictions, lower recent-session card, existing Today Run / Analysis actions, and the original quick-preview design as the rollback baseline.
+
+### Version: DV-2026-05-18-02
+Date: 2026-05-18
+Surface: Territory full-screen world map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Opted Territory into the Heatmap-style full-viewport Leaflet shell, using the same dark real-world CARTO map treatment as the page background with glass overlay cards, an overlay brand/sector/action topbar, and a compact route utility rail.
+Why: The user asked to inspect the Heatmap page and apply the same real-world map background style to Territory.
+Rollback target: `DV-2026-05-18-01`
+Notes: This is a presentation-layer change only. It preserves the live `/api/territory` and `/api/territory/polygons` wiring, polygon/zone toggle, sidebar route availability via the overlay utility rail, and existing Territory backend contracts.
+
+### Version: DV-2026-05-18-03
+Date: 2026-05-18
+Surface: Territory full-screen world map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the obsolete `terr-brief` overlay card from the Territory full-screen map so the real-world Leaflet surface owns the viewport without a duplicate conquered-space panel.
+Why: The user said the `terr-brief` block was unnecessary and asked to remove it.
+Rollback target: `DV-2026-05-18-02`
+Notes: This is a presentation cleanup only. It preserves the Heatmap-style world-map shell, overlay topbar, route utility rail, polygon/zone toggle, and live backend territory rendering.
+
+### Version: DV-2026-05-18-04
+Date: 2026-05-18
+Surface: Territory map-only land view on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the Territory page's visible buttons, overlay topbar, utility rail, filters, legend, lower panels, and footer so `/territory` renders only the full-screen real-world Leaflet map plus concrete backend conquered-land masks.
+Why: The user asked to remove the page buttons and keep only the concrete lands visible.
+Rollback target: `DV-2026-05-18-03`
+Notes: This preserves `/api/territory` and `/api/territory/polygons` data loading, Leaflet readiness, full-bleed map sizing, and external route availability from other runner sidebars; the Territory page itself no longer renders local navigation controls.
+
+### Version: DV-2026-05-18-05
+Date: 2026-05-18
+Surface: Territory map-only land view on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored the compact icon-only navigation rail on top of the Territory map while keeping the page free of action buttons, filters, legends, cards, footer, and Leaflet controls.
+Why: The user clarified that necessary buttons, specifically navigation buttons, should remain available.
+Rollback target: `DV-2026-05-18-04`
+Notes: This preserves the concrete backend land-mask map-only treatment and reuses the shared runner navigation model for route exits.
+
+### Version: DV-2026-05-18-06
+Date: 2026-05-18
+Surface: Territory map title strip on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added the Heatmap-style title strip to Territory with a Hermes/territory brand pill, recenter status with map coordinates, View Runs, Open Settings, and avatar actions while keeping the land map, navigation rail, and concrete backend mask as the main view.
+Why: The user shared the Heatmap top strip reference and asked to add those titles to Territory too.
+Rollback target: `DV-2026-05-18-05`
+Notes: This preserves the removed filters, legends, lower panels, footer, and Leaflet controls; only title/action chrome and the navigation rail remain over the map.
+
+### Version: DV-2026-05-18-07
+Date: 2026-05-18
+Surface: Territory concrete land and competition model on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `backend/src/test/java/com/hermes/backend/ProfileControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Hardened latest-run territory competition so a newer rival capture blocks older loop interior refill, then changed the map renderer from dotted circle markers to aggregated filled Leaflet rectangles so straight routes and loop interiors read as concrete occupied land tiles.
+Why: The user asked to redesign the occupied-land mechanism so borders fill concretely, loops fill their interiors, and newer user coverage consumes the land it overlaps from previous owners.
+Rollback target: `DV-2026-05-18-06`
+Notes: The backend still uses activity start time as the ownership ordering source, preserves the existing `/api/territory/polygons` land-mask contract, and keeps only the necessary Territory navigation/title controls over the map.
+
+### Version: DV-2026-05-18-08
+Date: 2026-05-18
+Surface: Territory concrete border polish on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Increased client mask density and added continuous anti-aliased land-mask border loops plus rounded route-trace skins over the filled tiles so occupied land reads as a concrete map shape rather than a pixelized grid edge.
+Why: The user said the Territory border still looked pixelized and asked to make it more concrete.
+Rollback target: `DV-2026-05-18-07`
+Notes: This is a visual renderer refinement only. It preserves the backend latest-wins ownership model, `/api/territory/polygons` land-mask data contract, filled tile occupation, title strip, and icon-only navigation rail.
+
+### Version: DV-2026-05-18-09
+Date: 2026-05-18
+Surface: Territory active red land rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Demoted route traces into a low-opacity underlay, removed the bright route-core overlay, and suppresses heavy concrete border halos for small active red masks so active territory no longer reads as stamp-like markers on top of the land fill.
+Why: The user asked to review a visible bug on the red Territory land after the border polish pass.
+Rollback target: `DV-2026-05-18-08`
+Notes: The backend ownership data was verified as non-empty and consistent; this is a frontend paint-order/opacity/border-threshold repair that preserves concrete filled tiles, smooth mask borders for larger land, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-10
+Date: 2026-05-18
+Surface: Territory narrow land-conquest mechanism on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the backend land-mask grid from 16m to 8m cells, reduced open-route claim radius from 22m to a center-strict 6m paint radius, and bumped mask/cache versions so old wide masks are treated as stale and recomputed. A regression now requires an open straight run to stay within a narrow corridor, including rejecting land 20m off the route, instead of claiming a broad territory block.
+Why: The user said a single line was over-estimating occupied land and asked for more concrete land-conquering semantics.
+Rollback target: `DV-2026-05-18-09`
+Notes: Open routes now claim a road-like strip; closed loops still flood-fill the genuinely enclosed interior. Latest-wins ownership and frontend concrete tile rendering remain unchanged.
+
+### Version: DV-2026-05-18-11
+Date: 2026-05-18
+Surface: Territory personal route visibility on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored a slim, high-contrast active-runner route centerline above the concrete land fill while keeping the broad route skin as a low-opacity underlay. The visible line is independent from the backend 6m land-conquest radius, so personal routes remain readable without inflating conquered land.
+Why: After narrowing the backend conquest radius, the user's own running route visually disappeared because the route trace was only a subtle underlay below the filled land tiles.
+Rollback target: `DV-2026-05-18-10`
+Notes: This is a frontend paint-order/visibility repair. It preserves the narrow backend land mask, latest-wins ownership, concrete tile fill, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-12
+Date: 2026-05-18
+Surface: Territory authenticated route loading on `/territory`
+Files: `frontend/src/contexts/AuthContext.jsx`, `frontend/src/contexts/authUrlTokenPersistence.smoke.test.js`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Persisted URL tokens synchronously in `AuthProvider` before child route effects can call `apiJson`, and made Territory wait for auth hydration before loading `/api/territory` and `/api/territory/polygons`. This prevents the page from briefly using unauthenticated fallback/demo data with zero route overlays on first load.
+Why: The user's running routes were not displaying because `/territory?token=...` could race: the page requested route/land-mask data before the URL token reached localStorage, then stayed on the empty/demo map until a reload.
+Rollback target: `DV-2026-05-18-11`
+Notes: This preserves the narrow land-conquest backend, visible route centerline, concrete land fill, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-13
+Date: 2026-05-18
+Surface: Territory continuous route and loop-fill conquest on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Bumped the land-mask encoding to v5 so stale persisted masks cannot keep rendering old broken/wide geometry, and explicitly paints detected mid-route loop closures before flood-fill so a route that returns to an earlier border seals and fills the enclosed land. Added regressions for connected sparse straight routes, mid-route loop interior fill, and stale v4 mask rejection.
+Why: The user reported straight route territory appearing broken into pieces and route loops failing to cover the enclosed area.
+Rollback target: `DV-2026-05-18-12`
+Notes: This preserves the 8m concrete mask grid, 6m open-route conquest radius, latest-wins ownership, active route centerline, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-14
+Date: 2026-05-18
+Surface: Territory own-route warmup refresh on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Territory now schedules a bounded refresh while `/api/territory/polygons` reports `backfillInProgress` or pending activity recomputation, so the page automatically repaints the active runner's route traces after backend land-mask versions rebuild.
+Why: The user's own running route could appear erased when the first load happened during polygon backfill: the warming response contained only already-cached rival land and no active own route traces until a later manual reload.
+Rollback target: `DV-2026-05-18-13`
+Notes: This is a frontend hydration/polling repair only. It preserves the 8m concrete mask grid, 6m open-route conquest radius, mid-route loop fill, latest-wins ownership, active route centerline, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-15
+Date: 2026-05-18
+Surface: Territory land-first route highlight removal on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the bright white personal-route centerline overlay from active Territory land masks while keeping the subtle low-opacity route skin underneath the concrete fill for corridor softness.
+Why: The user pointed at the white route highlighting and asked to remove it so the page reads as occupied land rather than a route-tracing view.
+Rollback target: `DV-2026-05-18-14`
+Notes: This is a visual paint-layer repair only. It preserves the 8m concrete mask grid, 6m open-route conquest radius, mid-route loop fill, latest-wins ownership, warmup refresh, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-16
+Date: 2026-05-18
+Surface: Territory solid land fill on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the remaining route-skin underlay and made occupied land tiles substantially more opaque, so background road/route lines no longer show through conquered territory.
+Why: The user pointed at visible background lines inside the red occupied land and asked to remove them.
+Rollback target: `DV-2026-05-18-15`
+Notes: Territory still uses backend land-mask cells and route traces for bounds, but it no longer paints route lines over or under the concrete land fill; active fill opacity is now `0.9`.
+
+### Version: DV-2026-05-18-17
+Date: 2026-05-18
+Surface: Heatmap continuous route rendering on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the visible GPS sample overlay from isolated Leaflet circle markers with same-activity rounded route polylines, while leaving the real-world basemap and heat-fog layer intact.
+Why: The user reported that a straight heatmap route appeared broken into separated pieces instead of reading as one continuous line.
+Rollback target: `DV-2026-05-18-16`
+Notes: This is a frontend rendering repair only. Backend `/api/profile/heatmap` still owns sampling, newest-run protection, and point totals; the frontend now uses those sampled points as route continuity geometry instead of disconnected dots.
+
+### Version: DV-2026-05-18-18
+Date: 2026-05-18
+Surface: Territory sealed concrete land rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the same-color `routeTraces` corridor bridge and instead seals the concrete land-mask tile bounds with a small client-side overlap, so straight or diagonal conquered land reads continuously without painting any route highlight on the Territory map.
+Why: The user clarified that route highlighting is unnecessary on Territory; the broken-straight-line issue must be solved at the occupied-land mask level.
+Rollback target: `DV-2026-05-18-17`
+Notes: This does not restore the removed white route highlighter, route-skin overlay, or same-color route bridge. Backend route traces remain available only for bounds/warmup reference; visible continuity comes from slightly overlapped concrete land tiles while preserving the narrow 8m/6m conquest semantics.
+
+### Version: DV-2026-05-19-01
+Date: 2026-05-19
+Surface: Heatmap auth-hydrated loading on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Heatmap now reads `authHydrated` from `AuthContext`, waits for hydration before redirecting to `/login`, and waits for hydration before requesting `/api/profile/heatmap` plus `/api/activities`.
+Why: The live `/heatmap` route could bounce to `/login` before URL/local token hydration completed, matching the earlier Territory first-load race.
+Rollback target: `DV-2026-05-18-17`
+Notes: This preserves the current Heatmap map-first layout, Leaflet heat layer, same-activity rounded route polylines, and signed-in auth requirement; unauthenticated sessions still redirect to `/login` after hydration.
+
+### Version: DV-2026-05-19-02
+Date: 2026-05-19
+Surface: Heatmap visible GPS dot restoration on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored the visible GPS overlay from same-activity route polylines back to sampled Leaflet circle markers while keeping the auth-hydrated redirect/data-loading guard added in the previous round.
+Why: The user explicitly asked to restore Heatmap to the dot version.
+Rollback target: `DV-2026-05-19-01`
+Notes: This changes only the visible overlay style. The heat-fog layer, sampled backend payload, and auth requirement stay intact.

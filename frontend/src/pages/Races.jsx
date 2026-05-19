@@ -1068,7 +1068,7 @@ const Races = memo(function Races() {
           <input type="date" value={form.eventDate} onChange={(event) => setForm((prev) => ({ ...prev, eventDate: event.target.value }))} required />
 
           <label className="modal-label">{t('races.form_distance')}</label>
-          <input type="number" min="1" step="0.1" value={form.distanceKm} onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
+          <input type="number" min="1" step="any" value={form.distanceKm} onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
 
           <label className="modal-label">{t('races.form_status')}</label>
           <select value={form.registrationStatus} onChange={(event) => setForm((prev) => ({ ...prev, registrationStatus: event.target.value }))}>

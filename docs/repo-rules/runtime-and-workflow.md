@@ -66,6 +66,8 @@ Working boundaries:
 
 For deep `/auto-hermes` behavior, read the owning workflow/helper instead of inflating `AGENTS.md`.
 
+Executor-backed Codex rounds default to YOLO/full-permission worker execution. The loop helper selects OMX Ralph with `--madmax` when OMX is auto-ready, otherwise the bundled Codex fallback uses `--dangerously-bypass-approvals-and-sandbox`. Generated briefs must show this as executor configuration, and child-agent lanes inherit that context unless an explicit executor override is configured.
+
 ## Loop And Batch Rules
 
 - In batch/loop mode, continue only while promotable work remains and verification keeps passing.

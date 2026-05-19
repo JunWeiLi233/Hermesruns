@@ -219,6 +219,34 @@ export default function AppIcon({ name, className = '', title }) {
           <circle cx="12" cy="11" r="2" />
         </>
       );
+    case 'territory':
+      return titled(
+        <>
+          <path d="M4.5 7.5 9 5l6 2.5 4.5-2.2v11.2L15 19l-6-2.5-4.5 2.2Z" />
+          <path d="M9 5v11.5" />
+          <path d="M15 7.5V19" />
+        </>
+      );
+    case 'account_tree':
+      return titled(
+        <>
+          <rect x="4" y="4" width="6" height="5" rx="1.4" />
+          <rect x="14" y="15" width="6" height="5" rx="1.4" />
+          <rect x="4" y="15" width="6" height="5" rx="1.4" />
+          <path d="M7 9v3.2a2 2 0 0 0 2 2h6" />
+          <path d="M7 15v-2.8" />
+        </>
+      );
+    case 'fitness_center':
+      return titled(
+        <>
+          <path d="M6 8v8" />
+          <path d="M18 8v8" />
+          <path d="M3.5 10v4" />
+          <path d="M20.5 10v4" />
+          <path d="M6 12h12" />
+        </>
+      );
     case 'sprint':
       return titled(
         <>
