@@ -97,8 +97,8 @@ export default function SettingsAtlasLayout({
         </aside>
       </section>
 
-      <div className="settings-atlas-grid">
-        <section className="settings-atlas-column">
+      <div className="settings-atlas-workbench">
+        <section className="settings-atlas-column settings-atlas-column--preferences">
           <div className="settings-atlas-column-head">
             <h3>{t('settings.stitch_preferences')}</h3>
           </div>
@@ -202,9 +202,9 @@ export default function SettingsAtlasLayout({
           </article>
         </section>
 
-        <section className="settings-atlas-column">
+        <section className="settings-atlas-column settings-atlas-column--actions settings-atlas-action-rail">
           <div className="settings-atlas-column-head">
-            <h3>{t('settings.danger_title')}</h3>
+            <h3>{t('settings.stitch_control_matrix')}</h3>
           </div>
 
           <article className="settings-atlas-panel">
@@ -267,7 +267,7 @@ export default function SettingsAtlasLayout({
           </article>
         </section>
 
-        <section className="settings-atlas-column">
+        <section className="settings-atlas-column settings-atlas-column--ecosystem">
           <div className="settings-atlas-column-head">
             <h3>{t('settings.stitch_data_ecosystem')}</h3>
           </div>

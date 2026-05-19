@@ -36,6 +36,19 @@ function normalizeRole(role) {
   return role === 'ADMIN' ? 'ADMIN' : 'USER';
 }
 
+function persistIncomingAuth(incomingAuth) {
+  try {
+    if (incomingAuth?.token) {
+      localStorage.setItem('hermes_jwt', incomingAuth.token);
+    }
+    if (incomingAuth?.email) {
+      localStorage.setItem('hermes_email', incomingAuth.email);
+    }
+  } catch {
+    // Ignore storage failures; route guards will still use React state for this render.
+  }
+}
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
@@ -47,6 +60,7 @@ export function AuthProvider({ children }) {
   // If OAuth redirects back with `#token=...` (backend RedirectView), derive the initial token synchronously
   // so route guards do not kick the user to `/login` or `/admin` before URL-hash parsing runs.
   const incomingAuth = readAuthFromUrl();
+  persistIncomingAuth(incomingAuth);
   const initialToken = incomingAuth?.token || localStorage.getItem('hermes_jwt') || null;
   const initialEmail = incomingAuth?.email || localStorage.getItem('hermes_email') || null;
 

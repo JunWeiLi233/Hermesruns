@@ -16,7 +16,7 @@ public class MuscleTrainingProfileService {
         this.preferenceRepository = preferenceRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public MuscleProfileDto getProfile(Runner runner) {
         MuscleTrainingPreference preference = getOrCreatePreference(runner);
         return toProfileDto(preference);

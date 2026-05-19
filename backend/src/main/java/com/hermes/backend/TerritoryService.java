@@ -47,7 +47,7 @@ public class TerritoryService {
     private static final double SECURE_RATIO = 1.22;
     private static final double MIN_CONTEST_SCORE = 4.0;
     private static final String POLYGON_CACHE_NAMESPACE = "territory-polygons";
-    private static final String POLYGON_CACHE_VERSION = "land-mask-union-v7";
+    private static final String POLYGON_CACHE_VERSION = "land-mask-union-v10-continuous-loop-fill";
     private static final Duration POLYGON_CACHE_TTL = Duration.ofMinutes(20);
     private static final Duration POLYGON_WARMING_CACHE_TTL = Duration.ofSeconds(8);
     private static final int MIN_TERRITORY_ROUTE_POINTS = 8;
@@ -57,7 +57,7 @@ public class TerritoryService {
     private static final int MAX_RESPONSE_ROUTE_TRACE_POINTS = 30_000;
     private static final int MAX_ROUTE_TRACE_POINTS_PER_ACTIVITY = 1_500;
     private static final String TERRITORY_MAP_CACHE_NAMESPACE = "territory-map";
-    private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v2-last-fill-wins";
+    private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v5-continuous-loop-fill";
     private static final Duration TERRITORY_MAP_CACHE_TTL = Duration.ofMinutes(2);
 
     private final ActivityPointRepository activityPointRepository;
@@ -392,7 +392,7 @@ public class TerritoryService {
             if (ownerCells.isEmpty()) {
                 continue;
             }
-            fillInteriorVoids(ownerCells, responseCellMeters, cosRef);
+            fillInteriorVoids(ownerCells, responseCellMeters, cosRef, claimedCells);
             List<MaskCellDto> cellDtos = ownerCells.values().stream()
                     .map(MaskAccumulator::toDto)
                     .toList();
@@ -531,6 +531,13 @@ public class TerritoryService {
     }
 
     private static void fillInteriorVoids(Map<String, MaskAccumulator> union, double cellMeters, double cosRef) {
+        fillInteriorVoids(union, cellMeters, cosRef, null);
+    }
+
+    private static void fillInteriorVoids(Map<String, MaskAccumulator> union,
+                                          double cellMeters,
+                                          double cosRef,
+                                          Set<String> globallyClaimedCells) {
         if (union.isEmpty() || !Double.isFinite(cellMeters) || cellMeters <= 0 || Math.abs(cosRef) < 1e-6) {
             return;
         }
@@ -590,13 +597,18 @@ public class TerritoryService {
             for (long x = occupiedMinX; x <= occupiedMaxX; x += 1) {
                 MaskGridPoint point = new MaskGridPoint(x, y);
                 String key = point.key();
-                if (union.containsKey(key) || outside.contains(key)) {
+                if (union.containsKey(key)
+                        || outside.contains(key)
+                        || (globallyClaimedCells != null && globallyClaimedCells.contains(key))) {
                     continue;
                 }
                 long fillX = x;
                 long fillY = y;
                 union.computeIfAbsent(key, ignored -> new MaskAccumulator(fillX, fillY))
                         .record(responseCellLatitude(fillY, cellMeters), responseCellLongitude(fillX, cellMeters, cosRef));
+                if (globallyClaimedCells != null) {
+                    globallyClaimedCells.add(key);
+                }
             }
         }
     }

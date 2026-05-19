@@ -4,6 +4,7 @@ import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
 import ShoeRecommendation from '../components/ShoeRecommendation';
@@ -569,9 +570,11 @@ export default function TodayRun() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('today_run.stitch_shell_title')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('today_run.stitch_shell_title')}
+              navigate={navigate}
+            />
           </div>
 
           <div className="runner-shell-topbar-actions">

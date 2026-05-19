@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,10 +7,9 @@ import { useUnit } from '../contexts/UnitContext';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import FooterNavLinks from '../components/FooterNavLinks';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import anatomyAnteriorGray from '../assets/anatomy/muscles-anterior-gray.png';
-import anatomyPosteriorGray from '../assets/anatomy/muscles-posterior-gray-unlabeled.png';
 import MUSCLE_MASKS from '../utils/muscleMasks.data.json';
 
 const DAY_OPTIONS = [
@@ -651,6 +650,13 @@ function formatTimestamp(value, displayLang) {
   }
 }
 
+function formatCopyTemplate(template, replacements = {}) {
+  return Object.entries(replacements).reduce(
+    (text, [token, value]) => text.replaceAll(`{${token}}`, value ?? ''),
+    template || '',
+  );
+}
+
 function parseOptionalNumber(value) {
   if (value === '' || value == null) return null;
   const parsed = Number(value);
@@ -1065,7 +1071,6 @@ const REFERENCE_BODY_MEASURE_VIEWBOX = { width: 790, height: 580 };
  * and the posterior SVG/muscle regions share that fitted person-scale matrix
  * with legacy x-axis corrections on top.
  */
-const POSTERIOR_RASTER_ALIGNMENT_TRANSFORM = 'translate(0 0)';
 const POSTERIOR_SVG_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 32.3948031496 18.805511811)';
 const POSTERIOR_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 83.7 9.0)';
 const POSTERIOR_GLUTE_REGION_ALIGNMENT_TRANSFORM = 'matrix(0.9665354331 0 0 0.9665354331 89.0 12.0)';
@@ -1394,7 +1399,7 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
     'muscle-map-card',
     'mt-body-measure-atlas',
     'mt-body-clinical-atlas',
-    'mt-body-real-human-atlas',
+    'mt-body-svg-human-atlas',
     'mt-body-medical-atlas',
     'mt-body-lean-runner-atlas',
     compact ? 'mt-body-measure-atlas--compact' : '',
@@ -1573,20 +1578,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           {/* ── FRONT FIGURE ─────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.anterior}>
             <text x="190" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.anterior}</text>
-            <g className="mt-body-reference-image-layer" aria-hidden="true">
-              <image
-                href={anatomyAnteriorGray}
-                x="58"
-                y="42"
-                width="264"
-                height="508"
-                data-align-level="shared-anatomy-baseline"
-                data-visual-scale="frame-contained-slice"
-                preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#mtBodyAnteriorPlate)"
-                className="mt-body-reference-image"
-              />
-            </g>
             <g className="mt-body-figure-clean" aria-hidden="true">
               {/* single coherent body silhouette — anterior */}
               <path
@@ -1633,21 +1624,6 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
           {/* ── BACK FIGURE ──────────────────────────────────────────────── */}
           <g className="mt-body-measure-view" aria-label={bodyMeasureCopy.posterior}>
             <text x="570" y="28" textAnchor="middle" className="mt-body-measure-view-label">{bodyMeasureCopy.posterior}</text>
-            <g className="mt-body-reference-image-layer" transform={POSTERIOR_RASTER_ALIGNMENT_TRANSFORM} aria-hidden="true">
-              <image
-                href={anatomyPosteriorGray}
-                x="411.12"
-                y="59.4"
-                width="370.2"
-                height="491.2"
-                data-align-level="shared-anatomy-baseline"
-                data-crop-align="posterior-body-axis-fitted"
-                data-visual-scale="posterior-matched-person-grid-fit"
-                preserveAspectRatio="xMidYMid meet"
-                clipPath="url(#mtBodyPosteriorPlate)"
-                className="mt-body-reference-image"
-              />
-            </g>
             <g className="mt-body-figure-clean" transform={POSTERIOR_SVG_ALIGNMENT_TRANSFORM} aria-hidden="true">
               {/* single coherent body silhouette — posterior */}
               <path
@@ -2483,6 +2459,16 @@ export default function MuscleTraining() {
     support: t('muscle_training.stitch_support'),
     settings: t('muscle_training.stitch_settings'),
     todayLabel: t('muscle_training.stitch_today_label'),
+    guideTitle: t('muscle_training.stitch_guide_title'),
+    guideSubtitle: t('muscle_training.stitch_guide_subtitle'),
+    guideDecisionTitle: t('muscle_training.stitch_guide_decision_title'),
+    guideDecisionBodyActive: t('muscle_training.stitch_guide_decision_body_active'),
+    guideDecisionBodyRest: t('muscle_training.stitch_guide_decision_body_rest'),
+    guideRunwayTitle: t('muscle_training.stitch_guide_runway_title'),
+    guideMapTitle: t('muscle_training.stitch_guide_map_title'),
+    guideAdjustCheckin: t('muscle_training.stitch_guide_adjust_checkin'),
+    anatomyExploreTitle: t('muscle_training.stitch_anatomy_explore_title'),
+    anatomyExploreHint: t('muscle_training.stitch_anatomy_explore_hint'),
     weekDoseLabel: t('muscle_training.stitch_week_dose_label'),
     weekAlignLabel: t('muscle_training.stitch_week_align_label'),
     decisionLabel: t('muscle_training.stitch_decision_label'),
@@ -2623,6 +2609,34 @@ export default function MuscleTraining() {
     };
   }, [copy.workoutTypes, displayLang, isMile, isZh, plan, stitchCopy]);
 
+  const friendlySteps = useMemo(() => {
+    const focusLabel = muscleFocus.length > 0
+      ? muscleFocus.join(' / ')
+      : stitchCopy.bodyMeasureInspectHint;
+
+    return [
+      {
+        key: 'decision',
+        number: '01',
+        title: stitchCopy.guideDecisionTitle,
+        body: featuredDay?.strength
+          ? stitchCopy.guideDecisionBodyActive
+          : stitchCopy.guideDecisionBodyRest,
+      },
+      {
+        key: 'runway',
+        number: '02',
+        title: stitchCopy.guideRunwayTitle,
+        body: [nextRunSummary.label, nextRunSummary.meta].filter(Boolean).join(' - '),
+      },
+      {
+        key: 'map',
+        number: '03',
+        title: stitchCopy.guideMapTitle,
+        body: focusLabel,
+      },
+    ];
+  }, [featuredDay, muscleFocus, nextRunSummary, stitchCopy]);
   useEffect(() => {
     const previousIsMile = previousIsMileRef.current;
     if (previousIsMile === isMile) return;
@@ -2828,9 +2842,11 @@ export default function MuscleTraining() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{stitchCopy.strength}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={stitchCopy.strength}
+              navigate={navigate}
+            />
           </div>
 
           <div className="runner-shell-topbar-actions">
@@ -2866,6 +2882,7 @@ export default function MuscleTraining() {
               className="mt-strength-lab"
               aria-labelledby="mt-strength-lab-title"
               data-session-state={featuredDay?.strength ? 'active' : 'recovery'}
+              data-friendly-strength-lab="true"
             >
             {/* ── ZONE 1: What should I do for strength today? ── */}
               <section className="mt-anatomy-command-board" aria-label={stitchCopy.muscleFocusTitle}>
@@ -2893,8 +2910,8 @@ export default function MuscleTraining() {
                 </div>
                 <div className="mt-anatomy-command-copy">
                   <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
-                  <strong>{stitchCopy.bodyMeasureTitle}</strong>
-                  <p>{stitchCopy.bodyMeasureInteractionHint}</p>
+                  <strong>{stitchCopy.anatomyExploreTitle}</strong>
+                  <p>{stitchCopy.anatomyExploreHint}</p>
                   {muscleFocus.length > 0 && (
                     <div className="strength-plan-focus-pills">
                       {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
@@ -2907,6 +2924,7 @@ export default function MuscleTraining() {
                 <div>
                   <span className="strength-plan-section-label">{stitchCopy.seriesLabel}</span>
                   <h1 id="mt-strength-lab-title">{stitchCopy.strength}</h1>
+                  <p className="mt-strength-lab-intro">{stitchCopy.guideSubtitle}</p>
                 </div>
               </div>
 
@@ -3018,7 +3036,23 @@ export default function MuscleTraining() {
                   <strong>{pickLabel(copy.currentFocus, plan.weekContext?.currentFocus)}</strong>
                   <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} - {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
                 </section>
-              </aside>
+                <section className="mt-friendly-guide-card" aria-label={stitchCopy.guideTitle}>
+                  <span className="strength-plan-section-label">{stitchCopy.guideTitle}</span>
+                  <div className="mt-friendly-steps">
+                    {friendlySteps.map((step) => (
+                      <article key={step.key} className="mt-friendly-step">
+                        <span>{step.number}</span>
+                        <div>
+                          <strong>{step.title}</strong>
+                          <p>{step.body}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  <button type="button" className="mt-friendly-secondary-btn" onClick={scrollToControls}>
+                    {stitchCopy.guideAdjustCheckin}
+                  </button>
+                </section>              </aside>
             </section>
 
             {/* ZONE 3: Does it match my running plan this week? */}
@@ -3182,7 +3216,7 @@ export default function MuscleTraining() {
                   </span>
                   {plan.todayCheckIn?.updatedAt && (
                     <span className="muscle-pill">
-                      {copy.checkInUpdatedAt}: {formatTimestamp(plan.todayCheckIn.updatedAt, displayLang)}
+                      {formatCopyTemplate(copy.checkInUpdatedAt, { date: formatTimestamp(plan.todayCheckIn.updatedAt, displayLang) })}
                     </span>
                   )}
                 </div>
@@ -3331,7 +3365,7 @@ export default function MuscleTraining() {
                           className={`muscle-day-chip${active ? ' active' : ''}`}
                           onClick={() => togglePreferredDay(day.value)}
                         >
-                          {t(day.zh ? 'muscle_training.weekday_zh' : 'muscle_training.weekday_en')}
+                          {isZh ? day.zh : day.en}
                         </button>
                       );
                     })}
