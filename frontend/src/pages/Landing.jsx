@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl } from '../api';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import HermesMarkSvg from '../components/HermesMarkSvg';
 
 function RevealSection({ children, className = '', delay = 0, initialVisible = false }) {
   const { ref, isVisible } = useScrollReveal({ threshold: 0.16, rootMargin: '0px', initialVisible });
@@ -22,8 +23,39 @@ function PageWidth({ children, className = '' }) {
   return <div className={`landing-cinematic-width ${className}`}>{children}</div>;
 }
 
+function StravaLogo({ className = '' }) {
+  const classNames = ['landing-strava-logo', className].filter(Boolean).join(' ');
+
+  return (
+    <svg
+      className={classNames}
+      viewBox="0 0 168 48"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect width="168" height="48" rx="10" fill="#fc4c02" />
+      <text
+        x="84"
+        y="31"
+        fill="#ffffff"
+        textAnchor="middle"
+        fontFamily="'Arial Black', 'Arial Narrow', Arial, sans-serif"
+        fontSize="25"
+        fontWeight="900"
+        letterSpacing="-2.4"
+      >
+        STRAVA
+      </text>
+    </svg>
+  );
+}
+
 function LandingGlyph({ name, className = '' }) {
   const classNames = ['landing-cinematic-glyph', className].filter(Boolean).join(' ');
+
+  if (name === 'logo') {
+    return <HermesMarkSvg tone="light" className={`${classNames} landing-cinematic-glyph--logo`} />;
+  }
 
   return (
     <svg className={classNames} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -306,7 +338,7 @@ export default function Landing() {
         <PageWidth className="landing-cinematic-nav-inner">
           <Link to="/" className="landing-cinematic-brand">
             <span className="landing-cinematic-brand-glyph" aria-hidden="true">
-              <LandingGlyph name="runner" />
+              <LandingGlyph name="logo" />
             </span>
             <span>HERMES</span>
           </Link>
@@ -347,8 +379,8 @@ export default function Landing() {
                 <p>{t('landing.cinematic_hero_text')}</p>
 
                 <div className="landing-cinematic-hero-actions">
-                  <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary is-large" onClick={startStrava}>
-                    <LandingGlyph name="runner" />
+                  <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava}>
+                    <StravaLogo />
                     <span>{t('landing.cta_strava')}</span>
                   </button>
                   <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--ghost is-large">
@@ -604,8 +636,9 @@ export default function Landing() {
                 <h2>{t('landing.cinematic_cta_title')}</h2>
                 <p>{t('landing.cinematic_cta_copy')}</p>
                 <div className="landing-cinematic-hero-actions">
-                  <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary is-large" onClick={startStrava}>
-                    {t('landing.cta_strava')}
+                  <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava}>
+                    <StravaLogo />
+                    <span>{t('landing.cta_strava')}</span>
                   </button>
                   <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--outline is-large">
                     {t('landing.get_started')}
@@ -655,4 +688,3 @@ export default function Landing() {
     </div>
   );
 }
-
