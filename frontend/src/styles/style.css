@@ -33144,10 +33144,10 @@ body.theme-light .analysis-load-command-archive-button {
 
 .analysis-intensity-command-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.72fr);
-  gap: 22px;
-  align-items: end;
-  padding: clamp(28px, 4vw, 42px);
+  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.55fr);
+  gap: 16px;
+  align-items: center;
+  padding: clamp(20px, 2.4vw, 28px) clamp(24px, 3vw, 32px);
 }
 
 .analysis-intensity-command-hero-copy {
@@ -33186,13 +33186,15 @@ body.theme-light .analysis-load-command-archive-button {
 
 .analysis-intensity-command-hero h1 {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: clamp(3.2rem, 8vw, 6.2rem);
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  font-size: clamp(2rem, 3.4vw, 3.2rem);
   font-style: italic;
   font-weight: 900;
-  letter-spacing: -0.08em;
-  line-height: 0.92;
+  letter-spacing: -0.06em;
+  line-height: 1;
 }
 
 .analysis-intensity-command-hero h1 strong {
@@ -33215,19 +33217,20 @@ body.theme-light .analysis-load-command-archive-button {
 }
 
 .analysis-intensity-command-hero-stat {
-  min-height: 148px;
-  padding: 22px;
-  border-radius: 26px;
-  background: rgba(255, 255, 255, 0.05);
+  min-height: auto;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .analysis-intensity-command-hero-stat strong {
-  font-size: clamp(1.8rem, 4vw, 2.7rem);
-  letter-spacing: -0.06em;
+  font-size: clamp(1.35rem, 2vw, 1.85rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
 }
 
 .analysis-intensity-command-grid {
@@ -33354,24 +33357,25 @@ body.theme-light .analysis-load-command-archive-button {
 }
 
 .analysis-intensity-command-judgment {
-  background: linear-gradient(145deg, rgba(240, 117, 97, 0.96), rgba(164, 60, 45, 0.96));
-  color: #260d09;
+  background: linear-gradient(145deg, rgba(48, 41, 32, 0.96), rgba(36, 30, 24, 0.96));
+  color: #f3ede8;
+  border: 1px solid rgba(240, 117, 97, 0.18);
 }
 
 .analysis-intensity-command-judgment-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
-  background: rgba(29, 12, 10, 0.12);
-  color: #2f120f;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(240, 117, 97, 0.18);
+  color: #f0bcb0;
 }
 
 .analysis-intensity-command-judgment h3,
 .analysis-intensity-command-judgment p {
-  color: #260d09;
+  color: #f3ede8;
 }
 
 .analysis-intensity-command-judgment h3 {
@@ -58216,6 +58220,17 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     height: 22px;
 }
 
+.landing-cinematic-glyph--logo {
+    fill: initial;
+    stroke: none;
+    stroke-width: 0;
+}
+
+.landing-cinematic-glyph--logo * {
+    stroke: none;
+    stroke-width: 0;
+}
+
 .landing-cinematic-btn .landing-cinematic-glyph {
     width: 1.08rem;
     height: 1.08rem;
@@ -58264,6 +58279,19 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     min-height: 52px;
     padding: 0 24px;
     font-size: 0.96rem;
+}
+
+.landing-cinematic-btn--strava {
+    gap: 12px;
+}
+
+.landing-strava-logo {
+    display: block;
+    width: 78px;
+    height: auto;
+    flex: 0 0 auto;
+    border-radius: 7px;
+    box-shadow: 0 8px 18px rgba(252, 76, 2, 0.22);
 }
 
 .landing-cinematic-btn--primary {
@@ -69368,6 +69396,37 @@ body.theme-light .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner
   .mt-today-card,
   .mt-readiness-card--decision
 ) :is(h1, h2, h3, h4, strong, label, .weather-engine-temp-display) {
+  /* Scoped to dark themes only — the cinematic cream-on-dark treatment is
+     correct over the dark gradient, but the runner-minimalist light override
+     downstream flips the background to white in light mode, leaving cream
+     text on white (contrast 1.05–1.18). Default to dark ink; dark themes get
+     the cream back via the higher-specificity sibling rule below. */
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) :is(
+  .analysis-page-shell,
+  .runs-dashboard-page,
+  .weather-engine-page,
+  .shoes-dashboard-page,
+  .races-dashboard-page,
+  .schedule-plan-page,
+  .runner-dashboard-page:has(.muscle-training-page)
+) :is(
+  .analysis-profile-primary,
+  .recent-runs-hero,
+  .recent-runs-insight-card--primary,
+  .weather-engine-hero,
+  .weather-engine-card--judgment,
+  .shoe-rotation-signal,
+  .shoe-inventory-card.is-primary,
+  .race-center-hero,
+  .race-center-pb-card.is-featured,
+  .schedule-plan-hero,
+  .schedule-plan-next-card,
+  .mt-today-card,
+  .mt-readiness-card--decision
+) :is(h1, h2, h3, h4, strong, label, .weather-engine-temp-display) {
   color: #fff4e6 !important;
 }
 
@@ -77378,16 +77437,26 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page {
   background: var(--profile-accent) !important;
 }
 
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary,
 .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary {
-  align-self: start !important;
-  align-content: start !important;
-  grid-auto-rows: minmax(0, auto);
+  align-self: stretch !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+  align-content: end !important;
+  grid-auto-flow: row !important;
+  grid-auto-rows: auto !important;
+  gap: clamp(14px, 1.35vw, 18px) !important;
 }
 
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session,
 .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session {
+  grid-area: auto !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
   height: auto !important;
   align-content: start !important;
-  align-self: start !important;
+  align-self: end !important;
   gap: clamp(14px, 1.6vw, 18px) !important;
   border-radius: clamp(18px, 1.6vw, 24px) !important;
   background:
@@ -77402,7 +77471,12 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page {
   line-height: 0.98 !important;
 }
 
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid,
 .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid {
+  grid-area: auto !important;
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  position: relative !important;
   height: auto !important;
   align-items: stretch !important;
   gap: 10px !important;
@@ -80274,4 +80348,60 @@ body .rewards-ledger-page .rewards-ledger-signoff {
     grid-column: 1 / -1;
   }
   body .rewards-ledger-page .rewards-ledger-pipeline-pct { text-align: left; }
+}
+
+/* ============================================================================
+   Weather hero contrast lock (light themes).
+   Earlier rules elsewhere in this stylesheet leave `.weather-engine-temp-display`
+   and the surrounding hero copy on the original cream-on-dark color
+   (`#fff4ed`) even when the cinematic dark backdrop has been replaced by the
+   light Hermes paper surface — that's the "older version" regression where the
+   big "31°C" goes near-invisible on cream. Force readable charcoal ink (and the
+   muted body tone for secondary copy) in `.theme-light` /
+   `.theme-high-contrast-light`, with full !important + high specificity so
+   downstream `:is(...)` page-scoped rules can't flip the text back to cream.
+   ============================================================================ */
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page :is(
+  .weather-engine-temp-display,
+  .weather-engine-temp-context-label,
+  .weather-engine-panel-head h2,
+  .weather-engine-card-head h2,
+  .weather-engine-hud-value,
+  .weather-engine-forecast-slot strong,
+  .weather-engine-engine-stat strong,
+  .weather-engine-judgment-meta strong,
+  .weather-engine-judgment-callout strong,
+  .weather-engine-empty strong
+) {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page :is(
+  .weather-engine-data-pill,
+  .weather-engine-data-pill strong,
+  .weather-engine-data-pill span,
+  .weather-engine-temp-context p,
+  .weather-engine-engine-copy,
+  .weather-engine-empty p,
+  .weather-engine-panel-head p,
+  .weather-engine-hud-foot,
+  .weather-engine-forecast-hour,
+  .weather-engine-forecast-summary,
+  .weather-engine-engine-stat span,
+  .weather-engine-judgment-callout p,
+  .weather-engine-judgment-callout span,
+  .weather-engine-judgment-meta p,
+  .weather-engine-judgment-meta span
+) {
+  color: rgba(44, 47, 48, 0.78) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill {
+  background: rgba(160, 57, 42, 0.06) !important;
+  border: 1px solid rgba(160, 57, 42, 0.14) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill strong {
+  color: rgba(160, 57, 42, 0.78) !important;
 }
