@@ -499,7 +499,7 @@ export default function RunDetail() {
 
   if (isBootstrappingRun) {
     return (
-      <div className="run-detail-page">
+      <div className="run-detail-page run-detail-profile-cockpit">
         <div className="run-detail-loading-card" aria-live="polite">
           <span className="run-detail-loading-kicker">{t('run_detail.hero_eyebrow')}</span>
           <h1>{t('run_detail.loading_summary')}</h1>
@@ -515,7 +515,7 @@ export default function RunDetail() {
 
   if (!run) {
     return (
-      <div className="run-detail-page">
+      <div className="run-detail-page run-detail-profile-cockpit">
         <div className="empty-state run-detail-empty-state" style={{ width: 'min(100%, 860px)', margin: '80px auto 0', padding: '42px 32px', borderRadius: 28, textAlign: 'center' }}>
           <h1>{t('run_detail.no_run_selected')}</h1>
           <p><Link to="/runs">{t('run_detail.back_to_runs')}</Link> {t('run_detail.no_run_selected_copy')}</p>
@@ -596,7 +596,7 @@ export default function RunDetail() {
   const powerValue = run.averageWatts;
 
   return (
-    <div className="run-detail-page">
+    <div className="run-detail-page run-detail-profile-cockpit">
       <div className="run-detail-topbar">
         <div className="run-detail-topbar-left">
           <Link to="/runs" className="run-detail-icon-btn" aria-label={t('run_detail.back_to_runs')}>
@@ -623,8 +623,8 @@ export default function RunDetail() {
       </div>
 
       <main className="run-detail-shell">
-        <section className="run-detail-hero-grid">
-          <div className="run-detail-map-card">
+        <section className="run-detail-hero-grid run-detail-profile-hero">
+          <div className="run-detail-map-card run-detail-profile-map">
             {points.length > 0 ? (
               <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
             ) : (
@@ -635,7 +635,7 @@ export default function RunDetail() {
               <strong>{distanceValue} {distanceUnitLabel}</strong>
             </div>
           </div>
-          <div className="run-detail-stat-rail">
+          <div className="run-detail-stat-rail run-detail-profile-stat-rail">
             <article className="run-detail-stat-card is-accent">
               <span>{t('run_detail.metric_distance')}</span>
               <strong>{distanceValue}<em>{distanceUnitLabel}</em></strong>

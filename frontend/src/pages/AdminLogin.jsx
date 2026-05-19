@@ -95,7 +95,7 @@ export default function AdminLogin() {
             </div>
 
             <form className="auth-flow-form" onSubmit={handleSubmit}>
-              {error && <div className="error-alert is-visible">{error}</div>}
+              {error && <div className="error-alert is-visible" role="alert">{error}</div>}
 
               <div className="form-group form-group--auth">
                 <label htmlFor="admin-email">{t('admin.email_label')}</label>
@@ -126,8 +126,8 @@ export default function AdminLogin() {
 
             <div className="auth-flow-legal">
               <Link to="/login">{t('admin.back_link')}</Link>
-              <Link to="/terms">Terms</Link>
-              <Link to="/privacy">Privacy</Link>
+              <Link to="/terms">{t('landing.stitch_footer_terms')}</Link>
+              <Link to="/privacy">{t('landing.stitch_footer_privacy')}</Link>
             </div>
           </div>
         </section>

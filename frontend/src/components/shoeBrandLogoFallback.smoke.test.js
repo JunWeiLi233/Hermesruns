@@ -9,7 +9,7 @@ const componentSource = readFileSync(path.join(here, 'ShoeBrandLogo.jsx'), 'utf8
 for (const missingAssetBrand of ['anta', 'bmai', 'do-win', 'lining', 'peak']) {
   assert.doesNotMatch(
     componentSource,
-    new RegExp(`import\\s+\\w+\\s+from\\s+['\"][^'\"]*${missingAssetBrand}\\.(svg|png|jpg|webp)['\"]`),
+    new RegExp(`import\\s+\\w+\\s+from\\s+['"][^'"]*${missingAssetBrand}\\.(svg|png|jpg|webp)['"]`),
     `ShoeBrandLogo should not reintroduce a hard import for the missing ${missingAssetBrand} brand asset.`,
   );
 }

@@ -11,6 +11,7 @@ import Modal from '../components/Modal';
 import HermesLogo from '../components/HermesLogo';
 import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
@@ -1304,9 +1305,11 @@ const Shoes = memo(function Shoes() {
         <main className="runner-shell-main">
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
-              <div className="runner-shell-topnav">
-                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_shoes')}</span>
-              </div>
+              <RunnerShellTopNav
+                navItems={navItems}
+                activeLabel={t('profile.dashboard_nav_shoes')}
+                navigate={navigate}
+              />
             </div>
 
             <div className="runner-shell-topbar-actions">

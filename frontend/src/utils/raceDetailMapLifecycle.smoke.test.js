@@ -42,4 +42,10 @@ assert.match(
   'RacesDetail should fit the Leaflet map to the actual route bounds with a tight pad so the street basemap stays at real city-street scale instead of zooming out to a broad overlay box.',
 );
 
+assert.match(
+  racesDetailSource,
+  /if \(createdMap && routeMapInstanceRef\.current === createdMap\) \{[\s\S]*routeMapInstanceRef\.current\.remove\(\);/,
+  'RacesDetail cleanup must not call remove() on a null routeMapInstanceRef when an effect is cancelled before Leaflet creates a map.',
+);
+
 console.log('[PASS] Race detail map lifecycle guardrails passed.');
