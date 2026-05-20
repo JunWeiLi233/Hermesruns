@@ -1181,6 +1181,9 @@ export default {
     "readiness_signal_stress_tooltip": "Stress recovery score — higher means your body handled yesterday's stress well.",
     "shoe_recommendation_title": "Suggested Shoe",
     "shoe_recommendation_reason": "{reason}",
+    "readinessDeferred": {
+      "notice": "Your readiness is {verdict}. Coach swapped {originalType} for {newType} today.",
+    },
     "dashboard_redesign": {
       "hero_morning": "Good morning",
       "hero_afternoon": "Good afternoon",
@@ -1947,6 +1950,9 @@ export default {
     },
     "route_auto_loading": "Recommending a route from your recent runs…",
     "route_auto_empty_hint": "Record your first run so Hermes can recommend an accessible route near you.",
+    "readinessDeferred": {
+      "badge": "Deferred · {originalType} → {newType}",
+    },
   },
   "weather_engine": {
     "no_penalty": "No heat penalty",
@@ -1971,6 +1977,13 @@ export default {
       },
   },
   "workflow_builder": {
+    "hero_kicker": "Workflow Lab",
+    "hero_title": "Build repeatable runner automations",
+    "hero_copy": "Start from a ready-made graph, swap Hermes data or coach helpers, then run the canvas to turn training inputs into reusable outputs.",
+    "hero_metrics_aria": "Workflow builder highlights",
+    "hero_stat_examples": "{count} starter workflows",
+    "hero_stat_palette": "Click or drag from the node rail",
+    "hero_stat_autosave": "Autosaves in this browser",
     "error_kicker": "Something went wrong",
     "error_title": "Failed to load workflows",
     "error_copy": "Check your connection and try again, or return to settings.",
@@ -1979,10 +1992,33 @@ export default {
     "loading_title": "Preparing workflow canvas",
     "loading_copy": "Loading your workflow data and node configurations…",
     "empty_kicker": "Get Started",
-    "empty_title": "No workflows yet",
-    "empty_copy": "Workflows connect analysis, notification, and data processing steps into a custom pipeline for your running data.",
-    "empty_cta": "Create First Workflow",
+    "empty_title": "Load an example or start from a blank board",
+    "empty_copy": "The left rail includes starter workflows and a three-step guide. When you want to freestyle, create a blank canvas and assemble nodes from the palette.",
+    "empty_cta": "Start blank canvas",
     "save_prompt": "Save workflow as…",
+    "instructions_kicker": "How it works",
+    "instructions_title": "Three moves to make this useful",
+    "step_one_title": "Load a starter workflow",
+    "step_one_copy": "Use one of the examples below to drop a working graph into the canvas instead of starting from zero.",
+    "step_two_title": "Adjust the nodes",
+    "step_two_copy": "Click a node to edit text, data sources, transforms, or coach helpers. Drag handles to reroute the flow.",
+    "step_three_title": "Run and inspect the result",
+    "step_three_copy": "Use Run in the node rail to execute the graph. Output nodes keep the final answer visible on the board.",
+    "examples_kicker": "Starter workflows",
+    "examples_title": "Example graphs you can load in one click",
+    "examples_copy": "Each example is wired to the current Hermes node types, so you can treat them as real starting points instead of mock cards.",
+    "examples_aria": "Workflow examples",
+    "example_cta": "Load example",
+    "example_loaded": "Loaded",
+    "workspace_kicker": "Canvas",
+    "workspace_title": "Full-screen workflow board",
+    "workspace_copy": "Keep the left rail for setup and examples; use the board for node placement, branching, and final outputs.",
+    "workspace_blank_cta": "Start blank",
+    "status_idle": "Canvas ready for your next graph.",
+    "status_running": "Workflow running...",
+    "status_success": "Run complete. Review the output nodes on the board.",
+    "status_error": "The last run needs attention. Check any red node badges.",
+    "status_template_loaded": "Example loaded. Rearrange nodes or swap inputs before you run.",
     "canvas_label": "Workflow canvas",
     "controls_label": "Canvas controls",
     "controls_zoom_in_label": "Zoom in",
@@ -2012,6 +2048,20 @@ export default {
     "transform_node_target_label": "Transform node input connector",
     "transform_node_source_label": "Transform node output connector",
     "transform_node_default_label": "Untitled transform",
+    "templates": {
+      "tpl-vdot": {
+        "title": "VDOT quick estimate",
+        "description": "Turn a representative distance into an instant easy-pace suggestion."
+      },
+      "tpl-race-brief": {
+        "title": "Race-day brief",
+        "description": "Blend race planning and weather adjustments into one pre-race output."
+      },
+      "tpl-recovery": {
+        "title": "Injury self-check",
+        "description": "Turn symptoms into a recovery-first recommendation and a one-line takeaway."
+      }
+    }
   },
   "forgotPassword": {
     "hero_recover": "Recover",

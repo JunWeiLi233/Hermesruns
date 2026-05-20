@@ -36993,6 +36993,28 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
   white-space: nowrap;
 }
 
+.schedule-plan-day-deferred-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-coral, #ffb4a7) 18%, transparent);
+  color: var(--accent-coral, #ffb4a7);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.schedule-plan-day--quality .schedule-plan-day-deferred-badge {
+  background: color-mix(in srgb, var(--accent-coral-strong, #f07561) 22%, transparent);
+  color: var(--accent-coral-strong, #f07561);
+}
+
 .schedule-plan-day--quality .schedule-plan-day-tag,
 .schedule-plan-day--quality h2,
 .schedule-plan-day--quality p,
