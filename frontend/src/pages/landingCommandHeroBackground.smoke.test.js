@@ -11,8 +11,68 @@ const heroAssetPath = path.join(here, '../assets/generated/landing-command-hero-
 
 assert.match(
   landingSource,
+  /import HermesMarkSvg from '\.\.\/components\/HermesMarkSvg';/,
+  'Landing should use the shared Hermes mark component for the brand glyph.',
+);
+
+assert.match(
+  landingSource,
+  /name === 'logo'[\s\S]*<HermesMarkSvg tone="light" className=\{`\$\{classNames\} landing-cinematic-glyph--logo`\} \/>/,
+  'LandingGlyph should support rendering the Hermes logo mark with the landing-cinematic-glyph class and logo-safe modifier.',
+);
+
+assert.match(
+  landingSource,
+  /landing-cinematic-brand-glyph" aria-hidden="true"[\s\S]{0,180}<LandingGlyph name="logo" \/>/,
+  'Landing brand glyph should render the Hermes logo mark.',
+);
+
+assert.doesNotMatch(
+  landingSource,
+  /landing-cinematic-brand-glyph" aria-hidden="true"[\s\S]{0,180}<LandingGlyph name="runner" \/>/,
+  'Landing brand glyph should not fall back to the old runner icon.',
+);
+
+assert.match(
+  landingSource,
+  /function StravaLogo\([\s\S]*<rect width="168" height="48" rx="10" fill="#fc4c02" \/>[\s\S]*STRAVA/,
+  'Landing should render the Strava logo badge from the provided orange/white brand reference.',
+);
+
+assert.equal(
+  [...landingSource.matchAll(/landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large/g)].length,
+  2,
+  'Both large Strava CTA buttons should carry the Strava logo button class.',
+);
+
+assert.equal(
+  [...landingSource.matchAll(/<StravaLogo \/>/g)].length,
+  2,
+  'Both large Strava CTA buttons should render the Strava logo.',
+);
+
+assert.doesNotMatch(
+  landingSource,
+  /landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large[\s\S]{0,220}<LandingGlyph name="runner" \/>/,
+  'Strava CTA buttons should not keep the old runner glyph.',
+);
+
+assert.match(
+  landingSource,
   /className="landing-cinematic-hero-grid landing-command-hero"/,
   'Landing hero grid should carry the command hero class targeted by the background image.',
+);
+
+assert.match(
+  landingSource,
+  /className="landing-command-deck"/,
+  'Landing feature section should keep the newer command-deck design instead of the old feature-grid fallback.',
+);
+
+assert.doesNotMatch(
+  landingSource,
+  /className="landing-cinematic-features"/,
+  'Landing source should not reintroduce the older cinematic feature-grid section.',
 );
 
 assert.ok(
@@ -35,6 +95,24 @@ assert.match(
   styleSource,
   /\.landing-cinematic-hero-grid\.landing-command-hero \.landing-cinematic-hero-title\s*\{[\s\S]*#fff7ea !important/,
   'Landing command hero title should stay light over the generated background.',
+);
+
+assert.match(
+  styleSource,
+  /\.landing-cinematic-glyph--logo\s*\{[\s\S]*stroke:\s*none/,
+  'Landing Hermes logo should disable the generic red stroked glyph treatment.',
+);
+
+assert.match(
+  styleSource,
+  /\.landing-cinematic-glyph--logo \*\s*\{[\s\S]*stroke:\s*none/,
+  'Landing Hermes logo child paths/rects should not inherit the generic red glyph stroke.',
+);
+
+assert.match(
+  styleSource,
+  /\.landing-strava-logo\s*\{[\s\S]*width:\s*78px/,
+  'Landing Strava logo should have a stable CTA-sized badge style.',
 );
 
 assert.match(

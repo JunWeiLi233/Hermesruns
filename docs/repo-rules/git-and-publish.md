@@ -8,6 +8,7 @@ This file owns commit, push, privacy, and pre-publish rules.
 - Do not push by default.
 - Push only when the user explicitly wants publication or there is a real agreed publish need.
 - The only approved auto-push target is `origin = https://github.com/520HXC/run.git`.
+- **The only supported path to open a PR into `main` is `/auto-hermes-push-main`** (driver: `.tools/auto-hermes-push-main.mjs`). Direct `git push origin main`, manual `gh pr create`, cherry-picks, rebases onto main, force-pushes, and history rewrites are forbidden. The helper enforces every required gate (security scan, lint, compile, Docker, identity) and writes an auditable artifact at `.ai-sync/AUTO_HERMES_PUSH_MAIN.{md,json}`. See the full spec and citation rules in [`.codex/commands/auto-hermes-push-main.md`](../../.codex/commands/auto-hermes-push-main.md).
 
 ## Never Push When
 
@@ -91,3 +92,12 @@ Not `needed`:
 
 Only commit publishable product files. Do not blindly stage workflow or local-only files.
 When `-Push` is requested, the auto-commit path also requires a fresh passing Docker gate artifact that matches the current working tree.
+
+## Commit Message and PR Body Citation
+
+Every commit that lands via `/auto-hermes-push-main` must follow the citation rules in [`.codex/commands/auto-hermes-push-main.md`](../../.codex/commands/auto-hermes-push-main.md#commit--pr-citation-rules). Short version:
+
+- **Commit title**: `<type>: <imperative summary ≤ 70 chars>`. `<type>` ∈ {`feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `chore`, `revert`}. Name a concrete artifact. Reject vague verbs (`update`, `fix bug`, `wip`).
+- **Commit body**: one paragraph per touched surface, cite file paths inline, explain WHY not HOW. Trailers: `Closes #N`, then `Co-Authored-By:` per collaborator with AI agents last.
+- **PR body**: required sections `## Summary` (one bullet per surface), `## Test plan` (checklist of verification commands actually run), `## Files of interest` (≤ 5 hotspots). Add `## Concurrent-agent bundling` when the PR includes another agent's uncommitted work.
+- Cite runtime proof for runtime claims (browser screenshot, runtime-sync artifact). For "tests pass", name the test class. Never claim ownership of code you didn't write.
