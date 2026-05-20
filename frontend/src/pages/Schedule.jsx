@@ -1127,16 +1127,25 @@ export default function Schedule() {
           <section className="schedule-plan-week-grid">
             {weekSchedule.map((day) => {
               const isLongRunAnchor = targetBlock.hasActiveBlock && String(day.entry?.workoutType || '').toUpperCase() === 'LONG_RUN';
+              const isReadinessDeferred = Boolean(day.entry?.readinessAdjusted && day.entry?.mutatedFrom);
               return (
                 <article
                   key={day.key}
-                  className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}`}
+                  className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}${isReadinessDeferred ? ' is-readiness-deferred' : ''}`}
                 >
                   <div>
                     <div className="schedule-plan-day-head">
                       <p className="schedule-plan-day-label">{day.dayLabel}</p>
                       {isLongRunAnchor ? <span className="schedule-plan-day-anchor">{s('long_run_anchor')}</span> : null}
                     </div>
+                    {isReadinessDeferred && (
+                      <span className="schedule-plan-day-deferred-badge">
+                        {s('readinessDeferred.badge', {
+                          originalType: prettifyWorkoutType(day.entry.mutatedFrom, t),
+                          newType: prettifyWorkoutType(day.entry.workoutType, t),
+                        })}
+                      </span>
+                    )}
                     <p className="schedule-plan-day-tag">{day.tag}</p>
                   </div>
                   <div>

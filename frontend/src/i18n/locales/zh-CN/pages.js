@@ -1181,6 +1181,9 @@ export default {
     "readiness_signal_stress_tooltip": "压力恢复评分，越高代表你身体对昨日压力的应对越好。",
     "shoe_recommendation_title": "建议跑鞋",
     "shoe_recommendation_reason": "{reason}",
+    "readinessDeferred": {
+      "notice": "你今天的状态是 {verdict}。教练把 {originalType} 换成了 {newType}。",
+    },
     "dashboard_redesign": {
       "hero_morning": "早上好",
       "hero_afternoon": "下午好",
@@ -1946,6 +1949,9 @@ export default {
     },
     "route_auto_loading": "正在根据你最近的跑步推荐路线…",
     "route_auto_empty_hint": "先记录一次跑步，Hermes 就能在你附近自动推荐一条可通行路线。",
+    "readinessDeferred": {
+      "badge": "已调整 · {originalType} → {newType}",
+    },
   },
   "weather_engine": {
     "no_penalty": "无需热修正",
@@ -1970,6 +1976,13 @@ export default {
       },
   },
   "workflow_builder": {
+    "hero_kicker": "工作流实验室",
+    "hero_title": "搭建可复用的跑者自动化流程",
+    "hero_copy": "先加载一个现成图谱，再替换 Hermes 数据节点或教练助手节点，最后运行画布，把训练输入整理成可重复使用的输出。",
+    "hero_metrics_aria": "工作流构建器亮点",
+    "hero_stat_examples": "{count} 个起步工作流",
+    "hero_stat_palette": "可点击或拖拽右侧节点栏",
+    "hero_stat_autosave": "会在当前浏览器自动保存",
     "error_kicker": "出了点问题",
     "error_title": "无法加载工作流",
     "error_copy": "请检查网络连接后重试，或返回设置页面。",
@@ -1978,10 +1991,33 @@ export default {
     "loading_title": "正在准备工作流画布",
     "loading_copy": "正在加载您的工作流数据和节点配置…",
     "empty_kicker": "开始搭建",
-    "empty_title": "您还没有创建任何工作流",
-    "empty_copy": "工作流可以帮您串联分析、通知和数据处理步骤，打造个性化的跑步数据管道。",
-    "empty_cta": "创建第一个工作流",
+    "empty_title": "先加载示例，或从空白画板开始",
+    "empty_copy": "左侧已经放好了起步示例和三步说明。想从零自由搭建时，直接创建空白画布，再从节点栏拼出自己的流程。",
+    "empty_cta": "开始空白画布",
     "save_prompt": "保存工作流为...",
+    "instructions_kicker": "使用方式",
+    "instructions_title": "三步把这个页面用起来",
+    "step_one_title": "先加载一个起步工作流",
+    "step_one_copy": "先从下面的示例载入一张可运行的图，不必每次都从零开始摆节点。",
+    "step_two_title": "再调整节点内容",
+    "step_two_copy": "点击节点可编辑文本、数据源、转换方式或教练助手；拖动连接点即可改写流程走向。",
+    "step_three_title": "最后运行并查看结果",
+    "step_three_copy": "使用右侧节点栏里的运行按钮执行整张图，输出节点会把最终结果直接留在画板上。",
+    "examples_kicker": "起步示例",
+    "examples_title": "一键加载的示例图谱",
+    "examples_copy": "这些示例都绑定到了当前 Hermes 节点类型，可以直接当成真实起点继续改，而不是只看不动的样板卡片。",
+    "examples_aria": "工作流示例",
+    "example_cta": "加载示例",
+    "example_loaded": "已加载",
+    "workspace_kicker": "画布",
+    "workspace_title": "全屏工作流画板",
+    "workspace_copy": "左侧负责说明和示例，右侧画板负责摆放节点、分支流程和查看最终输出。",
+    "workspace_blank_cta": "空白开始",
+    "status_idle": "画布已就绪，可以开始下一张流程图。",
+    "status_running": "工作流运行中...",
+    "status_success": "运行完成，请查看画板上的输出节点。",
+    "status_error": "上一次运行需要处理，请检查红色节点状态。",
+    "status_template_loaded": "示例已载入，运行前可以先调整节点和输入。",
     "canvas_label": "工作流画布",
     "controls_label": "画布控制面板",
     "controls_zoom_in_label": "放大",
@@ -2011,6 +2047,20 @@ export default {
     "transform_node_target_label": "转换节点输入连接点",
     "transform_node_source_label": "转换节点输出连接点",
     "transform_node_default_label": "未命名转换",
+    "templates": {
+      "tpl-vdot": {
+        "title": "VDOT 快速估算",
+        "description": "把代表性的训练距离转换成今天可直接参考的轻松跑配速建议。"
+      },
+      "tpl-race-brief": {
+        "title": "比赛日简报",
+        "description": "把比赛规划和天气调整合并成一条赛前执行输出。"
+      },
+      "tpl-recovery": {
+        "title": "伤痛自检",
+        "description": "把当前症状整理成以恢复为先的建议，并抽出一行重点结论。"
+      }
+    }
   },
   "forgotPassword": {
     "hero_recover": "找回",
