@@ -32,6 +32,9 @@
    without breaking those tests. To re-enable, uncomment the line below.
    @import './styles/_split/legacy-frame.css'; */
 @import './styles/analysis-detail-redesigns.css';
+@import './styles/_split/profile-dashboard-redesign.css';
+@import './styles/muscle-training-hermes-redesign.css';
+@import './styles/settings-fullwidth.css';
 
 @tailwind base;
 @tailwind components;
