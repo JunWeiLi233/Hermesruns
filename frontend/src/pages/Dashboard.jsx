@@ -675,6 +675,129 @@ function formatDashboardJobDuration(startValue, endValue) {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
+// ── react-window v2 row components ────────────────────────────────────────
+// These must live at module scope so List's internal memo() wrapping is stable.
+// All state/callbacks are passed via rowProps.
+
+function ShoeQueueRowComponent({ ariaAttributes, index, style, items, selectedId, selectedIds, onSelect, onToggle, t }) {
+  const shoe = items[index];
+  if (!shoe) return null;
+  return (
+    <div style={style}>
+      <button
+        type="button"
+        className={`admin-shoe-workbench__queue-item${selectedId === shoe.id ? ' is-active' : ''}`}
+        onClick={() => onSelect(shoe.id)}
+        {...ariaAttributes}
+      >
+        <div className="admin-shoe-workbench__queue-thumb">
+          <input
+            type="checkbox"
+            className="admin-shoe-select"
+            checked={selectedIds.includes(shoe.id)}
+            onChange={() => onToggle(shoe.id)}
+            onClick={(event) => event.stopPropagation()}
+          />
+          <ShoeImage
+            src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
+            alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
+            className="admin-shoe-img"
+            noImageLabel={t('dashboard.img_no_image')}
+          />
+        </div>
+        <div className="admin-shoe-workbench__queue-body">
+          <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
+          <span>{shoe.runnerEmail}</span>
+          <div className="admin-shoe-badges">
+            <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${getShoeReviewState(shoe)}`}>
+              {t(`dashboard.review_state_${getShoeReviewState(shoe)}`)}
+            </span>
+          </div>
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function ShoeRepositoryRowComponent({ ariaAttributes, index, style, items, selectedId, onSelect, t }) {
+  const shoe = items[index];
+  if (!shoe) return null;
+  const state = getShoeReviewState(shoe);
+  const affinity = getShoeAffinityScore(shoe);
+  const lastModified = getShoeLastModifiedLabel(shoe);
+  return (
+    <div style={style}>
+      <button
+        type="button"
+        className={`admin-shoe-stitch-repository__row${selectedId === shoe.id ? ' is-active' : ''}`}
+        onClick={() => onSelect(shoe.id)}
+        {...ariaAttributes}
+      >
+        <span className="admin-shoe-stitch-repository__identity">
+          <span className="admin-shoe-stitch-repository__thumb">
+            <ShoeImage
+              src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
+              alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
+              className="admin-shoe-stitch-repository__thumb-image"
+              noImageLabel={t('dashboard.img_no_image')}
+            />
+          </span>
+          <span className="admin-shoe-stitch-repository__identity-copy">
+            <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
+            <small>{shoe.runnerEmail}</small>
+          </span>
+        </span>
+        <span className="admin-shoe-stitch-repository__status">
+          <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${state}`}>
+            {t(`dashboard.review_state_${state}`)}
+          </span>
+        </span>
+        <span className="admin-shoe-stitch-repository__affinity">
+          <span className="admin-shoe-stitch-repository__meter">
+            <span className="admin-shoe-stitch-repository__meter-fill" style={{ width: `${affinity}%` }} />
+          </span>
+          <strong>{affinity}%</strong>
+        </span>
+        <span className="admin-shoe-stitch-repository__modified">
+          {lastModified !== '-' ? lastModified : t('dashboard.shoe_stitch_modified_fallback')}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function CatalogRowComponent({ ariaAttributes, index, style, items, onEdit, t }) {
+  const item = items[index];
+  if (!item) return null;
+  return (
+    <div style={style} {...ariaAttributes}>
+      <div className="admin-shoe-card">
+        <div className="admin-shoe-img-wrap">
+          <div className="admin-shoe-img-empty">{item.brand?.slice(0, 1) || '?'}</div>
+        </div>
+        <div className="admin-shoe-info">
+          <span className="admin-shoe-name">{item.model}</span>
+          <span className="admin-shoe-owner">{item.brand}</span>
+          {(item.modelZh || item.modelEn) && (
+            <div className="admin-shoe-badges">
+              {item.modelZh && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_zh')}: {item.modelZh}</span>}
+              {item.modelEn && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_en')}: {item.modelEn}</span>}
+            </div>
+          )}
+          <div className="admin-shoe-badges">
+            <span className="admin-shoe-status-badge admin-shoe-verified">{t(`dashboard.type_${item.type}`)}</span>
+          </div>
+          <button type="button" className="btn-secondary btn-inline-sm" onClick={() => onEdit(item)}>
+            {t('dashboard.btn_edit_catalog')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── end row components ─────────────────────────────────────────────────────
+
 const Dashboard = memo(function Dashboard() {
   const { logout, login, isAuthenticated } = useAuth();
   const { t, lang, setLang } = useI18n();
@@ -1300,14 +1423,14 @@ const Dashboard = memo(function Dashboard() {
     } catch { /* ignored */ }
   }
 
-  function openCatalogEditor(item) {
+  const openCatalogEditor = useCallback((item) => {
     setCatalogEditingItem(item);
     setCatalogEditModel(item.model || '');
     setCatalogEditModelZh(item.modelZh || '');
     setCatalogEditModelEn(item.modelEn || '');
     setCatalogEditType(item.type || 'daily');
     setCatalogEditOpen(true);
-  }
+  }, []);
 
   async function updateCatalogItem(e) {
     e.preventDefault();
@@ -2054,6 +2177,37 @@ const Dashboard = memo(function Dashboard() {
       .sort((left, right) => getShoeSpotlightPriority(right) - getShoeSpotlightPriority(left));
     return [selected, ...others].filter(Boolean).slice(0, 2);
   }, [selectedShoeWorkbench, shoesPage.items]);
+
+  // ── react-window v2 rowProps ─────────────────────────────────────────────
+  const shoesQueueItems = useMemo(() => shoesPage.items || [], [shoesPage.items]);
+
+  const toggleShoeSelected = useCallback((id) => {
+    setSelectedShoeIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  }, []);
+
+  const shoeQueueRowProps = useMemo(() => ({
+    items: shoesQueueItems,
+    selectedId: selectedShoeWorkbench?.id ?? null,
+    selectedIds: selectedShoeIds,
+    onSelect: setSelectedShoeWorkbenchId,
+    onToggle: toggleShoeSelected,
+    t,
+  }), [shoesQueueItems, selectedShoeWorkbench, selectedShoeIds, setSelectedShoeWorkbenchId, toggleShoeSelected, t]);
+
+  const shoeRepositoryRowProps = useMemo(() => ({
+    items: shoesQueueItems,
+    selectedId: selectedShoeWorkbench?.id ?? null,
+    onSelect: setSelectedShoeWorkbenchId,
+    t,
+  }), [shoesQueueItems, selectedShoeWorkbench, setSelectedShoeWorkbenchId, t]);
+
+  const catalogRowProps = useMemo(() => ({
+    items: filteredCatalogItems,
+    onEdit: openCatalogEditor,
+    t,
+  }), [filteredCatalogItems, openCatalogEditor, t]);
+
+  // ── end rowProps ──────────────────────────────────────────────────────────
 
   const adminRouteSurfaces = {
     overview: {
@@ -3522,37 +3676,15 @@ const Dashboard = memo(function Dashboard() {
                     <button type="button" className="delete-btn" onClick={() => runShoeBulk('clear_photo')}>{t('dashboard.btn_clear_photos')}</button>
                   </div>
                   <div className="admin-shoe-workbench__queue-list">
-                    {shoesPage.items?.map((shoe) => (
-                      <button
-                        key={shoe.id}
-                        type="button"
-                        className={`admin-shoe-workbench__queue-item${selectedShoeWorkbench?.id === shoe.id ? ' is-active' : ''}`}
-                        onClick={() => setSelectedShoeWorkbenchId(shoe.id)}
-                      >
-                        <div className="admin-shoe-workbench__queue-thumb">
-                          <input
-                            type="checkbox"
-                            className="admin-shoe-select"
-                            checked={selectedShoeIds.includes(shoe.id)}
-                            onChange={() => toggleSelected(setSelectedShoeIds, shoe.id)}
-                            onClick={(event) => event.stopPropagation()}
-                          />
-                          <ShoeImage
-                            src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
-                            alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
-                            className="admin-shoe-img"
-                            noImageLabel={t('dashboard.img_no_image')}
-                          />
-                        </div>
-                        <div className="admin-shoe-workbench__queue-body">
-                          <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
-                          <span>{shoe.runnerEmail}</span>
-                          <div className="admin-shoe-badges">
-                            <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${getShoeReviewState(shoe)}`}>{t(`dashboard.review_state_${getShoeReviewState(shoe)}`)}</span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                    {shoesQueueItems.length > 0 && (
+                      <List
+                        rowComponent={ShoeQueueRowComponent}
+                        rowCount={shoesQueueItems.length}
+                        rowHeight={132}
+                        rowProps={shoeQueueRowProps}
+                        style={{ height: Math.min(shoesQueueItems.length * 132, 528), overflowX: 'hidden' }}
+                      />
+                    )}
                   </div>
                   <Pagination pageData={shoesPage} onPageChange={page => setShoeQuery(prev => ({ ...prev, page }))} t={t} />
                 </aside>
@@ -3668,48 +3800,15 @@ const Dashboard = memo(function Dashboard() {
                             <span>{t('dashboard.shoe_stitch_repository_modified')}</span>
                           </div>
 
-                          {shoesPage.items?.map((shoe) => {
-                            const state = getShoeReviewState(shoe);
-                            const affinity = getShoeAffinityScore(shoe);
-                            const lastModified = getShoeLastModifiedLabel(shoe);
-                            return (
-                              <button
-                                key={shoe.id}
-                                type="button"
-                                className={`admin-shoe-stitch-repository__row${selectedShoeWorkbench?.id === shoe.id ? ' is-active' : ''}`}
-                                onClick={() => setSelectedShoeWorkbenchId(shoe.id)}
-                              >
-                                <span className="admin-shoe-stitch-repository__identity">
-                                  <span className="admin-shoe-stitch-repository__thumb">
-                                    <ShoeImage
-                                      src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
-                                      alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
-                                      className="admin-shoe-stitch-repository__thumb-image"
-                                      noImageLabel={t('dashboard.img_no_image')}
-                                    />
-                                  </span>
-                                  <span className="admin-shoe-stitch-repository__identity-copy">
-                                    <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
-                                    <small>{shoe.runnerEmail}</small>
-                                  </span>
-                                </span>
-                                <span className="admin-shoe-stitch-repository__status">
-                                  <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${state}`}>
-                                    {t(`dashboard.review_state_${state}`)}
-                                  </span>
-                                </span>
-                                <span className="admin-shoe-stitch-repository__affinity">
-                                  <span className="admin-shoe-stitch-repository__meter">
-                                    <span className="admin-shoe-stitch-repository__meter-fill" style={{ width: `${affinity}%` }} />
-                                  </span>
-                                  <strong>{affinity}%</strong>
-                                </span>
-                                <span className="admin-shoe-stitch-repository__modified">
-                                  {lastModified !== '-' ? lastModified : t('dashboard.shoe_stitch_modified_fallback')}
-                                </span>
-                              </button>
-                            );
-                          })}
+                          {shoesQueueItems.length > 0 && (
+                            <List
+                              rowComponent={ShoeRepositoryRowComponent}
+                              rowCount={shoesQueueItems.length}
+                              rowHeight={72}
+                              rowProps={shoeRepositoryRowProps}
+                              style={{ height: Math.min(shoesQueueItems.length * 72, 360), overflowX: 'hidden' }}
+                            />
+                          )}
                         </div>
                       </div>
                     </>
@@ -3737,29 +3836,15 @@ const Dashboard = memo(function Dashboard() {
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCatalogInventory()}>{t('dashboard.btn_refresh')}</button>
               </ActionBar>
               <div className="admin-shoe-grid">
-                {filteredCatalogItems.map(item => (
-                  <div key={item.key} className="admin-shoe-card">
-                    <div className="admin-shoe-img-wrap">
-                      <div className="admin-shoe-img-empty">{item.brand?.slice(0, 1) || '?'}</div>
-                    </div>
-                    <div className="admin-shoe-info">
-                      <span className="admin-shoe-name">{item.model}</span>
-                      <span className="admin-shoe-owner">{item.brand}</span>
-                      {(item.modelZh || item.modelEn) && (
-                        <div className="admin-shoe-badges">
-                          {item.modelZh && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_zh')}: {item.modelZh}</span>}
-                          {item.modelEn && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_en')}: {item.modelEn}</span>}
-                        </div>
-                      )}
-                      <div className="admin-shoe-badges">
-                        <span className="admin-shoe-status-badge admin-shoe-verified">{t(`dashboard.type_${item.type}`)}</span>
-                      </div>
-                      <button type="button" className="btn-secondary btn-inline-sm" onClick={() => openCatalogEditor(item)}>
-                        {t('dashboard.btn_edit_catalog')}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                {filteredCatalogItems.length > 0 && (
+                  <List
+                    rowComponent={CatalogRowComponent}
+                    rowCount={filteredCatalogItems.length}
+                    rowHeight={180}
+                    rowProps={catalogRowProps}
+                    style={{ height: Math.min(filteredCatalogItems.length * 180, 540), overflowX: 'hidden' }}
+                  />
+                )}
               </div>
               {filteredCatalogItems.length === 0 && <div className="history-status">{t('dashboard.catalog_inventory_empty')}</div>}
             </SectionCard>

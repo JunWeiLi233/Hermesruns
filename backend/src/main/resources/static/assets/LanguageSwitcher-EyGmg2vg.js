@@ -1,9 +1,0 @@
-<<<<<<<< HEAD:backend/src/main/resources/static/assets/LanguageSwitcher-EyGmg2vg.js
-import{n as s,r}from"./I18nContext-C_9_aH7B.js";var n=r();function c(){const{lang:e,setLang:a,t}=s();return(0,n.jsxs)("div",{className:"lang-switcher",children:[(0,n.jsx)("button",{type:"button","data-set-language":"zh-CN",className:e==="zh-CN"?"active":"","aria-pressed":e==="zh-CN",onClick:()=>a("zh-CN"),children:t("common.lang_zh")}),(0,n.jsx)("button",{type:"button","data-set-language":"en",className:e==="en"?"active":"","aria-pressed":e==="en",onClick:()=>a("en"),children:t("common.lang_en")})]})}export{c as t};
-
-//# sourceMappingURL=LanguageSwitcher-EyGmg2vg.js.map
-========
-import{n as s,r}from"./I18nContext-DvpcppxD.js";var n=r();function c(){const{lang:e,setLang:a,t}=s();return(0,n.jsxs)("div",{className:"lang-switcher",children:[(0,n.jsx)("button",{type:"button","data-set-language":"zh-CN",className:e==="zh-CN"?"active":"","aria-pressed":e==="zh-CN",onClick:()=>a("zh-CN"),children:t("common.lang_zh")}),(0,n.jsx)("button",{type:"button","data-set-language":"en",className:e==="en"?"active":"","aria-pressed":e==="en",onClick:()=>a("en"),children:t("common.lang_en")})]})}export{c as t};
-
-//# sourceMappingURL=LanguageSwitcher-DwYWou_y.js.map
->>>>>>>> origin/main:backend/src/main/resources/static/assets/LanguageSwitcher-DwYWou_y.js

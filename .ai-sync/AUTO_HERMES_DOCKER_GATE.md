@@ -1,8 +1,8 @@
 # Auto-Hermes Docker Gate
 
-Generated: 2026-05-20T05:22:35.106Z
+Generated: 2026-05-20T23:06:20.225Z
 Passed: no
-Git Head: e0ae9b2fc8669e33bee6725aa0c1489fd9a84067
+Git Head: 3e233239b6efd51cf357b4d056f5b18cd58fd34b
 Command: docker build -f C:\Users\Junwei\Downloads\Hermes\Dockerfile -t hermes-autohermes-gate:local .
 Reason: Docker publish gate failed for the current working tree.
 
@@ -10,174 +10,32 @@ Reason: Docker publish gate failed for the current working tree.
 ```text
 M .ai-sync/AGENT_SYNC.json
  M .ai-sync/AGENT_SYNC.md
- M .ai-sync/AUTO_HERMES_CONTROLLER.json
- M .ai-sync/AUTO_HERMES_CONTROLLER.md
- M .ai-sync/AUTO_HERMES_COORDINATOR.json
- M .ai-sync/AUTO_HERMES_COORDINATOR.md
- M .ai-sync/AUTO_HERMES_DOCKER_GATE.json
- M .ai-sync/AUTO_HERMES_DOCKER_GATE.md
- M .ai-sync/AUTO_HERMES_FINISH.json
- M .ai-sync/AUTO_HERMES_FINISH.md
- M .ai-sync/AUTO_HERMES_LOOP.json
- M .ai-sync/AUTO_HERMES_LOOP.md
- M .ai-sync/AUTO_HERMES_LOOP_STATE.json
- M .ai-sync/AUTO_HERMES_MAX_COORDINATOR.json
- M .ai-sync/AUTO_HERMES_MAX_COORDINATOR.md
- M .ai-sync/AUTO_HERMES_MAX_EXPLORER.json
- M .ai-sync/AUTO_HERMES_MAX_EXPLORER.md
- M .ai-sync/AUTO_HERMES_MAX_MERGE.json
- M .ai-sync/AUTO_HERMES_MAX_MERGE.md
- M .ai-sync/AUTO_HERMES_MAX_PLAN.json
- M .ai-sync/AUTO_HERMES_NEXT_PROMPT.md
- M .ai-sync/AUTO_HERMES_PROMOTION.json
- M .ai-sync/AUTO_HERMES_PROMOTION.md
- M .ai-sync/AUTO_HERMES_ROUND_RESULT.json
- M .ai-sync/AUTO_HERMES_ROUND_RESULT.md
- M .ai-sync/AUTO_HERMES_SELF_CHECK.json
- M .ai-sync/AUTO_HERMES_SELF_CHECK.md
- M .ai-sync/AUTO_HERMES_TELEMETRY.json
  M .ai-sync/CONTEXT_LEDGER.md
- M .ai-sync/HUMAN_LOOP.md
- M .ai-sync/LOCAL_CONSOLE_ERRORS.json
- M .ai-sync/LOCAL_CONSOLE_ERRORS.md
- M .ai-sync/LOOP_STATE.md
- M .ai-sync/OMX_AUTO_HERMES_BRIDGE.json
- M .ai-sync/OMX_AUTO_HERMES_BRIDGE.md
- M .ai-sync/QUALITY_AUDIT.md
- M .ai-sync/SELF_EVOLVING_AUDIT.md
- M .ai-sync/auto-hermes-state/ah-20260418171908-progress.json
- M .ai-sync/auto-hermes-state/ah-20260418171908-state.json
- M .ai-sync/context-snapshots/ah-20260418171908.json
+ M .claude/commands/auto-hermes-attack.md
+ M .claude/commands/auto-hermes-max.md
  M .claude/commands/auto-hermes-self.md
  M .claude/commands/auto-hermes.md
+ M .codex/commands/auto-hermes-attack.md
+ M .codex/commands/auto-hermes-security.md
+ M .tools/auto-hermes-loop.mjs
+ M .tools/auto-hermes-max-loop.mjs
+ M .tools/auto-hermes-security.mjs
+ M .tools/auto-hermes-security.test.mjs
+ M DESIGN_VERSIONS.md
+M  README.md
  M TASKS.md
  M backend/src/main/java/com/hermes/backend/ProfileController.java
- D backend/src/main/resources/static/assets/AddShoes-CWPz9Mak.js
- D backend/src/main/resources/static/assets/AddShoes-CWPz9Mak.js.map
- D backend/src/main/resources/static/assets/AdminLogin-7L0w6eVl.js
- D backend/src/main/resources/static/assets/AdminLogin-D-TOu_QI.js
- D backend/src/main/resources/static/assets/AdminLogin-D-TOu_QI.js.map
- D backend/src/main/resources/static/assets/Analysis-DR5M7VDX.js
- D backend/src/main/resources/static/assets/Analysis-DR5M7VDX.js.map
- D backend/src/main/resources/static/assets/AnalysisInsightDetail-bH7u-0q5.js
- D backend/src/main/resources/static/assets/AnalysisInsightDetail-bH7u-0q5.js.map
- D backend/src/main/resources/static/assets/AppIcon-Dy0KYyl0.js
- D backend/src/main/resources/static/assets/AppIcon-Dy0KYyl0.js.map
- D backend/src/main/resources/static/assets/AuthenticatedPageChrome-CMuNhBYl.js
- D backend/src/main/resources/static/assets/AuthenticatedPageChrome-CMuNhBYl.js.map
- D backend/src/main/resources/static/assets/AuthenticatedPageChrome-Dr4OvLGL.js
- D backend/src/main/resources/static/assets/CoachIdentityBadge-BCNg-9K1.js
- D backend/src/main/resources/static/assets/CoachIdentityBadge-CaM60qyI.js
- D backend/src/main/resources/static/assets/CoachIdentityBadge-CaM60qyI.js.map
- D backend/src/main/resources/static/assets/Dashboard-Dpeq3uJD.js
- D backend/src/main/resources/static/assets/Dashboard-Dpeq3uJD.js.map
- D backend/src/main/resources/static/assets/FooterNavLinks-CaxWCZ90.js
- D backend/src/main/resources/static/assets/FooterNavLinks-CaxWCZ90.js.map
- D backend/src/main/resources/static/assets/FooterNavLinks-CbsoW6tJ.js
- D backend/src/main/resources/static/assets/FooterNavLinks-CbsoW6tJ.js.map
- D backend/src/main/resources/static/assets/ForgotPassword-BU52O_am.js
- D backend/src/main/resources/static/assets/ForgotPassword-BU52O_am.js.map
- D backend/src/main/resources/static/assets/GarminImportSettings-BKxO_9sk.js
- D backend/src/main/resources/static/assets/GarminImportSettings-BKxO_9sk.js.map
- D backend/src/main/resources/static/assets/GarminImportSettings-DytR87U3.js
- D backend/src/main/resources/static/assets/Heatmap-DAqAgLWC.js
- D backend/src/main/resources/static/assets/Heatmap-DAqAgLWC.js.map
- D backend/src/main/resources/static/assets/HermesLogo-Bo_qu8vE.js
- D backend/src/main/resources/static/assets/HermesLogo-Bo_qu8vE.js.map
- D backend/src/main/resources/static/assets/HermesLogo-O32wfEec.js
- D backend/src/main/resources/static/assets/HermesLogo-O32wfEec.js.map
- D backend/src/main/resources/static/assets/I18nContext-DvpcppxD.js
- D backend/src/main/resources/static/assets/I18nContext-DvpcppxD.js.map
- D backend/src/main/resources/static/assets/ImportDataGuide-AybywHIP.js
- D backend/src/main/resources/static/assets/ImportDataGuide-AybywHIP.js.map
- D backend/src/main/resources/static/assets/ImportDataGuide-auH21w0J.js
- D backend/src/main/resources/static/assets/ImportDataGuide-auH21w0J.js.map
- D backend/src/main/resources/static/assets/ImportDataSettings-BBSCPPu7.js
- D backend/src/main/resources/static/assets/ImportDataSettings-BBSCPPu7.js.map
- D backend/src/main/resources/static/assets/ImportDataSettings-BtP_1eeH.js
- D backend/src/main/resources/static/assets/ImportDataSettings-BtP_1eeH.js.map
- D backend/src/main/resources/static/assets/Landing-BSLY-Cjl.js
- D backend/src/main/resources/static/assets/Landing-BSLY-Cjl.js.map
- D backend/src/main/resources/static/assets/LanguageSwitcher-DwYWou_y.js
- D backend/src/main/resources/static/assets/LanguageSwitcher-DwYWou_y.js.map
- D backend/src/main/resources/static/assets/LanguageSwitcher-EyGmg2vg.js
- D backend/src/main/resources/static/assets/LegalPage-BvUm-6rZ.js
- D backend/src/main/resources/static/assets/LegalPage-CgCcP62t.js
- D backend/src/main/resources/static/assets/LegalPage-CgCcP62t.js.map
- D backend/src/main/resources/static/assets/Login-AK__Yxiq.js
- D backend/src/main/resources/static/assets/Login-AK__Yxiq.js.map
- D backend/src/main/resources/static/assets/Modal-CHMxuPfo.js
- D backend/src/main/resources/static/assets/Modal-CHMxuPfo.js.map
- D backend/src/main/resources/static/assets/Modal-hX9tuEZw.js
- D backend/src/main/resources/static/assets/MuscleTraining-Bv9NuL4u.js
- D backend/src/main/resources/static/assets/MuscleTraining-Bv9NuL4u.js.map
- D backend/src/main/resources/static/assets/PredictionDetail-CtSuAe6z.js
- D backend/src/main/resources/static/assets/PredictionDetail-CtSuAe6z.js.map
- D backend/src/main/resources/static/assets/Profile-1-AAJ5nz.js
- D backend/src/main/resources/static/assets/Profile-1-AAJ5nz.js.map
- D backend/src/main/resources/static/assets/Races-jfpIeOuH.js
- D backend/src/main/resources/static/assets/Races-jfpIeOuH.js.map
- D backend/src/main/resources/static/assets/RacesDetail-BEE35REQ.js
- D backend/src/main/resources/static/assets/RacesDetail-BEE35REQ.js.map
- D backend/src/main/resources/static/assets/Rewards-kkFRnItV.js
- D backend/src/main/resources/static/assets/Rewards-kkFRnItV.js.map
- D backend/src/main/resources/static/assets/RunDetail-B38piig8.js
- D backend/src/main/resources/static/assets/RunDetail-B38piig8.js.map
- D backend/src/main/resources/static/assets/Runs-BfupJLL0.js
- D backend/src/main/resources/static/assets/Runs-BfupJLL0.js.map
- D backend/src/main/resources/static/assets/Schedule-C6IgZFZt.js
- D backend/src/main/resources/static/assets/Schedule-C6IgZFZt.js.map
- D backend/src/main/resources/static/assets/Settings-4MFkcv_I.js
- D backend/src/main/resources/static/assets/Settings-4MFkcv_I.js.map
- D backend/src/main/resources/static/assets/ShoeBrandLogo-DWVNVRNI.js
- D backend/src/main/resources/static/assets/ShoeBrandLogo-DWVNVRNI.js.map
- D backend/src/main/resources/static/assets/ShoeCatalog-D9AlrbX_.js
- D backend/src/main/resources/static/assets/ShoeCatalog-D9AlrbX_.js.map
- D backend/src/main/resources/static/assets/Shoes-BGQO5RJB.js
- D backend/src/main/resources/static/assets/Shoes-BGQO5RJB.js.map
- D backend/src/main/resources/static/assets/Signup-Bu6Es49x.js
- D backend/src/main/resources/static/assets/Signup-Bu6Es49x.js.map
- D backend/src/main/resources/static/assets/TodayRun-Cz2HuAvh.js
- D backend/src/main/resources/static/assets/TodayRun-Cz2HuAvh.js.map
- D backend/src/main/resources/static/assets/TopbarNotifications-BbnGKdcH.js
- D backend/src/main/resources/static/assets/TopbarNotifications-BbnGKdcH.js.map
- D backend/src/main/resources/static/assets/WeatherEngine-XpxI1O8m.js
- D backend/src/main/resources/static/assets/WeatherEngine-XpxI1O8m.js.map
- D backend/src/main/resources/static/assets/WorkflowBuilder-Dfe18Eus.js.map
- D backend/src/main/resources/static/assets/WorkflowBuilder-rFLF983C.js
- D backend/src/main/resources/static/assets/WorkflowBuilder-rFLF983C.js.map
- D backend/src/main/resources/static/assets/chevron-right-Cbs3qi40.js.map
- D backend/src/main/resources/static/assets/chevron-right-D2KSwqB3.js
- D backend/src/main/resources/static/assets/chevron-right-D2KSwqB3.js.map
- D backend/src/main/resources/static/assets/createLucideIcon-DhKY8IN6.js
- D backend/src/main/resources/static/assets/createLucideIcon-DhKY8IN6.js.map
- D backend/src/main/resources/static/assets/createLucideIcon-DuNBfM--.js
- D backend/src/main/resources/static/assets/createLucideIcon-DuNBfM--.js.map
- D backend/src/main/resources/static/assets/dist-C0hTFtOy.js
- D backend/src/main/resources/static/assets/dist-C0hTFtOy.js.map
- D backend/src/main/resources/static/assets/dist-ZDr44_sh.js
- D backend/src/main/resources/static/assets/dist-ZDr44_sh.js.map
- D backend/src/main/resources/static/assets/index-CLL9XU0N.css
- D backend/src/main/resources/static/assets/index-Ck8BO6eM.js
- D backend/src/main/resources/static/assets/index-VoXFMBG8.js
- D backend/src/main/resources/static/assets/index-VoXFMBG8.js.map
- D backend/src/main/resources/static/assets/raceImage-BUNgxU6p.js
- D backend/src/main/resources/static/assets/raceImage-CNVgxiTJ.js
- D backend/src/main/resources/static/assets/raceImage-CNVgxiTJ.js.map
- D backend/src/main/resources/static/assets/react-window-BCxYJmWc.js
- D backend/src/main/resources/static/assets/react-window-BCxYJmWc.js.map
- D backend/src/main/resources/static/assets/removeBackground-BY4j-T6p.js
- D backend/src/main/resources/static/assets/removeBackground-BY4j-T6p.js.map
- D backend/src/main/resources/static/assets/runnerShellNav-Cp-McBEi.js.map
- D backend/src/main/resources/static/assets/shoeCatalog-lR71jYZB.js.map
- D backend/src/main/resources/static/assets/shoeNames-19w8eCBP.js.map
- D backend/src/main/resources/static/assets/shoeRotation-BmxwpwNQ.js
- D backend/src/main/resources/static/assets/shoeRotation-BmxwpwNQ.js.map
- D backend/src/main/resources/static/assets/todayRun-D7zj9fp-.js
- D backend/src/main/resources/static/assets/todayRun-D7zj9fp-.js.map
- D backend/src/main/resources/static/assets/todayRun-D8B90tr4.js
-M  docs/architecture/saas-architecture.html
-M  docs/architecture/saas-architecture.svg
+ M docs/auto-hermes/daily-operator-guide.md
+ M docs/auto-hermes/index.md
+ M docs/repo-rules/truth-and-memory.md
+ M frontend/src/data/shoeCatalog.js
+ M frontend/src/i18n/locales/en/components.js
+ M frontend/src/i18n/locales/zh-CN/components.js
+ M frontend/src/index.css
+ M frontend/src/pages/AddShoes.jsx
+ M frontend/src/pages/RunDetail.jsx
+ M frontend/src/pages/Runs.jsx
+ M frontend/src/pages/workflowBuilderStatesA11y.smoke.test.js
  M frontend/src/styles/_split/admin.css
  M frontend/src/styles/_split/analysis.css
  M frontend/src/styles/_split/auth.css
@@ -194,7 +52,6 @@ M  docs/architecture/saas-architecture.svg
  M frontend/src/styles/_split/runner-shell.css
  M frontend/src/styles/_split/runs.css
  M frontend/src/styles/_split/schedule.css
- M frontend/src/styles/_split/settings.css
  M frontend/src/styles/_split/shared.css
  M frontend/src/styles/_split/shoes.css
  M frontend/src/styles/_split/subscription.css
@@ -204,11 +61,38 @@ M  docs/architecture/saas-architecture.svg
  M frontend/src/styles/_split/weather.css
  M frontend/src/styles/_split/workflow.css
  M frontend/src/styles/analysis-detail-redesigns.css
+ M frontend/src/utils/addShoeCatalog.js
+ M frontend/src/utils/addShoeCatalog.test.js
+ M frontend/src/utils/copilotPromptFiles.smoke.test.js
  M frontend/src/utils/progressionAtlas.js
 ?? .claude/commands/_skill-stack.md
+?? .claude/commands/auto-hermes-structure-update.md
+?? .codex/commands/auto-hermes-language.md
+?? .codex/commands/auto-hermes-structure-update.md
+?? .codex/commands/auto-hermes-submit-main.md
+?? .codex/workflows/auto-hermes-structure-update-contract.md
+?? .opencode/commands/auto-hermes-attack.md
+?? .opencode/commands/auto-hermes-find-shoe.md
+?? .opencode/commands/auto-hermes-market.md
+?? .opencode/commands/auto-hermes-pull-main.md
+?? .opencode/commands/auto-hermes-push-main.md
+?? .opencode/commands/auto-hermes-security.md
+?? .opencode/commands/auto-hermes-structure-update.md
+?? .opencode/commands/auto-hermes-tech-debt.md
+?? .tools/_split-locales-once.mjs
+?? .tools/auto-hermes-worktree-audit.mjs
+?? .tools/one-shot-contrast-audit.mjs
 ?? .tools/untrack-volatile-ai-sync.sh
+?? backend/test
+?? docs/auto-hermes/attack.md
+?? docs/auto-hermes/market.md
+?? docs/auto-hermes/security.md
+?? frontend/src/assets/generated/recent-runs-hero-overlay.jpg
+?? frontend/src/pages/runsHeroOverlayContrast.smoke.test.js
+?? frontend/src/styles/contrast-fixes.css
 ?? frontend/src/styles/muscle-training-hermes-redesign.css
 ?? frontend/src/styles/settings-fullwidth.css
+?? opencode.json
 ```
 
 ## Output
