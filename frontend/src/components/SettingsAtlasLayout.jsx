@@ -189,7 +189,7 @@ export default function SettingsAtlasLayout({
         </article>
       </div>
 
-      {/* ── Row 2: Checklist + Brief / Logout ── */}
+      {/* ── Row 2: Checklist, Brief, Logout ── */}
       <div className="st-main-grid">
 
         {/* Setup checklist */}
