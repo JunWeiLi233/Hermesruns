@@ -2014,6 +2014,8 @@ export default {
     "workspace_title": "Full-screen workflow board",
     "workspace_copy": "Keep the left rail for setup and examples; use the board for node placement, branching, and final outputs.",
     "workspace_blank_cta": "Start blank",
+    "workspace_run": "Run workflow",
+    "workspace_clear": "Clear canvas",
     "status_idle": "Canvas ready for your next graph.",
     "status_running": "Workflow running...",
     "status_success": "Run complete. Review the output nodes on the board.",
