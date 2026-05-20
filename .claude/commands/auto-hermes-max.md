@@ -1,5 +1,6 @@
 ---
 name: auto-hermes-max
+description: Parallel multi-lane workflow — decomposes one task into disjoint frontend / backend / test lanes, runs them in parallel, then merges. The coordinator never writes code itself.
 ---
 
 # Hermes Parallel Max Workflow

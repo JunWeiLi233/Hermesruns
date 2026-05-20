@@ -13,6 +13,7 @@ import InputNode from './nodes/InputNode';
 import OutputNode from './nodes/OutputNode';
 import AgentNode from './nodes/AgentNode';
 import TransformNode from './nodes/TransformNode';
+import DataSourceNode from './nodes/DataSourceNode';
 import SmartEdge from './edges/SmartEdge';
 import NodePalette from './NodePalette';
 import { useI18n } from '../../contexts/I18nContext';
@@ -23,6 +24,7 @@ const nodeTypes = {
   output: OutputNode,
   agent: AgentNode,
   transform: TransformNode,
+  'data-source': DataSourceNode,
 };
 
 const edgeTypes = {
@@ -40,6 +42,8 @@ function WorkflowCanvasInner() {
   const onConnect = useWorkflowStore((s) => s.onConnect);
   const addNode = useWorkflowStore((s) => s.addNode);
   const clearCanvas = useWorkflowStore((s) => s.clearCanvas);
+  const runWorkflow = useWorkflowStore((s) => s.runWorkflow);
+  const executionStatus = useWorkflowStore((s) => s.executionStatus);
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -63,11 +67,9 @@ function WorkflowCanvasInner() {
   );
 
   const onExecute = useCallback(() => {
-    useWorkflowStore.getState().setExecutionStatus('running');
-    setTimeout(() => {
-      useWorkflowStore.getState().setExecutionStatus('idle');
-    }, 2000);
-  }, []);
+    if (executionStatus === 'running') return;
+    runWorkflow();
+  }, [runWorkflow, executionStatus]);
 
   return (
     <div className="wf-canvas-wrapper" ref={reactFlowWrapper}>
@@ -95,14 +97,15 @@ function WorkflowCanvasInner() {
           'handle.ariaLabel': t('workflow_builder.handle_label'),
         }}
       >
-        <Background color="rgba(255,255,255,0.05)" gap={20} />
+        <Background color="rgba(160, 57, 42, 0.18)" gap={20} />
         <Controls className="wf-controls" aria-label={t('workflow_builder.controls_label')} />
         <MiniMap
           className="wf-minimap"
           aria-label={t('workflow_builder.minimap_label')}
           ariaLabel={t('workflow_builder.minimap_label')}
-          nodeStrokeColor="var(--neon-cyan, #06b6d4)"
-          maskColor="rgba(0,0,0,0.7)"
+          nodeStrokeColor="#f07561"
+          nodeColor="rgba(240, 117, 97, 0.4)"
+          maskColor="rgba(248, 244, 240, 0.7)"
         />
       </ReactFlow>
       <NodePalette
@@ -110,6 +113,7 @@ function WorkflowCanvasInner() {
         onAddNode={addNode}
         onClear={clearCanvas}
         onExecute={onExecute}
+        executionStatus={executionStatus}
       />
     </div>
   );

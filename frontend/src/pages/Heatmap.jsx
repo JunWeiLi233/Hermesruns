@@ -488,7 +488,7 @@ export default function Heatmap() {
             <AppIcon name="search" className="heatmap-page-pill-icon" />
             <div className="heatmap-page-search-copy">
               <strong>{t('heatmap.page_recenter')}</strong>
-              <span>{showMapOverlays ? centerLabel : t('heatmap_loading')}</span>
+              <span>{showMapOverlays ? centerLabel : t('heatmap.loading')}</span>
             </div>
           </button>
 
@@ -690,7 +690,7 @@ export default function Heatmap() {
           <div className="heatmap-page-empty">
             <div className="heatmap-page-empty-copy">
               <span className="heatmap-page-card-kicker">{t('heatmap.page_empty_kicker')}</span>
-              <h3>{t('heatmap_empty')}</h3>
+              <h3>{t('heatmap.empty')}</h3>
               <p>{t('heatmap.page_empty_copy')}</p>
             </div>
             <div className="heatmap-page-empty-actions">

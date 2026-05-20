@@ -27,8 +27,26 @@ public class AcclimatizationService {
 
     private static final double DEFAULT_BASELINE_DEW_POINT_C = 15.0;
     private static final double SHOCK_DELTA_THRESHOLD_C = 4.0;
-    private static final double PENALTY_TRIGGER_DEW_POINT_C = 15.0;
-    private static final int BASE_PENALTY_SEC_PER_KM_PER_DEGREE = 12;
+
+    /*
+     * Pace-penalty coefficients calibrated against published heat-and-running research:
+     *  - Maughan / Galloway dew-point pace-impact tables and the Runner's World
+     *    adjusted-pace calculator: measurable impact begins ~13°C dew point.
+     *  - Cheuvront et al. (2010) endurance decrement: ~2 % per 5 °C above the
+     *    runner's acclimatization baseline.
+     *  - Roecker et al. (2013) marathon-finish-time analysis: ~0.3 % per °C
+     *    above 10 °C ambient.
+     *
+     * For a typical 5:00 /km (300 s/km) easy pace, 2 s/km per °C ≈ 0.66 %/°C —
+     * inside the published 0.3–1.0 %/°C band. The previous 12 s/km/°C value
+     * implied a ~4 %/°C decrement, which is roughly 4× the highest published
+     * estimate and produced 2:00+/km penalties at 25 °C dew point.
+     */
+    private static final double PENALTY_TRIGGER_DEW_POINT_C = 13.0;
+    private static final double BASE_PENALTY_SEC_PER_KM_PER_DEGREE = 2.0;
+    private static final int MAX_PENALTY_SEC_PER_KM = 30;
+    private static final double SAFETY_WARNING_DEW_POINT_C = 26.0;
+
     private static final Duration DEW_POINT_CACHE_TTL = Duration.ofHours(24);
     private static final String OPEN_METEO_ENDPOINT = "archive";
 
@@ -102,15 +120,22 @@ public class AcclimatizationService {
                 0,
                 Math.round((currentDewPoint - PENALTY_TRIGGER_DEW_POINT_C) * BASE_PENALTY_SEC_PER_KM_PER_DEGREE)
         );
+        fullPenalty = Math.min(fullPenalty, MAX_PENALTY_SEC_PER_KM);
 
         AcclimatizationProgress progress = computeProgress(series.dailyDewPointC(), targetDate);
         int adjustedPenalty = (int) Math.round(fullPenalty * progress.penaltyFactor());
 
         String message = null;
         if (adjustedPenalty > 0) {
-            message = "Extreme Heat Detected. We've adjusted your target pace by +" + adjustedPenalty
-                    + " sec/km today to account for humidity. This should help keep you in the right zone."
-                    + " The adjustment will fade as acclimatization improves.";
+            if (currentDewPoint >= SAFETY_WARNING_DEW_POINT_C) {
+                message = "Dew point " + round2(currentDewPoint) + "°C — extreme heat stress."
+                        + " Easy pace +" + adjustedPenalty + "s/km today."
+                        + " Consider moving the workout earlier or doing intervals indoors.";
+            } else {
+                message = "Dew point " + round2(currentDewPoint) + "°C (above your "
+                        + round2(baselineDewPoint) + "°C baseline). Easy pace +" + adjustedPenalty
+                        + "s/km today. The adjustment fades over 7-10 days as you acclimatize.";
+            }
         }
 
         return new WeatherContextResponse(
