@@ -11,69 +11,6 @@ Rules
 
 ## Current Versions
 
-### Version: DV-2026-05-19-10
-Date: 2026-05-19
-Surface: Landing hero plate restoration on `/`
-Files: `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Restored `landing-cinematic-hero-plate` as the visible rounded cinematic container with the generated hero image living on the plate photo layer again, while the `landing-command-hero` grid now acts as the text/scrim overlay instead of a second competing background card.
-Why: The landing hero plate design had been visually flattened by newer command-hero background styles, so the intended framed plate treatment was no longer driving the first fold.
-Rollback target: `DV-2026-05-19-09`
-Notes: The generated hero image, single-column image-led first fold, removed proof board, and initial-visible reveal behavior remain intact.
-
-### Version: DV-2026-05-19-09
-Date: 2026-05-19
-Surface: Shared coach identity avatars
-Files: `frontend/src/components/CoachIdentityBadge.jsx`, `frontend/src/assets/generated/coach-identity-avatar-default.webp`, `frontend/src/utils/scheduleRemoteAssetPolicy.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Replaced the generated inline SVG coach fallback face with a project-local AI-generated photorealistic fictional running-coach portrait, so `coach-identity-avatar coach-identity-avatar--fallback` and every shared `CoachIdentityBadge` usage render a real-person-style avatar without remote image dependencies.
-Why: The user asked for a real person avatar on the coach identity fallback and other coach grids.
-Rollback target: `DV-2026-05-19-08`
-Notes: Source generation remains under `C:\Users\Junwei\.codex\generated_images\019e3aef-fafa-7720-8ca1-451adf874ce7\ig_016bb7dc754d06bd016a0c9c8541f48199932de82882787765.png`; app asset is the optimized WebP copy.
-
-### Version: DV-2026-05-19-08
-Date: 2026-05-19
-Surface: Shoes light-mode text contrast on `/shoes`
-Files: `frontend/src/styles/style.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Added a final route-scoped Shoes contrast hardening layer for the live light runner shell so the performance heading, rotation recommendation title, sidecar metrics, health labels, shoe type badges, footer links, and shell labels stay dark/readable on warm paper cards.
-Why: The live Shoes page was inheriting older dark locker tokens, causing cream and low-contrast gray text to sit on light cards.
-Rollback target: `DV-2026-05-18-02`
-Notes: This is a contrast-only repair; shoe data loading, recommendation logic, add/edit flows, sidebar routing, and Add Shoes layout remain unchanged.
-
-### Version: DV-2026-05-19-07
-Date: 2026-05-19
-Surface: Landing hero regenerated background on `/`
-Files: `frontend/src/assets/generated/landing-command-hero-background.png`, `frontend/src/hooks/useScrollReveal.js`, `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Regenerated the raster image used by the `landing-cinematic-hero-grid landing-command-hero reveal-visible` background, replaced the project-local hero asset, and hardened reveal behavior so the first fold starts visible while reveal sections still fall back in browser runtimes without `IntersectionObserver`.
-Why: The user explicitly asked to regenerate a new image for that landing hero surface.
-Rollback target: `DV-2026-05-19-06`
-Notes: New generated source copy: `C:\Users\Junwei\.codex\generated_images\019e3aef-fafa-7720-8ca1-451adf874ce7\ig_0f7d6534248e5dbb016a0c5eefd080819883b35ce1038a9134.png`; app asset remains `frontend/src/assets/generated/landing-command-hero-background.png`.
-
-### Version: DV-2026-05-19-06
-Date: 2026-05-19
-Surface: Landing hero proof-board removal on `/`
-Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Removed the hero proof/HUD panel (`landing-command-board landing-cinematic-hero-proof` / older `landing-cinematic-hud`) so the landing command hero is a single cinematic image-backed copy surface with no beige board intruding below the first fold.
-Why: The user asked to remove `landing-command-board landing-cinematic-hero-proof` from the landing page.
-Rollback target: `DV-2026-05-19-05`
-Notes: The generated background image and readable light headline treatment remain; the hero grid now forces a single column even under the public GPT Taste override.
-
-### Version: DV-2026-05-19-05
-Date: 2026-05-19
-Surface: Landing hero generated background on `/`
-Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/assets/generated/landing-command-hero-background.png`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Added a generated cinematic runner/map background image to the `landing-cinematic-hero-grid landing-command-hero reveal-visible` hero surface, wired the grid to the real repo asset, and retired the stale missing `landing-runner-hero.png` reference.
-Why: The user asked to generate a new image and place it behind the landing command hero.
-Rollback target: `DV-2026-05-19-04`
-Notes: Active image-to-code reference and copied raster source: `C:\Users\Junwei\.codex\generated_images\019e3aef-fafa-7720-8ca1-451adf874ce7\ig_0f7d6534248e5dbb016a0c5a191264819885cd402f68949670.png`; app asset copy: `frontend/src/assets/generated/landing-command-hero-background.png`.
-
-### Version: DV-2026-05-19-04
-Date: 2026-05-19
-Surface: Rewards / awards light mode on `/rewards`
-Files: `frontend/src/styles/style.css`, `frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Converted the active Awards page palette from a dark trophy vault to a warm ivory gallery mode, including light hero, cards, conic medal center, topbar, stat panels, progress rails, and badge boards.
-Why: The user asked to apply a light mode to the award page after the full redesign.
-Rollback target: `DV-2026-05-19-03`
-Notes: This is a route-scoped visual palette change only. Live badge data, `buildRewardShowcase`, closest-next-unlock wiring, and runner-shell navigation remain unchanged.
-
 ### Version: DV-2026-05-19-01
 Date: 2026-05-19
 Surface: Schedule light-mode text contrast on `/schedule`
@@ -2433,27 +2370,36 @@ Notes: This changes only the visible overlay style. The heat-fog layer, sampled 
 
 ### Version: DV-2026-05-19-03
 Date: 2026-05-19
-Surface: Rewards / awards page redesign on `/rewards`
-Files: `frontend/src/pages/Rewards.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
-What changed: Rebuilt `/rewards` into a trophy-vault awards surface with an oversized editorial hero, conic earned-progress medal, live earned/locked/run stat cards, a dedicated closest-next-unlock card powered by `upcomingRewards[0]`, earned badge preview strip, and redesigned earned/upcoming boards.
-Why: The user asked to fully redesign the award page, not just tweak the existing badge list.
+Surface: IRONPULSE strength cockpit on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the existing single strength route as a dark route-scoped cockpit with an acid-lime hero, weekly strength goal ring, target-area filters, weekly runway, real run-load/recovery metrics, sticky exercise detail panel, and clearly labeled placeholder strength-history cards.
+Why: The user asked to remake the strength area using the provided IRONPULSE references while preserving Hermes runner-strength logic and avoiding fake PR/1RM data.
 Rollback target: `DV-2026-05-19-02`
-Notes: This remains data-driven from `buildRewardShowcase`, keeps the runner-shell navigation/topbar marker, and does not introduce fake awards.
+Notes: No backend schema or route was added. Check-in save/reset now uses the existing `/api/training/muscle/today` backend endpoint instead of the stale `/check-in/today` path.
 
 ### Version: DV-2026-05-19-04
 Date: 2026-05-19
-Surface: Profile next-session rail alignment on `/profile`
-Files: `frontend/src/styles/style.css`, `frontend/src/pages/profileDashboardBrandCarouselLightMode.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Repaired the Profile right rail so `runner-dashboard-coach-prescription runner-dashboard-profile-next-session` uses an explicit stacked grid row above the three-card reference grid and resets stale route-scoped named grid areas that caused overlap.
-Why: The user asked for the next-session card to move down and match the three bottom grids; the first pass bottom-anchored the rail but allowed old `session`/`reference` grid areas to collide.
+Surface: IRONPULSE reference-one strength home on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `frontend/src/assets/muscle-training/*.svg`, `DESIGN_VERSIONS.md`
+What changed: Replaced the failed hybrid cockpit with a reference-one IRONPULSE home layout: centered weekly strength goal ring, current training arrangement strip, six local dark target-area image cards, explicit pending strength-history records, and secondary protocol/check-in panels below the first visual pass.
+Why: The user clarified that the main content should match the first IRONPULSE reference rather than retain the Runner Atlas white-card or anatomy-board direction.
 Rollback target: `DV-2026-05-19-03`
-Notes: This is a layout-only fix. It preserves the current Profile dossier redesign, navigation shell, data-driven workout card, and the three reference cards.
+Notes: The visible main route now uses `mt-ironpulse-page` instead of `muscle-training-page`, removes `data-friendly-strength-lab`, and suppresses the old Runner Atlas white canvas overlay for `/muscle-training`. Check-in still uses `/api/training/muscle/today`; PR, total lifted, and 1RM remain clearly marked as pending real strength history.
 
 ### Version: DV-2026-05-19-05
 Date: 2026-05-19
-Surface: Today Run command deck redesign on `/today-run`
-Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/todayRunCommandDeckRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Reframed `/today-run` as a full-width command deck with a decision-signal rail, oversized mission hero, conic readiness instrument, wider four-metric row, responsive workout phase grid, and dedicated light-mode gallery treatment.
-Why: The user asked to redesign the Today Run page while preserving the existing coach recommendation, weather, shoe, ACWR, wellness, and runner-shell data wiring.
+Surface: Compound target library on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a frontend-only compound exercise library for all six target areas, with four optional movements per area, split from real `today plan` rows and wired into target-card counts, row selection, and the detail panel.
+Why: The user wanted every muscle-area card to expose several compound-focused exercise options without pretending those optional movements are part of the backend-generated runner strength plan.
 Rollback target: `DV-2026-05-19-04`
-Notes: This is a frontend presentation change only. It keeps the batch `/api/today/dashboard` data path, fallback endpoints, shared runner navigation, workout CTA behavior, and existing translated copy.
+Notes: This does not change backend planning or recommendation math. Optional library rows are labeled as not participating in today's training suggestion calculation, while real check-in still uses `/api/training/muscle/today`.
+
+### Version: DV-2026-05-19-06
+Date: 2026-05-19
+Surface: Practical protocol workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted the exercise protocol area into the primary route experience: compact target filters, ledger-style exercise rows, and a right-side detail panel with dose, equipment, intent, and execution phases.
+Why: The user clarified that the image-card-first layout was not practical and asked for a page closer to the action detail/workbench reference.
+Rollback target: `DV-2026-05-19-05`
+Notes: The six target photos remain available only as small filter thumbnails. Real plan/recovery/check-in wiring is unchanged, and optional library movements still do not participate in today's recommendation calculation.
