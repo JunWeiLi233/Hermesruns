@@ -51,6 +51,60 @@ assert.match(
   'The protocol should use a practical two-column workbench layout.',
 );
 
+assert.match(
+  pageSource,
+  /const EXERCISE_VIDEO_EMBEDS = \{/,
+  'The action drawer should use explicit real YouTube embed mappings instead of search links or fake media.',
+);
+
+assert.match(
+  pageSource,
+  /youtube-nocookie\.com\/embed\//,
+  'Exercise videos should use privacy-friendly YouTube nocookie embed URLs.',
+);
+
+assert.match(
+  pageSource,
+  /className=\{`mt-ip-detail-drawer/,
+  'The selected exercise details should render as a right-side drawer/sheet, not the old flat card.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-ip-detail-close"/,
+  'The exercise detail drawer should have a real close button.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-ip-video-frame"/,
+  'The exercise detail drawer should include a real video iframe frame when a URL exists.',
+);
+
+assert.doesNotMatch(
+  pageSource,
+  /className="mt-ip-video-play"|className="mt-ip-video-progress"|className="mt-ip-video-controls"/,
+  'The action detail drawer must not render fake video controls.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-ip-video-missing"/,
+  'Exercises without mapped video URLs should show an honest no-video state instead of a fake player.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-ip-coach-tips"/,
+  'The drawer should show professional tips as interactive accordion rows.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-ip-step-guide"/,
+  'The drawer should include a high-contrast numbered step guide.',
+);
+
 assert.doesNotMatch(
   pageSource,
   /className="mt-ip-target-grid"/,
@@ -148,6 +202,24 @@ assert.match(
   styleSource,
   /\.mt-ip-target-filter-rail/,
   'Target-area filtering should be styled as a compact rail, not the main visual grid.',
+);
+
+assert.match(
+  styleSource,
+  /\.mt-ip-detail-drawer/,
+  'The selected exercise detail drawer should have scoped IRONPULSE styling.',
+);
+
+assert.match(
+  styleSource,
+  /\.mt-ip-video-frame/,
+  'The real embedded video frame should have route-scoped dark styling.',
+);
+
+assert.match(
+  styleSource,
+  /@media \(max-width:\s*760px\)[\s\S]*\.mt-ip-detail-drawer\s*\{[\s\S]*position:\s*static;/,
+  'On mobile, the detail drawer should become an in-flow sheet rather than a right overlay.',
 );
 
 assert.match(
