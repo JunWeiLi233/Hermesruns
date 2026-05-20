@@ -104,9 +104,13 @@ class AcclimatizationServiceTests {
         assertThat(response.climateShockEvent()).isTrue();
         assertThat(response.acclimatizationDay()).isEqualTo(6);
         assertThat(response.penaltyFactor()).isEqualTo(0.5);
-        assertThat(response.pacePenaltySecPerKm()).isEqualTo(42);
+        // Research-calibrated: (22°C dew - 13°C trigger) × 2 s/km/°C = 18 s/km full,
+        // × 0.5 acclimatization factor on day 6 = 9 s/km. Previous value of 42 s/km
+        // came from a 12 s/km/°C coefficient with no ceiling — ~4× the published
+        // 0.3–1.0 %/°C range (Maughan, Cheuvront 2010, Roecker 2013).
+        assertThat(response.pacePenaltySecPerKm()).isEqualTo(9);
         assertThat(response.acclimatizationStatus()).isEqualTo("day_4_9");
-        assertThat(response.message()).contains("+42 sec/km");
+        assertThat(response.message()).contains("+9s/km");
     }
 
     @Test
@@ -141,8 +145,11 @@ class AcclimatizationServiceTests {
         assertThat(response.currentDewPointC()).isEqualTo(14.0);
         assertThat(response.climateShockDeltaC()).isEqualTo(2.0);
         assertThat(response.climateShockEvent()).isFalse();
-        assertThat(response.pacePenaltySecPerKm()).isZero();
-        assertThat(response.message()).isNull();
+        // Under the calibrated model the 13 °C trigger fires at 14 °C dew point:
+        // (14 - 13) × 2 = 2 s/km. Below the 26 °C safety-warning threshold, so the
+        // standard baseline-fading message is rendered.
+        assertThat(response.pacePenaltySecPerKm()).isEqualTo(2);
+        assertThat(response.message()).contains("+2s/km");
     }
 
     @Test
