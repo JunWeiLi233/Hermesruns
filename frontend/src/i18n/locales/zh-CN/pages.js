@@ -2013,6 +2013,8 @@ export default {
     "workspace_title": "全屏工作流画板",
     "workspace_copy": "左侧负责说明和示例，右侧画板负责摆放节点、分支流程和查看最终输出。",
     "workspace_blank_cta": "空白开始",
+    "workspace_run": "运行工作流",
+    "workspace_clear": "清空画布",
     "status_idle": "画布已就绪，可以开始下一张流程图。",
     "status_running": "工作流运行中...",
     "status_success": "运行完成，请查看画板上的输出节点。",
