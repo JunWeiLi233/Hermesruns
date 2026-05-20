@@ -23,8 +23,6 @@ This mirrors the stronger Claude Code contract, adapted for Codex: `/auto-hermes
 - Use `.tools/auto-hermes-self-loop.mjs` for the current Ralph-native indefinite self-loop owner behavior.
 - Invoke it as `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-self-loop.mjs --write --json --runtime codex`; `codex` is the executor-backed self-executing runtime for Codex.
 - Do not use `--runtime codex-live` as the Codex default. `codex-live` is a coordinator-awaiting mode when no executor is configured, so it can emit `codex-live-awaiting-coordinator` instead of self-executing work. If that status appears, rerun with `--runtime codex` or configure a real executor before claiming `/auto-hermes-self` executed.
-- In the default executor-backed Codex path, `/auto-hermes-self` runs worker agents with YOLO/full permission: OMX Ralph uses `--madmax`, and the bundled Codex fallback uses `--dangerously-bypass-approvals-and-sandbox`.
-- Planned Codex subagent lanes inherit the active executor permission context; only an explicit `--executor-command`, `AUTO_HERMES_EXECUTOR_COMMAND`, or executor JSON config should override that default.
 - `/auto-hermes-self` is the true Ralph self-loop version of `/auto-hermes`: it keeps iterating until a real stop gate fires instead of treating a single bounded round as the finish state.
 - When explicitly using `codex-live`, child-agent delegation for this command should use `GPT-5.5` with medium reasoning effort.
 - Keep the same Hermes queue, verification, runtime-proof, and finish contracts as `/auto-hermes`; only the loop ownership contract changes.

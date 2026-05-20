@@ -1,0 +1,9 @@
+<<<<<<<< HEAD:backend/src/main/resources/static/assets/ImportDataGuide-auH21w0J.js
+import{n as t,r as s}from"./I18nContext-C_9_aH7B.js";var i=s(),a=7;function m(){const{t:e}=t();return(0,i.jsxs)("div",{className:"import-guide",children:[(0,i.jsx)("h3",{className:"import-guide-title",children:e("profile.import_guide_title")}),(0,i.jsx)("ol",{className:"import-guide-list",children:Array.from({length:a},(o,r)=>(0,i.jsx)("li",{children:e(`profile.import_guide_step_${r+1}`)},r+1))}),(0,i.jsxs)("div",{className:"import-guide-strava",children:[(0,i.jsx)("h4",{className:"import-guide-strava-title",children:e("profile.import_guide_strava_title")}),(0,i.jsx)("p",{className:"import-guide-strava-body",children:e("profile.import_guide_strava_body")})]}),(0,i.jsx)("p",{className:"import-guide-note",children:e("profile.import_guide_note")})]})}export{m as t};
+
+//# sourceMappingURL=ImportDataGuide-auH21w0J.js.map
+========
+import{n as t,r as s}from"./I18nContext-DvpcppxD.js";var i=s(),a=7;function m(){const{t:e}=t();return(0,i.jsxs)("div",{className:"import-guide",children:[(0,i.jsx)("h3",{className:"import-guide-title",children:e("profile.import_guide_title")}),(0,i.jsx)("ol",{className:"import-guide-list",children:Array.from({length:a},(o,r)=>(0,i.jsx)("li",{children:e(`profile.import_guide_step_${r+1}`)},r+1))}),(0,i.jsxs)("div",{className:"import-guide-strava",children:[(0,i.jsx)("h4",{className:"import-guide-strava-title",children:e("profile.import_guide_strava_title")}),(0,i.jsx)("p",{className:"import-guide-strava-body",children:e("profile.import_guide_strava_body")})]}),(0,i.jsx)("p",{className:"import-guide-note",children:e("profile.import_guide_note")})]})}export{m as t};
+
+//# sourceMappingURL=ImportDataGuide-AybywHIP.js.map
+>>>>>>>> origin/main:backend/src/main/resources/static/assets/ImportDataGuide-AybywHIP.js

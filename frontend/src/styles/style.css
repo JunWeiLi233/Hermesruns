@@ -33144,10 +33144,10 @@ body.theme-light .analysis-load-command-archive-button {
 
 .analysis-intensity-command-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.55fr);
-  gap: 16px;
-  align-items: center;
-  padding: clamp(20px, 2.4vw, 28px) clamp(24px, 3vw, 32px);
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.72fr);
+  gap: 22px;
+  align-items: end;
+  padding: clamp(28px, 4vw, 42px);
 }
 
 .analysis-intensity-command-hero-copy {
@@ -33186,15 +33186,13 @@ body.theme-light .analysis-load-command-archive-button {
 
 .analysis-intensity-command-hero h1 {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 12px;
-  font-size: clamp(2rem, 3.4vw, 3.2rem);
+  flex-direction: column;
+  gap: 4px;
+  font-size: clamp(3.2rem, 8vw, 6.2rem);
   font-style: italic;
   font-weight: 900;
-  letter-spacing: -0.06em;
-  line-height: 1;
+  letter-spacing: -0.08em;
+  line-height: 0.92;
 }
 
 .analysis-intensity-command-hero h1 strong {
@@ -33217,20 +33215,19 @@ body.theme-light .analysis-load-command-archive-button {
 }
 
 .analysis-intensity-command-hero-stat {
-  min-height: auto;
-  padding: 14px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
+  min-height: 148px;
+  padding: 22px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 10px;
 }
 
 .analysis-intensity-command-hero-stat strong {
-  font-size: clamp(1.35rem, 2vw, 1.85rem);
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  letter-spacing: -0.06em;
 }
 
 .analysis-intensity-command-grid {
@@ -33357,25 +33354,24 @@ body.theme-light .analysis-load-command-archive-button {
 }
 
 .analysis-intensity-command-judgment {
-  background: linear-gradient(145deg, rgba(48, 41, 32, 0.96), rgba(36, 30, 24, 0.96));
-  color: #f3ede8;
-  border: 1px solid rgba(240, 117, 97, 0.18);
+  background: linear-gradient(145deg, rgba(240, 117, 97, 0.96), rgba(164, 60, 45, 0.96));
+  color: #260d09;
 }
 
 .analysis-intensity-command-judgment-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: rgba(240, 117, 97, 0.18);
-  color: #f0bcb0;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: rgba(29, 12, 10, 0.12);
+  color: #2f120f;
 }
 
 .analysis-intensity-command-judgment h3,
 .analysis-intensity-command-judgment p {
-  color: #f3ede8;
+  color: #260d09;
 }
 
 .analysis-intensity-command-judgment h3 {
@@ -33519,9 +33515,8 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-sa
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-judgment {
-  background: linear-gradient(145deg, rgba(255, 252, 246, 0.98), rgba(247, 239, 226, 0.94));
-  border: 1px solid rgba(201, 85, 63, 0.22);
-  box-shadow: 0 14px 28px rgba(44, 36, 28, 0.06);
+  background: linear-gradient(145deg, rgba(252, 126, 105, 0.86), rgba(255, 180, 167, 0.94));
+  box-shadow: 0 18px 36px rgba(160, 57, 42, 0.12);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-eyebrow,
@@ -33591,12 +33586,12 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-st
 body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-judgment,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-judgment h3,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-judgment p {
-  color: #2c2f30;
+  color: #4a1c14;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-judgment-icon {
-  background: rgba(201, 85, 63, 0.14);
-  color: #c05540;
+  background: rgba(74, 28, 20, 0.08);
+  color: #6f2419;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-cta {
@@ -39140,511 +39135,6 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-plan-page .today-ru
   .today-run-stitch-support-grid,
   .today-run-stitch-readiness-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-/* Today Run command deck redesign final override */
-.today-run-command-page {
-  --tr-command-ink: #fff7ef;
-  --tr-command-soft: rgba(255, 247, 239, 0.68);
-  --tr-command-muted: rgba(255, 247, 239, 0.48);
-  --tr-command-carbon: #151311;
-  --tr-command-ember: #f07561;
-  --tr-command-ember-deep: #a0392a;
-  --tr-command-panel: rgba(31, 28, 25, 0.78);
-  --tr-command-panel-strong: rgba(42, 37, 33, 0.9);
-  background:
-    radial-gradient(circle at 12% 8%, rgba(240, 117, 97, 0.16), transparent 24rem),
-    radial-gradient(circle at 86% 18%, rgba(255, 180, 167, 0.1), transparent 22rem),
-    linear-gradient(180deg, #171513 0%, #11100f 52%, #181513 100%) !important;
-}
-
-.today-run-command-page .runner-shell-canvas.today-run-command-canvas {
-  width: min(1560px, calc(100% - clamp(22px, 4vw, 56px))) !important;
-  max-width: none !important;
-  margin-inline: auto !important;
-  padding: clamp(22px, 2.4vw, 34px) 0 clamp(48px, 6vw, 82px) !important;
-  display: grid;
-  gap: clamp(18px, 2.2vw, 30px);
-}
-
-.today-run-command-page .today-run-coaching-strip {
-  position: relative;
-  margin: 0 !important;
-  padding: clamp(12px, 1.5vw, 18px) !important;
-  border: 0 !important;
-  border-radius: clamp(22px, 2vw, 30px) !important;
-  background:
-    linear-gradient(135deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.025)),
-    rgba(22, 19, 17, 0.74) !important;
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.today-run-command-page .today-run-coaching-strip::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, transparent 0 12%, rgba(240, 117, 97, 0.14) 12% 12.3%, transparent 12.3% 52%, rgba(255, 247, 239, 0.06) 52% 52.2%, transparent 52.2%),
-    radial-gradient(circle at 8% 50%, rgba(240, 117, 97, 0.16), transparent 18rem);
-  pointer-events: none;
-}
-
-.today-run-command-page .today-run-coaching-strip-inner {
-  position: relative;
-  z-index: 1;
-  display: grid !important;
-  grid-template-columns: minmax(260px, 1.3fr) repeat(4, minmax(140px, 0.8fr)) !important;
-  gap: clamp(10px, 1vw, 14px) !important;
-  align-items: stretch !important;
-}
-
-.today-run-command-page .today-run-coaching-answer {
-  min-height: 132px;
-  padding: clamp(14px, 1.25vw, 18px) !important;
-  border: 0 !important;
-  border-radius: clamp(16px, 1.5vw, 22px) !important;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)),
-    rgba(255, 255, 255, 0.035) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.today-run-command-page .today-run-coaching-answer--readiness {
-  background:
-    radial-gradient(circle at 88% 18%, rgba(240, 117, 97, 0.24), transparent 12rem),
-    linear-gradient(135deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.04)) !important;
-}
-
-.today-run-command-page .today-run-coaching-answer-kicker,
-.today-run-command-page .today-run-plan-kicker,
-.today-run-command-page .today-run-plan-card-head span,
-.today-run-command-page .today-run-plan-panel-copy > span,
-.today-run-command-page .today-run-plan-hero-metrics span,
-.today-run-command-page .today-run-plan-panel-grid span,
-.today-run-command-page .today-run-plan-signal-grid span,
-.today-run-command-page .today-run-plan-coach-line span,
-.today-run-command-page .today-run-shoe-brief-copy span,
-.today-run-command-page .today-run-shoe-brief-meta span {
-  color: var(--tr-command-muted) !important;
-  font-size: 0.66rem !important;
-  font-weight: 850 !important;
-  letter-spacing: 0.19em !important;
-}
-
-.today-run-command-page .today-run-coaching-answer-value {
-  color: var(--tr-command-ink) !important;
-  font-family: "Manrope", var(--font-display);
-  font-size: clamp(1.05rem, 1.3vw, 1.38rem) !important;
-  letter-spacing: -0.025em;
-}
-
-.today-run-command-page .today-run-coaching-answer-sub {
-  color: var(--tr-command-soft) !important;
-}
-
-.today-run-command-page .today-run-readiness-signal {
-  background: rgba(255, 247, 239, 0.08);
-  border-radius: 999px;
-  padding: 5px 8px;
-}
-
-.today-run-command-page .today-run-readiness-signal-bar {
-  background: rgba(255, 247, 239, 0.1);
-}
-
-.today-run-command-page .today-run-readiness-signal-fill {
-  background: linear-gradient(90deg, var(--tr-command-ember), #ffb4a7);
-}
-
-.today-run-command-page .today-run-command-hero {
-  min-height: clamp(640px, 62vw, 840px);
-  grid-template-columns: minmax(0, 1.06fr) minmax(380px, 0.94fr) !important;
-  gap: clamp(18px, 2vw, 28px) !important;
-  padding: clamp(28px, 3.6vw, 56px) !important;
-  border-radius: clamp(28px, 3vw, 44px) !important;
-  background:
-    radial-gradient(circle at 12% 16%, rgba(240, 117, 97, 0.26), transparent 25rem),
-    radial-gradient(circle at 78% 18%, rgba(255, 180, 167, 0.11), transparent 22rem),
-    linear-gradient(135deg, rgba(38, 33, 29, 0.98), rgba(16, 15, 14, 0.98) 62%, #0e0d0c) !important;
-  box-shadow:
-    0 34px 86px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.today-run-command-page .today-run-command-hero::before {
-  content: "";
-  position: absolute;
-  inset: clamp(18px, 2vw, 28px);
-  border-radius: clamp(22px, 2.2vw, 34px);
-  background:
-    linear-gradient(115deg, rgba(255, 247, 239, 0.055) 0 1px, transparent 1px 22px),
-    radial-gradient(circle at 50% 100%, rgba(240, 117, 97, 0.1), transparent 34rem);
-  mask-image: linear-gradient(90deg, #000 0%, rgba(0,0,0,0.74) 58%, transparent 100%);
-  pointer-events: none;
-}
-
-.today-run-command-page .today-run-command-hero::after {
-  width: min(46vw, 640px) !important;
-  height: min(46vw, 640px) !important;
-  inset: auto -10% -26% auto !important;
-  background:
-    radial-gradient(circle, rgba(240, 117, 97, 0.28), transparent 62%),
-    conic-gradient(from 210deg, transparent, rgba(255, 180, 167, 0.13), transparent) !important;
-}
-
-.today-run-command-page .today-run-command-hero-copy {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.today-run-command-page .today-run-command-hero-copy h1 {
-  max-width: 12ch !important;
-  font-size: clamp(3.35rem, 6.4vw, 7.35rem) !important;
-  line-height: 0.88 !important;
-  letter-spacing: -0.085em !important;
-  text-wrap: balance;
-}
-
-.today-run-command-page .today-run-command-hero-copy > p {
-  max-width: 58ch !important;
-  color: var(--tr-command-soft) !important;
-  font-size: clamp(1rem, 1.15vw, 1.16rem);
-}
-
-.today-run-command-page .today-run-overview-disclosure {
-  width: min(100%, 620px);
-}
-
-.today-run-command-page .today-run-plan-morning-briefing {
-  width: min(100%, 760px);
-  margin-top: clamp(22px, 2.8vw, 38px);
-  padding: clamp(18px, 2vw, 26px);
-  border-radius: 28px;
-  background:
-    linear-gradient(135deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.035)),
-    rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.today-run-command-page .today-run-plan-morning-briefing p,
-.today-run-command-page .today-run-plan-wellness-insight span {
-  color: rgba(255, 247, 239, 0.8) !important;
-}
-
-.today-run-command-page .today-run-plan-downshift-btn,
-.today-run-command-page .today-run-stitch-primary-btn,
-.today-run-command-page .today-run-stitch-secondary-btn,
-.today-run-command-page .today-run-shoe-brief-action {
-  min-height: 44px;
-  border: 0 !important;
-  border-radius: 999px !important;
-  font-weight: 850;
-}
-
-.today-run-command-page .today-run-plan-downshift-btn,
-.today-run-command-page .today-run-stitch-primary-btn {
-  background: linear-gradient(135deg, var(--tr-command-ember-deep), var(--tr-command-ember)) !important;
-  color: #fff7ef !important;
-  box-shadow: 0 18px 34px rgba(160, 57, 42, 0.24);
-}
-
-.today-run-command-page .today-run-stitch-secondary-btn,
-.today-run-command-page .today-run-shoe-brief-action {
-  background: rgba(255, 247, 239, 0.1) !important;
-  color: #ffd6cb !important;
-}
-
-.today-run-command-page .today-run-plan-badges {
-  margin-top: clamp(18px, 2vw, 28px) !important;
-}
-
-.today-run-command-page .today-run-marathon-pill {
-  border: 0;
-  background: rgba(255, 247, 239, 0.085) !important;
-  color: #ffd7cd !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.today-run-command-page .today-run-plan-rationale {
-  margin-top: clamp(18px, 2vw, 28px);
-  padding: clamp(16px, 1.6vw, 22px);
-  border-radius: 24px;
-  background: rgba(255, 247, 239, 0.06);
-}
-
-.today-run-command-page .today-run-plan-rationale-label {
-  color: #ffd6cb;
-}
-
-.today-run-command-page .today-run-plan-rationale-content {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.today-run-command-page .today-run-plan-rationale-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 11px;
-  border-radius: 999px;
-  background: rgba(255, 247, 239, 0.08);
-  color: rgba(255, 247, 239, 0.78);
-  font-size: 0.86rem;
-}
-
-.today-run-command-page .today-run-plan-hero-metrics {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 10px !important;
-}
-
-.today-run-command-page .today-run-plan-hero-metrics article,
-.today-run-command-page .today-run-plan-panel-grid article,
-.today-run-command-page .today-run-plan-signal-grid article {
-  border: 0 !important;
-  border-radius: 22px !important;
-  background:
-    linear-gradient(180deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.035)),
-    rgba(255, 255, 255, 0.04) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-}
-
-.today-run-command-page .today-run-plan-hero-metrics strong,
-.today-run-command-page .today-run-plan-panel-grid strong,
-.today-run-command-page .today-run-plan-signal-grid strong,
-.today-run-command-page .today-run-plan-coach-line strong {
-  color: var(--tr-command-ink) !important;
-  font-family: "Manrope", var(--font-display);
-  font-size: clamp(1.18rem, 1.7vw, 1.65rem) !important;
-}
-
-.today-run-command-page .today-run-command-readiness-panel {
-  display: grid;
-  align-content: space-between;
-  min-height: 100%;
-  padding: clamp(22px, 2.4vw, 34px) !important;
-  border-radius: clamp(24px, 2.2vw, 34px) !important;
-  background:
-    radial-gradient(circle at 86% 12%, rgba(240, 117, 97, 0.22), transparent 17rem),
-    linear-gradient(160deg, rgba(255, 247, 239, 0.12), rgba(255, 247, 239, 0.035)),
-    rgba(255, 255, 255, 0.06) !important;
-}
-
-.today-run-command-page .today-run-command-readiness-panel::before {
-  content: "";
-  justify-self: end;
-  width: clamp(112px, 12vw, 168px);
-  aspect-ratio: 1;
-  margin-bottom: clamp(18px, 3vw, 34px);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(20, 18, 16, 0.9) 0 47%, transparent 48%),
-    conic-gradient(from 220deg, var(--tr-command-ember), #ffb4a7 64%, rgba(255, 247, 239, 0.14) 64%);
-  box-shadow: 0 22px 56px rgba(240, 117, 97, 0.16);
-}
-
-.today-run-command-page .today-run-plan-panel-copy h2 {
-  font-size: clamp(2.4rem, 4vw, 4.7rem) !important;
-  line-height: 0.88 !important;
-  letter-spacing: -0.08em !important;
-}
-
-.today-run-command-page .today-run-plan-grid.today-run-command-grid {
-  grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr) !important;
-  gap: clamp(18px, 2vw, 28px) !important;
-}
-
-.today-run-command-page .today-run-plan-card {
-  border: 0 !important;
-  border-radius: clamp(26px, 2.4vw, 38px) !important;
-  background:
-    radial-gradient(circle at 90% 0%, rgba(240, 117, 97, 0.12), transparent 18rem),
-    linear-gradient(180deg, rgba(39, 35, 31, 0.94), rgba(25, 23, 21, 0.96)) !important;
-  box-shadow:
-    0 26px 70px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-}
-
-.today-run-command-page .today-run-plan-card-head {
-  align-items: flex-end !important;
-  border-bottom: 1px solid rgba(255, 247, 239, 0.08);
-  padding-bottom: 18px;
-}
-
-.today-run-command-page .today-run-plan-card-head h2 {
-  max-width: 11ch;
-  font-size: clamp(2.2rem, 3.4vw, 4rem) !important;
-  line-height: 0.9 !important;
-  letter-spacing: -0.075em !important;
-}
-
-.today-run-command-page .today-run-plan-step-list {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: clamp(12px, 1.2vw, 16px) !important;
-}
-
-.today-run-command-page .today-run-plan-step-card,
-.today-run-command-page .today-run-plan-reason-card,
-.today-run-command-page .today-run-plan-coach-line,
-.today-run-command-page .today-run-shoe-brief {
-  border: 0 !important;
-  border-radius: 24px !important;
-  background:
-    linear-gradient(180deg, rgba(255, 247, 239, 0.085), rgba(255, 247, 239, 0.03)),
-    rgba(255, 255, 255, 0.035) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.today-run-command-page .today-run-plan-step-card h3,
-.today-run-command-page .today-run-shoe-brief-copy h3 {
-  color: var(--tr-command-ink) !important;
-}
-
-.today-run-command-page .today-run-plan-step-card p,
-.today-run-command-page .today-run-plan-reason-card p,
-.today-run-command-page .today-run-plan-coach-line p,
-.today-run-command-page .today-run-shoe-brief-copy p,
-.today-run-command-page .today-run-plan-card-head p,
-.today-run-command-page .today-run-plan-panel-copy p {
-  color: var(--tr-command-soft) !important;
-}
-
-.today-run-command-page .today-run-plan-step-card span,
-.today-run-command-page .today-run-plan-reason-card strong {
-  border: 0;
-  background: rgba(240, 117, 97, 0.18) !important;
-  color: #ffd2c8 !important;
-}
-
-.today-run-command-page .today-run-plan-coach-line {
-  align-items: stretch !important;
-}
-
-.today-run-command-page .today-run-plan-signal-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-}
-
-.today-run-command-page .runner-shell-footer {
-  opacity: 0.84;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page {
-  --tr-command-ink: #241f1a;
-  --tr-command-soft: rgba(36, 31, 26, 0.68);
-  --tr-command-muted: rgba(160, 57, 42, 0.62);
-  --tr-command-carbon: #fffaf3;
-  --tr-command-panel: rgba(255, 255, 255, 0.72);
-  --tr-command-panel-strong: rgba(255, 255, 255, 0.9);
-  background:
-    radial-gradient(circle at 14% 10%, rgba(240, 117, 97, 0.14), transparent 24rem),
-    radial-gradient(circle at 86% 14%, rgba(160, 57, 42, 0.08), transparent 24rem),
-    linear-gradient(180deg, #fbf7f1 0%, #f5efe7 48%, #eef1f2 100%) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-coaching-strip,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-command-hero,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-card {
-  background:
-    radial-gradient(circle at 10% 0%, rgba(240, 117, 97, 0.14), transparent 18rem),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 250, 243, 0.66)) !important;
-  box-shadow:
-    0 28px 70px rgba(76, 54, 39, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-coaching-answer,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-command-readiness-panel,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-morning-briefing,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-rationale,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-hero-metrics article,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-panel-grid article,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-signal-grid article,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-step-card,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-reason-card,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-coach-line,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-shoe-brief {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 250, 243, 0.48)),
-    rgba(255, 255, 255, 0.62) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-command-readiness-panel::before {
-  background:
-    radial-gradient(circle, #fffaf3 0 47%, transparent 48%),
-    conic-gradient(from 220deg, #a0392a, #f07561 64%, rgba(36, 31, 26, 0.1) 64%);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page :is(
-  .today-run-command-hero-copy h1,
-  .today-run-plan-card-head h2,
-  .today-run-plan-panel-copy h2,
-  .today-run-plan-step-card h3,
-  .today-run-shoe-brief-copy h3,
-  .today-run-coaching-answer-value,
-  .today-run-plan-hero-metrics strong,
-  .today-run-plan-panel-grid strong,
-  .today-run-plan-signal-grid strong,
-  .today-run-plan-coach-line strong
-) {
-  color: var(--tr-command-ink) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page :is(
-  .today-run-command-hero-copy > p,
-  .today-run-plan-card-head p,
-  .today-run-plan-panel-copy p,
-  .today-run-plan-step-card p,
-  .today-run-plan-reason-card p,
-  .today-run-plan-coach-line p,
-  .today-run-shoe-brief-copy p,
-  .today-run-plan-morning-briefing p,
-  .today-run-plan-wellness-insight span
-) {
-  color: var(--tr-command-soft) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-marathon-pill,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-plan-rationale-item,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-stitch-secondary-btn,
-body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-shoe-brief-action {
-  background: rgba(160, 57, 42, 0.1) !important;
-  color: #a0392a !important;
-}
-
-@media (max-width: 1180px) {
-  .today-run-command-page .today-run-coaching-strip-inner,
-  .today-run-command-page .today-run-command-hero,
-  .today-run-command-page .today-run-plan-grid.today-run-command-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .today-run-command-page .today-run-command-hero {
-    min-height: auto;
-  }
-}
-
-@media (max-width: 760px) {
-  .today-run-command-page .runner-shell-canvas.today-run-command-canvas {
-    width: min(100% - 22px, 100%) !important;
-  }
-
-  .today-run-command-page .today-run-plan-hero-metrics,
-  .today-run-command-page .today-run-plan-panel-grid,
-  .today-run-command-page .today-run-plan-signal-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .today-run-command-page .today-run-command-hero-copy h1 {
-    font-size: clamp(2.8rem, 16vw, 4.7rem) !important;
   }
 }
 
@@ -58726,17 +58216,6 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     height: 22px;
 }
 
-.landing-cinematic-glyph--logo {
-    fill: initial;
-    stroke: none;
-    stroke-width: 0;
-}
-
-.landing-cinematic-glyph--logo * {
-    stroke: none;
-    stroke-width: 0;
-}
-
 .landing-cinematic-btn .landing-cinematic-glyph {
     width: 1.08rem;
     height: 1.08rem;
@@ -58785,19 +58264,6 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     min-height: 52px;
     padding: 0 24px;
     font-size: 0.96rem;
-}
-
-.landing-cinematic-btn--strava {
-    gap: 12px;
-}
-
-.landing-strava-logo {
-    display: block;
-    width: 78px;
-    height: auto;
-    flex: 0 0 auto;
-    border-radius: 7px;
-    box-shadow: 0 8px 18px rgba(252, 76, 2, 0.22);
 }
 
 .landing-cinematic-btn--primary {
@@ -69902,37 +69368,6 @@ body.theme-light .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner
   .mt-today-card,
   .mt-readiness-card--decision
 ) :is(h1, h2, h3, h4, strong, label, .weather-engine-temp-display) {
-  /* Scoped to dark themes only — the cinematic cream-on-dark treatment is
-     correct over the dark gradient, but the runner-minimalist light override
-     downstream flips the background to white in light mode, leaving cream
-     text on white (contrast 1.05–1.18). Default to dark ink; dark themes get
-     the cream back via the higher-specificity sibling rule below. */
-  color: var(--text-strong, #2c2f30) !important;
-}
-
-body:is(.theme-midnight, .theme-high-contrast) :is(
-  .analysis-page-shell,
-  .runs-dashboard-page,
-  .weather-engine-page,
-  .shoes-dashboard-page,
-  .races-dashboard-page,
-  .schedule-plan-page,
-  .runner-dashboard-page:has(.muscle-training-page)
-) :is(
-  .analysis-profile-primary,
-  .recent-runs-hero,
-  .recent-runs-insight-card--primary,
-  .weather-engine-hero,
-  .weather-engine-card--judgment,
-  .shoe-rotation-signal,
-  .shoe-inventory-card.is-primary,
-  .race-center-hero,
-  .race-center-pb-card.is-featured,
-  .schedule-plan-hero,
-  .schedule-plan-next-card,
-  .mt-today-card,
-  .mt-readiness-card--decision
-) :is(h1, h2, h3, h4, strong, label, .weather-engine-temp-display) {
   color: #fff4e6 !important;
 }
 
@@ -77943,26 +77378,16 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page {
   background: var(--profile-accent) !important;
 }
 
-.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary,
 .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary {
-  align-self: stretch !important;
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
-  grid-template-rows: auto auto !important;
-  align-content: end !important;
-  grid-auto-flow: row !important;
-  grid-auto-rows: auto !important;
-  gap: clamp(14px, 1.35vw, 18px) !important;
+  align-self: start !important;
+  align-content: start !important;
+  grid-auto-rows: minmax(0, auto);
 }
 
-.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session,
 .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session {
-  grid-area: auto !important;
-  grid-column: 1 !important;
-  grid-row: 1 !important;
   height: auto !important;
   align-content: start !important;
-  align-self: end !important;
+  align-self: start !important;
   gap: clamp(14px, 1.6vw, 18px) !important;
   border-radius: clamp(18px, 1.6vw, 24px) !important;
   background:
@@ -77977,12 +77402,7 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page {
   line-height: 0.98 !important;
 }
 
-.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid,
 .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid {
-  grid-area: auto !important;
-  grid-column: 1 !important;
-  grid-row: 2 !important;
-  position: relative !important;
   height: auto !important;
   align-items: stretch !important;
   gap: 10px !important;
@@ -80856,58 +80276,1718 @@ body .rewards-ledger-page .rewards-ledger-signoff {
   body .rewards-ledger-page .rewards-ledger-pipeline-pct { text-align: left; }
 }
 
-/* ============================================================================
-   Weather hero contrast lock (light themes).
-   Earlier rules elsewhere in this stylesheet leave `.weather-engine-temp-display`
-   and the surrounding hero copy on the original cream-on-dark color
-   (`#fff4ed`) even when the cinematic dark backdrop has been replaced by the
-   light Hermes paper surface — that's the "older version" regression where the
-   big "31°C" goes near-invisible on cream. Force readable charcoal ink (and the
-   muted body tone for secondary copy) in `.theme-light` /
-   `.theme-high-contrast-light`, with full !important + high specificity so
-   downstream `:is(...)` page-scoped rules can't flip the text back to cream.
-   ============================================================================ */
-
-body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page :is(
-  .weather-engine-temp-display,
-  .weather-engine-temp-context-label,
-  .weather-engine-panel-head h2,
-  .weather-engine-card-head h2,
-  .weather-engine-hud-value,
-  .weather-engine-forecast-slot strong,
-  .weather-engine-engine-stat strong,
-  .weather-engine-judgment-meta strong,
-  .weather-engine-judgment-callout strong,
-  .weather-engine-empty strong
-) {
-  color: var(--text-strong, #2c2f30) !important;
+/* Muscle Training IRONPULSE route cockpit */
+.muscle-training-canvas {
+  --mt-iron-bg: #0b0d0b;
+  --mt-iron-surface: #121512;
+  --mt-iron-surface-strong: #181b17;
+  --mt-iron-line: rgba(218, 255, 180, 0.18);
+  --mt-iron-line-strong: rgba(204, 255, 0, 0.48);
+  --mt-iron-accent: #ccff00;
+  --mt-iron-accent-soft: rgba(204, 255, 0, 0.14);
+  --mt-iron-cyan: #73f4ff;
+  --mt-iron-ink: #f4f6ee;
+  --mt-iron-muted: #b8c0a7;
+  --mt-iron-dim: #7f8875;
+  background:
+    linear-gradient(rgba(204, 255, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(204, 255, 0, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 18% 4%, rgba(204, 255, 0, 0.08), transparent 26rem),
+    radial-gradient(circle at 90% 18%, rgba(115, 244, 255, 0.07), transparent 22rem),
+    var(--mt-iron-bg) !important;
+  background-size: 28px 28px, 28px 28px, auto, auto, auto;
+  color: var(--mt-iron-ink);
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page :is(
-  .weather-engine-data-pill,
-  .weather-engine-data-pill strong,
-  .weather-engine-data-pill span,
-  .weather-engine-temp-context p,
-  .weather-engine-engine-copy,
-  .weather-engine-empty p,
-  .weather-engine-panel-head p,
-  .weather-engine-hud-foot,
-  .weather-engine-forecast-hour,
-  .weather-engine-forecast-summary,
-  .weather-engine-engine-stat span,
-  .weather-engine-judgment-callout p,
-  .weather-engine-judgment-callout span,
-  .weather-engine-judgment-meta p,
-  .weather-engine-judgment-meta span
-) {
-  color: rgba(44, 47, 48, 0.78) !important;
+.muscle-training-page .mt-strength-lab[data-ironpulse-strength-lab="true"],
+.muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"],
+.muscle-training-page .strength-plan-control-deck {
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(204, 255, 0, 0.08), transparent 20rem),
+    linear-gradient(135deg, rgba(29, 32, 27, 0.96), rgba(14, 16, 14, 0.98)) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32) !important;
+  color: var(--mt-iron-ink) !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill {
-  background: rgba(160, 57, 42, 0.06) !important;
-  border: 1px solid rgba(160, 57, 42, 0.14) !important;
+.muscle-training-page .mt-strength-lab[data-ironpulse-strength-lab="true"] {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 34px);
+  padding: clamp(18px, 2.4vw, 34px) !important;
+  overflow: hidden;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill strong {
-  color: rgba(160, 57, 42, 0.78) !important;
+.muscle-training-page .mt-iron-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(260px, 3fr) minmax(300px, 4fr);
+  gap: clamp(16px, 1.8vw, 26px);
+  align-items: stretch;
+}
+
+.muscle-training-page .mt-iron-verdict,
+.muscle-training-page .mt-iron-volume-card,
+.muscle-training-page .mt-iron-stack article,
+.muscle-training-page .mt-target-card,
+.muscle-training-page .mt-week-strip,
+.muscle-training-page .mt-progress-chart,
+.muscle-training-page .mt-progress-metric,
+.muscle-training-page .mt-anatomy-command-board,
+.muscle-training-page .strength-plan-protocol,
+.muscle-training-page .strength-plan-rail-card,
+.muscle-training-page .strength-plan-cta-panel {
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(145deg, rgba(24, 27, 23, 0.96), rgba(14, 16, 14, 0.96)) !important;
+  box-shadow: none !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .mt-iron-verdict,
+.muscle-training-page .mt-iron-volume-card,
+.muscle-training-page .mt-iron-stack article {
+  min-width: 0;
+  padding: clamp(18px, 2vw, 28px);
+}
+
+.muscle-training-page .mt-iron-verdict {
+  display: grid;
+  align-content: space-between;
+  min-height: clamp(360px, 30vw, 520px);
+  background:
+    linear-gradient(90deg, rgba(18, 21, 18, 0.96), rgba(46, 54, 38, 0.92)),
+    var(--mt-iron-surface) !important;
+}
+
+.muscle-training-page .mt-iron-kicker,
+.muscle-training-page .strength-plan-section-label {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--mt-iron-line-strong);
+  border-radius: 8px;
+  padding: 5px 10px;
+  background: var(--mt-iron-accent-soft);
+  color: var(--mt-iron-accent) !important;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.muscle-training-page .mt-iron-kicker-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.muscle-training-page .mt-iron-verdict h1 {
+  margin: clamp(22px, 3vw, 42px) 0 0;
+  color: var(--mt-iron-ink) !important;
+  font-size: clamp(4.2rem, 9vw, 9.2rem);
+  line-height: 0.86;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.muscle-training-page .mt-strength-lab-intro {
+  max-width: 38rem;
+  margin: 18px 0 0;
+  color: var(--mt-iron-muted) !important;
+  font-size: clamp(1.05rem, 1.35vw, 1.35rem);
+  line-height: 1.55;
+}
+
+.muscle-training-page .mt-iron-chip-row,
+.muscle-training-page .strength-plan-hero-tags,
+.muscle-training-page .mt-iron-mini-metrics,
+.muscle-training-page .mt-exercise-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.muscle-training-page .mt-iron-chip-row span,
+.muscle-training-page .strength-plan-hero-tags span,
+.muscle-training-page .mt-iron-mini-metrics span,
+.muscle-training-page .mt-exercise-detail-meta span {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-iron-actions {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.muscle-training-page .strength-plan-primary-btn.mt-iron-primary,
+.muscle-training-page .strength-plan-primary-btn {
+  min-height: 48px;
+  border: 1px solid var(--mt-iron-accent) !important;
+  border-radius: 8px !important;
+  background: var(--mt-iron-accent) !important;
+  color: #071007 !important;
+  font-weight: 900;
+  letter-spacing: 0;
+  box-shadow: 0 0 26px rgba(204, 255, 0, 0.22) !important;
+}
+
+.muscle-training-page .strength-plan-primary-btn:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.muscle-training-page :is(.strength-plan-primary-btn, .primary-action-btn):disabled {
+  border-color: var(--mt-iron-line) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--mt-iron-dim) !important;
+  cursor: not-allowed !important;
+  opacity: 0.72;
+  box-shadow: none !important;
+  filter: none;
+  transform: none;
+}
+
+.muscle-training-page .mt-iron-volume-card {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 18px;
+}
+
+.muscle-training-page .mt-iron-card-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.muscle-training-page .mt-iron-card-head > strong {
+  color: var(--mt-iron-accent);
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-iron-ring {
+  position: relative;
+  width: min(100%, 230px);
+  aspect-ratio: 1;
+}
+
+.muscle-training-page .mt-iron-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.muscle-training-page .mt-iron-ring-track,
+.muscle-training-page .mt-iron-ring-progress {
+  fill: none;
+  stroke-width: 9;
+}
+
+.muscle-training-page .mt-iron-ring-track {
+  stroke: rgba(255, 255, 255, 0.12);
+}
+
+.muscle-training-page .mt-iron-ring-progress {
+  stroke: var(--mt-iron-accent);
+  stroke-dasharray: 314;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 9px rgba(204, 255, 0, 0.45));
+}
+
+.muscle-training-page .mt-iron-ring-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.muscle-training-page .mt-iron-ring-center strong {
+  color: var(--mt-iron-accent);
+  font-size: clamp(2.4rem, 4vw, 3.7rem);
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-iron-ring-center strong span,
+.muscle-training-page .mt-iron-ring-center small {
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-iron-ring-center small {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.muscle-training-page .mt-iron-mini-metrics {
+  width: 100%;
+  justify-content: center;
+}
+
+.muscle-training-page .mt-iron-mini-metrics span {
+  min-width: 94px;
+  text-align: center;
+}
+
+.muscle-training-page .mt-iron-mini-metrics strong {
+  display: block;
+  color: var(--mt-iron-ink);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-iron-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.muscle-training-page .mt-iron-stack article {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.muscle-training-page .mt-iron-stack article span,
+.muscle-training-page .mt-progress-metric span,
+.muscle-training-page .mt-progress-bar-row span {
+  color: var(--mt-iron-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.muscle-training-page .mt-iron-stack article strong,
+.muscle-training-page .mt-progress-metric strong {
+  color: var(--mt-iron-ink);
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.05;
+}
+
+.muscle-training-page .mt-iron-stack article p,
+.muscle-training-page .mt-iron-section-head p,
+.muscle-training-page .mt-exercise-detail-panel p {
+  margin: 0;
+  color: var(--mt-iron-muted) !important;
+  line-height: 1.55;
+}
+
+.muscle-training-page .mt-iron-placeholder-card {
+  border-color: rgba(115, 244, 255, 0.34) !important;
+  background:
+    linear-gradient(145deg, rgba(115, 244, 255, 0.08), rgba(18, 21, 18, 0.96)) !important;
+}
+
+.muscle-training-page .mt-iron-placeholder-card span,
+.muscle-training-page .mt-iron-placeholder-card strong {
+  color: var(--mt-iron-cyan) !important;
+}
+
+.muscle-training-page .mt-iron-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 0;
+}
+
+.muscle-training-page .mt-iron-section-head h2 {
+  margin: 10px 0 0;
+  color: var(--mt-iron-ink);
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+.muscle-training-page .mt-target-areas {
+  display: grid;
+  gap: 16px;
+}
+
+.muscle-training-page .mt-target-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 12px;
+}
+
+.muscle-training-page .mt-target-card {
+  position: relative;
+  display: grid;
+  min-height: 150px;
+  overflow: hidden;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.muscle-training-page .mt-target-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -42% 18%;
+  height: 90px;
+  background: linear-gradient(90deg, rgba(204, 255, 0, 0.16), rgba(115, 244, 255, 0.12));
+  transform: skewY(-14deg);
+}
+
+.muscle-training-page .mt-target-card-orbit {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--mt-iron-line-strong);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--mt-iron-accent) 0 5px, transparent 6px),
+    radial-gradient(circle, rgba(204, 255, 0, 0.16), transparent 70%);
+}
+
+.muscle-training-page .mt-target-card strong {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  color: var(--mt-iron-ink);
+  font-size: 1.32rem;
+}
+
+.muscle-training-page .mt-target-card small {
+  position: relative;
+  z-index: 1;
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-target-card.is-active {
+  border-color: var(--mt-iron-accent) !important;
+  box-shadow: inset 4px 0 0 var(--mt-iron-accent), 0 0 24px rgba(204, 255, 0, 0.14) !important;
+}
+
+.muscle-training-page .mt-target-card:focus-visible,
+.muscle-training-page .strength-plan-exercise-row:focus-visible,
+.muscle-training-page .strength-plan-primary-btn:focus-visible,
+.muscle-training-page .mt-friendly-secondary-btn:focus-visible {
+  outline: 3px solid rgba(115, 244, 255, 0.82);
+  outline-offset: 3px;
+}
+
+.muscle-training-page .mt-week-strip {
+  display: grid;
+  gap: 16px;
+  padding: clamp(16px, 2vw, 24px);
+}
+
+.muscle-training-page .mt-week-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(118px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.muscle-training-page .mt-strip-day {
+  display: grid;
+  min-height: 142px;
+  align-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+.muscle-training-page .mt-strip-day.is-today {
+  border-color: var(--mt-iron-accent) !important;
+  box-shadow: inset 0 3px 0 var(--mt-iron-accent) !important;
+}
+
+.muscle-training-page .mt-strip-day-label {
+  color: var(--mt-iron-ink);
+  font-weight: 900;
+}
+
+.muscle-training-page .mt-strip-marker-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.muscle-training-page .mt-strip-marker-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.muscle-training-page .mt-strip-marker-run,
+.muscle-training-page .mt-strip-marker-strength {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--mt-iron-muted);
+  background: var(--mt-iron-surface);
+}
+
+.muscle-training-page .mt-strip-marker-run {
+  border-radius: 50%;
+}
+
+.muscle-training-page .mt-strip-marker-strength {
+  border-color: var(--mt-iron-accent);
+  background: var(--mt-iron-accent);
+  transform: rotate(45deg);
+}
+
+.muscle-training-page .mt-strip-badge {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 4px 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-strip-badge-strength {
+  border-color: var(--mt-iron-line-strong);
+  color: var(--mt-iron-accent);
+}
+
+.muscle-training-page .mt-strip-day-dist {
+  color: var(--mt-iron-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-progress-band {
+  display: grid;
+  gap: 16px;
+}
+
+.muscle-training-page .mt-progress-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(150px, 0.5fr));
+  gap: 12px;
+}
+
+.muscle-training-page .mt-progress-chart,
+.muscle-training-page .mt-progress-metric {
+  padding: 18px;
+}
+
+.muscle-training-page .mt-progress-chart {
+  display: grid;
+  gap: 18px;
+}
+
+.muscle-training-page .mt-progress-bar-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.42fr) minmax(86px, 0.28fr) minmax(160px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.muscle-training-page .mt-progress-bar-row strong {
+  color: var(--mt-iron-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-progress-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.muscle-training-page .mt-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mt-iron-cyan), var(--mt-iron-accent));
+}
+
+.muscle-training-page .mt-progress-bar-muted span {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.muscle-training-page .mt-progress-metric {
+  display: grid;
+  align-content: space-between;
+  min-height: 120px;
+}
+
+.muscle-training-page .mt-anatomy-command-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.38fr);
+  gap: 18px;
+  min-height: auto !important;
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .mt-anatomy-command-map .mt-body-measure-atlas,
+.muscle-training-page .mt-anatomy-command-map .muscle-map-card {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .mt-anatomy-command-copy {
+  display: grid;
+  align-content: end;
+  gap: 14px;
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  padding: 18px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.muscle-training-page .mt-anatomy-command-copy strong {
+  color: var(--mt-iron-ink) !important;
+  font-size: clamp(1.65rem, 2.4vw, 2.5rem) !important;
+  line-height: 1.05 !important;
+  letter-spacing: 0 !important;
+}
+
+.muscle-training-page .mt-anatomy-command-copy p {
+  color: var(--mt-iron-muted) !important;
+}
+
+.muscle-training-page .strength-plan-focus-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.muscle-training-page .strength-plan-focus-pills span {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 6px 9px;
+  background: rgba(204, 255, 0, 0.08);
+  color: var(--mt-iron-accent);
+}
+
+.muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"] {
+  padding: clamp(18px, 2.4vw, 30px) !important;
+}
+
+.muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  gap: 18px;
+}
+
+.muscle-training-page .strength-plan-protocol {
+  display: grid;
+  gap: 16px;
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .strength-plan-protocol-list {
+  display: grid;
+  gap: 10px;
+}
+
+.muscle-training-page .strength-plan-exercise-row {
+  display: grid;
+  grid-template-columns: minmax(94px, 0.18fr) minmax(0, 1fr) minmax(220px, 0.45fr);
+  gap: 14px;
+  width: 100%;
+  min-height: 116px;
+  align-items: center;
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: var(--mt-iron-ink) !important;
+  text-align: left;
+  cursor: pointer;
+}
+
+.muscle-training-page .strength-plan-exercise-row.is-selected {
+  border-color: var(--mt-iron-accent) !important;
+  box-shadow: inset 4px 0 0 var(--mt-iron-accent), 0 0 18px rgba(204, 255, 0, 0.1) !important;
+}
+
+.muscle-training-page .strength-plan-exercise-media {
+  display: grid;
+  grid-template-columns: 32px minmax(48px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.muscle-training-page .strength-plan-exercise-order {
+  color: var(--mt-iron-accent);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .strength-plan-exercise-copy h3,
+.muscle-training-page .mt-exercise-detail-panel h3 {
+  margin: 0;
+  color: var(--mt-iron-ink);
+  font-size: clamp(1.2rem, 1.7vw, 1.65rem);
+  letter-spacing: 0;
+}
+
+.muscle-training-page .strength-plan-exercise-copy p,
+.muscle-training-page .strength-plan-exercise-meta em {
+  color: var(--mt-iron-muted) !important;
+}
+
+.muscle-training-page .strength-plan-exercise-kicker {
+  color: var(--mt-iron-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.muscle-training-page .strength-plan-exercise-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.muscle-training-page .strength-plan-exercise-meta div {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.muscle-training-page .strength-plan-exercise-meta span {
+  display: block;
+  color: var(--mt-iron-dim);
+  font-size: 0.75rem;
+}
+
+.muscle-training-page .strength-plan-exercise-meta strong {
+  color: var(--mt-iron-ink);
+}
+
+.muscle-training-page .mt-exercise-detail-panel {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .mt-exercise-detail-steps,
+.muscle-training-page .mt-exercise-detail-ladders {
+  display: grid;
+  gap: 10px;
+}
+
+.muscle-training-page .mt-exercise-detail-steps > strong {
+  color: var(--mt-iron-accent);
+}
+
+.muscle-training-page .mt-exercise-detail-steps article,
+.muscle-training-page .mt-exercise-detail-ladders article {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.muscle-training-page .mt-exercise-detail-ladders article {
+  grid-template-columns: 1fr;
+}
+
+.muscle-training-page .mt-exercise-detail-steps article span,
+.muscle-training-page .mt-exercise-detail-ladders article span {
+  color: var(--mt-iron-accent);
+  font-weight: 900;
+}
+
+.muscle-training-page .strength-plan-cta-panel {
+  display: grid;
+  gap: 10px;
+  padding: 16px !important;
+}
+
+.muscle-training-page .strength-plan-cta-panel h3 {
+  margin: 0;
+  color: var(--mt-iron-ink);
+}
+
+.muscle-training-page .strength-plan-cta-panel p {
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .strength-plan-control-deck {
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .strength-plan-control-head,
+.muscle-training-page .muscle-preference-head,
+.muscle-training-page .muscle-status-source {
+  color: var(--mt-iron-ink);
+}
+
+.muscle-training-page .strength-plan-control-head p,
+.muscle-training-page .muscle-preference-head p,
+.muscle-training-page .muscle-status-source span {
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-settings-summary,
+.muscle-training-page .muscle-panel,
+.muscle-training-page .muscle-pref-field,
+.muscle-training-page .muscle-day-chip,
+.muscle-training-page .muscle-secondary-btn,
+.muscle-training-page .primary-action-btn {
+  border-radius: 8px !important;
+}
+
+.muscle-training-page .mt-settings-summary,
+.muscle-training-page .muscle-panel {
+  border: 1px solid var(--mt-iron-line) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .muscle-pref-field :is(input, select) {
+  border-color: var(--mt-iron-line) !important;
+  background: #0f120f !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .muscle-day-chip.active,
+.muscle-training-page .primary-action-btn {
+  border-color: var(--mt-iron-accent) !important;
+  background: var(--mt-iron-accent) !important;
+  color: #071007 !important;
+}
+
+.muscle-training-page .primary-action-btn:disabled {
+  border-color: var(--mt-iron-line) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--mt-iron-dim) !important;
+}
+
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .muscle-training-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  margin-inline: 0 !important;
+  padding-inline: 0 !important;
+}
+
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .mt-strength-lab[data-ironpulse-strength-lab="true"] {
+  padding: clamp(18px, 2.4vw, 34px) !important;
+}
+
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-content-grid {
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr) !important;
+  gap: 18px !important;
+}
+
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-exercise-row {
+  grid-template-columns: minmax(94px, 0.18fr) minmax(0, 1fr) minmax(220px, 0.45fr) !important;
+  gap: 14px !important;
+  padding: 12px !important;
+}
+
+@media (max-width: 1180px) {
+  .muscle-training-page .mt-iron-hero,
+  .muscle-training-page .mt-progress-grid,
+  .muscle-training-page .mt-anatomy-command-board,
+  .muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .muscle-training-page .mt-iron-stack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .muscle-training-page .mt-exercise-detail-panel {
+    position: static;
+  }
+
+  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-content-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .muscle-training-canvas {
+    background-size: 20px 20px, 20px 20px, auto, auto, auto;
+  }
+
+  .muscle-training-page .mt-strength-lab[data-ironpulse-strength-lab="true"],
+  .muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"],
+  .muscle-training-page .strength-plan-control-deck {
+    padding: 14px !important;
+  }
+
+  .muscle-training-page .mt-iron-verdict h1 {
+    font-size: clamp(3.4rem, 18vw, 5.2rem);
+  }
+
+  .muscle-training-page .mt-iron-stack,
+  .muscle-training-page .mt-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .muscle-training-page .mt-target-card-grid,
+  .muscle-training-page .mt-week-strip-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(210px, 78vw);
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .muscle-training-page .mt-target-card,
+  .muscle-training-page .mt-strip-day {
+    scroll-snap-align: start;
+  }
+
+  .muscle-training-page .mt-progress-bar-row,
+  .muscle-training-page .strength-plan-exercise-row {
+    grid-template-columns: 1fr;
+  }
+
+  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-exercise-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .muscle-training-page .mt-iron-section-head {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muscle-training-page * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* IRONPULSE reference-one strength home, route-scoped. */
+.hermes-site-frame[data-route-path="/muscle-training"] .runner-shell-canvas::before {
+  display: none !important;
+}
+
+.hermes-site-frame[data-route-path="/muscle-training"] .muscle-training-canvas {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(204, 255, 0, 0.08), transparent 24rem),
+    radial-gradient(circle at 82% 34%, rgba(126, 255, 243, 0.07), transparent 28rem),
+    #0d0d0d !important;
+  margin: 0 !important;
+  padding: clamp(22px, 3.2vw, 48px) !important;
+  color: #f3f3ee !important;
+}
+
+.mt-ironpulse-page {
+  --mt-ironpulse-bg: #0d0d0d;
+  --mt-ironpulse-panel: #1b1b1b;
+  --mt-ironpulse-panel-2: #242424;
+  --mt-ironpulse-line: rgba(224, 232, 210, 0.18);
+  --mt-ironpulse-muted: #c8cfb7;
+  --mt-ironpulse-dim: #848978;
+  --mt-ironpulse-acid: #ccff00;
+  --mt-ironpulse-cyan: #94fff5;
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  color: #f5f5f0;
+  letter-spacing: 0;
+  background: transparent !important;
+}
+
+.mt-ironpulse-page,
+.mt-ironpulse-page * {
+  box-sizing: border-box;
+}
+
+.mt-ironpulse-page :is(h1, h2, h3, p) {
+  margin: 0;
+}
+
+.mt-ip-home {
+  display: grid;
+  gap: clamp(28px, 4vw, 48px);
+}
+
+.mt-ip-volume-goal {
+  display: grid;
+  grid-template-columns: minmax(190px, auto) auto minmax(260px, auto);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3vw, 34px);
+  padding-top: 0;
+  text-align: left;
+}
+
+.mt-ip-volume-goal h1,
+.mt-ip-section-head h2,
+.mt-ip-records h2 {
+  color: #f4f4ef;
+  font-size: clamp(1.75rem, 2.5vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.mt-ip-ring-card {
+  width: min(186px, 42vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(204, 255, 0, 0.12);
+  border-radius: 8px;
+  background: #101010;
+  box-shadow: 0 0 28px rgba(204, 255, 0, 0.08);
+}
+
+.mt-ip-ring {
+  position: relative;
+  width: 86%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.mt-ip-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-86deg);
+}
+
+.mt-ip-ring-track,
+.mt-ip-ring-progress {
+  fill: none;
+  stroke-width: 9;
+}
+
+.mt-ip-ring-track {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.mt-ip-ring-progress {
+  stroke: var(--mt-ironpulse-acid);
+  stroke-linecap: round;
+  stroke-dasharray: 365;
+  filter: drop-shadow(0 0 12px rgba(204, 255, 0, 0.5));
+}
+
+.mt-ip-ring-center {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+}
+
+.mt-ip-ring-center strong {
+  color: var(--mt-ironpulse-acid);
+  font-size: clamp(1.85rem, 3vw, 2.55rem);
+  font-weight: 950;
+  line-height: 0.9;
+}
+
+.mt-ip-ring-center span {
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mt-ip-volume-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 16px;
+  width: min(360px, 100%);
+}
+
+.mt-ip-volume-metrics article {
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: #191919;
+  padding: 12px 16px;
+}
+
+.mt-ip-volume-metrics span,
+.mt-ip-current-split span,
+.mt-ip-records .mt-ip-section-head span,
+.mt-ip-protocol .mt-ip-section-head span,
+.mt-ip-status-panel > span,
+.mt-ip-detail-panel > span {
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mt-ip-volume-metrics strong {
+  display: block;
+  color: #f6f6f1;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.mt-ip-current-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  border: 1px solid rgba(204, 255, 0, 0.22);
+  border-left: 5px solid var(--mt-ironpulse-acid);
+  border-radius: 6px;
+  background: #262626;
+  padding: clamp(18px, 2vw, 26px) clamp(20px, 3vw, 34px);
+}
+
+.mt-ip-current-split span {
+  display: inline-flex;
+  width: max-content;
+  margin-bottom: 8px;
+  padding: 4px 9px;
+  color: var(--mt-ironpulse-acid);
+  background: rgba(204, 255, 0, 0.09);
+  border-radius: 2px;
+}
+
+.mt-ip-current-split h2 {
+  color: #f2f2ed;
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.mt-ip-current-split p {
+  margin-top: 7px;
+  color: #e1e7d6;
+}
+
+.mt-ip-protocol-workbench {
+  overflow: hidden;
+}
+
+.mt-ip-workbench-head {
+  align-items: center;
+  border-bottom: 1px solid var(--mt-ironpulse-line);
+  margin-bottom: 0;
+  padding-bottom: 20px;
+}
+
+.mt-ip-workbench-head h2 {
+  max-width: 620px;
+  color: #fff;
+  font-size: clamp(2.8rem, 5.6vw, 5rem);
+  font-style: italic;
+  font-weight: 950;
+  line-height: 0.92;
+  text-shadow: 2px 2px 0 rgba(148, 255, 245, 0.32);
+}
+
+.mt-ip-workbench-head p {
+  max-width: 520px;
+  color: #ecf4d9;
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  line-height: 1.45;
+}
+
+.mt-ip-target-filter-rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin: 0 0 18px;
+  padding: 14px 2px 16px;
+  scrollbar-width: thin;
+}
+
+.mt-ip-filter-chip {
+  min-width: 132px;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  border: 1px solid rgba(224, 232, 210, 0.18);
+  border-radius: 8px;
+  background: #101010;
+  color: #f7f7f0;
+  padding: 7px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-ip-filter-chip img {
+  grid-row: 1 / 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  filter: saturate(0.82) contrast(1.14) brightness(0.72);
+}
+
+.mt-ip-filter-chip span {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.mt-ip-filter-chip small {
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.mt-ip-filter-chip--all {
+  grid-template-columns: 1fr;
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.12), #101010);
+}
+
+.mt-ip-filter-chip--all span,
+.mt-ip-filter-chip--all small {
+  grid-column: 1;
+}
+
+.mt-ip-filter-chip:is(:hover, :focus-visible, .is-active) {
+  border-color: rgba(204, 255, 0, 0.75);
+  outline: none;
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.16), #111);
+  box-shadow: 0 0 0 2px rgba(204, 255, 0, 0.12), 0 0 22px rgba(204, 255, 0, 0.12);
+}
+
+.mt-ip-primary-btn {
+  min-width: 190px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgba(204, 255, 0, 0.74);
+  border-radius: 8px;
+  background: var(--mt-ironpulse-acid);
+  color: #081000;
+  font-weight: 950;
+  letter-spacing: 0;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.24);
+}
+
+.mt-ip-btn-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.mt-ip-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.mt-ip-section-head button {
+  border: 0;
+  background: transparent;
+  color: var(--mt-ironpulse-cyan);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.mt-ip-section-head p {
+  max-width: 440px;
+  color: var(--mt-ironpulse-muted);
+}
+
+.mt-ip-target-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mt-ip-target-card {
+  position: relative;
+  min-height: 0;
+  aspect-ratio: 1.06;
+  overflow: hidden;
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: #101010;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.mt-ip-target-card img,
+.mt-ip-target-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.mt-ip-target-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.82) contrast(1.14) brightness(0.78);
+  transform: scale(1.01);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.mt-ip-target-overlay {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05) 18%, rgba(0, 0, 0, 0.42) 58%, rgba(0, 0, 0, 0.88) 100%),
+    radial-gradient(circle at 50% 22%, rgba(204, 255, 0, 0.1), transparent 40%);
+}
+
+.mt-ip-target-card strong,
+.mt-ip-target-card small {
+  position: absolute;
+  left: 14px;
+  z-index: 1;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
+}
+
+.mt-ip-target-card strong {
+  bottom: 48px;
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  font-weight: 950;
+}
+
+.mt-ip-target-card small {
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: rgba(244, 244, 238, 0.78);
+  font-weight: 800;
+}
+
+.mt-ip-target-card small span {
+  border: 1px solid rgba(204, 255, 0, 0.2);
+  border-radius: 999px;
+  background: rgba(8, 8, 8, 0.62);
+  padding: 3px 7px;
+  color: #f4f6df;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.mt-ip-target-card:is(:hover, :focus-visible, .is-active) {
+  border-color: rgba(204, 255, 0, 0.72);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(204, 255, 0, 0.14), 0 0 26px rgba(204, 255, 0, 0.12);
+}
+
+.mt-ip-target-card:is(:hover, :focus-visible, .is-active) img {
+  filter: saturate(0.96) contrast(1.2) brightness(0.88);
+  transform: scale(1.045);
+}
+
+.mt-ip-record-list {
+  display: grid;
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #191919;
+}
+
+.mt-ip-record-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 13px 16px;
+}
+
+.mt-ip-record-row + .mt-ip-record-row {
+  border-top: 1px solid var(--mt-ironpulse-line);
+}
+
+.mt-ip-record-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(204, 255, 0, 0.13);
+  color: var(--mt-ironpulse-acid);
+}
+
+.mt-ip-record-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mt-ip-record-row strong {
+  color: #f7f7f1;
+  font-weight: 900;
+}
+
+.mt-ip-record-row p {
+  margin-top: 3px;
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.86rem;
+}
+
+.mt-ip-record-row > span {
+  color: var(--mt-ironpulse-acid);
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.mt-ip-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.6fr);
+  gap: 18px;
+}
+
+.mt-ip-status-panel,
+.mt-ip-protocol,
+.mt-ip-detail-panel,
+.mt-ip-empty-panel,
+.mt-ironpulse-page .strength-plan-control-deck,
+.mt-ironpulse-page .muscle-panel {
+  border: 1px solid var(--mt-ironpulse-line) !important;
+  border-radius: 8px !important;
+  background: #181818 !important;
+  color: #f5f5ef !important;
+  box-shadow: none !important;
+}
+
+.mt-ip-status-panel,
+.mt-ip-protocol {
+  padding: clamp(18px, 2.2vw, 28px);
+}
+
+.mt-ip-status-panel h2 {
+  margin: 18px 0 12px;
+  color: #f6f6f0;
+  font-size: clamp(1.65rem, 2.6vw, 2.4rem);
+  font-weight: 950;
+  line-height: 1.02;
+}
+
+.mt-ip-status-panel p {
+  color: #d9dfce;
+  line-height: 1.55;
+}
+
+.mt-ip-status-metrics {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.mt-ip-status-metrics span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mt-ironpulse-muted);
+  border-top: 1px solid var(--mt-ironpulse-line);
+  padding-top: 10px;
+}
+
+.mt-ip-status-metrics strong {
+  color: #f7f7f2;
+}
+
+.mt-ip-protocol-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.46fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.mt-ip-exercise-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mt-ip-exercise-section-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 2px 4px;
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.mt-ip-exercise-section-label span {
+  color: var(--mt-ironpulse-acid);
+}
+
+.mt-ip-exercise-section-label em {
+  color: var(--mt-ironpulse-muted);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.mt-ip-exercise-section-label--library {
+  margin-top: 6px;
+  border-top: 1px solid var(--mt-ironpulse-line);
+  padding-top: 14px;
+}
+
+.mt-ip-exercise-row {
+  display: grid;
+  grid-template-columns: 54px minmax(170px, 1.2fr) minmax(142px, 0.7fr) minmax(96px, 0.55fr) minmax(120px, 0.85fr);
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: #101010;
+  color: #f5f5ef;
+  min-height: 86px;
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-ip-exercise-row > span:first-child {
+  color: var(--mt-ironpulse-cyan);
+  font-size: 1.18rem;
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row strong {
+  color: #fff;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row em,
+.mt-ip-exercise-row small,
+.mt-ip-exercise-row p {
+  color: var(--mt-ironpulse-muted);
+  font-style: normal;
+  font-size: 0.85rem;
+}
+
+.mt-ip-exercise-row p {
+  grid-column: 2 / -1;
+}
+
+.mt-ip-exercise-row p b {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--mt-ironpulse-acid);
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row.is-library {
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.08), rgba(16, 16, 16, 0.96));
+  border-color: rgba(204, 255, 0, 0.18);
+}
+
+.mt-ip-exercise-row.is-library > span:first-child {
+  color: var(--mt-ironpulse-cyan);
+}
+
+.mt-ip-exercise-row:is(:hover, :focus-visible, .is-selected) {
+  border-color: rgba(204, 255, 0, 0.64);
+  outline: none;
+  background: #151515;
+  box-shadow: inset 0 0 0 1px rgba(204, 255, 0, 0.18);
+}
+
+.mt-ip-detail-panel {
+  position: sticky;
+  top: 18px;
+  padding: clamp(18px, 2vw, 26px);
+}
+
+.mt-ip-detail-panel h3 {
+  margin-top: 12px;
+  color: #fff;
+  font-size: clamp(1.8rem, 3vw, 2.55rem);
+  font-style: italic;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.mt-ip-detail-panel p,
+.mt-ip-detail-steps p {
+  color: var(--mt-ironpulse-muted);
+  line-height: 1.55;
+}
+
+.mt-ip-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.mt-ip-detail-tags span,
+.mt-ironpulse-page .muscle-pill,
+.mt-ironpulse-page .muscle-day-chip {
+  border: 1px solid rgba(204, 255, 0, 0.24) !important;
+  border-radius: 6px !important;
+  background: rgba(204, 255, 0, 0.08) !important;
+  color: #f1f8df !important;
+}
+
+.mt-ip-detail-steps {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--mt-ironpulse-line);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.mt-ip-detail-steps article {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  border-bottom: 1px solid var(--mt-ironpulse-line);
+  padding-bottom: 10px;
+}
+
+.mt-ip-detail-steps span {
+  color: var(--mt-ironpulse-acid);
+  font-weight: 950;
+}
+
+.mt-ip-empty-panel {
+  padding: 18px;
+}
+
+.mt-ip-plan-empty {
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: rgba(204, 255, 0, 0.045);
+}
+
+.mt-ip-library-note {
+  margin-top: 14px;
+  border-top: 1px solid var(--mt-ironpulse-line);
+  padding-top: 12px;
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.88rem;
+}
+
+.mt-ironpulse-page .strength-plan-control-deck {
+  margin-top: 8px;
+  padding: clamp(18px, 2.4vw, 30px) !important;
+}
+
+.mt-ironpulse-page .strength-plan-control-head,
+.mt-ironpulse-page .muscle-preference-head {
+  color: #f7f7f0;
+}
+
+.mt-ironpulse-page .mt-settings-summary,
+.mt-ironpulse-page .primary-action-btn,
+.mt-ironpulse-page .muscle-secondary-btn {
+  border-radius: 8px !important;
+}
+
+.mt-ironpulse-page .primary-action-btn {
+  background: var(--mt-ironpulse-acid) !important;
+  color: #081000 !important;
+  border: 1px solid var(--mt-ironpulse-acid) !important;
+}
+
+.mt-ironpulse-page :is(input, select) {
+  background: #101010 !important;
+  color: #f5f5ee !important;
+  border-color: var(--mt-ironpulse-line) !important;
+}
+
+@media (max-width: 1100px) {
+  .mt-ip-secondary-grid,
+  .mt-ip-protocol-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-ip-detail-panel {
+    position: static;
+  }
+
+  .mt-ip-volume-goal {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .hermes-site-frame[data-route-path="/muscle-training"] .muscle-training-canvas {
+    padding: 18px 14px !important;
+  }
+
+  .mt-ip-current-split {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mt-ip-primary-btn {
+    width: 100%;
+  }
+
+  .mt-ip-target-filter-rail {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 8px;
+  }
+
+  .mt-ip-filter-chip {
+    min-width: 68vw;
+    scroll-snap-align: start;
+  }
+
+  .mt-ip-record-row {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .mt-ip-record-row > span {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .mt-ip-exercise-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .mt-ip-detail-panel {
+    order: -1;
+  }
+
+  .mt-ip-exercise-row :is(em, small, p) {
+    grid-column: 2;
+  }
+
+  .mt-ip-workbench-head {
+    align-items: start;
+    display: grid;
+  }
+
+  .mt-ip-workbench-head h2 {
+    font-size: clamp(2.35rem, 13vw, 3.6rem);
+  }
+
+  .mt-ip-volume-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
 }
