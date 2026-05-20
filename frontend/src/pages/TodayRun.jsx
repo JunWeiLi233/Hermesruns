@@ -522,7 +522,7 @@ export default function TodayRun() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page today-run-plan-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page today-run-plan-page today-run-command-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -590,7 +590,7 @@ export default function TodayRun() {
           </div>
         </header>
 
-        <div className="runner-shell-canvas today-run-plan-canvas">
+        <div className="runner-shell-canvas today-run-plan-canvas today-run-command-canvas">
           <section className="today-run-coaching-strip" aria-label={t('today_run.coaching_intelligence_title')}>
             <div className="today-run-coaching-strip-inner">
               <article className={`today-run-coaching-answer today-run-coaching-answer--readiness is-verdict-${(coachPayload?.state?.readinessVerdict || tone.key).toLowerCase()}`}>
@@ -736,8 +736,8 @@ export default function TodayRun() {
             </div>
           </section>
 
-          <section className="today-run-plan-hero">
-            <div className="today-run-plan-hero-copy">
+          <section className="today-run-plan-hero today-run-command-hero">
+            <div className="today-run-plan-hero-copy today-run-command-hero-copy">
               <span className="today-run-plan-kicker">{t('today_run.stitch_focus_label')}</span>
               <h1>{marathonPlan.focusTitle}</h1>
               <p>{marathonPlan.focusCopy}</p>
@@ -849,7 +849,7 @@ export default function TodayRun() {
               )}
             </div>
 
-            <aside className="today-run-plan-hero-panel">
+            <aside className="today-run-plan-hero-panel today-run-command-readiness-panel">
               <div className="today-run-plan-panel-copy">
                 <span>{t('today_run.stitch_readiness_status')}</span>
                 <h2>{recommendation.type}</h2>
@@ -896,7 +896,7 @@ export default function TodayRun() {
             </aside>
           </section>
 
-          <section className="today-run-plan-grid">
+          <section className="today-run-plan-grid today-run-command-grid">
             <div className="today-run-plan-left">
               <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
 

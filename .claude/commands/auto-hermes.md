@@ -1,5 +1,6 @@
 ---
 name: auto-hermes
+description: Hermes adaptive workflow — picks a task from TASKS.md (or runs the concrete scope you pass), implements with verification gates, and stops cleanly after one bounded round.
 ---
 
 # Hermes Adaptive Workflow
@@ -7,7 +8,14 @@ name: auto-hermes
 Canonical Hermes repo shortcut. If `TASKS.md` exists, `/auto-hermes` alone is enough to start queue execution.
 
 ## 0. Session start
-Run [`.claude/commands/_session-start.md`](_session-start.md) — HUMAN_LOOP check, context refresh, browser harness, GitHub Issues scan, re-read triggers.
+Before the first round of any session, run the inline session checklist:
+1. Read `.ai-sync/HUMAN_LOOP.md`. If it says `pause`, `stop`, or `must-ask`, stop and report.
+2. `node .tools/auto-hermes-loop.mjs --write --runtime claude` to refresh loop state.
+3. Confirm browser proof is reachable (`node .tools/auto-hermes-browser.mjs status` or `.tools/auto-hermes-playwright.mjs doctor`) only if the round will touch browser-visible code.
+4. `node .tools/auto-hermes-issues.mjs --list` to scan open GitHub issues for must-fix overlap.
+5. Re-read `.claude/skills/_TRIGGERS.md` so skill triggers are fresh.
+
+Then proceed to Mode Switch.
 
 ## Mode Switch (check arguments first)
 

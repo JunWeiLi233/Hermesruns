@@ -11,6 +11,69 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-05-19-10
+Date: 2026-05-19
+Surface: Landing hero plate restoration on `/`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored `landing-cinematic-hero-plate` as the visible rounded cinematic container with the generated hero image living on the plate photo layer again, while the `landing-command-hero` grid now acts as the text/scrim overlay instead of a second competing background card.
+Why: The landing hero plate design had been visually flattened by newer command-hero background styles, so the intended framed plate treatment was no longer driving the first fold.
+Rollback target: `DV-2026-05-19-09`
+Notes: The generated hero image, single-column image-led first fold, removed proof board, and initial-visible reveal behavior remain intact.
+
+### Version: DV-2026-05-19-09
+Date: 2026-05-19
+Surface: Shared coach identity avatars
+Files: `frontend/src/components/CoachIdentityBadge.jsx`, `frontend/src/assets/generated/coach-identity-avatar-default.webp`, `frontend/src/utils/scheduleRemoteAssetPolicy.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the generated inline SVG coach fallback face with a project-local AI-generated photorealistic fictional running-coach portrait, so `coach-identity-avatar coach-identity-avatar--fallback` and every shared `CoachIdentityBadge` usage render a real-person-style avatar without remote image dependencies.
+Why: The user asked for a real person avatar on the coach identity fallback and other coach grids.
+Rollback target: `DV-2026-05-19-08`
+Notes: Source generation remains under `C:\Users\Junwei\.codex\generated_images\019e3aef-fafa-7720-8ca1-451adf874ce7\ig_016bb7dc754d06bd016a0c9c8541f48199932de82882787765.png`; app asset is the optimized WebP copy.
+
+### Version: DV-2026-05-19-08
+Date: 2026-05-19
+Surface: Shoes light-mode text contrast on `/shoes`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a final route-scoped Shoes contrast hardening layer for the live light runner shell so the performance heading, rotation recommendation title, sidecar metrics, health labels, shoe type badges, footer links, and shell labels stay dark/readable on warm paper cards.
+Why: The live Shoes page was inheriting older dark locker tokens, causing cream and low-contrast gray text to sit on light cards.
+Rollback target: `DV-2026-05-18-02`
+Notes: This is a contrast-only repair; shoe data loading, recommendation logic, add/edit flows, sidebar routing, and Add Shoes layout remain unchanged.
+
+### Version: DV-2026-05-19-07
+Date: 2026-05-19
+Surface: Landing hero regenerated background on `/`
+Files: `frontend/src/assets/generated/landing-command-hero-background.png`, `frontend/src/hooks/useScrollReveal.js`, `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Regenerated the raster image used by the `landing-cinematic-hero-grid landing-command-hero reveal-visible` background, replaced the project-local hero asset, and hardened reveal behavior so the first fold starts visible while reveal sections still fall back in browser runtimes without `IntersectionObserver`.
+Why: The user explicitly asked to regenerate a new image for that landing hero surface.
+Rollback target: `DV-2026-05-19-06`
+Notes: New generated source copy: `C:\Users\Junwei\.codex\generated_images\019e3aef-fafa-7720-8ca1-451adf874ce7\ig_0f7d6534248e5dbb016a0c5eefd080819883b35ce1038a9134.png`; app asset remains `frontend/src/assets/generated/landing-command-hero-background.png`.
+
+### Version: DV-2026-05-19-06
+Date: 2026-05-19
+Surface: Landing hero proof-board removal on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the hero proof/HUD panel (`landing-command-board landing-cinematic-hero-proof` / older `landing-cinematic-hud`) so the landing command hero is a single cinematic image-backed copy surface with no beige board intruding below the first fold.
+Why: The user asked to remove `landing-command-board landing-cinematic-hero-proof` from the landing page.
+Rollback target: `DV-2026-05-19-05`
+Notes: The generated background image and readable light headline treatment remain; the hero grid now forces a single column even under the public GPT Taste override.
+
+### Version: DV-2026-05-19-05
+Date: 2026-05-19
+Surface: Landing hero generated background on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/assets/generated/landing-command-hero-background.png`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a generated cinematic runner/map background image to the `landing-cinematic-hero-grid landing-command-hero reveal-visible` hero surface, wired the grid to the real repo asset, and retired the stale missing `landing-runner-hero.png` reference.
+Why: The user asked to generate a new image and place it behind the landing command hero.
+Rollback target: `DV-2026-05-19-04`
+Notes: Active image-to-code reference and copied raster source: `C:\Users\Junwei\.codex\generated_images\019e3aef-fafa-7720-8ca1-451adf874ce7\ig_0f7d6534248e5dbb016a0c5a191264819885cd402f68949670.png`; app asset copy: `frontend/src/assets/generated/landing-command-hero-background.png`.
+
+### Version: DV-2026-05-19-04
+Date: 2026-05-19
+Surface: Rewards / awards light mode on `/rewards`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Converted the active Awards page palette from a dark trophy vault to a warm ivory gallery mode, including light hero, cards, conic medal center, topbar, stat panels, progress rails, and badge boards.
+Why: The user asked to apply a light mode to the award page after the full redesign.
+Rollback target: `DV-2026-05-19-03`
+Notes: This is a route-scoped visual palette change only. Live badge data, `buildRewardShowcase`, closest-next-unlock wiring, and runner-shell navigation remain unchanged.
+
 ### Version: DV-2026-05-19-01
 Date: 2026-05-19
 Surface: Schedule light-mode text contrast on `/schedule`
@@ -2367,3 +2430,30 @@ What changed: Restored the visible GPS overlay from same-activity route polyline
 Why: The user explicitly asked to restore Heatmap to the dot version.
 Rollback target: `DV-2026-05-19-01`
 Notes: This changes only the visible overlay style. The heat-fog layer, sampled backend payload, and auth requirement stay intact.
+
+### Version: DV-2026-05-19-03
+Date: 2026-05-19
+Surface: Rewards / awards page redesign on `/rewards`
+Files: `frontend/src/pages/Rewards.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rebuilt `/rewards` into a trophy-vault awards surface with an oversized editorial hero, conic earned-progress medal, live earned/locked/run stat cards, a dedicated closest-next-unlock card powered by `upcomingRewards[0]`, earned badge preview strip, and redesigned earned/upcoming boards.
+Why: The user asked to fully redesign the award page, not just tweak the existing badge list.
+Rollback target: `DV-2026-05-19-02`
+Notes: This remains data-driven from `buildRewardShowcase`, keeps the runner-shell navigation/topbar marker, and does not introduce fake awards.
+
+### Version: DV-2026-05-19-04
+Date: 2026-05-19
+Surface: Profile next-session rail alignment on `/profile`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/profileDashboardBrandCarouselLightMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Repaired the Profile right rail so `runner-dashboard-coach-prescription runner-dashboard-profile-next-session` uses an explicit stacked grid row above the three-card reference grid and resets stale route-scoped named grid areas that caused overlap.
+Why: The user asked for the next-session card to move down and match the three bottom grids; the first pass bottom-anchored the rail but allowed old `session`/`reference` grid areas to collide.
+Rollback target: `DV-2026-05-19-03`
+Notes: This is a layout-only fix. It preserves the current Profile dossier redesign, navigation shell, data-driven workout card, and the three reference cards.
+
+### Version: DV-2026-05-19-05
+Date: 2026-05-19
+Surface: Today Run command deck redesign on `/today-run`
+Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/todayRunCommandDeckRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed `/today-run` as a full-width command deck with a decision-signal rail, oversized mission hero, conic readiness instrument, wider four-metric row, responsive workout phase grid, and dedicated light-mode gallery treatment.
+Why: The user asked to redesign the Today Run page while preserving the existing coach recommendation, weather, shoe, ACWR, wellness, and runner-shell data wiring.
+Rollback target: `DV-2026-05-19-04`
+Notes: This is a frontend presentation change only. It keeps the batch `/api/today/dashboard` data path, fallback endpoints, shared runner navigation, workout CTA behavior, and existing translated copy.
