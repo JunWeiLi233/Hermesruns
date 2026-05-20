@@ -628,9 +628,13 @@ What happens: `/auto-hermes-max` decomposes the work into disjoint lanes — one
    ${EDITOR:-nano} .env
    ```
 
-#### Slash Commands — Native After Clone
+#### Slash Commands - Native After Clone
 
-The `/auto-hermes-*` commands ship inside this repository at [.claude/commands/](.claude/commands/) (Claude Code) and [.codex/commands/](.codex/commands/) (Codex / Gemini CLI). They are **project-scoped** — Claude Code auto-discovers them the moment you open the Hermes directory.
+The `/auto-hermes-*` commands ship inside this repository at [.claude/commands/](.claude/commands/) for Claude Code and [.codex/commands/](.codex/commands/) as the versioned Codex source. Claude Code discovers project commands from the checkout. Codex native `/` autocomplete is installed by mirroring the Codex sources into `$CODEX_HOME\prompts` and `$CODEX_HOME\commands`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .tools/install-hermes-codex-commands.ps1 -SkipWsl
+```
 
 Verify after a fresh clone:
 
@@ -642,14 +646,14 @@ claude            # launches Claude Code in the Hermes directory
 
 Once Claude Code is running, type `/` and look for the `auto-hermes` family in the autocomplete dropdown, or run `/help` to list every project command. Each entry shows the one-line `description:` from the command's frontmatter.
 
-##### Which commands are Claude-native vs Codex-only
+##### Which commands are Claude-native vs Codex-native
 
 Not every command exists for both CLIs. Use this table to pick the right tool:
 
-| Command | Claude Code | Codex / Gemini |
+| Command | Claude Code | Codex native source |
 |---|---|---|
 | `/auto-hermes` | ✅ [.claude/commands/auto-hermes.md](.claude/commands/auto-hermes.md) | ✅ [.codex/commands/auto-hermes.md](.codex/commands/auto-hermes.md) |
-| `/auto-hermes-self` | ✅ [.claude/commands/auto-hermes-self.md](.claude/commands/auto-hermes-self.md) | — |
+| `/auto-hermes-self` | ✅ [.claude/commands/auto-hermes-self.md](.claude/commands/auto-hermes-self.md) | ✅ [.codex/commands/auto-hermes-self.md](.codex/commands/auto-hermes-self.md) |
 | `/auto-hermes-max` | ✅ | ✅ |
 | `/auto-hermes-attack` | ✅ | ✅ |
 | `/auto-hermes-market` | ✅ | ✅ |
@@ -658,8 +662,9 @@ Not every command exists for both CLIs. Use this table to pick the right tool:
 | `/auto-hermes-pull-main` | ✅ [.claude/commands/auto-hermes-pull-main.md](.claude/commands/auto-hermes-pull-main.md) | ✅ [.codex/commands/auto-hermes-pull-main.md](.codex/commands/auto-hermes-pull-main.md) |
 | `/auto-hermes-security` | — (run via Codex, or `node .tools/auto-hermes-security.mjs`) | ✅ [.codex/commands/auto-hermes-security.md](.codex/commands/auto-hermes-security.md) |
 | `/auto-hermes-find-shoe` | — | ✅ [.codex/commands/auto-hermes-find-shoe.md](.codex/commands/auto-hermes-find-shoe.md) |
-| `/auto-hermes-language` | — (use `/auto-hermes Polish coach-voice copy on <surface>`) | — (use `/auto-hermes` with explicit scope) |
-| `/auto-hermes-structure-update` | — (run via `node .tools/auto-hermes-structure-update.mjs`) | — |
+| `/auto-hermes-language` | — (use `/auto-hermes Polish coach-voice copy on <surface>`) | ✅ [.codex/commands/auto-hermes-language.md](.codex/commands/auto-hermes-language.md) |
+| `/auto-hermes-structure-update` | — (run via `node .tools/auto-hermes-structure-update.mjs`) | ✅ [.codex/commands/auto-hermes-structure-update.md](.codex/commands/auto-hermes-structure-update.md) |
+| `/auto-hermes-submit-main` | — | ✅ [.codex/commands/auto-hermes-submit-main.md](.codex/commands/auto-hermes-submit-main.md) |
 
 If you need a Claude-native version of a Codex-only command (for example, to run `/auto-hermes-push-main` directly inside Claude Code), copy the matching file across:
 
@@ -2160,10 +2165,10 @@ claude            # 在 Hermes 目录里启动 Claude Code
 
 并非每条命令在两个 CLI 都存在。请根据下表选用：
 
-| 命令 | Claude Code | Codex / Gemini |
+| 命令 | Claude Code | Codex 原生命令来源 |
 |---|---|---|
 | `/auto-hermes` | ✅ [.claude/commands/auto-hermes.md](.claude/commands/auto-hermes.md) | ✅ [.codex/commands/auto-hermes.md](.codex/commands/auto-hermes.md) |
-| `/auto-hermes-self` | ✅ [.claude/commands/auto-hermes-self.md](.claude/commands/auto-hermes-self.md) | — |
+| `/auto-hermes-self` | ✅ [.claude/commands/auto-hermes-self.md](.claude/commands/auto-hermes-self.md) | ✅ [.codex/commands/auto-hermes-self.md](.codex/commands/auto-hermes-self.md) |
 | `/auto-hermes-max` | ✅ | ✅ |
 | `/auto-hermes-attack` | ✅ | ✅ |
 | `/auto-hermes-market` | ✅ | ✅ |
@@ -2171,8 +2176,9 @@ claude            # 在 Hermes 目录里启动 Claude Code
 | `/auto-hermes-push-main` | —（用 Codex / Gemini，或在 shell 里执行 `node .tools/auto-hermes-push-main.mjs --execute --write --message "<msg>"`）| ✅ [.codex/commands/auto-hermes-push-main.md](.codex/commands/auto-hermes-push-main.md) |
 | `/auto-hermes-security` | —（用 Codex，或执行 `node .tools/auto-hermes-security.mjs`）| ✅ [.codex/commands/auto-hermes-security.md](.codex/commands/auto-hermes-security.md) |
 | `/auto-hermes-find-shoe` | — | ✅ [.codex/commands/auto-hermes-find-shoe.md](.codex/commands/auto-hermes-find-shoe.md) |
-| `/auto-hermes-language` | —（在 `/auto-hermes` 后附加文案润色范围即可）| —（同上）|
-| `/auto-hermes-structure-update` | —（执行 `node .tools/auto-hermes-structure-update.mjs`）| — |
+| `/auto-hermes-language` | —（在 `/auto-hermes` 后附加文案润色范围即可）| ✅ [.codex/commands/auto-hermes-language.md](.codex/commands/auto-hermes-language.md) |
+| `/auto-hermes-structure-update` | —（执行 `node .tools/auto-hermes-structure-update.mjs`）| ✅ [.codex/commands/auto-hermes-structure-update.md](.codex/commands/auto-hermes-structure-update.md) |
+| `/auto-hermes-submit-main` | — | ✅ [.codex/commands/auto-hermes-submit-main.md](.codex/commands/auto-hermes-submit-main.md) |
 
 如果希望某条 Codex 专属命令在 Claude Code 里也能原生使用（例如 `/auto-hermes-push-main`），把对应文件复制过去：
 
