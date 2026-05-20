@@ -82,8 +82,44 @@ assert.doesNotMatch(
 
 assert.match(
   styleSource,
+  /\.runner-dashboard-page \.runner-dashboard-profile-purpose-cockpit \.runner-dashboard-coach-secondary\s*\{[\s\S]*align-self:\s*stretch !important;[\s\S]*align-content:\s*end !important;/,
+  'Profile next-session rail should stretch and bottom-anchor so the prescription card lands with the bottom reference grid.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page \.runner-dashboard-profile-purpose-cockpit \.runner-dashboard-coach-secondary\s*\{[\s\S]*grid-template-rows:\s*auto auto !important;[\s\S]*grid-auto-flow:\s*row !important;/,
+  'Profile next-session rail should keep the prescription card and reference grid in separate stacked rows instead of overlapping stale named grid areas.',
+);
+
+const legacyContentsRailIndex = styleSource.indexOf(
+  '.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary',
+);
+const bottomAnchoredRailIndex = styleSource.lastIndexOf(
+  '.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/profile"] .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary',
+);
+
+assert.ok(
+  bottomAnchoredRailIndex > legacyContentsRailIndex,
+  'Profile bottom-anchor rail override should come after the older route-scoped display: contents rule.',
+);
+
+assert.match(
+  styleSource,
   /\.runner-dashboard-profile-purpose-cockpit \.runner-dashboard-profile-next-session\s*\{[\s\S]*background:[\s\S]*linear-gradient/,
   'Profile next-session card should get the dark Analysis-style contrast panel.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page \.runner-dashboard-profile-purpose-cockpit \.runner-dashboard-profile-next-session\s*\{[\s\S]*grid-area:\s*auto !important;[\s\S]*grid-row:\s*1 !important;[\s\S]*align-self:\s*end !important;/,
+  'Profile next-session card should reset stale route-scoped grid-area placement and sit directly above the bottom reference-grid cluster.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page \.runner-dashboard-profile-purpose-cockpit \.runner-dashboard-profile-reference-grid\s*\{[\s\S]*grid-area:\s*auto !important;[\s\S]*grid-row:\s*2 !important;/,
+  'Profile reference grid should reset stale route-scoped grid-area placement so it does not overlap the next-session card.',
 );
 
 assert.match(

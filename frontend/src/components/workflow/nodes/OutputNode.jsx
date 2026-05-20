@@ -2,9 +2,13 @@ import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { FileOutput } from 'lucide-react';
 import { useI18n } from '../../../contexts/I18nContext';
+import useWorkflowStore from '../../../stores/useWorkflowStore';
+import NodeStatusBadge from './NodeStatusBadge';
 
-function OutputNode({ data, selected }) {
+function OutputNode({ id, data, selected }) {
   const { t } = useI18n();
+  const status = useWorkflowStore((s) => s.nodeStatus[id]);
+  const displayValue = (status?.status === 'done' && status?.output) || data?.output || '';
 
   return (
     <div
@@ -22,11 +26,15 @@ function OutputNode({ data, selected }) {
       <div className="wf-node-header">
         <FileOutput size={14} aria-hidden="true" />
         <span className="wf-node-type">{t('workflow_builder.output_node_type')}</span>
+        <NodeStatusBadge status={status?.status} />
       </div>
       <div className="wf-node-body">
         <div className="wf-node-output-text" role="status" aria-live="polite">
-          {data.output || t('workflow.output_placeholder')}
+          {displayValue || t('workflow.output_placeholder')}
         </div>
+        {status?.status === 'error' && status?.error && (
+          <p className="wf-node-output-error">{status.error}</p>
+        )}
       </div>
     </div>
   );

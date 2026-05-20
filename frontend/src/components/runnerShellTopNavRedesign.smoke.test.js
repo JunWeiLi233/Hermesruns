@@ -44,12 +44,18 @@ assert(
 
 [
   "key: 'territory'",
-  "key: 'rewards'",
   "key: 'workflows'",
   "t('profile.dashboard_nav_weather_engine')",
 ].forEach((needle) => {
   assert(navSource.includes(needle), `Shared runner nav is missing ${needle}.`);
 });
+
+// Rewards was removed from the shared left-side nav by explicit product decision;
+// the route still exists at /rewards but no longer appears in getRunnerShellNavItems.
+assert(
+  !navSource.includes("key: 'rewards'"),
+  'Shared runner nav should no longer surface a Rewards entry.',
+);
 
 [
   "case 'territory':",

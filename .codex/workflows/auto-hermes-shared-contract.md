@@ -140,6 +140,8 @@ Before implementation, the controller/loop pair should emit a minimal round-spec
 ### Frontend Design Decision Rule
 
 When a round enters the frontend `design-review` branch:
+- load the frontend design skill manifest with `node .tools/auto-hermes-skills.mjs --json`
+- treat `design.md` as the final Hermes visual authority and the skill manifest as execution guidance
 - explore 2-3 candidate directions internally when that improves the decision
 - choose the strongest direction autonomously from:
   - `design.md`
@@ -147,6 +149,7 @@ When a round enters the frontend `design-review` branch:
   - any explicit user-provided reference
 - carry only the selected direction into implementation and review
 - do not ask the user to choose among internal design options during a normal run
+- report any missing required frontend design skill as unavailable and use the nearest verified fallback instead of claiming it ran
 
 Escalate design choice to the Human Gate only when:
 - the design would change product scope or behavior in a non-obvious way
@@ -199,6 +202,8 @@ If Reviewer emits `reverse-recommended`:
 - Treat `/auto-hermes` as a repo workflow/command convention, not a guaranteed native app feature.
 - For self-loop, subagent, coordinator, executor, ECC, and RTK claims: use the shared claim taxonomy instead of raw yes/no wording.
 - Prefer executor-backed loop ownership over prompt-only continuation whenever an executor path is configured.
+- In the default Codex executor-backed path, worker agents run in YOLO/full-permission mode: OMX Ralph uses `--madmax`, and the bundled Codex fallback uses `--dangerously-bypass-approvals-and-sandbox`.
+- Generated coordinator and worker briefs must expose the executor permission mode so full-permission agent spawning is visible as configuration, not claimed as proof that a child agent already executed.
 
 ## Autonomous Decision Contract
 

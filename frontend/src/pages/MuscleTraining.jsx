@@ -11,6 +11,12 @@ import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import MUSCLE_MASKS from '../utils/muscleMasks.data.json';
+import targetArmsUrl from '../assets/muscle-training/target-arms.webp';
+import targetBackUrl from '../assets/muscle-training/target-back.webp';
+import targetChestUrl from '../assets/muscle-training/target-chest.webp';
+import targetCoreUrl from '../assets/muscle-training/target-core.webp';
+import targetLegsUrl from '../assets/muscle-training/target-legs.webp';
+import targetShouldersUrl from '../assets/muscle-training/target-shoulders.webp';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -32,6 +38,583 @@ const DEFAULT_PROFILE = {
 
 const CHECK_IN_RUN_TYPES = ['REST', 'EASY', 'RECOVERY', 'QUALITY', 'LONG_RUN', 'CROSS_TRAIN'];
 const CHECK_IN_ENTRY_STATES = ['PLANNED', 'ACTUAL'];
+function compoundLibraryExercise({
+  key,
+  zhName,
+  enName,
+  zhMuscles,
+  enMuscles,
+  equipment,
+  sets,
+  reps,
+  rpe,
+  zhIntent,
+  enIntent,
+  zhSteps,
+  enSteps,
+  zhRegression,
+  enRegression,
+  zhProgression,
+  enProgression,
+}) {
+  return {
+    key,
+    exercise: {
+      name: enName,
+      sets,
+      repsOrDuration: reps,
+      targetRpe: rpe,
+      tempoOrIntent: enIntent,
+      noiseLevel: 'OPTIONAL',
+      equipmentNeeded: equipment,
+    },
+    content: {
+      name: { zh: zhName, en: enName },
+      muscles: { zh: zhMuscles, en: enMuscles },
+      steps: { zh: zhSteps, en: enSteps },
+      intent: { zh: zhIntent, en: enIntent },
+      regression: { zh: zhRegression, en: enRegression },
+      progression: { zh: zhProgression, en: enProgression },
+    },
+  };
+}
+
+const TARGET_AREA_GROUPS = [
+  {
+    key: 'chest',
+    copyKey: 'targetChest',
+    image: targetChestUrl,
+    match: /chest|pec|胸/i,
+  },
+  {
+    key: 'back',
+    copyKey: 'targetBack',
+    image: targetBackUrl,
+    match: /back|lats|latissimus|scapula|背|肩胛/i,
+  },
+  {
+    key: 'legs',
+    copyKey: 'targetLegs',
+    image: targetLegsUrl,
+    match: /quad|hamstring|glute|calf|shin|tibialis|ankle|hip|leg|臀|腿|股|腘|小腿|胫|踝|髋/i,
+  },
+  {
+    key: 'shoulders',
+    copyKey: 'targetShoulders',
+    image: targetShouldersUrl,
+    match: /shoulder|deltoid|rotator|肩/i,
+  },
+  {
+    key: 'arms',
+    copyKey: 'targetArms',
+    image: targetArmsUrl,
+    match: /arm|forearm|biceps|triceps|grip|carry|手臂|前臂|二头|三头|握力|农夫/i,
+  },
+  {
+    key: 'core',
+    copyKey: 'targetCore',
+    image: targetCoreUrl,
+    match: /core|abs|oblique|trunk|plank|腹|核心|躯干|侧桥/i,
+  },
+];
+
+const EXERCISE_VIDEO_EMBEDS = {
+  'barbell-bench-press': 'https://www.youtube-nocookie.com/embed/0cXAp6WhSj4',
+  'incline-dumbbell-press': 'https://www.youtube-nocookie.com/embed/8fXfwG4ftaQ',
+  'weighted-dip': 'https://www.youtube-nocookie.com/embed/ZDOrGNvRdM0',
+  'push-up': 'https://www.youtube-nocookie.com/embed/c-lBErfxszs',
+  'pull-up': 'https://www.youtube-nocookie.com/embed/p40iUjf02j0',
+  'barbell-row': 'https://www.youtube-nocookie.com/embed/Nqh7q3zDCoQ',
+  'romanian-deadlift': 'https://www.youtube-nocookie.com/embed/5zmlnbWb-g4',
+  'chest-supported-row': 'https://www.youtube-nocookie.com/embed/oNsqMW1gPiU',
+  'barbell-squat': 'https://www.youtube-nocookie.com/embed/gcNh17Ckjgg',
+  'front-squat': 'https://www.youtube-nocookie.com/embed/_qv0m3tPd3s',
+  'deadlift': 'https://www.youtube-nocookie.com/embed/vfKwjT5-86k',
+  'bulgarian-split-squat': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'standing-overhead-press': 'https://www.youtube-nocookie.com/embed/wO0l5jW2NtQ',
+  'push-press': 'https://www.youtube-nocookie.com/embed/ep30avTSMB0',
+  'landmine-press': 'https://www.youtube-nocookie.com/embed/t9GuiNQo1O4',
+  'dumbbell-clean-press': 'https://www.youtube-nocookie.com/embed/sZ4XMWn8bAU',
+  'chin-up': 'https://www.youtube-nocookie.com/embed/Oi3bW9nQmGI',
+  'close-grip-bench': 'https://www.youtube-nocookie.com/embed/vEUyEOVn3yM',
+  'weighted-triceps-dip': 'https://www.youtube-nocookie.com/embed/gF_F67aNvuE',
+  'farmer-carry': 'https://www.youtube-nocookie.com/embed/z7E_YU9P1jU',
+  'turkish-get-up': 'https://www.youtube-nocookie.com/embed/sgd8n917Zv0',
+  'front-rack-carry': 'https://www.youtube-nocookie.com/embed/Q5kuuxaNDDM',
+  'hanging-leg-raise': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
+  'barbell-rollout': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
+};
+
+const COMPOUND_TARGET_LIBRARY = {
+  chest: [
+    compoundLibraryExercise({
+      key: 'barbell-bench-press',
+      zhName: '杠铃卧推',
+      enName: 'Barbell bench press',
+      zhMuscles: ['胸部', '肩部', '手臂'],
+      enMuscles: ['Chest', 'Shoulders', 'Arms'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '5',
+      rpe: 8,
+      zhIntent: '水平推力主项，建立上肢绝对力量',
+      enIntent: 'Primary horizontal press for upper-body strength',
+      zhSteps: ['肩胛后收下沉，脚掌踩稳。', '杠铃受控下降到胸下缘。', '向上推直，保持肩胛和躯干稳定。'],
+      enSteps: ['Retract and depress the shoulder blades with feet planted.', 'Lower the bar under control to the lower chest.', 'Press to lockout while the torso stays braced.'],
+      zhRegression: '改用哑铃卧推或俯卧撑。',
+      enRegression: 'Use dumbbell bench press or push-ups.',
+      zhProgression: '增加重量，或加入暂停卧推。',
+      enProgression: 'Add load or use paused bench reps.',
+    }),
+    compoundLibraryExercise({
+      key: 'incline-dumbbell-press',
+      zhName: '上斜哑铃卧推',
+      enName: 'Incline dumbbell press',
+      zhMuscles: ['胸部', '肩部', '手臂'],
+      enMuscles: ['Chest', 'Shoulders', 'Arms'],
+      equipment: 'DUMBBELL',
+      sets: 3,
+      reps: '6-8',
+      rpe: 7,
+      zhIntent: '上胸和肩前束复合推举',
+      enIntent: 'Compound incline press for upper chest and anterior delts',
+      zhSteps: ['凳角保持中等，不要过陡。', '哑铃下降到胸上侧，手肘略低于肩。', '向上推到哑铃接近但不碰撞。'],
+      enSteps: ['Use a moderate bench angle.', 'Lower the dumbbells to the upper chest with elbows below shoulders.', 'Press up until the dumbbells nearly meet.'],
+      zhRegression: '降低角度或减轻重量。',
+      enRegression: 'Lower the incline or reduce load.',
+      zhProgression: '增加重量或放慢离心阶段。',
+      enProgression: 'Add load or slow the eccentric.',
+    }),
+    compoundLibraryExercise({
+      key: 'weighted-dip',
+      zhName: '负重双杠臂屈伸',
+      enName: 'Weighted dip',
+      zhMuscles: ['胸部', '手臂', '肩部'],
+      enMuscles: ['Chest', 'Arms', 'Shoulders'],
+      equipment: 'GYM',
+      sets: 3,
+      reps: '5-8',
+      rpe: 8,
+      zhIntent: '大幅度下压，强化胸肩肱三头',
+      enIntent: 'Deep compound press for chest, shoulders, and triceps',
+      zhSteps: ['身体微前倾，肩膀远离耳朵。', '下降到肩部可控深度。', '向下压杠回到顶部，不耸肩。'],
+      enSteps: ['Lean slightly forward and keep shoulders away from ears.', 'Descend only as deep as control allows.', 'Press back to the top without shrugging.'],
+      zhRegression: '改用辅助臂屈伸或窄距俯卧撑。',
+      enRegression: 'Use assisted dips or close-grip push-ups.',
+      zhProgression: '逐步加负重，保持底部稳定。',
+      enProgression: 'Add load gradually while owning the bottom.',
+    }),
+    compoundLibraryExercise({
+      key: 'push-up',
+      zhName: '俯卧撑',
+      enName: 'Push-up',
+      zhMuscles: ['胸部', '核心', '手臂'],
+      enMuscles: ['Chest', 'Core', 'Arms'],
+      equipment: 'BODYWEIGHT',
+      sets: 3,
+      reps: '8-15',
+      rpe: 7,
+      zhIntent: '低门槛复合推力，保持躯干刚性',
+      enIntent: 'Accessible compound press with trunk stiffness',
+      zhSteps: ['身体从肩到脚保持直线。', '胸口向地面下降，手肘约 45 度。', '推起时肋骨不要外翻。'],
+      enSteps: ['Keep a straight line from shoulders to feet.', 'Lower the chest with elbows around 45 degrees.', 'Press up without flaring the ribs.'],
+      zhRegression: '改为上斜俯卧撑。',
+      enRegression: 'Use incline push-ups.',
+      zhProgression: '加负重或改为环上俯卧撑。',
+      enProgression: 'Add load or use ring push-ups.',
+    }),
+  ],
+  back: [
+    compoundLibraryExercise({
+      key: 'pull-up',
+      zhName: '引体向上',
+      enName: 'Pull-up',
+      zhMuscles: ['背部', '手臂', '核心'],
+      enMuscles: ['Back', 'Arms', 'Core'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '4-8',
+      rpe: 8,
+      zhIntent: '垂直拉力主项，强化背阔肌和握力',
+      enIntent: 'Primary vertical pull for lats and grip',
+      zhSteps: ['先下压肩胛，再开始拉。', '胸口靠近横杠，身体不摆动。', '受控下降到手臂伸直。'],
+      enSteps: ['Depress the scapula before pulling.', 'Pull the chest toward the bar without swinging.', 'Lower under control to full arm extension.'],
+      zhRegression: '用弹力带辅助或做下放。',
+      enRegression: 'Use band assistance or eccentric-only reps.',
+      zhProgression: '加负重或加入顶部停顿。',
+      enProgression: 'Add load or pause at the top.',
+    }),
+    compoundLibraryExercise({
+      key: 'barbell-row',
+      zhName: '杠铃划船',
+      enName: 'Barbell row',
+      zhMuscles: ['背部', '核心', '手臂'],
+      enMuscles: ['Back', 'Core', 'Arms'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '6',
+      rpe: 8,
+      zhIntent: '髋铰链位水平拉，训练背部和躯干抗弯',
+      enIntent: 'Horizontal pull from a hinge position',
+      zhSteps: ['髋部后移，背部保持长。', '杠铃拉向下肋，肘部向后。', '下降时保持躯干角度不变。'],
+      enSteps: ['Hinge back and keep the spine long.', 'Row the bar toward the lower ribs.', 'Lower without changing torso angle.'],
+      zhRegression: '改成胸托划船。',
+      enRegression: 'Use chest-supported rows.',
+      zhProgression: '增加重量或使用暂停划船。',
+      enProgression: 'Add load or pause each row.',
+    }),
+    compoundLibraryExercise({
+      key: 'romanian-deadlift',
+      zhName: '罗马尼亚硬拉',
+      enName: 'Romanian deadlift',
+      zhMuscles: ['背部', '臀部', '腿部'],
+      enMuscles: ['Back', 'Glutes', 'Legs'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '6',
+      rpe: 8,
+      zhIntent: '后链复合力量，强化髋铰链和背部张力',
+      enIntent: 'Posterior-chain compound hinge',
+      zhSteps: ['膝盖微屈，髋部向后。', '杠铃贴腿下降到腘绳肌拉紧。', '收髋站起，背阔肌保持张力。'],
+      enSteps: ['Keep soft knees and send hips back.', 'Slide the bar down until hamstrings load.', 'Extend the hips while lats stay tight.'],
+      zhRegression: '改用哑铃或缩短下降幅度。',
+      enRegression: 'Use dumbbells or shorten the range.',
+      zhProgression: '增加重量或放慢下降。',
+      enProgression: 'Add load or slow the descent.',
+    }),
+    compoundLibraryExercise({
+      key: 'chest-supported-row',
+      zhName: '胸托划船',
+      enName: 'Chest-supported row',
+      zhMuscles: ['背部', '手臂'],
+      enMuscles: ['Back', 'Arms'],
+      equipment: 'DUMBBELL',
+      sets: 3,
+      reps: '8-10',
+      rpe: 7,
+      zhIntent: '减少腰背负担，集中训练划船力量',
+      enIntent: 'Row strength with less low-back demand',
+      zhSteps: ['胸口贴稳斜凳。', '肩胛先后收，再拉肘。', '顶端停顿后慢慢放回。'],
+      enSteps: ['Keep the chest supported on the bench.', 'Retract shoulder blades before driving elbows.', 'Pause at the top and lower slowly.'],
+      zhRegression: '减轻重量或缩短顶端停顿。',
+      enRegression: 'Reduce load or shorten the pause.',
+      zhProgression: '增加重量或双侧改单侧。',
+      enProgression: 'Add load or row one arm at a time.',
+    }),
+  ],
+  legs: [
+    compoundLibraryExercise({
+      key: 'barbell-squat',
+      zhName: '杠铃深蹲',
+      enName: 'Barbell squat',
+      zhMuscles: ['腿部', '臀部', '核心'],
+      enMuscles: ['Legs', 'Glutes', 'Core'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '5',
+      rpe: 8,
+      zhIntent: '下肢复合主项，建立全身张力',
+      enIntent: 'Primary lower-body compound lift',
+      zhSteps: ['吸气撑紧，脚掌三点踩地。', '膝髋同步下沉，杠铃在中足上方。', '蹬地站起，胸腔和骨盆保持堆叠。'],
+      enSteps: ['Brace and root through the tripod foot.', 'Descend with knees and hips together over mid-foot.', 'Drive up while ribs and pelvis stay stacked.'],
+      zhRegression: '改成高箱深蹲或杯式深蹲。',
+      enRegression: 'Use box squats or goblet squats.',
+      zhProgression: '增加重量或加入暂停深蹲。',
+      enProgression: 'Add load or use paused squats.',
+    }),
+    compoundLibraryExercise({
+      key: 'front-squat',
+      zhName: '前蹲',
+      enName: 'Front squat',
+      zhMuscles: ['腿部', '核心', '背部'],
+      enMuscles: ['Legs', 'Core', 'Back'],
+      equipment: 'GYM',
+      sets: 3,
+      reps: '4-6',
+      rpe: 8,
+      zhIntent: '更直立的深蹲，强化股四头和躯干',
+      enIntent: 'Upright squat for quads and trunk',
+      zhSteps: ['手肘抬高，杠铃贴住肩前。', '保持躯干直立下蹲。', '站起时肘部不要掉。'],
+      enSteps: ['Lift elbows and pin the bar to the shoulders.', 'Squat down with an upright torso.', 'Stand without dropping the elbows.'],
+      zhRegression: '改成双哑铃前架深蹲。',
+      enRegression: 'Use double-dumbbell front squats.',
+      zhProgression: '增加重量或加入底部停顿。',
+      enProgression: 'Add load or pause at the bottom.',
+    }),
+    compoundLibraryExercise({
+      key: 'deadlift',
+      zhName: '硬拉',
+      enName: 'Deadlift',
+      zhMuscles: ['腿部', '背部', '臀部'],
+      enMuscles: ['Legs', 'Back', 'Glutes'],
+      equipment: 'GYM',
+      sets: 3,
+      reps: '3-5',
+      rpe: 8,
+      zhIntent: '重型髋膝伸展，训练全身力量',
+      enIntent: 'Heavy hip and knee extension',
+      zhSteps: ['杠铃贴近胫骨，背阔肌收紧。', '先把杠铃拉紧，再离地。', '髋膝一起伸展，顶部不过度后仰。'],
+      enSteps: ['Set the bar close and tighten the lats.', 'Pull slack out before the bar leaves the floor.', 'Extend hips and knees together without leaning back.'],
+      zhRegression: '改成架上硬拉或壶铃硬拉。',
+      enRegression: 'Use rack pulls or kettlebell deadlifts.',
+      zhProgression: '增加重量或加入暂停硬拉。',
+      enProgression: 'Add load or use paused deadlifts.',
+    }),
+    compoundLibraryExercise({
+      key: 'bulgarian-split-squat',
+      zhName: '保加利亚分腿蹲',
+      enName: 'Bulgarian split squat',
+      zhMuscles: ['腿部', '臀部', '核心'],
+      enMuscles: ['Legs', 'Glutes', 'Core'],
+      equipment: 'DUMBBELL',
+      sets: 3,
+      reps: '6/side',
+      rpe: 8,
+      zhIntent: '单腿复合力量，兼顾跑者稳定性',
+      enIntent: 'Single-leg compound strength for runners',
+      zhSteps: ['前脚踩稳，后脚放在凳上。', '向下坐到前腿承重。', '前脚蹬地站起，骨盆保持正。'],
+      enSteps: ['Plant the front foot and elevate the rear foot.', 'Sit down into the front leg.', 'Drive through the front foot while hips stay square.'],
+      zhRegression: '改成普通分腿蹲。',
+      enRegression: 'Use regular split squats.',
+      zhProgression: '加哑铃或底部停顿。',
+      enProgression: 'Add dumbbells or a bottom pause.',
+    }),
+  ],
+  shoulders: [
+    compoundLibraryExercise({
+      key: 'standing-overhead-press',
+      zhName: '站姿推举',
+      enName: 'Standing overhead press',
+      zhMuscles: ['肩部', '手臂', '核心'],
+      enMuscles: ['Shoulders', 'Arms', 'Core'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '5',
+      rpe: 8,
+      zhIntent: '垂直推力主项，训练肩部和躯干刚性',
+      enIntent: 'Primary vertical press with trunk stiffness',
+      zhSteps: ['臀腹收紧，杠铃在锁骨上方。', '头略后移，杠铃直线上推。', '锁定后头回到杠铃下方。'],
+      enSteps: ['Brace glutes and abs with the bar at the collarbone.', 'Move the head back and press vertically.', 'Lock out with the head under the bar.'],
+      zhRegression: '改成坐姿哑铃推举。',
+      enRegression: 'Use seated dumbbell press.',
+      zhProgression: '增加重量或加入暂停推举。',
+      enProgression: 'Add load or use paused presses.',
+    }),
+    compoundLibraryExercise({
+      key: 'push-press',
+      zhName: '借力推',
+      enName: 'Push press',
+      zhMuscles: ['肩部', '腿部', '核心'],
+      enMuscles: ['Shoulders', 'Legs', 'Core'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '3-5',
+      rpe: 8,
+      zhIntent: '下肢驱动到上肢的爆发推举',
+      enIntent: 'Explosive leg drive into an overhead press',
+      zhSteps: ['小幅屈膝，躯干保持直。', '快速蹬地把杠铃送起。', '手臂完成锁定，落回时吸收重量。'],
+      enSteps: ['Dip slightly with the torso vertical.', 'Drive hard through the floor.', 'Lock out and absorb the bar on the way down.'],
+      zhRegression: '改成轻重量站姿推举。',
+      enRegression: 'Use a lighter strict press.',
+      zhProgression: '增加重量但保持垂直驱动。',
+      enProgression: 'Add load while keeping the drive vertical.',
+    }),
+    compoundLibraryExercise({
+      key: 'landmine-press',
+      zhName: '地雷管推举',
+      enName: 'Landmine press',
+      zhMuscles: ['肩部', '胸部', '核心'],
+      enMuscles: ['Shoulders', 'Chest', 'Core'],
+      equipment: 'GYM',
+      sets: 3,
+      reps: '6/side',
+      rpe: 7,
+      zhIntent: '斜向推举，肩部压力更友好',
+      enIntent: 'Angled press with shoulder-friendly mechanics',
+      zhSteps: ['半跪或站姿撑紧身体。', '沿斜向上推，不旋转躯干。', '受控回到胸前。'],
+      enSteps: ['Brace from half-kneeling or standing.', 'Press up on the angle without rotating.', 'Return under control to the chest.'],
+      zhRegression: '减轻重量或双手推。',
+      enRegression: 'Reduce load or press with both hands.',
+      zhProgression: '单手加重量或加入停顿。',
+      enProgression: 'Add load one-arm or use pauses.',
+    }),
+    compoundLibraryExercise({
+      key: 'dumbbell-clean-press',
+      zhName: '哑铃挺举',
+      enName: 'Dumbbell clean and press',
+      zhMuscles: ['肩部', '腿部', '核心'],
+      enMuscles: ['Shoulders', 'Legs', 'Core'],
+      equipment: 'DUMBBELL',
+      sets: 3,
+      reps: '5',
+      rpe: 7,
+      zhIntent: '从髋部发力到头顶的全身复合动作',
+      enIntent: 'Full-body compound from hip drive to overhead',
+      zhSteps: ['髋部发力把哑铃带到肩上。', '稳定前架位置后再推举。', '放下时保持背部和腹压。'],
+      enSteps: ['Use hip drive to clean the dumbbells to shoulders.', 'Stabilize the rack before pressing.', 'Lower while keeping the back and brace set.'],
+      zhRegression: '拆成哑铃硬拉和推举。',
+      enRegression: 'Split it into dumbbell deadlift plus press.',
+      zhProgression: '增加重量或改成交替挺举。',
+      enProgression: 'Add load or alternate reps.',
+    }),
+  ],
+  arms: [
+    compoundLibraryExercise({
+      key: 'chin-up',
+      zhName: '反握引体',
+      enName: 'Chin-up',
+      zhMuscles: ['手臂', '背部', '核心'],
+      enMuscles: ['Arms', 'Back', 'Core'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '4-8',
+      rpe: 8,
+      zhIntent: '以肱二头参与为主的复合拉力',
+      enIntent: 'Compound pull with strong biceps contribution',
+      zhSteps: ['反握横杠，先收紧肩胛。', '把胸口拉向横杠。', '慢慢下降到手臂伸直。'],
+      enSteps: ['Use a supinated grip and set the shoulders.', 'Pull the chest toward the bar.', 'Lower slowly to straight arms.'],
+      zhRegression: '弹力带辅助或离心下放。',
+      enRegression: 'Use band assistance or eccentric reps.',
+      zhProgression: '加负重或顶部停顿。',
+      enProgression: 'Add load or pause at the top.',
+    }),
+    compoundLibraryExercise({
+      key: 'close-grip-bench',
+      zhName: '窄握卧推',
+      enName: 'Close-grip bench press',
+      zhMuscles: ['手臂', '胸部', '肩部'],
+      enMuscles: ['Arms', 'Chest', 'Shoulders'],
+      equipment: 'GYM',
+      sets: 4,
+      reps: '5',
+      rpe: 8,
+      zhIntent: '肱三头主导的复合水平推',
+      enIntent: 'Triceps-biased compound press',
+      zhSteps: ['握距略窄于肩，不要过窄。', '杠铃下降时肘部贴近身体。', '向上推直，手腕保持中立。'],
+      enSteps: ['Use a grip slightly narrower than shoulder width.', 'Keep elbows close as the bar lowers.', 'Press up with neutral wrists.'],
+      zhRegression: '改成窄距俯卧撑。',
+      enRegression: 'Use close-grip push-ups.',
+      zhProgression: '增加重量或加入暂停。',
+      enProgression: 'Add load or use pauses.',
+    }),
+    compoundLibraryExercise({
+      key: 'weighted-triceps-dip',
+      zhName: '负重臂屈伸',
+      enName: 'Weighted triceps dip',
+      zhMuscles: ['手臂', '胸部', '肩部'],
+      enMuscles: ['Arms', 'Chest', 'Shoulders'],
+      equipment: 'GYM',
+      sets: 3,
+      reps: '5-8',
+      rpe: 8,
+      zhIntent: '肱三头和胸肩协同的复合下压',
+      enIntent: 'Compound dip with triceps emphasis',
+      zhSteps: ['身体更直立，肩膀下沉。', '下降到肩部可控范围。', '向下压杠回到顶部。'],
+      enSteps: ['Stay more upright with shoulders depressed.', 'Descend only to controlled depth.', 'Press down into the bars to return.'],
+      zhRegression: '使用辅助器械或自重。',
+      enRegression: 'Use assistance or bodyweight only.',
+      zhProgression: '加负重但保持肩部稳定。',
+      enProgression: 'Add load while shoulders stay stable.',
+    }),
+    compoundLibraryExercise({
+      key: 'farmer-carry',
+      zhName: '农夫走',
+      enName: 'Farmer carry',
+      zhMuscles: ['手臂', '核心', '背部'],
+      enMuscles: ['Arms', 'Core', 'Back'],
+      equipment: 'DUMBBELL',
+      sets: 3,
+      reps: '30m',
+      rpe: 7,
+      zhIntent: '握力、躯干和肩胛稳定的全身负重行走',
+      enIntent: 'Loaded carry for grip, trunk, and scapular stability',
+      zhSteps: ['两侧重量拿稳，肩膀下沉。', '肋骨收住，步幅自然。', '走完全程不要让重量摆动。'],
+      enSteps: ['Hold both loads firmly with shoulders down.', 'Keep ribs down and stride naturally.', 'Finish the distance without swinging the load.'],
+      zhRegression: '减轻重量或缩短距离。',
+      enRegression: 'Reduce load or shorten distance.',
+      zhProgression: '增加重量或延长距离。',
+      enProgression: 'Add load or increase distance.',
+    }),
+  ],
+  core: [
+    compoundLibraryExercise({
+      key: 'turkish-get-up',
+      zhName: '土耳其起立',
+      enName: 'Turkish get-up',
+      zhMuscles: ['核心', '肩部', '腿部'],
+      enMuscles: ['Core', 'Shoulders', 'Legs'],
+      equipment: 'DUMBBELL',
+      sets: 3,
+      reps: '2/side',
+      rpe: 7,
+      zhIntent: '从地面到站立的全身控制动作',
+      enIntent: 'Full-body control from floor to standing',
+      zhSteps: ['眼睛看重量，先卷到肘部。', '桥起髋部，把腿收回。', '站起和回放都保持手臂垂直。'],
+      enSteps: ['Eyes on the weight as you roll to the elbow.', 'Bridge the hips and sweep the leg through.', 'Stand and return with the arm vertical.'],
+      zhRegression: '空手练路径。',
+      enRegression: 'Practice the path without load.',
+      zhProgression: '增加重量但不加速。',
+      enProgression: 'Add load without speeding up.',
+    }),
+    compoundLibraryExercise({
+      key: 'front-rack-carry',
+      zhName: '前架负重行走',
+      enName: 'Front-rack carry',
+      zhMuscles: ['核心', '背部', '腿部'],
+      enMuscles: ['Core', 'Back', 'Legs'],
+      equipment: 'DUMBBELL',
+      sets: 3,
+      reps: '20m',
+      rpe: 7,
+      zhIntent: '前架抗伸展，强化跑姿所需躯干刚性',
+      enIntent: 'Anti-extension loaded carry for trunk stiffness',
+      zhSteps: ['重量放在肩前，肘部略高。', '肋骨向下，骨盆中立。', '小步稳定前进，不后仰。'],
+      enSteps: ['Hold loads at the front rack with elbows slightly high.', 'Keep ribs down and pelvis neutral.', 'Walk with small stable steps without leaning back.'],
+      zhRegression: '减轻重量或原地站立保持。',
+      enRegression: 'Reduce load or hold in place.',
+      zhProgression: '增加重量或延长距离。',
+      enProgression: 'Add load or extend distance.',
+    }),
+    compoundLibraryExercise({
+      key: 'hanging-leg-raise',
+      zhName: '悬垂举腿',
+      enName: 'Hanging leg raise',
+      zhMuscles: ['核心', '手臂', '背部'],
+      enMuscles: ['Core', 'Arms', 'Back'],
+      equipment: 'GYM',
+      sets: 3,
+      reps: '6-10',
+      rpe: 7,
+      zhIntent: '悬垂抗摆动，强化前侧核心',
+      enIntent: 'Hanging anti-swing anterior core work',
+      zhSteps: ['肩膀下沉，身体先停稳。', '骨盆后倾，把腿抬起。', '慢慢放下，不借摆动。'],
+      enSteps: ['Depress shoulders and stop swinging first.', 'Posteriorly tilt the pelvis and lift the legs.', 'Lower slowly without using momentum.'],
+      zhRegression: '改成屈膝举腿。',
+      enRegression: 'Use bent-knee raises.',
+      zhProgression: '伸直腿或加停顿。',
+      enProgression: 'Straighten the legs or add pauses.',
+    }),
+    compoundLibraryExercise({
+      key: 'barbell-rollout',
+      zhName: '杠铃滚轮',
+      enName: 'Barbell rollout',
+      zhMuscles: ['核心', '肩部', '手臂'],
+      enMuscles: ['Core', 'Shoulders', 'Arms'],
+      equipment: 'GYM',
+      sets: 3,
+      reps: '6-8',
+      rpe: 7,
+      zhIntent: '抗伸展核心训练，连接肩带和骨盆',
+      enIntent: 'Anti-extension core work linking shoulders and pelvis',
+      zhSteps: ['跪姿撑紧臀腹。', '杠铃向前滚到可控距离。', '用核心拉回，不塌腰。'],
+      enSteps: ['Brace glutes and abs from kneeling.', 'Roll the bar forward only as far as control allows.', 'Pull back with the core without sagging.'],
+      zhRegression: '缩短滚出距离。',
+      enRegression: 'Shorten the rollout range.',
+      zhProgression: '增加距离或改站姿进阶。',
+      enProgression: 'Increase range or progress toward standing.',
+    }),
+  ],
+};
 const DEFAULT_CHECK_IN_DRAFT = {
   runType: 'EASY',
   entryState: 'PLANNED',
@@ -39,6 +622,46 @@ const DEFAULT_CHECK_IN_DRAFT = {
   durationMinutes: '',
 };
 const KM_PER_MILE = 1.60934;
+
+function getProtocolItemKey(item) {
+  if (!item) return '';
+  if (item.source === 'library') {
+    return `library-${item.targetKey || 'target'}-${item.libraryKey || item.exercise?.name || 'exercise'}-${item.exerciseIndex ?? 0}`;
+  }
+  return `${item.block?.title || 'block'}-${item.exercise?.name || 'exercise'}-${item.globalIndex ?? item.exerciseIndex ?? 0}`;
+}
+
+function createLibraryProtocolItem(targetKey, definition, exerciseIndex, globalIndex = 0) {
+  return {
+    source: 'library',
+    targetKey,
+    libraryKey: definition.key,
+    block: { title: 'COMPOUND_LIBRARY' },
+    blockIndex: 999,
+    exercise: definition.exercise,
+    exerciseIndex,
+    globalIndex,
+    libraryContent: definition.content,
+  };
+}
+
+function exerciseMatchesTargetArea(exercise, isZh, targetKey) {
+  if (targetKey === 'all') return true;
+  const group = TARGET_AREA_GROUPS.find((item) => item.key === targetKey);
+  if (!group) return false;
+  const exerciseCopy = getExerciseCardContent(exercise, isZh);
+  const haystack = [
+    exercise?.name,
+    exercise?.equipment,
+    exercise?.equipmentNeeded,
+    exercise?.intent,
+    exercise?.tempoOrIntent,
+    ...(exerciseCopy?.muscles || []),
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return group.match.test(haystack);
+}
 
 const EXERCISE_LABELS = {
   'Hip airplanes': { zh: '髋飞机', en: 'Hip airplanes' },
@@ -723,6 +1346,26 @@ function getExerciseCardContent(exercise, isZh) {
   };
 }
 
+function getExerciseContentForItem(item, isZh) {
+  if (item?.source === 'library' && item.libraryContent) {
+    const locale = isZh ? 'zh' : 'en';
+    return {
+      locale,
+      name: item.libraryContent.name?.[locale] || item.libraryContent.name?.en || normalizeExerciseName(item.exercise?.name),
+      muscles: item.libraryContent.muscles?.[locale] || item.libraryContent.muscles?.en || [],
+      steps: item.libraryContent.steps?.[locale] || item.libraryContent.steps?.en || [],
+      intent: item.libraryContent.intent?.[locale] || item.libraryContent.intent?.en || item.exercise?.tempoOrIntent || '',
+      regression: item.libraryContent.regression?.[locale] || item.libraryContent.regression?.en || '',
+      progression: item.libraryContent.progression?.[locale] || item.libraryContent.progression?.en || '',
+    };
+  }
+  return getExerciseCardContent(item?.exercise, isZh);
+}
+
+function getExerciseEquipmentKey(exercise) {
+  return exercise?.equipment || exercise?.equipmentNeeded || '';
+}
+
 function resolveExerciseVisualKey(name, muscles = []) {
   switch (normalizeExerciseName(name)) {
     case 'Dead bug':
@@ -776,31 +1419,26 @@ function resolveExerciseVisualKey(name, muscles = []) {
   }
 }
 
-function getExerciseVideoUrl(name) {
-  const queries = {
-    'Hip airplanes': 'hip airplanes exercise demo',
-    'Calf raises (slow tempo)': 'slow tempo calf raise exercise demo',
-    'Dead bug': 'dead bug exercise demo',
-    'Split squat': 'split squat exercise demo',
-    'Single-leg Romanian deadlift': 'single leg romanian deadlift exercise demo',
-    'Standing calf raise': 'standing calf raise exercise demo',
-    'Side plank': 'side plank exercise demo',
-    'Glute bridge (pause at top)': 'glute bridge pause at top exercise demo',
-    'Tibialis wall raise': 'tibialis wall raise exercise demo',
-    "World's greatest stretch": 'world greatest stretch exercise demo',
-    'Ankle dorsiflexion rocks': 'ankle dorsiflexion rocks exercise demo',
-    'Step-down (knee tracking)': 'step down knee tracking exercise demo',
-    'Hamstring curl (slider or machine)': 'hamstring slider curl exercise demo',
-    'Pallof press': 'pallof press exercise demo',
-    'Farmer carry (suitcase)': 'suitcase carry exercise demo',
-    'Pogo hops': 'pogo hops running drill demo',
-    'Skipping A-drill': 'A skip drill running demo',
-    'Box step-up (explosive)': 'explosive box step up exercise demo',
-    'Single-leg hop (low amplitude)': 'single leg hop low amplitude exercise demo',
-  };
-  const canonicalName = normalizeExerciseName(name);
-  const query = queries[canonicalName] || `${canonicalName} exercise demo`;
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+function slugExerciseName(name) {
+  return normalizeExerciseName(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getExerciseVideoEmbedUrl(item) {
+  if (!item) return '';
+  if (item.source === 'library' && item.libraryKey) {
+    return EXERCISE_VIDEO_EMBEDS[item.libraryKey] || '';
+  }
+  return EXERCISE_VIDEO_EMBEDS[slugExerciseName(item.exercise?.name)] || '';
+}
+
+function resolveTargetAreaKeyForItem(item, isZh) {
+  if (item?.targetKey) return item.targetKey;
+  const exercise = item?.exercise;
+  const group = TARGET_AREA_GROUPS.find((target) => exerciseMatchesTargetArea(exercise, isZh, target.key));
+  return group?.key || 'all';
 }
 
 function LegacyMuscleMap({ isZh }) {
@@ -2163,6 +2801,10 @@ export default function MuscleTraining() {
   const previousIsMileRef = useRef(isMile);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [shellProfile, setShellProfile] = useState(null);
+  const [activeTarget, setActiveTarget] = useState('all');
+  const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(true);
+  const [openTipIndex, setOpenTipIndex] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -2182,7 +2824,6 @@ export default function MuscleTraining() {
   const displayLang = lang;
   const isZh = displayLang === 'zh-CN';
   const distanceUnitLabel = isMile ? t('muscle_training.miles_unit') : t('muscle_training.km_unit');
-  const distanceWindowLabel = isZh ? `${distanceUnitLabel} / 7 \u5929` : `${distanceUnitLabel} / 7d`;
 
 
   const copy = useMemo(() => ({
@@ -2368,73 +3009,21 @@ export default function MuscleTraining() {
     () => (featuredDay?.strength ? sessionByType.get(featuredDay.strength.sessionType) : null),
     [featuredDay, sessionByType],
   );
-  const protocolItems = useMemo(
-    () => (featuredSession?.blocks || []).flatMap((block, blockIndex) => (
-      (block.exercises || []).map((exercise, exerciseIndex) => ({
-        block,
-        blockIndex,
-        exercise,
-        exerciseIndex,
-      }))
-    )),
-    [featuredSession],
-  );
-  const muscleFocus = useMemo(() => {
-    const labels = [];
-    protocolItems.forEach(({ exercise }) => {
-      getExerciseCardContent(exercise, isZh).muscles.forEach((muscle) => {
-        if (!labels.includes(muscle)) labels.push(muscle);
+  const protocolItems = useMemo(() => {
+    const items = [];
+    (featuredSession?.blocks || []).forEach((block, blockIndex) => {
+      (block.exercises || []).forEach((exercise, exerciseIndex) => {
+        items.push({
+          block,
+          blockIndex,
+          exercise,
+          exerciseIndex,
+          globalIndex: items.length,
+        });
       });
     });
-    return labels.slice(0, 4);
-  }, [isZh, protocolItems]);
-  const muscleInspection = useMemo(() => {
-    const registry = new Map();
-    protocolItems.forEach(({ block, exercise, exerciseIndex }) => {
-      const exerciseCopy = getExerciseCardContent(exercise, isZh);
-      const regionKeys = resolveReferenceBodyMeasureRegionKeys(exerciseCopy.muscles);
-      regionKeys.forEach((regionKey) => {
-        const current = registry.get(regionKey) || { exercises: [] };
-        if (!current.exercises.some((item) => item.name === exerciseCopy.name)) {
-          current.exercises.push({
-            name: exerciseCopy.name,
-            prescription: formatLocalizedExercisePrescription(exercise, isZh),
-            cue: exerciseCopy.intent || exerciseCopy.steps?.[0] || '',
-            blockTitle: pickLabel(copy.blockTitles, block.title, block.title),
-            order: exerciseIndex + 1,
-          });
-        }
-        registry.set(regionKey, current);
-      });
-    });
-    return registry;
-  }, [copy.blockTitles, isZh, protocolItems]);
-  const coachingCues = useMemo(
-    () => protocolItems.slice(0, 3).map(({ exercise, exerciseIndex }) => {
-      const content = getExerciseCardContent(exercise, isZh);
-      return {
-        key: `${exercise.name}-${exerciseIndex}`,
-        title: content.name,
-        body: content.steps[0] || content.intent,
-      };
-    }),
-    [isZh, protocolItems],
-  );
-  const estimatedBurn = useMemo(() => {
-    const minutes = featuredDay?.strength?.durationMinutes;
-    if (minutes == null) return null;
-    const rpe = featuredDay?.strength?.targetRpe || 6;
-    const loadFactor = rpe >= 8 ? 10.2 : rpe >= 7 ? 9.4 : 8.6;
-    return Math.round(minutes * loadFactor);
-  }, [featuredDay]);
-  const heroTags = useMemo(() => {
-    const tags = [];
-    if (featuredDay?.strength?.optional) tags.push(t('muscle_training.tag_optional_session'));
-    if (featuredDay?.run?.keyRun) tags.push(t('muscle_training.tag_safe_before_key_run'));
-    if (featuredDay?.run?.longRun) tags.push(t('muscle_training.tag_long_run_support'));
-    if (featuredSession?.emphasis) tags.push(featuredSession.emphasis);
-    return tags.slice(0, 3);
-  }, [featuredDay, featuredSession, t]);
+    return items;
+  }, [featuredSession]);
   const stitchCopy = useMemo(() => ({
     dashboard: t('muscle_training.stitch_dashboard'),
     analysis: t('muscle_training.stitch_analysis'),
@@ -2500,26 +3089,66 @@ export default function MuscleTraining() {
     longRunBadge: t('muscle_training.stitch_long_run_badge'),
     detailsToggle: t('muscle_training.stitch_details_toggle'),
     noRunContext: t('muscle_training.stitch_no_run_context'),
+    labBadge: t('muscle_training.stitch_lab_badge'),
+    volumeGoalTitle: t('muscle_training.stitch_volume_goal_title'),
+    weeklyCompletion: t('muscle_training.stitch_weekly_completion'),
+    progressStackTitle: t('muscle_training.stitch_progress_stack_title'),
+    nextKeyRun: t('muscle_training.stitch_next_key_run'),
+    currentFocusTitle: t('muscle_training.stitch_current_focus_title'),
+    historyPlaceholderTitle: t('muscle_training.stitch_history_placeholder_title'),
+    historyPlaceholderHint: t('muscle_training.stitch_history_placeholder_hint'),
+    historyPlaceholderBadge: t('muscle_training.stitch_history_placeholder_badge'),
+    targetAreasTitle: t('muscle_training.stitch_target_areas_title'),
+    targetChest: t('muscle_training.stitch_target_chest'),
+    targetBack: t('muscle_training.stitch_target_back'),
+    targetLegs: t('muscle_training.stitch_target_legs'),
+    targetShoulders: t('muscle_training.stitch_target_shoulders'),
+    targetArms: t('muscle_training.stitch_target_arms'),
+    targetCore: t('muscle_training.stitch_target_core'),
+    allTargets: t('muscle_training.stitch_all_targets'),
+    targetCardsHint: t('muscle_training.stitch_target_cards_hint'),
+    areaExerciseCount: t('muscle_training.stitch_area_exercise_count'),
+    areaPlanCount: t('muscle_training.stitch_area_plan_count'),
+    areaLibraryCount: t('muscle_training.stitch_area_library_count'),
+    currentSplitTitle: t('muscle_training.stitch_current_split_title'),
+    currentSplitBadge: t('muscle_training.stitch_current_split_badge'),
+    nextStrengthSession: t('muscle_training.stitch_next_strength_session'),
+    activeTime: t('muscle_training.stitch_active_time'),
+    recentPrsTitle: t('muscle_training.stitch_recent_prs_title'),
+    placeholderMetric: t('muscle_training.stitch_placeholder_metric'),
+    noAreaExercises: t('muscle_training.stitch_no_area_exercises'),
+    noAreaPlanExercises: t('muscle_training.stitch_no_area_plan_exercises'),
+    todayPlanTitle: t('muscle_training.stitch_today_plan_title'),
+    compoundLibraryTitle: t('muscle_training.stitch_compound_library_title'),
+    compoundBadge: t('muscle_training.stitch_compound_badge'),
+    optionalLibraryBadge: t('muscle_training.stitch_optional_library_badge'),
+    optionalLibraryNote: t('muscle_training.stitch_optional_library_note'),
+    weekRunwayTitle: t('muscle_training.stitch_week_runway_title'),
+    progressBandTitle: t('muscle_training.stitch_progress_band_title'),
+    volume7d: t('muscle_training.stitch_volume_7d'),
+    volume28d: t('muscle_training.stitch_volume_28d'),
+    highIntensity: t('muscle_training.stitch_high_intensity'),
+    recentHardRuns: t('muscle_training.stitch_recent_hard_runs'),
+    protocolWorkspaceTitle: t('muscle_training.stitch_protocol_workspace_title'),
+    protocolWorkspaceHint: t('muscle_training.stitch_protocol_workspace_hint'),
+    filterAll: t('muscle_training.stitch_filter_all'),
+    exerciseDetailTitle: t('muscle_training.stitch_exercise_detail_title'),
+    closeExerciseDetail: t('muscle_training.stitch_close_exercise_detail'),
+    allActions: t('muscle_training.stitch_all_actions'),
+    videoDemoTitle: t('muscle_training.stitch_video_demo_title'),
+    videoUnavailable: t('muscle_training.stitch_video_unavailable'),
+    professionalTips: t('muscle_training.stitch_professional_tips'),
+    stepGuide: t('muscle_training.stitch_step_guide'),
+    noExerciseSelected: t('muscle_training.stitch_no_exercise_selected'),
+    stepsLabel: t('muscle_training.stitch_steps_label'),
+    plannedLabel: t('muscle_training.stitch_planned_label'),
+    recommendedLabel: t('muscle_training.stitch_recommended_label'),
   }), [t]);
 
   const navItems = useMemo(
     () => getRunnerShellNavItems({ t, lang, activeKey: 'muscle' }),
     [t, lang],
   );
-  // heroTheme retained for possible future use but not rendered above-fold in this redesign
-  // eslint-disable-next-line no-unused-vars
-  const heroTheme = useMemo(() => {
-    const focus = pickLabel(copy.currentFocus, plan?.weekContext?.currentFocus, featuredSession?.emphasis || '');
-    const split = String(focus || '').split(/[\s/]+/).filter(Boolean);
-    if (split.length >= 2) {
-      return { lineOne: split[0], lineTwo: split.slice(1).join(' ') };
-    }
-    return {
-      lineOne: t('muscle_training.stitch_strength'),
-      lineTwo: focus || t('muscle_training.stitch_ready_label'),
-    };
-  }, [copy.currentFocus, featuredSession, t, plan]);
-
   // Count how many strength sessions are planned in the 7-day rolling window
   const weekDoseStats = useMemo(() => {
     if (!plan) return { planned: 0, recommended: 0, completedToday: false };
@@ -2609,34 +3238,163 @@ export default function MuscleTraining() {
     };
   }, [copy.workoutTypes, displayLang, isMile, isZh, plan, stitchCopy]);
 
-  const friendlySteps = useMemo(() => {
-    const focusLabel = muscleFocus.length > 0
-      ? muscleFocus.join(' / ')
-      : stitchCopy.bodyMeasureInspectHint;
+  const targetAreaCards = useMemo(() => {
+    return TARGET_AREA_GROUPS.map((group) => ({
+      ...group,
+      label: stitchCopy[group.copyKey],
+      planCount: protocolItems.filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, group.key)).length,
+      libraryCount: COMPOUND_TARGET_LIBRARY[group.key]?.length || 0,
+      count: protocolItems.filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, group.key)).length
+        + (COMPOUND_TARGET_LIBRARY[group.key]?.length || 0),
+    }));
+  }, [isZh, protocolItems, stitchCopy]);
 
-    return [
-      {
-        key: 'decision',
-        number: '01',
-        title: stitchCopy.guideDecisionTitle,
-        body: featuredDay?.strength
-          ? stitchCopy.guideDecisionBodyActive
-          : stitchCopy.guideDecisionBodyRest,
-      },
-      {
-        key: 'runway',
-        number: '02',
-        title: stitchCopy.guideRunwayTitle,
-        body: [nextRunSummary.label, nextRunSummary.meta].filter(Boolean).join(' - '),
-      },
-      {
-        key: 'map',
-        number: '03',
-        title: stitchCopy.guideMapTitle,
-        body: focusLabel,
-      },
-    ];
-  }, [featuredDay, muscleFocus, nextRunSummary, stitchCopy]);
+  const filteredProtocolItems = useMemo(() => {
+    if (activeTarget === 'all') return protocolItems;
+    return protocolItems.filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, activeTarget));
+  }, [activeTarget, isZh, protocolItems]);
+
+  const libraryProtocolItems = useMemo(() => {
+    const targetKeys = activeTarget === 'all'
+      ? TARGET_AREA_GROUPS.map((group) => group.key)
+      : [activeTarget];
+    let globalIndex = protocolItems.length;
+    return targetKeys.flatMap((targetKey) => (COMPOUND_TARGET_LIBRARY[targetKey] || [])
+      .map((definition, exerciseIndex) => createLibraryProtocolItem(
+        targetKey,
+        definition,
+        exerciseIndex,
+        globalIndex++,
+      )));
+  }, [activeTarget, protocolItems.length]);
+
+  const visibleExerciseItems = useMemo(() => [
+    ...filteredProtocolItems.map((item) => ({ ...item, source: 'plan' })),
+    ...libraryProtocolItems,
+  ], [filteredProtocolItems, libraryProtocolItems]);
+
+  const selectedProtocolItem = useMemo(() => (
+    visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
+    || visibleExerciseItems[0]
+    || null
+  ), [selectedExerciseKey, visibleExerciseItems]);
+
+  const selectedExerciseCopy = useMemo(
+    () => (selectedProtocolItem ? getExerciseContentForItem(selectedProtocolItem, isZh) : null),
+    [isZh, selectedProtocolItem],
+  );
+
+  const selectedExerciseVideoUrl = useMemo(
+    () => getExerciseVideoEmbedUrl(selectedProtocolItem),
+    [selectedProtocolItem],
+  );
+
+  const selectedTargetAreaLabel = useMemo(() => {
+    const targetKey = resolveTargetAreaKeyForItem(selectedProtocolItem, isZh);
+    if (targetKey === 'all') return stitchCopy.allTargets;
+    return targetAreaCards.find((target) => target.key === targetKey)?.label || stitchCopy.allTargets;
+  }, [isZh, selectedProtocolItem, stitchCopy.allTargets, targetAreaCards]);
+
+  const volumeCompletion = useMemo(() => {
+    const recommended = Math.max(weekDoseStats.recommended || weekDoseStats.planned || 1, 1);
+    return Math.min(100, Math.round((weekDoseStats.planned / recommended) * 100));
+  }, [weekDoseStats]);
+
+  const nextKeyRunSummary = useMemo(() => {
+    const keyDate = plan?.weekContext?.nextKeyRunDate;
+    const keyType = plan?.weekContext?.nextKeyRunType;
+    if (!keyDate && !keyType) return nextRunSummary;
+    return {
+      label: [keyDate ? formatShortDate(keyDate, displayLang) : '', pickLabel(copy.workoutTypes, keyType, '')].filter(Boolean).join(' - '),
+      meta: stitchCopy.weekAlignLabel,
+    };
+  }, [copy.workoutTypes, displayLang, nextRunSummary, plan, stitchCopy.weekAlignLabel]);
+
+  const nextStrengthSummary = useMemo(() => {
+    const days = plan?.days || [];
+    const nextStrengthIndex = days.findIndex((day) => !!day.strength);
+    if (nextStrengthIndex < 0) {
+      return {
+        label: stitchCopy.noStrengthTitle,
+        meta: stitchCopy.noStrengthHint,
+      };
+    }
+    const strengthDay = days[nextStrengthIndex];
+    const dayLabel = nextStrengthIndex === 0
+      ? stitchCopy.todayBadge
+      : formatDayLabel(strengthDay.date, strengthDay.dayLabel, displayLang);
+    const sessionLabel = pickLabel(copy.sessionTypes, strengthDay.strength?.sessionType, stitchCopy.strengthDayBadge);
+    const durationLabel = strengthDay.strength?.durationMinutes
+      ? formatMinutes(strengthDay.strength.durationMinutes, isZh)
+      : '';
+    return {
+      label: [dayLabel, sessionLabel].filter(Boolean).join(' - '),
+      meta: [durationLabel, strengthDay.strength?.targetRpe != null ? `RPE ${strengthDay.strength.targetRpe}` : ''].filter(Boolean).join(' · ') || stitchCopy.weekAlignLabel,
+    };
+  }, [copy.sessionTypes, displayLang, isZh, plan, stitchCopy]);
+
+  const currentSplitLabel = useMemo(() => (
+    pickLabel(copy.currentFocus, plan?.weekContext?.currentFocus, featuredSession?.emphasis || stitchCopy.strength)
+  ), [copy.currentFocus, featuredSession, plan, stitchCopy.strength]);
+
+  const weeklyStrengthMinutes = useMemo(() => (
+    (plan?.days || []).reduce((sum, day) => sum + (Number(day.strength?.durationMinutes) || 0), 0)
+  ), [plan]);
+
+  const recentStrengthPlaceholders = useMemo(() => ([
+    {
+      name: isZh ? '卧推 / 深蹲 / 硬拉' : 'Bench / Squat / Deadlift',
+      meta: stitchCopy.historyPlaceholderBadge,
+      value: stitchCopy.placeholderMetric,
+    },
+    {
+      name: isZh ? '总重量 / 1RM / PR' : 'Total lifted / 1RM / PRs',
+      meta: stitchCopy.historyPlaceholderHint,
+      value: stitchCopy.placeholderMetric,
+    },
+  ]), [isZh, stitchCopy]);
+
+  function handleTargetAreaSelect(targetKey) {
+    setActiveTarget(targetKey);
+    const nextPlanItem = targetKey === 'all'
+      ? protocolItems[0]
+      : protocolItems.find(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey));
+    const nextLibraryDefinition = targetKey === 'all'
+      ? COMPOUND_TARGET_LIBRARY[TARGET_AREA_GROUPS[0].key]?.[0]
+      : COMPOUND_TARGET_LIBRARY[targetKey]?.[0];
+    const nextItem = nextPlanItem || (
+      nextLibraryDefinition
+        ? createLibraryProtocolItem(targetKey === 'all' ? TARGET_AREA_GROUPS[0].key : targetKey, nextLibraryDefinition, 0, protocolItems.length)
+        : null
+    );
+    const nextKey = getProtocolItemKey(nextItem);
+    setSelectedExerciseKey(nextKey);
+    setIsDetailDrawerOpen(Boolean(nextKey));
+    setOpenTipIndex(0);
+    window.setTimeout(() => {
+      if (nextKey) document.getElementById(`mt-exercise-${nextKey}`)?.focus();
+    }, 0);
+  }
+
+  function handleExerciseSelect(item) {
+    setSelectedExerciseKey(getProtocolItemKey(item));
+    setIsDetailDrawerOpen(true);
+    setOpenTipIndex(0);
+  }
+
+  useEffect(() => {
+    if (activeTarget === 'all') return;
+    if (targetAreaCards.some((target) => target.key === activeTarget)) return;
+    setActiveTarget('all');
+  }, [activeTarget, targetAreaCards]);
+
+  useEffect(() => {
+    if (selectedExerciseKey && visibleExerciseItems.some((item) => getProtocolItemKey(item) === selectedExerciseKey)) return;
+    setSelectedExerciseKey(getProtocolItemKey(visibleExerciseItems[0]));
+    setIsDetailDrawerOpen(Boolean(visibleExerciseItems[0]));
+    setOpenTipIndex(0);
+  }, [selectedExerciseKey, visibleExerciseItems]);
+
   useEffect(() => {
     const previousIsMile = previousIsMileRef.current;
     if (previousIsMile === isMile) return;
@@ -2762,7 +3520,7 @@ export default function MuscleTraining() {
         distanceKm: distanceValue != null ? (isMile ? distanceValue * KM_PER_MILE : distanceValue) : null,
         durationMinutes: parseOptionalInteger(checkInDraft.durationMinutes),
       };
-      await apiJson('/api/training/muscle/check-in/today', {
+      await apiJson('/api/training/muscle/today', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -2783,7 +3541,7 @@ export default function MuscleTraining() {
     setNotice('');
     setCheckInNotice('');
     try {
-      await apiJson('/api/training/muscle/check-in/today', { method: 'DELETE' });
+      await apiJson('/api/training/muscle/today', { method: 'DELETE' });
       const nextPlan = await apiJson('/api/training/muscle/plan');
       applyPlanOnly(nextPlan);
       setCheckInNotice(copy.checkInResetSuccess);
@@ -2863,7 +3621,7 @@ export default function MuscleTraining() {
         </header>
 
         <div className="runner-shell-canvas muscle-training-canvas">
-          <div className="dashboard-container page-body muscle-training-page">
+          <div className="dashboard-container page-body mt-ironpulse-page">
 
         {loading && <div style={{ padding: '22px 0', color: 'var(--text-muted)' }}>{copy.loading}</div>}
         {!loading && error && <div className="error-alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
@@ -2878,316 +3636,298 @@ export default function MuscleTraining() {
 
         {!loading && !error && plan && (
           <>
-            <section
-              className="mt-strength-lab"
-              aria-labelledby="mt-strength-lab-title"
-              data-session-state={featuredDay?.strength ? 'active' : 'recovery'}
-              data-friendly-strength-lab="true"
-            >
-            {/* ── ZONE 1: What should I do for strength today? ── */}
-              <section className="mt-anatomy-command-board" aria-label={stitchCopy.muscleFocusTitle}>
-                <div className="mt-anatomy-command-map">
-                  <ReferenceMuscleMap
-                    isZh={isZh}
-                    focusMuscles={muscleFocus}
-                    weekContext={plan.weekContext}
-                    weekDoseStats={weekDoseStats}
-                    inspection={muscleInspection}
-                    copy={{
-                      title: stitchCopy.bodyMeasureTitle,
-                      desc: stitchCopy.bodyMeasureDesc,
-                      loadLabel: stitchCopy.bodyMeasureLoadLabel,
-                      balanceLabel: stitchCopy.bodyMeasureBalanceLabel,
-                      anterior: stitchCopy.bodyMeasureAnterior,
-                      posterior: stitchCopy.bodyMeasurePosterior,
-                      interactionHint: stitchCopy.bodyMeasureInteractionHint,
-                      selectedLabel: stitchCopy.bodyMeasureSelectedLabel,
-                      trainedByLabel: stitchCopy.bodyMeasureTrainedByLabel,
-                      planFocusLabel: stitchCopy.bodyMeasurePlanFocusLabel,
-                      inspectHint: stitchCopy.bodyMeasureInspectHint,
-                    }}
-                  />
-                </div>
-                <div className="mt-anatomy-command-copy">
-                  <span className="strength-plan-section-label">{stitchCopy.muscleFocusTitle}</span>
-                  <strong>{stitchCopy.anatomyExploreTitle}</strong>
-                  <p>{stitchCopy.anatomyExploreHint}</p>
-                  {muscleFocus.length > 0 && (
-                    <div className="strength-plan-focus-pills">
-                      {muscleFocus.map((muscle) => <span key={muscle}>{muscle}</span>)}
+            <section className="mt-ip-home" data-ironpulse-page="true">
+              <section className="mt-ip-volume-goal" aria-labelledby="mt-ip-volume-title">
+                <h1 id="mt-ip-volume-title">{stitchCopy.volumeGoalTitle}</h1>
+                <div className="mt-ip-ring-card">
+                  <div
+                    className="mt-ip-ring"
+                    aria-label={`${stitchCopy.weeklyCompletion} ${volumeCompletion}%`}
+                  >
+                    <svg viewBox="0 0 140 140" role="img" aria-hidden="true">
+                      <circle cx="70" cy="70" r="58" className="mt-ip-ring-track" />
+                      <circle
+                        cx="70"
+                        cy="70"
+                        r="58"
+                        className="mt-ip-ring-progress"
+                        style={{ strokeDashoffset: 365 - (volumeCompletion / 100) * 365 }}
+                      />
+                    </svg>
+                    <div className="mt-ip-ring-center">
+                      <strong>{volumeCompletion}%</strong>
+                      <span>{stitchCopy.weeklyCompletion}</span>
                     </div>
-                  )}
+                  </div>
+                </div>
+                <div className="mt-ip-volume-metrics">
+                  <article>
+                    <span>{stitchCopy.plannedLabel}</span>
+                    <strong>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</strong>
+                  </article>
+                  <article>
+                    <span>{stitchCopy.activeTime}</span>
+                    <strong>{weeklyStrengthMinutes ? formatMinutes(weeklyStrengthMinutes, isZh) : '-'}</strong>
+                  </article>
                 </div>
               </section>
 
-              <div className="mt-strength-lab-header">
+              <section className="mt-ip-current-split" aria-labelledby="mt-ip-current-split-title">
                 <div>
-                  <span className="strength-plan-section-label">{stitchCopy.seriesLabel}</span>
-                  <h1 id="mt-strength-lab-title">{stitchCopy.strength}</h1>
-                  <p className="mt-strength-lab-intro">{stitchCopy.guideSubtitle}</p>
+                  <span>{stitchCopy.currentSplitBadge}</span>
+                  <h2 id="mt-ip-current-split-title">{currentSplitLabel}</h2>
+                  <p>{stitchCopy.nextStrengthSession}: {nextStrengthSummary.label}{nextStrengthSummary.meta ? ` · ${nextStrengthSummary.meta}` : ''}</p>
                 </div>
-              </div>
+                <button type="button" className="mt-ip-primary-btn" onClick={scrollToControls}>
+                  <AppIcon name="arrow_forward" className="mt-ip-btn-icon" />
+                  {stitchCopy.startWorkout}
+                </button>
+              </section>
 
-              <section className="mt-coach-cockpit">
-              <div className="mt-coach-cockpit-main">
-                <section className={`mt-today-card${featuredDay?.strength ? ' has-session' : ' is-recovery-session'}`}>
-                  <div className="mt-today-verdict">
-                    <div className="mt-today-card-kicker">
-                      <AppIcon name="fitness_center" className="mt-today-kicker-icon" />
-                      <span>{stitchCopy.todayLabel}</span>
-                      {featuredDay?.strength && (
-                        <span className="mt-today-badge mt-today-badge-strength">
-                          {pickLabel(copy.sessionTypes, featuredDay.strength.sessionType)}
-                        </span>
-                      )}
-                      {!featuredDay?.strength && (
-                        <span className="mt-today-badge mt-today-badge-rest">
-                          {stitchCopy.noStrengthTitle}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="mt-today-narrative">{todayCoachNarrative}</p>
+              <section className="mt-ip-protocol mt-ip-protocol-workbench" data-ironpulse-protocol="true" aria-labelledby="mt-ip-protocol-title">
+                <div className="mt-ip-section-head mt-ip-workbench-head">
+                  <div>
+                    <span>{stitchCopy.protocolTitle}</span>
+                    <h2 id="mt-ip-protocol-title">{stitchCopy.protocolWorkspaceTitle}</h2>
                   </div>
+                  <p>{stitchCopy.protocolWorkspaceHint}</p>
+                </div>
 
-                  <div className="mt-readiness-deck">
-                    <article className="mt-readiness-card mt-readiness-card--decision">
-                      <span>{stitchCopy.decisionLabel}</span>
-                      <strong>
-                        {featuredDay?.strength
-                          ? pickLabel(copy.sessionTypes, featuredDay.strength.sessionType)
-                          : stitchCopy.noStrengthTitle}
-                      </strong>
-                      <p>{featuredDay?.strength ? (heroTags[0] || stitchCopy.readyHint) : stitchCopy.noStrengthHint}</p>
-                    </article>
-
-                    <article className="mt-readiness-card mt-readiness-card--dose">
-                      <span>{stitchCopy.weekDoseLabel}</span>
-                      <strong>
-                        {weekDoseStats.planned}
-                        <small> / {weekDoseStats.recommended || 0}</small>
-                      </strong>
-                      <p>
-                        {plan.weekContext?.volumeKm7d != null
-                          ? `${formatDistanceValue(plan.weekContext.volumeKm7d, isMile, 1) ?? '0'} ${isMile ? t('muscle_training.miles_unit') : t('muscle_training.km_unit')} / 7d`
-                          : stitchCopy.weekAlignLabel}
-                      </p>
-                    </article>
-
-                    <article className="mt-readiness-card mt-readiness-card--next-run">
-                      <span>{stitchCopy.nextRunLabel}</span>
-                      <strong>{nextRunSummary.label}</strong>
-                      <p>{nextRunSummary.meta}</p>
-                    </article>
-
-                    <article className="mt-readiness-card mt-readiness-card--gate">
-                      <span>{stitchCopy.recoveryGateLabel}</span>
-                      <strong>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)}</strong>
-                      <p>
-                        {plan.weekContext?.acwr != null
-                          ? `ACWR ${trimNumber(plan.weekContext.acwr, 2)} · ${pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}`
-                          : pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}
-                      </p>
-                    </article>
-                  </div>
-
-                  {featuredDay?.strength && (
-                    <div className="mt-today-metrics">
-                      <div className="mt-today-metric">
-                        <span>{stitchCopy.durationLabel}</span>
-                        <strong>{featuredDay.strength.durationMinutes ? formatMinutes(featuredDay.strength.durationMinutes, isZh) : '-'}</strong>
-                      </div>
-                      <div className="mt-today-metric">
-                        <span>{copy.rpeTitle}</span>
-                        <strong>RPE {featuredDay.strength.targetRpe ?? '-'}</strong>
-                      </div>
-                      <div className="mt-today-metric">
-                        <span>{stitchCopy.loadLabel}</span>
-                        <strong>{String(protocolItems.length).padStart(2, '0')}</strong>
-                      </div>
-                      {estimatedBurn != null && (
-                        <div className="mt-today-metric">
-                          <span>{stitchCopy.burnLabel}</span>
-                          <strong>{estimatedBurn} kcal</strong>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {featuredDay?.strength && (
-                    <div className="mt-today-actions">
-                      <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
-                        {stitchCopy.startWorkout}
-                      </button>
-                      {heroTags.length > 0 && (
-                        <div className="strength-plan-hero-tags">
-                          {heroTags.map((tag) => <span key={tag}>{tag}</span>)}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
-
-              </div>
-
-              <aside className="mt-coach-cockpit-rail">
-                <section className="mt-coach-rail-card mt-coach-rail-card--focus">
-                  <span className="strength-plan-section-label">{stitchCopy.recoveryImpactTitle}</span>
-                  <strong>{pickLabel(copy.currentFocus, plan.weekContext?.currentFocus)}</strong>
-                  <p>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)} - {pickLabel(copy.loadStatus, plan.weekContext?.loadStatus)}</p>
-                </section>
-                <section className="mt-friendly-guide-card" aria-label={stitchCopy.guideTitle}>
-                  <span className="strength-plan-section-label">{stitchCopy.guideTitle}</span>
-                  <div className="mt-friendly-steps">
-                    {friendlySteps.map((step) => (
-                      <article key={step.key} className="mt-friendly-step">
-                        <span>{step.number}</span>
-                        <div>
-                          <strong>{step.title}</strong>
-                          <p>{step.body}</p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                  <button type="button" className="mt-friendly-secondary-btn" onClick={scrollToControls}>
-                    {stitchCopy.guideAdjustCheckin}
+                <div className="mt-ip-target-filter-rail" aria-label={stitchCopy.targetAreasTitle}>
+                  <button
+                    type="button"
+                    className={`mt-ip-filter-chip mt-ip-filter-chip--all${activeTarget === 'all' ? ' is-active' : ''}`}
+                    onClick={() => handleTargetAreaSelect('all')}
+                    aria-pressed={activeTarget === 'all'}
+                  >
+                    <span>{stitchCopy.allTargets}</span>
+                    <small>{formatCopyTemplate(stitchCopy.areaExerciseCount, { count: visibleExerciseItems.length })}</small>
                   </button>
-                </section>              </aside>
-            </section>
-
-            {/* ZONE 3: Does it match my running plan this week? */}
-            <section className="mt-week-strip">
-              <span className="strength-plan-section-label">{stitchCopy.weekStripLabel}</span>
-              <div className="mt-week-strip-grid">
-                {(plan.days || []).map((day, idx) => {
-                  const hasStrength = !!day.strength;
-                  const isKeyRun = day.run?.keyRun;
-                  const isLongRun = day.run?.longRun;
-                  const isRest = day.run?.workoutType === 'REST' || (!day.run?.workoutType && !hasStrength);
-                  const isToday = idx === 0;
-                  let dayType = 'run';
-                  if (isRest && !hasStrength) dayType = 'rest';
-                  return (
-                    <div
-                      key={day.date || idx}
-                      className={`mt-strip-day${hasStrength ? ' has-strength' : ''}${isToday ? ' is-today' : ''}${isKeyRun ? ' has-key-run' : ''}${isLongRun ? ' has-long-run' : ''} day-type-${dayType}`}
+                  {targetAreaCards.map((target) => (
+                    <button
+                      key={target.key}
+                      type="button"
+                      className={`mt-ip-filter-chip${activeTarget === target.key ? ' is-active' : ''}`}
+                      onClick={() => handleTargetAreaSelect(target.key)}
+                      aria-pressed={activeTarget === target.key}
                     >
-                      <div className="mt-strip-day-label">
-                        {isToday
-                          ? stitchCopy.todayBadge
-                          : formatDayLabel(day.date, day.dayLabel, displayLang)}
-                      </div>
-                      <div className="mt-strip-day-badges">
-                        {hasStrength && (
-                          <span className="mt-strip-badge mt-strip-badge-strength">
-                            {stitchCopy.strengthDayBadge}
-                          </span>
-                        )}
-                        {isKeyRun && (
-                          <span className="mt-strip-badge mt-strip-badge-key">
-                            {stitchCopy.keyRunBadge}
-                          </span>
-                        )}
-                        {isLongRun && (
-                          <span className="mt-strip-badge mt-strip-badge-long">
-                            {stitchCopy.longRunBadge}
-                          </span>
-                        )}
-                        {!hasStrength && !isKeyRun && !isLongRun && (
-                          <span className="mt-strip-badge mt-strip-badge-run">
-                            {isRest ? stitchCopy.restDayBadge : stitchCopy.runDayBadge}
-                          </span>
-                        )}
-                      </div>
-                      {day.run?.plannedDistanceKm != null && (
-                        <div className="mt-strip-day-dist">
-                          {formatDistance(day.run.plannedDistanceKm, isZh, isMile)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                      <img src={target.image} alt="" loading="lazy" aria-hidden="true" />
+                      <span>{target.label}</span>
+                      <small>
+                        {formatCopyTemplate(stitchCopy.areaPlanCount, { count: target.planCount })}
+                        {' · '}
+                        {formatCopyTemplate(stitchCopy.areaLibraryCount, { count: target.libraryCount })}
+                      </small>
+                    </button>
+                  ))}
+                </div>
 
-            {/* ── PROTOCOL: Full exercise list (disclosed on demand on mobile) ── */}
-            </section>
-
-            {featuredDay?.strength && (
-              <section className="strength-plan-hero-shell mt-protocol-board">
-                <section className="strength-plan-content-grid">
-                  <div className="strength-plan-protocol">
-                    <span className="strength-plan-section-label">{stitchCopy.protocolTitle}</span>
-                    {protocolItems.length > 0 ? (
-                      <div className="strength-plan-protocol-list">
-                        {protocolItems.map(({ block, blockIndex, exercise, exerciseIndex }) => {
-                          const exerciseCopy = getExerciseCardContent(exercise, isZh);
-                          return (
-                            <article
-                              key={`${block.title}-${exercise.name}-${exerciseIndex}`}
-                              className="strength-plan-exercise-row"
-                              data-block-index={blockIndex + 1}
-                              data-exercise-index={exerciseIndex + 1}
-                            >
-                              <div className="strength-plan-exercise-media">
-                                <span className="strength-plan-exercise-order" aria-hidden="true">
-                                  {String(exerciseIndex + 1).padStart(2, '0')}
-                                </span>
-                                <ExerciseIllustration exerciseName={exercise.name} muscles={exerciseCopy.muscles} isZh={isZh} />
-                              </div>
-                              <div className="strength-plan-exercise-copy">
-                                <span className="strength-plan-exercise-kicker">
-                                  {String(blockIndex + 1).padStart(2, '0')} / {pickLabel(copy.blockTitles, block.title, block.title)}
-                                </span>
-                                <h3>{exerciseCopy.name}</h3>
-                                <p>{exerciseCopy.steps.slice(0, 2).join(' ')}</p>
-                              </div>
-                              <div className="strength-plan-exercise-meta">
-                                <div>
-                                  <span>{t('muscle_training.sets_reps_duration')}</span>
-                                  <strong>{formatLocalizedExercisePrescription(exercise, isZh)}</strong>
-                                </div>
-                                <em>{exerciseCopy.intent}</em>
-                              </div>
-                            </article>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="strength-plan-empty-panel">
-                        <h3>{stitchCopy.noStrengthTitle}</h3>
-                        <p>{pickLabel(copy.noStrengthReasons, featuredDay?.noStrengthReasonCode, stitchCopy.noStrengthHint)}</p>
+                <div className="mt-ip-protocol-layout">
+                  <div className="mt-ip-exercise-list">
+                    {filteredProtocolItems.length > 0 && (
+                      <div className="mt-ip-exercise-section-label">
+                        <span>{stitchCopy.todayPlanTitle}</span>
+                        <em>{formatCopyTemplate(stitchCopy.areaExerciseCount, { count: filteredProtocolItems.length })}</em>
                       </div>
                     )}
-
-                    <div className="strength-plan-cta-panel">
-                      <h3>{stitchCopy.readyTitle}</h3>
-                      <p>{stitchCopy.readyHint}</p>
-                      <button type="button" className="strength-plan-primary-btn" onClick={scrollToControls}>
-                        {stitchCopy.enterWorkout}
-                      </button>
-                    </div>
+                    {filteredProtocolItems.map((item) => {
+                      const planItem = { ...item, source: 'plan' };
+                      const { block, exercise, globalIndex } = planItem;
+                      const exerciseCopy = getExerciseContentForItem(planItem, isZh);
+                      const itemKey = getProtocolItemKey(planItem);
+                      const isSelected = itemKey === getProtocolItemKey(selectedProtocolItem);
+                      const equipmentKey = getExerciseEquipmentKey(exercise);
+                      return (
+                        <button
+                          key={itemKey}
+                          id={`mt-exercise-${itemKey}`}
+                          type="button"
+                          className={`mt-ip-exercise-row${isSelected ? ' is-selected' : ''}`}
+                          onClick={() => handleExerciseSelect(planItem)}
+                          aria-pressed={isSelected}
+                        >
+                          <span>{String(globalIndex + 1).padStart(2, '0')}</span>
+                          <strong>{exerciseCopy.name}</strong>
+                          <em>{formatLocalizedExercisePrescription(exercise, isZh)}</em>
+                          <small>{pickLabel(copy.exerciseEquipment, equipmentKey, equipmentKey)}</small>
+                          <small>{exerciseCopy.muscles.join(' / ')}</small>
+                          <p><b>{stitchCopy.todayPlanTitle}</b>{exerciseCopy.intent || pickLabel(copy.blockTitles, block.title, block.title)}</p>
+                        </button>
+                      );
+                    })}
+                    {filteredProtocolItems.length === 0 && activeTarget !== 'all' && (
+                      <div className="mt-ip-empty-panel mt-ip-plan-empty">
+                        <strong>{stitchCopy.noAreaPlanExercises}</strong>
+                        <p>{stitchCopy.optionalLibraryNote}</p>
+                      </div>
+                    )}
+                    {libraryProtocolItems.length > 0 && (
+                      <div className="mt-ip-exercise-section-label mt-ip-exercise-section-label--library">
+                        <span>{stitchCopy.compoundLibraryTitle}</span>
+                        <em>{stitchCopy.optionalLibraryNote}</em>
+                      </div>
+                    )}
+                    {libraryProtocolItems.length > 0 ? (
+                      libraryProtocolItems.map((item) => {
+                        const { exercise, globalIndex } = item;
+                        const exerciseCopy = getExerciseContentForItem(item, isZh);
+                        const itemKey = getProtocolItemKey(item);
+                        const isSelected = itemKey === getProtocolItemKey(selectedProtocolItem);
+                        const equipmentKey = getExerciseEquipmentKey(exercise);
+                        return (
+                          <button
+                            key={itemKey}
+                            id={`mt-exercise-${itemKey}`}
+                            type="button"
+                            className={`mt-ip-exercise-row is-library${isSelected ? ' is-selected' : ''}`}
+                            onClick={() => handleExerciseSelect(item)}
+                            aria-pressed={isSelected}
+                          >
+                            <span>{String(globalIndex + 1).padStart(2, '0')}</span>
+                            <strong>{exerciseCopy.name}</strong>
+                            <em>{formatLocalizedExercisePrescription(exercise, isZh)}</em>
+                            <small>{pickLabel(copy.exerciseEquipment, equipmentKey, equipmentKey)}</small>
+                            <small>{exerciseCopy.muscles.join(' / ')}</small>
+                            <p><b>{stitchCopy.compoundBadge}</b>{exerciseCopy.intent}</p>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="mt-ip-empty-panel">
+                        <strong>{stitchCopy.noAreaExercises}</strong>
+                        <p>{stitchCopy.targetCardsHint}</p>
+                      </div>
+                    )}
                   </div>
 
-                  <aside className="strength-plan-rail strength-plan-rail--cues-only">
-                    <section className="strength-plan-rail-card strength-plan-rail-card--cues">
-                      <span className="strength-plan-section-label">{stitchCopy.coachingCuesTitle}</span>
-                      <div className="strength-plan-cues">
-                        {coachingCues.map((cue, index) => (
-                          <article key={cue.key} className="strength-plan-cue">
-                            <span>{String(index + 1).padStart(2, '0')}</span>
-                            <div>
-                              <h4>{cue.title}</h4>
-                              <p>{cue.body}</p>
-                            </div>
-                          </article>
-                        ))}
+                  <aside className={`mt-ip-detail-drawer${isDetailDrawerOpen ? ' is-open' : ' is-closed'}`} aria-label={stitchCopy.exerciseDetailTitle}>
+                    <button
+                      type="button"
+                      className="mt-ip-detail-close"
+                      onClick={() => setIsDetailDrawerOpen(false)}
+                      aria-label={stitchCopy.closeExerciseDetail}
+                    >
+                      x
+                    </button>
+                    {selectedProtocolItem && selectedExerciseCopy ? (
+                      <>
+                        <nav className="mt-ip-detail-breadcrumb" aria-label={stitchCopy.exerciseDetailTitle}>
+                          <span>{stitchCopy.allActions}</span>
+                          <span>/</span>
+                          <span>{selectedTargetAreaLabel}</span>
+                          <span>/</span>
+                          <strong>{selectedExerciseCopy.name}</strong>
+                        </nav>
+                        <h3>{selectedExerciseCopy.name}</h3>
+                        <p>{selectedExerciseCopy.intent}</p>
+                        <div className="mt-ip-detail-tags">
+                          <span>{selectedProtocolItem.source === 'library' ? stitchCopy.optionalLibraryBadge : stitchCopy.todayPlanTitle}</span>
+                          {selectedProtocolItem.source === 'library' && <span>{stitchCopy.compoundBadge}</span>}
+                          <span>{formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh)}</span>
+                          <span>
+                            {selectedProtocolItem.source === 'library'
+                              ? stitchCopy.compoundLibraryTitle
+                              : pickLabel(copy.blockTitles, selectedProtocolItem.block.title, selectedProtocolItem.block.title)}
+                          </span>
+                          <span>{pickLabel(copy.exerciseEquipment, getExerciseEquipmentKey(selectedProtocolItem.exercise), getExerciseEquipmentKey(selectedProtocolItem.exercise))}</span>
+                        </div>
+                        {selectedExerciseVideoUrl ? (
+                          <div className="mt-ip-video-frame">
+                            <iframe
+                              src={selectedExerciseVideoUrl}
+                              title={`${selectedExerciseCopy.name} ${stitchCopy.videoDemoTitle}`}
+                              loading="lazy"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowFullScreen
+                            />
+                          </div>
+                        ) : (
+                          <div className="mt-ip-video-missing">
+                            <p>{stitchCopy.videoUnavailable}</p>
+                          </div>
+                        )}
+                        <div className="mt-ip-coach-tips">
+                          <h4>{stitchCopy.professionalTips}</h4>
+                          {selectedExerciseCopy.steps.map((step, index) => (
+                            <article
+                              key={`${selectedExerciseCopy.name}-tip-${index}`}
+                              className={`mt-ip-tip-row${openTipIndex === index ? ' is-open' : ''}`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setOpenTipIndex((current) => (current === index ? -1 : index))}
+                                aria-expanded={openTipIndex === index}
+                              >
+                                <span>{String(index + 1).padStart(2, '0')}</span>
+                                <strong>{step}</strong>
+                                <em>{openTipIndex === index ? '-' : '+'}</em>
+                              </button>
+                              {openTipIndex === index && (
+                                <p>
+                                  {selectedProtocolItem.source === 'library'
+                                    ? stitchCopy.optionalLibraryNote
+                                    : stitchCopy.todayPlanTitle}
+                                </p>
+                              )}
+                            </article>
+                          ))}
+                        </div>
+                        <div className="mt-ip-step-guide">
+                          <h4>{stitchCopy.stepGuide}</h4>
+                          <div>
+                            {selectedExerciseCopy.steps.map((step, index) => (
+                              <article key={`${selectedExerciseCopy.name}-guide-${index}`} className="mt-ip-step-card">
+                                <span>{String(index + 1).padStart(2, '0')}</span>
+                                <p>{step}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                        {selectedProtocolItem.source === 'library' && (
+                          <p className="mt-ip-library-note">{stitchCopy.optionalLibraryNote}</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="mt-ip-video-missing">
+                        <p>{stitchCopy.noExerciseSelected}</p>
                       </div>
-                    </section>
+                    )}
                   </aside>
-                </section>
+                </div>
               </section>
-            )}
+
+              <section className="mt-ip-records" aria-labelledby="mt-ip-records-title">
+                <div className="mt-ip-section-head">
+                  <h2 id="mt-ip-records-title">{stitchCopy.recentPrsTitle}</h2>
+                  <span>{stitchCopy.historyPlaceholderBadge}</span>
+                </div>
+                <div className="mt-ip-record-list">
+                  {recentStrengthPlaceholders.map((record) => (
+                    <article key={record.name} className="mt-ip-record-row">
+                      <div className="mt-ip-record-icon" aria-hidden="true">
+                        <AppIcon name="emoji_events" />
+                      </div>
+                      <div>
+                        <strong>{record.name}</strong>
+                        <p>{record.meta}</p>
+                      </div>
+                      <span>{record.value}</span>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <article className="mt-ip-status-panel">
+                <span>{stitchCopy.recoveryImpactTitle}</span>
+                <h2>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)}</h2>
+                <p>{todayCoachNarrative || stitchCopy.guideSubtitle}</p>
+                <div className="mt-ip-status-metrics">
+                  <span>{stitchCopy.nextKeyRun}<strong>{nextKeyRunSummary.label}</strong></span>
+                  <span>ACWR<strong>{plan.weekContext?.acwr != null ? trimNumber(plan.weekContext.acwr, 2) : '-'}</strong></span>
+                  <span>{stitchCopy.highIntensity}<strong>{plan.weekContext?.highIntensityRatioLast7d != null ? `${Math.round(plan.weekContext.highIntensityRatioLast7d * 100)}%` : '-'}</strong></span>
+                </div>
+              </article>
+            </section>
 
             {/* ── COACH CONTROLS: check-in + preferences behind disclosure ── */}
             <section id="muscle-controls" className="strength-plan-control-deck">
@@ -3200,7 +3940,7 @@ export default function MuscleTraining() {
 
             <details className="mt-settings-disclosure">
               <summary className="mt-settings-summary">
-                <AppIcon name="tune" className="mt-settings-icon" />
+                <AppIcon name="settings" className="mt-settings-icon" />
                 {stitchCopy.settingsDisclosure}
               </summary>
 
@@ -3253,6 +3993,7 @@ export default function MuscleTraining() {
                         type="button"
                         className={`muscle-day-chip${checkInDraft.runType === runType ? ' active' : ''}`}
                         onClick={() => updateCheckInDraft('runType', runType)}
+                        aria-pressed={checkInDraft.runType === runType}
                       >
                         {pickLabel(copy.workoutTypes, runType, runType)}
                       </button>
@@ -3364,6 +4105,7 @@ export default function MuscleTraining() {
                           type="button"
                           className={`muscle-day-chip${active ? ' active' : ''}`}
                           onClick={() => togglePreferredDay(day.value)}
+                          aria-pressed={active}
                         >
                           {isZh ? day.zh : day.en}
                         </button>
