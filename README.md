@@ -420,7 +420,7 @@ Or invoke it as a slash command in Claude Code / Codex / Gemini CLI:
 
 What the command does, in order:
 
-1. Verifies the remote is `https://github.com/520HXC/run.git` and git identity is `JunWeiLi233 / mcpejunwei@gmail.com`.
+1. Verifies the remote is `https://github.com/520HXC/run.git` and the local git identity matches the values configured in `CLAUDE.md` ("Identity (set before every commit)").
 2. Refuses to run when the current branch is `main` itself.
 3. Refreshes architecture diagrams (`README.md`, `/auto-hermes` flow, SaaS, AI agents).
 4. Runs the static security scan — blocks on secret, PII, API-key, or config leaks.
