@@ -1758,7 +1758,7 @@ label,
 
 .data-table th {
     color: var(--text-muted);
-    font-size: 0.73rem;
+    font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -27938,7 +27938,7 @@ body.theme-light .auth-page .error-alert--success {
 
 .shoe-inventory-brand-label,
 .shoe-inventory-panel-kicker {
-  color: rgba(239, 231, 221, 0.48);
+  color: rgba(239, 231, 221, 0.75);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.24em;
@@ -30639,7 +30639,7 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 
 .analysis-injury-prevention-risk-label {
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   line-height: 1.35;
 }
 
@@ -30718,7 +30718,7 @@ body.theme-light .dashboard-body .unit-toggle button.active {
 
 .analysis-injury-prevention-acwr-zones span {
   text-align: center;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   padding: 3px 0;
@@ -36853,8 +36853,8 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
 .schedule-plan-hero-summary-chip span,
 .schedule-plan-route-target-metric span {
   display: block;
-  color: rgba(232, 226, 220, 0.46);
-  font-size: 0.54rem;
+  color: rgba(232, 226, 220, 0.75);
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -36886,8 +36886,8 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
 .schedule-plan-hero-metrics span {
   display: block;
   margin-bottom: 6px;
-  color: rgba(232, 226, 220, 0.34);
-  font-size: 0.56rem;
+  color: rgba(232, 226, 220, 0.72);
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -37010,8 +37010,8 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--edi
 
 .schedule-plan-day > div:last-child p {
   margin: 4px 0 0;
-  color: rgba(232, 226, 220, 0.4);
-  font-size: 0.52rem;
+  color: rgba(232, 226, 220, 0.72);
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -44487,7 +44487,7 @@ body.theme-light .settings-control-theme-card.is-active {
 
 .recent-runs-card-metric span {
   display: block;
-  color: rgba(232, 224, 217, 0.42);
+  color: rgba(232, 224, 217, 0.72);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.16em;
