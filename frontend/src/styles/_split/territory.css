@@ -1,0 +1,2545 @@
+/* Territory competition page */
+
+.territory-page {
+  --territory-bg: #11100e;
+  --territory-panel: rgba(28, 26, 22, 0.82);
+  --territory-panel-strong: rgba(38, 35, 29, 0.92);
+  --territory-border: rgba(255, 255, 255, 0.11);
+  --territory-text: #f4eee7;
+  --territory-muted: rgba(244, 238, 231, 0.66);
+  --territory-accent: #f07561;
+  --territory-green: #86efac;
+  background:
+    radial-gradient(circle at 15% 8%, rgba(240, 117, 97, 0.14), transparent 32rem),
+    radial-gradient(circle at 80% 18%, rgba(91, 156, 245, 0.12), transparent 30rem),
+    var(--territory-bg);
+}
+
+.territory-canvas {
+  gap: 22px;
+}
+
+.territory-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.territory-hero-copy,
+.territory-empty-note,
+.territory-card {
+  border: 1px solid var(--territory-border);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)), var(--territory-panel);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
+}
+
+.territory-hero-copy {
+  min-height: 210px;
+  border-radius: 30px;
+  padding: clamp(24px, 4vw, 42px);
+  position: relative;
+  overflow: hidden;
+}
+
+.territory-hero-copy::after {
+  content: "";
+  position: absolute;
+  inset: auto -8% -40% 48%;
+  height: 180px;
+  background: linear-gradient(90deg, transparent, rgba(240, 117, 97, 0.22), transparent);
+  transform: rotate(-8deg);
+}
+
+.territory-kicker,
+.territory-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--territory-accent);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.territory-hero h1 {
+  max-width: 760px;
+  margin: 16px 0 12px;
+  color: var(--territory-text);
+  font-size: clamp(2.3rem, 6vw, 5.6rem);
+  line-height: 0.92;
+  letter-spacing: -0.08em;
+}
+
+.territory-hero p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--territory-muted);
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.territory-loading {
+  display: inline-flex;
+  margin-top: 18px;
+  color: var(--territory-green);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.territory-empty-note {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  border-radius: 28px;
+  padding: 26px;
+}
+
+.territory-empty-note strong {
+  color: var(--territory-text);
+  font-size: 1.35rem;
+}
+
+.territory-empty-note span {
+  color: var(--territory-muted);
+  line-height: 1.6;
+}
+
+.territory-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(240, 117, 97, 0.32);
+  border-radius: 999px;
+  color: #ffd2c9;
+  background: rgba(240, 117, 97, 0.12);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.territory-map-section {
+  position: relative;
+  min-height: clamp(460px, 66vh, 720px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 34px;
+  background: #090909;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.38);
+}
+
+.territory-leaflet-map {
+  position: absolute;
+  inset: 0;
+  min-height: 460px;
+  z-index: 0;
+}
+
+.territory-map-section::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(17, 16, 14, 0.48), transparent 34%, rgba(17, 16, 14, 0.56)),
+    radial-gradient(circle at 20% 20%, rgba(240, 117, 97, 0.12), transparent 24rem);
+  z-index: 1;
+}
+
+.territory-overlay-stats,
+.territory-overlay-filters,
+.territory-overlay-legend {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+}
+
+.territory-overlay-stats {
+  top: 18px;
+  left: 18px;
+  flex-wrap: wrap;
+}
+
+.territory-stat-chip,
+.territory-pill,
+.territory-legend-item {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(16, 15, 13, 0.72);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.territory-stat-chip {
+  min-width: 128px;
+  border-radius: 20px;
+  padding: 14px 16px;
+}
+
+.territory-stat-chip span {
+  display: block;
+  color: var(--territory-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.territory-stat-chip strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--territory-text);
+  font-size: 1.45rem;
+}
+
+.territory-stat-chip small {
+  color: var(--territory-muted);
+  font-size: 0.78rem;
+}
+
+.territory-overlay-filters {
+  top: 18px;
+  right: 18px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.territory-pill {
+  min-height: 38px;
+  border-radius: 999px;
+  color: var(--territory-text);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.territory-pill.is-active {
+  color: #1d1714;
+  border-color: transparent;
+  background: var(--territory-accent);
+}
+
+.territory-overlay-legend {
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.territory-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 9px 12px;
+  color: var(--territory-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.territory-legend-dot,
+.territory-lb-swatch,
+.territory-zone-swatch {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 0 18px currentColor;
+}
+
+.territory-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.92fr) minmax(320px, 1.08fr);
+  gap: 18px;
+}
+
+.territory-card {
+  border-radius: 28px;
+  padding: 22px;
+}
+
+.territory-target,
+.territory-contests {
+  grid-column: span 2;
+}
+
+.territory-lb-row,
+.territory-zone-row,
+.territory-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.territory-lb-row.is-you,
+.territory-zone-row.is-contested {
+  border-color: rgba(240, 117, 97, 0.34);
+  background: rgba(240, 117, 97, 0.11);
+}
+
+.territory-lb-rank,
+.territory-lb-area,
+.territory-city-area {
+  color: var(--territory-text);
+  font-weight: 900;
+}
+
+.territory-lb-info,
+.territory-zone-info,
+.territory-recent-row div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.territory-lb-info strong,
+.territory-zone-info strong,
+.territory-recent-row strong,
+.territory-target h2,
+.territory-contest-head h3 {
+  color: var(--territory-text);
+}
+
+.territory-lb-info span,
+.territory-zone-info span,
+.territory-recent-row span,
+.territory-contests p,
+.territory-target p {
+  color: var(--territory-muted);
+}
+
+.territory-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #c8ffd9;
+  background: rgba(134, 239, 172, 0.13);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.territory-status-pill.is-warning {
+  color: #ffe2b2;
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.territory-target {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(240, 117, 97, 0.22), transparent 18rem),
+    var(--territory-panel-strong);
+}
+
+.territory-target .territory-section-label,
+.territory-target h2,
+.territory-target p,
+.territory-target-meta {
+  grid-column: 1;
+}
+
+.territory-target h2 {
+  margin: 10px 0 0;
+  font-size: clamp(1.8rem, 4vw, 3.5rem);
+  letter-spacing: -0.05em;
+}
+
+.territory-target p {
+  max-width: 760px;
+  margin: 0;
+  line-height: 1.7;
+}
+
+.territory-target-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.territory-target-meta span {
+  border-radius: 999px;
+  padding: 8px 10px;
+  color: var(--territory-text);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.territory-action-btn {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: center;
+}
+
+.territory-recent-row svg {
+  width: 22px;
+  height: 22px;
+  color: var(--territory-accent);
+}
+
+.territory-contest-block {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.territory-contest-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.territory-contest-head h3 {
+  flex: 1;
+  margin: 0;
+}
+
+.territory-contest-bar {
+  height: 10px;
+  overflow: hidden;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.territory-contest-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+@media (max-width: 980px) {
+  .territory-hero,
+  .territory-grid,
+  .territory-target {
+    grid-template-columns: 1fr;
+  }
+
+  .territory-target,
+  .territory-contests,
+  .territory-action-btn {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .territory-overlay-stats,
+  .territory-overlay-filters,
+  .territory-overlay-legend {
+    position: relative;
+    inset: auto;
+    margin: 12px;
+  }
+
+  .territory-map-section {
+    display: flex;
+    min-height: 620px;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .territory-hero-copy,
+  .territory-empty-note,
+  .territory-card {
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .territory-map-section {
+    border-radius: 24px;
+  }
+
+  .territory-overlay-filters {
+    justify-content: flex-start;
+  }
+
+  .territory-lb-row,
+  .territory-zone-row,
+  .territory-recent-row,
+  .territory-contest-head {
+    align-items: flex-start;
+  }
+}
+
+/* Territory prototype board */
+
+.territory-page {
+  --terr-bg: #121212;
+  --terr-surface: rgba(28, 26, 24, 0.76);
+  --terr-surface-strong: rgba(33, 30, 27, 0.88);
+  --terr-border: rgba(255, 255, 255, 0.12);
+  --terr-text: #f1ece7;
+  --terr-muted: rgba(241, 236, 231, 0.62);
+  --terr-accent: #f07561;
+  --terr-blue: #5b9cf5;
+  --terr-green: #86efac;
+  --terr-warning: #fbbf24;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(240, 117, 97, 0.16), transparent 32rem),
+    radial-gradient(circle at 78% 10%, rgba(91, 156, 245, 0.12), transparent 34rem),
+    var(--terr-bg);
+}
+
+.territory-canvas {
+  gap: 22px;
+}
+
+/* terr-map-section: clamp viewport height, 34px cinematic radius (larger than --radius-xl 20px),
+   and #090909 near-black map canvas are intentional cinematic values with no token equivalent */
+
+.terr-map-section {
+  position: relative;
+  min-height: clamp(520px, 70vh, 820px); /* tokens-ok */
+  overflow: hidden;
+  border: 1px solid var(--terr-border);
+  border-radius: 34px;
+  background: #090909; /* tokens-ok */
+  box-shadow: var(--shadow-soft);
+  isolation: isolate;
+}
+
+.terr-leaflet-map {
+  position: absolute;
+  inset: 0;
+  min-height: 520px; /* tokens-ok */
+  z-index: 0;
+}
+
+.terr-map-section::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(18, 18, 18, 0.34), transparent 36%, rgba(18, 18, 18, 0.58)),
+    radial-gradient(circle at 20% 18%, rgba(240, 117, 97, 0.14), transparent 24rem),
+    radial-gradient(circle at 78% 72%, rgba(91, 156, 245, 0.1), transparent 28rem);
+}
+
+/* Map overlay containers: positional px values are map-viewport insets, no positional token exists */
+
+.terr-overlay-stats,
+.terr-overlay-filters,
+.terr-overlay-command,
+.terr-overlay-legend {
+  position: absolute;
+  z-index: 2;
+  display: flex; /* tokens-ok */
+  gap: 10px;
+}
+
+.terr-overlay-stats {
+  top: 18px; /* tokens-ok */
+  left: 18px;
+  flex-wrap: wrap;
+  max-width: min(680px, calc(100% - 36px));
+}
+
+.terr-overlay-filters {
+  top: 18px; /* tokens-ok */
+  right: 18px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: min(560px, calc(100% - 36px));
+}
+
+.terr-overlay-command {
+  left: 18px;
+  bottom: 18px;
+  width: min(430px, calc(100% - 160px));
+  display: grid;
+  gap: 12px;
+}
+
+.terr-overlay-legend {
+  right: 18px; /* tokens-ok */
+  bottom: 18px;
+  left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: min(520px, calc(100% - 480px));
+}
+
+.terr-stat-chip,
+.terr-pill,
+.terr-legend-item {
+  border: 1px solid var(--terr-border);
+  background: var(--terr-surface);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(16px);
+}
+
+/* terr-stat-chip: min-width is a component minimum, no sizing token; padding is layout */
+
+.terr-stat-chip {
+  min-width: 128px; /* tokens-ok */
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+}
+
+.terr-stat-chip span {
+  display: block;
+  color: var(--terr-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.terr-stat-chip strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--terr-text);
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.terr-stat-chip small {
+  color: var(--terr-muted);
+  font-size: 0.78rem;
+}
+
+.terr-pill {
+  min-height: 38px; /* tokens-ok */
+  border-radius: 999px; /* tokens-ok pill */
+  color: var(--terr-text);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 14px; /* tokens-ok */
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.terr-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(240, 117, 97, 0.34); /* tokens-ok */
+}
+
+.terr-pill.is-active {
+  color: #1d1714;
+  border-color: transparent;
+  background: var(--terr-accent);
+}
+
+.terr-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* tokens-ok */
+  border-radius: 999px; /* tokens-ok pill */
+  padding: 9px 12px; /* tokens-ok */
+  color: var(--terr-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+/* terr-zone-swatch: 12px icon size has no icon-size token; 999px is pill shape; glow uses currentColor */
+
+.terr-legend-dot,
+.terr-lb-swatch,
+.terr-zone-swatch {
+  width: 12px; /* tokens-ok */
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 999px; /* tokens-ok */
+  box-shadow: 0 0 18px currentColor;
+}
+
+.terr-marker {
+  background: transparent;
+  border: 0;
+}
+
+.terr-below-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.92fr) minmax(320px, 1.08fr);
+  gap: 18px; /* tokens-ok */
+}
+
+.terr-card {
+  border: 1px solid var(--terr-border);
+  border-radius: 28px; /* tokens-ok */
+  padding: 22px; /* tokens-ok */
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)), /* tokens-ok */
+    var(--terr-surface);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
+.terr-command-card {
+  border: 1px solid var(--terr-border);
+  border-radius: 24px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    var(--terr-surface-strong);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
+.terr-command-card--focus.is-hot {
+  border-color: rgba(251, 191, 36, 0.28);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(251, 191, 36, 0.18), transparent 12rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    var(--terr-surface-strong);
+}
+
+.terr-command-card--focus.is-stable {
+  border-color: rgba(134, 239, 172, 0.2);
+}
+
+.terr-command-kicker {
+  display: inline-flex;
+  align-items: center;
+  color: var(--terr-accent);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.terr-command-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.terr-command-head strong {
+  display: block;
+  color: var(--terr-text);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.3rem, 2vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.terr-command-head p {
+  margin: 10px 0 0;
+  color: var(--terr-muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.terr-command-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.terr-command-meta span {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.terr-command-meta small {
+  color: var(--terr-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.terr-command-meta strong {
+  color: var(--terr-text);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.terr-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.terr-command-primary {
+  min-width: 180px;
+}
+
+.terr-command-secondary {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--terr-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--terr-text);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.terr-command-secondary:hover {
+  transform: translateY(-1px);
+  border-color: rgba(240, 117, 97, 0.34);
+}
+
+.terr-command-watchlist {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.terr-command-queue-btn {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--terr-text);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.terr-command-queue-btn:hover {
+  transform: translateY(-1px);
+}
+
+.terr-command-queue-btn span,
+.terr-command-queue-btn small {
+  color: var(--terr-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.terr-command-queue-btn strong {
+  color: var(--terr-text);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.terr-command-queue-btn.is-hot {
+  border-color: rgba(251, 191, 36, 0.24);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.terr-command-queue-btn.is-expand {
+  border-color: rgba(240, 117, 97, 0.22);
+}
+
+.terr-command-queue-btn.is-stable {
+  border-color: rgba(134, 239, 172, 0.18);
+}
+
+.terr-command-queue-btn.is-active {
+  border-color: rgba(240, 117, 97, 0.4);
+  background: rgba(240, 117, 97, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.12);
+}
+
+.terr-cities-card {
+  min-height: 100%;
+}
+
+.terr-target-card,
+.terr-contests-card {
+  grid-column: span 2;
+}
+
+.terr-target-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(240, 117, 97, 0.22), transparent 18rem),
+    var(--terr-surface-strong);
+}
+
+.terr-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--terr-accent);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.terr-lb-list,
+.terr-zone-list,
+.terr-recent-list,
+.terr-cities-list {
+  display: grid;
+  gap: 12px; /* tokens-ok */
+  margin-top: 14px; /* tokens-ok */
+}
+
+.terr-lb-row,
+.terr-zone-row,
+.terr-recent-row,
+.terr-city-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--terr-border);
+  border-radius: var(--radius-lg);
+  background: var(--terr-surface);
+}
+
+.terr-lb-row.is-you,
+.terr-zone-row.is-contested {
+  border-color: rgba(240, 117, 97, 0.34); /* tokens-ok */
+  background: rgba(240, 117, 97, 0.11); /* tokens-ok */
+}
+
+.terr-zone-row--button {
+  width: 100%;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.terr-zone-row--button.is-selected {
+  border-color: rgba(240, 117, 97, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(240, 117, 97, 0.14);
+}
+
+.terr-lb-rank,
+.terr-lb-area,
+.terr-city-area {
+  color: var(--terr-text);
+  font-weight: 900;
+}
+
+.terr-lb-info,
+.terr-zone-info,
+.terr-recent-info,
+.terr-city-info {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px; /* tokens-ok */
+}
+
+.terr-lb-info strong,
+.terr-zone-info strong,
+.terr-recent-info strong,
+.terr-city-info strong,
+.terr-target-card h3,
+.terr-contest-head h4 {
+  color: var(--terr-text);
+}
+
+.terr-lb-info span,
+.terr-zone-info span,
+.terr-recent-info span,
+.terr-city-info span,
+.terr-contest-hint,
+.terr-empty-copy,
+.terr-target-card p {
+  color: var(--terr-muted);
+}
+
+/* terr-mini-pill: success green (#c8ffd9) and warning amber (#ffe2b2) have no semantic color tokens;
+   999px pill and 30px touch-height are layout constants */
+
+.terr-mini-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px; /* tokens-ok */
+  white-space: nowrap;
+  border-radius: 999px; /* tokens-ok */
+  padding: 0 10px;
+  color: #c8ffd9; /* tokens-ok */
+  background: rgba(134, 239, 172, 0.13); /* tokens-ok */
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.terr-mini-pill.is-warning {
+  color: #ffe2b2; /* tokens-ok */
+  background: rgba(251, 191, 36, 0.15); /* tokens-ok */
+}
+
+.terr-target-card .terr-section-label,
+.terr-target-card h3,
+.terr-target-card p,
+.terr-target-meta {
+  grid-column: 1;
+}
+
+.terr-target-card h3 {
+  margin: 10px 0 0;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.9rem, 4vw, 3.65rem);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+}
+
+.terr-target-card p {
+  max-width: 760px;
+  margin: 0;
+  line-height: 1.7;
+}
+
+.terr-target-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px; /* tokens-ok */
+}
+
+.terr-target-meta span {
+  border-radius: 999px; /* tokens-ok pill */
+  padding: 8px 10px; /* tokens-ok */
+  color: var(--terr-text);
+  background: rgba(255, 255, 255, 0.08); /* tokens-ok */
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.terr-target-button {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: center;
+}
+
+.terr-recent-row svg {
+  width: 22px;
+  height: 22px;
+  color: var(--terr-accent);
+}
+
+.terr-contest-block {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--terr-border);
+  border-radius: var(--radius-xl);
+  background: var(--terr-surface);
+}
+
+.terr-contest-head {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* tokens-ok */
+}
+
+.terr-contest-head h4 {
+  flex: 1;
+  margin: 0;
+}
+
+/* terr-contest-bar: 42px touch-height has no sizing token in design system */
+
+.terr-contest-bar {
+  display: flex;
+  overflow: hidden;
+  min-height: 42px; /* tokens-ok */
+  margin-top: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--terr-surface);
+}
+
+.terr-bar-side {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  padding: 0 10px; /* tokens-ok */
+}
+
+.terr-bar-side > span {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+}
+
+.terr-bar-side small {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  color: var(--terr-text);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terr-contest-hint {
+  margin: 12px 0 0; /* tokens-ok */
+}
+
+.terr-mode-banner {
+  display: grid;
+  gap: 10px;
+}
+
+.terr-mode-banner p {
+  margin: 0;
+  color: var(--terr-muted);
+  line-height: 1.65;
+}
+
+/* Territory brief �?above-fold coach summary */
+
+/* Editorial spacing: border-radius (28px) and padding (24px 28px) are intentional layout values; box-shadow is dark-mode ambient depth; gradient stops are decorative */
+
+.terr-brief {
+  border: 1px solid var(--terr-border); /* tokens-ok */
+  border-radius: 28px;
+  padding: 24px 28px;
+  background:
+    radial-gradient(circle at 88% 20%, var(--accent-coral-strong), transparent 14rem),
+    var(--terr-surface-strong);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+}
+
+.terr-intvl-brief {
+  display: grid;
+  gap: 18px;
+  overflow: hidden;
+  position: relative;
+}
+
+.terr-intvl-brief::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 34%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 74px);
+  opacity: 0.5;
+}
+
+.terr-intvl-brief > * {
+  position: relative;
+  z-index: 1;
+}
+
+.terr-intvl-opening {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.terr-intvl-copy {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+}
+
+.terr-intvl-kicker {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(240, 117, 97, 0.34);
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: var(--terr-accent);
+  background: rgba(240, 117, 97, 0.1);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.terr-intvl-copy h1 {
+  margin: 0;
+  max-width: 760px;
+  color: var(--terr-text);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 4.8rem);
+  font-weight: 900;
+  letter-spacing: -0.08em;
+  line-height: 0.92;
+}
+
+.terr-intvl-copy p {
+  margin: 0;
+  max-width: 720px;
+  color: var(--terr-muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.terr-route-planner-preview {
+  display: grid;
+  gap: 12px;
+  align-content: end;
+  border: 1px solid rgba(240, 117, 97, 0.28);
+  border-radius: 24px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(134, 239, 172, 0.16), transparent 12rem),
+    linear-gradient(160deg, rgba(240, 117, 97, 0.16), rgba(255, 255, 255, 0.04));
+  box-shadow: var(--shadow-card);
+}
+
+.terr-route-planner-preview span,
+.terr-lobby-strip span,
+.terr-game-step span {
+  color: var(--terr-accent);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.terr-route-planner-preview strong {
+  color: var(--terr-text);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.terr-route-planner-preview small {
+  color: var(--terr-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.terr-game-loop {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.terr-game-step {
+  display: grid;
+  gap: 8px;
+  min-height: 154px;
+  border: 1px solid var(--terr-border);
+  border-radius: 22px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.04);
+}
+
+.terr-game-step strong {
+  color: var(--terr-text);
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.terr-game-step p {
+  margin: 0;
+  color: var(--terr-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.terr-lobby-strip {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(134, 239, 172, 0.18);
+  border-radius: 20px;
+  padding: 12px 16px;
+  background: rgba(134, 239, 172, 0.07);
+}
+
+.terr-lobby-strip strong {
+  color: var(--terr-text);
+  font-size: 0.92rem;
+}
+
+.terr-lobby-strip p {
+  margin: 0;
+  color: var(--terr-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.terr-brief-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--terr-accent);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.terr-brief-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--terr-accent);
+}
+
+.terr-brief-kpis {
+  display: flex; /* tokens-ok */
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.terr-brief-kpi {
+  display: flex; /* tokens-ok */
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--terr-border);
+  border-radius: 18px;
+  background: var(--terr-surface);
+  min-width: 130px;
+  flex: 1;
+}
+
+.terr-brief-kpi--area {
+  border-color: rgba(240, 117, 97, 0.32); /* tokens-ok */
+  background: rgba(240, 117, 97, 0.1);
+}
+
+.terr-brief-kpi--alert {
+  border-color: rgba(251, 191, 36, 0.28); /* tokens-ok */
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.terr-brief-kpi strong {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--terr-text);
+}
+
+.terr-brief-kpi--alert strong {
+  color: var(--terr-warning);
+}
+
+.terr-brief-kpi small {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--terr-muted);
+}
+
+.terr-brief-kpi span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--terr-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terr-brief-insight {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--terr-border);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--terr-muted);
+}
+
+/* Target empty state */
+
+.terr-target-empty {
+  display: flex; /* tokens-ok */
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 8px;
+  grid-column: 1;
+}
+
+.terr-target-empty p {
+  color: var(--terr-muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* mini-pill accent variant �?green success; no semantic success token in this design system */
+
+.terr-mini-pill.is-accent {
+  color: #c8ffd9; /* tokens-ok */
+  background: rgba(134, 239, 172, 0.13);
+}
+
+/* Responsive brief */
+
+@media (max-width: 640px) {
+  .terr-brief {
+    padding: 18px 16px;
+    border-radius: 22px;
+  }
+
+  .terr-intvl-opening,
+  .terr-game-loop,
+  .terr-lobby-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .terr-intvl-copy h1 {
+    font-size: clamp(2rem, 12vw, 3rem);
+  }
+
+  .terr-brief-kpis {
+    gap: 8px;
+  }
+
+  .terr-brief-kpi {
+    min-width: 0;
+    flex: 1 1 calc(50% - 4px);
+    padding: 10px 12px;
+  }
+
+  .terr-brief-kpi strong {
+    font-size: 1.25rem;
+  }
+
+  .terr-brief-insight {
+    font-size: 0.84rem;
+  }
+}
+
+@media (max-width: 980px) {
+  .terr-below-grid,
+  .terr-target-card {
+    grid-template-columns: 1fr;
+  }
+
+  .terr-target-card,
+  .terr-contests-card,
+  .terr-target-button {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .terr-overlay-stats,
+  .terr-overlay-filters,
+  .terr-overlay-command,
+  .terr-overlay-legend {
+    position: relative;
+    inset: auto;
+    margin: 12px;
+  }
+
+  .terr-map-section {
+    display: flex;
+    min-height: 660px;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .terr-card {
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .terr-map-section {
+    border-radius: 24px;
+  }
+
+  .terr-overlay-filters {
+    justify-content: flex-start;
+  }
+
+  .terr-overlay-command {
+    width: auto;
+  }
+
+  .terr-command-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .terr-lb-row,
+  .terr-zone-row,
+  .terr-recent-row,
+  .terr-city-row,
+  .terr-contest-head {
+    align-items: flex-start;
+  }
+
+  .terr-zone-row,
+  .terr-contest-head {
+    flex-wrap: wrap;
+  }
+}
+
+/* Polygon brief �?empty state and double-count note */
+
+/* gap and padding-top are component-internal layout spacers; no spacing token maps to these slot values */
+
+.terr-brief-empty-polygons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* tokens-ok */
+  padding-top: 4px; /* tokens-ok */
+}
+
+.terr-brief-empty-desc {
+  margin: 0;
+  color: var(--terr-muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.terr-brief-empty-cta {
+  align-self: flex-start;
+  border: 1px solid var(--terr-accent);
+  border-radius: 999px; /* tokens-ok pill shape */
+  padding: 10px 20px; /* tokens-ok */
+  color: var(--terr-accent);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  transition: var(--transition);
+}
+
+.terr-brief-empty-cta:hover {
+  color: #1d1714;
+  background: var(--terr-accent);
+}
+
+.terr-brief-double-count-note {
+  margin: 8px 0 0; /* tokens-ok */
+  color: var(--terr-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  opacity: 0.72;
+}
+
+/* View-toggle pills label */
+
+.terr-pill--view-toggle {
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .terr-brief-empty-cta {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Territory Profile-aligned mission board refresh. */
+
+.territory-page {
+  --terr-paper: #fffaf3;
+  --terr-paper-soft: rgba(255, 250, 243, 0.78);
+  --terr-ink: #211a15;
+  --terr-ink-soft: rgba(40, 30, 24, 0.68);
+  --terr-line-soft: rgba(84, 58, 44, 0.12);
+  --terr-coral: #c95543;
+  --terr-coral-soft: rgba(201, 85, 67, 0.12);
+  --terr-olive: #60745a;
+  --terr-olive-soft: rgba(96, 116, 90, 0.12);
+  --terr-night: #221915;
+  --terr-profile-shadow: 0 32px 80px rgba(58, 38, 26, 0.12);
+  color: var(--terr-ink);
+  background:
+    radial-gradient(circle at 8% -8%, rgba(201, 85, 67, 0.16), transparent 34rem),
+    radial-gradient(circle at 92% 4%, rgba(96, 116, 90, 0.16), transparent 32rem),
+    linear-gradient(180deg, #f4eee6 0%, #ede2d6 100%);
+}
+
+.territory-canvas {
+  max-width: min(100%, 1500px);
+  margin-inline: auto;
+  gap: clamp(18px, 2vw, 30px);
+}
+
+.territory-page .territory-mode-pill {
+  border: 1px solid rgba(201, 85, 67, 0.18);
+  background: rgba(255, 250, 243, 0.72);
+  color: var(--terr-coral);
+}
+
+.terr-brief {
+  display: grid;
+  gap: clamp(18px, 2vw, 26px);
+  overflow: hidden;
+  border: 0;
+  border-radius: clamp(28px, 3vw, 42px);
+  padding: clamp(22px, 3vw, 42px);
+  background:
+    radial-gradient(circle at 82% 4%, rgba(201, 85, 67, 0.16), transparent 22rem),
+    linear-gradient(135deg, rgba(255, 252, 246, 0.98), rgba(245, 236, 224, 0.86));
+  box-shadow: var(--terr-profile-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.terr-intvl-brief::before {
+  background:
+    linear-gradient(112deg, rgba(116, 77, 57, 0.07) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(90deg, transparent 0 46px, rgba(116, 77, 57, 0.045) 46px 47px);
+  opacity: 0.72;
+}
+
+.terr-brief-kicker,
+.terr-intvl-kicker,
+.terr-section-label,
+.terr-command-kicker {
+  color: var(--terr-coral);
+}
+
+.terr-intvl-opening {
+  grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
+  align-items: stretch;
+}
+
+.terr-intvl-copy h1 {
+  max-width: 13ch;
+  color: var(--terr-ink);
+  font-size: clamp(2.7rem, 5.4vw, 6.1rem);
+  line-height: 0.9;
+}
+
+.terr-intvl-copy p {
+  max-width: 58rem;
+  color: var(--terr-ink-soft);
+}
+
+.terr-route-planner-preview {
+  align-content: space-between;
+  border: 0;
+  border-radius: 30px;
+  padding: clamp(20px, 2.2vw, 30px);
+  background:
+    radial-gradient(circle at 86% 10%, rgba(134, 239, 172, 0.22), transparent 12rem),
+    linear-gradient(145deg, #2a201b, #151210);
+  box-shadow: 0 26px 60px rgba(37, 24, 16, 0.22);
+}
+
+.terr-route-planner-preview strong,
+.terr-route-planner-preview small {
+  color: rgba(255, 250, 243, 0.92);
+}
+
+.terr-game-loop {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border-radius: 26px;
+  background: rgba(255, 250, 243, 0.58);
+  box-shadow: inset 0 0 0 1px var(--terr-line-soft);
+}
+
+.terr-game-step {
+  min-height: 132px;
+  border: 0;
+  border-radius: 0;
+  padding: clamp(16px, 1.8vw, 24px);
+  background: transparent;
+}
+
+.terr-game-step + .terr-game-step {
+  border-left: 1px solid var(--terr-line-soft);
+}
+
+.terr-game-step strong,
+.terr-brief-kpi strong,
+.terr-target-card h3,
+.terr-lb-info strong,
+.terr-zone-info strong,
+.terr-recent-info strong,
+.terr-city-info strong,
+.terr-command-head strong,
+.terr-contest-head h4 {
+  color: var(--terr-ink);
+}
+
+.terr-game-step p,
+.terr-lobby-strip p,
+.terr-brief-insight,
+.terr-brief-double-count-note,
+.terr-lb-info span,
+.terr-zone-info span,
+.terr-recent-info span,
+.terr-city-info span,
+.terr-contest-hint,
+.terr-empty-copy,
+.terr-target-card p,
+.terr-command-head p,
+.terr-command-meta small,
+.terr-command-queue-btn span,
+.terr-command-queue-btn small {
+  color: var(--terr-ink-soft);
+}
+
+.terr-lobby-strip {
+  grid-template-columns: auto auto minmax(0, 1fr);
+  border: 0;
+  border-radius: 24px;
+  background:
+    linear-gradient(90deg, var(--terr-olive-soft), rgba(255, 250, 243, 0.54));
+  box-shadow: inset 0 0 0 1px rgba(96, 116, 90, 0.12);
+}
+
+.terr-lobby-strip strong {
+  color: var(--terr-ink);
+}
+
+.terr-brief-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.terr-brief-kpi {
+  min-width: 0;
+  border: 0;
+  border-radius: 24px;
+  padding: 16px 18px;
+  background: rgba(255, 250, 243, 0.62);
+  box-shadow: inset 0 0 0 1px var(--terr-line-soft);
+}
+
+.terr-brief-kpi--area {
+  background:
+    radial-gradient(circle at 78% 8%, rgba(201, 85, 67, 0.18), transparent 10rem),
+    rgba(255, 250, 243, 0.74);
+}
+
+.terr-brief-kpi--alert {
+  background:
+    radial-gradient(circle at 76% 10%, rgba(180, 130, 0, 0.16), transparent 10rem),
+    rgba(255, 250, 243, 0.68);
+}
+
+.terr-map-section {
+  min-height: clamp(620px, 72vh, 880px);
+  border: 0;
+  border-radius: clamp(30px, 3vw, 46px);
+  background:
+    linear-gradient(145deg, rgba(34, 25, 21, 0.94), rgba(14, 13, 12, 0.98));
+  box-shadow: 0 34px 90px rgba(45, 30, 20, 0.18);
+}
+
+.terr-map-section::after {
+  background:
+    linear-gradient(180deg, rgba(18, 18, 18, 0.2), transparent 38%, rgba(18, 18, 18, 0.54)),
+    radial-gradient(circle at 18% 16%, rgba(201, 85, 67, 0.12), transparent 26rem),
+    radial-gradient(circle at 78% 72%, rgba(96, 116, 90, 0.12), transparent 28rem);
+}
+
+.terr-stat-chip,
+.terr-pill,
+.terr-legend-item,
+.terr-command-card,
+.terr-card,
+.terr-command-meta span,
+.terr-command-queue-btn,
+.terr-command-secondary {
+  border: 0;
+  background: rgba(255, 250, 243, 0.8);
+  box-shadow: 0 18px 48px rgba(34, 23, 16, 0.14), inset 0 0 0 1px rgba(84, 58, 44, 0.1);
+  backdrop-filter: blur(18px);
+}
+
+.terr-overlay-command {
+  width: min(460px, calc(100% - 190px));
+}
+
+.terr-command-card {
+  border-radius: 30px;
+  padding: 20px;
+}
+
+.terr-command-card--focus.is-hot {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(180, 130, 0, 0.18), transparent 13rem),
+    rgba(255, 250, 243, 0.86);
+}
+
+.terr-command-card--focus.is-stable {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(96, 116, 90, 0.16), transparent 13rem),
+    rgba(255, 250, 243, 0.86);
+}
+
+.terr-stat-chip {
+  border-radius: 24px;
+  color: var(--terr-ink);
+}
+
+.terr-stat-chip span,
+.terr-pill,
+.terr-legend-item {
+  color: var(--terr-ink-soft);
+}
+
+.terr-stat-chip strong,
+.terr-pill.is-active,
+.terr-legend-item {
+  color: var(--terr-ink);
+}
+
+.terr-pill.is-active {
+  background: var(--terr-coral);
+  color: #fff8ef;
+  box-shadow: 0 18px 42px rgba(201, 85, 67, 0.24);
+}
+
+.terr-below-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(16px, 1.6vw, 24px);
+  align-items: stretch;
+}
+
+.terr-card {
+  border-radius: clamp(26px, 2.4vw, 36px);
+  padding: clamp(20px, 2vw, 30px);
+  background:
+    radial-gradient(circle at 92% 4%, rgba(201, 85, 67, 0.08), transparent 14rem),
+    rgba(255, 250, 243, 0.78);
+}
+
+.terr-leaderboard {
+  grid-column: span 4;
+}
+
+.terr-zones-card {
+  grid-column: span 8;
+}
+
+.terr-target-card {
+  grid-column: span 7;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, auto);
+  background:
+    radial-gradient(circle at 84% 20%, rgba(201, 85, 67, 0.18), transparent 18rem),
+    linear-gradient(145deg, rgba(255, 250, 243, 0.92), rgba(244, 233, 220, 0.76));
+}
+
+.terr-recent-card {
+  grid-column: span 5;
+}
+
+.terr-contests-card {
+  grid-column: span 8;
+}
+
+.terr-cities-card {
+  grid-column: span 4;
+}
+
+.terr-lb-list,
+.terr-zone-list,
+.terr-recent-list,
+.terr-cities-list {
+  gap: 10px;
+}
+
+.terr-lb-row,
+.terr-zone-row,
+.terr-recent-row,
+.terr-city-row,
+.terr-contest-block {
+  border: 0;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 1px var(--terr-line-soft);
+}
+
+.terr-zone-row--button.is-selected,
+.terr-lb-row.is-you,
+.terr-zone-row.is-contested {
+  background: var(--terr-coral-soft);
+  box-shadow: inset 0 0 0 1px rgba(201, 85, 67, 0.22);
+}
+
+.terr-contest-bar {
+  background: rgba(33, 25, 20, 0.08);
+}
+
+.terr-bar-side > span {
+  opacity: 0.42;
+}
+
+.terr-bar-side small {
+  color: var(--terr-ink);
+}
+
+@media (max-width: 1100px) {
+  .terr-brief-kpis,
+  .terr-game-loop {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .terr-game-step + .terr-game-step {
+    border-left: 0;
+    border-top: 1px solid var(--terr-line-soft);
+  }
+
+  .terr-game-step:nth-child(2) {
+    border-top: 0;
+    border-left: 1px solid var(--terr-line-soft);
+  }
+
+  .terr-leaderboard,
+  .terr-zones-card,
+  .terr-target-card,
+  .terr-recent-card,
+  .terr-contests-card,
+  .terr-cities-card {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 980px) {
+  .terr-intvl-opening,
+  .terr-target-card {
+    grid-template-columns: 1fr;
+  }
+
+  .terr-overlay-command {
+    width: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .terr-brief-kpis,
+  .terr-game-loop {
+    grid-template-columns: 1fr;
+  }
+
+  .terr-game-step:nth-child(2) {
+    border-left: 0;
+    border-top: 1px solid var(--terr-line-soft);
+  }
+
+  .terr-brief {
+    padding: 18px;
+  }
+}
+
+/* Territory Heatmap-outline map shell. */
+
+.territory-heatmap-outline {
+  width: 100vw;
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: 0;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(255, 102, 92, 0.1), transparent 28%),
+    linear-gradient(180deg, #07090c 0%, #05070a 54%, #030406 100%);
+}
+
+.territory-heatmap-outline .runner-shell-sidebar,
+.territory-heatmap-outline .runner-shell-topbar {
+  display: none;
+}
+
+.territory-heatmap-outline .runner-shell-main {
+  width: 100vw;
+  max-width: 100vw;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.territory-heatmap-outline .territory-canvas {
+  display: grid;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0;
+}
+
+.territory-heatmap-outline .terr-map-section {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  width: 100vw;
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 94, 82, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(4, 6, 8, 0.98), rgba(5, 7, 10, 0.98));
+  box-shadow: none;
+}
+
+.territory-heatmap-outline .terr-leaflet-map {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  filter: none;
+}
+
+.territory-heatmap-outline .leaflet-container {
+  width: 100vw;
+  max-width: 100vw;
+  background: #d8e3dc;
+  filter: saturate(0.9) contrast(1.16) brightness(0.84);
+}
+
+.territory-heatmap-outline .territory-real-world-tile,
+.territory-heatmap-outline img.leaflet-tile {
+  opacity: 1;
+  mix-blend-mode: normal;
+}
+
+.territory-heatmap-outline .terr-map-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+  background: none;
+}
+
+.territory-heatmap-outline .terr-map-topbar,
+.territory-heatmap-outline .terr-map-utility-rail,
+.territory-heatmap-outline .terr-brief,
+.territory-heatmap-outline .terr-overlay-command,
+.territory-heatmap-outline .terr-overlay-stats,
+.territory-heatmap-outline .terr-overlay-filters,
+.territory-heatmap-outline .terr-overlay-legend {
+  z-index: 3;
+}
+
+.territory-heatmap-outline .terr-map-topbar {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  left: 22px;
+  display: grid;
+  grid-template-columns: auto minmax(250px, 390px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.territory-heatmap-outline .terr-map-brand-pill,
+.territory-heatmap-outline .terr-map-sector-pill,
+.territory-heatmap-outline .terr-map-utility-btn,
+.territory-heatmap-outline .terr-map-secondary-btn,
+.territory-heatmap-outline .terr-map-primary-btn,
+.territory-heatmap-outline .terr-map-avatar {
+  border: 0;
+  color: #f1e7dd;
+  background: rgba(8, 10, 13, 0.84);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 248, 238, 0.12),
+    0 22px 58px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.territory-heatmap-outline .terr-map-brand-pill,
+.territory-heatmap-outline .terr-map-sector-pill {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 58px;
+  align-items: center;
+  gap: 14px;
+  border-radius: 18px;
+  padding: 0 18px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.territory-heatmap-outline .terr-map-brand-pill span,
+.territory-heatmap-outline .terr-map-sector-copy span {
+  color: rgba(244, 238, 232, 0.68);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.territory-heatmap-outline .terr-map-sector-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.territory-heatmap-outline .terr-map-sector-copy strong {
+  overflow: hidden;
+  color: #f1e7dd;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.territory-heatmap-outline .terr-map-pill-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.territory-heatmap-outline .terr-map-action-strip {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.territory-heatmap-outline .terr-map-primary-btn,
+.territory-heatmap-outline .terr-map-secondary-btn {
+  display: inline-flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  padding: 0 18px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.territory-heatmap-outline .terr-map-primary-btn {
+  color: #160f10;
+  background: linear-gradient(135deg, #ffaf4f, #ff5a47);
+}
+
+.territory-heatmap-outline .terr-map-avatar {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+}
+
+.territory-heatmap-outline .terr-map-utility-rail {
+  position: absolute;
+  top: 110px;
+  left: 18px;
+  display: grid;
+  width: 60px;
+  max-height: calc(100vh - 136px);
+  gap: 7px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 22px;
+  padding: 5px;
+  background: rgba(8, 10, 13, 0.46);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 248, 238, 0.1),
+    0 18px 48px rgba(0, 0, 0, 0.24);
+  scrollbar-width: none;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.territory-heatmap-outline .terr-map-utility-rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.territory-heatmap-outline .terr-map-utility-btn {
+  display: inline-flex;
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.territory-heatmap-outline .terr-map-utility-btn.is-active {
+  color: #180f10;
+  background: linear-gradient(180deg, rgba(255, 101, 88, 0.94), rgba(255, 54, 95, 0.95));
+}
+
+.territory-heatmap-outline .terr-map-utility-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.territory-heatmap-outline .terr-map-utility-divider {
+  width: 28px;
+  height: 1px;
+  margin: 2px auto;
+  background: rgba(244, 238, 232, 0.18);
+}
+
+.territory-heatmap-outline .terr-brief {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  justify-self: start;
+  width: min(430px, calc(100% - 204px));
+  max-height: calc(100vh - 168px);
+  margin: 0 0 24px 96px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 248, 238, 0.15);
+  border-radius: 26px;
+  padding: 24px;
+  color: #171512;
+  background:
+    linear-gradient(145deg, rgba(255, 252, 246, 0.9), rgba(238, 224, 205, 0.84)),
+    rgba(255, 252, 246, 0.86);
+  box-shadow: 0 24px 62px rgba(23, 19, 15, 0.22);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.territory-heatmap-outline .terr-intvl-opening {
+  grid-template-columns: 1fr;
+}
+
+.territory-heatmap-outline .terr-intvl-copy h1 {
+  max-width: 11ch;
+  color: #171512;
+  font-size: clamp(2rem, 4vw, 3.65rem);
+  line-height: 0.94;
+}
+
+.territory-heatmap-outline .terr-intvl-copy p {
+  color: rgba(43, 32, 24, 0.68);
+  font-size: 0.92rem;
+}
+
+.territory-heatmap-outline .terr-route-planner-preview,
+.territory-heatmap-outline .terr-lobby-strip,
+.territory-heatmap-outline .terr-brief-double-count-note {
+  display: none;
+}
+
+.territory-heatmap-outline .terr-game-loop {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.territory-heatmap-outline .terr-game-step {
+  min-height: 76px;
+  padding: 12px;
+}
+
+.territory-heatmap-outline .terr-game-step strong {
+  color: #171512;
+  font-size: 0.98rem;
+}
+
+.territory-heatmap-outline .terr-game-step p {
+  display: none;
+}
+
+.territory-heatmap-outline .terr-brief-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.territory-heatmap-outline .terr-brief-kpi {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.territory-heatmap-outline .terr-brief-kpi strong {
+  color: #171512;
+  font-size: 1.25rem;
+}
+
+.territory-heatmap-outline .terr-brief-kpi span,
+.territory-heatmap-outline .terr-brief-insight {
+  color: rgba(43, 32, 24, 0.62);
+}
+
+.territory-heatmap-outline .terr-overlay-stats {
+  top: 118px;
+  left: 96px;
+  max-width: min(620px, calc(100% - 520px));
+}
+
+.territory-heatmap-outline .terr-overlay-command {
+  top: 118px;
+  right: 22px;
+  bottom: auto;
+  left: auto;
+  width: min(360px, calc(100% - 44px));
+}
+
+.territory-heatmap-outline .terr-overlay-filters {
+  top: auto;
+  right: 22px;
+  bottom: 188px;
+  max-width: min(520px, calc(100% - 536px));
+}
+
+.territory-heatmap-outline .terr-overlay-legend {
+  right: 22px;
+  bottom: 24px;
+  max-width: min(360px, calc(100% - 536px));
+}
+
+.territory-heatmap-outline .terr-stat-chip,
+.territory-heatmap-outline .terr-pill,
+.territory-heatmap-outline .terr-legend-item,
+.territory-heatmap-outline .terr-command-card {
+  border: 0;
+  background:
+    linear-gradient(145deg, rgba(255, 252, 246, 0.9), rgba(238, 224, 205, 0.84)),
+    rgba(255, 252, 246, 0.86);
+  box-shadow: 0 24px 62px rgba(23, 19, 15, 0.22);
+}
+
+.territory-heatmap-outline .terr-command-card {
+  max-height: calc(100vh - 250px);
+  overflow: auto;
+}
+
+.territory-heatmap-outline .terr-below-grid,
+.territory-heatmap-outline .terr-mode-banner,
+.territory-heatmap-outline .runner-dashboard-footer {
+  width: min(1500px, calc(100% - 44px));
+  margin-inline: auto;
+}
+
+.territory-heatmap-outline .terr-mode-banner {
+  margin-top: 24px;
+}
+
+.territory-heatmap-outline .terr-below-grid {
+  padding-block: 24px;
+}
+
+.territory-heatmap-outline .runner-dashboard-footer {
+  padding-bottom: 28px;
+}
+
+@media (max-width: 1180px) {
+  .territory-heatmap-outline .terr-overlay-stats,
+  .territory-heatmap-outline .terr-overlay-filters,
+  .territory-heatmap-outline .terr-overlay-command,
+  .territory-heatmap-outline .terr-overlay-legend,
+  .territory-heatmap-outline .terr-brief {
+    position: relative;
+    inset: auto;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    margin: 12px;
+  }
+
+  .territory-heatmap-outline .terr-map-section {
+    display: flex;
+    min-height: auto;
+    flex-direction: column;
+    padding-top: 104px;
+  }
+
+  .territory-heatmap-outline .terr-leaflet-map {
+    position: relative;
+    min-height: 620px;
+  }
+}
+
+@media (max-width: 760px) {
+  .territory-heatmap-outline .terr-map-topbar {
+    position: relative;
+    inset: auto;
+    grid-template-columns: 1fr;
+    margin: 12px;
+  }
+
+  .territory-heatmap-outline .terr-map-utility-rail {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: auto;
+    max-width: calc(100% - 24px);
+    grid-auto-flow: column;
+    grid-auto-columns: 50px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 0 12px 12px;
+  }
+
+  .territory-heatmap-outline .terr-map-section {
+    padding-top: 0;
+  }
+
+  .territory-heatmap-outline .terr-game-loop,
+  .territory-heatmap-outline .terr-brief-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Territory full-bleed guard: the hidden runner sidebar must not leave a blank gutter. */
+
+html body .territory-page.territory-heatmap-outline.runner-shell-page,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .runner-shell-main,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .runner-shell-canvas,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .territory-canvas,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .terr-map-section,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .terr-leaflet-map,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-container {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  min-width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  inset-inline-start: 0 !important;
+  transform: none !important;
+}
+
+html body .territory-page.territory-heatmap-outline.runner-shell-page .runner-shell-main,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .territory-canvas,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .terr-map-section {
+  left: 0 !important;
+}
+
+html body .territory-page.territory-heatmap-outline.runner-shell-page .terr-map-section {
+  top: 0 !important;
+  min-height: 100vh !important;
+}
+
+html body .territory-page.territory-heatmap-outline.runner-shell-page .terr-leaflet-map,
+html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-container {
+  height: 100vh !important;
+  min-height: 100vh !important;
+}
+
+/* Territory map-only mode: remove every control layer so the page is just the concrete land mask over the world map. */
+
+.territory-map-only .runner-shell-sidebar,
+.territory-map-only .runner-shell-topbar,
+.territory-map-only .terr-map-topbar,
+.territory-map-only .terr-overlay-filters,
+.territory-map-only .terr-overlay-legend,
+.territory-map-only .terr-below-grid,
+.territory-map-only .runner-dashboard-footer,
+.territory-map-only .leaflet-control-container {
+  display: none !important;
+}
+
+.territory-map-only .terr-map-section--lands-only {
+  overflow: hidden;
+}
+
+.territory-map-only .terr-map-utility-rail--navigation-only {
+  display: grid !important;
+  top: 22px;
+  left: 18px;
+  z-index: 620;
+}
+
+/* Territory map-only mode: remove every control layer so the page is just the concrete land mask over the world map. */
+
+.territory-map-only .runner-shell-sidebar,
+.territory-map-only .runner-shell-topbar,
+.territory-map-only .terr-overlay-filters,
+.territory-map-only .terr-overlay-legend,
+.territory-map-only .terr-below-grid,
+.territory-map-only .runner-dashboard-footer,
+.territory-map-only .leaflet-control-container {
+  display: none !important;
+}
+
+.territory-map-only .terr-map-section--lands-only {
+  overflow: hidden;
+}
+
+.territory-map-only .terr-map-titlebar {
+  display: grid !important;
+  grid-template-columns: auto minmax(260px, 390px) minmax(0, 1fr);
+  z-index: 650;
+}
+
+.territory-map-only .terr-map-brand-pill--static {
+  cursor: default;
+}
+
+.territory-map-only .terr-map-brand-pill--static strong {
+  color: #f1e7dd;
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.territory-map-only .terr-map-recenter-pill {
+  cursor: pointer;
+}
+
+.territory-map-only .terr-map-titlebar .terr-map-primary-btn {
+  color: #f1e7dd;
+  background: rgba(8, 10, 13, 0.84);
+}
+
+.territory-map-only .terr-map-titlebar .terr-map-avatar {
+  color: #ffb19f;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 116, 84, 0.35), transparent 56%),
+    rgba(63, 16, 12, 0.86);
+}
+
+.territory-map-only .terr-map-utility-rail--navigation-only {
+  display: grid !important;
+  top: 96px;
+  left: 18px;
+  z-index: 620;
+}
+
+@media (max-width: 760px) {
+  .territory-map-only .terr-map-titlebar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    left: 14px;
+    grid-template-columns: 1fr;
+  }
+
+  .territory-map-only .terr-map-titlebar .terr-map-action-strip {
+    justify-content: flex-start;
+  }
+
+  .territory-map-only .terr-map-utility-rail--navigation-only {
+    top: 238px;
+    left: 14px;
+  }
+}

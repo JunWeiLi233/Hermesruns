@@ -11,6 +11,12 @@ import { createAutoHermesSupervisorState, evaluateAutoHermesSupervisorRound } fr
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
+const YOLO_EXECUTOR_PERMISSION = {
+  mode: "yolo",
+  codexFlag: "--dangerously-bypass-approvals-and-sandbox",
+  omxFlag: "--madmax",
+  description: "full-permission worker execution: bypass Codex approvals and sandbox for externally supervised Hermes agent rounds",
+};
 const RUNTIME_NATIVE_EXECUTION = {
   gemini: {
     runtime: "gemini",
@@ -476,8 +482,11 @@ function detectOmxRalphExecutor(args) {
   if (!omxCommand) return null;
 
   return {
-    label: "omx-ralph",
-    command: `& ${shellQuote(omxCommand)} ralph --no-deslop "Read the bounded /auto-hermes worker brief at {promptFile}. Treat {controllerJson} as the authoritative routing brief for task {task} on surface {surface}. Execute that single round, verify it, then stop."`,
+    label: "omx-ralph-yolo",
+    permissionMode: YOLO_EXECUTOR_PERMISSION.mode,
+    permissionFlag: YOLO_EXECUTOR_PERMISSION.omxFlag,
+    permissionDescription: YOLO_EXECUTOR_PERMISSION.description,
+    command: `& ${shellQuote(omxCommand)} ralph ${YOLO_EXECUTOR_PERMISSION.omxFlag} --no-deslop "Read the bounded /auto-hermes worker brief at {promptFile}. Treat {controllerJson} as the authoritative routing brief for task {task} on surface {surface}. Execute that single round, verify it, then stop."`,
   };
 }
 
@@ -500,8 +509,11 @@ function detectBundledCodexExecutor() {
     .join("; ");
 
   return {
-    label: "bundled-codex-local",
-    command: `${clearProxyCommands}; $env:CODEX_HOME=${shellQuote(localCodexHome)}; New-Item -ItemType Directory -Force $env:CODEX_HOME | Out-Null; New-Item -ItemType Directory -Force (Join-Path $env:CODEX_HOME '.tmp') | Out-Null; ${seedCommands}; Get-Content -Raw {promptFile} | & ${shellQuote(localCodex)} exec --full-auto --ephemeral -C {cwd} -`,
+    label: "bundled-codex-local-yolo",
+    permissionMode: YOLO_EXECUTOR_PERMISSION.mode,
+    permissionFlag: YOLO_EXECUTOR_PERMISSION.codexFlag,
+    permissionDescription: YOLO_EXECUTOR_PERMISSION.description,
+    command: `${clearProxyCommands}; $env:CODEX_HOME=${shellQuote(localCodexHome)}; New-Item -ItemType Directory -Force $env:CODEX_HOME | Out-Null; New-Item -ItemType Directory -Force (Join-Path $env:CODEX_HOME '.tmp') | Out-Null; ${seedCommands}; Get-Content -Raw {promptFile} | & ${shellQuote(localCodex)} exec ${YOLO_EXECUTOR_PERMISSION.codexFlag} --ephemeral -C {cwd} -`,
   };
 }
 
@@ -907,6 +919,8 @@ function deriveLoopClaimStates({
         : "no unattended executor command is configured",
       evidence: [
         `executorLabel=${executor?.label || "none"}`,
+        `permissionMode=${executor?.permissionMode || "default"}`,
+        `permissionFlag=${executor?.permissionFlag || "none"}`,
       ],
     }),
     rtk: makeClaim("rtk shell compactor", {
@@ -1139,7 +1153,7 @@ function renderCompactTechDebt(techDebtReview) {
   ];
 }
 
-function renderCompactSubagents(subagentPlan, externalCatalog, roleLines, runtimeNativeExecution = null) {
+function renderCompactSubagents(subagentPlan, externalCatalog, roleLines, runtimeNativeExecution = null, executorPermission = null) {
   const roles = roleLines
     .filter((line) => !line.startsWith("- "))
     .map((line) => line.replace(/^Role:\s*/, ""))
@@ -1163,6 +1177,12 @@ function renderCompactSubagents(subagentPlan, externalCatalog, roleLines, runtim
   return [
     "Subagent dispatch:",
     `- ${useAgentLabel}`,
+    ...(executorPermission?.mode
+      ? [
+          `- executor permission: ${executorPermission.mode}${executorPermission.flag ? ` (${executorPermission.flag})` : ""}`,
+          "- planned child-agent lanes inherit the active executor permission context; do not downgrade to sandboxed execution unless the command/config explicitly overrides it",
+        ]
+      : []),
     ...(runtimeNativeExecution
       ? [
           `- native runtime owner: ${runtimeNativeExecution.agentOwner}; model policy: ${runtimeNativeExecution.modelPolicy}`,
@@ -1242,6 +1262,7 @@ function renderWorkerPrompt(controllerResult, roundIndex, rtk, ralphArtifacts = 
     summary: "No frontend console guard is required for this round.",
   };
   const runtimeNativeExecution = ralphArtifacts.runtimeNativeExecution || null;
+  const executorPermission = ralphArtifacts.executorPermission || null;
   const evolvedTraceSkillLines = renderEvolvedTraceSkillLines(controllerResult?.traceToSkill);
   return [
     "# Auto-Hermes Worker Round",
@@ -1262,7 +1283,7 @@ function renderWorkerPrompt(controllerResult, roundIndex, rtk, ralphArtifacts = 
     "",
     ...renderCompactTechDebt(techDebtReview),
     "",
-    ...renderCompactSubagents(subagentPlan, externalCatalog, roleLines, runtimeNativeExecution),
+    ...renderCompactSubagents(subagentPlan, externalCatalog, roleLines, runtimeNativeExecution, executorPermission),
     "",
     ...renderCompactFrontendGuard(frontendGuard),
     "",
@@ -1315,6 +1336,13 @@ function renderWorkerPrompt(controllerResult, roundIndex, rtk, ralphArtifacts = 
           `- Round type: ${designContext.roundType}`,
           `- Visual goal: ${designContext.visualGoal}`,
           `- Preserve: ${designContext.preserve}`,
+          ...(designContext.frontendSkillStack
+            ? [
+                `- Frontend skill manifest: node .tools/auto-hermes-skills.mjs --json`,
+                `- Active frontend skills: ${designContext.frontendSkillStack.stack.map((skill) => `${skill.name}:${skill.available ? "available" : "missing"}`).join(" | ")}`,
+                `- Missing required frontend skills: ${designContext.frontendSkillStack.unavailableRequired.length ? designContext.frontendSkillStack.unavailableRequired.join(" | ") : "none"}`,
+              ]
+            : []),
           "- Read the authority file before editing UI and keep the implementation inside that design system.",
         ]
       : []),
@@ -1406,6 +1434,7 @@ function renderLoopMarkdown(state) {
     `Rounds completed: ${state.roundsCompleted}`,
     `Same work-unit streak: ${state.sameWorkUnitStreak || 0}`,
     `Executor: ${state.executorLabel || "unconfigured"}`,
+    `Executor permission: ${state.executorPermissionMode || "default"}${state.executorPermissionFlag ? ` (${state.executorPermissionFlag})` : ""}`,
     "",
   ];
 
@@ -1586,6 +1615,9 @@ function buildCoordinatorBrief(state, promptText, latestControllerResult, execut
     nextAction,
     mustNotReplyYet,
     executorLabel: executor?.label || state.executorLabel || runtimeExecutorLabel(args.runtime),
+    executorPermissionMode: executor?.permissionMode || state.executorPermissionMode || "",
+    executorPermissionFlag: executor?.permissionFlag || state.executorPermissionFlag || "",
+    executorPermissionDescription: executor?.permissionDescription || state.executorPermissionDescription || "",
     runtimeNativeExecution,
     rtk,
     eccProfile,
@@ -1641,6 +1673,7 @@ function renderCoordinatorMarkdown(brief) {
     `Next Action: ${brief.nextAction}`,
     `Must Not Reply Yet: ${brief.mustNotReplyYet ? "yes" : "no"}`,
     `Executor: ${brief.executorLabel || "none"}`,
+    `Executor Permission: ${brief.executorPermissionMode || "default"}${brief.executorPermissionFlag ? ` (${brief.executorPermissionFlag})` : ""}`,
     `RTK Mode: ${brief.rtk?.mode || "unavailable"}`,
     `ECC Mode: ${brief.eccProfile?.mode || "compatibility-fallback"}`,
     `ECC Packs: ${brief.eccProfile?.enabled?.length ? brief.eccProfile.enabled.join(", ") : "none"}`,
@@ -1882,6 +1915,9 @@ export function runAutoHermesLoop(rawArgs = process.argv.slice(2)) {
     currentPhase: String(persistedState.currentPhase || "grounding").trim() || "grounding",
     stopReason: "",
     executorLabel: executor?.label || runtimeExecutorLabel(args.runtime),
+    executorPermissionMode: executor?.permissionMode || "",
+    executorPermissionFlag: executor?.permissionFlag || "",
+    executorPermissionDescription: executor?.permissionDescription || "",
     runtimeNativeExecution,
     rtk,
     history: [],
@@ -1985,6 +2021,11 @@ export function runAutoHermesLoop(rawArgs = process.argv.slice(2)) {
       lastRoundResult: state.lastRoundResult,
       lastRoundResultSignature: state.lastRoundResultSignature,
       runtimeNativeExecution: state.runtimeNativeExecution,
+      executorPermission: {
+        mode: state.executorPermissionMode,
+        flag: state.executorPermissionFlag,
+        description: state.executorPermissionDescription,
+      },
     });
     state.lastWorkUnit = controllerResult?.title
       ? {

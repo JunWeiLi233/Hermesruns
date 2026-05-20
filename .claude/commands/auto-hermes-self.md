@@ -9,7 +9,12 @@ Active execution loop. Claude Code initializes, **assembles a coding team**, dis
 The team coordinates through a shared bulletin at `.ai-sync/TEAMWORK.md` so every member knows what siblings are doing and what's next.
 
 ## 0. Session Start
-Run [`_session-start.md`](_session-start.md).
+Before the first round of any session, run the inline session checklist:
+1. Read `.ai-sync/HUMAN_LOOP.md`. If it says `pause`, `stop`, or `must-ask`, stop and report.
+2. `node .tools/auto-hermes-self-loop.mjs --write --runtime claude` to refresh loop state.
+3. Confirm browser proof is reachable (`node .tools/auto-hermes-browser.mjs status` or `.tools/auto-hermes-playwright.mjs doctor`) only if the round will touch browser-visible code.
+4. `node .tools/auto-hermes-issues.mjs --list` to scan open GitHub issues for must-fix overlap.
+5. Re-read `.claude/skills/_TRIGGERS.md` so skill triggers are fresh.
 
 ## Loop Entry
 1. **Refresh state:** `node .tools/auto-hermes-self-loop.mjs --write --runtime claude`

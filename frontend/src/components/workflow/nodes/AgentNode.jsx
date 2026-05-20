@@ -2,11 +2,14 @@ import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Bot } from 'lucide-react';
 import { useI18n } from '../../../contexts/I18nContext';
+import useWorkflowStore from '../../../stores/useWorkflowStore';
+import { AGENT_TYPES } from '../../../utils/workflowEngine';
+import NodeStatusBadge from './NodeStatusBadge';
 
-const AGENT_TYPES = ['vdot-analyst', 'shoe-advisor', 'race-planner', 'weather-advisor', 'injury-screener'];
-
-function AgentNode({ data, selected }) {
+function AgentNode({ id, data, selected }) {
   const { t } = useI18n();
+  const setNodeData = useWorkflowStore((s) => s.setNodeData);
+  const status = useWorkflowStore((s) => s.nodeStatus[id]);
 
   return (
     <div
@@ -30,13 +33,14 @@ function AgentNode({ data, selected }) {
       <div className="wf-node-header">
         <Bot size={14} aria-hidden="true" />
         <span className="wf-node-type">{t('workflow_builder.agent_node_type')}</span>
+        <NodeStatusBadge status={status?.status} />
       </div>
       <div className="wf-node-body">
         <select
           className="wf-node-select"
           aria-label={t('workflow_builder.agent_node_select_label')}
-          value={data.agentType || 'vdot-analyst'}
-          onChange={(e) => data.onAgentTypeChange?.(e.target.value)}
+          value={data?.agentType || 'vdot-analyst'}
+          onChange={(e) => setNodeData(id, { agentType: e.target.value })}
         >
           {AGENT_TYPES.map((agentType) => (
             <option key={agentType} value={agentType}>
@@ -44,6 +48,14 @@ function AgentNode({ data, selected }) {
             </option>
           ))}
         </select>
+        {status?.status === 'done' && status?.output && (
+          <p className="wf-node-output-preview" title={status.output}>
+            {String(status.output).slice(0, 120)}{String(status.output).length > 120 ? '…' : ''}
+          </p>
+        )}
+        {status?.status === 'error' && status?.error && (
+          <p className="wf-node-output-error">{status.error}</p>
+        )}
       </div>
     </div>
   );

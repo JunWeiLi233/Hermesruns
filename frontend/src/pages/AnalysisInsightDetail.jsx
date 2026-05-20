@@ -1351,7 +1351,7 @@ export default function AnalysisInsightDetail() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page analysis-insight-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page analysis-insight-detail-page${insightKey === 'intensity' ? ' is-intensity' : ''}${insightKey === 'coach-insight' ? ' is-coach-insight' : ''}${insightKey === 'injury-risk' ? ' is-injury-risk' : ''}${insightKey === 'load-balance' ? ' is-load-balance' : ''}${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">

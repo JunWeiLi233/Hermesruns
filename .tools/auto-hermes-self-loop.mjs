@@ -44,7 +44,7 @@ const CODEX_LIVE_CHILD_AGENT_POLICY = {
 };
 const RALPH_LOOP_STRENGTH = {
   mode: "strict-ralph-loop",
-  completionPromise: "continue until a real stop gate fires; never treat one successful bounded round as natural completion; Claude Code is the executor and must actively re-enter the loop after each round",
+  completionPromise: "continue until a real stop gate fires; never treat one successful bounded round as natural completion; the configured self-loop runtime is the executor and must actively re-enter the loop after each round",
   requiredRoundEvidence: [
     "verify-result pass with fresh command evidence",
     "runtime-proof pass when source changes affect a live/runtime surface",
@@ -85,6 +85,7 @@ const RALPH_LOOP_STRENGTH = {
     enabled: true,
     description: "Before every round, verify the Ralph self-loop ability is intact. If the previous task changed loop-critical files and broke the loop, fix it before proceeding.",
     loopCriticalFiles: [
+      ".codex/commands/auto-hermes-self.md",
       ".claude/commands/auto-hermes-self.md",
       ".tools/auto-hermes-self-loop.mjs",
       ".tools/auto-hermes-loop.mjs",
@@ -102,13 +103,13 @@ const RALPH_LOOP_STRENGTH = {
       },
       {
         id: "contract-check",
-        description: "Verify the self execution contract is still claude-self-executing.",
-        command: "node .tools/auto-hermes-self-loop.mjs --write --runtime claude --dry-run; verify selfExecutionContract === 'claude-self-executing' in .ai-sync/AUTO_HERMES_SELF_LOOP.json",
+        description: "Verify the self execution contract still matches the selected runtime.",
+        command: "node .tools/auto-hermes-self-loop.mjs --write --runtime <runtime> --dry-run; verify runtime codex => selfExecutionContract === 'executor-backed', runtime claude => selfExecutionContract === 'claude-self-executing'",
       },
       {
         id: "protocol-check",
-        description: "Verify the coordinator brief still contains the active execution protocol.",
-        command: "grep 'Claude Self-Loop Protocol (Active Execution)' .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md && grep 'claude-execute-round' .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md",
+        description: "Verify the coordinator brief still contains the active execution protocol for the selected runtime.",
+        command: "verify .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md contains either 'Codex Self-Loop Protocol (Active Execution)' for runtime codex or 'Claude Self-Loop Protocol (Active Execution)' for runtime claude",
       },
     ],
     fixPolicy: {
@@ -364,6 +365,23 @@ function renderRuntimeNativePolicyLines(runtimeNativeExecution) {
   return [];
 }
 
+function renderCodexSelfLoopProtocolLines(selfExecutionContract) {
+  if (selfExecutionContract !== "executor-backed") return [];
+  return [
+    "",
+    "## Codex Self-Loop Protocol (Active Execution)",
+    "Description: Codex runs the Ralph self-loop through the executor-backed runtime. It refreshes state, verifies loop-critical files, executes or inspects bounded-round evidence, writes round-close evidence, and re-enters until a real stop gate fires.",
+    "Loop body:",
+    "  scan GitHub issues with .tools/auto-hermes-issues.mjs when available",
+    "  run node .tools/auto-hermes-self-loop.mjs --write --json --runtime codex",
+    "  read .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md",
+    "  if Next Action is loop-owner-execute-round: inspect emitted evidence, then re-enter",
+    "  if Next Action is codex-coordinator-execute-round: execute the bounded round directly, verify, run review gate, round-close, then re-enter",
+    "  if Next Action is stop: run the configured finish helper when eligible, then report the stop reason",
+    "Integrity gate: node --check .tools/auto-hermes-self-loop.mjs; node --check .tools/auto-hermes-loop.mjs; dry-run with --runtime codex and verify selfExecutionContract is executor-backed.",
+  ];
+}
+
 function decoratePrompt(promptText, runtimeNativeExecution = null) {
   const header = [
     "# Auto-Hermes Self Loop",
@@ -404,6 +422,7 @@ function renderSelfLoopMarkdown(state) {
     `Rounds attempted: ${state.roundsAttempted}`,
     `Rounds completed: ${state.roundsCompleted}`,
     `Executor: ${state.executorLabel || "unconfigured"}`,
+    `Executor permission: ${state.executorPermissionMode || "default"}${state.executorPermissionFlag ? ` (${state.executorPermissionFlag})` : ""}`,
     `Last round result signature: ${state.lastRoundResultSignature || "none"}`,
     "",
     "This is the true Ralph self-loop version of `/auto-hermes`.",
@@ -534,6 +553,9 @@ function writeSelfArtifacts(args, state) {
     maxSameWorkUnitRepeats: state.maxSameWorkUnitRepeats,
     maxExecutorRetries: state.maxExecutorRetries,
     maxSelfReentries: state.maxSelfReentries,
+    executorPermissionMode: state.executorPermissionMode || "",
+    executorPermissionFlag: state.executorPermissionFlag || "",
+    executorPermissionDescription: state.executorPermissionDescription || "",
     ralphLoop: RALPH_LOOP_STRENGTH,
     loopContract: SELF_LOOP_CONTRACT,
     commandName: "/auto-hermes-self",
@@ -555,6 +577,7 @@ function writeSelfArtifacts(args, state) {
     `Self re-entry limit: ${state.maxSelfReentries || DEFAULT_SELF_REENTRY_LIMIT}`,
     `Self loop invocations: ${state.selfLoopInvocations || 1}`,
     `Self re-entries attempted: ${state.selfReentriesAttempted || 0}`,
+    `Executor Permission: ${decoratedCoordinator.executorPermissionMode || "default"}${decoratedCoordinator.executorPermissionFlag ? ` (${decoratedCoordinator.executorPermissionFlag})` : ""}`,
     "",
     "This is the true Ralph self-loop version of `/auto-hermes`.",
     "Keep iterating until a real stop gate fires.",
@@ -586,6 +609,7 @@ function writeSelfArtifacts(args, state) {
       : []),
     "",
     ...renderRalphLoopStrengthLines(),
+    ...renderCodexSelfLoopProtocolLines(selfExecutionContract),
     ...(runtimeNativeExecution?.runtime === "claude" && RALPH_LOOP_STRENGTH.claudeSelfExecution?.enabled
       ? [
           "",
@@ -610,6 +634,9 @@ function writeSelfArtifacts(args, state) {
     selfExecutionContract,
     unbounded: true,
     runtimeNativeExecution: runtimeNativeExecution || null,
+    executorPermissionMode: state.executorPermissionMode || "",
+    executorPermissionFlag: state.executorPermissionFlag || "",
+    executorPermissionDescription: state.executorPermissionDescription || "",
     maxRounds: null,
     maxSameWorkUnitRepeats: state.maxSameWorkUnitRepeats,
     maxExecutorRetries: state.maxExecutorRetries,
