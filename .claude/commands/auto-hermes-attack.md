@@ -1,5 +1,6 @@
 ---
 name: auto-hermes-attack
+description: Synthetic resilience probe — non-destructive failure-mode tests against high-risk surfaces (auth expired, weather outage, malformed file, partial sync). Records findings as bounded tech-debt tasks.
 ---
 
 # Hermes Attack Simulation

@@ -113,8 +113,11 @@ No prior knowledge of Spring Boot, React, or sports science is required to make 
 
 > **Credentials at a glance**
 >
+> Display name: **Hermes Shared Runner**
 > Email: `strava+140971747@hermes.local`
 > Password: `HermesLocal1!`
+>
+> After login you'll see the dashboard greet you with `早上好, Hermes Shared Runner.` (or `Good morning, Hermes Shared Runner.` in English). If you see a different name, the bootstrap didn't pick up the default — see [How to enable](#how-to-enable) below.
 
 > **Reserved territory rival**
 >
@@ -135,9 +138,10 @@ Copy-Item Hermes.local.env.example.ps1 Hermes.local.env.ps1
 `start_hermes.bat` reads `Hermes.local.env.ps1` automatically. The file already includes:
 
 ```powershell
-$env:APP_LOCAL_SHARED_RUNNER_ENABLED  = "true"
-$env:APP_LOCAL_SHARED_RUNNER_EMAIL    = "strava+140971747@hermes.local"
-$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED      = "true"
+$env:APP_LOCAL_SHARED_RUNNER_EMAIL        = "strava+140971747@hermes.local"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD     = "HermesLocal1!"
+$env:APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME = "Hermes Shared Runner"
 ```
 
 Alternatively, set the vars inline without editing any file:
@@ -162,6 +166,7 @@ The relevant lines in `.env.example` (already present):
 APP_LOCAL_SHARED_RUNNER_ENABLED=true
 APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
 APP_LOCAL_SHARED_RUNNER_PASSWORD=HermesLocal1!
+APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME=Hermes Shared Runner
 ```
 
 #### What you get
@@ -394,6 +399,88 @@ The frontend calls this endpoint in `frontend/src/pages/Profile.jsx`. Search for
 
 ---
 
+#### How to Submit Your Change
+
+> **`/auto-hermes-push-main` is the only supported way to open a PR into `main`.**
+> Do not `git push origin main` directly, do not run `gh pr create` by hand, do not cherry-pick, rebase, force-push, or merge through any other path. The command runs every required gate, blocks on real failures (secret leak, lint, backend compile, Docker, identity), pushes the current branch, opens the PR, and writes a structured artifact at `.ai-sync/AUTO_HERMES_PUSH_MAIN.{md,json}` so the change is auditable. Bypassing it skips those gates.
+
+Run it from the repo root:
+
+```bash
+node .tools/auto-hermes-push-main.mjs --execute --write --message "<type>: <one-line summary>"
+```
+
+Or invoke it as a slash command in Claude Code / Codex / Gemini CLI:
+
+```
+/auto-hermes-push-main
+```
+
+**Commit and PR citation rules** (enforced by the command for AI agents, recommended for humans): every commit title is `<type>: <imperative one-line summary ≤ 70 chars>`, every PR body has `## Summary` (one bullet per touched surface — what changed and why), `## Test plan` (checklist of verification commands you actually ran), and links to `Closes #N` when an issue exists. Cite the touched files inline. Cite browser proof screenshots for UI changes and runtime proof artifacts for backend changes. Never claim "all tests pass" without listing which tests. Full rules: [`.codex/commands/auto-hermes-push-main.md`](.codex/commands/auto-hermes-push-main.md) → *Commit & PR Citation Rules*.
+
+What the command does, in order:
+
+1. Verifies the remote is `https://github.com/520HXC/run.git` and the local git identity matches the values configured in `CLAUDE.md` ("Identity (set before every commit)").
+2. Refuses to run when the current branch is `main` itself.
+3. Refreshes architecture diagrams (`README.md`, `/auto-hermes` flow, SaaS, AI agents).
+4. Runs the static security scan — blocks on secret, PII, API-key, or config leaks.
+5. Runs `npm run lint` (frontend) and `./mvnw -q -DskipTests compile` (backend).
+6. Runs the Docker / main-repository publish gate.
+7. Pushes the current branch to `origin`.
+8. Opens a PR into `main` via `gh pr create`.
+
+If any gate fails, the command stops and reports which one. Fix the underlying issue, rerun. Do not bypass with `--skip-checks` unless you are absolutely sure the finding is a false positive AND you can prove it in the PR body.
+
+---
+
+<a id="how-to-sync-from-upstream"></a>
+
+#### How to Sync from Upstream
+
+> **`/auto-hermes-pull-main` is the safe counterpart to `/auto-hermes-push-main`.**
+> Use it whenever someone else (or you, on another machine) has pushed commits to `main` and you want them locally without losing your in-progress edits.
+
+Run it from the repo root:
+
+```bash
+# Dry-run first — shows what would change, never touches the tree.
+node .tools/auto-hermes-pull-main.mjs
+
+# Then pull. Auto-stashes dirty work, fast-forwards on `main`, merges (or
+# rebases with --strategy rebase) on a feature branch, and writes an audit
+# artifact to `.ai-sync/AUTO_HERMES_PULL_MAIN.{md,json}`.
+node .tools/auto-hermes-pull-main.mjs --execute --write
+```
+
+Or invoke it as a slash command in Claude Code / Codex / Gemini CLI:
+
+```
+/auto-hermes-pull-main
+```
+
+What the command does, in order:
+
+1. Verifies the remote is `https://github.com/520HXC/run.git` and refuses to run on a detached HEAD.
+2. Runs `git fetch origin --prune` to learn the latest refs without touching the tree.
+3. Reports how many commits you're ahead / behind and lists the incoming commits.
+4. Picks a strategy: `ff-only` on `main` (no merge commits on the trunk), `merge` (default) or `rebase` (with `--strategy rebase`) on a feature branch.
+5. If the tree has uncommitted changes, runs `git stash push -u -m "auto-hermes-pull-main <timestamp>"` first. Pass `--no-stash` to refuse instead.
+6. Applies the merge / rebase / fast-forward.
+7. On any conflict, **aborts the operation** and **restores your stash** so you're back to where you started. Pass `--allow-conflicts` to leave the tree in the conflicted state for manual resolution.
+8. On a clean pull, restores your stash via `git stash pop`. If the pop hits a conflict, the stash is kept on the stack with the exact filename surfaced.
+
+The command never force-pulls, never `git reset --hard`s, and never auto-resolves conflicts.
+
+Typical loop with the matching push command:
+
+```
+/auto-hermes-pull-main   # before you start editing
+…work, commit…
+/auto-hermes-push-main   # when ready to open a PR
+```
+
+---
+
 <a id="architecture-stack"></a>
 
 ### Architecture & Tech Stack
@@ -482,7 +569,7 @@ Use this table to decide which command to run. All commands read `TASKS.md` as t
 | Smoke-test resilience (auth expired, weather outage, malformed file) | `/auto-hermes-attack` | Synthetic failure-mode probe — non-destructive. |
 | Research running-shoe brands/series and update the catalog | `/auto-hermes-find-shoe` | Web search → series-level catalog additions. |
 | Polish frontend copy so the product sounds coach-like, not AI-generic | `/auto-hermes-language` | Routes UI copy through coach-voice review with zh-CN/en sync enforced. |
-| Push the branch and open a PR into `github.com/520HXC/run` | `/auto-hermes-push-main` | Full gates (lint, compile, runtime proof, identity check), then push + PR. |
+| Push the branch and open a PR into `github.com/520HXC/run` | `/auto-hermes-push-main` | **The only supported PR path.** Full gates (security scan, lint, compile, Docker, identity), then push + PR. Direct `git push origin main`, manual `gh pr create`, cherry-picks, and force-pushes are not allowed. See [How to Submit Your Change](#how-to-submit-your-change). |
 | Apply Hermes UI standards to one specific surface | `/frontend-design` | Loads the frontend-design skill and Hermes design tokens, then runs a single bounded UI round. |
 | Generate a minimal working brief before broad execution | `/optimize-context` | Writes `.ai-codex/optimized-claude.md` with the smallest useful context slice. Saves tokens for the actual round. |
 | Cap response token count for tight sessions | `/caveman` | Switches the session into terse mode (`lite` by default). |
@@ -541,6 +628,154 @@ What happens: `/auto-hermes-max` decomposes the work into disjoint lanes — one
    ${EDITOR:-nano} .env
    ```
 
+#### Slash Commands — Native After Clone
+
+The `/auto-hermes-*` commands ship inside this repository at [.claude/commands/](.claude/commands/) (Claude Code) and [.codex/commands/](.codex/commands/) (Codex / Gemini CLI). They are **project-scoped** — Claude Code auto-discovers them the moment you open the Hermes directory.
+
+Verify after a fresh clone:
+
+```bash
+git clone https://github.com/520HXC/run.git Hermes
+cd Hermes
+claude            # launches Claude Code in the Hermes directory
+```
+
+Once Claude Code is running, type `/` and look for the `auto-hermes` family in the autocomplete dropdown, or run `/help` to list every project command. Each entry shows the one-line `description:` from the command's frontmatter.
+
+##### Which commands are Claude-native vs Codex-only
+
+Not every command exists for both CLIs. Use this table to pick the right tool:
+
+| Command | Claude Code | Codex / Gemini |
+|---|---|---|
+| `/auto-hermes` | ✅ [.claude/commands/auto-hermes.md](.claude/commands/auto-hermes.md) | ✅ [.codex/commands/auto-hermes.md](.codex/commands/auto-hermes.md) |
+| `/auto-hermes-self` | ✅ [.claude/commands/auto-hermes-self.md](.claude/commands/auto-hermes-self.md) | — |
+| `/auto-hermes-max` | ✅ | ✅ |
+| `/auto-hermes-attack` | ✅ | ✅ |
+| `/auto-hermes-market` | ✅ | ✅ |
+| `/auto-hermes-tech-debt` | ✅ | ✅ |
+| `/auto-hermes-push-main` | — (run via Codex / Gemini, **or** `node .tools/auto-hermes-push-main.mjs --execute --write --message "<msg>"` from any shell) | ✅ [.codex/commands/auto-hermes-push-main.md](.codex/commands/auto-hermes-push-main.md) |
+| `/auto-hermes-pull-main` | ✅ [.claude/commands/auto-hermes-pull-main.md](.claude/commands/auto-hermes-pull-main.md) | ✅ [.codex/commands/auto-hermes-pull-main.md](.codex/commands/auto-hermes-pull-main.md) |
+| `/auto-hermes-security` | — (run via Codex, or `node .tools/auto-hermes-security.mjs`) | ✅ [.codex/commands/auto-hermes-security.md](.codex/commands/auto-hermes-security.md) |
+| `/auto-hermes-find-shoe` | — | ✅ [.codex/commands/auto-hermes-find-shoe.md](.codex/commands/auto-hermes-find-shoe.md) |
+| `/auto-hermes-language` | — (use `/auto-hermes Polish coach-voice copy on <surface>`) | — (use `/auto-hermes` with explicit scope) |
+| `/auto-hermes-structure-update` | — (run via `node .tools/auto-hermes-structure-update.mjs`) | — |
+
+If you need a Claude-native version of a Codex-only command (for example, to run `/auto-hermes-push-main` directly inside Claude Code), copy the matching file across:
+
+```bash
+cp .codex/commands/auto-hermes-push-main.md .claude/commands/auto-hermes-push-main.md
+# Then either restart Claude Code, or type `/` and the new command will appear.
+```
+
+The `.gitignore` whitelists every `.claude/commands/*.md` and `.codex/commands/*.md`, so a newly-added command is committable and survives the next `git clone`.
+
+##### Making `/auto-hermes-*` work outside this repo (optional)
+
+Project commands only load when Claude Code is launched inside the Hermes directory. If you want the same commands available **everywhere** (for cross-repo work or quick experiments), copy them into Claude Code's user-level directory:
+
+Windows (PowerShell):
+```powershell
+$dest = Join-Path $HOME ".claude\commands"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Copy-Item .claude\commands\auto-hermes*.md $dest
+```
+
+macOS / Linux:
+```bash
+mkdir -p "$HOME/.claude/commands"
+cp .claude/commands/auto-hermes*.md "$HOME/.claude/commands/"
+```
+
+Be aware: the global copies still reference Hermes-specific scripts under `.tools/` and Hermes-specific files like `TASKS.md`. They only work end-to-end when the current working directory is a Hermes checkout. Treat global installation as a convenience for autocomplete, not a way to run the workflow against unrelated codebases.
+
+##### Optional skills not shipped with the repo
+
+`git clone Hermes` already gives you **every workflow command** (`/auto-hermes`, `/auto-hermes-pull-main`, `/auto-hermes-push-main`, `/auto-hermes-self`, `/auto-hermes-max`, `/auto-hermes-tech-debt`, etc.) **and the auto-triggered skills they depend on** (`frontend-design`, `translation-sync`, `ui-ux-pro-max`, `loop-mode`, `handoff-state`, plus all 20+ Codex skills under `.codex/skills/`). The standard workflow is fully self-contained — no install required.
+
+The only things **not** in the repo are a small set of **explicit-call-only** skills. They never auto-fire inside `/auto-hermes`; you only miss them if you try to invoke one by name. Install them only if you actually want to type their slash command.
+
+| Skill | What it does | Why it isn't shipped |
+|---|---|---|
+| `taste-soft`, `taste-brutalist`, `taste-minimalist`, `taste-redesign`, `taste-image-to-code`, `taste-stitch`, `taste-output`, `taste-gpt`, `taste-skill` | Visual-style sub-skills for direct calls like `/taste-soft redesign /profile`. | Upstream community skills with their own licensing — copy them from another Hermes contributor's `~/.claude/skills/` rather than redistributing. |
+| `mem0` | Wraps the `mem0`-backed cross-session memory bridge at `.tools/mem0-bridge.mjs`. The bridge code IS shipped; this is just the SKILL.md that documents when an agent should call it. | The bridge no-ops gracefully without an API key, so the skill is optional. |
+| `auto-hermes-language` | Sub-skill for coach-voice copy polish. | Most users invoke this as `/auto-hermes Polish coach-voice copy on <surface>` instead — same result. |
+
+###### How to install the Taste sub-skills
+
+The Taste sub-skills are user-level (they apply across every project, not just Hermes). If a current Hermes contributor has them, the fastest path is to copy the directories from their `~/.claude/skills/` to yours. There's no public package: each `SKILL.md` is a hand-written Markdown prompt with frontmatter (`name`, `description`).
+
+Windows (PowerShell), assuming a contributor shared a zip:
+```powershell
+$dest = Join-Path $HOME ".claude\skills"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Expand-Archive -Path .\taste-skills-bundle.zip -DestinationPath $dest
+```
+
+macOS / Linux:
+```bash
+mkdir -p "$HOME/.claude/skills"
+unzip taste-skills-bundle.zip -d "$HOME/.claude/skills/"
+```
+
+If you don't have a bundle, you can write a new sub-skill yourself:
+
+```bash
+mkdir -p "$HOME/.claude/skills/taste-yourstyle"
+cat > "$HOME/.claude/skills/taste-yourstyle/SKILL.md" <<'EOF'
+---
+name: taste-yourstyle
+description: One-line trigger description. Use only when the user directly names or calls /taste-yourstyle.
+---
+
+# Your design style guide
+# Bullet rules, banned patterns, required tokens, etc.
+EOF
+```
+
+Restart Claude Code; `/taste-yourstyle` will appear in autocomplete.
+
+###### How to enable `mem0` (optional cross-session memory)
+
+The bridge is already at `.tools/mem0-bridge.mjs`. To turn it on:
+
+```bash
+# 1. Get an API key from https://mem0.ai (free tier exists).
+export MEM0_API_KEY="<your key>"
+
+# 2. Optional: self-hosted endpoint.
+export MEM0_BASE_URL="https://api.mem0.ai"
+```
+
+Without `MEM0_API_KEY` the bridge silently no-ops — every memory call returns `{ "skipped": true }` and the agent continues. Set the key only if you want durable per-agent memory across sessions.
+
+If you want the SKILL.md prompt (to teach Claude Code when to invoke the bridge), drop a one-paragraph file at `~/.claude/skills/mem0/SKILL.md` describing the bridge's trigger conditions — see the `mem0` skill block earlier in this README for a copy-paste-able example.
+
+###### How to enable the Claude-native `/auto-hermes-push-main` slash command
+
+The slash command file lives in `.codex/commands/`. For Claude Code, copy it across (this is also covered above, but worth repeating in the install context):
+
+```bash
+cp .codex/commands/auto-hermes-push-main.md .claude/commands/auto-hermes-push-main.md
+```
+
+Or just run the underlying helper from any shell without the slash command:
+
+```bash
+node .tools/auto-hermes-push-main.mjs --execute --write --message "<type>: <summary>"
+```
+
+Both invoke the same logic.
+
+##### Troubleshooting "command not found"
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `/auto-hermes` not in autocomplete | Claude Code was launched outside the Hermes directory | `cd Hermes && claude` |
+| Command appears but errors on step 0 | Missing Node.js (the loop scripts under `.tools/` are `.mjs`) | Install Node 18+ and retry |
+| Command runs but lane scripts fail | Missing local env file | Re-run step 2 above (`Hermes.local.env.ps1` on Windows, `.env` on macOS / Linux) |
+| Adding a new `auto-hermes-*` command, `git add` silently skips it | An older `.gitignore` allowlist | Pull latest `main` — the gitignore now allows `.claude/commands/*.md` and `.codex/commands/*.md` |
+
 #### Claude Code Commands
 
 | Command | What it does |
@@ -555,7 +790,8 @@ What happens: `/auto-hermes-max` decomposes the work into disjoint lanes — one
 | `/auto-hermes-structure-update` | Structure improvement pass |
 | `/auto-hermes-find-shoe` | Web-research running shoe brands and update the catalog |
 | `/auto-hermes-language` | Polish frontend copy to coach-voice (zh-CN/en sync enforced) |
-| `/auto-hermes-push-main` | Guarded publish to `github.com/520HXC/run` |
+| `/auto-hermes-push-main` | **The only supported PR path** — guarded publish to `github.com/520HXC/run`. Runs security scan, lint, compile, Docker gate, pushes the branch, opens the PR. No manual `git push`, `gh pr create`, cherry-picks, or force-pushes. |
+| `/auto-hermes-pull-main` | **Safe sync from upstream.** Auto-stashes dirty work, fetches `origin`, fast-forwards `main` (or merges/rebases a feature branch), restores stash. Aborts cleanly on conflict — never auto-resolves. Counterpart to `/auto-hermes-push-main`. See [How to Sync from Upstream](#how-to-sync-from-upstream). |
 | `/auto-hermes-submit-main` | Backup-first cherry-pick from nested repo |
 | `/auto-ship` | Run TASKS.md queue with shared git policy |
 | `/deploy` | Prepare Hermes for deployment |
@@ -958,8 +1194,10 @@ For macOS / Linux, use the PostgreSQL env block above and run the backend agains
 
 → Short setup guide at [Use the Built-in Mock Account](#mock-account) — start there if you're new.
 
-Hermes can bootstrap a local-only demo account with seeded shoes and runs:
+Hermes can bootstrap a local-only demo account named **Hermes Shared Runner** with seeded shoes and runs:
 `strava+140971747@hermes.local` / `HermesLocal1!`
+
+The display name comes from `app.local-shared-runner.display-name`, which defaults to `Hermes Shared Runner` in [`LocalSharedRunnerBootstrapConfiguration.java`](backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapConfiguration.java). Override with `APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME` if you need a different greeting.
 
 It also reserves a territory-conflict test account:
 `territory-rival@hermes.local` / `HermesRival1!`
@@ -1903,6 +2141,75 @@ macOS / Linux：
 cp .env.example .env
 ${EDITOR:-nano} .env
 ```
+
+#### 斜杠命令 — 克隆即可原生使用
+
+`/auto-hermes-*` 系列命令直接随仓库分发：[.claude/commands/](.claude/commands/) 给 Claude Code 使用，[.codex/commands/](.codex/commands/) 给 Codex / Gemini CLI 使用。这些命令是**项目级**作用域 — 在 Hermes 目录里打开 Claude Code，命令会自动被识别。
+
+新克隆后验证：
+
+```bash
+git clone https://github.com/520HXC/run.git Hermes
+cd Hermes
+claude            # 在 Hermes 目录里启动 Claude Code
+```
+
+启动后输入 `/`，自动补全里会列出 `auto-hermes` 系列；或者执行 `/help` 列出全部项目命令。每条命令显示的描述来自命令文件的 frontmatter `description:` 字段。
+
+##### Claude 原生 vs Codex 专属
+
+并非每条命令在两个 CLI 都存在。请根据下表选用：
+
+| 命令 | Claude Code | Codex / Gemini |
+|---|---|---|
+| `/auto-hermes` | ✅ [.claude/commands/auto-hermes.md](.claude/commands/auto-hermes.md) | ✅ [.codex/commands/auto-hermes.md](.codex/commands/auto-hermes.md) |
+| `/auto-hermes-self` | ✅ [.claude/commands/auto-hermes-self.md](.claude/commands/auto-hermes-self.md) | — |
+| `/auto-hermes-max` | ✅ | ✅ |
+| `/auto-hermes-attack` | ✅ | ✅ |
+| `/auto-hermes-market` | ✅ | ✅ |
+| `/auto-hermes-tech-debt` | ✅ | ✅ |
+| `/auto-hermes-push-main` | —（用 Codex / Gemini，或在 shell 里执行 `node .tools/auto-hermes-push-main.mjs --execute --write --message "<msg>"`）| ✅ [.codex/commands/auto-hermes-push-main.md](.codex/commands/auto-hermes-push-main.md) |
+| `/auto-hermes-security` | —（用 Codex，或执行 `node .tools/auto-hermes-security.mjs`）| ✅ [.codex/commands/auto-hermes-security.md](.codex/commands/auto-hermes-security.md) |
+| `/auto-hermes-find-shoe` | — | ✅ [.codex/commands/auto-hermes-find-shoe.md](.codex/commands/auto-hermes-find-shoe.md) |
+| `/auto-hermes-language` | —（在 `/auto-hermes` 后附加文案润色范围即可）| —（同上）|
+| `/auto-hermes-structure-update` | —（执行 `node .tools/auto-hermes-structure-update.mjs`）| — |
+
+如果希望某条 Codex 专属命令在 Claude Code 里也能原生使用（例如 `/auto-hermes-push-main`），把对应文件复制过去：
+
+```bash
+cp .codex/commands/auto-hermes-push-main.md .claude/commands/auto-hermes-push-main.md
+# 重启 Claude Code，或者直接输入 `/`，新命令会立刻出现。
+```
+
+`.gitignore` 已白名单 `.claude/commands/*.md` 与 `.codex/commands/*.md`，因此新加入的命令可以正常提交、并在下次 `git clone` 后继续可用。
+
+##### 让命令在 Hermes 目录之外也能使用（可选）
+
+项目级命令只在 Hermes 目录里启动 Claude Code 时才可见。如果希望在任何目录都能自动补全这些命令（跨仓库工作或快速试验），把它们复制到 Claude Code 的用户级目录：
+
+Windows（PowerShell）：
+```powershell
+$dest = Join-Path $HOME ".claude\commands"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Copy-Item .claude\commands\auto-hermes*.md $dest
+```
+
+macOS / Linux：
+```bash
+mkdir -p "$HOME/.claude/commands"
+cp .claude/commands/auto-hermes*.md "$HOME/.claude/commands/"
+```
+
+注意：全局副本依然引用了 `.tools/` 里的 Hermes 专属脚本和 `TASKS.md` 等文件。只有在当前工作目录是 Hermes checkout 时整套流程才能跑通。把全局安装当作"自动补全便利"，不要把它当作"在无关项目里跑 Hermes 流程"的方式。
+
+##### 命令找不到时的排查
+
+| 现象 | 可能原因 | 解决 |
+|---|---|---|
+| `/auto-hermes` 不在自动补全里 | 在 Hermes 目录之外启动了 Claude Code | `cd Hermes && claude` |
+| 命令出现，但第 0 步报错 | 缺少 Node.js（`.tools/` 下的循环脚本是 `.mjs`）| 安装 Node 18+ 后重试 |
+| 命令开始运行但通道脚本失败 | 缺少本地 env 文件 | 重新执行上面"配置本地密钥"一步 |
+| 新加的 `auto-hermes-*` 命令 `git add` 时被忽略 | 旧版 `.gitignore` 白名单 | 拉取最新 `main` — gitignore 现已允许 `.claude/commands/*.md` 与 `.codex/commands/*.md` |
 
 #### Claude Code 命令
 

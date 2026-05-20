@@ -47,6 +47,7 @@ const WEATHER_PAGE_COPY = {
     engine_status_day_4_9: '第 4-9 天：正在建立适应',
     engine_status_day_10_14: '第 10-14 天：趋于稳定',
     engine_message: '引擎提示',
+    engine_message_heat: '检测到极端热应激。Hermes 已把今天的目标配速放慢 +{penalty} sec/km，用来抵消湿度带来的额外成本。这样既能守住强度区间，也能让身体把适应做完。等热适应跟上，惩罚会逐步淡出。',
     no_penalty: '无需修正',
     no_day: '未开始',
     no_message: '当前没有额外热风险提醒。',
@@ -104,6 +105,7 @@ const WEATHER_PAGE_COPY = {
     engine_status_day_4_9: 'Days 4-9: adapting',
     engine_status_day_10_14: 'Days 10-14: stabilized',
     engine_message: 'Engine note',
+    engine_message_heat: "Extreme heat detected. We've adjusted your target pace by +{penalty} sec/km today to account for humidity. This keeps the session inside the right intensity zone. The adjustment will fade as your acclimatization improves.",
     no_penalty: 'No penalty',
     no_day: 'Not started',
     no_message: 'No extra heat warning is active right now.',
@@ -175,6 +177,17 @@ function formatCardinalDirection(degrees, t) {
   return t(`weather_engine.cardinalDirection.${dirKeys[index]}`);
 }
 
+// Server-side `weatherContext.message` is English-only. Re-compose from the
+// structured `pacePenaltySecPerKm` so zh-CN runners see the same advice in
+// Chinese without round-tripping a translation through the backend.
+function localizeEngineMessage(weatherContext, wt) {
+  const penalty = Number(weatherContext?.pacePenaltySecPerKm);
+  if (Number.isFinite(penalty) && penalty > 0) {
+    return wt('engine_message_heat').replace('{penalty}', String(Math.round(penalty)));
+  }
+  return weatherContext?.message || wt('no_message');
+}
+
 function statusLabel(status, wt) {
   if (!status) return '--';
   const labels = {
@@ -211,20 +224,43 @@ function buildHourlyForecast(response, lang, t) {
   const times = Array.isArray(hourly.time) ? hourly.time : [];
   const temps = Array.isArray(hourly.temperature_2m) ? hourly.temperature_2m : [];
   const codes = Array.isArray(hourly.weather_code) ? hourly.weather_code : [];
+  const current = response?.current || null;
 
-  return times.slice(0, 12).map((time, index) => {
+  // Open-Meteo returns hourly slots from 00:00 of forecast_days; slice from the
+  // current hour so the "现在 / Now" slot is genuinely upcoming, not midnight.
+  const nowMs = Date.now();
+  let startIndex = times.findIndex((value) => {
+    const ms = new Date(value).getTime();
+    return Number.isFinite(ms) && ms + 60 * 60 * 1000 > nowMs;
+  });
+  if (startIndex < 0) startIndex = 0;
+
+  const windowTimes = times.slice(startIndex, startIndex + 12);
+
+  return windowTimes.map((time, offset) => {
+    const index = startIndex + offset;
     const date = new Date(time);
     const label = Number.isNaN(date.getTime())
       ? '--'
-      : index === 0
+      : offset === 0
         ? pageText(lang, 'pipeline_now')
         : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Bind the first ("现在") slot to the live observation so the timeline value
+    // matches the hero "实时环境状态" reading; later slots stay on the hourly
+    // forecast series.
+    const liveCurrent = offset === 0 && current ? current : null;
+    const temperature = liveCurrent && Number.isFinite(Number(liveCurrent.temperature_2m))
+      ? Number(liveCurrent.temperature_2m)
+      : temps[index];
+    const weatherCode = liveCurrent && Number.isFinite(Number(liveCurrent.weather_code))
+      ? Number(liveCurrent.weather_code)
+      : codes[index];
     return {
-      key: `${time}-${index}`,
+      key: `${time}-${offset}`,
       label,
-      temperature: temps[index],
-      weatherCode: codes[index],
-      summary: describeWeatherCode(codes[index], t),
+      temperature,
+      weatherCode,
+      summary: describeWeatherCode(weatherCode, t),
     };
   });
 }
@@ -330,7 +366,7 @@ export default function WeatherEngine() {
     url.searchParams.set('longitude', longitude);
     url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code');
     url.searchParams.set('hourly', 'temperature_2m,weather_code');
-    url.searchParams.set('forecast_days', '1');
+    url.searchParams.set('forecast_days', '2');
     url.searchParams.set('timezone', 'auto');
 
     fetch(url, { signal: controller.signal })
@@ -659,7 +695,7 @@ export default function WeatherEngine() {
                 </div>
                 <div className="weather-engine-judgment-meta">
                   <span>{wt('engine_message')}</span>
-                  <p>{weatherContext?.message || wt('no_message')}</p>
+                  <p>{localizeEngineMessage(weatherContext, wt)}</p>
                 </div>
               </div>
 

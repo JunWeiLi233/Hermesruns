@@ -1333,7 +1333,6 @@ export default function AnalysisInsightDetail() {
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
     { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
-    { key: 'rewards', label: t('rewards.top_title'), route: '/rewards', icon: 'workspace_premium' },
     { key: 'workflows', label: t('profile.dashboard_nav_workflows'), route: '/workflows', icon: 'account_tree' },
   ];
   const topnavTitle = detail.title;
@@ -1351,7 +1350,7 @@ export default function AnalysisInsightDetail() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page analysis-insight-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page analysis-insight-detail-page${insightKey === 'intensity' ? ' is-intensity' : ''}${insightKey === 'coach-insight' ? ' is-coach-insight' : ''}${insightKey === 'injury-risk' ? ' is-injury-risk' : ''}${insightKey === 'load-balance' ? ' is-load-balance' : ''}${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">

@@ -1,0 +1,833 @@
+/* ============================================================================
+   Analysis detail-page redesigns + adjacent runner-facing surfaces.
+
+   This file is loaded AFTER `style.css` from `index.css`, so every rule here
+   wins the cascade against the older inline detail-page styles inside
+   `style.css`. Scoped per page via the `analysis-insight-detail-page.is-*`
+   modifiers added in `AnalysisInsightDetail.jsx`.
+
+   Pages covered:
+     - /analysis/intensity        (.is-intensity)
+     - /analysis/coach-insight    (.is-coach-insight)
+     - /analysis/injury-risk      (.is-injury-risk)
+     - /analysis/load-balance     (.is-load-balance)
+     - /profile                   (coach-secondary 3-card grid centralize)
+     - /weather                   (light-theme hero contrast lock)
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   /analysis/intensity — Hermes-native + full-width canvas.
+   ---------------------------------------------------------------------------- */
+
+body .analysis-insight-detail-page.is-intensity .runner-shell-canvas.analysis-insight-detail-canvas {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px clamp(20px, 3vw, 40px) 56px;
+  gap: 28px;
+  background:
+    radial-gradient(circle at 6% 4%, rgba(255, 180, 167, 0.18), transparent 32%),
+    radial-gradient(circle at 92% 0%, rgba(160, 57, 42, 0.08), transparent 30%),
+    linear-gradient(180deg, #fbf6f0 0%, #f5ede4 100%);
+}
+
+@media (min-width: 1100px) {
+  body .analysis-insight-detail-page.is-intensity.runner-dashboard-page .runner-shell-canvas.analysis-insight-detail-canvas {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 28px clamp(24px, 3vw, 48px) 64px !important;
+  }
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-distribution,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-recovery,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card {
+  background: rgba(255, 252, 248, 0.96);
+  border: 1px solid rgba(160, 57, 42, 0.16);
+  box-shadow: 0 18px 38px rgba(78, 39, 30, 0.07);
+  border-radius: 28px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero {
+  padding: clamp(32px, 4vw, 56px);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 180, 167, 0.32), transparent 36%),
+    linear-gradient(135deg, #ffffff 0%, #fdf3ec 100%);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 4.8vw, 4.2rem);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  color: var(--text-strong, #2c2f30);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero h1 strong {
+  color: var(--brand-accent, #a0392a);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment {
+  background: linear-gradient(150deg, #ffb4a7 0%, #f07561 55%, #a0392a 100%);
+  color: #fff6f2;
+  border-radius: 28px;
+}
+
+/* ----------------------------------------------------------------------------
+   Profile dashboard — centralize the 3-card reference grid below the dark
+   "建议今日训练" prescription card so they stack full-width.
+   ---------------------------------------------------------------------------- */
+
+.runner-dashboard-page .runner-dashboard-coach-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-secondary > .runner-dashboard-coach-prescription,
+.runner-dashboard-page .runner-dashboard-coach-secondary > .runner-dashboard-profile-reference-grid {
+  width: 100%;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-secondary > .runner-dashboard-profile-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 720px) {
+  .runner-dashboard-page .runner-dashboard-coach-secondary > .runner-dashboard-profile-reference-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   /analysis/coach-insight — Hermes-native + full-width canvas.
+   ---------------------------------------------------------------------------- */
+
+body .analysis-insight-detail-page.is-coach-insight .runner-shell-canvas.analysis-insight-detail-canvas {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px clamp(20px, 3vw, 40px) 56px;
+  gap: 28px;
+  background:
+    radial-gradient(circle at 6% 4%, rgba(255, 180, 167, 0.18), transparent 32%),
+    radial-gradient(circle at 92% 0%, rgba(160, 57, 42, 0.08), transparent 30%),
+    linear-gradient(180deg, #fbf6f0 0%, #f5ede4 100%);
+}
+
+@media (min-width: 1100px) {
+  body .analysis-insight-detail-page.is-coach-insight.runner-dashboard-page .runner-shell-canvas.analysis-insight-detail-canvas {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 28px clamp(24px, 3vw, 48px) 64px !important;
+  }
+}
+
+.analysis-insight-detail-page.is-coach-insight {
+  --coach-card: rgba(255, 252, 248, 0.97);
+  --coach-card-strong: rgba(255, 250, 244, 0.99);
+  --coach-ink: var(--text-strong, #2c2f30);
+  --coach-ink-soft: rgba(44, 47, 48, 0.62);
+  --coach-eyebrow: rgba(160, 57, 42, 0.78);
+  --coach-line: rgba(160, 57, 42, 0.14);
+  --coach-line-strong: rgba(160, 57, 42, 0.22);
+  --coach-coral: var(--accent-coral-strong, #f07561);
+  --coach-coral-soft: rgba(255, 180, 167, 0.32);
+  --coach-coral-strong: var(--brand-accent, #a0392a);
+  --coach-shadow: 0 18px 38px rgba(78, 39, 30, 0.07);
+  --coach-shadow-strong: 0 24px 52px rgba(78, 39, 30, 0.12);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero {
+  border-radius: 28px;
+  border: 1px solid var(--coach-line);
+  background:
+    radial-gradient(circle at 14% 10%, rgba(255, 180, 167, 0.32), transparent 38%),
+    radial-gradient(circle at 96% 0%, rgba(160, 57, 42, 0.08), transparent 42%),
+    linear-gradient(135deg, #ffffff 0%, #fdf3ec 100%);
+  box-shadow: var(--coach-shadow-strong);
+  padding: clamp(32px, 4vw, 56px);
+  align-items: center;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-art { display: none; }
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero h1 {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 800;
+  font-size: clamp(2.4rem, 4.8vw, 4.2rem);
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  color: var(--coach-ink);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero h1 strong {
+  color: var(--coach-coral-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero p {
+  color: var(--coach-ink-soft);
+  font-size: 1.02rem;
+  line-height: 1.65;
+  max-width: 58ch;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-live-pill {
+  background: var(--coach-coral);
+  color: #fff6f2;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-cycle-pill,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-pill {
+  background: rgba(160, 57, 42, 0.08);
+  color: var(--coach-coral-strong);
+  border: 1px solid var(--coach-line);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric {
+  background: var(--coach-card-strong);
+  border: 1px solid var(--coach-line);
+  box-shadow: 0 12px 24px rgba(78, 39, 30, 0.06);
+  border-radius: 22px;
+  padding: 22px 24px;
+  backdrop-filter: none;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric.is-accent {
+  background: linear-gradient(160deg, rgba(255, 180, 167, 0.36), rgba(255, 244, 238, 0.92));
+  border-color: var(--coach-line-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > span {
+  color: var(--coach-eyebrow);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric strong {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric small {
+  color: var(--coach-ink-soft);
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-section-head h2 {
+  font-style: normal;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  letter-spacing: -0.025em;
+  color: var(--coach-ink);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-section-head p,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-panel-head p {
+  color: var(--coach-ink-soft);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle span {
+  background: rgba(160, 57, 42, 0.06);
+  color: var(--coach-ink-soft);
+  border: 1px solid transparent;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle span.is-active {
+  background: var(--coach-card-strong);
+  color: var(--coach-coral-strong);
+  border-color: var(--coach-line-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-grid {
+  gap: 28px;
+  grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
+}
+
+@media (min-width: 1600px) {
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(360px, 0.9fr);
+  }
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-card {
+  background: var(--coach-card);
+  border: 1px solid var(--coach-line);
+  box-shadow: var(--coach-shadow);
+  border-radius: 24px;
+  padding: clamp(24px, 2.4vw, 32px);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-grid {
+  background-image:
+    linear-gradient(to right, rgba(160, 57, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(160, 57, 42, 0.08) 1px, transparent 1px);
+  opacity: 0.5;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-head p {
+  color: var(--coach-ink-soft);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-score strong {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-score small {
+  color: var(--coach-coral-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-copy h3 {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  letter-spacing: -0.02em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-copy p {
+  color: var(--coach-ink-soft);
+  line-height: 1.65;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile {
+  background: var(--coach-card-strong);
+  border: 1px solid var(--coach-line);
+  border-radius: 16px;
+  box-shadow: 0 8px 18px rgba(78, 39, 30, 0.04);
+  padding: 18px 20px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile span {
+  color: var(--coach-eyebrow);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile strong {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile small {
+  color: var(--coach-ink-soft);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-primary {
+  stroke: var(--coach-coral);
+  stroke-width: 3.5;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-secondary {
+  stroke: rgba(160, 57, 42, 0.22);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-point {
+  fill: var(--coach-coral-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-tooltip {
+  background: var(--coach-card-strong);
+  border: 1px solid var(--coach-line);
+  box-shadow: var(--coach-shadow);
+  backdrop-filter: none;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-tooltip strong {
+  color: var(--coach-ink);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-recent-card {
+  background: var(--coach-card);
+  border: 1px solid var(--coach-line);
+  border-radius: 24px;
+  box-shadow: var(--coach-shadow);
+  padding: clamp(22px, 2.2vw, 28px);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-panel-head h3 {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row {
+  background: var(--coach-card-strong);
+  border: 1px solid var(--coach-line);
+  border-radius: 16px;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(78, 39, 30, 0.08);
+  border-color: var(--coach-line-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-icon {
+  background: var(--coach-coral-soft);
+  color: var(--coach-coral-strong);
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-copy strong {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-copy span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-meta span {
+  color: var(--coach-ink-soft);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-meta strong {
+  color: var(--coach-coral-strong);
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-sidebar {
+  gap: 22px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan {
+  background: linear-gradient(150deg, #ffb4a7 0%, #f07561 55%, #a0392a 100%);
+  color: #fff6f2;
+  border: 0;
+  border-radius: 24px;
+  box-shadow: 0 22px 48px rgba(160, 57, 42, 0.22);
+  padding: clamp(24px, 2.4vw, 30px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan h3 {
+  color: #fff6f2;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-style: normal;
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
+  letter-spacing: -0.02em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-plan-kicker-row {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-plan-kicker-row span {
+  color: rgba(255, 246, 242, 0.86);
+  letter-spacing: 0.16em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-plan-meta span {
+  color: rgba(255, 246, 242, 0.96);
+  font-family: var(--font-display);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-why-card {
+  background: rgba(35, 13, 10, 0.16);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-why-card span {
+  color: rgba(255, 246, 242, 0.78);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-why-card p {
+  color: #fff6f2;
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan {
+  background: var(--coach-card);
+  border: 1px solid var(--coach-line);
+  border-radius: 18px;
+  box-shadow: 0 12px 24px rgba(78, 39, 30, 0.05);
+  padding: 18px 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan > span {
+  color: var(--coach-eyebrow);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan h4 {
+  margin: 0;
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan p {
+  color: var(--coach-ink-soft);
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card {
+  background: var(--coach-card-strong);
+  border: 1px solid var(--coach-line);
+  border-radius: 20px;
+  box-shadow: var(--coach-shadow);
+  padding: 22px 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--coach-shadow-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card h3 {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card p {
+  color: var(--coach-ink-soft);
+  font-size: 0.95rem;
+  margin-top: 4px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-meta strong {
+  color: var(--coach-coral-strong);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  display: block;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-meta small {
+  color: var(--coach-ink-soft);
+  display: block;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-footer-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-support-card {
+  background: var(--coach-card);
+  border: 1px solid var(--coach-line);
+  border-radius: 22px;
+  box-shadow: var(--coach-shadow);
+  padding: clamp(22px, 2.2vw, 28px);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip {
+  background: var(--coach-card-strong);
+  border: 1px solid var(--coach-line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip.is-active {
+  background: linear-gradient(150deg, rgba(255, 180, 167, 0.32), rgba(255, 246, 242, 0.96));
+  border-color: var(--coach-line-strong);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile span {
+  color: var(--coach-eyebrow);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip strong,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile strong {
+  color: var(--coach-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile small {
+  color: var(--coach-ink-soft);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-reason-list p {
+  color: var(--coach-ink-soft);
+  line-height: 1.65;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-vo2-page-back {
+  background: rgba(160, 57, 42, 0.08);
+  color: var(--coach-coral-strong);
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px 8px 12px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-vo2-page-back:hover {
+  background: rgba(160, 57, 42, 0.14);
+}
+
+@media (max-width: 1100px) {
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-grid,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-footer-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  body .analysis-insight-detail-page.is-coach-insight .runner-shell-canvas.analysis-insight-detail-canvas {
+    padding: 18px 16px 48px;
+  }
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-card,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-recent-card,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-support-card {
+    border-radius: 22px;
+    padding: 20px;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   /analysis/injury-risk — Hermes-native + full-width canvas.
+   ---------------------------------------------------------------------------- */
+
+body .analysis-insight-detail-page.is-injury-risk .runner-shell-canvas.analysis-insight-detail-canvas {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px clamp(20px, 3vw, 40px) 56px;
+  gap: 28px;
+  background:
+    radial-gradient(circle at 6% 4%, rgba(255, 180, 167, 0.18), transparent 32%),
+    radial-gradient(circle at 92% 0%, rgba(160, 57, 42, 0.08), transparent 30%),
+    linear-gradient(180deg, #fbf6f0 0%, #f5ede4 100%);
+}
+
+@media (min-width: 1100px) {
+  body .analysis-insight-detail-page.is-injury-risk.runner-dashboard-page .runner-shell-canvas.analysis-insight-detail-canvas {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 28px clamp(24px, 3vw, 48px) 64px !important;
+  }
+}
+
+.analysis-insight-detail-page.is-injury-risk .analysis-cinematic-hero {
+  max-width: none;
+  padding: clamp(32px, 4vw, 48px) clamp(28px, 3.5vw, 44px);
+  border-radius: 28px;
+  border: 1px solid rgba(160, 57, 42, 0.14);
+  background:
+    radial-gradient(circle at 14% 10%, rgba(255, 180, 167, 0.32), transparent 38%),
+    linear-gradient(135deg, #ffffff 0%, #fdf3ec 100%);
+  box-shadow: 0 24px 52px rgba(78, 39, 30, 0.12);
+}
+
+.analysis-insight-detail-page.is-injury-risk .analysis-cinematic-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 4.8vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  color: var(--text-strong, #2c2f30);
+}
+
+.analysis-insight-detail-page.is-injury-risk .analysis-cinematic-hero p {
+  color: rgba(44, 47, 48, 0.62);
+  font-size: 1.02rem;
+  line-height: 1.65;
+  letter-spacing: 0;
+  text-transform: none;
+  max-width: 64ch;
+}
+
+.analysis-insight-detail-page.is-injury-risk .analysis-cinematic-card {
+  background: rgba(255, 252, 248, 0.97);
+  border: 1px solid rgba(160, 57, 42, 0.14);
+  box-shadow: 0 18px 38px rgba(78, 39, 30, 0.07);
+  border-radius: 24px;
+  color: var(--text-strong, #2c2f30);
+}
+
+.analysis-insight-detail-page.is-injury-risk .analysis-cinematic-card--coach {
+  background: linear-gradient(150deg, #ffb4a7 0%, #f07561 55%, #a0392a 100%);
+  border: 0;
+  color: #fff6f2;
+  box-shadow: 0 22px 48px rgba(160, 57, 42, 0.22);
+}
+
+.analysis-insight-detail-page.is-injury-risk .analysis-cinematic-card--coach * {
+  color: #fff6f2;
+}
+
+/* ----------------------------------------------------------------------------
+   /analysis/load-balance — Hermes-native + full-width canvas.
+   ---------------------------------------------------------------------------- */
+
+body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px clamp(20px, 3vw, 40px) 56px;
+  gap: 28px;
+  background:
+    radial-gradient(circle at 6% 4%, rgba(255, 180, 167, 0.18), transparent 32%),
+    radial-gradient(circle at 92% 0%, rgba(160, 57, 42, 0.08), transparent 30%),
+    linear-gradient(180deg, #fbf6f0 0%, #f5ede4 100%);
+}
+
+@media (min-width: 1100px) {
+  body .analysis-insight-detail-page.is-load-balance.runner-dashboard-page .runner-shell-canvas.analysis-insight-detail-canvas {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 28px clamp(24px, 3vw, 48px) 64px !important;
+  }
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-hero {
+  padding: clamp(32px, 4vw, 48px) clamp(28px, 3.5vw, 44px);
+  border-radius: 28px;
+  border: 1px solid rgba(160, 57, 42, 0.14);
+  background:
+    radial-gradient(circle at 14% 10%, rgba(255, 180, 167, 0.32), transparent 38%),
+    linear-gradient(135deg, #ffffff 0%, #fdf3ec 100%);
+  box-shadow: 0 24px 52px rgba(78, 39, 30, 0.12);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-hero h1 {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 800;
+  font-size: clamp(2.4rem, 4.8vw, 4.2rem);
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  color: var(--text-strong, #2c2f30);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-hero h1 strong {
+  color: var(--brand-accent, #a0392a);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-hero h1::after,
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-hero h1::before {
+  display: none;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-card,
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-card {
+  background: rgba(255, 252, 248, 0.97);
+  border: 1px solid rgba(160, 57, 42, 0.14);
+  box-shadow: 0 18px 38px rgba(78, 39, 30, 0.07);
+  border-radius: 24px;
+  color: var(--text-strong, #2c2f30);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg line {
+  stroke: rgba(44, 47, 48, 0.1);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg text {
+  fill: rgba(44, 47, 48, 0.62);
+}
+
+/* ----------------------------------------------------------------------------
+   /weather — light-theme hero contrast lock.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page :is(
+  .weather-engine-temp-display,
+  .weather-engine-temp-context-label,
+  .weather-engine-panel-head h2,
+  .weather-engine-card-head h2,
+  .weather-engine-hud-value,
+  .weather-engine-forecast-slot strong,
+  .weather-engine-engine-stat strong,
+  .weather-engine-judgment-meta strong,
+  .weather-engine-judgment-callout strong,
+  .weather-engine-empty strong
+) {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page :is(
+  .weather-engine-data-pill,
+  .weather-engine-data-pill span,
+  .weather-engine-temp-context p,
+  .weather-engine-engine-copy,
+  .weather-engine-empty p,
+  .weather-engine-panel-head p,
+  .weather-engine-hud-foot,
+  .weather-engine-forecast-hour,
+  .weather-engine-forecast-summary,
+  .weather-engine-engine-stat span,
+  .weather-engine-judgment-callout p,
+  .weather-engine-judgment-callout span,
+  .weather-engine-judgment-meta p,
+  .weather-engine-judgment-meta span
+) {
+  color: rgba(44, 47, 48, 0.78) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill {
+  background: rgba(160, 57, 42, 0.06) !important;
+  border: 1px solid rgba(160, 57, 42, 0.14) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill strong {
+  color: rgba(160, 57, 42, 0.78) !important;
+}

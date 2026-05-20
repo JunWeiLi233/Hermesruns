@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-export function useScrollReveal({ threshold = 0.1, rootMargin = '0px' } = {}) {
-  const [isVisible, setIsVisible] = useState(false);
+export function useScrollReveal({ threshold = 0.1, rootMargin = '0px', initialVisible = false } = {}) {
+  const [isVisible, setIsVisible] = useState(Boolean(initialVisible));
   const ref = useRef(null);
 
   useEffect(() => {
+    if (initialVisible) return undefined;
+
     const currentRef = ref.current;
 
     if (typeof IntersectionObserver === 'undefined') {
@@ -29,7 +31,7 @@ export function useScrollReveal({ threshold = 0.1, rootMargin = '0px' } = {}) {
     return () => {
       observer.disconnect();
     };
-  }, [threshold, rootMargin]);
+  }, [threshold, rootMargin, initialVisible]);
 
   return { ref, isVisible };
 }

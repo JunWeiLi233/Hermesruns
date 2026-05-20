@@ -10,6 +10,7 @@ export function getNextEdgeId(source, target) {
 
 export const DEFAULT_POSITIONS = {
   input: { x: 50, y: 50 },
+  'data-source': { x: 50, y: 250 },
   output: { x: 600, y: 50 },
   agent: { x: 300, y: 150 },
   transform: { x: 300, y: 300 },
