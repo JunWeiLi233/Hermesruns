@@ -28,23 +28,24 @@ export default function NodePalette({ onDragStart, onClear, onExecute, onAddNode
         <h3 id={paletteTitleId}>{t('workflow.nodes_label')}</h3>
       </div>
       <div className="wf-palette-items" role="list" aria-label={t('workflow.nodes_label')}>
-        {NODE_TYPES.map(({ type, labelKey, ariaKey, icon: _Icon, color }) => (
-          <div
-            key={type}
-            className={`wf-palette-item wf-palette-item--${color}`}
-            role="listitem"
-            tabIndex={0}
-            draggable
-            aria-label={t(ariaKey)}
-            onKeyDown={(e) => handlePaletteKeyDown(e, type)}
-            onDragStart={(e) => {
-              e.dataTransfer.setData('application/reactflow', type);
-              e.dataTransfer.effectAllowed = 'move';
-              onDragStart?.(e, type);
-            }}
-          >
-            <_Icon size={16} aria-hidden="true" />
-            <span>{t(labelKey)}</span>
+        {NODE_TYPES.map(({ type, labelKey, ariaKey, icon: Icon, color }) => (
+          <div key={type} role="listitem">
+            <button
+              type="button"
+              className={`wf-palette-item wf-palette-item--${color}`}
+              draggable
+              aria-label={t(ariaKey)}
+              onClick={() => onAddNode?.(type, DEFAULT_POSITIONS[type])}
+              onKeyDown={(event) => handlePaletteKeyDown(event, type)}
+              onDragStart={(event) => {
+                event.dataTransfer.setData('application/reactflow', type);
+                event.dataTransfer.effectAllowed = 'move';
+                onDragStart?.(event, type);
+              }}
+            >
+              <Icon size={16} aria-hidden="true" />
+              <span>{t(labelKey)}</span>
+            </button>
           </div>
         ))}
       </div>
@@ -58,7 +59,7 @@ export default function NodePalette({ onDragStart, onClear, onExecute, onAddNode
           aria-busy={isRunning}
         >
           <RunIcon size={14} aria-hidden="true" className={isRunning ? 'wf-spin' : ''} />
-          {isRunning ? '…' : t('workflow.run')}
+          {isRunning ? '...' : t('workflow.run')}
         </button>
         <button type="button" className="wf-palette-btn wf-palette-btn--danger" onClick={onClear} aria-label={t('workflow.clear')}>
           <Trash2 size={14} aria-hidden="true" /> {t('workflow.clear')}

@@ -23,7 +23,33 @@ public class RoutePlannerService {
     private static final double OVERPASS_RADIUS_FACTOR = 800.0;
     private static final double MIN_OVERPASS_RADIUS_M = 1_500.0;
     private static final double MAX_OVERPASS_RADIUS_M = 25_000.0;
-    private static final int MAX_GRAPH_NODES = 3_000;
+    /*
+     * Graph + waypoint sizing. The previous 3_000-node cap was too small for
+     * any dense urban area (a 4 km radius of a city typically yields tens of
+     * thousands of OSM way-geometry points), which left the start node stranded
+     * in a geographically lopsided fragment of the graph. Komoot / Strava /
+     * Garmin route builders all retain every OSM way-geometry vertex so the
+     * rendered polyline traces real street curvature; running with too few
+     * nodes is what produces the "straight line across the block" rendering
+     * the user reported. 12_000 strikes a balance between coverage and the
+     * O(N) memory footprint of the A* open set.
+     */
+    private static final int MAX_GRAPH_NODES = 12_000;
+
+    /*
+     * Maximum allowed straight-line gap between two consecutive waypoints in
+     * the returned polyline. OSM way geometry on urban residential streets is
+     * sampled every 10-30 m, on suburban / highway segments every 80-200 m.
+     * A typical city block diagonal is 200-300 m. We reject only segments
+     * above 250 m so a polyline cannot visibly cut diagonally across a full
+     * city block (the "straight line across the street" the user reported),
+     * while still allowing long suburban streets and sparsely-mapped trail
+     * segments. Routes with any segment above this threshold are rejected as
+     * not drawably runnable so the caller can fall back to the no-route path
+     * instead of showing a misleading shortcut polyline.
+     */
+    private static final double MAX_WAYPOINT_GAP_M = 250.0;
+
     private static final double RUNNING_SPEED_KPH = 10.0;
     private static final double GRAPH_COORDINATE_SCALE = 10_000_000.0;
     private static final double DISTANCE_BUCKET_M = 50.0;
@@ -307,7 +333,17 @@ public class RoutePlannerService {
                 continue;
             }
 
-            List<GraphNode> wayNodes = new ArrayList<>();
+            // Stop accepting NEW ways once the cap is reached, but always finish
+            // the current way atomically (nodes + edges) so a way is never left
+            // half-connected. The previous implementation returned mid-way and
+            // left orphan nodes that the A* search could not traverse — which
+            // produced visible shortcut polylines whenever the renderer drew a
+            // straight line between two disconnected fragments of the network.
+            if (graph.size() >= MAX_GRAPH_NODES) {
+                break;
+            }
+
+            List<GraphNode> wayNodes = new ArrayList<>(el.geometry.size());
             for (double[] pt : el.geometry) {
                 double lat = pt[0];
                 double lng = pt[1];
@@ -323,16 +359,17 @@ public class RoutePlannerService {
                     coordinateIndex.put(coordinateKey, nid);
                 }
                 wayNodes.add(node);
-
-                if (graph.size() > MAX_GRAPH_NODES) {
-                    return graph;
-                }
             }
 
-            // Connect consecutive nodes
+            // Connect every consecutive way-geometry pair so the resulting A*
+            // path contains every intermediate point along each street rather
+            // than only the way's endpoints. Komoot / Strava / Garmin route
+            // builders all preserve this density so the rendered polyline
+            // traces real street curvature.
             for (int i = 0; i < wayNodes.size() - 1; i++) {
                 GraphNode a = wayNodes.get(i);
                 GraphNode b = wayNodes.get(i + 1);
+                if (a.id == b.id) continue;
                 double dist = haversineM(a.lat, a.lng, b.lat, b.lng);
                 double elevGain = computeEdgeElevationGain(a.elevation, b.elevation);
                 a.neighbors.add(new GraphNode.Edge(b.id, dist, elevGain));
@@ -545,7 +582,37 @@ public class RoutePlannerService {
         if (waypoints == null || waypoints.size() < MIN_ROUTE_SHAPE_POINTS) {
             return false;
         }
+        if (hasCrossBlockJump(waypoints)) {
+            return false;
+        }
         return countMeaningfulDirectionChanges(waypoints) >= MIN_ROUTE_DIRECTION_CHANGES;
+    }
+
+    /**
+     * Returns true when any two consecutive waypoints are farther apart than
+     * the maximum allowed street-geometry gap. A jump above this threshold
+     * means the polyline is cutting across un-mapped terrain rather than
+     * following a real street segment — which is exactly what makes a route
+     * render as a straight line across a city block. Such routes are rejected
+     * so the caller can fall back to the no-drawable-route response instead of
+     * showing a misleading polyline.
+     */
+    static boolean hasCrossBlockJump(List<double[]> waypoints) {
+        if (waypoints == null || waypoints.size() < 2) {
+            return false;
+        }
+        for (int i = 1; i < waypoints.size(); i++) {
+            double[] previous = waypoints.get(i - 1);
+            double[] current = waypoints.get(i);
+            if (previous == null || current == null || previous.length < 2 || current.length < 2) {
+                continue;
+            }
+            double segmentMeters = haversineMStatic(previous[0], previous[1], current[0], current[1]);
+            if (segmentMeters > MAX_WAYPOINT_GAP_M) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int countMeaningfulDirectionChanges(List<double[]> waypoints) {

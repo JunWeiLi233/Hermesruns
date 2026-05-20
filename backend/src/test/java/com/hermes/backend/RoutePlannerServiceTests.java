@@ -284,18 +284,22 @@ class RoutePlannerServiceTests {
 
     @Test
     void aStarSearchShouldFindRouteInGridGraph() {
-        // Build a simple grid graph manually
+        // Realistic urban grid: 0.0015° ≈ 130-170 m per grid step at 40 °N,
+        // matching the MAX_WAYPOINT_GAP_M guard (250 m) that prevents the A*
+        // path from including any segment that would render as a straight
+        // line across a city block. A 10×10 grid gives plenty of perimeter
+        // and interior choices for a ~1.5 km target loop.
         RoutePlannerService service = new RoutePlannerService();
-        Map<Long, RoutePlannerService.GraphNode> graph = buildGridGraph(0.01, 0.01, 5, 5);
+        Map<Long, RoutePlannerService.GraphNode> graph = buildGridGraph(0.0015, 0.0015, 10, 10);
 
         RoutePlannerService.AStarResult result = service.aStarSearch(
-                graph, -1L, 5000.0, // target 5km, node -1 is first grid node
+                graph, -1L, 1500.0,
                 "rolling"
         );
 
         assertThat(result).isNotNull();
         assertThat(result.path).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.totalDistanceM).isBetween(3500.0, 7500.0);
+        assertThat(result.totalDistanceM).isBetween(1000.0, 2500.0);
         // Path should start and end at -1
         assertThat(result.path.get(0)).isEqualTo(-1L);
         assertThat(result.path.get(result.path.size() - 1)).isEqualTo(-1L);
@@ -357,6 +361,25 @@ class RoutePlannerServiceTests {
 
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 3.0, "hilly");
         assertThat(result).isNotNull();
+    }
+
+    @Test
+    void routeShapeGuardShouldRejectAcrossBlockShortcut() {
+        // Three nodes that together form an L-shape, but with a 600 m gap
+        // between the second and third points — that means the rendered
+        // polyline would cut diagonally across multiple city blocks instead
+        // of following streets. The guard must reject this so the caller
+        // falls back to the no-drawable-route response.
+        List<double[]> acrossBlockJump = List.of(
+                new double[]{40.7000, -74.0000},
+                new double[]{40.7000, -73.9985},
+                new double[]{40.7012, -73.9985},
+                new double[]{40.7012, -73.9920},  // 600m jump from previous
+                new double[]{40.7000, -74.0000}
+        );
+
+        assertThat(RoutePlannerService.hasCrossBlockJump(acrossBlockJump)).isTrue();
+        assertThat(RoutePlannerService.hasRunnableRouteShape(acrossBlockJump)).isFalse();
     }
 
     @Test
