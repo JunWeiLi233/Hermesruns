@@ -35,6 +35,8 @@
 @import './styles/_split/profile-dashboard-redesign.css';
 @import './styles/muscle-training-hermes-redesign.css';
 @import './styles/settings-fullwidth.css';
+@import './styles/contrast-fixes.css';
+@import './styles/admin-kinetic-editorial.css';
 
 @tailwind base;
 @tailwind components;
