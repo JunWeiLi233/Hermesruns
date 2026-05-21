@@ -4965,9 +4965,11 @@ details[open] .mt-settings-summary::before {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.mt-card:hover {
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
-  transform: translateY(-2px);
+@media (hover: hover) {
+  .mt-card:hover {
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
+    transform: translateY(-2px);
+  }
 }
 
 .mt-card-head {
@@ -5208,9 +5210,11 @@ details[open] .mt-settings-summary::before {
   flex-shrink: 0;
 }
 
-.mt-recommend-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .mt-recommend-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
 }
 
 /* ── Side Grid (2-col) ──────────────────────────────────── */
