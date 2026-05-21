@@ -3854,12 +3854,14 @@ export default function MuscleTraining() {
                 ].filter((s) => s.label);
                 return (
                   <article className={`mt-card mt-recovery-card is-${level}`} aria-labelledby="mt-recovery-title">
-                    <div className="mt-card-head">
-                      <span className="mt-kicker">{t('muscle_training.stitch_mt_recovery_kicker')}</span>
-                      <h2 id="mt-recovery-title" className="mt-card-title">{recoveryTitle}</h2>
+                    <div className="mt-card-head mt-card-head--split">
+                      <div>
+                        <span className="mt-kicker">{t('muscle_training.stitch_mt_recovery_kicker')}</span>
+                        <h2 id="mt-recovery-title" className="mt-card-title">{recoveryTitle}</h2>
+                      </div>
+                      <span className={`mt-recovery-badge is-${level}`}>{gateKey || level.toUpperCase()}</span>
                     </div>
                     <p className="mt-recovery-copy">{todayCoachNarrative || stitchCopy.guideSubtitle}</p>
-                    <span className={`mt-recovery-badge is-${level}`}>{recoveryTitle}</span>
                     {suggestions.length > 0 && (
                       <ul className="mt-recovery-suggestions">
                         {suggestions.map((s) => (
