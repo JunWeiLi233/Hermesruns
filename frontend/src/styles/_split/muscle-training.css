@@ -4942,7 +4942,6 @@ details[open] .mt-settings-summary::before {
   padding: 28px 28px 40px;
   max-width: 1100px;
   margin: 0 auto;
-  animation: mt-fade-up 0.35s ease both;
 }
 
 /* Kicker label */
