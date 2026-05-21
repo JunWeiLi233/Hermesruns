@@ -3763,7 +3763,15 @@ export default function MuscleTraining() {
                   const isExpanded = expandedExerciseIdx === idx;
                   return (
                     <div key={itemKey} className="mt-exercise-row" role="listitem">
-                      <div className="mt-exercise-main">
+                      <div
+                        className="mt-exercise-main"
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        aria-controls={`mt-ex-detail-${idx}`}
+                        onClick={() => setExpandedExerciseIdx(isExpanded ? null : idx)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedExerciseIdx(isExpanded ? null : idx); } }}
+                      >
                         <span className="mt-exercise-num">{String(idx + 1).padStart(2, '0')}</span>
                         <div className="mt-exercise-info">
                           <strong>{exerciseCopy.name}</strong>
@@ -3777,15 +3785,9 @@ export default function MuscleTraining() {
                         <span className={`mt-exercise-badge${isLibrary ? ' is-library' : ' is-plan'}`}>
                           {isLibrary ? 'OPT' : 'PLAN'}
                         </span>
-                        <button
-                          type="button"
-                          className="mt-exercise-chevron"
-                          onClick={() => setExpandedExerciseIdx(isExpanded ? null : idx)}
-                          aria-expanded={isExpanded}
-                          aria-controls={`mt-ex-detail-${idx}`}
-                        >
+                        <span className="mt-exercise-chevron" aria-hidden="true">
                           <AppIcon name={isExpanded ? 'expand_less' : 'expand_more'} />
-                        </button>
+                        </span>
                       </div>
                       {isExpanded && (
                         <div id={`mt-ex-detail-${idx}`} className="mt-exercise-detail">
