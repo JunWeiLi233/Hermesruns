@@ -3628,11 +3628,12 @@ export default function MuscleTraining() {
                   </svg>
                   <div className="mt-ring-center">
                     <strong>{volumeCompletion}%</strong>
-                    <span>{stitchCopy.weeklyCompletion}</span>
+                    <span>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</span>
                   </div>
                 </div>
                 <div className="mt-ring-meta">
-                  <span>{stitchCopy.plannedLabel}&nbsp;<strong>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</strong></span>
+                  <span>{t('muscle_training.stitch_mt_hero_sessions')}</span>
+                  <strong>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</strong>
                 </div>
               </div>
             </section>
