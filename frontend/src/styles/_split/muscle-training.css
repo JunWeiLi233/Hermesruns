@@ -3308,3 +3308,2375 @@ details[open] .mt-settings-summary::before {
     font-size: clamp(1.55rem, 9vw, 2.5rem) !important;
   }
 }
+
+/* Muscle Training IRONPULSE route cockpit */
+
+.muscle-training-canvas {
+  --mt-iron-bg: #0b0d0b;
+  --mt-iron-surface: #121512;
+  --mt-iron-surface-strong: #181b17;
+  --mt-iron-line: rgba(218, 255, 180, 0.18);
+  --mt-iron-line-strong: rgba(204, 255, 0, 0.48);
+  --mt-iron-accent: #ccff00;
+  --mt-iron-accent-soft: rgba(204, 255, 0, 0.14);
+  --mt-iron-cyan: #73f4ff;
+  --mt-iron-ink: #f4f6ee;
+  --mt-iron-muted: #b8c0a7;
+  --mt-iron-dim: #7f8875;
+  background:
+    linear-gradient(rgba(204, 255, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(204, 255, 0, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 18% 4%, rgba(204, 255, 0, 0.08), transparent 26rem),
+    radial-gradient(circle at 90% 18%, rgba(115, 244, 255, 0.07), transparent 22rem),
+    var(--mt-iron-bg) !important;
+  background-size: 28px 28px, 28px 28px, auto, auto, auto;
+  color: var(--mt-iron-ink);
+}
+
+.muscle-training-page .mt-strength-lab[data-ironpulse-strength-lab="true"],
+.muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"],
+.muscle-training-page .strength-plan-control-deck {
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(204, 255, 0, 0.08), transparent 20rem),
+    linear-gradient(135deg, rgba(29, 32, 27, 0.96), rgba(14, 16, 14, 0.98)) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32) !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .mt-strength-lab[data-ironpulse-strength-lab="true"] {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 34px);
+  padding: clamp(18px, 2.4vw, 34px) !important;
+  overflow: hidden;
+}
+
+.muscle-training-page .mt-iron-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(260px, 3fr) minmax(300px, 4fr);
+  gap: clamp(16px, 1.8vw, 26px);
+  align-items: stretch;
+}
+
+.muscle-training-page .mt-iron-verdict,
+.muscle-training-page .mt-iron-volume-card,
+.muscle-training-page .mt-iron-stack article,
+.muscle-training-page .mt-target-card,
+.muscle-training-page .mt-week-strip,
+.muscle-training-page .mt-progress-chart,
+.muscle-training-page .mt-progress-metric,
+.muscle-training-page .mt-anatomy-command-board,
+.muscle-training-page .strength-plan-protocol,
+.muscle-training-page .strength-plan-rail-card,
+.muscle-training-page .strength-plan-cta-panel {
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(145deg, rgba(24, 27, 23, 0.96), rgba(14, 16, 14, 0.96)) !important;
+  box-shadow: none !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .mt-iron-verdict,
+.muscle-training-page .mt-iron-volume-card,
+.muscle-training-page .mt-iron-stack article {
+  min-width: 0;
+  padding: clamp(18px, 2vw, 28px);
+}
+
+.muscle-training-page .mt-iron-verdict {
+  display: grid;
+  align-content: space-between;
+  min-height: clamp(360px, 30vw, 520px);
+  background:
+    linear-gradient(90deg, rgba(18, 21, 18, 0.96), rgba(46, 54, 38, 0.92)),
+    var(--mt-iron-surface) !important;
+}
+
+.muscle-training-page .mt-iron-kicker,
+.muscle-training-page .strength-plan-section-label {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--mt-iron-line-strong);
+  border-radius: 8px;
+  padding: 5px 10px;
+  background: var(--mt-iron-accent-soft);
+  color: var(--mt-iron-accent) !important;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.muscle-training-page .mt-iron-kicker-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.muscle-training-page .mt-iron-verdict h1 {
+  margin: clamp(22px, 3vw, 42px) 0 0;
+  color: var(--mt-iron-ink) !important;
+  font-size: clamp(4.2rem, 9vw, 9.2rem);
+  line-height: 0.86;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.muscle-training-page .mt-strength-lab-intro {
+  max-width: 38rem;
+  margin: 18px 0 0;
+  color: var(--mt-iron-muted) !important;
+  font-size: clamp(1.05rem, 1.35vw, 1.35rem);
+  line-height: 1.55;
+}
+
+.muscle-training-page .mt-iron-chip-row,
+.muscle-training-page .strength-plan-hero-tags,
+.muscle-training-page .mt-iron-mini-metrics,
+.muscle-training-page .mt-exercise-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.muscle-training-page .mt-iron-chip-row span,
+.muscle-training-page .strength-plan-hero-tags span,
+.muscle-training-page .mt-iron-mini-metrics span,
+.muscle-training-page .mt-exercise-detail-meta span {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-iron-actions {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.muscle-training-page .strength-plan-primary-btn.mt-iron-primary,
+.muscle-training-page .strength-plan-primary-btn {
+  min-height: 48px;
+  border: 1px solid var(--mt-iron-accent) !important;
+  border-radius: 8px !important;
+  background: var(--mt-iron-accent) !important;
+  color: #071007 !important;
+  font-weight: 900;
+  letter-spacing: 0;
+  box-shadow: 0 0 26px rgba(204, 255, 0, 0.22) !important;
+}
+
+.muscle-training-page .strength-plan-primary-btn:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.muscle-training-page :is(.strength-plan-primary-btn, .primary-action-btn):disabled {
+  border-color: var(--mt-iron-line) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--mt-iron-dim) !important;
+  cursor: not-allowed !important;
+  opacity: 0.72;
+  box-shadow: none !important;
+  filter: none;
+  transform: none;
+}
+
+.muscle-training-page .mt-iron-volume-card {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 18px;
+}
+
+.muscle-training-page .mt-iron-card-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.muscle-training-page .mt-iron-card-head > strong {
+  color: var(--mt-iron-accent);
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-iron-ring {
+  position: relative;
+  width: min(100%, 230px);
+  aspect-ratio: 1;
+}
+
+.muscle-training-page .mt-iron-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.muscle-training-page .mt-iron-ring-track,
+.muscle-training-page .mt-iron-ring-progress {
+  fill: none;
+  stroke-width: 9;
+}
+
+.muscle-training-page .mt-iron-ring-track {
+  stroke: rgba(255, 255, 255, 0.12);
+}
+
+.muscle-training-page .mt-iron-ring-progress {
+  stroke: var(--mt-iron-accent);
+  stroke-dasharray: 314;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 9px rgba(204, 255, 0, 0.45));
+}
+
+.muscle-training-page .mt-iron-ring-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.muscle-training-page .mt-iron-ring-center strong {
+  color: var(--mt-iron-accent);
+  font-size: clamp(2.4rem, 4vw, 3.7rem);
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-iron-ring-center strong span,
+.muscle-training-page .mt-iron-ring-center small {
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-iron-ring-center small {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.muscle-training-page .mt-iron-mini-metrics {
+  width: 100%;
+  justify-content: center;
+}
+
+.muscle-training-page .mt-iron-mini-metrics span {
+  min-width: 94px;
+  text-align: center;
+}
+
+.muscle-training-page .mt-iron-mini-metrics strong {
+  display: block;
+  color: var(--mt-iron-ink);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-iron-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.muscle-training-page .mt-iron-stack article {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.muscle-training-page .mt-iron-stack article span,
+.muscle-training-page .mt-progress-metric span,
+.muscle-training-page .mt-progress-bar-row span {
+  color: var(--mt-iron-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.muscle-training-page .mt-iron-stack article strong,
+.muscle-training-page .mt-progress-metric strong {
+  color: var(--mt-iron-ink);
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.05;
+}
+
+.muscle-training-page .mt-iron-stack article p,
+.muscle-training-page .mt-iron-section-head p,
+.muscle-training-page .mt-exercise-detail-panel p {
+  margin: 0;
+  color: var(--mt-iron-muted) !important;
+  line-height: 1.55;
+}
+
+.muscle-training-page .mt-iron-placeholder-card {
+  border-color: rgba(115, 244, 255, 0.34) !important;
+  background:
+    linear-gradient(145deg, rgba(115, 244, 255, 0.08), rgba(18, 21, 18, 0.96)) !important;
+}
+
+.muscle-training-page .mt-iron-placeholder-card span,
+.muscle-training-page .mt-iron-placeholder-card strong {
+  color: var(--mt-iron-cyan) !important;
+}
+
+.muscle-training-page .mt-iron-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 0;
+}
+
+.muscle-training-page .mt-iron-section-head h2 {
+  margin: 10px 0 0;
+  color: var(--mt-iron-ink);
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+.muscle-training-page .mt-target-areas {
+  display: grid;
+  gap: 16px;
+}
+
+.muscle-training-page .mt-target-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 12px;
+}
+
+.muscle-training-page .mt-target-card {
+  position: relative;
+  display: grid;
+  min-height: 150px;
+  overflow: hidden;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.muscle-training-page .mt-target-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -42% 18%;
+  height: 90px;
+  background: linear-gradient(90deg, rgba(204, 255, 0, 0.16), rgba(115, 244, 255, 0.12));
+  transform: skewY(-14deg);
+}
+
+.muscle-training-page .mt-target-card-orbit {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--mt-iron-line-strong);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--mt-iron-accent) 0 5px, transparent 6px),
+    radial-gradient(circle, rgba(204, 255, 0, 0.16), transparent 70%);
+}
+
+.muscle-training-page .mt-target-card strong {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  color: var(--mt-iron-ink);
+  font-size: 1.32rem;
+}
+
+.muscle-training-page .mt-target-card small {
+  position: relative;
+  z-index: 1;
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-target-card.is-active {
+  border-color: var(--mt-iron-accent) !important;
+  box-shadow: inset 4px 0 0 var(--mt-iron-accent), 0 0 24px rgba(204, 255, 0, 0.14) !important;
+}
+
+.muscle-training-page .mt-target-card:focus-visible,
+.muscle-training-page .strength-plan-exercise-row:focus-visible,
+.muscle-training-page .strength-plan-primary-btn:focus-visible,
+.muscle-training-page .mt-friendly-secondary-btn:focus-visible {
+  outline: 3px solid rgba(115, 244, 255, 0.82);
+  outline-offset: 3px;
+}
+
+.muscle-training-page .mt-week-strip {
+  display: grid;
+  gap: 16px;
+  padding: clamp(16px, 2vw, 24px);
+}
+
+.muscle-training-page .mt-week-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(118px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.muscle-training-page .mt-strip-day {
+  display: grid;
+  min-height: 142px;
+  align-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+.muscle-training-page .mt-strip-day.is-today {
+  border-color: var(--mt-iron-accent) !important;
+  box-shadow: inset 0 3px 0 var(--mt-iron-accent) !important;
+}
+
+.muscle-training-page .mt-strip-day-label {
+  color: var(--mt-iron-ink);
+  font-weight: 900;
+}
+
+.muscle-training-page .mt-strip-marker-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.muscle-training-page .mt-strip-marker-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.muscle-training-page .mt-strip-marker-run,
+.muscle-training-page .mt-strip-marker-strength {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--mt-iron-muted);
+  background: var(--mt-iron-surface);
+}
+
+.muscle-training-page .mt-strip-marker-run {
+  border-radius: 50%;
+}
+
+.muscle-training-page .mt-strip-marker-strength {
+  border-color: var(--mt-iron-accent);
+  background: var(--mt-iron-accent);
+  transform: rotate(45deg);
+}
+
+.muscle-training-page .mt-strip-badge {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 4px 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-strip-badge-strength {
+  border-color: var(--mt-iron-line-strong);
+  color: var(--mt-iron-accent);
+}
+
+.muscle-training-page .mt-strip-day-dist {
+  color: var(--mt-iron-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-progress-band {
+  display: grid;
+  gap: 16px;
+}
+
+.muscle-training-page .mt-progress-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(150px, 0.5fr));
+  gap: 12px;
+}
+
+.muscle-training-page .mt-progress-chart,
+.muscle-training-page .mt-progress-metric {
+  padding: 18px;
+}
+
+.muscle-training-page .mt-progress-chart {
+  display: grid;
+  gap: 18px;
+}
+
+.muscle-training-page .mt-progress-bar-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.42fr) minmax(86px, 0.28fr) minmax(160px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.muscle-training-page .mt-progress-bar-row strong {
+  color: var(--mt-iron-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .mt-progress-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.muscle-training-page .mt-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mt-iron-cyan), var(--mt-iron-accent));
+}
+
+.muscle-training-page .mt-progress-bar-muted span {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.muscle-training-page .mt-progress-metric {
+  display: grid;
+  align-content: space-between;
+  min-height: 120px;
+}
+
+.muscle-training-page .mt-anatomy-command-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.38fr);
+  gap: 18px;
+  min-height: auto !important;
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .mt-anatomy-command-map .mt-body-measure-atlas,
+.muscle-training-page .mt-anatomy-command-map .muscle-map-card {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .mt-anatomy-command-copy {
+  display: grid;
+  align-content: end;
+  gap: 14px;
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  padding: 18px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.muscle-training-page .mt-anatomy-command-copy strong {
+  color: var(--mt-iron-ink) !important;
+  font-size: clamp(1.65rem, 2.4vw, 2.5rem) !important;
+  line-height: 1.05 !important;
+  letter-spacing: 0 !important;
+}
+
+.muscle-training-page .mt-anatomy-command-copy p {
+  color: var(--mt-iron-muted) !important;
+}
+
+.muscle-training-page .strength-plan-focus-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.muscle-training-page .strength-plan-focus-pills span {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 6px 9px;
+  background: rgba(204, 255, 0, 0.08);
+  color: var(--mt-iron-accent);
+}
+
+.muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"] {
+  padding: clamp(18px, 2.4vw, 30px) !important;
+}
+
+.muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  gap: 18px;
+}
+
+.muscle-training-page .strength-plan-protocol {
+  display: grid;
+  gap: 16px;
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .strength-plan-protocol-list {
+  display: grid;
+  gap: 10px;
+}
+
+.muscle-training-page .strength-plan-exercise-row {
+  display: grid;
+  grid-template-columns: minmax(94px, 0.18fr) minmax(0, 1fr) minmax(220px, 0.45fr);
+  gap: 14px;
+  width: 100%;
+  min-height: 116px;
+  align-items: center;
+  border: 1px solid var(--mt-iron-line) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: var(--mt-iron-ink) !important;
+  text-align: left;
+  cursor: pointer;
+}
+
+.muscle-training-page .strength-plan-exercise-row.is-selected {
+  border-color: var(--mt-iron-accent) !important;
+  box-shadow: inset 4px 0 0 var(--mt-iron-accent), 0 0 18px rgba(204, 255, 0, 0.1) !important;
+}
+
+.muscle-training-page .strength-plan-exercise-media {
+  display: grid;
+  grid-template-columns: 32px minmax(48px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.muscle-training-page .strength-plan-exercise-order {
+  color: var(--mt-iron-accent);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.muscle-training-page .strength-plan-exercise-copy h3,
+.muscle-training-page .mt-exercise-detail-panel h3 {
+  margin: 0;
+  color: var(--mt-iron-ink);
+  font-size: clamp(1.2rem, 1.7vw, 1.65rem);
+  letter-spacing: 0;
+}
+
+.muscle-training-page .strength-plan-exercise-copy p,
+.muscle-training-page .strength-plan-exercise-meta em {
+  color: var(--mt-iron-muted) !important;
+}
+
+.muscle-training-page .strength-plan-exercise-kicker {
+  color: var(--mt-iron-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.muscle-training-page .strength-plan-exercise-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.muscle-training-page .strength-plan-exercise-meta div {
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.muscle-training-page .strength-plan-exercise-meta span {
+  display: block;
+  color: var(--mt-iron-dim);
+  font-size: 0.75rem;
+}
+
+.muscle-training-page .strength-plan-exercise-meta strong {
+  color: var(--mt-iron-ink);
+}
+
+.muscle-training-page .mt-exercise-detail-panel {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .mt-exercise-detail-steps,
+.muscle-training-page .mt-exercise-detail-ladders {
+  display: grid;
+  gap: 10px;
+}
+
+.muscle-training-page .mt-exercise-detail-steps > strong {
+  color: var(--mt-iron-accent);
+}
+
+.muscle-training-page .mt-exercise-detail-steps article,
+.muscle-training-page .mt-exercise-detail-ladders article {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--mt-iron-line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.muscle-training-page .mt-exercise-detail-ladders article {
+  grid-template-columns: 1fr;
+}
+
+.muscle-training-page .mt-exercise-detail-steps article span,
+.muscle-training-page .mt-exercise-detail-ladders article span {
+  color: var(--mt-iron-accent);
+  font-weight: 900;
+}
+
+.muscle-training-page .strength-plan-cta-panel {
+  display: grid;
+  gap: 10px;
+  padding: 16px !important;
+}
+
+.muscle-training-page .strength-plan-cta-panel h3 {
+  margin: 0;
+  color: var(--mt-iron-ink);
+}
+
+.muscle-training-page .strength-plan-cta-panel p {
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .strength-plan-control-deck {
+  padding: clamp(16px, 2vw, 24px) !important;
+}
+
+.muscle-training-page .strength-plan-control-head,
+.muscle-training-page .muscle-preference-head,
+.muscle-training-page .muscle-status-source {
+  color: var(--mt-iron-ink);
+}
+
+.muscle-training-page .strength-plan-control-head p,
+.muscle-training-page .muscle-preference-head p,
+.muscle-training-page .muscle-status-source span {
+  color: var(--mt-iron-muted);
+}
+
+.muscle-training-page .mt-settings-summary,
+.muscle-training-page .muscle-panel,
+.muscle-training-page .muscle-pref-field,
+.muscle-training-page .muscle-day-chip,
+.muscle-training-page .muscle-secondary-btn,
+.muscle-training-page .primary-action-btn {
+  border-radius: 8px !important;
+}
+
+.muscle-training-page .mt-settings-summary,
+.muscle-training-page .muscle-panel {
+  border: 1px solid var(--mt-iron-line) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .muscle-pref-field :is(input, select) {
+  border-color: var(--mt-iron-line) !important;
+  background: #0f120f !important;
+  color: var(--mt-iron-ink) !important;
+}
+
+.muscle-training-page .muscle-day-chip.active,
+.muscle-training-page .primary-action-btn {
+  border-color: var(--mt-iron-accent) !important;
+  background: var(--mt-iron-accent) !important;
+  color: #071007 !important;
+}
+
+.muscle-training-page .primary-action-btn:disabled {
+  border-color: var(--mt-iron-line) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--mt-iron-dim) !important;
+}
+
+@media (max-width: 1180px) {
+  .muscle-training-page .mt-iron-hero,
+  .muscle-training-page .mt-progress-grid,
+  .muscle-training-page .mt-anatomy-command-board,
+  .muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .muscle-training-page .mt-iron-stack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .muscle-training-page .mt-exercise-detail-panel {
+    position: static;
+  }
+
+  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-content-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .muscle-training-canvas {
+    background-size: 20px 20px, 20px 20px, auto, auto, auto;
+  }
+
+  .muscle-training-page .mt-strength-lab[data-ironpulse-strength-lab="true"],
+  .muscle-training-page .mt-protocol-board[data-ironpulse-protocol="true"],
+  .muscle-training-page .strength-plan-control-deck {
+    padding: 14px !important;
+  }
+
+  .muscle-training-page .mt-iron-verdict h1 {
+    font-size: clamp(3.4rem, 18vw, 5.2rem);
+  }
+
+  .muscle-training-page .mt-iron-stack,
+  .muscle-training-page .mt-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .muscle-training-page .mt-target-card-grid,
+  .muscle-training-page .mt-week-strip-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(210px, 78vw);
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .muscle-training-page .mt-target-card,
+  .muscle-training-page .mt-strip-day {
+    scroll-snap-align: start;
+  }
+
+  .muscle-training-page .mt-progress-bar-row,
+  .muscle-training-page .strength-plan-exercise-row {
+    grid-template-columns: 1fr;
+  }
+
+  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path="/muscle-training"] .mt-protocol-board[data-ironpulse-protocol="true"] .strength-plan-exercise-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .muscle-training-page .mt-iron-section-head {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muscle-training-page * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.mt-ironpulse-page {
+  --mt-ironpulse-bg: #0d0d0d;
+  --mt-ironpulse-panel: #1b1b1b;
+  --mt-ironpulse-panel-2: #242424;
+  --mt-ironpulse-line: rgba(224, 232, 210, 0.18);
+  --mt-ironpulse-muted: #c8cfb7;
+  --mt-ironpulse-dim: #848978;
+  --mt-ironpulse-acid: #ccff00;
+  --mt-ironpulse-cyan: #94fff5;
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  color: #f5f5f0;
+  letter-spacing: 0;
+  background: transparent !important;
+}
+
+.mt-ironpulse-page,
+.mt-ironpulse-page * {
+  box-sizing: border-box;
+}
+
+.mt-ironpulse-page :is(h1, h2, h3, p) {
+  margin: 0;
+}
+
+.mt-ip-home {
+  display: grid;
+  gap: clamp(28px, 4vw, 48px);
+}
+
+.mt-ip-volume-goal {
+  display: grid;
+  grid-template-columns: minmax(190px, auto) auto minmax(260px, auto);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3vw, 34px);
+  padding-top: 0;
+  text-align: left;
+}
+
+.mt-ip-volume-goal h1,
+.mt-ip-section-head h2,
+.mt-ip-records h2 {
+  color: #f4f4ef;
+  font-size: clamp(1.75rem, 2.5vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.mt-ip-ring-card {
+  width: min(186px, 42vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(204, 255, 0, 0.12);
+  border-radius: 8px;
+  background: #101010;
+  box-shadow: 0 0 28px rgba(204, 255, 0, 0.08);
+}
+
+.mt-ip-ring {
+  position: relative;
+  width: 86%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.mt-ip-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-86deg);
+}
+
+.mt-ip-ring-track,
+.mt-ip-ring-progress {
+  fill: none;
+  stroke-width: 9;
+}
+
+.mt-ip-ring-track {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.mt-ip-ring-progress {
+  stroke: var(--mt-ironpulse-acid);
+  stroke-linecap: round;
+  stroke-dasharray: 365;
+  filter: drop-shadow(0 0 12px rgba(204, 255, 0, 0.5));
+}
+
+.mt-ip-ring-center {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+}
+
+.mt-ip-ring-center strong {
+  color: var(--mt-ironpulse-acid);
+  font-size: clamp(1.85rem, 3vw, 2.55rem);
+  font-weight: 950;
+  line-height: 0.9;
+}
+
+.mt-ip-ring-center span {
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mt-ip-volume-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 16px;
+  width: min(360px, 100%);
+}
+
+.mt-ip-volume-metrics article {
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: #191919;
+  padding: 12px 16px;
+}
+
+.mt-ip-volume-metrics span,
+.mt-ip-current-split span,
+.mt-ip-records .mt-ip-section-head span,
+.mt-ip-protocol .mt-ip-section-head span,
+.mt-ip-status-panel > span,
+.mt-ip-detail-panel > span {
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mt-ip-volume-metrics strong {
+  display: block;
+  color: #f6f6f1;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.mt-ip-current-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  border: 1px solid rgba(204, 255, 0, 0.22);
+  border-left: 5px solid var(--mt-ironpulse-acid);
+  border-radius: 6px;
+  background: #262626;
+  padding: clamp(18px, 2vw, 26px) clamp(20px, 3vw, 34px);
+}
+
+.mt-ip-current-split span {
+  display: inline-flex;
+  width: max-content;
+  margin-bottom: 8px;
+  padding: 4px 9px;
+  color: var(--mt-ironpulse-acid);
+  background: rgba(204, 255, 0, 0.09);
+  border-radius: 2px;
+}
+
+.mt-ip-current-split h2 {
+  color: #f2f2ed;
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.mt-ip-current-split p {
+  margin-top: 7px;
+  color: #e1e7d6;
+}
+
+.mt-ip-protocol-workbench {
+  overflow: hidden;
+}
+
+.mt-ip-workbench-head {
+  align-items: center;
+  border-bottom: 1px solid var(--mt-ironpulse-line);
+  margin-bottom: 0;
+  padding-bottom: 20px;
+}
+
+.mt-ip-workbench-head h2 {
+  max-width: 620px;
+  color: #fff;
+  font-size: clamp(2.8rem, 5.6vw, 5rem);
+  font-style: italic;
+  font-weight: 950;
+  line-height: 0.92;
+  text-shadow: 2px 2px 0 rgba(148, 255, 245, 0.32);
+}
+
+.mt-ip-workbench-head p {
+  max-width: 520px;
+  color: #ecf4d9;
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  line-height: 1.45;
+}
+
+.mt-ip-target-filter-rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin: 0 0 18px;
+  padding: 14px 2px 16px;
+  scrollbar-width: thin;
+}
+
+.mt-ip-filter-chip {
+  min-width: 132px;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  border: 1px solid rgba(224, 232, 210, 0.18);
+  border-radius: 8px;
+  background: #101010;
+  color: #f7f7f0;
+  padding: 7px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-ip-filter-chip img {
+  grid-row: 1 / 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  filter: saturate(0.82) contrast(1.14) brightness(0.72);
+}
+
+.mt-ip-filter-chip span {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.mt-ip-filter-chip small {
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.mt-ip-filter-chip--all {
+  grid-template-columns: 1fr;
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.12), #101010);
+}
+
+.mt-ip-filter-chip--all span,
+.mt-ip-filter-chip--all small {
+  grid-column: 1;
+}
+
+.mt-ip-filter-chip:is(:hover, :focus-visible, .is-active) {
+  border-color: rgba(204, 255, 0, 0.75);
+  outline: none;
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.16), #111);
+  box-shadow: 0 0 0 2px rgba(204, 255, 0, 0.12), 0 0 22px rgba(204, 255, 0, 0.12);
+}
+
+.mt-ip-primary-btn {
+  min-width: 190px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgba(204, 255, 0, 0.74);
+  border-radius: 8px;
+  background: var(--mt-ironpulse-acid);
+  color: #081000;
+  font-weight: 950;
+  letter-spacing: 0;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.24);
+}
+
+.mt-ip-btn-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.mt-ip-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.mt-ip-section-head button {
+  border: 0;
+  background: transparent;
+  color: var(--mt-ironpulse-cyan);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.mt-ip-section-head p {
+  max-width: 440px;
+  color: var(--mt-ironpulse-muted);
+}
+
+.mt-ip-target-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mt-ip-target-card {
+  position: relative;
+  min-height: 0;
+  aspect-ratio: 1.06;
+  overflow: hidden;
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: #101010;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.mt-ip-target-card img,
+.mt-ip-target-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.mt-ip-target-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.82) contrast(1.14) brightness(0.78);
+  transform: scale(1.01);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.mt-ip-target-overlay {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05) 18%, rgba(0, 0, 0, 0.42) 58%, rgba(0, 0, 0, 0.88) 100%),
+    radial-gradient(circle at 50% 22%, rgba(204, 255, 0, 0.1), transparent 40%);
+}
+
+.mt-ip-target-card strong,
+.mt-ip-target-card small {
+  position: absolute;
+  left: 14px;
+  z-index: 1;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
+}
+
+.mt-ip-target-card strong {
+  bottom: 48px;
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  font-weight: 950;
+}
+
+.mt-ip-target-card small {
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: rgba(244, 244, 238, 0.78);
+  font-weight: 800;
+}
+
+.mt-ip-target-card small span {
+  border: 1px solid rgba(204, 255, 0, 0.2);
+  border-radius: 999px;
+  background: rgba(8, 8, 8, 0.62);
+  padding: 3px 7px;
+  color: #f4f6df;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.mt-ip-target-card:is(:hover, :focus-visible, .is-active) {
+  border-color: rgba(204, 255, 0, 0.72);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(204, 255, 0, 0.14), 0 0 26px rgba(204, 255, 0, 0.12);
+}
+
+.mt-ip-target-card:is(:hover, :focus-visible, .is-active) img {
+  filter: saturate(0.96) contrast(1.2) brightness(0.88);
+  transform: scale(1.045);
+}
+
+.mt-ip-record-list {
+  display: grid;
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #191919;
+}
+
+.mt-ip-record-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 13px 16px;
+}
+
+.mt-ip-record-row + .mt-ip-record-row {
+  border-top: 1px solid var(--mt-ironpulse-line);
+}
+
+.mt-ip-record-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(204, 255, 0, 0.13);
+  color: var(--mt-ironpulse-acid);
+}
+
+.mt-ip-record-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mt-ip-record-row strong {
+  color: #f7f7f1;
+  font-weight: 900;
+}
+
+.mt-ip-record-row p {
+  margin-top: 3px;
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.86rem;
+}
+
+.mt-ip-record-row > span {
+  color: var(--mt-ironpulse-acid);
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.mt-ip-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.6fr);
+  gap: 18px;
+}
+
+.mt-ip-status-panel,
+.mt-ip-protocol,
+.mt-ip-detail-panel,
+.mt-ip-empty-panel,
+.mt-ironpulse-page .strength-plan-control-deck,
+.mt-ironpulse-page .muscle-panel {
+  border: 1px solid var(--mt-ironpulse-line) !important;
+  border-radius: 8px !important;
+  background: #181818 !important;
+  color: #f5f5ef !important;
+  box-shadow: none !important;
+}
+
+.mt-ip-status-panel,
+.mt-ip-protocol {
+  padding: clamp(18px, 2.2vw, 28px);
+}
+
+.mt-ip-status-panel h2 {
+  margin: 18px 0 12px;
+  color: #f6f6f0;
+  font-size: clamp(1.65rem, 2.6vw, 2.4rem);
+  font-weight: 950;
+  line-height: 1.02;
+}
+
+.mt-ip-status-panel p {
+  color: #d9dfce;
+  line-height: 1.55;
+}
+
+.mt-ip-status-metrics {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.mt-ip-status-metrics span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mt-ironpulse-muted);
+  border-top: 1px solid var(--mt-ironpulse-line);
+  padding-top: 10px;
+}
+
+.mt-ip-status-metrics strong {
+  color: #f7f7f2;
+}
+
+.mt-ip-protocol-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.46fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.mt-ip-exercise-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mt-ip-exercise-section-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 2px 4px;
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.mt-ip-exercise-section-label span {
+  color: var(--mt-ironpulse-acid);
+}
+
+.mt-ip-exercise-section-label em {
+  color: var(--mt-ironpulse-muted);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.mt-ip-exercise-section-label--library {
+  margin-top: 6px;
+  border-top: 1px solid var(--mt-ironpulse-line);
+  padding-top: 14px;
+}
+
+.mt-ip-exercise-row {
+  display: grid;
+  grid-template-columns: 54px minmax(170px, 1.2fr) minmax(142px, 0.7fr) minmax(96px, 0.55fr) minmax(120px, 0.85fr);
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: #101010;
+  color: #f5f5ef;
+  min-height: 86px;
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-ip-exercise-row > span:first-child {
+  color: var(--mt-ironpulse-cyan);
+  font-size: 1.18rem;
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row strong {
+  color: #fff;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row em,
+.mt-ip-exercise-row small,
+.mt-ip-exercise-row p {
+  color: var(--mt-ironpulse-muted);
+  font-style: normal;
+  font-size: 0.85rem;
+}
+
+.mt-ip-exercise-row p {
+  grid-column: 2 / -1;
+}
+
+.mt-ip-exercise-row p b {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--mt-ironpulse-acid);
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row.is-library {
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.08), rgba(16, 16, 16, 0.96));
+  border-color: rgba(204, 255, 0, 0.18);
+}
+
+.mt-ip-exercise-row.is-library > span:first-child {
+  color: var(--mt-ironpulse-cyan);
+}
+
+.mt-ip-exercise-row:is(:hover, :focus-visible, .is-selected) {
+  border-color: rgba(204, 255, 0, 0.64);
+  outline: none;
+  background: #151515;
+  box-shadow: inset 0 0 0 1px rgba(204, 255, 0, 0.18);
+}
+
+.mt-ip-detail-panel {
+  position: sticky;
+  top: 18px;
+  padding: clamp(18px, 2vw, 26px);
+}
+
+.mt-ip-detail-panel h3 {
+  margin-top: 12px;
+  color: #fff;
+  font-size: clamp(1.8rem, 3vw, 2.55rem);
+  font-style: italic;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.mt-ip-detail-panel p,
+.mt-ip-detail-steps p {
+  color: var(--mt-ironpulse-muted);
+  line-height: 1.55;
+}
+
+.mt-ip-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.mt-ip-detail-tags span,
+.mt-ironpulse-page .muscle-pill,
+.mt-ironpulse-page .muscle-day-chip {
+  border: 1px solid rgba(204, 255, 0, 0.24) !important;
+  border-radius: 6px !important;
+  background: rgba(204, 255, 0, 0.08) !important;
+  color: #f1f8df !important;
+}
+
+.mt-ip-detail-steps {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--mt-ironpulse-line);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.mt-ip-detail-steps article {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  border-bottom: 1px solid var(--mt-ironpulse-line);
+  padding-bottom: 10px;
+}
+
+.mt-ip-detail-steps span {
+  color: var(--mt-ironpulse-acid);
+  font-weight: 950;
+}
+
+.mt-ip-empty-panel {
+  padding: 18px;
+}
+
+.mt-ip-plan-empty {
+  border: 1px solid var(--mt-ironpulse-line);
+  border-radius: 6px;
+  background: rgba(204, 255, 0, 0.045);
+}
+
+.mt-ip-library-note {
+  margin-top: 14px;
+  border-top: 1px solid var(--mt-ironpulse-line);
+  padding-top: 12px;
+  color: var(--mt-ironpulse-muted);
+  font-size: 0.88rem;
+}
+
+.mt-ironpulse-page .strength-plan-control-deck {
+  margin-top: 8px;
+  padding: clamp(18px, 2.4vw, 30px) !important;
+}
+
+.mt-ironpulse-page .strength-plan-control-head,
+.mt-ironpulse-page .muscle-preference-head {
+  color: #f7f7f0;
+}
+
+.mt-ironpulse-page .mt-settings-summary,
+.mt-ironpulse-page .primary-action-btn,
+.mt-ironpulse-page .muscle-secondary-btn {
+  border-radius: 8px !important;
+}
+
+.mt-ironpulse-page .primary-action-btn {
+  background: var(--mt-ironpulse-acid) !important;
+  color: #081000 !important;
+  border: 1px solid var(--mt-ironpulse-acid) !important;
+}
+
+.mt-ironpulse-page :is(input, select) {
+  background: #101010 !important;
+  color: #f5f5ee !important;
+  border-color: var(--mt-ironpulse-line) !important;
+}
+
+@media (max-width: 1100px) {
+  .mt-ip-secondary-grid,
+  .mt-ip-protocol-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-ip-detail-panel {
+    position: static;
+  }
+
+  .mt-ip-volume-goal {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MUSCLE TRAINING — REDESIGNED CANVAS (mt-* prefix)
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes mt-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Content wrapper */
+.mt-content {
+  padding: 28px 28px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  animation: mt-fade-up 0.35s ease both;
+}
+
+/* Kicker label */
+.mt-kicker {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-accent, #c0462b);
+  margin-bottom: 6px;
+}
+
+/* ── Base card ──────────────────────────────────────────── */
+.mt-card {
+  background: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+  border: 1px solid var(--line-soft, rgba(28, 25, 23, 0.06));
+  border-radius: var(--radius-xl, 22px);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-card, 0 4px 20px rgba(0, 0, 0, 0.07));
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.mt-card:hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
+  transform: translateY(-2px);
+}
+
+.mt-card-head {
+  margin-bottom: 14px;
+}
+
+.mt-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 2px 0 0;
+  line-height: 1.3;
+}
+
+/* ── Chips ──────────────────────────────────────────────── */
+.mt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(192, 70, 43, 0.08);
+  color: var(--brand-accent, #c0462b);
+}
+
+.mt-chip .app-icon,
+.mt-chip .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.mt-chip--sm {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+}
+
+.mt-chip--filter {
+  background: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+  color: var(--text-muted);
+  border: 1.5px solid var(--line-soft, rgba(28, 25, 23, 0.08));
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.mt-chip--filter:hover,
+.mt-chip--filter.is-active {
+  background: var(--brand-accent, #c0462b);
+  color: #fff;
+  border-color: var(--brand-accent, #c0462b);
+}
+
+/* ── Hero section ───────────────────────────────────────── */
+.mt-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #e8634e));
+  border-radius: var(--radius-xl, 22px);
+  padding: 28px 32px;
+  color: #fff;
+  margin-bottom: 20px;
+  animation: mt-fade-up 0.4s ease both;
+}
+
+.mt-hero-left {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.mt-hero-left .mt-kicker {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.mt-hero-title {
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 4px 0 8px;
+  line-height: 1.15;
+}
+
+.mt-hero-desc {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 14px;
+}
+
+.mt-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mt-hero .mt-chip {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.mt-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.mt-ring-wrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+
+.mt-ring-svg {
+  width: 88px;
+  height: 88px;
+  transform: rotate(-90deg);
+}
+
+.mt-ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 8;
+}
+
+.mt-ring-progress {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.mt-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.mt-ring-center strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.mt-ring-center span {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+  margin-top: 1px;
+}
+
+.mt-ring-meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+}
+
+.mt-ring-meta strong {
+  font-weight: 700;
+  color: #fff;
+}
+
+/* ── Recommendation Banner ──────────────────────────────── */
+.mt-recommend {
+  background: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+  border-radius: var(--radius-xl, 22px);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  border-left: 4px solid var(--brand-accent, #c0462b);
+  animation: mt-fade-up 0.45s ease both;
+}
+
+.mt-recommend-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.mt-recommend-left {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.mt-recommend-title {
+  font-size: 0.93rem;
+  color: var(--text-strong);
+  margin: 4px 0 10px;
+  line-height: 1.5;
+}
+
+.mt-recommend-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mt-recommend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #e8634e));
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mt-recommend-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ── Side Grid (2-col) ──────────────────────────────────── */
+.mt-side-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 20px;
+  animation: mt-fade-up 0.5s ease both;
+}
+
+/* ── Session card specifics ─────────────────────────────── */
+.mt-session-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.mt-session-meta .app-icon,
+.mt-session-meta .material-symbols-outlined {
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+.mt-session-purpose {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.mt-session-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.mt-target-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.1);
+  color: var(--brand-accent, #c0462b);
+  border: 1px solid rgba(192, 70, 43, 0.18);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mt-target-pill.is-active,
+.mt-target-pill:hover {
+  background: var(--brand-accent, #c0462b);
+  color: #fff;
+  border-color: var(--brand-accent, #c0462b);
+}
+
+/* ── Target Areas card ──────────────────────────────────── */
+.mt-target-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mt-target-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 14px);
+  border: 1.5px solid var(--line-soft, rgba(28, 25, 23, 0.06));
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+}
+
+.mt-target-area:hover,
+.mt-target-area.is-active {
+  background: rgba(192, 70, 43, 0.06);
+  border-color: var(--brand-accent, #c0462b);
+}
+
+.mt-target-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(240, 117, 97, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-accent, #c0462b);
+  flex-shrink: 0;
+}
+
+.mt-target-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mt-target-info strong {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.mt-target-info span {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+/* ── Exercise List ──────────────────────────────────────── */
+.mt-exercises {
+  background: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+  border: 1px solid var(--line-soft, rgba(28, 25, 23, 0.06));
+  border-radius: var(--radius-xl, 22px);
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  animation: mt-fade-up 0.55s ease both;
+}
+
+.mt-exercises-head {
+  margin-bottom: 14px;
+}
+
+.mt-exercises-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.mt-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mt-exercise-row {
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid var(--line-soft, rgba(28, 25, 23, 0.06));
+  overflow: hidden;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.mt-exercise-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.mt-exercise-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.mt-exercise-num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 24px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.mt-exercise-info {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.mt-exercise-info strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mt-exercise-meta {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mt-exercise-badge {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.mt-exercise-badge.is-plan {
+  background: rgba(192, 70, 43, 0.1);
+  color: var(--brand-accent, #c0462b);
+}
+
+.mt-exercise-badge.is-library {
+  background: rgba(184, 124, 0, 0.1);
+  color: #b87c00;
+}
+
+.mt-exercise-chevron {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mt-exercise-chevron:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.mt-exercise-detail {
+  padding: 0 14px 14px 48px;
+  border-top: 1px solid var(--line-soft, rgba(28, 25, 23, 0.06));
+}
+
+.mt-exercise-steps {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.mt-exercise-step {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.mt-exercise-intent {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 8px 0 0;
+}
+
+.mt-exercise-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.mt-exercise-empty strong {
+  display: block;
+  color: var(--text-strong);
+  margin-bottom: 6px;
+}
+
+/* ── History card ───────────────────────────────────────── */
+.mt-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mt-history-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.mt-history-info strong {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.mt-history-info span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.mt-history-bar-wrap {
+  width: 80px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-soft, rgba(28, 25, 23, 0.08));
+  overflow: hidden;
+}
+
+.mt-history-bar {
+  height: 100%;
+  background: var(--brand-accent, #c0462b);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.mt-history-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.mt-history-empty {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ── Recovery Status card ───────────────────────────────── */
+.mt-recovery-copy {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.mt-recovery-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.mt-recovery-badge.is-good {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.mt-recovery-badge.is-caution {
+  background: rgba(202, 138, 4, 0.1);
+  color: #ca8a04;
+}
+
+.mt-recovery-badge.is-warning {
+  background: rgba(192, 70, 43, 0.1);
+  color: var(--brand-accent, #c0462b);
+}
+
+.mt-recovery-card.is-good {
+  border-left: 4px solid #16a34a;
+}
+
+.mt-recovery-card.is-caution {
+  border-left: 4px solid #ca8a04;
+}
+
+.mt-recovery-card.is-warning {
+  border-left: 4px solid var(--brand-accent, #c0462b);
+}
+
+.mt-recovery-suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mt-recovery-suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.mt-recovery-suggestions .app-icon,
+.mt-recovery-suggestions .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--brand-accent, #c0462b);
+}
+
+/* ── Dark mode overrides ────────────────────────────────── */
+body:is(.theme-midnight, .theme-high-contrast) .mt-card,
+body:is(.theme-midnight, .theme-high-contrast) .mt-exercises,
+body:is(.theme-midnight, .theme-high-contrast) .mt-recommend {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-chip--filter {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-target-area {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-exercise-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-history-bar-wrap {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Responsive: 960px collapse ────────────────────────── */
+@media (max-width: 960px) {
+  .mt-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mt-hero-right {
+    align-self: center;
+  }
+
+  .mt-side-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-target-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mt-content {
+    padding: 16px 16px 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mt-target-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-recommend-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mt-history-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .mt-history-bar-wrap {
+    display: none;
+  }
+}
+
+/* ── Reset IronPulse canvas background for new redesign ─── */
+/* The legacy .muscle-training-canvas applied a dark iron grid via !important.
+   When the new .mt-content is present, strip that background so the
+   runner-shell page background shows through cleanly. */
+.muscle-training-canvas:has(.mt-content) {
+  background: transparent !important;
+  color: var(--text-strong) !important;
+}
+
+/* Dark-mode: elevate card surfaces so they read against the dark shell */
+body:is(.theme-midnight, .theme-high-contrast) .mt-card,
+body:is(.theme-midnight, .theme-high-contrast) .mt-exercises {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-recommend {
+  background: rgba(160, 57, 42, 0.14) !important;
+  border-left-color: var(--brand-accent, #a0392a) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-card-title,
+body:is(.theme-midnight, .theme-high-contrast) .mt-hero-title {
+  color: var(--text-strong);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-recommend-title {
+  color: var(--text-strong);
+}
