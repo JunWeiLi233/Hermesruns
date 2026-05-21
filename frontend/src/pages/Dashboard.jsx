@@ -2336,22 +2336,25 @@ const Dashboard = memo(function Dashboard() {
   return (
     <div className="dashboard-body admin-command-page">
       <div className="admin-command-layout">
-        <aside className="admin-command-sidebar">
-          <div className="admin-command-sidebar__brand">
+        <aside className="admin-command-sidebar ad-sidebar" aria-label={t('admin.kinetic.sidebar_brand')}>
+          <div className="admin-command-sidebar__brand ad-sidebar-brand">
             <HermesLogo dark />
-            <p>{activeRouteSurface.eyebrow}</p>
-            <small>{activeRouteSurface.title}</small>
+            <div>
+              <div className="ad-sidebar-brand-wordmark">{t('admin.kinetic.sidebar_brand')}</div>
+              <div className="ad-sidebar-brand-sub">{t('admin.kinetic.sidebar_brand_sub')}</div>
+            </div>
           </div>
 
-          <div className="admin-command-sidebar__nav">
+          <nav className="admin-command-sidebar__nav ad-sidebar-nav">
             {TAB_ITEMS.map((tab, index) => (
               <button
                 key={tab.key}
                 type="button"
-                className={`admin-command-sidebar__nav-item${activeTab === tab.key ? ' is-active' : ''}`}
+                aria-label={t(tab.labelKey)}
+                className={`admin-command-sidebar__nav-item ad-sidebar-link${activeTab === tab.key ? ' is-active' : ''}`}
                 onClick={() => navigateToTab(tab.key)}
               >
-                <span className="admin-command-sidebar__nav-icon" data-icon={TAB_ICONS[tab.key]} aria-hidden="true" />
+                <span className="material-symbols-outlined" aria-hidden="true">{TAB_ICONS[tab.key]}</span>
                 <span className="admin-command-sidebar__nav-copy">
                   <strong>{t(tab.labelKey)}</strong>
                   <span>{adminRouteSurfaces[tab.key]?.navCopy || t(tab.labelKey)}</span>
@@ -2359,7 +2362,7 @@ const Dashboard = memo(function Dashboard() {
                 <span className="admin-command-sidebar__nav-index">{String(index + 1).padStart(2, '0')}</span>
               </button>
             ))}
-          </div>
+          </nav>
 
           <div className="admin-command-sidebar__status">
             {adminStatusItems.map((item) => (
@@ -2376,26 +2379,31 @@ const Dashboard = memo(function Dashboard() {
             ))}
           </div>
 
-          <div className="admin-command-sidebar__footer">
-            <button type="button" className="admin-command-sidebar__cta" onClick={() => navigateToTab('courseMaps')}>
-              <span className="admin-command-sidebar__cta-icon" data-icon="add" aria-hidden="true" />
+          <div className="admin-command-sidebar__footer ad-sidebar-footer">
+            <button type="button" className="admin-command-sidebar__cta ad-sidebar-link" onClick={() => navigateToTab('courseMaps')} aria-label={t('dashboard.tab_course_maps')}>
+              <span className="material-symbols-outlined" aria-hidden="true">add</span>
               <span>{t('dashboard.tab_course_maps')}</span>
             </button>
-            <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout" onClick={logout}>
-              <span className="admin-command-sidebar__link-icon" data-icon="logout" aria-hidden="true" />
+            <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout ad-sidebar-link" onClick={logout} aria-label={t('dashboard.nav_logout')}>
+              <span className="material-symbols-outlined" aria-hidden="true">logout</span>
               <span>{t('dashboard.nav_logout')}</span>
             </button>
           </div>
         </aside>
 
-        <div className="admin-command-main">
-          <header className="admin-command-topbar">
+        <div className="admin-command-main ad-content">
+          <header className="admin-command-topbar ad-topbar">
             <div className="admin-command-topbar__headline">
+              <div className="ad-topbar-breadcrumb" aria-label="breadcrumb">
+                <span>{t('admin.kinetic.topbar_brand')}</span>
+                <span className="ad-topbar-breadcrumb-sep" aria-hidden="true">/</span>
+                <span className="ad-topbar-breadcrumb-current">{activeRouteSurface.title}</span>
+              </div>
               <span className="admin-command-topbar__eyebrow">{activeRouteSurface.eyebrow}</span>
               <strong>{activeRouteSurface.title}</strong>
               <p>{activeRouteSurface.summary}</p>
             </div>
-            <div className="admin-command-topbar__controls">
+            <div className="admin-command-topbar__controls ad-topbar-actions">
               <div className="admin-command-topbar__brand">
                 <div className="admin-command-topbar__wordmark">HERMES</div>
                 <div className="admin-command-topbar__nav">
@@ -2431,7 +2439,112 @@ const Dashboard = memo(function Dashboard() {
         {message && <div className="admin-shoe-status dashboard-message" role="status" aria-live="polite">{message}</div>}
 
         {activeTab === 'overview' && overview && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
+
+            {/* Kinetic Editorial: metric strip */}
+            <div className="ad-metric-strip">
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_active_users')}</div>
+                <div className="ad-metric-value">{usersPage.totalItems || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_active_users')}</div>
+              </div>
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_shoes_inventory')}</div>
+                <div className="ad-metric-value">{shoesPage.totalItems || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_shoes_inventory')}</div>
+              </div>
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_audit_24h')}</div>
+                <div className="ad-metric-value">{auditPage.totalItems || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_audit_24h')}</div>
+              </div>
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_pending_maps')}</div>
+                <div className="ad-metric-value">{courseMapsPage.items?.filter(item => getCourseMapPending(item)).length || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_pending_maps')}</div>
+              </div>
+            </div>
+
+            {/* Kinetic Editorial: ops grid */}
+            <div className="ad-ops-grid">
+              {[
+                { key: 'users', icon: 'groups', tab: 'users', titleKey: 'admin.kinetic.ops_users', subKey: 'admin.kinetic.ops_users_sub' },
+                { key: 'courseMaps', icon: 'map', tab: 'courseMaps', titleKey: 'admin.kinetic.ops_course_maps', subKey: 'admin.kinetic.ops_course_maps_sub' },
+                { key: 'shoes', icon: 'footprint', tab: 'shoes', titleKey: 'admin.kinetic.ops_shoes', subKey: 'admin.kinetic.ops_shoes_sub' },
+                { key: 'jobs', icon: 'sync', tab: 'jobs', titleKey: 'admin.kinetic.ops_jobs', subKey: 'admin.kinetic.ops_jobs_sub' },
+                { key: 'audit', icon: 'history', tab: 'audit', titleKey: 'admin.kinetic.ops_audit', subKey: 'admin.kinetic.ops_audit_sub' },
+                { key: 'settings', icon: 'settings', tab: 'settings', titleKey: 'admin.kinetic.ops_settings', subKey: 'admin.kinetic.ops_settings_sub' },
+              ].map(op => (
+                <button
+                  key={op.key}
+                  type="button"
+                  className="ad-ops-card"
+                  aria-label={t(op.titleKey)}
+                  onClick={() => navigateToTab(op.tab)}
+                >
+                  <div className="ad-ops-card-icon">
+                    <span className="material-symbols-outlined" aria-hidden="true">{op.icon}</span>
+                  </div>
+                  <div className="ad-ops-card-body">
+                    <div className="ad-ops-card-title">{t(op.titleKey)}</div>
+                    <div className="ad-ops-card-sub">{t(op.subKey)}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Kinetic Editorial: two-col — system health + recent audit */}
+            <div className="ad-two-col">
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.health_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.health_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-health-grid">
+                  {adminStatusItems.map((item) => (
+                    <div key={item.label} className="ad-health-row">
+                      <span className={`ad-health-dot${item.tone === 'ready' ? ' is-ok' : item.tone === 'action' ? ' is-fail' : ' is-warn'}`} aria-hidden="true" />
+                      <span className="ad-health-label">{item.label}</span>
+                      <span className="ad-health-val">{item.value}</span>
+                    </div>
+                  ))}
+                  {queueCards.slice(0, 4).map((card) => (
+                    <div key={card.key} className="ad-health-row">
+                      <span className={`ad-health-dot${card.count === 0 ? ' is-ok' : card.key === 'FAILED' ? ' is-fail' : ' is-warn'}`} aria-hidden="true" />
+                      <span className="ad-health-label">{t(card.titleKey)}</span>
+                      <span className="ad-health-val">{card.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.audit_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.audit_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-audit-mini">
+                  {overviewAuditPreview.map((item, index) => (
+                    <div key={item.id ?? index} className="ad-audit-row">
+                      <span className="ad-avatar-sm" aria-hidden="true">
+                        {String(item.actorEmail || '?').slice(0, 1).toUpperCase()}
+                      </span>
+                      <span className="ad-audit-actor">{item.actorEmail || '-'}</span>
+                      <span className="ad-audit-action">{item.action || item.summary || '-'}</span>
+                      <span className="ad-audit-time">{formatAdminDate(item.timestamp || item.createdAt)}</span>
+                    </div>
+                  ))}
+                  {overviewAuditPreview.length === 0 && (
+                    <div className="ad-muted">{t('dashboard.audit_status_success')}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <section className="admin-overview-hud">
               <article className="admin-overview-hud__hero">
                 <span className="admin-overview-hud__eyebrow">{t('dashboard.ops_overview_title')}</span>
@@ -2776,7 +2889,7 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'users' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
           <section className="admin-users-command-center">
             <section className="admin-users-command-hero">
               <div className="admin-users-command-hero__copy">
@@ -3028,7 +3141,7 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'courseMaps' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
             <section className="admin-track-hub-hero">
               <div className="admin-track-hub-hero__copy">
                 <span className="section-intro-kicker admin-track-hub-hero__eyebrow">{t('dashboard.course_maps_kicker')}</span>
@@ -3587,7 +3700,7 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'shoes' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
             <SectionCard className="section-card--compact section-card--spaced">
               <div className="admin-shoe-stitch-hero">
                 <div className="admin-shoe-stitch-hero__copy">
@@ -3865,7 +3978,7 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'jobs' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
           <section className="admin-jobs-command-deck">
             <div className="admin-jobs-command-deck__hero">
               <div className="admin-jobs-command-deck__hero-copy">
@@ -4207,7 +4320,7 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'audit' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
           <section className="admin-audit-terminal">
             <div className="admin-audit-terminal__hero">
               <div className="admin-audit-terminal__hero-copy">
@@ -4355,7 +4468,75 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
+
+            {/* Kinetic Editorial: settings grid */}
+            <div className="ad-settings-grid">
+              {/* Language card */}
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.settings_language_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.settings_language_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-option-list">
+                  {dashboardLanguageOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`ad-option-card${lang === option.value ? ' is-active' : ''}`}
+                      onClick={() => setLang(option.value)}
+                      aria-pressed={lang === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Theme card */}
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.settings_theme_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.settings_theme_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-option-list">
+                  {dashboardThemeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`ad-option-card${theme === option.value ? ' is-active' : ''}`}
+                      onClick={() => setTheme(option.value)}
+                      aria-pressed={theme === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logout card */}
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.settings_logout_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.settings_logout_title')}</h3>
+                  </div>
+                </div>
+                <p className="ad-muted">{t('admin.kinetic.settings_logout_copy')}</p>
+                <button
+                  type="button"
+                  className="ad-logout-btn"
+                  onClick={logout}
+                >
+                  {t('admin.kinetic.settings_logout_btn')}
+                </button>
+              </div>
+            </div>
+
           <section className="admin-settings-studio">
             <div className="admin-settings-studio__hero">
               <div className="admin-settings-studio__hero-copy">
