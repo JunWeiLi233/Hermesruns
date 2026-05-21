@@ -5006,6 +5006,11 @@ details[open] .mt-settings-summary::before {
   padding: 3px 8px;
 }
 
+.mt-chip small {
+  opacity: 0.75;
+  font-size: 0.85em;
+}
+
 .mt-chip--filter {
   background: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
   color: var(--text-muted);
@@ -5141,6 +5146,7 @@ details[open] .mt-settings-summary::before {
 /* ── Recommendation Banner ──────────────────────────────── */
 .mt-recommend {
   background: var(--bg-glass-strong, rgba(255, 255, 255, 0.92));
+  border: 1px solid var(--line-soft, rgba(28, 25, 23, 0.06));
   border-radius: var(--radius-xl, 22px);
   padding: 20px 24px;
   margin-bottom: 20px;
@@ -5352,6 +5358,13 @@ details[open] .mt-settings-summary::before {
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
+  cursor: pointer;
+}
+
+.mt-exercise-main:focus-visible {
+  outline: 2px solid var(--brand-accent, #c0462b);
+  outline-offset: -2px;
+  border-radius: var(--radius-md, 12px);
 }
 
 .mt-exercise-num {
@@ -5584,8 +5597,7 @@ details[open] .mt-settings-summary::before {
 
 /* ── Dark mode overrides ────────────────────────────────── */
 body:is(.theme-midnight, .theme-high-contrast) .mt-card,
-body:is(.theme-midnight, .theme-high-contrast) .mt-exercises,
-body:is(.theme-midnight, .theme-high-contrast) .mt-recommend {
+body:is(.theme-midnight, .theme-high-contrast) .mt-exercises {
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -5669,6 +5681,7 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-exercises {
 
 body:is(.theme-midnight, .theme-high-contrast) .mt-recommend {
   background: rgba(160, 57, 42, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
   border-left-color: var(--brand-accent, #a0392a) !important;
 }
 
