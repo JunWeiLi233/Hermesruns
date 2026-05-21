@@ -3315,6 +3315,7 @@ export default function MuscleTraining() {
 
   function handleTargetAreaSelect(targetKey) {
     setActiveTarget(targetKey);
+    setExpandedExerciseIdx(null);
     const nextPlanItem = targetKey === 'all'
       ? protocolItems[0]
       : protocolItems.find(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey));
