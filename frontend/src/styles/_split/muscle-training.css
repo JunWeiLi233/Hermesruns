@@ -5126,19 +5126,25 @@ details[open] .mt-settings-summary::before {
 }
 
 .mt-ring-center span {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: rgba(255, 255, 255, 0.75);
   text-align: center;
-  margin-top: 1px;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
 }
 
 .mt-ring-meta {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .mt-ring-meta strong {
+  font-size: 0.85rem;
   font-weight: 700;
   color: #fff;
 }
