@@ -5626,6 +5626,21 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-history-bar-wrap {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* Active states in dark mode — must appear after the generic dark overrides
+   so same-specificity rules don't flatten active chips/areas to inactive look */
+body:is(.theme-midnight, .theme-high-contrast) .mt-chip--filter.is-active,
+body:is(.theme-midnight, .theme-high-contrast) .mt-chip--filter:hover {
+  background: var(--brand-accent, #a0392a);
+  color: #fff;
+  border-color: var(--brand-accent, #a0392a);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .mt-target-area.is-active,
+body:is(.theme-midnight, .theme-high-contrast) .mt-target-area:hover {
+  background: rgba(160, 57, 42, 0.2);
+  border-color: var(--brand-accent, #a0392a);
+}
+
 /* ── Responsive: 960px collapse ────────────────────────── */
 @media (max-width: 960px) {
   .mt-hero {
