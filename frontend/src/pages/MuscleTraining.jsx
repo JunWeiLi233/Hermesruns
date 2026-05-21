@@ -3643,11 +3643,11 @@ export default function MuscleTraining() {
               <div className="mt-recommend-inner">
                 <div className="mt-recommend-left">
                   <span className="mt-kicker">{t('muscle_training.stitch_mt_recommend_tag')}</span>
-                  <p className="mt-recommend-title">{todayCoachNarrative || stitchCopy.guideSubtitle}</p>
+                  <p className="mt-recommend-title">{nextStrengthSummary.label || stitchCopy.guideSubtitle}</p>
                   <div className="mt-recommend-tags">
-                    {[nextStrengthSummary.label, nextStrengthSummary.meta].filter(Boolean).map((tag) => (
-                      <span key={tag} className="mt-chip mt-chip--sm">{tag}</span>
-                    ))}
+                    {nextStrengthSummary.meta && (
+                      <span className="mt-chip mt-chip--sm">{nextStrengthSummary.meta}</span>
+                    )}
                   </div>
                 </div>
                 <button type="button" className="mt-recommend-btn" onClick={scrollToControls}>
