@@ -5695,10 +5695,11 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-target-area:hover {
 /* ── Reset IronPulse canvas background for new redesign ─── */
 /* The legacy .muscle-training-canvas applied a dark iron grid via !important.
    When the new .mt-content is present, strip that background so the
-   runner-shell page background shows through cleanly. */
+   runner-shell page background (#121212) shows through. Color is NOT overridden
+   here — cards use their own text tokens, and the shell body color (#f1ece7)
+   applies to non-card text like the control deck. */
 .muscle-training-canvas:has(.mt-content) {
   background: transparent !important;
-  color: var(--text-strong) !important;
 }
 
 /* Dark-mode: elevate card surfaces so they read against the dark shell */
