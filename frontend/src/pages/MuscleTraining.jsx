@@ -3693,13 +3693,17 @@ export default function MuscleTraining() {
                 </div>
                 <div className="mt-target-grid">
                   {targetAreaCards.map((ta) => {
+                    // Body-part-specific Heroicons-style outline icons. Each
+                    // name maps to a dedicated case in AppIcon.jsx so the
+                    // target-area grid no longer falls back to the generic
+                    // dumbbell or running-figure glyph.
                     const iconMap = {
-                      chest: 'fitness_center',
-                      shoulders: 'fitness_center',
-                      legs: 'directions_run',
-                      core: 'self_improvement',
-                      arms: 'sports_gymnastics',
-                      back: 'sports_gymnastics',
+                      chest: 'chest',
+                      shoulders: 'shoulders',
+                      legs: 'legs',
+                      core: 'core',
+                      arms: 'arms',
+                      back: 'back',
                     };
                     const icon = iconMap[ta.key] || 'fitness_center';
                     return (
