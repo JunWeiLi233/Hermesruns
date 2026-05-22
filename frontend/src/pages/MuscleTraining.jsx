@@ -143,6 +143,25 @@ const EXERCISE_VIDEO_EMBEDS = {
   'front-rack-carry': 'https://www.youtube-nocookie.com/embed/Q5kuuxaNDDM',
   'hanging-leg-raise': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
   'barbell-rollout': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
+  'hip-airplanes': 'https://www.youtube-nocookie.com/embed/9svtEV4vkp0',
+  'calf-raises-slow-tempo': 'https://www.youtube-nocookie.com/embed/Km0QS46bTEA',
+  'dead-bug': 'https://www.youtube-nocookie.com/embed/GbSC02oU3To',
+  'split-squat': 'https://www.youtube-nocookie.com/embed/zzUZOMiE-mg',
+  'single-leg-romanian-deadlift': 'https://www.youtube-nocookie.com/embed/Zfr6wizR8rs',
+  'standing-calf-raise': 'https://www.youtube-nocookie.com/embed/c5Kv6-fnTj8',
+  'side-plank': 'https://www.youtube-nocookie.com/embed/N_s9em1xTqU',
+  'glute-bridge-pause-at-top': 'https://www.youtube-nocookie.com/embed/Q_Bpj91Yiis',
+  'tibialis-wall-raise': 'https://www.youtube-nocookie.com/embed/VzIcGAgBiaM',
+  'world-s-greatest-stretch': 'https://www.youtube-nocookie.com/embed/-CiWQ2IvY34',
+  'ankle-dorsiflexion-rocks': 'https://www.youtube-nocookie.com/embed/WBD8DJ2du8I',
+  'step-down-knee-tracking': 'https://www.youtube-nocookie.com/embed/Or4C-UQ63Xc',
+  'hamstring-curl-slider-or-machine': 'https://www.youtube-nocookie.com/embed/HaR-vvFwb7A',
+  'pallof-press': 'https://www.youtube-nocookie.com/embed/nFspBRHke4w',
+  'farmer-carry-suitcase': 'https://www.youtube-nocookie.com/embed/3RKKnZhhelE',
+  'pogo-hops': 'https://www.youtube-nocookie.com/embed/j0nl5dWuqN4',
+  'skipping-a-drill': 'https://www.youtube-nocookie.com/embed/aSDyoraNOZc',
+  'box-step-up-explosive': 'https://www.youtube-nocookie.com/embed/5qjqDHOUh-A',
+  'single-leg-hop-low-amplitude': 'https://www.youtube-nocookie.com/embed/A2Q0ZUHjYHo',
 };
 
 const COMPOUND_TARGET_LIBRARY = {
@@ -2804,6 +2823,7 @@ export default function MuscleTraining() {
   const [activeTarget, setActiveTarget] = useState('all');
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(true);
+  const [isTodayPlanExpanded, setIsTodayPlanExpanded] = useState(false);
   const [openTipIndex, setOpenTipIndex] = useState(0);
 
   useEffect(() => {
@@ -3119,6 +3139,10 @@ export default function MuscleTraining() {
     noAreaExercises: t('muscle_training.stitch_no_area_exercises'),
     noAreaPlanExercises: t('muscle_training.stitch_no_area_plan_exercises'),
     todayPlanTitle: t('muscle_training.stitch_today_plan_title'),
+    todayPlanCollapsedHint: t('muscle_training.stitch_today_plan_collapsed_hint'),
+    todayPlanToggleOpen: t('muscle_training.stitch_today_plan_toggle_open'),
+    todayPlanToggleClose: t('muscle_training.stitch_today_plan_toggle_close'),
+    todayPlanNoFilteredExercises: t('muscle_training.stitch_today_plan_no_filtered_exercises'),
     compoundLibraryTitle: t('muscle_training.stitch_compound_library_title'),
     compoundBadge: t('muscle_training.stitch_compound_badge'),
     optionalLibraryBadge: t('muscle_training.stitch_optional_library_badge'),
@@ -3268,10 +3292,15 @@ export default function MuscleTraining() {
       )));
   }, [activeTarget, protocolItems.length]);
 
-  const visibleExerciseItems = useMemo(() => [
+  const allProtocolExerciseItems = useMemo(() => [
     ...filteredProtocolItems.map((item) => ({ ...item, source: 'plan' })),
     ...libraryProtocolItems,
   ], [filteredProtocolItems, libraryProtocolItems]);
+
+  const visibleExerciseItems = useMemo(() => [
+    ...libraryProtocolItems,
+    ...(isTodayPlanExpanded ? filteredProtocolItems.map((item) => ({ ...item, source: 'plan' })) : []),
+  ], [filteredProtocolItems, isTodayPlanExpanded, libraryProtocolItems]);
 
   const selectedProtocolItem = useMemo(() => (
     visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
@@ -3356,15 +3385,18 @@ export default function MuscleTraining() {
 
   function handleTargetAreaSelect(targetKey) {
     setActiveTarget(targetKey);
-    const nextPlanItem = targetKey === 'all'
-      ? protocolItems[0]
-      : protocolItems.find(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey));
     const nextLibraryDefinition = targetKey === 'all'
       ? COMPOUND_TARGET_LIBRARY[TARGET_AREA_GROUPS[0].key]?.[0]
       : COMPOUND_TARGET_LIBRARY[targetKey]?.[0];
-    const nextItem = nextPlanItem || (
-      nextLibraryDefinition
-        ? createLibraryProtocolItem(targetKey === 'all' ? TARGET_AREA_GROUPS[0].key : targetKey, nextLibraryDefinition, 0, protocolItems.length)
+    const nextLibraryItem = nextLibraryDefinition
+      ? createLibraryProtocolItem(targetKey === 'all' ? TARGET_AREA_GROUPS[0].key : targetKey, nextLibraryDefinition, 0, protocolItems.length)
+      : null;
+    const nextPlanItem = targetKey === 'all'
+      ? protocolItems[0]
+      : protocolItems.find(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey));
+    const nextItem = nextLibraryItem || (
+      isTodayPlanExpanded && nextPlanItem
+        ? { ...nextPlanItem, source: 'plan' }
         : null
     );
     const nextKey = getProtocolItemKey(nextItem);
@@ -3374,6 +3406,11 @@ export default function MuscleTraining() {
     window.setTimeout(() => {
       if (nextKey) document.getElementById(`mt-exercise-${nextKey}`)?.focus();
     }, 0);
+  }
+
+  function handleTodayPlanToggle() {
+    setIsTodayPlanExpanded((current) => !current);
+    setOpenTipIndex(0);
   }
 
   function handleExerciseSelect(item) {
@@ -3396,6 +3433,11 @@ export default function MuscleTraining() {
   }, [selectedExerciseKey, visibleExerciseItems]);
 
   useEffect(() => {
+    if (isTodayPlanExpanded || !selectedProtocolItem || selectedProtocolItem.source !== 'plan') return;
+    setSelectedExerciseKey(getProtocolItemKey(visibleExerciseItems[0]));
+  }, [isTodayPlanExpanded, selectedProtocolItem, visibleExerciseItems]);
+
+  useEffect(() => {
     const previousIsMile = previousIsMileRef.current;
     if (previousIsMile === isMile) return;
     previousIsMileRef.current = isMile;
@@ -3411,6 +3453,8 @@ export default function MuscleTraining() {
     setDraft(normalized);
     setPlan(nextPlan);
     setCheckInDraft(buildCheckInDraft(nextPlan, isMile));
+    setSelectedExerciseKey('');
+    setIsTodayPlanExpanded(false);
   }, [isMile]);
 
   function applyPlanOnly(nextPlan) {
@@ -3701,7 +3745,7 @@ export default function MuscleTraining() {
                     aria-pressed={activeTarget === 'all'}
                   >
                     <span>{stitchCopy.allTargets}</span>
-                    <small>{formatCopyTemplate(stitchCopy.areaExerciseCount, { count: visibleExerciseItems.length })}</small>
+                    <small>{formatCopyTemplate(stitchCopy.areaExerciseCount, { count: allProtocolExerciseItems.length })}</small>
                   </button>
                   {targetAreaCards.map((target) => (
                     <button
@@ -3724,41 +3768,60 @@ export default function MuscleTraining() {
 
                 <div className="mt-ip-protocol-layout">
                   <div className="mt-ip-exercise-list">
-                    {filteredProtocolItems.length > 0 && (
-                      <div className="mt-ip-exercise-section-label">
-                        <span>{stitchCopy.todayPlanTitle}</span>
-                        <em>{formatCopyTemplate(stitchCopy.areaExerciseCount, { count: filteredProtocolItems.length })}</em>
-                      </div>
-                    )}
-                    {filteredProtocolItems.map((item) => {
-                      const planItem = { ...item, source: 'plan' };
-                      const { block, exercise, globalIndex } = planItem;
-                      const exerciseCopy = getExerciseContentForItem(planItem, isZh);
-                      const itemKey = getProtocolItemKey(planItem);
-                      const isSelected = itemKey === getProtocolItemKey(selectedProtocolItem);
-                      const equipmentKey = getExerciseEquipmentKey(exercise);
-                      return (
+                    <div className="mt-ip-plan-collapse">
+                      <div className="mt-ip-plan-summary">
+                        <div>
+                          <span>{stitchCopy.todayPlanTitle}</span>
+                          <strong>
+                            {filteredProtocolItems.length > 0
+                              ? formatCopyTemplate(stitchCopy.areaExerciseCount, { count: filteredProtocolItems.length })
+                              : stitchCopy.todayPlanNoFilteredExercises}
+                          </strong>
+                          <p>{stitchCopy.todayPlanCollapsedHint}</p>
+                        </div>
                         <button
-                          key={itemKey}
-                          id={`mt-exercise-${itemKey}`}
                           type="button"
-                          className={`mt-ip-exercise-row${isSelected ? ' is-selected' : ''}`}
-                          onClick={() => handleExerciseSelect(planItem)}
-                          aria-pressed={isSelected}
+                          className="mt-ip-plan-toggle"
+                          onClick={handleTodayPlanToggle}
+                          aria-expanded={isTodayPlanExpanded}
+                          disabled={filteredProtocolItems.length === 0}
                         >
-                          <span>{String(globalIndex + 1).padStart(2, '0')}</span>
-                          <strong>{exerciseCopy.name}</strong>
-                          <em>{formatLocalizedExercisePrescription(exercise, isZh)}</em>
-                          <small>{pickLabel(copy.exerciseEquipment, equipmentKey, equipmentKey)}</small>
-                          <small>{exerciseCopy.muscles.join(' / ')}</small>
-                          <p><b>{stitchCopy.todayPlanTitle}</b>{exerciseCopy.intent || pickLabel(copy.blockTitles, block.title, block.title)}</p>
+                          {isTodayPlanExpanded ? stitchCopy.todayPlanToggleClose : stitchCopy.todayPlanToggleOpen}
                         </button>
-                      );
-                    })}
+                      </div>
+                      {isTodayPlanExpanded && filteredProtocolItems.length > 0 && (
+                        <div className="mt-ip-plan-rows">
+                          {filteredProtocolItems.map((item, rowIndex) => {
+                            const planItem = { ...item, source: 'plan' };
+                            const { block, exercise } = planItem;
+                            const exerciseCopy = getExerciseContentForItem(planItem, isZh);
+                            const itemKey = getProtocolItemKey(planItem);
+                            const isSelected = itemKey === getProtocolItemKey(selectedProtocolItem);
+                            const equipmentKey = getExerciseEquipmentKey(exercise);
+                            return (
+                              <button
+                                key={itemKey}
+                                id={`mt-exercise-${itemKey}`}
+                                type="button"
+                                className={`mt-ip-exercise-row mt-ip-exercise-row--plan${isSelected ? ' is-selected' : ''}`}
+                                onClick={() => handleExerciseSelect(planItem)}
+                                aria-pressed={isSelected}
+                              >
+                                <span>{String(rowIndex + 1).padStart(2, '0')}</span>
+                                <strong>{exerciseCopy.name}</strong>
+                                <em>{formatLocalizedExercisePrescription(exercise, isZh)}</em>
+                                <small>{pickLabel(copy.exerciseEquipment, equipmentKey, equipmentKey)}</small>
+                                <small>{exerciseCopy.muscles.join(' / ')}</small>
+                                <p><b>{stitchCopy.todayPlanTitle}</b>{exerciseCopy.intent || pickLabel(copy.blockTitles, block.title, block.title)}</p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                     {filteredProtocolItems.length === 0 && activeTarget !== 'all' && (
-                      <div className="mt-ip-empty-panel mt-ip-plan-empty">
-                        <strong>{stitchCopy.noAreaPlanExercises}</strong>
-                        <p>{stitchCopy.optionalLibraryNote}</p>
+                      <div className="mt-ip-plan-inline-note">
+                        {stitchCopy.noAreaPlanExercises}
                       </div>
                     )}
                     {libraryProtocolItems.length > 0 && (
@@ -3768,8 +3831,8 @@ export default function MuscleTraining() {
                       </div>
                     )}
                     {libraryProtocolItems.length > 0 ? (
-                      libraryProtocolItems.map((item) => {
-                        const { exercise, globalIndex } = item;
+                      libraryProtocolItems.map((item, rowIndex) => {
+                        const { exercise } = item;
                         const exerciseCopy = getExerciseContentForItem(item, isZh);
                         const itemKey = getProtocolItemKey(item);
                         const isSelected = itemKey === getProtocolItemKey(selectedProtocolItem);
@@ -3783,7 +3846,7 @@ export default function MuscleTraining() {
                             onClick={() => handleExerciseSelect(item)}
                             aria-pressed={isSelected}
                           >
-                            <span>{String(globalIndex + 1).padStart(2, '0')}</span>
+                            <span>{String(rowIndex + 1).padStart(2, '0')}</span>
                             <strong>{exerciseCopy.name}</strong>
                             <em>{formatLocalizedExercisePrescription(exercise, isZh)}</em>
                             <small>{pickLabel(copy.exerciseEquipment, equipmentKey, equipmentKey)}</small>
