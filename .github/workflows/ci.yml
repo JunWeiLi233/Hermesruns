@@ -97,7 +97,7 @@ jobs:
   deploy-docs:
     name: deploy-docs
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.HERMES_DEPLOY_DOCS == 'true'
     permissions:
       contents: write
     steps:
