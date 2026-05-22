@@ -6,10 +6,12 @@ import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import MuscleHeatmap from '../components/MuscleHeatmap';
 import FooterNavLinks from '../components/FooterNavLinks';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import { muscleSlugsForExercise } from '../utils/muscleSlugMapper';
 import MUSCLE_MASKS from '../utils/muscleMasks.data.json';
 import targetArmsUrl from '../assets/muscle-training/target-arms.webp';
 import targetBackUrl from '../assets/muscle-training/target-back.webp';
@@ -3795,6 +3797,24 @@ export default function MuscleTraining() {
                       </div>
                       {isExpanded && (
                         <div id={`mt-ex-detail-${idx}`} className="mt-exercise-detail">
+                          {(() => {
+                            const heatmapSlugs = muscleSlugsForExercise(exerciseCopy.muscles);
+                            if (heatmapSlugs.length === 0) return null;
+                            const heatmapData = heatmapSlugs.map((slug) => ({ slug, intensity: 2 }));
+                            const muscleLabel = exerciseCopy.muscles.join(' / ');
+                            return (
+                              <figure
+                                className="mt-exercise-heatmap"
+                                aria-label={`${exerciseCopy.name}${muscleLabel ? ': ' + muscleLabel : ''}`}
+                              >
+                                <MuscleHeatmap
+                                  data={heatmapData}
+                                  frontLabel={isZh ? '正面' : 'Front'}
+                                  backLabel={isZh ? '背面' : 'Back'}
+                                />
+                              </figure>
+                            );
+                          })()}
                           {exerciseCopy.steps.length > 0 && (
                             <ol className="mt-exercise-steps">
                               {exerciseCopy.steps.map((step, si) => (
