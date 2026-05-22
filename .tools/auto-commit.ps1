@@ -450,7 +450,15 @@ if ($Push) {
     }
 }
 
-$identityArgs = @('-c', 'user.name=JunWeiLi233', '-c', 'user.email=mcpejunwei@gmail.com')
+$identityArgs = @()
+$publishUserName = $env:AUTO_HERMES_COMMIT_USER_NAME
+$publishUserEmail = $env:AUTO_HERMES_COMMIT_USER_EMAIL
+if ($publishUserName -and $publishUserName.Trim()) {
+    $identityArgs += @('-c', ('user.name=' + $publishUserName.Trim()))
+}
+if ($publishUserEmail -and $publishUserEmail.Trim()) {
+    $identityArgs += @('-c', ('user.email=' + $publishUserEmail.Trim()))
+}
 
 if ($DryRun) {
     Write-Output 'Auto-commit dry run'

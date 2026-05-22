@@ -201,9 +201,9 @@ If `## Blocked Tasks` does not exist when step 9 first needs it, create the sect
 ## Shared Lifecycle Reference
 
 Shared `/auto-hermes` lifecycle rules now live in:
-- [auto-hermes-shared-contract.md](C:\Users\Junwei\Downloads\Hermes\.codex\workflows\auto-hermes-shared-contract.md)
-- [auto-hermes-architecture.md](C:\Users\Junwei\Downloads\Hermes\.codex\workflows\auto-hermes-architecture.md)
-- [auto-hermes-claim-taxonomy.md](C:\Users\Junwei\Downloads\Hermes\.codex\workflows\auto-hermes-claim-taxonomy.md)
+- [auto-hermes-shared-contract.md](.codex/workflows/auto-hermes-shared-contract.md)
+- [auto-hermes-architecture.md](.codex/workflows/auto-hermes-architecture.md)
+- [auto-hermes-claim-taxonomy.md](.codex/workflows/auto-hermes-claim-taxonomy.md)
 
 Those workflow docs are now the authority for:
 - follow-up and tech-debt pass
