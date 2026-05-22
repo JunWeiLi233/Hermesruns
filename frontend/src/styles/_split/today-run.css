@@ -1,0 +1,2319 @@
+.today-run-container {
+    width: min(1120px, calc(100% - 48px));
+}
+
+.today-run-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.today-run-hero-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.today-run-coach-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    background: color-mix(in srgb, var(--surface-elevated, rgba(255, 255, 255, 0.72)) 88%, rgba(59, 130, 246, 0.06));
+}
+
+.today-run-coach-head .coach-subcopy {
+    margin-top: 0;
+    margin-left: 8px;
+}
+
+.today-run-summary-grid,
+.today-run-metric-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.today-run-summary-card,
+.today-run-metric-card,
+.today-run-step-card,
+.today-run-reason-card {
+    border: 1px solid rgba(255, 107, 53, 0.14);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.today-run-summary-card,
+.today-run-metric-card {
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.today-run-summary-card strong,
+.today-run-metric-card strong {
+    color: var(--text-strong);
+    font-size: 1.15rem;
+    line-height: 1.4;
+}
+
+.today-run-summary-card.tone-recovery {
+    border-color: rgba(148, 163, 184, 0.3);
+    background: rgba(148, 163, 184, 0.08);
+}
+
+.today-run-summary-card.tone-easy {
+    border-color: rgba(34, 197, 94, 0.24);
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.today-run-summary-card.tone-quality {
+    border-color: rgba(245, 158, 11, 0.24);
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.today-run-summary-card.tone-restart {
+    border-color: rgba(255, 107, 53, 0.24);
+    background: rgba(255, 107, 53, 0.08);
+}
+
+.today-run-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.today-run-step-list,
+.today-run-reason-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.today-run-step-card,
+.today-run-reason-card {
+    padding: 18px 20px;
+}
+
+.today-run-step-badge,
+.today-run-reason-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 32px;
+    border-radius: 999px;
+    background: rgba(255, 107, 53, 0.12);
+    color: var(--brand-accent-strong);
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.today-run-step-card p,
+.today-run-reason-card p {
+    color: var(--text-muted);
+    line-height: 1.75;
+}
+
+.today-run-reason-card {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.today-run-reason-index {
+    margin-bottom: 0;
+}
+
+/* Weather-readiness strip */
+
+.today-run-weather-strip {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    background: color-mix(in srgb, var(--surface-elevated, rgba(255,255,255,0.72)) 90%, rgba(99,102,241,0.06));
+}
+
+.today-run-weather-strip--penalty {
+    border-color: rgba(239, 68, 68, 0.22);
+    background: color-mix(in srgb, var(--surface-elevated, rgba(255,255,255,0.72)) 90%, rgba(239,68,68,0.06));
+}
+
+.today-run-weather-strip--clear {
+    border-color: rgba(34, 197, 94, 0.22);
+    background: color-mix(in srgb, var(--surface-elevated, rgba(255,255,255,0.72)) 90%, rgba(34,197,94,0.05));
+}
+
+.today-run-weather-strip__icon {
+    font-size: 1.25rem;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.today-run-weather-strip__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.today-run-weather-strip__label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted, #64748b);
+}
+
+.today-run-weather-strip__value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-strong);
+}
+
+.today-run-weather-strip__detail {
+    font-size: 0.875rem;
+    color: var(--text-muted, #64748b);
+    line-height: 1.5;
+    margin-top: 2px;
+}
+
+.today-run-weather-strip__dismiss {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: 2px 4px;
+    color: var(--text-muted, #64748b);
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.today-run-weather-strip__dismiss:hover {
+    opacity: 1;
+}
+
+.today-run-empty-wrap {
+  margin-top: 18px;
+}
+
+.today-run-empty-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.today-run-hero-badges {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.today-run-confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.today-run-confidence-badge--ready {
+  background: rgba(220, 252, 231, 0.95);
+  color: #166534;
+}
+
+.today-run-confidence-badge--warning {
+  background: rgba(255, 237, 213, 0.95);
+  color: #c2410c;
+}
+
+.today-run-confidence-badge--action {
+  background: rgba(254, 226, 226, 0.96);
+  color: #b91c1c;
+}
+
+.today-run-signal-row {
+  margin-top: 14px;
+}
+
+.today-run-signal-button.is-active {
+  border-color: rgba(249, 115, 22, 0.24);
+  box-shadow: 0 14px 32px rgba(249, 115, 22, 0.12);
+}
+
+.today-run-signal-explainer {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.today-run-signal-explainer--ready {
+  background: rgba(236, 253, 245, 0.75);
+  border-color: rgba(34, 197, 94, 0.16);
+}
+
+.today-run-signal-explainer--warning {
+  background: rgba(255, 247, 237, 0.8);
+  border-color: rgba(249, 115, 22, 0.16);
+}
+
+.today-run-signal-explainer--action {
+  background: rgba(254, 242, 242, 0.84);
+  border-color: rgba(239, 68, 68, 0.16);
+}
+
+.today-run-signal-explainer__label {
+  display: inline-flex;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted, #64748b);
+}
+
+.today-run-signal-explainer p {
+  margin: 0;
+  color: var(--text-strong, #0f172a);
+  line-height: 1.55;
+}
+
+.today-run-signal-improves-next {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.today-run-signal-improves-next-label {
+  display: inline-flex;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ea580c;
+}
+
+.today-run-signal-improves-next p {
+  color: rgba(51, 65, 85, 0.92);
+  font-size: 0.88em;
+}
+
+.today-run-plan-page .runner-shell-canvas {
+  padding-inline: clamp(18px, 2.4vw, 32px);
+}
+
+.today-run-plan-canvas {
+  padding-top: 24px;
+  gap: 24px;
+}
+
+.today-run-coaching-strip {
+  margin: 0 0 16px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(var(--runner-surface-rgb, 255,255,255), 0.06) 0%, rgba(var(--runner-surface-rgb, 255,255,255), 0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.today-run-coaching-strip-inner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.today-run-coaching-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.2s ease;
+}
+
+.today-run-coaching-answer:hover {
+  background: rgba(255,255,255,0.07);
+}
+
+.today-run-coaching-answer-kicker {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.5);
+  font-weight: 500;
+}
+
+.today-run-coaching-answer-value {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.95);
+}
+
+.today-run-coaching-answer-value.is-quality,
+.today-run-coaching-answer-value.is-improving {
+  color: #4ade80;
+}
+
+.today-run-coaching-answer-value.is-easy,
+.today-run-coaching-answer-value.is-maintaining,
+.today-run-coaching-answer-value.is-steady {
+  color: #60a5fa;
+}
+
+.today-run-coaching-answer-value.is-moderate {
+  color: #facc15;
+}
+
+.today-run-coaching-answer-value.is-recovery,
+.today-run-coaching-answer-value.is-restart,
+.today-run-coaching-answer-value.is-declining {
+  color: #fb923c;
+}
+
+.today-run-coaching-answer-value.is-rest {
+  color: #f87171;
+}
+
+.today-run-coaching-answer-sub {
+  font-size: 12px;
+  line-height: 1.3;
+  color: rgba(255,255,255,0.55);
+}
+
+.today-run-coaching-answer-delta {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(163,230,53,0.9);
+}
+
+.today-run-coaching-answer-delta:has(+ .is-declining),
+.today-run-coaching-answer.is-declining .today-run-coaching-answer-delta {
+  color: rgba(251,146,60,0.9);
+}
+
+.today-run-coaching-answer--load.is-acwr-optimal {
+  border-left: 3px solid #4ade80;
+}
+
+.today-run-coaching-answer--load.is-acwr-low {
+  border-left: 3px solid #60a5fa;
+}
+
+.today-run-coaching-answer--load.is-acwr-high {
+  border-left: 3px solid #facc15;
+}
+
+.today-run-coaching-answer--load.is-acwr-danger {
+  border-left: 3px solid #f87171;
+}
+
+.today-run-coaching-answer--load.is-acwr-unknown {
+  border-left: 3px solid rgba(255,255,255,0.2);
+}
+
+@media (max-width: 1080px) {
+  .today-run-coaching-strip-inner {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .today-run-coaching-strip {
+    margin: 0 0 12px;
+    padding: 12px 14px;
+  }
+
+  .today-run-coaching-strip-inner {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .today-run-coaching-answer {
+    padding: 8px 10px;
+  }
+}
+
+.today-run-plan-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.8fr);
+  gap: 24px;
+  padding: 28px;
+  border-radius: 32px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(240, 117, 97, 0.22), transparent 24%),
+    radial-gradient(circle at 82% 0%, rgba(255, 255, 255, 0.06), transparent 24%),
+    linear-gradient(145deg, #1f1b1a 0%, #141313 72%, #101010 100%);
+  box-shadow: 0 30px 72px rgba(0, 0, 0, 0.34);
+}
+
+.today-run-plan-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -8% -24% auto;
+  width: 360px;
+  height: 360px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(240, 117, 97, 0.22), transparent 68%);
+  pointer-events: none;
+}
+
+.today-run-plan-hero-copy,
+.today-run-plan-hero-panel,
+.today-run-plan-card {
+  position: relative;
+  z-index: 1;
+}
+
+.today-run-plan-kicker,
+.today-run-plan-card-head span,
+.today-run-plan-panel-copy > span {
+  display: inline-flex;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(247, 171, 155, 0.82);
+}
+
+.today-run-plan-hero-copy h1,
+.today-run-plan-card-head h2,
+.today-run-plan-panel-copy h2 {
+  margin: 10px 0 0;
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  transform: none;
+}
+
+.today-run-plan-hero-copy h1 {
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  max-width: 11ch;
+}
+
+.today-run-plan-hero-copy > p,
+.today-run-plan-card-head p,
+.today-run-plan-panel-copy p {
+  margin: 14px 0 0;
+  color: rgba(232, 226, 220, 0.72);
+  max-width: 64ch;
+  line-height: 1.7;
+}
+
+.today-run-plan-badges {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.today-run-plan-metric-adjusted {
+  display: flex;
+  flex-direction: column;
+}
+
+.today-run-plan-metric-adjusted small {
+  margin-top: 4px;
+  color: #ffb5a6;
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.9;
+  letter-spacing: 0.01em;
+}
+
+.today-run-marathon-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.14);
+  color: #ffb5a6;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.today-run-plan-hero-metrics,
+.today-run-plan-panel-grid,
+.today-run-plan-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.today-run-plan-hero-metrics {
+  margin-top: 24px;
+}
+
+.today-run-plan-hero-metrics article,
+.today-run-plan-panel-grid article,
+.today-run-plan-signal-grid article {
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+}
+
+.today-run-plan-vdot-trend.is-improving {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.today-run-plan-vdot-trend.is-declining {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.today-run-plan-vdot-trend.is-maintaining {
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.today-run-plan-vdot-trend-delta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+.today-run-plan-vdot-trend.is-improving .today-run-plan-vdot-trend-delta {
+  color: #22c55e;
+}
+
+.today-run-plan-vdot-trend.is-declining .today-run-plan-vdot-trend-delta {
+  color: #ef4444;
+}
+
+.today-run-plan-vdot-trend.is-maintaining .today-run-plan-vdot-trend-delta {
+  color: #eab308;
+}
+
+.today-run-plan-hero-metrics span,
+.today-run-plan-panel-grid span,
+.today-run-plan-signal-grid span,
+.today-run-plan-coach-line span {
+  display: block;
+  color: rgba(232, 226, 220, 0.44);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.today-run-plan-hero-metrics strong,
+.today-run-plan-panel-grid strong,
+.today-run-plan-signal-grid strong,
+.today-run-plan-coach-line strong {
+  display: block;
+  margin-top: 10px;
+  color: #f4f0ea;
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.today-run-plan-weather {
+  margin-top: 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.today-run-plan-weather.is-penalty {
+  background: rgba(240, 117, 97, 0.14);
+}
+
+.today-run-plan-weather-copy strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff2ee;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.today-run-plan-weather-copy p {
+  margin: 8px 0 0;
+  color: rgba(232, 226, 220, 0.72);
+  line-height: 1.6;
+}
+
+.today-run-plan-weather-dismiss {
+  border: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f0ea;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.today-run-plan-hero-panel,
+.today-run-plan-card {
+  padding: 22px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(46, 42, 40, 0.94), rgba(29, 27, 27, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.today-run-shoe-brief {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.today-run-shoe-brief.is-positive {
+  background: linear-gradient(145deg, rgba(255, 138, 114, 0.16), rgba(255, 255, 255, 0.05));
+}
+
+.today-run-shoe-brief.is-empty {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.today-run-shoe-brief-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.today-run-shoe-brief-copy span,
+.today-run-shoe-brief-meta span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 235, 228, 0.54);
+}
+
+.today-run-shoe-brief-copy h3 {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  line-height: 1.05;
+  color: #fff3ee;
+}
+
+.today-run-shoe-brief-copy p {
+  margin: 0;
+  color: rgba(255, 241, 237, 0.78);
+}
+
+.today-run-shoe-brief-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.today-run-shoe-brief-action {
+  margin-left: auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(255, 138, 114, 0.16);
+  color: #ffb2a4;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.today-run-shoe-brief-action:hover {
+  background: rgba(255, 138, 114, 0.22);
+}
+
+.today-run-plan-panel-copy h2 {
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+}
+
+.today-run-plan-panel-grid {
+  margin-top: 20px;
+}
+
+.today-run-plan-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr);
+  gap: 24px;
+}
+
+.today-run-plan-left,
+.today-run-plan-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.today-run-plan-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.today-run-plan-card-head h2 {
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+}
+
+.today-run-plan-card-head p {
+  max-width: 34ch;
+  font-size: 0.96rem;
+}
+
+.today-run-plan-step-list,
+.today-run-plan-reason-list,
+.today-run-plan-coach-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.today-run-plan-step-card,
+.today-run-plan-reason-card,
+.today-run-plan-coach-line {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 18px 20px;
+}
+
+.today-run-plan-step-card h3 {
+  margin: 14px 0 0;
+  color: #f8f2ed;
+  font-size: 1.16rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.today-run-plan-step-card strong {
+  display: block;
+  margin-top: 10px;
+  color: #ffcfbf;
+  font-size: 0.94rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.today-run-plan-step-card span,
+.today-run-plan-reason-card strong {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.18);
+  color: #ffb59c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-run-plan-step-card p,
+.today-run-plan-reason-card p {
+  margin: 12px 0 0;
+  color: rgba(232, 226, 220, 0.8);
+  line-height: 1.72;
+}
+
+.today-run-plan-reason-card strong {
+  min-width: 44px;
+  justify-content: center;
+}
+
+.today-run-plan-coach-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.today-run-plan-coach-line p {
+  margin: 0;
+  max-width: 28ch;
+  color: rgba(232, 226, 220, 0.8);
+  line-height: 1.6;
+}
+
+.today-run-marathon-cta-row {
+  margin-top: 14px;
+}
+
+.today-run-marathon-cta-btn {
+  min-height: 46px;
+  padding-inline: 18px;
+}
+
+.today-run-plan-card--coach .today-run-plan-card-head h2 {
+  font-size: 1.14rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+@media (max-width: 1100px) {
+  .today-run-plan-hero,
+  .today-run-plan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .today-run-plan-card-head {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .today-run-plan-hero,
+  .today-run-plan-hero-panel,
+  .today-run-plan-card {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .today-run-plan-hero-metrics,
+  .today-run-plan-panel-grid,
+  .today-run-plan-signal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-run-plan-weather {
+    flex-direction: column;
+  }
+
+  .today-run-plan-weather-dismiss {
+    align-self: flex-end;
+  }
+}
+
+.today-run-stitch-canvas {
+  padding-top: 24px;
+  display: grid;
+  gap: 24px;
+}
+
+.today-run-stitch-hero {
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  align-items: flex-end;
+  padding: 34px;
+  border-radius: 32px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #1b1615 0%, #121111 100%);
+  box-shadow: 0 34px 72px rgba(0, 0, 0, 0.34);
+}
+
+.today-run-stitch-hero-media {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: grayscale(0.18) brightness(0.52);
+  transform: scale(1.01);
+}
+
+.today-run-stitch-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(10, 10, 10, 0.06), rgba(17, 20, 21, 0.9)),
+    radial-gradient(circle at 22% 82%, rgba(240, 117, 97, 0.18), transparent 24%);
+}
+
+.today-run-stitch-hero-copy,
+.today-run-stitch-readiness-card,
+.today-run-stitch-card {
+  position: relative;
+  z-index: 1;
+}
+
+.today-run-stitch-hero-copy {
+  max-width: 760px;
+  display: grid;
+  gap: 18px;
+}
+
+.today-run-stitch-focus-tag,
+.today-run-stitch-card-kicker,
+.today-run-stitch-card-head span,
+.today-run-stitch-step-head span,
+.today-run-stitch-why span,
+.today-run-stitch-note span,
+.today-run-stitch-support-grid span,
+.today-run-stitch-readiness-grid span,
+.today-run-stitch-readiness-pill span,
+.today-run-stitch-meta-row span {
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 183, 171, 0.84);
+}
+
+.today-run-stitch-hero-copy h1,
+.today-run-stitch-card-head h2,
+.today-run-stitch-step-body h3 {
+  margin: 0;
+  font-family: "Manrope", var(--font-display);
+  color: #f4f0ea;
+  letter-spacing: -0.05em;
+}
+
+.today-run-stitch-hero-copy h1 {
+  display: grid;
+  gap: 2px;
+  font-size: clamp(3.2rem, 7vw, 6.4rem);
+  line-height: 0.94;
+  max-width: 11ch;
+}
+
+.today-run-stitch-hero-copy h1 span {
+  color: #ffb4a7;
+}
+
+.today-run-stitch-hero-copy p,
+.today-run-stitch-card-head p,
+.today-run-stitch-step-body p,
+.today-run-stitch-why p,
+.today-run-stitch-note p,
+.today-run-stitch-alert p {
+  margin: 0;
+  color: rgba(232, 226, 220, 0.78);
+  line-height: 1.7;
+}
+
+.today-run-stitch-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.today-run-stitch-meta-row article {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(16, 18, 19, 0.5);
+  backdrop-filter: blur(18px);
+}
+
+.today-run-stitch-meta-row strong,
+.today-run-stitch-readiness-grid strong,
+.today-run-stitch-readiness-pill strong,
+.today-run-stitch-support-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: #f4f0ea;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.today-run-stitch-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+}
+
+.today-run-stitch-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: 28px;
+  background: rgba(22, 23, 24, 0.88);
+}
+
+.today-run-stitch-metric-card,
+.today-run-stitch-readiness-card {
+  background: linear-gradient(180deg, rgba(38, 40, 41, 0.96), rgba(25, 27, 28, 0.96));
+}
+
+.today-run-stitch-metric-card {
+  padding: 28px 24px;
+  border-radius: 22px;
+}
+
+.today-run-stitch-metric-card span {
+  display: block;
+  color: rgba(199, 188, 183, 0.6);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.today-run-stitch-metric-card strong {
+  display: block;
+  margin-top: 14px;
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  line-height: 0.92;
+}
+
+.today-run-stitch-readiness-card {
+  padding: 26px 24px;
+  border-radius: 28px;
+  display: grid;
+  gap: 18px;
+}
+
+.today-run-stitch-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.today-run-stitch-readiness-grid > div {
+  min-width: 0;
+}
+
+.today-run-stitch-readiness-grid strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.today-run-stitch-readiness-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(14, 16, 17, 0.72);
+}
+
+.today-run-stitch-readiness-pill strong {
+  margin-top: 0;
+  color: #ffb4a7;
+  font-size: 1rem;
+}
+
+.today-run-stitch-weather {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.today-run-stitch-weather.is-penalty {
+  background: rgba(240, 117, 97, 0.14);
+}
+
+.today-run-stitch-weather-copy span {
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 197, 187, 0.78);
+}
+
+.today-run-stitch-weather-copy strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff4f0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.today-run-stitch-weather-copy p {
+  margin: 8px 0 0;
+  color: rgba(232, 226, 220, 0.74);
+  line-height: 1.6;
+}
+
+.today-run-stitch-weather-dismiss {
+  border: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f0ea;
+  cursor: pointer;
+}
+
+.today-run-stitch-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+  gap: 24px;
+}
+
+.today-run-stitch-left,
+.today-run-stitch-right {
+  min-width: 0;
+}
+
+.today-run-stitch-right {
+  position: relative;
+}
+
+.today-run-stitch-card {
+  padding: 26px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(240, 117, 97, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(33, 30, 29, 0.96), rgba(24, 23, 22, 0.98));
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+}
+
+.today-run-stitch-card--coach {
+  position: sticky;
+  top: 96px;
+}
+
+.today-run-stitch-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.today-run-stitch-card-head h2 {
+  margin-top: 10px;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 0.98;
+}
+
+.today-run-stitch-card-head p {
+  max-width: 32ch;
+}
+
+.today-run-stitch-timeline {
+  display: grid;
+  gap: 18px;
+  margin-top: 26px;
+}
+
+.today-run-stitch-step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.today-run-stitch-step-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.today-run-stitch-step-rail::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: -18px;
+  width: 2px;
+  background: rgba(87, 66, 62, 0.92);
+}
+
+.today-run-stitch-step:last-child .today-run-stitch-step-rail::after {
+  display: none;
+}
+
+.today-run-stitch-step-dot {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: #47403d;
+  box-shadow: 0 0 0 5px rgba(17, 20, 21, 1);
+}
+
+.today-run-stitch-step.is-accent .today-run-stitch-step-dot {
+  background: #ff8a72;
+}
+
+.today-run-stitch-step-body {
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.today-run-stitch-step-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.today-run-stitch-step-head strong {
+  color: #ffb4a7;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-run-stitch-step-body h3 {
+  margin-top: 12px;
+  font-size: 1.32rem;
+  line-height: 1.04;
+}
+
+.today-run-stitch-step-body p {
+  margin-top: 12px;
+}
+
+.today-run-stitch-why,
+.today-run-stitch-note,
+.today-run-stitch-alert {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border-radius: 24px;
+}
+
+.today-run-stitch-why {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.today-run-stitch-note {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.today-run-stitch-alert {
+  background: rgba(240, 117, 97, 0.14);
+}
+
+.today-run-stitch-reason-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.today-run-stitch-reason {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.today-run-stitch-reason strong {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.18);
+  color: #ffb4a7;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.today-run-stitch-reason p {
+  margin: 0;
+  color: rgba(232, 226, 220, 0.8);
+  line-height: 1.65;
+}
+
+.today-run-stitch-support-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.today-run-stitch-support-grid article {
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.today-run-stitch-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.today-run-stitch-primary-btn,
+.today-run-stitch-secondary-btn {
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font-family: "Inter", var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.today-run-stitch-primary-btn {
+  background: linear-gradient(135deg, #a0392a, #fc7e69);
+  color: #fff5f1;
+  box-shadow: 0 16px 30px rgba(160, 57, 42, 0.18);
+}
+
+.today-run-stitch-secondary-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f0ea;
+}
+
+@media (max-width: 1100px) {
+  .today-run-stitch-band,
+  .today-run-stitch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-run-stitch-card--coach {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .today-run-stitch-hero,
+  .today-run-stitch-card,
+  .today-run-stitch-readiness-card {
+    padding: 22px;
+    border-radius: 26px;
+  }
+
+  .today-run-stitch-card-head {
+    flex-direction: column;
+  }
+
+  .today-run-stitch-metrics,
+  .today-run-stitch-support-grid,
+  .today-run-stitch-readiness-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Today Run command deck redesign final override */
+
+.today-run-command-page {
+  --tr-command-ink: #fff7ef;
+  --tr-command-soft: rgba(255, 247, 239, 0.68);
+  --tr-command-muted: rgba(255, 247, 239, 0.48);
+  --tr-command-carbon: #151311;
+  --tr-command-ember: #f07561;
+  --tr-command-ember-deep: #a0392a;
+  --tr-command-panel: rgba(31, 28, 25, 0.78);
+  --tr-command-panel-strong: rgba(42, 37, 33, 0.9);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(240, 117, 97, 0.16), transparent 24rem),
+    radial-gradient(circle at 86% 18%, rgba(255, 180, 167, 0.1), transparent 22rem),
+    linear-gradient(180deg, #171513 0%, #11100f 52%, #181513 100%) !important;
+}
+
+.today-run-command-page .runner-shell-canvas.today-run-command-canvas {
+  width: min(1560px, calc(100% - clamp(22px, 4vw, 56px))) !important;
+  max-width: none !important;
+  margin-inline: auto !important;
+  padding: clamp(22px, 2.4vw, 34px) 0 clamp(48px, 6vw, 82px) !important;
+  display: grid;
+  gap: clamp(18px, 2.2vw, 30px);
+}
+
+.today-run-command-page .today-run-coaching-strip {
+  position: relative;
+  margin: 0 !important;
+  padding: clamp(12px, 1.5vw, 18px) !important;
+  border: 0 !important;
+  border-radius: clamp(22px, 2vw, 30px) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.025)),
+    rgba(22, 19, 17, 0.74) !important;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.today-run-command-page .today-run-coaching-strip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 0 12%, rgba(240, 117, 97, 0.14) 12% 12.3%, transparent 12.3% 52%, rgba(255, 247, 239, 0.06) 52% 52.2%, transparent 52.2%),
+    radial-gradient(circle at 8% 50%, rgba(240, 117, 97, 0.16), transparent 18rem);
+  pointer-events: none;
+}
+
+.today-run-command-page .today-run-coaching-strip-inner {
+  position: relative;
+  z-index: 1;
+  display: grid !important;
+  grid-template-columns: minmax(260px, 1.3fr) repeat(4, minmax(140px, 0.8fr)) !important;
+  gap: clamp(10px, 1vw, 14px) !important;
+  align-items: stretch !important;
+}
+
+.today-run-command-page .today-run-coaching-answer {
+  min-height: 132px;
+  padding: clamp(14px, 1.25vw, 18px) !important;
+  border: 0 !important;
+  border-radius: clamp(16px, 1.5vw, 22px) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)),
+    rgba(255, 255, 255, 0.035) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.today-run-command-page .today-run-coaching-answer--readiness {
+  background:
+    radial-gradient(circle at 88% 18%, rgba(240, 117, 97, 0.24), transparent 12rem),
+    linear-gradient(135deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.04)) !important;
+}
+
+.today-run-command-page .today-run-coaching-answer-kicker,
+.today-run-command-page .today-run-plan-kicker,
+.today-run-command-page .today-run-plan-card-head span,
+.today-run-command-page .today-run-plan-panel-copy > span,
+.today-run-command-page .today-run-plan-hero-metrics span,
+.today-run-command-page .today-run-plan-panel-grid span,
+.today-run-command-page .today-run-plan-signal-grid span,
+.today-run-command-page .today-run-plan-coach-line span,
+.today-run-command-page .today-run-shoe-brief-copy span,
+.today-run-command-page .today-run-shoe-brief-meta span {
+  color: var(--tr-command-muted) !important;
+  font-size: 0.66rem !important;
+  font-weight: 850 !important;
+  letter-spacing: 0.19em !important;
+}
+
+.today-run-command-page .today-run-coaching-answer-value {
+  color: var(--tr-command-ink) !important;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.05rem, 1.3vw, 1.38rem) !important;
+  letter-spacing: -0.025em;
+}
+
+.today-run-command-page .today-run-coaching-answer-sub {
+  color: var(--tr-command-soft) !important;
+}
+
+.today-run-command-page .today-run-readiness-signal {
+  background: rgba(255, 247, 239, 0.08);
+  border-radius: 999px;
+  padding: 5px 8px;
+}
+
+.today-run-command-page .today-run-readiness-signal-bar {
+  background: rgba(255, 247, 239, 0.1);
+}
+
+.today-run-command-page .today-run-readiness-signal-fill {
+  background: linear-gradient(90deg, var(--tr-command-ember), #ffb4a7);
+}
+
+.today-run-command-page .today-run-command-hero {
+  min-height: clamp(640px, 62vw, 840px);
+  grid-template-columns: minmax(0, 1.06fr) minmax(380px, 0.94fr) !important;
+  gap: clamp(18px, 2vw, 28px) !important;
+  padding: clamp(28px, 3.6vw, 56px) !important;
+  border-radius: clamp(28px, 3vw, 44px) !important;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(240, 117, 97, 0.26), transparent 25rem),
+    radial-gradient(circle at 78% 18%, rgba(255, 180, 167, 0.11), transparent 22rem),
+    linear-gradient(135deg, rgba(38, 33, 29, 0.98), rgba(16, 15, 14, 0.98) 62%, #0e0d0c) !important;
+  box-shadow:
+    0 34px 86px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.today-run-command-page .today-run-command-hero::before {
+  content: "";
+  position: absolute;
+  inset: clamp(18px, 2vw, 28px);
+  border-radius: clamp(22px, 2.2vw, 34px);
+  background:
+    linear-gradient(115deg, rgba(255, 247, 239, 0.055) 0 1px, transparent 1px 22px),
+    radial-gradient(circle at 50% 100%, rgba(240, 117, 97, 0.1), transparent 34rem);
+  mask-image: linear-gradient(90deg, #000 0%, rgba(0,0,0,0.74) 58%, transparent 100%);
+  pointer-events: none;
+}
+
+.today-run-command-page .today-run-command-hero::after {
+  width: min(46vw, 640px) !important;
+  height: min(46vw, 640px) !important;
+  inset: auto -10% -26% auto !important;
+  background:
+    radial-gradient(circle, rgba(240, 117, 97, 0.28), transparent 62%),
+    conic-gradient(from 210deg, transparent, rgba(255, 180, 167, 0.13), transparent) !important;
+}
+
+.today-run-command-page .today-run-command-hero-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.today-run-command-page .today-run-command-hero-copy h1 {
+  max-width: 12ch !important;
+  font-size: clamp(3.35rem, 6.4vw, 7.35rem) !important;
+  line-height: 0.88 !important;
+  letter-spacing: -0.085em !important;
+  text-wrap: balance;
+}
+
+.today-run-command-page .today-run-command-hero-copy > p {
+  max-width: 58ch !important;
+  color: var(--tr-command-soft) !important;
+  font-size: clamp(1rem, 1.15vw, 1.16rem);
+}
+
+.today-run-command-page .today-run-overview-disclosure {
+  width: min(100%, 620px);
+}
+
+.today-run-command-page .today-run-plan-morning-briefing {
+  width: min(100%, 760px);
+  margin-top: clamp(22px, 2.8vw, 38px);
+  padding: clamp(18px, 2vw, 26px);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.035)),
+    rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.today-run-command-page .today-run-plan-morning-briefing p,
+.today-run-command-page .today-run-plan-wellness-insight span {
+  color: rgba(255, 247, 239, 0.8) !important;
+}
+
+.today-run-command-page .today-run-plan-downshift-btn,
+.today-run-command-page .today-run-stitch-primary-btn,
+.today-run-command-page .today-run-stitch-secondary-btn,
+.today-run-command-page .today-run-shoe-brief-action {
+  min-height: 44px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  font-weight: 850;
+}
+
+.today-run-command-page .today-run-plan-downshift-btn,
+.today-run-command-page .today-run-stitch-primary-btn {
+  background: linear-gradient(135deg, var(--tr-command-ember-deep), var(--tr-command-ember)) !important;
+  color: #fff7ef !important;
+  box-shadow: 0 18px 34px rgba(160, 57, 42, 0.24);
+}
+
+.today-run-command-page .today-run-stitch-secondary-btn,
+.today-run-command-page .today-run-shoe-brief-action {
+  background: rgba(255, 247, 239, 0.1) !important;
+  color: #ffd6cb !important;
+}
+
+.today-run-command-page .today-run-plan-badges {
+  margin-top: clamp(18px, 2vw, 28px) !important;
+}
+
+.today-run-command-page .today-run-marathon-pill {
+  border: 0;
+  background: rgba(255, 247, 239, 0.085) !important;
+  color: #ffd7cd !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.today-run-command-page .today-run-plan-rationale {
+  margin-top: clamp(18px, 2vw, 28px);
+  padding: clamp(16px, 1.6vw, 22px);
+  border-radius: 24px;
+  background: rgba(255, 247, 239, 0.06);
+}
+
+.today-run-command-page .today-run-plan-rationale-label {
+  color: #ffd6cb;
+}
+
+.today-run-command-page .today-run-plan-rationale-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.today-run-command-page .today-run-plan-rationale-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(255, 247, 239, 0.08);
+  color: rgba(255, 247, 239, 0.78);
+  font-size: 0.86rem;
+}
+
+.today-run-command-page .today-run-plan-hero-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.today-run-command-page .today-run-plan-hero-metrics article,
+.today-run-command-page .today-run-plan-panel-grid article,
+.today-run-command-page .today-run-plan-signal-grid article {
+  border: 0 !important;
+  border-radius: 22px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.035)),
+    rgba(255, 255, 255, 0.04) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.today-run-command-page .today-run-plan-hero-metrics strong,
+.today-run-command-page .today-run-plan-panel-grid strong,
+.today-run-command-page .today-run-plan-signal-grid strong,
+.today-run-command-page .today-run-plan-coach-line strong {
+  color: var(--tr-command-ink) !important;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.18rem, 1.7vw, 1.65rem) !important;
+}
+
+.today-run-command-page .today-run-command-readiness-panel {
+  display: grid;
+  align-content: space-between;
+  min-height: 100%;
+  padding: clamp(22px, 2.4vw, 34px) !important;
+  border-radius: clamp(24px, 2.2vw, 34px) !important;
+  background:
+    radial-gradient(circle at 86% 12%, rgba(240, 117, 97, 0.22), transparent 17rem),
+    linear-gradient(160deg, rgba(255, 247, 239, 0.12), rgba(255, 247, 239, 0.035)),
+    rgba(255, 255, 255, 0.06) !important;
+}
+
+.today-run-command-page .today-run-command-readiness-panel::before {
+  content: "";
+  justify-self: end;
+  width: clamp(112px, 12vw, 168px);
+  aspect-ratio: 1;
+  margin-bottom: clamp(18px, 3vw, 34px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(20, 18, 16, 0.9) 0 47%, transparent 48%),
+    conic-gradient(from 220deg, var(--tr-command-ember), #ffb4a7 64%, rgba(255, 247, 239, 0.14) 64%);
+  box-shadow: 0 22px 56px rgba(240, 117, 97, 0.16);
+}
+
+.today-run-command-page .today-run-plan-panel-copy h2 {
+  font-size: clamp(2.4rem, 4vw, 4.7rem) !important;
+  line-height: 0.88 !important;
+  letter-spacing: -0.08em !important;
+}
+
+.today-run-command-page .today-run-plan-grid.today-run-command-grid {
+  grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr) !important;
+  gap: clamp(18px, 2vw, 28px) !important;
+}
+
+.today-run-command-page .today-run-plan-card {
+  border: 0 !important;
+  border-radius: clamp(26px, 2.4vw, 38px) !important;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(240, 117, 97, 0.12), transparent 18rem),
+    linear-gradient(180deg, rgba(39, 35, 31, 0.94), rgba(25, 23, 21, 0.96)) !important;
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.today-run-command-page .today-run-plan-card-head {
+  align-items: flex-end !important;
+  border-bottom: 1px solid rgba(255, 247, 239, 0.08);
+  padding-bottom: 18px;
+}
+
+.today-run-command-page .today-run-plan-card-head h2 {
+  max-width: 11ch;
+  font-size: clamp(2.2rem, 3.4vw, 4rem) !important;
+  line-height: 0.9 !important;
+  letter-spacing: -0.075em !important;
+}
+
+.today-run-command-page .today-run-plan-step-list {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: clamp(12px, 1.2vw, 16px) !important;
+}
+
+.today-run-command-page .today-run-plan-step-card,
+.today-run-command-page .today-run-plan-reason-card,
+.today-run-command-page .today-run-plan-coach-line,
+.today-run-command-page .today-run-shoe-brief {
+  border: 0 !important;
+  border-radius: 24px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 239, 0.085), rgba(255, 247, 239, 0.03)),
+    rgba(255, 255, 255, 0.035) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.today-run-command-page .today-run-plan-step-card h3,
+.today-run-command-page .today-run-shoe-brief-copy h3 {
+  color: var(--tr-command-ink) !important;
+}
+
+.today-run-command-page .today-run-plan-step-card p,
+.today-run-command-page .today-run-plan-reason-card p,
+.today-run-command-page .today-run-plan-coach-line p,
+.today-run-command-page .today-run-shoe-brief-copy p,
+.today-run-command-page .today-run-plan-card-head p,
+.today-run-command-page .today-run-plan-panel-copy p {
+  color: var(--tr-command-soft) !important;
+}
+
+.today-run-command-page .today-run-plan-step-card span,
+.today-run-command-page .today-run-plan-reason-card strong {
+  border: 0;
+  background: rgba(240, 117, 97, 0.18) !important;
+  color: #ffd2c8 !important;
+}
+
+.today-run-command-page .today-run-plan-coach-line {
+  align-items: stretch !important;
+}
+
+.today-run-command-page .today-run-plan-signal-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.today-run-command-page .runner-shell-footer {
+  opacity: 0.84;
+}
+
+@media (max-width: 1180px) {
+  .today-run-command-page .today-run-coaching-strip-inner,
+  .today-run-command-page .today-run-command-hero,
+  .today-run-command-page .today-run-plan-grid.today-run-command-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .today-run-command-page .today-run-command-hero {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .today-run-command-page .runner-shell-canvas.today-run-command-canvas {
+    width: min(100% - 22px, 100%) !important;
+  }
+
+  .today-run-command-page .today-run-plan-hero-metrics,
+  .today-run-command-page .today-run-plan-panel-grid,
+  .today-run-command-page .today-run-plan-signal-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .today-run-command-page .today-run-command-hero-copy h1 {
+    font-size: clamp(2.8rem, 16vw, 4.7rem) !important;
+  }
+}
+
+.today-run-stitch-coach-badge,
+.prediction-marathon-coach-badge,
+.analysis-intensity-coach-badge,
+.analysis-load-coach-badge,
+.analysis-overview-coach-badge,
+.analysis-coach-command-coach-badge,
+.analysis-cinematic-coach-badge {
+  align-self: flex-start;
+}
+
+.today-run-stitch-coach-system-copy {
+  margin: 0 0 18px;
+  max-width: 32ch;
+}
+
+/* Morning Briefing */
+
+.today-run-plan-morning-briefing {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: rgba(240, 117, 97, 0.05);
+  border: 1px solid rgba(240, 117, 97, 0.12);
+  position: relative;
+}
+
+.today-run-plan-morning-briefing-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(247, 171, 155, 0.9);
+  margin-bottom: 8px;
+}
+
+.today-run-plan-morning-briefing p {
+  margin: 0 !important;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #fff2ee;
+  font-style: italic;
+  font-family: var(--font-display);
+}
+
+/* Downshift Button */
+
+.today-run-plan-downshift-btn {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.today-run-plan-downshift-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.today-run-plan-downshift-btn.is-active {
+  background: rgba(240, 117, 97, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.today-run-plan-downshift-btn.is-active:hover {
+  background: rgba(240, 117, 97, 0.18);
+}
+
+.today-run-plan-downshift-btn .runner-dashboard-side-link-icon {
+  width: 18px !important;
+  height: 18px !important;
+  color: inherit;
+}
+
+/* Rationale & Confidence Block */
+
+.today-run-plan-rationale {
+  margin-top: 24px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+}
+
+.today-run-plan-rationale-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.today-run-plan-rationale-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+}
+
+.today-run-plan-confidence-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.today-run-plan-confidence-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.today-run-plan-confidence-bar {
+  position: relative;
+  width: 120px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.today-run-plan-confidence-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.today-run-plan-confidence-bar.is-ready .today-run-plan-confidence-fill {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.today-run-plan-confidence-bar.is-warning .today-run-plan-confidence-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.today-run-plan-confidence-bar.is-action .today-run-plan-confidence-fill {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.today-run-plan-confidence-value {
+  position: absolute;
+  right: -36px;
+  top: -6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.today-run-plan-rationale-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.today-run-plan-rationale-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.today-run-plan-rationale-icon {
+  width: 16px !important;
+  height: 16px !important;
+  color: var(--brand-accent);
+  opacity: 0.8;
+}
+
+.today-run-load-callout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 4px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.today-run-load-callout.is-unknown {
+  border-left-color: rgba(255, 255, 255, 0.25);
+}
+
+.today-run-load-callout.is-low {
+  border-left-color: #60a5fa;
+}
+
+.today-run-load-callout.is-optimal {
+  border-left-color: #4ade80;
+}
+
+.today-run-load-callout.is-high {
+  border-left-color: #facc15;
+}
+
+.today-run-load-callout.is-danger {
+  border-left-color: #f87171;
+}
+
+.today-run-load-callout-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.today-run-load-callout-copy span,
+.today-run-load-callout-metric small {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+}
+
+.today-run-load-callout-copy strong {
+  font-size: 1.05rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.today-run-load-callout-copy p {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.today-run-load-callout-metric {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.today-run-load-callout-metric strong {
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.today-run-load-callout-zone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.today-run-load-callout.is-low .today-run-load-callout-zone {
+  background: rgba(96, 165, 250, 0.16);
+  color: #bfdbfe;
+}
+
+.today-run-load-callout.is-optimal .today-run-load-callout-zone {
+  background: rgba(74, 222, 128, 0.16);
+  color: #bbf7d0;
+}
+
+.today-run-load-callout.is-high .today-run-load-callout-zone {
+  background: rgba(250, 204, 21, 0.16);
+  color: #fde68a;
+}
+
+.today-run-load-callout.is-danger .today-run-load-callout-zone {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+}
+
+.today-run-load-callout.is-unknown .today-run-load-callout-zone {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.today-run-load-callout-metric span {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+  .today-run-plan-rationale-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .today-run-load-callout {
+    grid-template-columns: 1fr;
+  }
+
+  .today-run-load-callout-metric {
+    justify-items: start;
+  }
+}
+
+/* TodayRun Wellness Styles */
+
+.today-run-coaching-wellness-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 4px 0 2px;
+}
+
+.today-run-coaching-wellness-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.today-run-coaching-wellness-item strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--slate-900);
+}
+
+.today-run-coaching-wellness-icon {
+   width: 14px;
+   height: 14px;
+   opacity: 0.7;
+   color: var(--indigo-500);
+ }
+
+.today-run-coaching-answer--readiness {
+  border-left: 3px solid rgba(255,255,255,0.15);
+}
+
+.today-run-coaching-answer--readiness.is-verdict-go {
+  border-left-color: #4ade80;
+}
+
+.today-run-coaching-answer--readiness.is-verdict-easy {
+  border-left-color: #60a5fa;
+}
+
+.today-run-coaching-answer--readiness.is-verdict-recovery {
+  border-left-color: #fb923c;
+}
+
+.today-run-coaching-answer--readiness.is-verdict-rest {
+  border-left-color: #f87171;
+}
+
+.today-run-readiness-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.today-run-readiness-signal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6); /* tokens-ok �?inside dark coaching strip; overridden in light mode below */
+}
+
+.today-run-readiness-signal-label {
+  flex-shrink: 0;
+  min-width: 32px; /* tokens-ok */
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.7;
+  letter-spacing: 0.02em;
+}
+
+.today-run-readiness-signal small {
+  flex-shrink: 0;
+  min-width: 18px;
+  text-align: right;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7); /* tokens-ok �?inside dark coaching strip; overridden in light mode below */
+}
+
+.today-run-readiness-signal-scale {
+  font-weight: 400; /* tokens-ok */
+  opacity: 0.55;
+  margin-left: 1px;
+}
+
+.today-run-readiness-signal-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.today-run-readiness-signal-bar {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.1); /* tokens-ok �?inside dark coaching strip; overridden in light mode below */
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.today-run-readiness-signal-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, #60a5fa, #4ade80); /* tokens-ok �?data-vis gradient, no token equivalent */
+  transition: width var(--transition);
+}
+
+.today-run-plan-metric-adjusted {
+  position: relative;
+}
+
+.today-run-plan-metric-adjusted small {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--slate-400);
+  text-decoration: line-through;
+  margin-top: -2px;
+}
+
+/* Wellness Interpretation Styles */
+
+.today-run-plan-wellness-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(var(--indigo-rgb, 129, 140, 248), 0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(var(--indigo-rgb, 129, 140, 248), 0.1);
+}
+
+.today-run-plan-wellness-insight {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.today-run-plan-wellness-insight-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--indigo-500);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.today-run-plan-wellness-insight span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--slate-700);
+  line-height: 1.5;
+}

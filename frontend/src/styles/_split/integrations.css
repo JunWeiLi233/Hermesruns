@@ -1,0 +1,1545 @@
+.strava-sync-notice {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    border-radius: 22px;
+}
+
+.strava-sync-notice__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.strava-sync-notice__icon svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.strava-sync-notice__copy {
+    min-width: 0;
+}
+
+.strava-sync-notice__copy strong,
+.reward-card__body h3 {
+    display: block;
+    margin: 0 0 4px;
+}
+
+.strava-sync-notice__copy p,
+.reward-card__body p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.55;
+}
+
+.import-guide {
+    margin-bottom: 20px;
+    padding: 16px 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-soft);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.import-guide-title {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
+    font-family: var(--font-display);
+}
+
+.import-guide-list {
+    margin: 0 0 12px;
+    padding-left: 1.35rem;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    color: var(--text-strong);
+}
+
+.import-guide-list li {
+    margin-bottom: 8px;
+}
+
+.import-guide-list li:last-child {
+    margin-bottom: 0;
+}
+
+.import-guide-strava {
+    margin-bottom: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line-soft, rgba(255, 255, 255, 0.08));
+}
+
+.import-guide-strava-title {
+    margin: 0 0 8px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
+    font-family: var(--font-display);
+}
+
+.import-guide-strava-body {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+
+.import-guide-note {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+}
+
+.import-source-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.import-source-card {
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.import-source-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.import-source-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.import-source-title {
+    color: var(--text-strong);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.import-source-hint {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.import-source-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 107, 53, 0.2);
+    background: rgba(255, 107, 53, 0.08);
+    color: var(--brand-accent-strong);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.import-source-card input[type="file"] {
+    margin-top: 8px;
+}
+
+.import-summary-line {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.garmin-import-form {
+  display: grid;
+  gap: 16px;
+}
+
+.garmin-import-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.06));
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface-strong, #fff) 94%, transparent), color-mix(in srgb, #11548a 14%, transparent));
+}
+
+.garmin-import-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.garmin-import-hero-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+}
+
+.garmin-import-hero-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.garmin-import-hero-copy strong {
+  font-size: 1rem;
+}
+
+.garmin-import-hero-copy p,
+.garmin-credentials-note,
+.garmin-import-secondary span {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1.6;
+}
+
+.garmin-import-pill {
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: color-mix(in srgb, #11548a 12%, transparent);
+  color: #11548a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.garmin-import-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.garmin-import-field {
+  display: grid;
+  gap: 8px;
+}
+
+.garmin-import-limit {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.06));
+  background: color-mix(in srgb, var(--surface-strong, #fff) 90%, transparent);
+  color: var(--text-strong, #0f172a);
+}
+
+.garmin-import-status {
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.86rem;
+  border: 1px solid transparent;
+}
+
+.garmin-import-status--success {
+  background: rgba(22, 163, 74, 0.12);
+  border-color: rgba(22, 163, 74, 0.2);
+  color: #15803d;
+}
+
+.garmin-import-status--error {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.16);
+  color: #b91c1c;
+}
+
+.garmin-import-status--warn,
+.garmin-import-status--info {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.16);
+  color: var(--text-strong, #0f172a);
+}
+
+.garmin-import-actions {
+  margin-top: 4px;
+}
+
+.garmin-import-secondary {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-soft, rgba(255, 255, 255, 0.06));
+}
+
+.garmin-import-secondary-button {
+  width: auto;
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.garmin-wellness-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border, rgba(255,255,255,0.1)); }
+
+.garmin-wellness-section-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; }
+
+.garmin-wellness-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+
+.garmin-wellness-toggle { position: relative; width: 44px; height: 24px; border-radius: 12px; background: var(--card-muted-bg, #3a3a3a); cursor: pointer; transition: background 0.2s; border: none; }
+
+.garmin-wellness-toggle.garmin-wellness-toggle--active { background: var(--accent-green, #22c55e); }
+
+.garmin-wellness-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+
+.garmin-wellness-toggle.garmin-wellness-toggle--active::after { transform: translateX(20px); }
+
+.garmin-wellness-sync-btn { padding: 0.45rem 1.1rem; border-radius: 6px; border: 1px solid var(--card-border, rgba(255,255,255,0.15)); background: var(--card-bg, #1a1a1a); color: var(--text-primary, #fff); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+
+.garmin-wellness-sync-btn:hover:not(:disabled) { background: var(--card-hover, #2a2a2a); border-color: var(--accent-blue, #3b82f6); }
+
+.garmin-wellness-sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.garmin-wellness-status { font-size: 0.8rem; color: var(--text-secondary, #999); margin-top: 0.5rem; }
+
+.garmin-wellness-save-credentials-btn { padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid var(--card-border, rgba(255,255,255,0.15)); background: transparent; color: var(--text-secondary, #999); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+
+.garmin-wellness-save-credentials-btn:hover { color: var(--text-primary, #fff); border-color: var(--text-primary, #fff); }
+
+.garmin-import-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--garmin-tone-bg);
+  box-shadow: inset 0 0 0 1px var(--garmin-tone-ring);
+  color: var(--garmin-tone-fg);
+  white-space: nowrap;
+}
+
+.garmin-import-modal-shell {
+  background:
+    radial-gradient(circle at top left, rgba(122, 202, 222, 0.14), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(240, 117, 97, 0.18), transparent 30%),
+    rgba(4, 7, 12, 0.62);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.garmin-import-modal-card {
+  width: min(100%, 1040px);
+  padding: 28px;
+  border: 0;
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.16), transparent 24%),
+    linear-gradient(160deg, rgba(25, 24, 27, 0.96), rgba(14, 18, 28, 0.98));
+  box-shadow: 0 36px 80px rgba(0, 0, 0, 0.42);
+}
+
+.garmin-import-modal-card .modal-header {
+  padding-bottom: 22px;
+}
+
+.garmin-import-modal-card .modal-header h3 {
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(2.15rem, 4vw, 3rem);
+  font-style: italic;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.garmin-import-modal-card .modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.garmin-import-modal-card .modal-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.garmin-import-form {
+  gap: 0;
+}
+
+.garmin-import-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 20px;
+}
+
+.garmin-import-visual,
+.garmin-import-panel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.garmin-import-hero {
+  align-items: flex-start;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.garmin-import-hero-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+}
+
+.garmin-import-hero-copy {
+  gap: 6px;
+}
+
+.garmin-import-hero-copy strong {
+  font-size: clamp(1.82rem, 3.6vw, 2.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+}
+
+.garmin-import-panel-head,
+.garmin-import-field-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.garmin-import-panel-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.garmin-import-panel-copy strong {
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.garmin-import-field,
+.garmin-import-field--limit {
+  display: grid;
+  gap: 10px;
+}
+
+.garmin-import-field--limit,
+.garmin-import-secondary {
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.garmin-import-panel .modal-label {
+  margin-bottom: 0;
+}
+
+.garmin-import-panel input,
+.garmin-import-limit {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #fff7f3;
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.garmin-import-panel input::placeholder {
+  color: rgba(232, 226, 220, 0.42);
+}
+
+.garmin-import-panel input:hover,
+.garmin-import-limit:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.garmin-import-panel input:focus,
+.garmin-import-limit:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 0 0 1px rgba(252, 126, 105, 0.42),
+    0 0 0 4px rgba(240, 117, 97, 0.14);
+}
+
+.garmin-import-limit {
+  appearance: none;
+  color-scheme: dark;
+}
+
+.garmin-import-secondary {
+  align-items: center;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 0;
+}
+
+.garmin-import-secondary-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.garmin-import-secondary-button {
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f3ee;
+  box-shadow: none;
+}
+
+.garmin-import-secondary-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.garmin-import-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 0;
+}
+
+.garmin-import-actions .modal-button {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 0;
+  border-radius: 999px;
+}
+
+.garmin-import-actions .btn-primary {
+  background: linear-gradient(135deg, #f07561, #ff9f7e);
+  box-shadow: 0 18px 30px rgba(240, 117, 97, 0.22);
+}
+
+.garmin-import-actions .btn-secondary {
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f3ee;
+}
+
+.garmin-import-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.garmin-import-page {
+  width: min(100%, 1240px);
+  margin: 0 auto;
+  padding: 40px 32px 56px;
+  display: grid;
+  gap: 24px;
+}
+
+.garmin-import-page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px 24px;
+  align-items: end;
+}
+
+.garmin-import-page-back {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f3ee;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.garmin-import-page-back:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.garmin-import-page-heading {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.garmin-import-page-heading h1 {
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  font-style: italic;
+  line-height: 0.92;
+  letter-spacing: -0.08em;
+  color: #fff8f4;
+}
+
+.garmin-import-page-heading p,
+.garmin-import-page-copy {
+  max-width: 54rem;
+  color: rgba(232, 226, 220, 0.78);
+  line-height: 1.68;
+}
+
+.garmin-import-page-copy.is-inline {
+  max-width: none;
+}
+
+.garmin-import-page-status {
+  justify-self: end;
+  width: min(100%, 320px);
+}
+
+.garmin-import-page-card {
+  display: grid;
+  gap: 22px;
+  padding: 28px;
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at top right, rgba(122, 202, 222, 0.16), transparent 24%),
+    linear-gradient(160deg, rgba(25, 24, 27, 0.96), rgba(14, 18, 28, 0.98));
+  box-shadow: 0 36px 80px rgba(0, 0, 0, 0.42);
+}
+
+.garmin-import-page-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 20px;
+}
+
+.garmin-import-page-wellness,
+.garmin-import-page-guide {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.garmin-import-page-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.garmin-import-page-section-head span {
+  display: block;
+  color: rgba(232, 226, 220, 0.6);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.garmin-import-page-section-head strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff9f5;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.48rem, 2.8vw, 1.9rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.garmin-import-page-guide-cta {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f3ee;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.garmin-import-page-guide-cta:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.garmin-import-page-actions {
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .garmin-import-page {
+    padding: 28px 18px 40px;
+  }
+
+  .garmin-import-page-header {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .garmin-import-page-status,
+  .garmin-import-page-back {
+    justify-self: start;
+  }
+
+  .garmin-import-page-card,
+  .garmin-import-page-wellness,
+  .garmin-import-page-guide {
+    padding: 22px 20px;
+    border-radius: 24px;
+  }
+
+  .settings-atlas-service-card--garmin {
+    align-items: stretch;
+    padding: 22px 20px;
+  }
+
+  .settings-atlas-service-main--garmin {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-atlas-service-card--garmin .settings-atlas-service-action {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .settings-atlas-service-card--garmin .settings-atlas-service-action.is-connect {
+    width: auto;
+    flex: 0 0 auto;
+    align-self: flex-start;
+  }
+
+  .settings-atlas-service-meta-grid,
+  .garmin-import-metric-grid,
+  .garmin-import-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-atlas-import-drop--garmin {
+    padding: 20px 18px;
+    justify-items: start;
+  }
+
+  .garmin-import-modal-card {
+    padding: 22px 18px;
+    border-radius: 26px;
+  }
+
+  .garmin-import-visual,
+  .garmin-import-panel {
+    padding: 20px 18px;
+    border-radius: 24px;
+  }
+
+  .garmin-import-panel-head,
+  .garmin-import-field-head,
+  .garmin-import-secondary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .garmin-import-secondary-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.integration-alert-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(240, 117, 97, 0.08), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(242, 117, 71, 0.05), transparent 28%),
+    #131313;
+  color: #e5e2e1;
+}
+
+.integration-alert-topbar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 80px;
+  padding: 20px 22px;
+  background: rgba(10, 10, 10, 0.78);
+  backdrop-filter: blur(22px);
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.34);
+}
+
+.integration-alert-brand,
+.integration-alert-icon-btn,
+.integration-alert-avatar,
+.integration-alert-inline-link,
+.integration-alert-support-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.integration-alert-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.integration-alert-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: rgba(229, 226, 225, 0.68);
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.integration-alert-icon-btn:hover,
+.integration-alert-inline-link:hover,
+.integration-alert-support-link:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.integration-alert-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 180, 167, 0.96), rgba(240, 117, 97, 0.88));
+  color: #451008;
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 24px rgba(240, 117, 97, 0.28);
+}
+
+.integration-alert-shell {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 132px 22px 38px;
+}
+
+.integration-alert-background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.integration-alert-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(120px);
+  opacity: 0.8;
+}
+
+.integration-alert-orb--primary {
+  top: 18%;
+  left: -120px;
+  width: 520px;
+  height: 520px;
+  background: rgba(240, 117, 97, 0.14);
+}
+
+.integration-alert-orb--secondary {
+  right: -90px;
+  bottom: 24%;
+  width: 360px;
+  height: 360px;
+  background: rgba(242, 117, 71, 0.12);
+}
+
+.integration-alert-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(320px, 0.92fr);
+  gap: 22px;
+  width: min(100%, 1080px);
+  margin: auto;
+}
+
+.integration-alert-primary-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.integration-alert-card,
+.integration-alert-sidecard,
+.integration-alert-support-card {
+  border-radius: 24px;
+  background: rgba(30, 29, 29, 0.92);
+  box-shadow: 0 26px 46px rgba(0, 0, 0, 0.34);
+}
+
+.integration-alert-card {
+  overflow: hidden;
+}
+
+.integration-alert-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #f07561 0%, #b24d3a 100%);
+}
+
+.integration-alert-band span,
+.integration-alert-band strong,
+.integration-alert-sidecard-head h2,
+.integration-alert-inline-link,
+.integration-alert-support-link {
+  font-family: "Inter", var(--font-body);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.integration-alert-band span {
+  color: rgba(79, 15, 6, 0.86);
+}
+
+.integration-alert-band strong {
+  color: rgba(255, 239, 233, 0.72);
+  white-space: nowrap;
+}
+
+.integration-alert-card-body {
+  padding: 28px 26px 26px;
+}
+
+.integration-alert-copy h1 {
+  max-width: 12ch;
+  margin: 0;
+  color: #f3efec;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(2.9rem, 5vw, 4.35rem);
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  line-height: 0.92;
+}
+
+.integration-alert-copy p {
+  max-width: 560px;
+  margin: 18px 0 0;
+  color: rgba(229, 226, 225, 0.64);
+  font-size: 1.02rem;
+  line-height: 1.65;
+}
+
+.integration-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.integration-alert-primary-btn,
+.integration-alert-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 28px;
+  border-radius: 999px;
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: transform 0.18s ease, filter 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.integration-alert-primary-btn {
+  border: 0;
+  background: linear-gradient(135deg, #ff8b74 0%, #f07561 100%);
+  color: #5c180b;
+  box-shadow: 0 18px 36px rgba(240, 117, 97, 0.3);
+  cursor: pointer;
+}
+
+.integration-alert-secondary-btn {
+  border: 0;
+  background: rgba(63, 63, 62, 0.96);
+  color: #f2efec;
+  cursor: pointer;
+}
+
+.integration-alert-primary-btn:hover:not(:disabled),
+.integration-alert-secondary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.integration-alert-primary-btn:disabled,
+.integration-alert-secondary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.integration-alert-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  color: #ffb4a7;
+  font-family: "Inter", var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.integration-alert-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.integration-alert-status--alert {
+  color: #ff9d93;
+}
+
+.integration-alert-status--active {
+  color: #f8b2a0;
+}
+
+.integration-alert-sidebar {
+  display: grid;
+  gap: 18px;
+}
+
+.integration-alert-sidecard {
+  padding: 24px 22px 18px;
+}
+
+.integration-alert-sidecard-head h2 {
+  margin: 0;
+  color: rgba(229, 226, 225, 0.42);
+}
+
+.integration-alert-pipeline-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.integration-alert-pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 14px;
+  border-radius: 18px;
+  background: rgba(38, 37, 37, 0.9);
+}
+
+.integration-alert-pipeline.is-live {
+  box-shadow: inset 2px 0 0 rgba(34, 197, 94, 0.55);
+}
+
+.integration-alert-pipeline.is-muted {
+  box-shadow: inset 2px 0 0 rgba(240, 117, 97, 0.45);
+}
+
+.integration-alert-pipeline.is-standby {
+  opacity: 0.7;
+}
+
+.integration-alert-pipeline-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.integration-alert-pipeline-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.integration-alert-pipeline-icon.is-strava {
+  background: rgba(252, 103, 25, 0.16);
+  color: #fc6719;
+}
+
+.integration-alert-pipeline-icon.is-manual {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f3efec;
+}
+
+.integration-alert-pipeline-icon.is-garmin {
+  background: rgba(93, 129, 216, 0.12);
+  color: #97b8ff;
+}
+
+.integration-alert-pipeline strong,
+.integration-alert-support-card strong {
+  display: block;
+  color: #f3efec;
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.integration-alert-pipeline p,
+.integration-alert-support-card p {
+  margin: 4px 0 0;
+  color: rgba(229, 226, 225, 0.38);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.integration-alert-pipeline-state {
+  color: #22c55e;
+  font-size: 1rem;
+}
+
+.integration-alert-pipeline.is-muted .integration-alert-pipeline-state {
+  color: #ff8b74;
+}
+
+.integration-alert-inline-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 20px;
+  padding-top: 18px;
+  color: rgba(245, 240, 234, 0.68);
+}
+
+.integration-alert-support-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 164px;
+  padding: 22px;
+}
+
+.integration-alert-support-link {
+  margin-top: 18px;
+  color: #ffb4a7;
+}
+
+.integration-alert-support-mark {
+  position: absolute;
+  right: -12px;
+  bottom: -18px;
+  font-size: 6.4rem;
+  color: rgba(255, 255, 255, 0.04);
+}
+
+.integration-alert-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px 28px;
+  margin-top: auto;
+  padding: 56px 0 6px;
+}
+
+.integration-alert-footer a,
+.integration-alert-footer p {
+  margin: 0;
+  color: rgba(229, 226, 225, 0.28);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.integration-alert-footer a:hover {
+  color: #ffb4a7;
+}
+
+@media (max-width: 1024px) {
+  .integration-alert-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .integration-alert-shell {
+    padding-inline: 16px;
+  }
+
+  .integration-alert-topbar {
+    padding-inline: 16px;
+  }
+
+  .integration-alert-copy h1 {
+    max-width: none;
+    font-size: 2.8rem;
+  }
+
+  .integration-alert-copy p {
+    font-size: 0.94rem;
+  }
+
+  .integration-alert-actions {
+    flex-direction: column;
+  }
+
+  .integration-alert-primary-btn,
+  .integration-alert-secondary-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .integration-alert-footer {
+    gap: 14px 20px;
+    padding-top: 44px;
+  }
+}
+
+.garmin-import-page-wellness--wide {
+  grid-column: 1 / -1;
+}
+
+.import-data-page {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 56px;
+  display: grid;
+  gap: 24px;
+}
+
+.import-data-page-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+
+.import-data-page-back,
+.import-data-page-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 244, 240, 0.82);
+}
+
+.import-data-page-back {
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.import-data-page-back:hover {
+  transform: translateY(-1px);
+  border-color: rgba(240, 117, 97, 0.36);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.import-data-page-heading {
+  display: grid;
+  gap: 10px;
+}
+
+.import-data-page-kicker-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+  color: rgba(255, 218, 212, 0.66);
+}
+
+.import-data-page-kicker-line {
+  width: 44px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(240, 117, 97, 0.96), rgba(255, 180, 167, 0));
+}
+
+.import-data-page-heading h1 {
+  font-size: clamp(2.4rem, 4vw, 4rem);
+  line-height: 0.95;
+  color: #fff7f5;
+}
+
+.import-data-page-heading p {
+  max-width: 720px;
+  color: rgba(255, 235, 229, 0.74);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.import-data-page-status {
+  display: grid;
+  gap: 4px;
+  min-width: 210px;
+  border-radius: 24px;
+}
+
+.import-data-page-status span {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  color: rgba(255, 218, 212, 0.62);
+}
+
+.import-data-page-status strong {
+  font-size: 1rem;
+  color: #fffaf8;
+}
+
+.import-data-page-status--success {
+  border-color: rgba(52, 211, 153, 0.34);
+  background: rgba(12, 32, 23, 0.8);
+}
+
+.import-data-page-status--error {
+  border-color: rgba(248, 113, 113, 0.36);
+  background: rgba(40, 18, 21, 0.82);
+}
+
+.import-data-page-status--active {
+  border-color: rgba(255, 180, 167, 0.4);
+  background: rgba(58, 24, 19, 0.86);
+}
+
+.import-data-page-card {
+  display: grid;
+  gap: 22px;
+  padding: 26px;
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(24, 26, 31, 0.92), rgba(14, 16, 19, 0.95)),
+    radial-gradient(circle at top left, rgba(240, 117, 97, 0.16), transparent 32%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.28);
+}
+
+.import-data-page-hero {
+  padding: 8px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(240, 117, 97, 0.14), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.import-data-page-hero-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.import-data-page-hero-copy,
+.import-data-page-hero-metrics {
+  padding: 22px;
+  border-radius: 24px;
+  background: rgba(10, 12, 16, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.import-data-page-hero-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.import-data-page-hero-copy strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 2.4vw, 2.6rem);
+  line-height: 1;
+  color: #fff8f6;
+}
+
+.import-data-page-hero-copy p {
+  color: rgba(255, 235, 229, 0.72);
+  line-height: 1.65;
+}
+
+.import-data-page-hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.import-data-page-metric {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: grid;
+  gap: 8px;
+}
+
+.import-data-page-metric span {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.68rem;
+  color: rgba(255, 218, 212, 0.6);
+}
+
+.import-data-page-metric strong {
+  font-size: 1.55rem;
+  color: #fff7f5;
+}
+
+.import-data-page-lane-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.import-data-source-card,
+.import-data-command-lane,
+.import-data-page-guide {
+  min-height: 100%;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.import-data-source-card {
+  box-shadow: none;
+}
+
+.import-data-command-lane {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.import-data-command-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.import-data-command-copy strong {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  color: #fff7f5;
+}
+
+.import-data-command-copy p,
+.import-data-command-lane .import-summary-line {
+  color: rgba(255, 235, 229, 0.74);
+  line-height: 1.6;
+}
+
+.import-data-command-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.import-data-command-stats > div {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: grid;
+  gap: 6px;
+}
+
+.import-data-command-stats span {
+  font-size: 0.75rem;
+  color: rgba(255, 218, 212, 0.6);
+}
+
+.import-data-command-stats strong {
+  font-size: 1.2rem;
+  color: #fff7f5;
+}
+
+.import-data-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.import-data-command-actions .modal-button {
+  min-width: 180px;
+}
+
+.import-data-command-status {
+  margin: 0;
+}
+
+.import-data-page-guide {
+  padding: 24px;
+}
+
+@media (max-width: 1080px) {
+  .import-data-page-header,
+  .import-data-page-hero-main,
+  .import-data-page-lane-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .import-data-page {
+    width: min(100% - 20px, 100%);
+    padding: 20px 0 40px;
+  }
+
+  .import-data-page-card {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .import-data-page-hero-copy,
+  .import-data-page-hero-metrics,
+  .import-data-command-lane,
+  .import-data-page-guide {
+    padding: 18px;
+  }
+
+  .import-data-page-hero-metrics,
+  .import-data-command-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .import-data-command-actions .modal-button {
+    width: 100%;
+  }
+}

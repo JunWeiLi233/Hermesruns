@@ -1,0 +1,43 @@
+/* Hermes design-system CSS, split per-surface from the original
+   `styles/style.css` (~80k lines) by `.tools/split-styles.mjs`.
+   Cascade order: tokens → shared shell → surface files → theme overrides
+   → quarantined legacy-frame block → recent per-surface redesigns. */
+@import './styles/_split/tokens.css';
+@import './styles/_split/runner-shell.css';
+@import './styles/_split/shared.css';
+@import './styles/_split/auth.css';
+@import './styles/_split/landing.css';
+@import './styles/_split/profile.css';
+@import './styles/_split/analysis.css';
+@import './styles/_split/today-run.css';
+@import './styles/_split/runs.css';
+@import './styles/_split/races.css';
+@import './styles/_split/schedule.css';
+@import './styles/_split/shoes.css';
+@import './styles/_split/muscle-training.css';
+@import './styles/_split/territory.css';
+@import './styles/_split/heatmap.css';
+@import './styles/_split/weather.css';
+@import './styles/_split/rewards.css';
+@import './styles/_split/workflow.css';
+@import './styles/_split/settings.css';
+@import './styles/_split/integrations.css';
+@import './styles/_split/subscription.css';
+@import './styles/_split/admin.css';
+@import './styles/_split/misc.css';
+@import './styles/_split/light-theme-overrides.css';
+/* `_split/legacy-frame.css` (~8.7k lines targeting `.hermes-site-frame`) is
+   quarantined — the class is never applied to live DOM. Smoke tests still read
+   it from disk; removing it from the live bundle drops ~350 KB of dead CSS
+   without breaking those tests. To re-enable, uncomment the line below.
+   @import './styles/_split/legacy-frame.css'; */
+@import './styles/analysis-detail-redesigns.css';
+@import './styles/_split/profile-dashboard-redesign.css';
+@import './styles/muscle-training-hermes-redesign.css';
+@import './styles/settings-fullwidth.css';
+@import './styles/contrast-fixes.css';
+@import './styles/admin-kinetic-editorial.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

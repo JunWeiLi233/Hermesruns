@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 740" role="img" aria-labelledby="title desc">
+  <title id="title">Hermes SaaS Application Architecture</title>
+  <desc id="desc">Public entry, runner shell, admin tooling, backend services, data stores, and third-party integrations.</desc>
+  
+    <defs>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.08)" stroke-width="1"></path>
+      </pattern>
+      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"></polygon>
+      </marker>
+    </defs>
+    <rect width="1280" height="740" fill="#020617"></rect>
+    <rect width="1280" height="740" fill="url(#grid)"></rect>
+  
+  <text x="40" y="42" fill="#e2e8f0" font-size="24" font-weight="700" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Hermes SaaS Application Architecture</text>
+  <text x="40" y="64" fill="#94a3b8" font-size="11" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Public entry, runner shell, admin tooling, backend services, data stores, and third-party integrations.</text>
+  
+    <g>
+      <line x1="133" y1="166" x2="282" y2="153" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="207.5" y="153.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">browse</text>
+    </g>
+  
+
+    <g>
+      <line x1="133" y1="186" x2="282" y2="322" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="207.5" y="248" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">train</text>
+    </g>
+  
+
+    <g>
+      <line x1="133" y1="206" x2="282" y2="476" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="207.5" y="335" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">operate</text>
+    </g>
+  
+
+    <g>
+      <line x1="504" y1="153" x2="566" y2="208" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="535" y="174.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">route</text>
+    </g>
+  
+
+    <g>
+      <line x1="504" y1="322" x2="566" y2="236" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="535" y="273" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">shell</text>
+    </g>
+  
+
+    <g>
+      <line x1="504" y1="476" x2="566" y2="268" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="535" y="366" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">dashboard</text>
+    </g>
+  
+
+    <g>
+      <line x1="756" y1="236" x2="806" y2="187" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="781" y="205.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/api</text>
+    </g>
+  
+
+    <g>
+      <line x1="906" y1="256" x2="906" y2="310" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="906" y="277" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">service calls</text>
+    </g>
+  
+
+    <g>
+      <line x1="1006" y1="187" x2="1070" y2="217" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="1038" y="196" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">persist</text>
+    </g>
+  
+
+    <g>
+      <line x1="1006" y1="384" x2="1070" y2="241" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="1038" y="306.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">state</text>
+    </g>
+  
+
+    <g>
+      <line x1="1006" y1="384" x2="1070" y2="393" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="1038" y="382.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sync / webhooks</text>
+    </g>
+  
+
+    <g>
+      <line x1="1070" y1="367" x2="1006" y2="372" stroke="#fb7185" stroke-width="1.4" marker-end="url(#arrowhead)" stroke-dasharray="6,4"></line>
+      <text x="1038" y="363.5" text-anchor="middle" fill="#fb7185" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">provider data</text>
+    </g>
+  
+  
+    <g>
+      <rect x="248" y="64" width="286" height="490" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.25" stroke-dasharray="8,4"></rect>
+      <text x="260" y="82" fill="#fbbf24" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">React Route Families</text>
+    </g>
+  
+
+    <g>
+      <rect x="784" y="86" width="468" height="408" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.25" stroke-dasharray="8,4"></rect>
+      <text x="796" y="104" fill="#fbbf24" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Spring Boot Runtime + Integrations</text>
+    </g>
+  
+  
+    <g>
+      <rect x="48" y="120" width="170" height="92" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="48" y="120" width="170" height="92" rx="8" fill="rgba(30, 41, 59, 0.56)" stroke="#94a3b8" stroke-width="1.5"></rect>
+      <text x="62" y="142" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Users</text>
+<text x="62" y="156" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">public visitors</text>
+<text x="62" y="170" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">signed-in runners</text>
+<text x="62" y="184" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">admin operators</text>
+    </g>
+  
+
+    <g>
+      <rect x="282" y="92" width="222" height="122" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="282" y="92" width="222" height="122" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
+      <text x="296" y="114" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Public Routes (7)</text>
+<text x="296" y="128" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/</text>
+<text x="296" y="142" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/login</text>
+<text x="296" y="156" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/signup</text>
+<text x="296" y="170" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/forgot-password</text>
+<text x="296" y="184" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/terms</text>
+<text x="296" y="198" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">+2 more</text>
+    </g>
+  
+
+    <g>
+      <rect x="282" y="252" width="222" height="140" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="282" y="252" width="222" height="140" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
+      <text x="296" y="274" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Runner Routes (23)</text>
+<text x="296" y="288" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/profile</text>
+<text x="296" y="302" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/runs</text>
+<text x="296" y="316" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/run/:id</text>
+<text x="296" y="330" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/run</text>
+<text x="296" y="344" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/analysis</text>
+<text x="296" y="358" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/heatmap</text>
+<text x="296" y="372" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/territory</text>
+<text x="296" y="386" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/weather</text>
+<text x="296" y="400" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">+15 more</text>
+    </g>
+  
+
+    <g>
+      <rect x="282" y="430" width="222" height="92" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="282" y="430" width="222" height="92" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
+      <text x="296" y="452" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Admin / Redirect (5)</text>
+<text x="296" y="466" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/dashboard/*</text>
+<text x="296" y="480" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">redirects: 4</text>
+    </g>
+  
+
+    <g>
+      <rect x="566" y="180" width="190" height="112" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="566" y="180" width="190" height="112" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
+      <text x="580" y="202" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">React + Vite SPA</text>
+<text x="580" y="216" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">lazy pages: 29</text>
+<text x="580" y="230" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">React Router 7</text>
+<text x="580" y="244" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">shared runner shell + themes</text>
+    </g>
+  
+
+    <g>
+      <rect x="806" y="118" width="200" height="138" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="806" y="118" width="200" height="138" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
+      <text x="820" y="140" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Spring Boot API</text>
+<text x="820" y="154" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">auth + controllers</text>
+<text x="820" y="168" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">REST endpoints</text>
+<text x="820" y="182" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">serves built SPA on :8080</text>
+    </g>
+  
+
+    <g>
+      <rect x="806" y="310" width="200" height="148" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="806" y="310" width="200" height="148" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
+      <text x="820" y="332" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Domain Services</text>
+<text x="820" y="346" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">analysis / coaching</text>
+<text x="820" y="360" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">imports / sync jobs</text>
+<text x="820" y="374" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">races / shoes / workflow tools</text>
+<text x="820" y="388" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">weather + billing + route extraction</text>
+    </g>
+  
+
+    <g>
+      <rect x="1070" y="170" width="160" height="94" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="1070" y="170" width="160" height="94" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.5"></rect>
+      <text x="1084" y="192" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Data Layer</text>
+<text x="1084" y="206" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">H2 local-first default</text>
+<text x="1084" y="220" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">PostgreSQL optional</text>
+<text x="1084" y="234" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">JPA / Hibernate persistence</text>
+    </g>
+  
+
+    <g>
+      <rect x="1070" y="314" width="160" height="158" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="1070" y="314" width="160" height="158" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.5"></rect>
+      <text x="1084" y="336" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">External Integrations</text>
+<text x="1084" y="350" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Strava OAuth + sync</text>
+<text x="1084" y="364" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Google OAuth</text>
+<text x="1084" y="378" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Garmin Connect</text>
+<text x="1084" y="392" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Stripe</text>
+<text x="1084" y="406" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Open-Meteo</text>
+<text x="1084" y="420" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">AI providers / route extraction</text>
+    </g>
+  
+  
+    <g>
+      <rect x="1060" y="580" width="200" height="108" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1"></rect>
+      <text x="1072" y="592" fill="#e2e8f0" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Legend</text>
+      
+      <rect x="1072" y="594" width="14" height="10" rx="3" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1"></rect>
+      <text x="1094" y="603" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">client routes and SPA runtime</text>
+    
+
+      <rect x="1072" y="612" width="14" height="10" rx="3" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1"></rect>
+      <text x="1094" y="621" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Spring Boot controllers and services</text>
+    
+
+      <rect x="1072" y="630" width="14" height="10" rx="3" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1"></rect>
+      <text x="1094" y="639" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">persistent application state</text>
+    
+
+      <rect x="1072" y="648" width="14" height="10" rx="3" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1"></rect>
+      <text x="1094" y="657" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">third-party providers and infra edges</text>
+    
+
+      <rect x="1072" y="666" width="14" height="10" rx="3" fill="rgba(30, 41, 59, 0.56)" stroke="#94a3b8" stroke-width="1"></rect>
+      <text x="1094" y="675" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">human users / operators</text>
+    
+    </g>
+  
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120" role="img" aria-label="ANTA logo">
+  <defs>
+    <linearGradient id="anta-red" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#b90f18"/>
+      <stop offset="1" stop-color="#ff3717"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#anta-red)" d="M5 49C38 21 70 10 114 9c44-1 77 11 100 28-43-13-80-18-118-15-34 2-63 12-91 27Z"/>
+  <path fill="#f12916" d="M128 45c32 5 58 16 84 39-40-17-76-27-120-34 12-3 22-4 36-5Z"/>
+  <text x="8" y="106" fill="#d3171b" font-family="Arial Black,Arial,sans-serif" font-size="47" font-style="italic" font-weight="900" letter-spacing="-4">ANTA</text>
+</svg>

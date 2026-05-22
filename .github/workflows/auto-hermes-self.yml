@@ -1,0 +1,192 @@
+name: auto-hermes-self
+
+# Manual-trigger workflow that runs the /auto-hermes-self Ralph-style self-loop
+# in a non-interactive GitHub Actions environment.
+#
+# Prerequisites (set once on the repo):
+#   - Secrets:
+#       ANTHROPIC_API_KEY — direct Anthropic API key with Claude Code access.
+#       (GITHUB_TOKEN is provided automatically; if you need cross-repo push or
+#        custom PR-creation perms, set GH_TOKEN to a fine-scoped PAT instead.)
+#   - Permissions: this workflow declares `contents: write` and
+#     `pull-requests: write` so Auto-Publish-on-Stop can push + open a PR.
+#
+# What it runs:
+#   1. Checks out the repo (full history) and configures git identity.
+#   2. Installs Node 20, Java 17, Maven cache, and Playwright Chromium so the
+#      Hermes wrappers (.tools/auto-hermes-self-loop.mjs, run-vite-build.mjs,
+#      auto-hermes-playwright.mjs) all work headless without the user's Chrome.
+#   3. Refreshes the self-loop coordinator brief and reads queue state.
+#   4. Hands the bounded prompt to anthropics/claude-code-action so Claude
+#      executes /auto-hermes-self with CI-mode caps (AHS_MAX_ROUNDS,
+#      AHS_MAX_MINUTES, headless Playwright only, no ScheduleWakeup, hard
+#      HUMAN_LOOP stop).
+#   5. Uploads round artifacts (TEAMWORK.md, coordinator briefs, screenshots)
+#      so you can audit a stopped run.
+#
+# To trigger:
+#   GitHub UI -> Actions tab -> auto-hermes-self -> Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Concrete task scope. Empty = self-loop the existing TASKS.md queue.'
+        required: false
+        default: ''
+        type: string
+      max_rounds:
+        description: 'Hard ceiling on rounds per invocation.'
+        required: false
+        default: '3'
+        type: string
+      max_minutes:
+        description: 'Hard ceiling on wall-clock minutes.'
+        required: false
+        default: '30'
+        type: string
+      target_branch:
+        description: 'Branch to push to + open a PR against.'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Skip Auto-Publish (no push, no PR). Useful for smoke-testing.'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+# Prevent two manual runs from racing the same branch.
+concurrency:
+  group: auto-hermes-self-${{ github.ref }}-${{ inputs.scope || 'queue' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  run-self-loop:
+    name: run-self-loop
+    runs-on: ubuntu-latest
+    # Hard wall-clock ceiling at the runner level — the in-loop AHS_MAX_MINUTES
+    # is the soft limit; this is the runner safety net so a stuck job cannot
+    # burn an hour of minutes.
+    timeout-minutes: 45
+
+    env:
+      CI: 'true'
+      GITHUB_ACTIONS: 'true'
+      AHS_SCOPE: ${{ inputs.scope }}
+      AHS_MAX_ROUNDS: ${{ inputs.max_rounds }}
+      AHS_MAX_MINUTES: ${{ inputs.max_minutes }}
+      AHS_TARGET_BRANCH: ${{ inputs.target_branch }}
+      AHS_DRY_RUN: ${{ inputs.dry_run }}
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Resolve the target branch lazily — empty input means stay on the
+          # ref that triggered the workflow.
+          ref: ${{ inputs.target_branch || github.ref }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          echo "branch=$(git rev-parse --abbrev-ref HEAD)"
+          echo "sha=$(git rev-parse HEAD)"
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - name: Install frontend deps (for vite build + smoke tests)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright + Chromium (headless browser proof)
+        run: |
+          npm install --no-save @playwright/test
+          npx playwright install --with-deps chromium
+          node .tools/auto-hermes-playwright.mjs doctor
+
+      - name: Refresh /auto-hermes-self coordinator brief
+        run: |
+          node .tools/auto-hermes-self-loop.mjs --write --runtime claude
+          echo '--- AUTO_HERMES_SELF_COORDINATOR.md (head) ---'
+          head -60 .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md || true
+
+      - name: Run /auto-hermes-self via Claude Code action
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Default to Opus for the coordinator; specialists may downgrade to
+          # Sonnet inside lane prompts.
+          model: claude-opus-4-5
+          # Single high-level prompt: invoke the slash command with the scope.
+          # Claude Code will read .claude/commands/auto-hermes-self.md (now
+          # tracked) and honour the CI Mode section.
+          prompt: |
+            You are running inside a GitHub Actions workflow on the Hermes repo.
+            Honour the **CI Mode** section of `/auto-hermes-self` strictly:
+              * Hard cap rounds at $AHS_MAX_ROUNDS (currently ${{ inputs.max_rounds }}).
+              * Hard cap wall-clock at $AHS_MAX_MINUTES minutes (currently ${{ inputs.max_minutes }}).
+              * Use `.tools/auto-hermes-playwright.mjs` exclusively for browser proof.
+              * Do NOT call ScheduleWakeup — this is a single non-interactive invocation.
+              * Treat any HUMAN_LOOP gate as a hard stop, not a pause.
+              * When `$AHS_DRY_RUN == 'true'`, skip Auto-Publish entirely.
+
+            Now run the command:
+              /auto-hermes-self ${{ inputs.scope }}
+        env:
+          AHS_SCOPE: ${{ inputs.scope }}
+          AHS_MAX_ROUNDS: ${{ inputs.max_rounds }}
+          AHS_MAX_MINUTES: ${{ inputs.max_minutes }}
+          AHS_DRY_RUN: ${{ inputs.dry_run }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show TEAMWORK.md after the run
+        if: always()
+        run: |
+          if [ -f .ai-sync/TEAMWORK.md ]; then
+            echo '--- .ai-sync/TEAMWORK.md ---'
+            cat .ai-sync/TEAMWORK.md
+          else
+            echo 'No TEAMWORK.md present.'
+          fi
+
+      - name: Upload round artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-hermes-self-${{ github.run_id }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            .ai-sync/TEAMWORK.md
+            .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md
+            .ai-sync/AUTO_HERMES_SELF_COORDINATOR.json
+            .ai-sync/AUTO_HERMES_SELF_LOOP.json
+            .ai-sync/AUTO_HERMES_SELF_ROUND_RESULT.json
+            .ai-sync/AUTO_HERMES_CONTROLLER.json
+            .ai-sync/auto-hermes-max-results/
+            .ai-sync/playwright-state/
+            task-images/

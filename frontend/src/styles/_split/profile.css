@@ -1,0 +1,6554 @@
+.profile-distribution-strip {
+    grid-column: 1 / -1;
+    padding: 22px 24px 26px;
+}
+
+.profile-distribution-section {
+    width: 100%;
+}
+
+.profile-distribution-header {
+    margin-bottom: 18px;
+}
+
+.profile-distribution-heading {
+    margin: 0 0 4px;
+    font-size: 1.12rem;
+    letter-spacing: -0.03em;
+    color: var(--text-strong, #0f172a);
+}
+
+.profile-distribution-sub {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted, #64748b);
+}
+
+.profile-distribution-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.profile-distribution-grid .profile-zone-card:first-child {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+    .profile-distribution-grid {
+        grid-template-columns: 1fr;
+    }
+    .profile-distribution-grid .profile-zone-card:first-child {
+        grid-column: auto;
+    }
+}
+
+.profile-zone-card {
+    border: 1px solid var(--line, rgba(16, 32, 61, 0.1));
+    border-radius: 18px;
+    padding: 14px 14px 16px;
+    background: var(--surface-strong, rgba(255, 255, 255, 0.94));
+}
+
+.profile-zone-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.profile-zone-card-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-strong, #0f172a);
+    line-height: 1.35;
+}
+
+.profile-zone-metric-select {
+    font-size: 0.75rem;
+    padding: 6px 26px 6px 10px;
+    max-width: 8rem;
+}
+
+.profile-zone-card-body {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.profile-zone-donut-wrap {
+    flex: 0 0 40%;
+    max-width: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.profile-zone-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.72rem;
+}
+
+.profile-zone-row {
+    display: grid;
+    grid-template-columns: 2.8rem minmax(0, 6.5rem) 1fr minmax(3.5rem, auto);
+    gap: 8px;
+    align-items: center;
+}
+
+.profile-zone-pct {
+    color: var(--text-muted, #64748b);
+    font-variant-numeric: tabular-nums;
+}
+
+.profile-zone-label {
+    color: var(--text-strong, #0f172a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-zone-bar-wrap {
+    height: 6px;
+    border-radius: 4px;
+    background: rgba(148, 163, 184, 0.22);
+    overflow: hidden;
+    min-width: 0;
+}
+
+.profile-zone-bar {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    min-width: 2px;
+}
+
+.profile-zone-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted, #64748b);
+    font-size: 0.7rem;
+}
+
+.profile-zone-empty {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted, #64748b);
+}
+
+/* Profile settings link hint */
+
+.profile-settings-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+}
+
+.profile-settings-link {
+  color: var(--text-muted, #64748b);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.profile-settings-link:hover {
+  color: var(--brand-accent, #ff6b35);
+}
+
+.profile-hero-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+  .profile-hero-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-hero-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .section-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.profile-weather-section {
+  margin-top: 24px;
+  display: grid;
+  gap: 18px;
+  overflow: hidden;
+}
+
+.profile-weather-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.profile-weather-copy {
+  display: grid;
+  gap: 8px;
+  max-width: 640px;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.profile-weather-kicker {
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted, #64748b);
+  font-weight: 700;
+}
+
+.profile-weather-copy h2 {
+  margin: 0;
+  font-size: clamp(1.3rem, 2vw, 2rem);
+}
+
+.profile-weather-copy p {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+  line-height: 1.6;
+}
+
+.profile-weather-now-card {
+  flex: 0 1 auto;
+  min-width: min(240px, 100%);
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.06));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface-strong, #fff) 92%, transparent), color-mix(in srgb, var(--sport-accent, #FF6B35) 12%, transparent));
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.profile-weather-now-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sport-accent, #FF6B35);
+  flex-shrink: 0;
+}
+
+.profile-weather-now-glyph {
+  width: 34px;
+  height: 34px;
+}
+
+.profile-weather-now-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.profile-weather-now-label,
+.profile-weather-now-meta,
+.profile-weather-stat-copy span,
+.profile-weather-forecast-head span {
+  color: var(--text-muted, #64748b);
+  font-size: 0.82rem;
+}
+
+.profile-weather-now-copy strong {
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.profile-weather-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-weather-stat-card {
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.06));
+  background: color-mix(in srgb, var(--surface-strong, #fff) 88%, transparent);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.profile-weather-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--sport-accent, #FF6B35) 12%, transparent);
+  color: var(--sport-accent, #FF6B35);
+  flex-shrink: 0;
+}
+
+.profile-weather-stat-icon .weather-glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.profile-weather-stat-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.profile-weather-stat-copy strong {
+  font-size: 1.05rem;
+}
+
+.profile-weather-engine {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface-strong, #fff) 92%, transparent), color-mix(in srgb, var(--brand-ink, #10203d) 10%, transparent));
+}
+
+.profile-weather-forecast-shell {
+  border-top: 1px solid var(--line-soft, rgba(255, 255, 255, 0.06));
+  padding-top: 18px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.profile-weather-forecast-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+/* 闂傚倸鍊风粈渚€宕崸妤€鍌ㄦ繝濠傜墕绾惧鏌熼崜褏甯涢柣鎾冲暣閺屾稖绠涢幙鍐┬︽繛?Unified first-view hero padding for signed-in pages 闂傚倸鍊风粈渚€宕崸妤€鍌ㄦ繝濠傜墕绾惧鏌熼崜褏甯涢柣鎾冲暣閺屾稖绠涢幙鍐┬︽繛瀛樼矒缁犳牕顫忓ú顏勭闁圭粯甯掓潏鍛存⒑缁嬫鍎愰柟鐟版喘瀵顓兼径濠勵槯婵犮垼娉涢敃锝嗙珶閺囥垺鈷掑ù锝囶焾閺嗛亶鏌涘Ο鑽ょ煉鐎规洘鍨块獮妯肩磼濡厧甯楅梻浣侯焾缁绘劙藝椤栨稓顩插Δ锝呭暞閳锋垿鏌涢幇顓炵祷閻㈩垬鍔戦弻娑氣偓锝庡亝瀹曞矂鏌＄仦鐣屝х€规洘顨嗗鍕節娴ｅ壊妫滈梻鍌氬€风粈渚€宕崸妤€鍌ㄦ繝濠傜墕绾惧鏌熼崜褏甯涢柣鎾冲暣閺屾稖绠涢幙鍐┬︽繛瀛樼矒缁犳牕顫忓ú顏勭闁圭粯甯掓潏鍛存⒑缁嬫鍎愰柟鐟版喘瀵顓兼径濠勵槯婵犮垼娉涢敃锝嗙珶閺囥垺鈷掑ù锝囶焾閺嗛亶鏌涘Ο鑽ょ煉鐎规洘鍨块獮妯肩磼濡厧甯楅梻浣侯焾缁绘劙藝椤栨稓顩插Δ锝呭暞閳锋垿鏌涢幇顓炵祷閻㈩垬鍔戦�?*/
+
+.profile-page-intro,
+.analysis-page-header,
+.rewards-hero-card {
+  padding: 32px 36px;
+}
+
+.profile-readiness-rail {
+  margin-bottom: 20px;
+}
+
+.profile-readiness-rail--merged {
+  margin-top: 20px;
+  margin-bottom: 0;
+  padding: 22px 22px 0;
+  border: 1px solid rgba(255, 107, 53, 0.14);
+  background: linear-gradient(180deg, rgba(255, 248, 244, 0.96), rgba(255, 255, 255, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.profile-readiness-rail--merged::before {
+  inset: 0;
+  height: 56px;
+  border-radius: 24px 24px 0 0;
+  background: linear-gradient(120deg, rgba(255, 107, 53, 0.14), rgba(251, 191, 36, 0.08), transparent 72%);
+}
+
+.profile-readiness-next-row,
+.settings-next-action-row {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 107, 53, 0.14);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 237, 0.94));
+}
+
+.profile-readiness-next-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.profile-readiness-proof-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: rgba(51, 65, 85, 0.92);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.profile-readiness-proof-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 23, 42, 0.2);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.profile-readiness-proof-btn:hover {
+  color: #ea580c;
+  text-decoration-color: #ea580c;
+}
+
+.profile-readiness-next-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f97316;
+}
+
+.profile-inline-status {
+  margin-top: -4px;
+}
+
+.profile-hero-strip.premium-summary-strip,
+.history-summary-grid.premium-summary-strip,
+.rewards-hero-progress-row.premium-summary-strip {
+  padding: 14px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+}
+
+.profile-page-intro {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.runner-dashboard-page {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 12% 10%, rgba(240, 117, 97, 0.14), transparent 28%),
+        radial-gradient(circle at 78% 0%, rgba(255, 255, 255, 0.05), transparent 22%),
+        linear-gradient(180deg, #121212 0%, #151515 100%);
+    color: #e5e2e1;
+}
+
+.runner-dashboard-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    background: rgba(17, 17, 17, 0.78);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+    z-index: 70;
+}
+
+.runner-dashboard-brand {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.runner-dashboard-brand .hermes-logo {
+    font-size: 1.15rem;
+}
+
+.runner-dashboard-topnav {
+    display: none;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.runner-dashboard-topnav-link {
+    border: 0;
+    background: transparent;
+    color: rgba(229, 226, 225, 0.48);
+    font-family: "Manrope", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 0.18s ease;
+}
+
+.runner-dashboard-topnav-link:hover,
+.runner-dashboard-topnav-link.is-active {
+    color: #f07561;
+}
+
+.runner-dashboard-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.runner-dashboard-action-btn,
+.runner-dashboard-icon-btn,
+.runner-dashboard-avatar-btn {
+    border: 0;
+    background: rgba(53, 53, 52, 0.78);
+    color: #f5f0ee;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
+}
+
+.runner-dashboard-action-btn,
+.runner-dashboard-avatar-btn {
+    min-height: 2.5rem;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    gap: 0.5rem;
+}
+
+.runner-dashboard-action-btn {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.runner-dashboard-action-btn .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+.runner-dashboard-icon-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+}
+
+.runner-dashboard-avatar-btn {
+    font-family: "Manrope", sans-serif;
+    font-weight: 800;
+    background: linear-gradient(135deg, #f07561, #ffb4a7);
+    color: #400200;
+    justify-content: flex-start;
+    min-width: 7.5rem;
+}
+
+.runner-dashboard-avatar-btn strong {
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.runner-dashboard-action-btn:hover,
+.runner-dashboard-icon-btn:hover,
+.runner-dashboard-avatar-btn:hover {
+    background: rgba(240, 117, 97, 0.18);
+    transform: translateY(-1px);
+}
+
+.runner-dashboard-sidenav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 16rem;
+    padding: 6.75rem 1.25rem 1.5rem;
+    background: linear-gradient(180deg, rgba(26, 26, 26, 0.98), rgba(21, 21, 21, 0.96));
+    box-shadow: 24px 0 48px rgba(0, 0, 0, 0.38);
+    display: none;
+    flex-direction: column;
+    z-index: 60;
+}
+
+.runner-dashboard-sidenav-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.runner-dashboard-sidenav-kicker {
+    font-size: 0.64rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(229, 226, 225, 0.34);
+    font-weight: 700;
+}
+
+.runner-dashboard-sidenav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.runner-dashboard-side-link {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    border: 0;
+    background: transparent;
+    color: rgba(229, 226, 225, 0.42);
+    padding: 0.95rem 1rem;
+    border-radius: 1rem;
+    font-family: "Manrope", sans-serif;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.runner-dashboard-side-link:hover {
+    background: rgba(53, 53, 52, 0.42);
+    color: #f5f0ee;
+}
+
+.runner-dashboard-side-link.is-active {
+    background: rgba(53, 53, 52, 0.55);
+    color: #f07561;
+    box-shadow: inset 3px 0 0 #f07561;
+}
+
+.runner-dashboard-side-link-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 0.28rem;
+    background: currentColor;
+    opacity: 0.85;
+}
+
+.runner-dashboard-sidenav-footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0 0.5rem;
+}
+
+.runner-dashboard-primary-cta {
+    border: 0;
+    border-radius: 999px;
+    background: #f07561;
+    color: #400200;
+    padding: 0.9rem 1rem;
+    font-family: "Manrope", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 20px 36px rgba(240, 117, 97, 0.2);
+}
+
+.runner-dashboard-foot-link {
+    border: 0;
+    background: transparent;
+    color: rgba(229, 226, 225, 0.42);
+    text-align: left;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.runner-dashboard-mobile-nav {
+    position: sticky;
+    top: 5rem;
+    z-index: 50;
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    padding: 0.85rem 1rem 0;
+    background: linear-gradient(180deg, rgba(18, 18, 18, 1), rgba(18, 18, 18, 0.85));
+}
+
+.runner-dashboard-mobile-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.runner-dashboard-mobile-link {
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(42, 42, 42, 0.92);
+    color: rgba(229, 226, 225, 0.62);
+    padding: 0.72rem 1rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.runner-dashboard-mobile-link.is-active {
+    background: #f07561;
+    color: #400200;
+}
+
+.runner-dashboard-main {
+    padding: 0 0 2.5rem;
+    width: 100%;
+    margin: 0;
+}
+
+.runner-dashboard-hero-copy {
+    margin-bottom: 1.5rem;
+}
+
+.runner-dashboard-hero-copy h1 {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(2.55rem, 5vw, 4.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+    margin-bottom: 0.45rem;
+}
+
+.runner-dashboard-hero-copy p {
+    color: rgba(229, 226, 225, 0.55);
+    font-size: 1rem;
+}
+
+.runner-dashboard-banner,
+.runner-dashboard-loading-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: rgba(32, 31, 31, 0.88);
+    border-radius: 1.3rem;
+    padding: 0.95rem 1.1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.26);
+}
+
+.runner-dashboard-banner.tone-success {
+    background: rgba(34, 197, 94, 0.14);
+}
+
+.runner-dashboard-banner.tone-warning {
+    background: rgba(245, 158, 11, 0.14);
+}
+
+.runner-dashboard-banner button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.runner-pr-modal-shell {
+    background:
+        radial-gradient(circle at top left, rgba(240, 117, 97, 0.22), transparent 30%),
+        rgba(8, 8, 8, 0.76);
+    backdrop-filter: blur(20px);
+}
+
+.runner-pr-modal-card {
+    width: min(38rem, calc(100vw - 2rem));
+    border: 0;
+    border-radius: 1.9rem;
+    overflow: hidden;
+    background:
+        linear-gradient(145deg, rgba(240, 117, 97, 0.18), rgba(28, 27, 27, 0.98) 34%),
+        rgba(18, 18, 18, 0.98);
+    box-shadow: 0 32px 72px rgba(0, 0, 0, 0.42);
+}
+
+.runner-pr-modal-card .modal-header {
+    align-items: flex-start;
+    padding: 1.4rem 1.4rem 0;
+    border: 0;
+}
+
+.runner-pr-modal-card .modal-header h3 {
+    font-family: "Manrope", sans-serif;
+    font-size: 0.76rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(255, 180, 167, 0.88);
+}
+
+.runner-pr-modal-card .modal-close {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(229, 226, 225, 0.84);
+}
+
+.runner-pr-modal-card .modal-form {
+    padding: 0 1.4rem 1.4rem;
+}
+
+.runner-pr-modal-body {
+    display: grid;
+    gap: 1rem;
+}
+
+.runner-pr-modal-hero {
+    padding: 1.2rem 1.3rem;
+    border-radius: 1.5rem;
+    background:
+        linear-gradient(135deg, rgba(255, 236, 229, 0.96), rgba(255, 217, 206, 0.88));
+    color: #28110d;
+}
+
+.runner-pr-modal-kicker {
+    display: block;
+    margin-bottom: 0.55rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.runner-pr-modal-hero h4 {
+    margin: 0 0 0.55rem;
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 0.92;
+    letter-spacing: -0.06em;
+    font-style: italic;
+}
+
+.runner-pr-modal-hero p {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.65;
+}
+
+.runner-pr-modal-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.runner-pr-modal-entry {
+    display: grid;
+    gap: 0.45rem;
+    padding: 1rem 1.05rem;
+    border-radius: 1.2rem;
+    background: rgba(34, 33, 33, 0.92);
+}
+
+.runner-pr-modal-entry-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: rgba(255, 180, 167, 0.76);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.runner-pr-modal-entry strong {
+    display: block;
+    font-family: "Manrope", sans-serif;
+    font-size: 1.35rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.runner-pr-modal-entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    color: rgba(229, 226, 225, 0.56);
+    font-size: 0.82rem;
+}
+
+.runner-pr-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.runner-pr-modal-primary {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.95rem 1.45rem;
+    background: linear-gradient(135deg, #f07561, #ffb4a7);
+    color: #2c0d08;
+    font-family: "Manrope", sans-serif;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+/* 闁冲厜鍋撻柍鍏夊�?Progression info modal 闁冲厜鍋撻柍鍏夊�?*/
+
+.runner-progression-info-shell {
+    background:
+        radial-gradient(circle at top left, rgba(240, 117, 97, 0.18), transparent 30%),
+        rgba(8, 8, 8, 0.76);
+    backdrop-filter: blur(20px);
+}
+
+.runner-progression-info-card {
+    width: min(34rem, calc(100vw - 2rem));
+    border: 0;
+    border-radius: 1.9rem;
+    overflow: hidden;
+    background:
+        linear-gradient(145deg, rgba(240, 117, 97, 0.14), rgba(28, 27, 27, 0.98) 34%),
+        rgba(18, 18, 18, 0.98);
+    box-shadow: 0 32px 72px rgba(0, 0, 0, 0.42);
+}
+
+.runner-progression-info-card .modal-header {
+    align-items: flex-start;
+    padding: 1.4rem 1.4rem 0;
+    border: 0;
+}
+
+.runner-progression-info-card .modal-header h3 {
+    font-family: "Manrope", sans-serif;
+    font-size: 0.76rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(255, 180, 167, 0.88);
+}
+
+.runner-progression-info-card .modal-close {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(229, 226, 225, 0.84);
+}
+
+.runner-progression-info-card .modal-form {
+    padding: 0 1.4rem 1.4rem;
+}
+
+.runner-progression-info-body {
+    display: grid;
+    gap: 1rem;
+}
+
+.runner-progression-info-hero {
+    padding: 1.2rem 1.3rem;
+    border-radius: 1.5rem;
+    background:
+        linear-gradient(135deg, rgba(255, 236, 229, 0.96), rgba(255, 217, 206, 0.88));
+    color: #28110d;
+}
+
+.runner-progression-info-kicker {
+    display: block;
+    margin-bottom: 0.55rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.runner-progression-info-hero h4 {
+    margin: 0 0 0.55rem;
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+}
+
+.runner-progression-info-hero p {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.65;
+}
+
+.runner-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.runner-dashboard-readiness-card,
+.runner-dashboard-weekly-card,
+.runner-dashboard-sessions-card,
+.runner-dashboard-mini-metric {
+    background: rgba(28, 27, 27, 0.96);
+    border-radius: 1.4rem;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+}
+
+.runner-dashboard-readiness-card,
+.runner-dashboard-weekly-card,
+.runner-dashboard-sessions-card {
+    padding: 1.4rem;
+}
+
+.runner-dashboard-readiness-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.runner-dashboard-readiness-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(240, 117, 97, 0.06), transparent 44%);
+    pointer-events: none;
+}
+
+.runner-dashboard-card-kicker {
+    display: block;
+    margin-bottom: 1rem;
+    color: rgba(240, 117, 97, 0.92);
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-readiness-card h2 {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(2.7rem, 6vw, 4.2rem);
+    line-height: 0.92;
+    letter-spacing: -0.08em;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+.runner-dashboard-readiness-meter {
+    height: 0.22rem;
+    border-radius: 999px;
+    background: rgba(229, 226, 225, 0.08);
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.runner-dashboard-readiness-meter-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f07561, #ffb4a7);
+}
+
+.runner-dashboard-readiness-score {
+    text-align: right;
+    color: rgba(229, 226, 225, 0.75);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.runner-dashboard-readiness-note {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: rgba(53, 53, 52, 0.82);
+    display: flex;
+    gap: 0.8rem;
+    color: rgba(229, 226, 225, 0.8);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.runner-dashboard-note-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    margin-top: 0.25rem;
+    border-radius: 999px;
+    background: #f07561;
+    box-shadow: 0 0 0 6px rgba(240, 117, 97, 0.14);
+    flex: 0 0 auto;
+}
+
+.runner-dashboard-workout-card {
+    position: relative;
+    min-height: 20rem;
+    border-radius: 1.4rem;
+    overflow: hidden;
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+}
+
+.runner-dashboard-workout-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(9, 9, 9, 0.1), rgba(9, 9, 9, 0.9)),
+        linear-gradient(90deg, rgba(9, 9, 9, 0.72), rgba(9, 9, 9, 0.12) 55%);
+}
+
+.runner-dashboard-workout-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.runner-dashboard-workout-chip {
+    width: fit-content;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    background: rgba(240, 117, 97, 0.92);
+    color: #400200;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+
+.runner-dashboard-workout-content h3 {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 0.98;
+    letter-spacing: -0.06em;
+    max-width: 34rem;
+    margin-bottom: 1rem;
+}
+
+.runner-dashboard-workout-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.runner-dashboard-workout-stats span,
+.runner-dashboard-mini-metric label {
+    display: block;
+    color: rgba(229, 226, 225, 0.45);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+}
+
+.runner-dashboard-workout-stats strong {
+    font-family: "Manrope", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.runner-dashboard-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.4rem;
+}
+
+.runner-dashboard-section-head h4 {
+    font-family: "Manrope", sans-serif;
+    font-size: 1.85rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.runner-dashboard-legend {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    color: rgba(229, 226, 225, 0.54);
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-legend i {
+    width: 0.55rem;
+    height: 0.55rem;
+    display: inline-block;
+    border-radius: 0.15rem;
+    margin-right: 0.35rem;
+}
+
+.runner-dashboard-legend .actual {
+    background: #f07561;
+}
+
+.runner-dashboard-legend .projected {
+    background: rgba(229, 226, 225, 0.2);
+}
+
+.runner-dashboard-bar-chart {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.9rem;
+    align-items: end;
+    min-height: 15rem;
+    position: relative;
+    padding-top: 3.8rem;
+}
+
+.runner-dashboard-bar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+    position: relative;
+}
+
+.runner-dashboard-bar-track {
+    position: relative;
+    width: 100%;
+    height: 11.5rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.32rem;
+}
+
+.runner-dashboard-bar {
+    width: min(0.85rem, 42%);
+    border-radius: 0.28rem 0.28rem 0 0;
+}
+
+.runner-dashboard-bar.projected {
+    background: rgba(229, 226, 225, 0.12);
+}
+
+.runner-dashboard-bar.actual {
+    background: linear-gradient(180deg, #ffb4a7 0%, #f07561 100%);
+    box-shadow: 0 0 18px rgba(240, 117, 97, 0.2);
+    cursor: pointer;
+}
+
+.runner-dashboard-bar-col span {
+    color: rgba(229, 226, 225, 0.42);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.runner-dashboard-bar-col.is-today span {
+    color: #f07561;
+}
+
+.runner-dashboard-bar-col.is-active .runner-dashboard-bar.actual {
+    box-shadow: 0 0 24px rgba(240, 117, 97, 0.36);
+}
+
+.runner-dashboard-bar-col.is-active .runner-dashboard-bar.projected {
+    background: rgba(229, 226, 225, 0.22);
+}
+
+.runner-dashboard-bar-tooltip {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    min-width: 168px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: rgba(18, 20, 24, 0.92);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.runner-dashboard-bar-tooltip.is-left {
+    left: 0;
+    transform: none;
+}
+
+.runner-dashboard-bar-tooltip.is-right {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+
+.runner-dashboard-bar-tooltip strong,
+.runner-dashboard-bar-tooltip span {
+    display: block;
+}
+
+.runner-dashboard-bar-tooltip strong {
+    color: #fff8f4;
+    font-family: "Manrope", var(--font-display);
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.runner-dashboard-bar-tooltip span {
+    margin-top: 4px;
+    color: rgba(243, 237, 232, 0.74);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-sessions-slot {
+    border-radius: var(--radius-xl);
+    padding: 1.45rem;
+    background: var(--surface-strong);
+    box-shadow: var(--shadow-card);
+}
+
+.runner-dashboard-session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.runner-dashboard-session-row {
+    width: 100%;
+    border: 0;
+    border-radius: 1rem;
+    padding: 0.95rem 1rem;
+    background: rgba(53, 53, 52, 0.58);
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+    text-align: left;
+}
+
+.runner-dashboard-session-main {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.runner-dashboard-session-main strong {
+    display: block;
+    font-size: 0.98rem;
+    margin-bottom: 0.18rem;
+}
+
+.runner-dashboard-session-main span,
+.runner-dashboard-session-metric span {
+    color: rgba(229, 226, 225, 0.45);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-session-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(240, 117, 97, 0.12);
+    color: #f07561;
+    font-size: 1rem;
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.runner-dashboard-session-metric {
+    text-align: right;
+    flex: 0 0 auto;
+}
+
+.runner-dashboard-session-metric strong {
+    display: block;
+    font-family: "Manrope", sans-serif;
+    font-size: 0.95rem;
+    margin-bottom: 0.18rem;
+}
+
+.runner-dashboard-history-btn {
+    width: 100%;
+    margin-top: 1.2rem;
+    border: 0;
+    border-radius: 1rem;
+    background: rgba(53, 53, 52, 0.42);
+    color: rgba(229, 226, 225, 0.72);
+    padding: 0.95rem 1rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.runner-dashboard-empty {
+    color: rgba(229, 226, 225, 0.52);
+    line-height: 1.7;
+}
+
+.runner-dashboard-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 64px 32px;
+    text-align: center;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.runner-dashboard-empty-hero h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: #f0f0f0;
+}
+
+.runner-dashboard-empty-hero p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(229, 226, 225, 0.68);
+    margin: 0;
+}
+
+.runner-dashboard-empty-icon {
+    font-size: 3rem;
+    color: rgba(229, 226, 225, 0.35);
+    margin-bottom: 12px;
+}
+
+.runner-dashboard-empty-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.runner-dashboard-empty-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.runner-dashboard-empty-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.runner-dashboard-empty-cta--primary {
+    background: linear-gradient(135deg, #fc4c02, #e34402);
+    color: #fff;
+}
+
+.runner-dashboard-empty-cta--secondary {
+    background: rgba(229, 226, 225, 0.08);
+    color: #e5e2e1;
+    border: 1px solid rgba(229, 226, 225, 0.18);
+}
+
+.runner-dashboard-empty-cta .material-symbols-outlined {
+    font-size: 1.2rem;
+}
+
+.runner-dashboard-progression-atlas {
+    position: relative;
+    overflow: hidden;
+    margin-top: 1.25rem;
+    padding: 1.45rem;
+    border-radius: 1.7rem;
+    background:
+        radial-gradient(circle at top right, rgba(240, 117, 97, 0.18), transparent 26%),
+        linear-gradient(150deg, rgba(36, 35, 35, 0.98), rgba(24, 24, 24, 0.96));
+    box-shadow: 0 28px 56px rgba(0, 0, 0, 0.32);
+}
+
+.runner-dashboard-progression-atlas::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 38%);
+    pointer-events: none;
+}
+
+.runner-dashboard-progression-atlas > * {
+    position: relative;
+    z-index: 1;
+}
+
+.runner-dashboard-progression-head,
+.runner-dashboard-progression-summary,
+.runner-dashboard-progression-runlist-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.runner-dashboard-progression-heading h3 {
+    position: relative;
+    margin: 0 0 0.5rem;
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 0.96;
+    letter-spacing: -0.06em;
+}
+
+.runner-dashboard-progression-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    margin-left: 0.4rem;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: baseline;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(229, 226, 225, 0.68);
+    transition: background var(--transition), color var(--transition);
+}
+
+.runner-dashboard-progression-info-icon:hover,
+.runner-dashboard-progression-info-icon:focus-visible {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    outline: none;
+}
+
+.runner-dashboard-progression-heading p {
+    max-width: 44rem;
+    margin: 0;
+    color: rgba(229, 226, 225, 0.68);
+    line-height: 1.65;
+}
+
+.runner-dashboard-progression-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.runner-dashboard-progression-tab {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.7rem 1rem;
+    background: transparent;
+    color: rgba(229, 226, 225, 0.58);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.runner-dashboard-progression-tab:hover,
+.runner-dashboard-progression-tab:focus-visible {
+    color: rgba(255, 248, 244, 0.92);
+    outline: none;
+}
+
+.runner-dashboard-progression-tab.is-active {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(240, 117, 97, 0.22));
+    color: #fff8f4;
+    transform: translateY(-1px);
+}
+
+.runner-dashboard-progression-summary {
+    margin-top: 1.5rem;
+    margin-bottom: 1.15rem;
+}
+
+.runner-dashboard-progression-label,
+.runner-dashboard-progression-stat span,
+.runner-dashboard-progression-axis span,
+.runner-dashboard-progression-runmain span,
+.runner-dashboard-progression-runmeta span,
+.runner-dashboard-progression-runlist-window {
+    color: rgba(229, 226, 225, 0.5);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-progression-summary-main strong {
+    display: block;
+    margin-top: 0.25rem;
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(2.7rem, 5vw, 4.8rem);
+    line-height: 0.92;
+    letter-spacing: -0.08em;
+}
+
+.runner-dashboard-progression-summary-meta {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: end;
+    text-align: right;
+}
+
+.runner-dashboard-progression-stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.runner-dashboard-progression-stat {
+    padding: 1rem 1.05rem;
+    border-radius: 1.1rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.runner-dashboard-progression-stat strong {
+    display: block;
+    margin-top: 0.38rem;
+    font-family: "Manrope", sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.15;
+    letter-spacing: -0.04em;
+}
+
+.runner-dashboard-progression-lane {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.9fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.runner-dashboard-progression-chart-card,
+.runner-dashboard-progression-runlist,
+.runner-dashboard-progression-empty {
+    padding: 1.2rem;
+    border-radius: 1.35rem;
+    background:
+        radial-gradient(circle at top right, rgba(240, 117, 97, 0.08), transparent 32%),
+        rgba(18, 18, 18, 0.54);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.runner-dashboard-progression-chart-frame {
+    position: relative;
+    min-height: 20rem;
+    padding: 0.8rem 0 0.35rem;
+    border-radius: 1.15rem;
+    cursor: crosshair;
+}
+
+.runner-dashboard-progression-gridlines {
+    position: absolute;
+    inset: 1rem 0 1.9rem;
+    display: grid;
+    align-content: space-between;
+    pointer-events: none;
+}
+
+.runner-dashboard-progression-gridlines span {
+    display: block;
+    width: 100%;
+    border-top: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.runner-dashboard-progression-chart {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.runner-dashboard-progression-line-glow {
+    opacity: 0.28;
+    filter: blur(7px);
+}
+
+.runner-dashboard-progression-focus-rail {
+    stroke: rgba(255, 255, 255, 0.2);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 4;
+}
+
+.runner-dashboard-progression-marker-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.runner-dashboard-progression-marker {
+    position: absolute;
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: rgba(255, 221, 213, 0.52);
+    transform: translate(-50%, -50%);
+    transition: background 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.runner-dashboard-progression-marker.is-active {
+    background: #fbc2b5;
+}
+
+.runner-dashboard-progression-active-marker {
+    position: absolute;
+    width: 0;
+    height: 0;
+    transform: translate(-50%, -50%);
+}
+
+.runner-dashboard-progression-active-marker-halo,
+.runner-dashboard-progression-active-marker-core {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+}
+
+.runner-dashboard-progression-active-marker-halo {
+    width: 0.9rem;
+    height: 0.9rem;
+    background: rgba(240, 117, 97, 0.18);
+}
+
+.runner-dashboard-progression-active-marker-core {
+    width: 0.42rem;
+    height: 0.42rem;
+    background: #fff3ef;
+    box-shadow: 0 0 0 1.4px #f07561;
+}
+
+.runner-dashboard-progression-hit-lane {
+    position: absolute;
+    inset: 0;
+}
+
+.runner-dashboard-progression-hitpoint {
+    position: absolute;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+}
+
+.runner-dashboard-progression-hitpoint:focus-visible {
+    outline: 2px solid rgba(255, 248, 244, 0.9);
+    outline-offset: 4px;
+}
+
+.runner-dashboard-progression-callout {
+    position: absolute;
+    min-width: 10.8rem;
+    padding: 0.9rem 1rem 0.85rem;
+    border-radius: 1.1rem;
+    background:
+        linear-gradient(150deg, rgba(27, 20, 19, 0.94), rgba(54, 30, 26, 0.86)),
+        linear-gradient(135deg, rgba(240, 117, 97, 0.24), rgba(255, 180, 167, 0.16));
+    color: #fff8f4;
+    box-shadow: 0 24px 44px rgba(0, 0, 0, 0.28);
+    transform: translate(-50%, calc(-100% - 1rem));
+    pointer-events: none;
+}
+
+.runner-dashboard-progression-callout.is-right {
+    transform: translate(-100%, calc(-100% - 1rem));
+}
+
+.runner-dashboard-progression-callout.is-left {
+    transform: translate(0, calc(-100% - 1rem));
+}
+
+.runner-dashboard-progression-callout strong,
+.runner-dashboard-progression-callout span {
+    display: block;
+}
+
+.runner-dashboard-progression-callout strong {
+    font-family: "Manrope", sans-serif;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.runner-dashboard-progression-callout span {
+    margin-top: 0.32rem;
+    color: rgba(255, 240, 235, 0.74);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-progression-callout small {
+    display: block;
+    margin-top: 0.38rem;
+    color: rgba(255, 240, 235, 0.72);
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.runner-dashboard-progression-axis {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+
+.runner-dashboard-progression-runlist-head {
+    margin-bottom: 1rem;
+}
+
+.runner-dashboard-progression-runlist-head h4 {
+    margin: 0;
+    font-family: "Manrope", sans-serif;
+    font-size: 1.4rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.runner-dashboard-progression-runstack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.runner-dashboard-progression-runrow {
+    width: 100%;
+    border: 0;
+    border-radius: 1rem;
+    padding: 0.95rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: inherit;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.runner-dashboard-progression-runrow:hover,
+.runner-dashboard-progression-runrow:focus-visible {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.runner-dashboard-progression-runmain strong,
+.runner-dashboard-progression-runmeta strong {
+    display: block;
+}
+
+.runner-dashboard-progression-runmain strong {
+    margin-bottom: 0.24rem;
+    font-size: 0.96rem;
+}
+
+.runner-dashboard-progression-runmeta {
+    text-align: right;
+    flex: 0 0 auto;
+}
+
+.runner-dashboard-progression-runmeta strong {
+    font-family: "Manrope", sans-serif;
+    font-size: 0.96rem;
+    margin-bottom: 0.22rem;
+}
+
+.runner-dashboard-progression-empty {
+    margin-top: 1rem;
+}
+
+.runner-dashboard-progression-empty strong {
+    display: block;
+    font-family: "Manrope", sans-serif;
+    font-size: 1.3rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.7rem;
+}
+
+.runner-dashboard-progression-empty p {
+    margin: 0;
+    color: rgba(229, 226, 225, 0.68);
+    line-height: 1.7;
+}
+
+.runner-dashboard-progression-empty .runner-dashboard-history-btn {
+    margin-top: 1rem;
+}
+
+.runner-dashboard-feature-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.runner-dashboard-feature-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1.45rem;
+    border-radius: 1.5rem;
+    background:
+        radial-gradient(circle at top right, rgba(240, 117, 97, 0.16), transparent 34%),
+        rgba(28, 27, 27, 0.96);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+}
+
+.runner-dashboard-feature-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 42%);
+    pointer-events: none;
+}
+
+.runner-dashboard-feature-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.runner-dashboard-feature-card--workout {
+    background:
+        linear-gradient(135deg, rgba(240, 117, 97, 0.16), rgba(240, 117, 97, 0.02) 46%),
+        rgba(28, 27, 27, 0.98);
+}
+
+.runner-dashboard-feature-card--stamina {
+    justify-content: flex-start;
+    gap: 1rem;
+    background:
+        radial-gradient(circle at top right, rgba(255, 180, 167, 0.16), transparent 34%),
+        linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
+}
+
+.runner-dashboard-feature-card--race {
+  background:
+    radial-gradient(circle at top right, rgba(125, 224, 163, 0.16), transparent 34%),
+    linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
+  border-color: rgba(125, 224, 163, 0.18);
+}
+
+.runner-dashboard-feature-card--predictions {
+  background:
+    radial-gradient(circle at top right, rgba(240, 117, 97, 0.14), transparent 34%),
+    linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
+}
+
+.runner-dashboard-feature-card--muscle {
+  background:
+    radial-gradient(circle at top right, rgba(180, 200, 220, 0.16), transparent 34%),
+    linear-gradient(160deg, rgba(31, 29, 29, 0.98), rgba(24, 24, 24, 0.95));
+}
+
+.runner-dashboard-muscle-session-type {
+  font-weight: 700;
+  color: rgba(200, 195, 190, 0.92);
+}
+
+.runner-dashboard-muscle-focus {
+  font-size: 0.78rem;
+  color: rgba(200, 195, 190, 0.64);
+  line-height: 1.5;
+  margin-bottom: 0.6rem;
+}
+
+.runner-dashboard-race-countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.runner-dashboard-race-countdown strong {
+  font-size: 2.8rem;
+  font-weight: 800;
+  font-family: "Manrope", var(--font-display);
+  letter-spacing: -0.04em;
+  color: #7de0a3;
+  line-height: 1;
+}
+
+.runner-dashboard-race-countdown span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(125, 224, 163, 0.6);
+  text-transform: uppercase;
+}
+
+.runner-dashboard-race-prep {
+  margin-top: 1.2rem;
+}
+
+.runner-dashboard-race-phase-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(125, 224, 163, 0.15);
+  border: 1px solid rgba(125, 224, 163, 0.25);
+  border-radius: 4px;
+  color: #7de0a3;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.runner-dashboard-race-prep p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(232, 226, 220, 0.8);
+}
+
+.runner-dashboard-race-prep small {
+  display: block;
+  font-weight: 700;
+  color: rgba(125, 224, 163, 0.7);
+  margin-bottom: 4px;
+}
+
+.runner-dashboard-stamina-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.runner-dashboard-feature-scoreband.runner-dashboard-stamina-scoreband {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    flex-wrap: nowrap;
+}
+
+.runner-dashboard-stamina-scoreline {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.4rem;
+}
+
+.runner-dashboard-stamina-scoreline strong {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(3rem, 6vw, 4rem);
+    line-height: 0.86;
+    letter-spacing: -0.1em;
+}
+
+.runner-dashboard-stamina-scoreline strong em,
+.runner-dashboard-stamina-capline strong em,
+.runner-dashboard-stamina-stat-row strong em {
+    font-style: normal;
+    font-size: 0.32em;
+    margin-left: 0.08em;
+}
+
+.runner-dashboard-stamina-arrow {
+    font-size: 2.15rem;
+    margin-bottom: 0.38rem;
+}
+
+.runner-dashboard-stamina-arrow--down {
+    color: #ff6b5f;
+}
+
+.runner-dashboard-stamina-arrow--up {
+    color: #41d48a;
+}
+
+.runner-dashboard-stamina-arrow--steady {
+    color: #f7b3a4;
+}
+
+.runner-dashboard-stamina-capline {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.28rem;
+    min-width: 6.9rem;
+    text-align: right;
+}
+
+.runner-dashboard-stamina-capline span,
+.runner-dashboard-stamina-capline small {
+    color: rgba(229, 226, 225, 0.58);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    line-height: 1.45;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-stamina-capline strong {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(1.7rem, 3.7vw, 2.4rem);
+    line-height: 0.9;
+    letter-spacing: -0.07em;
+}
+
+.runner-dashboard-stamina-capline small {
+    letter-spacing: 0.08em;
+}
+
+.runner-dashboard-feature-copy.runner-dashboard-stamina-copy {
+    margin-bottom: 0.1rem;
+}
+
+.runner-dashboard-feature-copy.runner-dashboard-stamina-copy h3 {
+    font-size: clamp(1.55rem, 3.8vw, 2.35rem);
+    line-height: 1;
+}
+
+.runner-dashboard-feature-copy.runner-dashboard-stamina-copy p {
+    max-width: 32rem;
+}
+
+.runner-dashboard-stamina-meter-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding-top: 0.25rem;
+}
+
+.runner-dashboard-stamina-meter-labels {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.runner-dashboard-stamina-meter-labels span {
+    color: rgba(229, 226, 225, 0.56);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-feature-meter.runner-dashboard-stamina-meter {
+    position: relative;
+    height: 0.78rem;
+    margin-top: 0;
+    overflow: visible;
+}
+
+.runner-dashboard-stamina-meter-fill {
+    background: linear-gradient(90deg, #f07561 0%, #ffb4a7 100%);
+}
+
+.runner-dashboard-stamina-cap-marker {
+    position: absolute;
+    top: 50%;
+    width: 0.4rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 0.22rem rgba(240, 117, 97, 0.18);
+}
+
+.runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 0;
+    padding-top: 0.1rem;
+}
+
+.runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row span {
+    color: rgba(229, 226, 225, 0.56);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row strong {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(1.2rem, 3.1vw, 1.55rem);
+    line-height: 1;
+    letter-spacing: -0.06em;
+}
+
+.runner-dashboard-feature-head,
+.runner-dashboard-feature-scoreband,
+.runner-dashboard-feature-actions,
+.runner-dashboard-feature-chip-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.runner-dashboard-feature-head {
+    margin-bottom: 1rem;
+}
+
+.runner-dashboard-feature-eyebrow,
+.runner-dashboard-feature-scoreband span,
+.runner-dashboard-feature-stat-row span,
+.runner-dashboard-feature-chip-row span,
+.runner-dashboard-feature-session-pill span,
+.runner-dashboard-feature-link {
+    color: rgba(229, 226, 225, 0.5);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-feature-copy {
+    margin-bottom: 1.2rem;
+}
+
+.runner-dashboard-feature-copy h3 {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(1.9rem, 4.8vw, 3.35rem);
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+    margin: 0 0 0.55rem;
+}
+
+.runner-dashboard-feature-copy p {
+    max-width: 40rem;
+    color: rgba(229, 226, 225, 0.72);
+    line-height: 1.65;
+}
+
+.runner-dashboard-feature-scoreband strong {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    line-height: 1;
+    letter-spacing: -0.06em;
+}
+
+.runner-dashboard-feature-meter {
+    height: 0.34rem;
+    margin-top: 1rem;
+    border-radius: 999px;
+    background: rgba(229, 226, 225, 0.08);
+    overflow: hidden;
+}
+
+.runner-dashboard-feature-meter-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f07561, #ffb4a7);
+}
+
+.runner-dashboard-feature-gear {
+    margin-bottom: 1.25rem;
+    padding-top: 0.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.runner-dashboard-feature-gear label {
+    color: rgba(229, 226, 225, 0.5);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-feature-gear strong {
+    display: block;
+    font-family: "Manrope", sans-serif;
+    font-size: 1.1rem;
+    color: #fff;
+    letter-spacing: -0.01em;
+}
+
+.runner-dashboard-feature-stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+  }
+
+.runner-dashboard-feature-stat-row strong {
+    display: block;
+    font-family: "Manrope", sans-serif;
+    font-size: 1.05rem;
+    margin-top: 0.3rem;
+}
+
+.runner-dashboard-feature-primary,
+.runner-dashboard-feature-secondary,
+.runner-dashboard-feature-link,
+.runner-dashboard-feature-session-pill {
+    border: 0;
+    cursor: pointer;
+}
+
+.runner-dashboard-feature-primary,
+.runner-dashboard-feature-secondary {
+    min-height: 2.9rem;
+    border-radius: 999px;
+    padding: 0.85rem 1.15rem;
+    font-family: "Manrope", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.runner-dashboard-feature-primary {
+    background: linear-gradient(135deg, #f07561, #ffb4a7);
+    color: #400200;
+}
+
+.runner-dashboard-feature-secondary {
+    background: rgba(53, 53, 52, 0.72);
+    color: rgba(229, 226, 225, 0.82);
+}
+
+.runner-dashboard-feature-mini-bars {
+    min-height: 8.75rem;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.55rem;
+    align-items: end;
+    margin-bottom: 1rem;
+}
+
+.runner-dashboard-feature-mini-bar {
+    min-height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.24rem;
+}
+
+.runner-dashboard-feature-mini-bar i {
+    display: block;
+    width: min(0.7rem, 42%);
+    border-radius: 0.3rem 0.3rem 0 0;
+}
+
+.runner-dashboard-feature-mini-bar .projected {
+    background: rgba(229, 226, 225, 0.14);
+}
+
+.runner-dashboard-feature-mini-bar .actual {
+    background: linear-gradient(180deg, #ffb4a7 0%, #f07561 100%);
+}
+
+.runner-dashboard-feature-mini-bar.is-today .actual {
+    box-shadow: 0 0 20px rgba(240, 117, 97, 0.28);
+}
+
+.runner-dashboard-feature-chip-row {
+    justify-content: flex-start;
+}
+
+.runner-dashboard-feature-chip-row span {
+    border-radius: 999px;
+    padding: 0.45rem 0.72rem;
+    background: rgba(53, 53, 52, 0.78);
+}
+
+.runner-dashboard-feature-session-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1 1 auto;
+    margin-bottom: 1rem;
+}
+
+.runner-dashboard-feature-session-pill {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    text-align: left;
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+    background: rgba(53, 53, 52, 0.62);
+    color: inherit;
+}
+
+.runner-dashboard-feature-session-pill strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.98rem;
+}
+
+.runner-dashboard-feature-session-pill em {
+    color: #f7b3a4;
+    font-family: "Manrope", sans-serif;
+    font-size: 0.88rem;
+    font-style: normal;
+    flex: 0 0 auto;
+}
+
+.runner-dashboard-feature-link {
+    width: fit-content;
+    padding: 0;
+    background: transparent;
+}
+
+.runner-dashboard-metric-strip {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1.2rem;
+}
+
+.runner-dashboard-mini-metric {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.35rem;
+}
+
+.runner-dashboard-mini-metric > span {
+    color: rgba(240, 117, 97, 0.42);
+    font-family: "Manrope", sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.runner-dashboard-mini-metric strong {
+    font-family: "Manrope", sans-serif;
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.runner-dashboard-mini-metric em {
+    color: rgba(229, 226, 225, 0.52);
+    font-size: 0.75rem;
+    font-style: normal;
+    margin-left: 0.2rem;
+}
+
+.runner-dashboard-vdot-trend {
+    display: inline-block;
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 99px;
+    line-height: 1.5;
+}
+
+.runner-dashboard-vdot-trend--improving {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.12);
+}
+
+.runner-dashboard-vdot-trend--maintaining {
+    color: rgba(229, 226, 225, 0.55);
+    background: rgba(229, 226, 225, 0.07);
+}
+
+.runner-dashboard-vdot-trend--declining {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.12);
+}
+
+.runner-dashboard-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem 1.6rem;
+    padding: 2.4rem 0 0.5rem;
+}
+
+.runner-dashboard-shell-topbar .runner-shell-topnav-link {
+    font-family: "Manrope", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.runner-dashboard-footer button {
+    border: 0;
+    background: transparent;
+    color: rgba(229, 226, 225, 0.28);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+@media (min-width: 768px) {
+    .runner-dashboard-topnav {
+        display: flex;
+    }
+
+    .runner-dashboard-sidenav {
+        display: flex;
+    }
+
+    .runner-dashboard-mobile-nav {
+        display: none;
+    }
+
+    .runner-dashboard-main {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0 0 2.5rem;
+    }
+
+    .runner-dashboard-grid {
+        grid-template-columns: minmax(22rem, 1fr) minmax(34rem, 1.65fr);
+        grid-template-areas:
+            "readiness workout"
+            "weekly sessions";
+        align-items: stretch;
+    }
+
+    .runner-dashboard-readiness-card {
+        grid-area: readiness;
+    }
+
+    .runner-dashboard-workout-card {
+        grid-area: workout;
+    }
+
+    .runner-dashboard-weekly-card {
+        grid-area: weekly;
+    }
+
+    .runner-dashboard-sessions-slot {
+        grid-area: sessions;
+    }
+
+    .runner-dashboard-feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+    }
+
+    .runner-dashboard-feature-card--workout {
+        min-height: 0;
+    }
+
+.runner-dashboard-fitness-strip-predictions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem 1rem;
+    padding: 0.4rem 0 0;
+}
+.runner-dashboard-fitness-strip-prediction {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.runner-dashboard-fitness-strip-prediction label {
+    font-family: "Manrope", sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(229, 226, 225, 0.40);
+}
+.runner-dashboard-fitness-strip-prediction strong {
+    font-family: "Manrope", sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-feature-card--muscle {
+  background:
+    radial-gradient(circle at top right, rgba(100, 130, 160, 0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 241, 242, 0.98));
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-muscle-session-type {
+  color: rgba(44, 47, 48, 0.86);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-muscle-focus {
+  color: rgba(89, 92, 93, 0.76);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-feature-card--predictions {
+  background:
+    radial-gradient(circle at top right, rgba(252, 126, 105, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 239, 236, 0.98));
+}
+body.theme-light .runner-dashboard-fitness-strip-prediction label {
+    color: rgba(0, 0, 0, 0.32);
+}
+body.theme-light .runner-dashboard-fitness-strip-prediction strong {
+    color: #1a1a1a;
+}
+
+@media (max-width: 1080px) {
+    .runner-dashboard-fitness-strip-predictions {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .runner-dashboard-fitness-strip-predictions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.runner-dashboard-metric-strip {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: 1.5rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .runner-dashboard-topbar {
+        padding: 0 1rem;
+    }
+
+    .runner-dashboard-topbar-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .runner-dashboard-action-btn,
+    .runner-dashboard-avatar-btn {
+        min-height: 2.35rem;
+        padding-inline: 0.85rem;
+    }
+
+    .runner-dashboard-workout-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .runner-dashboard-feature-stat-row {
+        grid-template-columns: 1fr;
+    }
+
+    .runner-dashboard-progression-switcher,
+    .runner-dashboard-progression-stat-row,
+    .runner-dashboard-progression-lane {
+        grid-template-columns: 1fr;
+    }
+
+    .runner-dashboard-progression-tab {
+        flex: 1 1 0;
+        min-width: 0;
+        padding-inline: 0.7rem;
+    }
+
+    .runner-dashboard-progression-summary-meta,
+    .runner-dashboard-progression-runlist-window {
+        justify-items: start;
+        text-align: left;
+    }
+
+    .runner-dashboard-progression-chart-frame {
+        min-height: 17rem;
+    }
+
+    .runner-dashboard-progression-runrow {
+        flex-direction: column;
+    }
+
+    .runner-dashboard-progression-runmeta {
+        text-align: left;
+    }
+
+    .runner-dashboard-session-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .runner-dashboard-stamina-hero {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .runner-dashboard-stamina-capline {
+        align-items: flex-start;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .runner-dashboard-stamina-arrow {
+        font-size: 1.9rem;
+    }
+
+    .runner-dashboard-feature-stat-row.runner-dashboard-stamina-stat-row {
+        grid-template-columns: 1fr;
+    }
+
+    .runner-dashboard-session-metric {
+        text-align: left;
+    }
+
+    .runner-dashboard-feature-session-pill {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .runner-dashboard-bar-chart {
+        gap: 0.45rem;
+    }
+}
+
+/* Profile Dashboard Brand Carousel */
+
+.runner-dashboard-brand-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 8% 10%, rgba(240, 117, 97, 0.22), transparent 30%),
+    linear-gradient(135deg, #1a1a1a 0%, #121212 100%);
+  border: 1px solid rgba(255, 244, 236, 0.08);
+  padding: clamp(22px, 4vw, 34px);
+  margin-bottom: 28px;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.26);
+}
+
+.runner-dashboard-brand-inner {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.82fr) minmax(0, 1.18fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.runner-dashboard-brand-preview-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.runner-dashboard-brand-preview-copy span,
+.runner-dashboard-brand-preview-card span {
+  color: rgba(255, 244, 236, 0.48);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-brand-preview-copy h2 {
+  margin: 0;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.65rem, 3vw, 2.45rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: #f7f4ef;
+}
+
+.runner-dashboard-brand-preview-copy p {
+  max-width: 520px;
+  margin: 12px 0 0;
+  color: rgba(255, 244, 236, 0.58);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.runner-dashboard-brand-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.runner-dashboard-brand-preview-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 132px;
+  border-radius: 18px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.025)),
+    rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 244, 236, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.runner-dashboard-brand-preview-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 12px 12px auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.18);
+  filter: blur(8px);
+}
+
+.runner-dashboard-brand-preview-card strong {
+  position: relative;
+  z-index: 1;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.35rem, 2vw, 1.95rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: #ffffff;
+}
+
+.runner-dashboard-brand-preview-card em {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: rgba(255, 244, 236, 0.5);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.runner-dashboard-coach-cockpit {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(255, 180, 167, 0.26), transparent 34%),
+    radial-gradient(circle at 86% 10%, rgba(240, 117, 97, 0.16), transparent 28%),
+    linear-gradient(135deg, #1f1917 0%, #121212 58%, #0b0b0b 100%);
+  padding: clamp(26px, 4.5vw, 46px);
+}
+
+.runner-dashboard-coach-cockpit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(115deg, rgba(255, 244, 236, 0.06) 0 1px, transparent 1px 18px),
+    radial-gradient(circle at 78% 78%, rgba(255, 255, 255, 0.08), transparent 24%);
+  opacity: 0.5;
+}
+
+.runner-dashboard-coach-layout {
+  grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
+  gap: clamp(20px, 3.5vw, 38px);
+}
+
+.runner-dashboard-coach-primary {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: clamp(18px, 3vw, 30px);
+  min-height: 390px;
+}
+
+.runner-dashboard-coach-copy {
+  justify-content: flex-start;
+}
+
+.runner-dashboard-coach-copy h1 {
+  max-width: 12ch;
+  margin: 0.85rem 0 1rem;
+  color: #fff4ec;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(2.75rem, 5.9vw, 6.15rem);
+  font-weight: 850;
+  line-height: 0.9;
+  letter-spacing: -0.085em;
+}
+
+.runner-dashboard-coach-copy h3 {
+  margin: 0;
+  color: #fffaf7;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.runner-dashboard-coach-score {
+  width: min(100%, 260px);
+  border: 1px solid rgba(255, 244, 236, 0.1);
+  border-radius: 24px;
+  background:
+    linear-gradient(160deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.04)),
+    rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.runner-dashboard-coach-score span,
+.runner-dashboard-coach-prescription-stats span {
+  color: rgba(255, 244, 236, 0.52);
+  font-size: 0.58rem;
+  font-weight: 850;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-coach-score strong {
+  color: #fff4ec;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(3.2rem, 7vw, 5.2rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+}
+
+.runner-dashboard-coach-score em {
+  color: rgba(255, 180, 167, 0.88);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-coach-secondary {
+  display: grid;
+  gap: 14px;
+  align-content: stretch;
+}
+
+.runner-dashboard-coach-quick-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.runner-dashboard-coach-quick-grid .runner-dashboard-brand-preview-card {
+  min-height: 116px;
+}
+
+.runner-dashboard-coach-prescription {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 244, 236, 0.1);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.055)),
+    rgba(12, 12, 12, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: clamp(20px, 3vw, 26px);
+  display: grid;
+  gap: 16px;
+}
+
+.runner-dashboard-coach-prescription::after {
+  content: "";
+  position: absolute;
+  right: -48px;
+  bottom: -70px;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.16);
+  filter: blur(18px);
+}
+
+.runner-dashboard-coach-prescription > * {
+  position: relative;
+  z-index: 1;
+}
+
+.runner-dashboard-coach-prescription h2 {
+  margin: 0;
+  color: #fffaf7;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.runner-dashboard-coach-prescription p {
+  max-width: 620px;
+  margin: 0;
+  color: rgba(255, 244, 236, 0.62);
+  font-size: 0.9rem;
+  line-height: 1.58;
+}
+
+.runner-dashboard-coach-prescription-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.runner-dashboard-coach-prescription-stats div {
+  min-width: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.runner-dashboard-coach-prescription-stats strong {
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.runner-dashboard-coach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 1080px) {
+  .runner-dashboard-coach-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .runner-dashboard-coach-primary {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+    grid-template-rows: auto;
+    align-items: end;
+  }
+}
+
+@media (max-width: 720px) {
+  .runner-dashboard-brand-carousel {
+    border-radius: 16px;
+    padding: 24px 20px;
+  }
+
+  .runner-dashboard-brand-inner {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .runner-dashboard-brand-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .runner-dashboard-brand-preview-card {
+    min-height: 118px;
+  }
+
+  .runner-dashboard-coach-primary,
+  .runner-dashboard-coach-prescription-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .runner-dashboard-coach-score {
+    width: 100%;
+  }
+
+  .runner-dashboard-coach-copy h1 {
+    font-size: clamp(2.35rem, 16vw, 4.2rem);
+  }
+
+  .runner-dashboard-coach-actions {
+    flex-direction: column;
+  }
+}
+
+.runner-dashboard-side-link-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.runner-dashboard-brand {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.runner-dashboard-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.runner-dashboard-sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(243, 237, 232, 0.72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+
+.runner-dashboard-sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transform: translateX(1px);
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-sidebar-toggle {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(145deg, rgba(240, 117, 97, 0.94), rgba(201, 78, 61, 0.98));
+  color: #fff7f3;
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.22);
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-sidebar-toggle:hover {
+  background: linear-gradient(145deg, rgba(246, 133, 114, 0.98), rgba(216, 91, 73, 1));
+  transform: translateX(0);
+}
+
+.runner-dashboard-toggle-glyph,
+.runner-dashboard-workout-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Manrope", var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.runner-dashboard-toggle-glyph {
+  font-size: 1rem;
+  font-family: 'Material Symbols Outlined', "Manrope", var(--font-display);
+  font-variation-settings: 'FILL' 0, 'wght' 700, 'GRAD' 0, 'opsz' 24;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-toggle-glyph {
+  font-size: 1.3rem;
+}
+
+.runner-dashboard-side-link-label,
+.runner-dashboard-workout-btn-label {
+  transition: opacity var(--transition), width var(--transition);
+}
+
+.runner-dashboard-workout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.runner-dashboard-workout-glyph {
+  font-size: 1rem;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar {
+  width: 88px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-main {
+  margin-left: 88px;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-brand {
+  flex-direction: column;
+  align-items: center;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-brand-copy {
+  align-items: center;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo),
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-side-link-label,
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-workout-btn-label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-side-link {
+  justify-content: center;
+  padding-left: 12px;
+  padding-right: 12px;
+  gap: 0;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar-footer {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-workout-btn {
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Weather Adjusted Fitness Styles */
+
+.runner-dashboard-vdot-overview {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.runner-dashboard-vdot-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.runner-dashboard-vdot-hero strong {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--slate-900);
+}
+
+.runner-dashboard-vdot-hero span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--slate-500);
+  text-transform: uppercase;
+}
+
+.runner-dashboard-vdot-adjusted {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.runner-dashboard-vdot-adjusted span {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--indigo-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.runner-dashboard-vdot-adjusted strong {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--indigo-600);
+}
+
+.runner-dashboard-mini-metric-vdot {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.runner-dashboard-mini-metric-adjusted {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--indigo-500);
+}
+
+/* 闁冲厜鍋撻柍鍏夊�?Premium / Pro feature gating 闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊亾闁冲厜鍋撻柍鍏夊�?*/
+
+.runner-dashboard-pro-card {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(252, 126, 105, .08), rgba(160, 57, 42, .04));
+  border: 1px solid rgba(160, 57, 42, .14);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.runner-dashboard-pro-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.runner-dashboard-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--brand-accent), #fc7e69);
+  color: #fff;
+  line-height: 1.5;
+}
+
+.runner-dashboard-pro-expiry {
+  font-size: .84rem;
+  color: var(--text-muted);
+}
+
+/* Free-user quota card */
+
+.runner-dashboard-pro-quota-card {
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(245, 246, 247, .92));
+  border: 1px solid rgba(171, 173, 174, .18);
+  box-shadow: var(--shadow-card);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.runner-dashboard-pro-quota-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.runner-dashboard-pro-quota-kicker {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(160, 57, 42, .08);
+  width: fit-content;
+}
+
+.runner-dashboard-pro-quota-copy h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--text-strong);
+  letter-spacing: -.01em;
+}
+
+.runner-dashboard-pro-quota-copy p {
+  margin: 6px 0 0;
+  font-size: .84rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.runner-dashboard-pro-quota-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 8px 18px;
+  border-radius: 24px;
+  font-family: var(--font-display);
+  font-size: .88rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-accent), #fc7e69);
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.runner-dashboard-pro-quota-cta:hover {
+  opacity: .9;
+}
+
+/* Auto-Hermes Max profile/admin visual refresh. */
+
+.runner-dashboard-page .runner-dashboard-main {
+  position: relative;
+  isolation: isolate;
+}
+
+.runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit {
+  min-height: clamp(520px, 58vh, 680px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 244, 236, 0.18);
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at 10% 6%, rgba(255, 180, 167, 0.28), transparent 30%),
+    radial-gradient(circle at 84% 14%, rgba(240, 117, 97, 0.2), transparent 28%),
+    radial-gradient(circle at 78% 88%, rgba(255, 244, 236, 0.08), transparent 34%),
+    linear-gradient(135deg, #231815 0%, #151312 54%, #080706 100%); /* tokens-ok */
+  box-shadow:
+    0 38px 90px rgba(4, 4, 4, 0.42),
+    inset 0 1px 0 rgba(255, 244, 236, 0.16);
+}
+
+.runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit::before {
+  background:
+    linear-gradient(112deg, rgba(255, 244, 236, 0.08) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(90deg, transparent 0 28px, rgba(255, 244, 236, 0.035) 28px 29px),
+    radial-gradient(circle at 50% 48%, transparent 0 39%, rgba(240, 117, 97, 0.12) 40%, transparent 42%),
+    linear-gradient(90deg, rgba(240, 117, 97, 0.18), transparent 22%, transparent 78%, rgba(255, 180, 167, 0.1));
+  opacity: 0.86;
+}
+
+.runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit::after {
+  content: "";
+  position: absolute;
+  right: clamp(20px, 4vw, 52px);
+  bottom: clamp(18px, 4vw, 48px);
+  width: min(34vw, 360px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 244, 236, 0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, transparent 47%, rgba(255, 244, 236, 0.18) 48% 52%, transparent 53%),
+    repeating-radial-gradient(circle, rgba(255, 244, 236, 0.16) 0 1px, transparent 1px 26px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-layout {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: minmax(0, 0.96fr) minmax(360px, 1.04fr);
+  align-items: stretch;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-primary {
+  min-height: clamp(420px, 48vh, 560px);
+  padding: clamp(10px, 1.2vw, 18px);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 244, 236, 0.08), rgba(255, 244, 236, 0.02)),
+    rgba(255, 244, 236, 0.035);
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 236, 0.08);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-copy h1 {
+  max-width: 11ch;
+  font-size: clamp(3rem, 5.35vw, 5.55rem);
+  letter-spacing: -0.085em;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-copy p {
+  max-width: 46rem;
+  color: rgba(255, 250, 247, 0.78);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-score {
+  width: min(100%, 320px);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 244, 236, 0.18), transparent 44%),
+    linear-gradient(135deg, rgba(255, 244, 236, 0.12), rgba(240, 117, 97, 0.16));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 236, 0.14),
+    0 26px 56px rgba(0, 0, 0, 0.26);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-score strong {
+  font-size: clamp(4.2rem, 9vw, 7.4rem);
+  letter-spacing: -0.11em;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-secondary {
+  align-content: stretch;
+  gap: 16px;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-quick-grid {
+  gap: 14px;
+}
+
+.runner-dashboard-page .runner-dashboard-brand-preview-card {
+  min-height: 124px;
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 244, 236, 0.15), rgba(255, 255, 255, 0.045)),
+    rgba(255, 244, 236, 0.055);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 236, 0.1),
+    0 20px 42px rgba(0, 0, 0, 0.18);
+}
+
+.runner-dashboard-page .runner-dashboard-brand-preview-card::before {
+  opacity: 0.95;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-prescription {
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(255, 180, 167, 0.16), transparent 28%),
+    linear-gradient(135deg, rgba(255, 244, 236, 0.13), rgba(255, 244, 236, 0.04));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 244, 236, 0.12),
+    0 26px 54px rgba(0, 0, 0, 0.22);
+}
+
+@media (max-width: 980px) {
+  .runner-dashboard-page .runner-dashboard-brand-carousel.runner-dashboard-coach-cockpit {
+    min-height: auto;
+    border-radius: 28px;
+  }
+
+  .runner-dashboard-page .runner-dashboard-coach-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .runner-dashboard-page .runner-dashboard-coach-primary {
+    min-height: 0;
+  }
+}
+
+/* Profile browser-harness runner dossier redesign */
+
+.runner-dashboard-page .runner-dashboard-profile-dossier {
+  min-height: clamp(500px, 56vh, 640px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-overline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 clamp(18px, 3vw, 34px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-overline span,
+.runner-dashboard-page .runner-dashboard-coach-command-row em {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid rgba(255, 244, 236, 0.14);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: rgba(255, 244, 236, 0.62);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-command-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: clamp(22px, 4vw, 44px);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-command-row span {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid rgba(255, 244, 236, 0.16);
+  padding-top: 12px;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-command-row strong {
+  overflow-wrap: anywhere;
+  color: #fff8f1;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.4rem, 2.4vw, 2.1rem);
+  font-weight: 900;
+  letter-spacing: -0.08em;
+  line-height: 0.95;
+}
+
+.runner-dashboard-page .runner-dashboard-coach-command-row em {
+  width: max-content;
+  max-width: 100%;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  color: rgba(255, 244, 236, 0.5);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-score-meter {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 244, 236, 0.16);
+}
+
+.runner-dashboard-page .runner-dashboard-coach-score-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff4ec;
+  transform-origin: left center;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-next-session {
+  display: grid;
+  align-content: space-between;
+  gap: clamp(16px, 2.4vw, 26px);
+}
+
+@media (max-width: 760px) {
+  .runner-dashboard-page .runner-dashboard-coach-command-row,
+  .hermes-site-frame.is-minimalist .runner-dashboard-page .runner-dashboard-profile-dossier .runner-dashboard-coach-quick-grid,
+  .hermes-site-frame.is-minimalist .runner-dashboard-page .runner-dashboard-profile-dossier .runner-dashboard-coach-prescription-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .hermes-site-frame.is-minimalist .runner-dashboard-page .runner-dashboard-profile-dossier {
+    min-height: auto;
+    padding: 14px !important;
+  }
+
+  .hermes-site-frame.is-minimalist .runner-dashboard-page .runner-dashboard-profile-dossier .runner-dashboard-coach-copy h1 {
+    font-size: clamp(2.7rem, 15vw, 4.8rem);
+  }
+}
+
+/* Profile image-to-code runner dossier pass */
+
+@media (min-width: 1100px) {
+  .runner-dashboard-page.runner-shell-page {
+    grid-template-columns: 112px minmax(0, 1fr) !important;
+  }
+
+  .runner-dashboard-page .runner-shell-sidebar {
+    width: 112px !important;
+    padding-inline: 12px !important;
+  }
+
+  .runner-dashboard-page .runner-shell-main {
+    margin-left: 112px !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-brand-copy p,
+  .runner-dashboard-page .runner-shell-side-link-label,
+  .runner-dashboard-page .runner-dashboard-workout-btn-label {
+    font-size: 0.58rem !important;
+    letter-spacing: 0.12em;
+  }
+
+  .runner-dashboard-page .runner-shell-canvas {
+    width: min(100% - 32px, 1390px) !important;
+    margin: 0 0 0 16px !important;
+    padding: 24px 28px 52px !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-main {
+    max-width: 1360px !important;
+  }
+}
+
+.runner-dashboard-page .runner-dashboard-profile-image-code .runner-dashboard-coach-layout {
+  align-items: stretch;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure {
+  position: relative;
+  display: grid;
+  align-self: start;
+  height: clamp(340px, 32vw, 460px);
+  min-height: 380px;
+  overflow: hidden;
+  border: 1px solid rgba(41, 35, 27, 0.12);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 52% 18%, rgba(255, 255, 255, 0.8), transparent 28%),
+    linear-gradient(180deg, rgba(255, 252, 245, 0.72) 0 48%, rgba(227, 220, 207, 0.96) 49% 100%),
+    linear-gradient(145deg, #fffaf1 0%, #f3ecdf 62%, #e7ddcd 100%);
+  isolation: isolate;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure::before {
+  content: "";
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: 86px;
+  height: 124px;
+  border-radius: 50% 50% 0 0;
+  background:
+    radial-gradient(ellipse at 30% 80%, rgba(78, 70, 58, 0.2), transparent 48%),
+    radial-gradient(ellipse at 70% 86%, rgba(78, 70, 58, 0.15), transparent 50%),
+    linear-gradient(180deg, transparent, rgba(106, 97, 82, 0.13));
+  filter: blur(0.4px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure-orbit {
+  position: absolute;
+  inset: 34px 28px auto;
+  height: 230px;
+  border: 1px solid rgba(41, 35, 27, 0.12);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0;
+  transform: skewX(-7deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-plate {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 178px;
+  height: 276px;
+  transform: translate(-50%, -50%) rotate(-2deg);
+  filter: grayscale(1) drop-shadow(0 28px 22px rgba(41, 35, 27, 0.18));
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-plate span {
+  position: absolute;
+  display: block;
+  background: #312d28;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-head {
+  left: 75px;
+  top: 2px;
+  width: 36px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-torso {
+  left: 70px;
+  top: 46px;
+  width: 48px;
+  height: 90px;
+  border-radius: 44% 56% 52% 48% / 28% 34% 66% 72%;
+  transform: rotate(8deg);
+  background: linear-gradient(180deg, #2f2d29, #514a41 98%);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm {
+  width: 17px;
+  height: 108px;
+  border-radius: 999px;
+  transform-origin: top center;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm.is-left {
+  left: 58px;
+  top: 58px;
+  transform: rotate(38deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm.is-right {
+  left: 107px;
+  top: 58px;
+  transform: rotate(-50deg);
+  background: #4b4036;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg {
+  width: 19px;
+  height: 138px;
+  border-radius: 999px;
+  transform-origin: top center;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg.is-left {
+  left: 70px;
+  top: 130px;
+  transform: rotate(34deg);
+  background: #514a41;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg.is-right {
+  left: 96px;
+  top: 130px;
+  transform: rotate(-30deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-terrain-line {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 84px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(41, 35, 27, 0.3), transparent);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-terrain-line::after {
+  content: "";
+  position: absolute;
+  left: 16%;
+  right: 7%;
+  top: -11px;
+  height: 22px;
+  border-top: 2px solid rgba(126, 72, 48, 0.42);
+  border-radius: 50%;
+  transform: rotate(-1.5deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure-caption {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 14px;
+  align-items: end;
+  padding-top: 16px;
+  border-top: 1px solid rgba(41, 35, 27, 0.12);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure-caption span,
+.runner-dashboard-page .runner-dashboard-profile-figure-caption em {
+  color: rgba(41, 35, 27, 0.58);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure-caption strong {
+  grid-row: span 2;
+  color: #2e2922;
+  font-size: clamp(2.6rem, 6vw, 4.8rem);
+  font-weight: 900;
+  letter-spacing: -0.12em;
+  line-height: 0.82;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-metric-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(41, 35, 27, 0.12);
+  border-radius: 16px;
+  background: rgba(41, 35, 27, 0.12);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-image-code .runner-dashboard-brand-preview-card {
+  min-height: 138px;
+  border: 0;
+  border-radius: 0;
+  background: rgba(255, 254, 251, 0.94);
+  box-shadow: none;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-image-code .runner-dashboard-brand-preview-card strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.82fr) minmax(0, 0.86fr);
+  gap: 12px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-card {
+  position: relative;
+  min-height: 286px;
+  overflow: hidden;
+  border: 1px solid rgba(42, 36, 28, 0.11);
+  border-radius: 10px;
+  background: rgba(255, 253, 248, 0.96);
+  padding: 18px 18px 16px;
+  box-shadow: none;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-head span,
+.runner-dashboard-page .runner-dashboard-profile-reference-head em,
+.runner-dashboard-page .runner-dashboard-profile-reference-card p {
+  margin: 0;
+  color: rgba(36, 33, 30, 0.58);
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-card strong {
+  color: #24211e;
+  font-family: "Manrope", "Satoshi", "Aptos", sans-serif;
+  font-size: clamp(2rem, 3vw, 3.15rem);
+  font-weight: 760;
+  letter-spacing: -0.075em;
+  line-height: 0.9;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-card small {
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-bars {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 9px;
+  align-items: end;
+  height: 126px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-bars span {
+  display: block;
+  height: var(--bar-height);
+  max-height: 100%;
+  min-height: 8px;
+  background: rgba(42, 36, 28, 0.16);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-bars span.is-today {
+  background:
+    repeating-linear-gradient(135deg, rgba(183, 71, 54, 0.38) 0 2px, rgba(183, 71, 54, 0.12) 2px 5px),
+    rgba(183, 71, 54, 0.26);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 24px;
+  height: 42px;
+  border-bottom: 1px solid rgba(42, 36, 28, 0.12);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark::before {
+  content: "";
+  position: absolute;
+  inset: 10px 0 0;
+  border-top: 2px solid rgba(42, 36, 28, 0.78);
+  border-radius: 50%;
+  transform: rotate(-3deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark span {
+  position: absolute;
+  bottom: 19px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #24211e;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark span:nth-child(1) { left: 3%; bottom: 12px; }
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark span:nth-child(2) { left: 25%; bottom: 18px; }
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark span:nth-child(3) { left: 48%; bottom: 16px; }
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark span:nth-child(4) { left: 70%; bottom: 21px; }
+
+.runner-dashboard-page .runner-dashboard-profile-reference-spark span:nth-child(5) { right: 1%; bottom: 27px; background: #b74736; }
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-graph {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-chart {
+  position: relative;
+  min-width: 0;
+  height: 58px;
+  overflow: hidden;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-gridline {
+  fill: none;
+  stroke: rgba(42, 36, 28, 0.12);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-line {
+  fill: none;
+  stroke: rgba(42, 36, 28, 0.78);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-line.is-flat {
+  stroke-dasharray: 5 6;
+  stroke-width: 2.2;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-graph.is-improving .runner-dashboard-profile-reference-vdot-line {
+  stroke: #2f7d50;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-graph.is-declining .runner-dashboard-profile-reference-vdot-line {
+  stroke: #b74736;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-graph.is-maintaining .runner-dashboard-profile-reference-vdot-line,
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-graph.is-unknown .runner-dashboard-profile-reference-vdot-line {
+  stroke: rgba(42, 36, 28, 0.78);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-dot {
+  position: absolute;
+  z-index: 2;
+  top: var(--point-y);
+  left: var(--point-x);
+  width: 5px;
+  height: 5px;
+  border: 1.2px solid rgba(42, 36, 28, 0.7);
+  border-radius: 999px;
+  background: #fff9ef;
+  box-sizing: border-box;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-dot.is-latest {
+  width: 6px;
+  height: 6px;
+  border-width: 1.4px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-graph.is-improving .runner-dashboard-profile-reference-vdot-dot.is-latest {
+  border-color: #2f7d50;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-graph.is-declining .runner-dashboard-profile-reference-vdot-dot.is-latest {
+  border-color: #b74736;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: rgba(36, 33, 30, 0.54);
+  font-size: 0.64rem;
+  font-weight: 860;
+  letter-spacing: 0.04em;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-meta span:nth-child(2) {
+  color: #24211e;
+  text-align: center;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-vdot-meta span:nth-child(3) {
+  text-align: right;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-route {
+  position: absolute;
+  inset: 18px 16px 12px auto;
+  width: 42%;
+  opacity: 0.52;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-route::before,
+.runner-dashboard-page .runner-dashboard-profile-reference-route span {
+  content: "";
+  position: absolute;
+  inset: 8px 0 0;
+  border: 1px solid rgba(42, 36, 28, 0.16);
+  border-left: 0;
+  border-bottom: 0;
+  border-radius: 50% 0 0 0;
+  transform: rotate(-18deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-reference-route span {
+  inset: 34px 12px 20px 18px;
+  border-color: rgba(42, 36, 28, 0.12);
+  transform: rotate(20deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure {
+  min-height: 410px;
+  height: clamp(410px, 33vw, 470px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure::before {
+  left: -18%;
+  right: -18%;
+  bottom: 86px;
+  height: 150px;
+  background:
+    radial-gradient(ellipse at 24% 80%, rgba(73, 67, 58, 0.18), transparent 44%),
+    radial-gradient(ellipse at 52% 76%, rgba(73, 67, 58, 0.22), transparent 48%),
+    radial-gradient(ellipse at 78% 84%, rgba(73, 67, 58, 0.16), transparent 48%);
+  opacity: 0.72;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure::after {
+  content: "";
+  position: absolute;
+  inset: 46% -18% 88px -18%;
+  z-index: -1;
+  background:
+    linear-gradient(165deg, transparent 0 42%, rgba(142, 133, 116, 0.2) 43% 46%, transparent 47%),
+    linear-gradient(22deg, transparent 0 54%, rgba(142, 133, 116, 0.16) 55% 59%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 253, 247, 0), rgba(222, 214, 199, 0.72));
+  filter: blur(0.2px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-figure-orbit {
+  display: none;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-plate {
+  left: 50%;
+  top: 42%;
+  width: 230px;
+  height: 320px;
+  transform: translate(-50%, -50%) rotate(2deg);
+  filter: grayscale(1) contrast(0.95) drop-shadow(0 30px 26px rgba(42, 36, 28, 0.2));
+  opacity: 0.94;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-plate::before {
+  content: "";
+  position: absolute;
+  left: 48px;
+  right: 34px;
+  bottom: 8px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(42, 36, 28, 0.12);
+  filter: blur(8px);
+  transform: rotate(-7deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-svg {
+  position: absolute;
+  inset: -10px -6px -6px -8px;
+  width: calc(100% + 14px);
+  height: calc(100% + 16px);
+  overflow: visible;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-photo {
+  position: absolute;
+  inset: -28px -68px -22px -76px;
+  width: calc(100% + 144px);
+  height: calc(100% + 50px);
+  object-fit: cover;
+  object-position: 58% 48%;
+  filter: grayscale(1) contrast(1.08) brightness(1.04);
+  opacity: 0.84;
+  mix-blend-mode: multiply;
+  transform: scale(1.62);
+  transform-origin: 58% 48%;
+  -webkit-mask-image: radial-gradient(ellipse at 52% 48%, #000 0 38%, rgba(0, 0, 0, 0.82) 48%, transparent 74%);
+  mask-image: radial-gradient(ellipse at 52% 48%, #000 0 38%, rgba(0, 0, 0, 0.82) 48%, transparent 74%);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-photo:not([src=""]) + .runner-dashboard-profile-runner-svg {
+  display: none;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-svg + span,
+.runner-dashboard-page .runner-dashboard-profile-runner-svg + span ~ span {
+  display: none;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-plate span {
+  background: linear-gradient(180deg, #3a3732, #6a6256);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-head {
+  left: 100px;
+  top: 0;
+  width: 30px;
+  height: 34px;
+  border-radius: 47% 53% 48% 52%;
+  background:
+    radial-gradient(circle at 52% 18%, #1f1d1b 0 35%, transparent 37%),
+    linear-gradient(180deg, #3d3933, #655d52) !important;
+  transform: rotate(8deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-torso {
+  left: 77px;
+  top: 38px;
+  width: 82px;
+  height: 104px;
+  border-radius: 45% 55% 54% 46% / 21% 24% 70% 72%;
+  clip-path: polygon(13% 0, 87% 3%, 100% 38%, 70% 100%, 31% 97%, 0 38%);
+  background:
+    linear-gradient(82deg, rgba(255, 255, 255, 0.22), transparent 45%),
+    linear-gradient(180deg, #4c4740, #7a7063 92%) !important;
+  transform: rotate(5deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-torso::after {
+  content: "";
+  position: absolute;
+  inset: 16px 18px 14px 48px;
+  border-radius: 999px;
+  background: rgba(34, 31, 28, 0.18);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm {
+  width: 18px;
+  height: 74px;
+  border-radius: 999px;
+  transform-origin: 50% 12%;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm::after,
+.runner-dashboard-page .runner-dashboard-profile-runner-leg::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(100% - 10px);
+  width: 100%;
+  height: 70px;
+  border-radius: 999px;
+  background: inherit;
+  transform-origin: 50% 10px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm.is-left {
+  left: 68px;
+  top: 58px;
+  transform: rotate(36deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm.is-left::after {
+  height: 62px;
+  transform: rotate(-82deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm.is-right {
+  left: 144px;
+  top: 58px;
+  background: linear-gradient(180deg, #2d2a26, #585146) !important;
+  transform: rotate(-40deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-arm.is-right::after {
+  height: 58px;
+  transform: rotate(76deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg {
+  width: 21px;
+  height: 98px;
+  border-radius: 999px;
+  transform-origin: 50% 10px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg.is-left {
+  left: 88px;
+  top: 132px;
+  background: linear-gradient(180deg, #5e574d, #38342f) !important;
+  transform: rotate(42deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg.is-left::after {
+  height: 86px;
+  transform: rotate(-92deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg.is-right {
+  left: 130px;
+  top: 128px;
+  background: linear-gradient(180deg, #403b35, #60584d) !important;
+  transform: rotate(-22deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-runner-leg.is-right::after {
+  height: 98px;
+  transform: rotate(42deg);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-terrain-line {
+  left: 10%;
+  right: 6%;
+  bottom: 88px;
+  background: linear-gradient(90deg, transparent, rgba(42, 36, 28, 0.25), rgba(176, 84, 62, 0.26), transparent);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-terrain-line::after {
+  border-top-color: rgba(176, 84, 62, 0.32);
+}
+
+/* Profile grid style refresh */
+
+.profile-dashboard-page {
+  --profile-grid-field: #efe5d7;
+  --profile-grid-paper: rgba(255, 251, 242, 0.84);
+  --profile-grid-paper-strong: rgba(255, 253, 247, 0.94);
+  --profile-grid-ink: #211f1a;
+  --profile-grid-ink-soft: rgba(33, 31, 26, 0.62);
+  --profile-grid-line: rgba(72, 58, 42, 0.16);
+  --profile-grid-line-strong: rgba(72, 58, 42, 0.28);
+  --profile-grid-accent: #bf5b49;
+  --profile-grid-dark: #2b261f;
+  --profile-grid-dark-soft: rgba(255, 246, 232, 0.66);
+}
+
+/* Profile support grid calm board final override */
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr) !important;
+  grid-template-areas:
+    "workout readiness"
+    "workout weekly"
+    "sessions streak" !important;
+  grid-auto-rows: minmax(252px, auto) minmax(340px, auto) minmax(270px, auto) !important;
+  gap: clamp(16px, 1.6vw, 24px) !important;
+  align-items: stretch;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+  grid-area: workout !important;
+  min-height: clamp(560px, 46vw, 720px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card {
+  grid-area: readiness !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: space-between;
+  gap: clamp(14px, 1.4vw, 18px);
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card {
+  grid-area: weekly !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: start;
+  gap: clamp(12px, 1.2vw, 18px);
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot {
+  grid-area: sessions !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: start;
+  gap: 16px;
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card {
+  grid-area: streak !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: space-between;
+  gap: 18px;
+  padding: clamp(20px, 1.9vw, 28px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card h2 {
+  max-width: 10ch;
+  font-size: clamp(2rem, 3vw, 3.5rem) !important;
+  letter-spacing: 0 !important;
+  line-height: 0.94 !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-vdot-overview {
+  align-items: end;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-vdot-hero strong {
+  font-size: clamp(2rem, 2.8vw, 3.2rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-readiness-note,
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-section-head {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-section-head h4 {
+  font-size: clamp(1.8rem, 2.4vw, 3rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-bar-chart {
+  min-height: 12rem;
+  padding-top: 2.4rem;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-bar-track {
+  height: 8.8rem;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stat {
+  padding: clamp(14px, 1.3vw, 18px);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stat span {
+  font-size: clamp(2.2rem, 3.4vw, 4rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot .runner-dashboard-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .profile-dashboard-page .runner-dashboard-profile-support-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "workout"
+      "readiness"
+      "weekly"
+      "streak"
+      "sessions" !important;
+    grid-auto-rows: auto !important;
+  }
+
+  .profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+    min-height: clamp(360px, 54vw, 560px) !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Profile support grid calm board redesign */
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr) !important;
+  grid-template-areas:
+    "workout readiness"
+    "workout weekly"
+    "sessions streak" !important;
+  grid-auto-rows: minmax(252px, auto) minmax(340px, auto) minmax(270px, auto) !important;
+  gap: clamp(16px, 1.6vw, 24px) !important;
+  align-items: stretch;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+  min-height: clamp(560px, 46vw, 720px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card,
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card,
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot,
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card {
+  min-height: 0 !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card {
+  display: grid;
+  align-content: space-between;
+  gap: clamp(14px, 1.4vw, 18px);
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card h2 {
+  max-width: 10ch;
+  font-size: clamp(2rem, 3vw, 3.5rem) !important;
+  letter-spacing: 0 !important;
+  line-height: 0.94 !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-vdot-overview {
+  align-items: end;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-vdot-hero strong {
+  font-size: clamp(2rem, 2.8vw, 3.2rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-readiness-note {
+  margin-top: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card {
+  display: grid;
+  align-content: start;
+  gap: clamp(12px, 1.2vw, 18px);
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-section-head {
+  margin-bottom: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-section-head h4 {
+  font-size: clamp(1.8rem, 2.4vw, 3rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-bar-chart {
+  min-height: 12rem;
+  padding-top: 2.4rem;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-bar-track {
+  height: 8.8rem;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card {
+  display: grid;
+  align-content: space-between;
+  gap: 18px;
+  padding: clamp(20px, 1.9vw, 28px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stat {
+  padding: clamp(14px, 1.3vw, 18px);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stat span {
+  font-size: clamp(2.2rem, 3.4vw, 4rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot .runner-dashboard-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .profile-dashboard-page .runner-dashboard-profile-support-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "workout"
+      "readiness"
+      "weekly"
+      "streak"
+      "sessions" !important;
+    grid-auto-rows: auto !important;
+  }
+
+  .profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+    min-height: clamp(360px, 54vw, 560px) !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Runner atlas Muscle Training specificity repair */
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) {
+  border-color: rgba(255, 244, 228, 0.1) !important;
+  background:
+    radial-gradient(circle at 86% 12%, rgba(201, 85, 63, 0.26), transparent 17rem),
+    radial-gradient(circle at 18% 86%, rgba(104, 126, 96, 0.2), transparent 17rem),
+    linear-gradient(90deg, rgba(255, 244, 228, 0.045) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 244, 228, 0.035) 1px, transparent 1px),
+    linear-gradient(145deg, #302920, var(--runner-atlas-dark) 62%, #1d1914) !important;
+  background-size: auto, auto, 32px 32px, 32px 32px, auto;
+  color: #fff4e6 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 30px 72px rgba(46, 34, 24, 0.22) !important;
+}
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) :is(h1, h2, h3, h4, strong, label) {
+  color: #fff4e6 !important;
+}
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) :is(p, span, small, em) {
+  color: var(--runner-atlas-dark-soft) !important;
+}
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) {
+  border: 1px solid var(--runner-minimal-line) !important;
+  background: var(--runner-minimal-surface) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) :is(h1, h2, h3, h4, strong, label) {
+  color: var(--runner-minimal-ink) !important;
+}
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) :is(p, span, small, em) {
+  color: var(--runner-minimal-muted) !important;
+}
+
+/* Profile first-fold decision-map refinement */
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit {
+  padding: clamp(16px, 2vw, 28px) !important;
+  background:
+    radial-gradient(circle at 4% 0%, rgba(185, 71, 53, 0.18), transparent 22rem),
+    radial-gradient(circle at 94% 88%, rgba(43, 38, 31, 0.12), transparent 24rem),
+    linear-gradient(90deg, rgba(33, 28, 24, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(33, 28, 24, 0.032) 1px, transparent 1px),
+    linear-gradient(135deg, var(--profile-paper), var(--profile-paper-2)) !important;
+  background-size: auto, auto, 34px 34px, 34px 34px, auto;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-layout {
+  grid-template-columns: minmax(0, 0.92fr) minmax(520px, 1.08fr) !important;
+  align-items: stretch !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary {
+  min-height: clamp(430px, 34vw, 548px) !important;
+  gap: clamp(12px, 1.25vw, 16px) !important;
+  padding: clamp(22px, 2.6vw, 34px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy {
+  align-self: start;
+  gap: 9px;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy h1 {
+  max-width: 17ch !important;
+  margin: 0.24rem 0 0.34rem !important;
+  font-size: clamp(1.95rem, 2.2vw, 3rem) !important;
+  font-style: normal !important;
+  line-height: 0.92 !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy p {
+  max-width: 48ch;
+  font-size: clamp(0.88rem, 0.9vw, 0.98rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-map {
+  order: 3;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 250, 243, 0.22)),
+    rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-node {
+  min-height: 108px;
+  border-right: 1px solid var(--profile-line);
+  border-bottom: 1px solid var(--profile-line);
+  padding: 14px;
+  animation: profileDossierRise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(70ms + (var(--profile-decision-index, 0) * 48ms));
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-node:nth-child(1) {
+  --profile-decision-index: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-node:nth-child(2) {
+  --profile-decision-index: 1;
+  border-right: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-node:nth-child(3) {
+  --profile-decision-index: 2;
+  border-bottom: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-node:nth-child(4) {
+  --profile-decision-index: 3;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-node span,
+.profile-dashboard-page .runner-dashboard-profile-decision-node em {
+  color: color-mix(in srgb, var(--profile-muted) 86%, var(--profile-ink));
+  font-size: 0.68rem;
+  line-height: 1.3;
+  text-transform: none;
+  white-space: normal;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-decision-node strong {
+  font-size: clamp(0.98rem, 1.08vw, 1.18rem);
+  line-height: 1.04;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row {
+  order: 4;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row span {
+  min-width: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row strong {
+  font-size: clamp(0.9rem, 0.98vw, 1.08rem) !important;
+  line-height: 1.08 !important;
+  overflow-wrap: anywhere;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row span:nth-child(2) strong {
+  font-size: clamp(0.78rem, 0.82vw, 0.94rem) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score {
+  order: 5;
+  width: 100% !important;
+  max-width: 420px;
+  align-self: end;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session {
+  min-height: clamp(248px, 20vw, 306px) !important;
+  padding: clamp(18px, 2vw, 26px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session h2 {
+  font-size: clamp(1.7rem, 2.24vw, 2.72rem) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card {
+  min-height: 178px !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-bars {
+  height: 64px !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary,
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session,
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card {
+  animation: profileDossierRise 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session {
+  animation-delay: 60ms;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card {
+  animation-delay: 110ms;
+}
+
+@media (min-width: 1181px) {
+  .profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .profile-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .profile-dashboard-page .runner-dashboard-profile-decision-map {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-dashboard-page .runner-dashboard-profile-decision-node,
+  .profile-dashboard-page .runner-dashboard-profile-decision-node:nth-child(2),
+  .profile-dashboard-page .runner-dashboard-profile-decision-node:nth-child(3),
+  .profile-dashboard-page .runner-dashboard-profile-decision-node:nth-child(4) {
+    border-right: 0;
+    border-bottom: 1px solid var(--profile-line);
+  }
+
+  .profile-dashboard-page .runner-dashboard-profile-decision-node:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-dashboard-page .runner-dashboard-profile-purpose-cockpit :is(
+    .runner-dashboard-coach-primary,
+    .runner-dashboard-profile-next-session,
+    .runner-dashboard-profile-reference-card,
+    .runner-dashboard-profile-decision-node
+  ) {
+    animation: none;
+  }
+}
+
+/* Profile workout media card contrast repair */
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card .runner-dashboard-workout-content {
+  color: #fff7ec !important;
+  text-shadow: 0 1px 18px rgba(22, 17, 13, 0.42);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card .runner-dashboard-workout-chip {
+  border: 1px solid rgba(255, 247, 236, 0.18);
+  background: rgba(255, 247, 236, 0.9) !important;
+  color: #7f2f24 !important;
+  text-shadow: none;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card .runner-dashboard-workout-content h3,
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card .runner-dashboard-workout-stats strong {
+  color: #fff7ec !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card .runner-dashboard-workout-stats span {
+  color: rgba(255, 247, 236, 0.68) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card .runner-dashboard-workout-stats > div {
+  min-width: 0;
+  border-top: 1px solid rgba(255, 247, 236, 0.2);
+  padding-top: 12px;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card .runner-dashboard-workout-stats strong {
+  overflow-wrap: anywhere;
+  line-height: 1.08;
+}
+
+/* Runner shell navigation redesign */
+
+.runner-dashboard-page {
+  --runner-nav-expanded-width: clamp(156px, 9.2vw, 178px);
+  --runner-nav-collapsed-width: 84px;
+  --runner-nav-ink: #201a17;
+  --runner-nav-muted: rgba(32, 26, 23, 0.62);
+  --runner-nav-line: rgba(112, 61, 46, 0.13);
+  --runner-nav-surface: rgba(255, 250, 244, 0.84);
+  --runner-nav-active: #a0392a;
+  --runner-nav-active-soft: rgba(160, 57, 42, 0.15);
+  --runner-nav-hover-bg: rgba(255, 255, 255, 0.56);
+  --runner-nav-active-bg: rgba(255, 255, 255, 0.86);
+}
+
+@media (min-width: 1100px) {
+  .runner-dashboard-page.runner-shell-page:not(.is-sidebar-collapsed) {
+    grid-template-columns: var(--runner-nav-expanded-width) minmax(0, 1fr) !important;
+  }
+
+  .runner-dashboard-page:not(.is-sidebar-collapsed) .runner-shell-sidebar {
+    width: var(--runner-nav-expanded-width) !important;
+    padding: 16px 10px 14px !important;
+  }
+
+  .runner-dashboard-page:not(.is-sidebar-collapsed) .runner-shell-main {
+    margin-left: var(--runner-nav-expanded-width) !important;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar {
+    width: var(--runner-nav-collapsed-width) !important;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed .runner-shell-main {
+    margin-left: var(--runner-nav-collapsed-width) !important;
+  }
+}
+
+.runner-dashboard-page .runner-shell-sidebar {
+  isolation: isolate;
+  overflow: hidden;
+  gap: 18px;
+  border-right: 1px solid var(--runner-nav-line);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(244, 235, 224, 0.9)),
+    var(--runner-nav-surface);
+  box-shadow:
+    18px 0 42px rgba(105, 68, 48, 0.1),
+    inset -1px 0 0 rgba(255, 255, 255, 0.64);
+}
+
+.runner-dashboard-page .runner-shell-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 12px auto 12px 0;
+  width: 3px;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(160, 57, 42, 0), rgba(160, 57, 42, 0.76) 42%, rgba(111, 169, 133, 0.32));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.runner-dashboard-page .runner-shell-sidebar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(112, 61, 46, 0.035) 0 1px, transparent 1px 18px),
+    radial-gradient(circle at 84% 10%, rgba(252, 126, 105, 0.12), transparent 28%),
+    radial-gradient(circle at 8% 88%, rgba(111, 169, 133, 0.08), transparent 28%);
+  opacity: 0.74;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.runner-dashboard-page .runner-dashboard-brand,
+.runner-dashboard-page .runner-shell-side-nav,
+.runner-dashboard-page .runner-shell-sidebar-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.runner-dashboard-page .runner-dashboard-brand {
+  min-height: 70px;
+  padding: 4px 6px 14px;
+  border-bottom: 1px solid var(--runner-nav-line);
+}
+
+.runner-dashboard-page .runner-dashboard-brand-copy {
+  gap: 6px;
+}
+
+.runner-dashboard-page .runner-dashboard-brand-copy .hermes-logo {
+  letter-spacing: -0.045em;
+}
+
+.runner-dashboard-page .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {
+  max-width: 12ch;
+  color: var(--runner-nav-muted);
+  font-size: 0.54rem;
+  line-height: 1.35;
+  letter-spacing: 0.16em;
+}
+
+.runner-dashboard-page .runner-dashboard-sidebar-toggle {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--runner-nav-line);
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--runner-nav-ink);
+  box-shadow: 0 10px 24px rgba(105, 68, 48, 0.08);
+}
+
+.runner-dashboard-page .runner-shell-side-nav {
+  counter-reset: runner-nav-item;
+  gap: 7px;
+  padding: 2px 0 4px;
+}
+
+.runner-dashboard-page .runner-shell-side-link {
+  position: relative;
+  min-height: 42px;
+  counter-increment: runner-nav-item;
+  gap: 10px;
+  padding: 9px 34px 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--runner-nav-muted);
+  font-size: 0.69rem;
+  font-weight: 850;
+  letter-spacing: 0.015em;
+  line-height: 1.05;
+  text-transform: none;
+  box-shadow: none;
+  transform: translateZ(0);
+  transition:
+    background 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.runner-dashboard-page .runner-shell-side-link::before {
+  content: counter(runner-nav-item, decimal-leading-zero);
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  color: color-mix(in srgb, var(--runner-nav-muted) 56%, transparent);
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.runner-dashboard-page .runner-shell-side-link::after {
+  content: "";
+  position: absolute;
+  inset: 9px auto 9px 5px;
+  width: 0;
+  border-radius: 999px;
+  background: var(--runner-nav-active);
+  opacity: 0;
+  transition: width 180ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.runner-dashboard-page .runner-shell-side-link .runner-dashboard-side-link-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: currentColor;
+}
+
+.runner-dashboard-page .runner-shell-side-link:hover {
+  border-color: var(--runner-nav-line);
+  background: var(--runner-nav-hover-bg);
+  color: var(--runner-nav-ink);
+  transform: translate3d(2px, 0, 0);
+}
+
+.runner-dashboard-page .runner-shell-side-link.is-active {
+  border-color: rgba(160, 57, 42, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, var(--runner-nav-active-soft), transparent 42%),
+    var(--runner-nav-active-bg);
+  color: var(--runner-nav-active);
+  box-shadow:
+    0 14px 28px rgba(105, 68, 48, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.runner-dashboard-page .runner-shell-side-link.is-active::before {
+  color: rgba(160, 57, 42, 0.72);
+}
+
+.runner-dashboard-page .runner-shell-side-link.is-active::after {
+  width: 3px;
+  opacity: 0.9;
+}
+
+.runner-dashboard-page .runner-shell-sidebar-footer {
+  padding: 6px 4px 0;
+}
+
+.runner-dashboard-page .runner-shell-workout-btn {
+  min-height: 46px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--runner-nav-active) 22%, transparent);
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.36), transparent 32%),
+    linear-gradient(135deg, #c94e3d, #a0392a);
+  color: #fff8f4;
+  box-shadow: 0 16px 30px rgba(160, 57, 42, 0.22);
+}
+
+.runner-dashboard-page .runner-shell-workout-btn:hover {
+  filter: saturate(1.04) brightness(1.03);
+  transform: translate3d(0, -1px, 0);
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar {
+  padding-inline: 10px !important;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-brand {
+  padding-inline: 0;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-sidebar-toggle {
+  width: 40px;
+  height: 40px;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-side-link {
+  min-height: 44px;
+  justify-content: center;
+  padding: 10px !important;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-side-link::before {
+  display: none;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-shell-side-link::after {
+  inset: auto 12px 5px 12px;
+  width: auto;
+  height: 3px;
+}
+
+@media (max-width: 860px) {
+  .runner-dashboard-page .runner-shell-sidebar {
+    position: static;
+    width: 100% !important;
+    padding: 14px !important;
+    border-right: 0;
+    border-bottom: 1px solid var(--runner-nav-line);
+    box-shadow: 0 14px 34px rgba(105, 68, 48, 0.08);
+  }
+
+  .runner-dashboard-page .runner-shell-side-nav {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(118px, 1fr);
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .runner-dashboard-page .runner-shell-side-link {
+    min-height: 42px;
+    padding: 9px 26px 9px 10px !important;
+    white-space: nowrap;
+  }
+
+  .runner-dashboard-page .runner-shell-side-link::before {
+    right: 8px;
+  }
+}
+
+.runner-comeback-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  min-height: 150px;
+  margin: 0 0 clamp(18px, 2vw, 28px);
+  padding: clamp(20px, 2.2vw, 30px);
+  border: 1px solid rgba(49, 44, 37, 0.14);
+  border-radius: clamp(22px, 2vw, 30px);
+  background:
+    radial-gradient(circle at 92% 18%, rgba(242, 102, 79, 0.15), transparent 15rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(255, 248, 238, 0.16)),
+    var(--gpt-card, rgba(255, 252, 246, 0.84));
+  box-shadow: 0 18px 44px rgba(43, 32, 24, 0.08);
+  color: var(--gpt-ink, #20201d);
+}
+
+.runner-comeback-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 4px;
+  background: #f2664f;
+}
+
+.runner-comeback-card__orb {
+  position: absolute;
+  top: -34px;
+  right: -28px;
+  width: clamp(100px, 10vw, 160px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: rgba(242, 102, 79, 0.08);
+  color: rgba(32, 32, 29, 0.12);
+}
+
+.runner-comeback-card__orb-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.runner-comeback-card__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(49, 44, 37, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.72);
+  color: rgba(32, 32, 29, 0.72);
+}
+
+.runner-comeback-card__close-icon,
+.runner-comeback-card__glyph-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.runner-comeback-card__body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  max-width: 760px;
+}
+
+.runner-comeback-card__eyebrow-row,
+.runner-comeback-card__tips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.runner-comeback-card__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: rgba(242, 102, 79, 0.1);
+  color: #b74736;
+}
+
+.runner-comeback-card__eyebrow,
+.runner-comeback-card__tip {
+  color: rgba(32, 32, 29, 0.62);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.runner-comeback-card__title {
+  margin: 0;
+  max-width: 18ch;
+  color: var(--gpt-ink, #20201d);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.55rem, 2.2vw, 2.55rem);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 0.96;
+}
+
+.runner-comeback-card__copy {
+  margin: 0;
+  max-width: 58ch;
+  color: rgba(32, 32, 29, 0.66);
+  font-size: clamp(0.9rem, 0.96vw, 1rem);
+  line-height: 1.58;
+}
+
+.runner-comeback-card__tips {
+  margin-top: 6px;
+}
+
+.runner-comeback-card__tip {
+  border: 1px solid rgba(49, 44, 37, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.68);
+  padding: 0.62rem 0.82rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.runner-comeback-card__tip.is-primary {
+  border-color: rgba(242, 102, 79, 0.22);
+  background: rgba(242, 102, 79, 0.1);
+  color: #a83c2c;
+}
+
+/* Shared runner shell top navigation */
+
+.runner-dashboard-page .runner-shell-topbar-left {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.runner-dashboard-page .runner-shell-topbar-actions {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 860px) {
+  .runner-dashboard-page .runner-shell-topbar {
+    padding: 14px;
+  }
+
+  .runner-shell-topnav--command {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 8px;
+    border-radius: 22px;
+  }
+
+  .runner-shell-topnav-identity {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .runner-shell-topnav-meta {
+    grid-column: auto;
+  }
+}
+
+/* Profile page runtime fallback: the current app shell mounts /profile without .hermes-site-frame. */
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary {
+  display: grid !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(32, 27, 23, 0.18) !important;
+  border-radius: clamp(24px, 2.2vw, 34px) !important;
+  background:
+    radial-gradient(circle at 88% 14%, rgba(242, 102, 79, 0.2), transparent 16rem),
+    linear-gradient(145deg, rgba(31, 27, 23, 0.98), rgba(22, 20, 18, 0.96)),
+    #171512 !important;
+  box-shadow: 0 24px 62px rgba(43, 32, 24, 0.14) !important;
+  color: #fff8ee !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(115deg, rgba(255, 248, 238, 0.08) 0 1px, transparent 1px 18px),
+    radial-gradient(circle at 24% 90%, rgba(255, 248, 238, 0.1), transparent 22rem);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session :is(h2, strong) {
+  color: #fff8ee !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session :is(p, span, em) {
+  color: rgba(255, 248, 238, 0.68) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session .runner-dashboard-card-kicker {
+  color: #f2664f !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session .runner-dashboard-feature-primary {
+  background: #f2664f !important;
+  color: #211a16 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session .runner-dashboard-feature-secondary {
+  border-color: rgba(255, 248, 238, 0.22) !important;
+  background: rgba(255, 248, 238, 0.08) !important;
+  color: #fff8ee !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session .runner-dashboard-coach-prescription-stats {
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  overflow: visible !important;
+  border: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session .runner-dashboard-coach-prescription-stats > div {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.46fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border: 1px solid rgba(255, 248, 238, 0.14) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 248, 238, 0.075) !important;
+  padding: 10px 12px !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session .runner-dashboard-coach-prescription-stats > div:last-child {
+  border-right: 1px solid rgba(255, 248, 238, 0.14) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session .runner-dashboard-coach-prescription-stats strong {
+  text-align: right;
+  font-size: clamp(1rem, 1.35vw, 1.28rem) !important;
+  line-height: 1.05;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-distance {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-distance .runner-dashboard-profile-reference-route {
+  border-color: rgba(32, 32, 29, 0.08);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-distance .runner-dashboard-profile-reference-route::before,
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-distance .runner-dashboard-profile-reference-route span {
+  border-color: rgba(32, 32, 29, 0.22);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-vo2 .runner-dashboard-profile-reference-vdot-graph {
+  min-height: 104px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-vdot-svg {
+  overflow: visible;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-support-grid .runner-dashboard-readiness-card {
+  grid-column: span 5;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-support-grid .runner-dashboard-workout-card {
+  grid-column: span 7;
+}
+
+/* Profile cockpit collapse repair: target the real /profile shell, which has no .hermes-site-frame wrapper. */
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit {
+  width: min(1180px, calc(100% - clamp(28px, 5vw, 72px)));
+  min-height: auto !important;
+  margin-inline: auto;
+  padding: clamp(20px, 2.8vw, 34px) !important;
+  border: 1px solid rgba(76, 54, 39, 0.12) !important;
+  border-radius: clamp(26px, 2.4vw, 36px) !important;
+  background:
+    radial-gradient(circle at 16% 14%, rgba(242, 102, 79, 0.16), transparent 18rem),
+    radial-gradient(circle at 88% 80%, rgba(32, 32, 29, 0.08), transparent 22rem),
+    linear-gradient(135deg, rgba(255, 252, 246, 0.92), rgba(251, 238, 225, 0.72)) !important;
+  box-shadow:
+    0 28px 82px rgba(71, 45, 30, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr) !important;
+  gap: clamp(18px, 2.4vw, 30px) !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: clamp(560px, 52vw, 720px) !important;
+  display: grid !important;
+  align-content: space-between !important;
+  gap: clamp(20px, 3vw, 38px) !important;
+  border: 1px solid rgba(62, 44, 32, 0.12) !important;
+  border-radius: clamp(24px, 2.2vw, 34px) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 248, 238, 0.34)),
+    rgba(255, 252, 246, 0.78) !important;
+  padding: clamp(26px, 4vw, 52px) !important;
+  box-shadow: 0 22px 54px rgba(69, 45, 31, 0.08) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-secondary {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: clamp(14px, 1.8vw, 20px) !important;
+  min-width: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session {
+  min-height: clamp(330px, 32vw, 430px) !important;
+  padding: clamp(20px, 2.4vw, 30px) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid {
+  grid-column: auto !important;
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card {
+  min-width: 0 !important;
+  min-height: 176px !important;
+  border-radius: 22px !important;
+  padding: 16px !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-weekly {
+  grid-column: 1 / -1;
+  min-height: 214px !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-vo2 {
+  grid-column: 1 / -1;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card strong {
+  font-size: clamp(1.55rem, 2.5vw, 2.45rem) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-bars {
+  height: 88px !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-vdot-graph {
+  position: relative !important;
+  inset: auto !important;
+  margin-top: 16px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy h1 {
+  max-width: 11ch !important;
+  color: #201a17 !important;
+  font-size: clamp(3.15rem, 6.2vw, 6.9rem) !important;
+  letter-spacing: -0.105em !important;
+  line-height: 0.86 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy h3 {
+  color: #201a17 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy p {
+  max-width: 56ch;
+  color: rgba(32, 26, 23, 0.68) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-overline span,
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row em {
+  border-color: rgba(32, 26, 23, 0.12);
+  color: rgba(32, 26, 23, 0.58);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row span {
+  border-top-color: rgba(32, 26, 23, 0.16);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row strong {
+  color: #201a17;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score {
+  width: min(100%, 360px) !important;
+  border: 1px solid rgba(32, 26, 23, 0.14) !important;
+  border-radius: 26px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(242, 102, 79, 0.14), transparent 12rem),
+    rgba(255, 255, 255, 0.58) !important;
+  color: #201a17 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score :is(span, em) {
+  color: rgba(32, 26, 23, 0.6) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score strong {
+  color: #201a17 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score-meter {
+  background: rgba(32, 26, 23, 0.12) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score-meter i {
+  background: #201a17 !important;
+}
+
+@media (max-width: 1180px) {
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary {
+    min-height: auto !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-weekly,
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-vo2 {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit {
+    width: min(100% - 24px, 100%);
+    padding: 14px !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary {
+    padding: 22px !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row,
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy h1 {
+    font-size: clamp(2.65rem, 15vw, 4.7rem) !important;
+  }
+}
+
+/* Profile full redesign: decision-map runner dossier */
+
+.runner-dashboard-page {
+  --profile-ink: #211c18;
+  --profile-muted: rgba(33, 28, 24, 0.62);
+  --profile-soft: rgba(33, 28, 24, 0.08);
+  --profile-line: rgba(94, 70, 52, 0.14);
+  --profile-paper: #fffaf3;
+  --profile-paper-2: #f4eadf;
+  --profile-accent: #b94735;
+  --profile-accent-soft: rgba(185, 71, 53, 0.12);
+  --profile-carbon: #1c1916;
+}
+
+.runner-dashboard-page .runner-dashboard-main {
+  width: min(100%, 1560px);
+  max-width: none;
+  margin-inline: auto;
+  padding-inline: clamp(14px, 2.4vw, 42px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit {
+  width: min(100%, 1500px) !important;
+  overflow: hidden;
+  border-color: var(--profile-line) !important;
+  border-radius: clamp(18px, 1.7vw, 26px) !important;
+  background:
+    linear-gradient(90deg, rgba(33, 28, 24, 0.045) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(33, 28, 24, 0.035) 1px, transparent 1px),
+    linear-gradient(135deg, var(--profile-paper), var(--profile-paper-2)) !important;
+  background-size: 34px 34px, 34px 34px, auto;
+  box-shadow:
+    0 30px 74px rgba(79, 55, 38, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-layout {
+  grid-template-columns: minmax(0, 1.18fr) minmax(380px, 0.82fr) !important;
+  align-items: start !important;
+  gap: clamp(18px, 2vw, 28px) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary {
+  min-height: clamp(500px, 42vw, 640px) !important;
+  align-content: start !important;
+  grid-template-rows: auto auto auto auto auto;
+  gap: clamp(14px, 1.55vw, 18px) !important;
+  border-color: var(--profile-line) !important;
+  border-radius: clamp(18px, 1.6vw, 24px) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 250, 243, 0.24)),
+    color-mix(in srgb, var(--profile-paper) 88%, white) !important;
+  padding: clamp(22px, 2.7vw, 36px) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-overline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-overline span,
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-date,
+.runner-dashboard-page .runner-dashboard-card-kicker {
+  letter-spacing: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy {
+  align-self: center;
+  display: grid;
+  gap: clamp(10px, 1vw, 13px);
+  min-height: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy h1 {
+  max-width: 13ch !important;
+  color: var(--profile-ink) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(2.35rem, 3.6vw, 4.65rem) !important;
+  font-weight: 950;
+  letter-spacing: 0 !important;
+  line-height: 0.9 !important;
+  margin: 0.42rem 0 0.5rem !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy h3 {
+  width: fit-content;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--profile-accent) 28%, transparent);
+  border-radius: 999px;
+  background: var(--profile-accent-soft);
+  padding: 0.56rem 0.78rem;
+  color: var(--profile-accent) !important;
+  font-size: clamp(0.74rem, 0.82vw, 0.88rem);
+  letter-spacing: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-copy p {
+  max-width: 62ch;
+  color: var(--profile-muted) !important;
+  font-size: clamp(0.9rem, 0.94vw, 1rem);
+  line-height: 1.48 !important;
+}
+
+.runner-dashboard-profile-decision-map {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--profile-line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.runner-dashboard-profile-decision-node {
+  position: relative;
+  min-width: 0;
+  min-height: 108px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  border: 0;
+  border-right: 1px solid var(--profile-line);
+  background: transparent;
+  padding: 12px;
+  color: var(--profile-ink);
+  text-align: left;
+  transform: translateZ(0);
+  transition:
+    background 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.runner-dashboard-profile-decision-node:last-child {
+  border-right: 0;
+}
+
+.runner-dashboard-profile-decision-node::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--profile-accent);
+  opacity: 0;
+  transform: scaleX(0.24);
+  transform-origin: left;
+  transition:
+    opacity 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.runner-dashboard-profile-decision-node:hover,
+.runner-dashboard-profile-decision-node:focus-visible {
+  background: rgba(255, 255, 255, 0.62);
+  transform: translate3d(0, -2px, 0);
+}
+
+.runner-dashboard-profile-decision-node:active {
+  transform: translate3d(0, 1px, 0) scale(0.99);
+}
+
+.runner-dashboard-profile-decision-node:hover::before,
+.runner-dashboard-profile-decision-node:focus-visible::before {
+  opacity: 0.9;
+  transform: scaleX(1);
+}
+
+.runner-dashboard-profile-decision-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--profile-accent);
+}
+
+.runner-dashboard-profile-decision-node span,
+.runner-dashboard-profile-decision-node em {
+  overflow: hidden;
+  color: var(--profile-muted);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.runner-dashboard-profile-decision-node strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(0.88rem, 1.02vw, 1.08rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.08;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score {
+  width: min(100%, 420px) !important;
+  align-self: end;
+  padding: 14px !important;
+  border-color: var(--profile-line) !important;
+  border-radius: 22px !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score strong,
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row strong {
+  color: var(--profile-ink) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  letter-spacing: 0 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score strong {
+  font-size: clamp(2.65rem, 4.35vw, 3.9rem) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row {
+  margin-top: 0 !important;
+  gap: 10px !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row strong {
+  font-size: clamp(1.02rem, 1.48vw, 1.28rem) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-command-row span {
+  gap: 5px !important;
+  padding-top: 8px !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-score-meter i {
+  background: var(--profile-accent) !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session h2 {
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.9rem, 2.6vw, 3.2rem) !important;
+  letter-spacing: 0 !important;
+  line-height: 0.98 !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card {
+  height: auto !important;
+  border-color: var(--profile-line) !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card strong {
+  color: var(--profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  letter-spacing: 0;
+}
+
+@media (min-width: 1181px) {
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-layout {
+    grid-template-columns: minmax(0, 0.96fr) minmax(520px, 1.04fr) !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session {
+    min-height: clamp(280px, 23vw, 340px) !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-weekly,
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card.is-vo2 {
+    grid-column: auto !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card {
+    min-height: 214px !important;
+  }
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-bars {
+    height: 76px !important;
+  }
+}
+
+@media (min-width: 1181px) {
+  .profile-dashboard-page .runner-shell-canvas {
+    width: calc(100% - 24px) !important;
+    max-width: none !important;
+    margin: 0 12px !important;
+    padding: 24px 20px 52px !important;
+  }
+
+  .profile-dashboard-page .runner-dashboard-main {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+    padding-inline: clamp(16px, 1.4vw, 24px) !important;
+  }
+
+  .profile-dashboard-page .runner-dashboard-profile-purpose-cockpit,
+  .profile-dashboard-page .runner-dashboard-profile-support-grid,
+  .profile-dashboard-page .runner-dashboard-profile-atlas,
+  .profile-dashboard-page .runner-dashboard-profile-bento-grid,
+  .profile-dashboard-page .runner-dashboard-profile-signal-grid {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+.runner-dashboard-profile-body {
+  display: grid;
+  gap: clamp(18px, 2.2vw, 32px);
+  animation: profileRailReveal 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-support-grid {
+  display: grid !important;
+  grid-template-columns: repeat(16, minmax(0, 1fr)) !important;
+  grid-template-areas:
+    "workout workout workout workout workout workout workout readiness readiness readiness readiness readiness streak streak streak streak"
+    "workout workout workout workout workout workout workout weekly weekly weekly weekly weekly streak streak streak streak"
+    "sessions sessions sessions sessions sessions sessions sessions weekly weekly weekly weekly weekly streak streak streak streak";
+  grid-auto-rows: minmax(154px, auto);
+  gap: clamp(14px, 1.6vw, 22px) !important;
+  align-items: stretch;
+}
+
+.runner-dashboard-profile-support-grid > .runner-streak-card {
+  grid-area: streak !important;
+}
+
+.runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card {
+  grid-area: readiness !important;
+}
+
+.runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+  grid-area: workout !important;
+}
+
+.runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card {
+  grid-area: weekly !important;
+}
+
+.runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot {
+  grid-area: sessions !important;
+}
+
+.runner-dashboard-profile-support-grid > * {
+  min-width: 0;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card {
+  align-content: stretch;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card,
+.runner-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card,
+.runner-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot {
+  min-height: 0;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+  min-height: clamp(440px, 32vw, 610px);
+}
+
+.runner-streak-card,
+.runner-dashboard-page .runner-dashboard-readiness-card,
+.runner-dashboard-page .runner-dashboard-weekly-card,
+.runner-dashboard-page .runner-dashboard-sessions-slot,
+.runner-dashboard-page .runner-dashboard-profile-atlas,
+.runner-dashboard-page .runner-dashboard-profile-bento-card,
+.runner-dashboard-page .runner-dashboard-profile-signal-card {
+  border: 1px solid var(--profile-line) !important;
+  border-radius: clamp(18px, 1.4vw, 24px) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.24)),
+    var(--profile-paper) !important;
+  box-shadow: 0 20px 48px rgba(76, 54, 39, 0.08) !important;
+}
+
+.runner-streak-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100%;
+  display: grid;
+  align-content: space-between;
+  gap: 18px;
+  padding: clamp(18px, 2vw, 26px);
+  color: var(--profile-ink);
+}
+
+.runner-streak-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 4px;
+  background: var(--profile-accent);
+}
+
+.runner-streak-card__head,
+.runner-streak-card__title,
+.runner-streak-card__link,
+.runner-streak-card__stats,
+.runner-streak-card__stat div {
+  display: flex;
+  align-items: center;
+}
+
+.runner-streak-card__head {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.runner-streak-card__title {
+  margin: 0;
+  gap: 10px;
+  color: var(--profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1rem, 1.2vw, 1.22rem);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.runner-streak-card__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid color-mix(in srgb, var(--profile-accent) 28%, transparent);
+  border-radius: 14px;
+  background: var(--profile-accent-soft);
+  color: var(--profile-accent);
+}
+
+.runner-streak-card__glyph-icon,
+.runner-streak-card__link-icon,
+.runner-streak-card__stat-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.runner-streak-card__link {
+  gap: 4px;
+  color: var(--profile-accent);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+
+.runner-streak-card__link:hover {
+  text-decoration: underline;
+}
+
+.runner-streak-card__stats {
+  align-items: stretch;
+  gap: 10px;
+}
+
+.runner-streak-card__stat {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--profile-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.42);
+  padding: 16px;
+}
+
+.runner-streak-card__stat p {
+  margin: 0 0 12px;
+  color: var(--profile-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.runner-streak-card__stat div {
+  gap: 8px;
+}
+
+.runner-streak-card__stat span {
+  color: var(--profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(2rem, 3vw, 3.5rem);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 0.9;
+}
+
+.runner-streak-card__stat em {
+  color: var(--profile-muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.runner-streak-card__stat-icon {
+  color: var(--profile-accent);
+}
+
+.runner-streak-card__hint {
+  margin: 0;
+  color: var(--profile-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.runner-dashboard-page .runner-dashboard-feature-grid.runner-dashboard-profile-bento-grid {
+  grid-template-columns: repeat(16, minmax(0, 1fr)) !important;
+  grid-template-areas:
+    "race race race race predictions predictions predictions predictions predictions predictions predictions load load load load load"
+    "stamina stamina stamina stamina stamina workout workout workout workout workout workout muscle muscle muscle muscle muscle"
+    "sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions";
+  grid-auto-rows: minmax(230px, auto);
+  grid-auto-flow: row dense;
+  gap: clamp(14px, 1.7vw, 24px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--race {
+  grid-area: race;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--predictions {
+  grid-area: predictions;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--load {
+  grid-area: load;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--stamina {
+  grid-area: stamina;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--workout {
+  grid-area: workout;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--muscle {
+  grid-area: muscle;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--sessions {
+  grid-area: sessions;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-grid:not(:has(.runner-dashboard-profile-bento-card--muscle)) {
+  grid-template-areas:
+    "race race race race predictions predictions predictions predictions predictions predictions predictions load load load load load"
+    "stamina stamina stamina stamina stamina workout workout workout workout workout workout workout workout workout workout workout"
+    "sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions";
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-grid:not(:has(.runner-dashboard-profile-bento-card--predictions)) {
+  grid-template-areas:
+    "race race race race race load load load load load stamina stamina stamina stamina stamina stamina"
+    "workout workout workout workout workout workout workout workout muscle muscle muscle muscle muscle muscle muscle muscle"
+    "sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions";
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-grid:not(:has(.runner-dashboard-profile-bento-card--predictions)):not(:has(.runner-dashboard-profile-bento-card--muscle)) {
+  grid-template-areas:
+    "race race race race race load load load load load stamina stamina stamina stamina stamina stamina"
+    "workout workout workout workout workout workout workout workout workout workout workout workout workout workout workout workout"
+    "sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions sessions";
+}
+
+.runner-dashboard-page .runner-dashboard-profile-bento-card--race,
+.runner-dashboard-page .runner-dashboard-profile-bento-card--predictions,
+.runner-dashboard-page .runner-dashboard-profile-bento-card--load,
+.runner-dashboard-page .runner-dashboard-profile-bento-card--stamina,
+.runner-dashboard-page .runner-dashboard-profile-bento-card--workout,
+.runner-dashboard-page .runner-dashboard-profile-bento-card--muscle,
+.runner-dashboard-page .runner-dashboard-profile-bento-card--sessions {
+  min-width: 0;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-signal-grid {
+  grid-template-columns: repeat(16, minmax(0, 1fr)) !important;
+  gap: clamp(12px, 1.4vw, 18px);
+}
+
+.runner-dashboard-page .runner-dashboard-profile-signal-card--vo2 {
+  grid-column: span 7;
+  min-height: 190px;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-signal-card--compact {
+  grid-column: span 3;
+}
+
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary,
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-next-session,
+.runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-profile-reference-card,
+.runner-streak-card,
+.runner-dashboard-page .runner-dashboard-readiness-card,
+.runner-dashboard-page .runner-dashboard-workout-card,
+.runner-dashboard-page .runner-dashboard-weekly-card,
+.runner-dashboard-page .runner-dashboard-sessions-slot,
+.runner-dashboard-page .runner-dashboard-profile-atlas,
+.runner-dashboard-page .runner-dashboard-profile-bento-card,
+.runner-dashboard-page .runner-dashboard-profile-signal-card {
+  transform: translateZ(0);
+}
+
+@media (max-width: 1180px) {
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .runner-dashboard-profile-decision-map {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .runner-dashboard-profile-decision-node:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .runner-dashboard-profile-decision-node:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--profile-line);
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-support-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "streak streak streak streak readiness readiness readiness readiness workout workout workout workout"
+      "weekly weekly weekly weekly weekly weekly sessions sessions sessions sessions sessions sessions";
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-signal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .runner-dashboard-page .runner-dashboard-main {
+    padding-inline: 12px;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit {
+    width: 100% !important;
+    border-radius: 20px !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-support-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "streak"
+      "readiness"
+      "workout"
+      "weekly"
+      "sessions";
+  }
+
+  .runner-dashboard-page .runner-dashboard-feature-grid.runner-dashboard-profile-bento-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: none !important;
+    grid-auto-rows: auto;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-bento-card--race,
+  .runner-dashboard-page .runner-dashboard-profile-bento-card--predictions,
+  .runner-dashboard-page .runner-dashboard-profile-bento-card--stamina,
+  .runner-dashboard-page .runner-dashboard-profile-bento-card--workout,
+  .runner-dashboard-page .runner-dashboard-profile-bento-card--load,
+  .runner-dashboard-page .runner-dashboard-profile-bento-card--muscle,
+  .runner-dashboard-page .runner-dashboard-profile-bento-card--sessions {
+    grid-area: auto !important;
+    grid-column: auto !important;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+    min-height: 20rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .runner-dashboard-page .runner-dashboard-profile-purpose-cockpit .runner-dashboard-coach-primary {
+    grid-template-rows: auto;
+    min-height: auto !important;
+  }
+
+  .runner-dashboard-profile-decision-map {
+    grid-template-columns: 1fr;
+  }
+
+  .runner-dashboard-profile-decision-node,
+  .runner-dashboard-profile-decision-node:nth-child(2n) {
+    min-height: 132px;
+    border-right: 0;
+    border-bottom: 1px solid var(--profile-line);
+  }
+
+  .runner-dashboard-profile-decision-node:last-child {
+    border-bottom: 0;
+  }
+
+  .runner-streak-card__stats {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .runner-dashboard-page .runner-dashboard-profile-signal-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runner-dashboard-profile-body {
+    animation: none;
+  }
+
+  .runner-dashboard-profile-decision-node,
+  .runner-dashboard-profile-decision-node::before {
+    transition: none;
+  }
+}
+
+/* Profile grid style refresh final override */
+
+.profile-dashboard-page :is(
+  .runner-dashboard-readiness-card,
+  .runner-dashboard-weekly-card,
+  .runner-dashboard-sessions-slot,
+  .runner-dashboard-profile-atlas,
+  .runner-dashboard-profile-bento-card,
+  .runner-dashboard-profile-signal-card
+) {
+  border: 1px solid var(--profile-grid-line) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(191, 91, 73, 0.09), transparent 30%),
+    linear-gradient(145deg, var(--profile-grid-paper-strong), rgba(247, 239, 226, 0.52)),
+    var(--profile-grid-paper) !important;
+  color: var(--profile-grid-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 18px 42px rgba(57, 42, 28, 0.08) !important;
+}
+
+.profile-dashboard-page :is(
+  .runner-dashboard-profile-bento-card--race,
+  .runner-dashboard-profile-signal-card--vo2
+) {
+  background:
+    radial-gradient(circle at 84% 12%, rgba(191, 91, 73, 0.24), transparent 14rem),
+    linear-gradient(145deg, #302920, var(--profile-grid-dark) 62%, #211d18) !important;
+  color: #fff4e6 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 28px 62px rgba(47, 34, 24, 0.19) !important;
+}
+
+.profile-dashboard-page :is(
+  .runner-dashboard-profile-bento-card--race,
+  .runner-dashboard-profile-signal-card--vo2
+) :is(h2, h3, h4, strong, label) {
+  color: #fff4e6 !important;
+}
+
+.profile-dashboard-page :is(
+  .runner-dashboard-profile-bento-card--race,
+  .runner-dashboard-profile-signal-card--vo2
+) :is(p, span, small, em) {
+  color: var(--profile-grid-dark-soft) !important;
+}
+
+/* Profile support grid calm board final override */
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr) !important;
+  grid-template-areas:
+    "workout readiness"
+    "workout weekly"
+    "sessions streak" !important;
+  grid-auto-rows: minmax(252px, auto) minmax(340px, auto) minmax(270px, auto) !important;
+  gap: clamp(16px, 1.6vw, 24px) !important;
+  align-items: stretch;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+  grid-area: workout !important;
+  min-height: clamp(560px, 46vw, 720px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card {
+  grid-area: readiness !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: space-between;
+  gap: clamp(14px, 1.4vw, 18px);
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card {
+  grid-area: weekly !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: start;
+  gap: clamp(12px, 1.2vw, 18px);
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot {
+  grid-area: sessions !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: start;
+  gap: 16px;
+  padding: clamp(22px, 2vw, 30px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card {
+  grid-area: streak !important;
+  display: grid;
+  min-height: 0 !important;
+  align-content: space-between;
+  gap: 18px;
+  padding: clamp(20px, 1.9vw, 28px) !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card h2 {
+  max-width: 10ch;
+  font-size: clamp(2rem, 3vw, 3.5rem) !important;
+  letter-spacing: 0 !important;
+  line-height: 0.94 !important;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-vdot-overview {
+  align-items: end;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-vdot-hero strong {
+  font-size: clamp(2rem, 2.8vw, 3.2rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-readiness-card .runner-dashboard-readiness-note,
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-section-head {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-section-head h4 {
+  font-size: clamp(1.8rem, 2.4vw, 3rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-bar-chart {
+  min-height: 12rem;
+  padding-top: 2.4rem;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-weekly-card .runner-dashboard-bar-track {
+  height: 8.8rem;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stat {
+  padding: clamp(14px, 1.3vw, 18px);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stat span {
+  font-size: clamp(2.2rem, 3.4vw, 4rem);
+}
+
+.profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-sessions-slot .runner-dashboard-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .profile-dashboard-page .runner-dashboard-profile-support-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "workout"
+      "readiness"
+      "weekly"
+      "streak"
+      "sessions" !important;
+    grid-auto-rows: auto !important;
+  }
+
+  .profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-dashboard-workout-card {
+    min-height: clamp(360px, 54vw, 560px) !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stats {
+    grid-template-columns: 1fr;
+  }
+}

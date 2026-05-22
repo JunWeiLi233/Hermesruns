@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 110" role="img" aria-label="Salomon logo">
+  <rect x="27" y="14" width="70" height="70" rx="8" fill="#111827"/>
+  <path fill="#fff" d="M45 62c11 8 29 9 36 1 5-6 1-12-13-15-9-2-13-3-13-6 0-4 6-6 14-5 7 1 13 3 19 7l-6 11c-8-5-20-7-23-3-2 3 3 5 13 7 15 3 21 9 18 19-5 16-35 17-51 5l6-11Z"/>
+  <text x="184" y="63" text-anchor="middle" fill="#111827" font-family="Arial Black, Arial, sans-serif" font-size="32" font-weight="900">SALOMON</text>
+</svg>

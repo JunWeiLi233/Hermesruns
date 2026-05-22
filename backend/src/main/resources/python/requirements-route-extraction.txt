@@ -1,0 +1,8 @@
+numpy>=1.26,<3
+opencv-python-headless>=4.10,<5
+Pillow>=10,<12
+scikit-image>=0.24,<1
+transformers>=4.52,<6
+accelerate>=1.0,<2
+qwen-vl-utils>=0.0.8
+pytest>=8,<9

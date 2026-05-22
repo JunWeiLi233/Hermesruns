@@ -1,0 +1,1037 @@
+/* Muscle training redesign override. Keep scoped to the IRONPULSE page. */
+
+.runner-dashboard-page:has(.mt-ironpulse-page),
+.runner-dashboard-page:has(.mt-ironpulse-page) .runner-shell-main,
+.runner-dashboard-page:has(.mt-ironpulse-page) .muscle-training-canvas {
+  background:
+    radial-gradient(circle at 28% 0%, rgba(204, 255, 0, 0.08), transparent 28rem),
+    radial-gradient(circle at 100% 34%, rgba(85, 255, 230, 0.06), transparent 34rem),
+    #070806 !important;
+}
+
+.runner-dashboard-page:has(.mt-ironpulse-page) .muscle-training-canvas {
+  min-height: calc(100vh - 78px);
+  padding: clamp(18px, 3vw, 44px);
+  overflow-x: hidden;
+}
+
+.runner-dashboard-page:has(.mt-ironpulse-page) .dashboard-container.page-body {
+  width: min(1360px, 100%);
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mt-ironpulse-page {
+  --mt-ip-bg: #070806;
+  --mt-ip-panel: #111210;
+  --mt-ip-panel-strong: #191a17;
+  --mt-ip-panel-glow: rgba(204, 255, 0, 0.1);
+  --mt-ip-line: rgba(229, 238, 212, 0.16);
+  --mt-ip-line-strong: rgba(204, 255, 0, 0.46);
+  --mt-ip-text: #f8f8f0;
+  --mt-ip-muted: #c7cfb7;
+  --mt-ip-dim: #848c79;
+  --mt-ip-acid: #ccff00;
+  --mt-ip-cyan: #9dffff;
+  --mt-ip-danger: #ffad99;
+  color: var(--mt-ip-text);
+  display: grid;
+  gap: clamp(24px, 4vw, 46px);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  isolation: isolate;
+}
+
+.mt-ironpulse-page *,
+.mt-ironpulse-page *::before,
+.mt-ironpulse-page *::after {
+  box-sizing: border-box;
+}
+
+.mt-ironpulse-page button,
+.mt-ironpulse-page input,
+.mt-ironpulse-page select {
+  font: inherit;
+}
+
+.mt-ip-home {
+  display: grid;
+  gap: clamp(26px, 4vw, 48px);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mt-ip-home > *,
+.mt-ip-protocol,
+.mt-ip-current-split,
+.mt-ip-volume-goal,
+.mt-ip-records,
+.mt-ip-status-panel,
+.strength-plan-control-deck {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mt-ip-volume-goal {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding-block: 8px 0;
+  text-align: center;
+}
+
+.mt-ip-volume-goal h1 {
+  margin: 0;
+  color: var(--mt-ip-text);
+  font-size: clamp(1.55rem, 2.6vw, 2.35rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.48);
+}
+
+.mt-ip-ring-card {
+  width: min(270px, 72vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(204, 255, 0, 0.12);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(18, 19, 18, 0.98), rgba(9, 10, 9, 0.98));
+  box-shadow: 0 0 36px rgba(204, 255, 0, 0.09);
+}
+
+.mt-ip-ring {
+  position: relative;
+  width: 84%;
+  aspect-ratio: 1;
+}
+
+.mt-ip-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.mt-ip-ring-track,
+.mt-ip-ring-progress {
+  fill: none;
+  stroke-width: 9;
+}
+
+.mt-ip-ring-track {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.mt-ip-ring-progress {
+  stroke: var(--mt-ip-acid);
+  stroke-linecap: round;
+  stroke-dasharray: 365;
+  filter: drop-shadow(0 0 10px rgba(204, 255, 0, 0.44));
+  transition: stroke-dashoffset 240ms ease;
+}
+
+.mt-ip-ring-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+}
+
+.mt-ip-ring-center strong {
+  color: var(--mt-ip-acid);
+  font-size: clamp(2.45rem, 5vw, 4rem);
+  line-height: 1;
+  font-weight: 950;
+}
+
+.mt-ip-ring-center span {
+  color: var(--mt-ip-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mt-ip-volume-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(138px, 1fr));
+  gap: 14px;
+  width: min(390px, 100%);
+}
+
+.mt-ip-volume-metrics article {
+  min-height: 58px;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 7px;
+  background: rgba(25, 25, 24, 0.92);
+}
+
+.mt-ip-volume-metrics span {
+  color: var(--mt-ip-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.mt-ip-volume-metrics strong {
+  color: var(--mt-ip-text);
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.mt-ip-current-split,
+.mt-ip-protocol,
+.mt-ip-records,
+.mt-ip-status-panel,
+.strength-plan-control-deck {
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(204, 255, 0, 0.06), transparent 34%),
+    rgba(17, 18, 16, 0.94);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
+}
+
+.mt-ip-current-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: clamp(18px, 2.8vw, 30px);
+  border-left: 5px solid var(--mt-ip-acid);
+}
+
+.mt-ip-current-split span,
+.mt-ip-section-head > div > span,
+.mt-ip-section-head > span,
+.mt-ip-status-panel > span,
+.strength-plan-section-label {
+  display: inline-flex;
+  width: max-content;
+  color: var(--mt-ip-acid);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mt-ip-current-split h2 {
+  margin: 6px 0 4px;
+  color: var(--mt-ip-text);
+  font-size: clamp(1.25rem, 2.3vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.mt-ip-current-split p,
+.mt-ip-section-head p,
+.mt-ip-status-panel p,
+.strength-plan-control-head p {
+  margin: 0;
+  color: var(--mt-ip-muted);
+  line-height: 1.55;
+}
+
+.mt-ip-primary-btn,
+.strength-plan-control-deck .primary-action-btn,
+.runner-dashboard-page:has(.mt-ironpulse-page) .runner-dashboard-workout-btn {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(204, 255, 0, 0.72);
+  border-radius: 8px;
+  background: var(--mt-ip-acid);
+  color: #111506;
+  padding: 0 22px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 0 22px rgba(204, 255, 0, 0.18);
+}
+
+.mt-ip-primary-btn:hover,
+.strength-plan-control-deck .primary-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 28px rgba(204, 255, 0, 0.28);
+}
+
+.mt-ip-btn-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+}
+
+.mt-ip-primary-btn svg {
+  max-width: 17px;
+  max-height: 17px;
+}
+
+.mt-ip-protocol-workbench {
+  padding: clamp(18px, 3vw, 34px);
+}
+
+.mt-ip-section-head,
+.mt-ip-workbench-head,
+.strength-plan-control-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.mt-ip-section-head h2,
+.mt-ip-status-panel h2,
+.strength-plan-control-head h2 {
+  margin: 4px 0 0;
+  color: var(--mt-ip-text);
+  font-size: clamp(1.45rem, 3.8vw, 4.35rem);
+  line-height: 0.94;
+  font-weight: 950;
+  font-style: italic;
+  letter-spacing: 0;
+  text-shadow: 2px 2px 0 rgba(157, 255, 255, 0.18);
+}
+
+.mt-ip-workbench-head p {
+  max-width: 560px;
+  font-size: clamp(0.98rem, 1.6vw, 1.24rem);
+}
+
+.mt-ip-target-filter-rail {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(132px, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--mt-ip-line);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.mt-ip-filter-chip {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background: rgba(10, 11, 10, 0.88);
+  color: var(--mt-ip-text);
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-ip-filter-chip--all {
+  grid-template-columns: 1fr;
+}
+
+.mt-ip-filter-chip img {
+  grid-row: 1 / span 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  filter: saturate(0.85) contrast(1.14) brightness(0.7);
+}
+
+.mt-ip-filter-chip span {
+  color: var(--mt-ip-text);
+  font-weight: 950;
+  line-height: 1;
+}
+
+.mt-ip-filter-chip small {
+  color: var(--mt-ip-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.mt-ip-filter-chip:hover,
+.mt-ip-filter-chip:focus-visible,
+.mt-ip-filter-chip.is-active {
+  border-color: var(--mt-ip-line-strong);
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.14), rgba(20, 21, 18, 0.94));
+  box-shadow: 0 0 18px rgba(204, 255, 0, 0.13);
+  outline: none;
+}
+
+.mt-ip-protocol-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 500px);
+  gap: 22px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+.mt-ip-exercise-list {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.mt-ip-plan-collapse {
+  border: 1px solid rgba(229, 238, 212, 0.14);
+  border-radius: 8px;
+  background: rgba(12, 13, 12, 0.92);
+  overflow: hidden;
+}
+
+.mt-ip-plan-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+}
+
+.mt-ip-plan-summary span,
+.mt-ip-exercise-section-label span {
+  color: var(--mt-ip-acid);
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.mt-ip-plan-summary strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--mt-ip-text);
+  font-size: 1rem;
+}
+
+.mt-ip-plan-summary p {
+  margin: 4px 0 0;
+  color: var(--mt-ip-muted);
+  line-height: 1.45;
+}
+
+.mt-ip-plan-toggle {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid rgba(204, 255, 0, 0.52);
+  border-radius: 7px;
+  background: rgba(204, 255, 0, 0.1);
+  color: var(--mt-ip-acid);
+  padding: 0 14px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.mt-ip-plan-toggle:disabled {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--mt-ip-dim);
+  cursor: not-allowed;
+}
+
+.mt-ip-plan-rows {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.mt-ip-plan-inline-note,
+.mt-ip-empty-panel {
+  border: 1px solid rgba(229, 238, 212, 0.14);
+  border-radius: 8px;
+  background: rgba(13, 14, 13, 0.8);
+  color: var(--mt-ip-muted);
+  padding: 14px 16px;
+}
+
+.mt-ip-exercise-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 10px;
+  padding: 12px 2px 4px;
+}
+
+.mt-ip-exercise-section-label em {
+  color: var(--mt-ip-muted);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.mt-ip-exercise-row {
+  width: 100%;
+  min-height: 96px;
+  display: grid;
+  grid-template-columns: 64px minmax(140px, 1.15fr) minmax(116px, 0.8fr) minmax(86px, 0.64fr) minmax(120px, 0.9fr);
+  grid-template-areas:
+    "num name dose equip muscles"
+    "num intent intent intent intent";
+  gap: 6px 16px;
+  align-items: center;
+  border: 1px solid rgba(229, 238, 212, 0.14);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(204, 255, 0, 0.07), transparent 48%),
+    rgba(9, 10, 9, 0.94);
+  color: var(--mt-ip-text);
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-ip-exercise-row--plan {
+  opacity: 0.9;
+  background:
+    linear-gradient(135deg, rgba(157, 255, 255, 0.06), transparent 52%),
+    rgba(11, 12, 12, 0.92);
+}
+
+.mt-ip-exercise-row > span {
+  grid-area: num;
+  color: var(--mt-ip-cyan);
+  font-size: 1.35rem;
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row > strong {
+  grid-area: name;
+  color: var(--mt-ip-text);
+  font-size: clamp(1rem, 1.4vw, 1.18rem);
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.mt-ip-exercise-row > em {
+  grid-area: dose;
+  color: var(--mt-ip-muted);
+  font-style: normal;
+  font-weight: 850;
+}
+
+.mt-ip-exercise-row > small {
+  color: var(--mt-ip-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.mt-ip-exercise-row > small:first-of-type {
+  grid-area: equip;
+}
+
+.mt-ip-exercise-row > small:last-of-type {
+  grid-area: muscles;
+}
+
+.mt-ip-exercise-row > p {
+  grid-area: intent;
+  margin: 0;
+  color: var(--mt-ip-muted);
+  line-height: 1.45;
+}
+
+.mt-ip-exercise-row b {
+  color: var(--mt-ip-acid);
+  margin-right: 8px;
+}
+
+.mt-ip-exercise-row:hover,
+.mt-ip-exercise-row:focus-visible,
+.mt-ip-exercise-row.is-selected {
+  border-color: var(--mt-ip-line-strong);
+  background:
+    linear-gradient(135deg, rgba(204, 255, 0, 0.13), transparent 52%),
+    rgba(18, 20, 14, 0.98);
+  box-shadow: inset 0 0 0 1px rgba(204, 255, 0, 0.18), 0 0 18px rgba(204, 255, 0, 0.1);
+  outline: none;
+}
+
+.mt-ip-detail-drawer {
+  position: sticky;
+  top: 18px;
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+  border: 1px solid rgba(229, 238, 212, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(150deg, rgba(204, 255, 0, 0.07), transparent 36%),
+    #121312;
+  box-shadow: -18px 0 70px rgba(0, 0, 0, 0.32), 0 0 24px rgba(204, 255, 0, 0.08);
+  padding: clamp(18px, 2vw, 28px);
+}
+
+.mt-ip-detail-drawer.is-closed {
+  opacity: 0.72;
+}
+
+.mt-ip-detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mt-ip-text);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.mt-ip-detail-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding-right: 48px;
+  color: var(--mt-ip-muted);
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.mt-ip-detail-breadcrumb strong,
+.mt-ip-detail-breadcrumb span:first-child {
+  color: var(--mt-ip-acid);
+}
+
+.mt-ip-detail-drawer h3 {
+  margin: 20px 0 4px;
+  color: var(--mt-ip-text);
+  font-size: clamp(2rem, 4vw, 3.7rem);
+  line-height: 0.9;
+  font-weight: 950;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.mt-ip-detail-drawer > p {
+  margin: 0 0 14px;
+  color: var(--mt-ip-muted);
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.mt-ip-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 14px 0 16px;
+}
+
+.mt-ip-detail-tags span {
+  border: 1px solid rgba(204, 255, 0, 0.44);
+  border-radius: 7px;
+  background: rgba(204, 255, 0, 0.09);
+  color: #eaffbf;
+  padding: 4px 7px;
+  font-weight: 850;
+}
+
+.mt-ip-video-frame,
+.mt-ip-video-missing {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #080908;
+}
+
+.mt-ip-video-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.mt-ip-video-missing {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--mt-ip-muted);
+  text-align: center;
+}
+
+.mt-ip-coach-tips,
+.mt-ip-step-guide {
+  margin-top: 22px;
+}
+
+.mt-ip-coach-tips h4,
+.mt-ip-step-guide h4 {
+  margin: 0 0 12px;
+  color: var(--mt-ip-text);
+  font-size: 1.12rem;
+}
+
+.mt-ip-tip-row {
+  border: 1px solid rgba(204, 255, 0, 0.28);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.13), rgba(25, 27, 18, 0.9));
+  overflow: hidden;
+}
+
+.mt-ip-tip-row + .mt-ip-tip-row {
+  margin-top: 8px;
+}
+
+.mt-ip-tip-row button {
+  width: 100%;
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 44px 1fr 24px;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--mt-ip-text);
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mt-ip-tip-row span,
+.mt-ip-step-card span {
+  color: var(--mt-ip-acid);
+  font-size: 1.5rem;
+  font-weight: 950;
+}
+
+.mt-ip-tip-row strong {
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.mt-ip-tip-row em {
+  color: var(--mt-ip-acid);
+  font-style: normal;
+  font-size: 1.2rem;
+  font-weight: 950;
+  text-align: right;
+}
+
+.mt-ip-tip-row p {
+  margin: 0;
+  border-top: 1px solid rgba(229, 238, 212, 0.14);
+  color: var(--mt-ip-muted);
+  padding: 0 14px 14px 70px;
+  line-height: 1.45;
+}
+
+.mt-ip-step-guide > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.mt-ip-step-card {
+  min-height: 126px;
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background: rgba(12, 13, 12, 0.9);
+  padding: 14px;
+}
+
+.mt-ip-step-card p {
+  margin: 8px 0 0;
+  color: var(--mt-ip-muted);
+  line-height: 1.38;
+}
+
+.mt-ip-library-note {
+  margin-top: 16px !important;
+  border-top: 1px solid var(--mt-ip-line);
+  padding-top: 14px;
+  color: var(--mt-ip-muted);
+}
+
+.mt-ip-records,
+.mt-ip-status-panel,
+.strength-plan-control-deck {
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.mt-ip-record-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.mt-ip-record-row {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background: rgba(12, 13, 12, 0.86);
+  padding: 12px 14px;
+}
+
+.mt-ip-record-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(204, 255, 0, 0.13);
+  color: var(--mt-ip-acid);
+}
+
+.mt-ip-record-row strong,
+.mt-ip-record-row > span {
+  color: var(--mt-ip-text);
+  font-weight: 950;
+}
+
+.mt-ip-record-row p {
+  margin: 2px 0 0;
+  color: var(--mt-ip-muted);
+}
+
+.mt-ip-record-row > span {
+  color: var(--mt-ip-acid);
+  font-size: 1.35rem;
+}
+
+.mt-ip-status-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.mt-ip-status-metrics span {
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background: rgba(12, 13, 12, 0.8);
+  color: var(--mt-ip-muted);
+  padding: 12px;
+}
+
+.mt-ip-status-metrics strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--mt-ip-text);
+}
+
+.strength-plan-control-deck {
+  margin-top: 2px;
+}
+
+.strength-plan-control-deck .mt-settings-disclosure {
+  margin-top: 18px;
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background: rgba(8, 9, 8, 0.86);
+}
+
+.strength-plan-control-deck .mt-settings-summary {
+  cursor: pointer;
+  color: var(--mt-ip-text);
+  padding: 14px 16px;
+  font-weight: 950;
+}
+
+.strength-plan-control-deck .card {
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 8px;
+  background: rgba(14, 15, 14, 0.94);
+  color: var(--mt-ip-text);
+  box-shadow: none;
+}
+
+.strength-plan-control-deck input,
+.strength-plan-control-deck select {
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 7px;
+  background: #090a09;
+  color: var(--mt-ip-text);
+}
+
+.strength-plan-control-deck .muscle-secondary-btn,
+.strength-plan-control-deck .muscle-day-chip {
+  border: 1px solid var(--mt-ip-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mt-ip-text);
+}
+
+.strength-plan-control-deck .muscle-day-chip.active {
+  border-color: var(--mt-ip-line-strong);
+  background: rgba(204, 255, 0, 0.14);
+  color: var(--mt-ip-acid);
+}
+
+@media (max-width: 1180px) {
+  .mt-ip-target-filter-rail {
+    grid-template-columns: repeat(7, minmax(150px, 1fr));
+  }
+
+  .mt-ip-protocol-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mt-ip-detail-drawer {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .runner-dashboard-page:has(.mt-ironpulse-page) .muscle-training-canvas {
+    padding: 14px;
+  }
+
+  .mt-ironpulse-page {
+    gap: 24px;
+  }
+
+  .mt-ip-current-split,
+  .mt-ip-section-head,
+  .mt-ip-workbench-head,
+  .mt-ip-plan-summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mt-ip-volume-metrics,
+  .mt-ip-status-metrics,
+  .mt-ip-step-guide > div {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-ip-target-filter-rail {
+    display: flex;
+    margin-inline: -14px;
+    padding-inline: 14px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .mt-ip-filter-chip {
+    flex: 0 0 min(210px, 72vw);
+    scroll-snap-align: start;
+  }
+
+  .mt-ip-plan-collapse {
+    border-radius: 8px;
+  }
+
+  .mt-ip-plan-toggle {
+    width: 100%;
+  }
+
+  .mt-ip-exercise-row {
+    min-height: 0;
+    grid-template-columns: 44px 1fr;
+    grid-template-areas:
+      "num name"
+      "num dose"
+      "num equip"
+      "num muscles"
+      "intent intent";
+    gap: 7px 12px;
+    padding: 14px;
+  }
+
+  .mt-ip-exercise-row > p {
+    margin-top: 4px;
+  }
+
+  .mt-ip-detail-drawer {
+    position: static;
+    max-height: none;
+    padding: 18px;
+  }
+
+  .mt-ip-detail-drawer h3 {
+    padding-right: 42px;
+    font-size: clamp(2rem, 14vw, 3.2rem);
+  }
+
+  .mt-ip-record-row {
+    grid-template-columns: 38px 1fr;
+  }
+
+  .mt-ip-record-row > span {
+    grid-column: 2;
+  }
+}
+
+/* ============================================================================
+   Muscle heatmap (per-exercise card) — wraps the upstream
+   `react-muscle-highlighter` package (MIT, github.com/soroojshehryar/
+   react-muscle-highlighter) with Hermes IRONPULSE design tokens so the body
+   diagram reads on the dark acid-lime page. Component is rendered inside the
+   expanded exercise detail in MuscleTraining.jsx.
+   ============================================================================ */
+
+.mt-ironpulse-page,
+.mt-exercise-heatmap {
+  --mt-heatmap-intensity-1: rgba(255, 195, 175, 0.46);
+  --mt-heatmap-intensity-2: rgba(240, 117, 97, 0.76);
+  --mt-heatmap-intensity-3: rgba(204, 57, 42, 0.94);
+  --mt-heatmap-border: rgba(229, 238, 212, 0.35);
+  --mt-heatmap-default-fill: rgba(229, 238, 212, 0.06);
+  --mt-heatmap-default-stroke: rgba(229, 238, 212, 0.5);
+}
+
+.mt-exercise-heatmap {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 14px;
+  padding: 14px 18px;
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid rgba(204, 255, 0, 0.16);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(204, 255, 0, 0.08), transparent 58%),
+    rgba(14, 15, 14, 0.86);
+  color: var(--mt-ip-text, #f8f8f0);
+}
+
+.muscle-heatmap-figure {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.muscle-heatmap-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.muscle-heatmap__body {
+  display: block;
+  line-height: 0;
+}
+
+.muscle-heatmap__body svg {
+  display: block;
+}
+
+.muscle-heatmap-caption {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mt-ip-muted, #c7cfb7);
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .mt-exercise-heatmap {
+    padding: 10px 12px;
+  }
+  .muscle-heatmap-figure {
+    gap: 14px;
+  }
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120" role="img" aria-label="QIAODAN logo">
+  <g fill="#e31b2f">
+    <circle cx="112" cy="18" r="7"/>
+    <circle cx="143" cy="28" r="6"/>
+    <path d="M106 30c7-8 14-11 22-9 8 2 12 10 9 18l-6 18 19 26c4 5 3 12-2 16-5 4-12 3-16-2L113 73 89 89c-6 4-13 2-17-3-4-6-2-13 3-17l28-20 9-19c1 0 2 0 3 0Z"/>
+    <path d="M76 56c7 0 13 6 13 13 0 7-6 13-13 13s-13-6-13-13c0-7 6-13 13-13Z"/>
+  </g>
+  <text x="110" y="116" fill="#e31b2f" font-family="Arial Black,Arial,sans-serif" font-size="34" font-weight="900" letter-spacing="2" text-anchor="middle">QIAODAN</text>
+</svg>

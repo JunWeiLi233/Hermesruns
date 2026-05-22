@@ -1,0 +1,15 @@
+{
+  "base_url": "http://localhost:8080",
+  "poll_seconds": 30,
+  "retry_count": 2,
+  "retry_delay_seconds": 8,
+  "max_log_lines": 4000,
+  "log_path": "D:/Hermes/.tools/hermes_sync.log",
+  "garmin_dir": "D:/Hermes/imports/garmin",
+  "coros_dir": "D:/Hermes/imports/coros",
+  "archive_dir": "D:/Hermes/imports/processed",
+  "auth": {
+    "email": "runner@example.com",
+    "password": "replace-with-your-password"
+  }
+}

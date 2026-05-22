@@ -1,0 +1,306 @@
+/* 闂傚倸鍊风粈渚€宕崸妤€鍌ㄦ繝濠傜墕绾惧鏌熼崜褏甯涢柣鎾冲暣閺屾稖绠涢幙鍐┬︽繛?Subscription card 闂傚倸鍊风粈渚€宕崸妤€鍌ㄦ繝濠傜墕绾惧鏌熼崜褏甯涢柣鎾冲暣閺屾稖绠涢幙鍐┬︽繛?*/
+
+.subscription-section {
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.subscription-section:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 44px rgba(0, 0, 0, 0.3);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.subscription-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.subscription-tier-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.subscription-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.subscription-badge-pro {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+}
+
+.subscription-badge-free {
+    background: var(--classic-bg);
+    color: var(--classic-muted);
+    border: 1px solid var(--classic-border);
+}
+
+.subscription-expires {
+    font-size: 13px;
+    color: var(--classic-muted);
+}
+
+.subscription-user-phase {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+}
+
+.subscription-quota-info {
+    padding: 0;
+}
+
+.subscription-detail {
+    margin: 0;
+    font-size: 14px;
+    color: var(--classic-secondary);
+}
+
+.subscription-upgrade {
+    margin-top: 4px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.08));
+    border-radius: 8px;
+    border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.subscription-upgrade-hint {
+    margin: 0;
+    font-size: 13px;
+    color: #6366f1;
+    font-weight: 500;
+}
+
+.subscription-card--clickable {
+    cursor: pointer;
+    border-radius: 10px;
+    outline: none;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.subscription-card--clickable:hover {
+    background: rgba(99, 102, 241, 0.04);
+}
+
+.subscription-card--clickable:focus-visible {
+    box-shadow: 0 0 0 2px var(--classic-surface, #fff), 0 0 0 4px rgba(99, 102, 241, 0.45);
+}
+
+.subscription-click-hint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--classic-muted);
+}
+
+.subscription-modal-admin-note {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: var(--classic-muted);
+    line-height: 1.45;
+}
+
+.subscription-plan-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 540px) {
+    .subscription-plan-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.subscription-plan-card {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--classic-border);
+    background: var(--classic-surface, #fff);
+}
+
+.subscription-plan-card--current {
+    border-color: rgba(99, 102, 241, 0.45);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(139, 92, 246, 0.06));
+}
+
+.subscription-plan-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.subscription-plan-card-body {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--classic-secondary);
+}
+
+.subscription-current-pill {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.15);
+    color: #6366f1;
+}
+
+.subscription-pro-cta {
+    margin: 16px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--classic-muted);
+}
+
+.subscription-modal-subtitle {
+    margin: -6px 0 16px;
+    font-size: 14px;
+    color: var(--classic-muted);
+    line-height: 1.45;
+}
+
+.subscription-feature-list {
+    margin: 0 0 12px;
+    padding-left: 1.15em;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--classic-secondary);
+}
+
+.subscription-feature-list li {
+    margin-bottom: 4px;
+}
+
+.subscription-plan-card-foot {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--classic-muted);
+}
+
+.subscription-plan-card--pro {
+    position: relative;
+    border-width: 2px;
+    border-color: rgba(99, 102, 241, 0.35);
+    background: linear-gradient(160deg, rgba(99, 102, 241, 0.04), rgba(139, 92, 246, 0.05));
+}
+
+.subscription-price-label {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--classic-primary);
+}
+
+.subscription-price-disclaimer {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--classic-muted);
+}
+
+.subscription-checkout-block {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(99, 102, 241, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.subscription-months-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--classic-secondary);
+}
+
+.subscription-months-select {
+    max-width: 220px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--classic-border);
+    background: var(--classic-surface, #fff);
+    font-size: 14px;
+}
+
+.subscription-checkout-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    font-weight: 600;
+}
+
+.subscription-checkout-note,
+.subscription-powered-by {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--classic-muted);
+}
+
+.subscription-powered-by {
+    opacity: 0.85;
+}
+
+.subscription-checkout-error {
+    margin-top: 8px;
+}
+
+.subscription-toast {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.subscription-toast--success {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #166534;
+}
+
+.subscription-toast--muted {
+    background: var(--classic-bg);
+    border: 1px solid var(--classic-border);
+    color: var(--classic-muted);
+}
+
+.subscription-toast-close {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0 4px;
+    color: inherit;
+    opacity: 0.65;
+}
+
+.subscription-toast-close:hover {
+    opacity: 1;
+}
