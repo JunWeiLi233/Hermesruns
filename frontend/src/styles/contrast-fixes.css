@@ -57,6 +57,22 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(
   color: var(--text-strong, #2c2f30) !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .mt-top-workbench .mt-top-panel-head h2,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .mt-top-workbench .mt-top-reference-head .mt-kicker,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .mt-top-workbench .mt-top-action-copy strong {
+  color: #bfff00 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .mt-top-workbench .mt-top-actions-head h2,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .mt-top-workbench .mt-top-reference-head h2,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .mt-top-workbench .mt-top-reference-body h3 {
+  color: #ffffff !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .mt-top-workbench :is(p, em, li, figcaption span, .mt-top-actions-head span, .mt-top-actions-note, .mt-top-muscle-hint) {
+  color: rgba(255, 255, 255, 0.64) !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root :is(
   .runs-dashboard-page,
   .weather-engine-page,

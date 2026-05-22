@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +9,7 @@ const pageSource = readFileSync(path.join(here, 'MuscleTraining.jsx'), 'utf8');
 const cssSource = readFileSync(path.join(here, '../styles/_split/muscle-training.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
+const anatomyAssetPath = path.join(here, '../assets/muscle-training/anatomy-neon-selector.png');
 
 // ── New mt-* card-based redesign presence ──────────────────────────────────
 assert.match(
@@ -42,12 +44,82 @@ assert.doesNotMatch(
 );
 
 assert.doesNotMatch(
+  pageSource,
+  /className="mt-muscle-selector"|selectedMuscleRegionKey|handleMuscleRegionSelect/,
+  'The rejected self-drawn anatomy selector implementation must stay removed.',
+);
+
+assert.doesNotMatch(
   cssSource,
   /mt-action-diagram|mt-action-phase-play|mt-action-sweep/,
   'Removed action-diagram styles must stay out of the active muscle-training stylesheet.',
 );
 
 // ── Hero ring ──────────────────────────────────────────────────────────────
+assert.ok(
+  existsSync(anatomyAssetPath),
+  'The top anatomy workbench should use a local anatomy image asset instead of a hotlinked image.',
+);
+
+assert.match(
+  pageSource,
+  /anatomyNeonSelectorUrl/,
+  'The page should import the local neon anatomy image asset.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-top-workbench"/,
+  'The page should add the screenshot-matched top anatomy workbench.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-muscle-hotspot/,
+  'The top anatomy image should expose real clickable muscle-group hotspots.',
+);
+
+assert.match(
+  pageSource,
+  /handleTopExerciseSelect/,
+  'Top recommendations should select the current reference action without expanding the lower protocol rows.',
+);
+
+assert.match(
+  pageSource,
+  /EXERCISE_VIDEO_EMBEDS/,
+  'The right rail should restore the GitHub-history YouTube nocookie embed mapping.',
+);
+
+assert.match(
+  pageSource,
+  /getExerciseVideoEmbedUrl/,
+  'The right rail should resolve video embeds from the selected protocol item.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-card mt-video-card"/,
+  'The lower right rail should render an exercise video card.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-card mt-reference-card"/,
+  'The lower right rail should render the restored exercise image and cue card.',
+);
+
+assert.doesNotMatch(
+  pageSource,
+  /mt-recovery-suggestions/,
+  'The gray recovery placeholder icon list should not render in the lower right rail.',
+);
+
+assert.ok(
+  pageSource.indexOf('className="mt-top-workbench"') < pageSource.indexOf('className="mt-hero"'),
+  'Top anatomy workbench should appear before the existing hero.',
+);
+
 assert.match(
   pageSource,
   /className="mt-hero"/,
@@ -86,6 +158,18 @@ assert.match(
   'The exercise section should include mt-exercises-filter filter chips.',
 );
 
+assert.match(
+  pageSource,
+  /className="mt-filter-visual"/,
+  'Target filter chips should display their local body-part image inside each body-part button.',
+);
+
+assert.match(
+  pageSource,
+  /handleExerciseSelect\(item\)/,
+  'Clicking a lower exercise row should sync the right rail video and reference card.',
+);
+
 assert.ok(
   pageSource.indexOf('className="mt-exercises"') > pageSource.indexOf('className="mt-hero"'),
   'Exercise list should appear after the hero section.',
@@ -100,8 +184,8 @@ assert.match(
 
 assert.match(
   pageSource,
-  /className="mt-card mt-history-card"/,
-  'Load history should be displayed as an mt-card mt-history-card.',
+  /className="mt-side-grid mt-media-rail"/,
+  'The lower right rail should use the restored media rail instead of the gray recovery placeholder.',
 );
 
 // ── Data integrity: compound library still wired ───────────────────────────
@@ -172,6 +256,24 @@ assert.match(
 
 assert.match(
   cssSource,
+  /\.mt-top-workbench\s*\{/,
+  'muscle-training.css should define the three-column top anatomy workbench.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-top-action-card\.is-selected/,
+  'Top recommended actions need a visible selected state.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-muscle-hotspot\.is-active/,
+  'Clickable muscle hotspots need a visible active state.',
+);
+
+assert.match(
+  cssSource,
   /\.mt-exercises-filter\s*\{/,
   'muscle-training.css should define .mt-exercises-filter for the filter chip row.',
 );
@@ -180,6 +282,24 @@ assert.match(
   cssSource,
   /\.mt-chip--filter\.is-active/,
   'Filter chips must have a visible active/selected state.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-video-frame iframe/,
+  'muscle-training.css should style the restored embedded video frame.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-filter-visual img/,
+  'muscle-training.css should size the body-part images inside filter buttons.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-reference-media img/,
+  'muscle-training.css should style the restored exercise reference image.',
 );
 
 assert.match(
@@ -220,6 +340,26 @@ for (const [locale, source] of [['en', enSource], ['zh-CN', zhSource]]) {
     source,
     /"stitch_mt_exercises_kicker"/,
     `${locale} locale should include the redesigned exercise section kicker.`,
+  );
+  assert.match(
+    source,
+    /"stitch_top_muscle_title"/,
+    `${locale} locale should include the top anatomy workbench copy.`,
+  );
+  assert.match(
+    source,
+    /"stitch_top_reference_title"/,
+    `${locale} locale should include the Reference Dock copy.`,
+  );
+  assert.match(
+    source,
+    /"stitch_video_demo_title"/,
+    `${locale} locale should include the restored exercise video title.`,
+  );
+  assert.match(
+    source,
+    /"stitch_video_unavailable"/,
+    `${locale} locale should include the no-video state.`,
   );
 }
 
