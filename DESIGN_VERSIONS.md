@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-05-22-06
+Date: 2026-05-22
+Surface: Muscle Training top anatomy workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/assets/muscle-training/anatomy-neon-selector.png`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a screenshot-matched top workbench with a local neon anatomy image, clickable muscle-group hotspots, a real recommendation list, and a right Reference Dock synced to the selected action.
+Why: The user supplied the target HTML and wanted only the top strength area rebuilt around a usable anatomy image, without reworking the lower action protocol workbench.
+Rollback target: `working tree before this change`
+Notes: The lower protocol rows and existing plan/library data contracts are preserved.
+
 ### Version: DV-2026-05-22-05
 Date: 2026-05-22
 Surface: Muscle Training restored card workbench on `/muscle-training`

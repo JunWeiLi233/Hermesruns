@@ -4940,7 +4940,7 @@ details[open] .mt-settings-summary::before {
 /* Content wrapper */
 .mt-content {
   padding: 28px 28px 40px;
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -5032,6 +5032,364 @@ details[open] .mt-settings-summary::before {
   background: var(--brand-accent, #c0462b);
   color: #fff;
   border-color: var(--brand-accent, #c0462b);
+}
+
+.mt-top-workbench {
+  --mt-neon: #bfff00;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr) minmax(300px, 0.95fr);
+  gap: 28px;
+  margin-bottom: 28px;
+  padding: 28px;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 28% 0%, rgba(191, 255, 0, 0.08), transparent 28rem),
+    #0a0a0a;
+  animation: mt-fade-up 0.4s ease both;
+}
+
+.mt-top-panel,
+.mt-top-reference-card {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 24px;
+  background: rgba(20, 20, 20, 0.94);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+}
+
+.mt-top-panel {
+  padding: 28px;
+  min-width: 0;
+}
+
+.mt-top-workbench .mt-top-panel-head h2,
+.mt-top-workbench .mt-top-actions-head h2,
+.mt-top-workbench .mt-top-reference-head h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1.12;
+}
+
+.mt-top-workbench .mt-top-panel-head h2,
+.mt-top-workbench .mt-top-reference-head .mt-kicker {
+  color: var(--mt-neon);
+}
+
+.mt-muscle-visual-shell {
+  position: relative;
+  margin-top: 28px;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #050606;
+}
+
+.mt-muscle-visual {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mt-muscle-hotspot-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.mt-muscle-hotspot {
+  position: absolute;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(191, 255, 0, 0.02);
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.mt-muscle-hotspot span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.mt-muscle-hotspot:hover,
+.mt-muscle-hotspot:focus-visible,
+.mt-muscle-hotspot.is-active {
+  border-color: rgba(191, 255, 0, 0.78);
+  background: rgba(191, 255, 0, 0.14);
+  box-shadow: 0 0 26px rgba(191, 255, 0, 0.38);
+  outline: none;
+  transform: scale(1.03);
+}
+
+.mt-top-muscle-hint,
+.mt-top-actions-note {
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.mt-top-actions-card {
+  display: flex;
+  flex-direction: column;
+  border-color: rgba(191, 255, 0, 0.42);
+}
+
+.mt-top-actions-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.mt-top-workbench .mt-top-actions-head span {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.mt-top-action-list {
+  display: grid;
+  gap: 18px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.mt-top-action-card {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.mt-top-action-card:hover,
+.mt-top-action-card:focus-visible,
+.mt-top-action-card.is-selected {
+  border-color: rgba(191, 255, 0, 0.42);
+  background: rgba(191, 255, 0, 0.08);
+  outline: none;
+}
+
+.mt-top-action-thumb {
+  position: relative;
+  display: block;
+  width: 118px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mt-top-action-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mt-top-action-thumb i {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.mt-top-action-copy {
+  min-width: 0;
+}
+
+.mt-top-workbench .mt-top-action-copy strong {
+  display: block;
+  color: var(--mt-neon);
+  font-size: 1.02rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.mt-top-workbench .mt-top-action-copy em {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.78rem;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.mt-top-workbench .mt-top-action-card small {
+  color: rgba(191, 255, 0, 0.82);
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mt-top-reference {
+  min-width: 0;
+}
+
+.mt-top-reference-head {
+  margin-bottom: 28px;
+}
+
+.mt-top-workbench .mt-top-reference-head .mt-kicker {
+  margin-bottom: 10px;
+}
+
+.mt-top-workbench .mt-top-reference-head h2 {
+  font-size: 2rem;
+  font-style: italic;
+}
+
+.mt-top-reference-card {
+  overflow: hidden;
+}
+
+.mt-top-reference-media {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #050606;
+}
+
+.mt-top-reference-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.1) contrast(1.08);
+}
+
+.mt-top-reference-media::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--mt-neon) 45%, rgba(255, 255, 255, 0.16) 45%);
+}
+
+.mt-top-reference-media figcaption {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  display: grid;
+  gap: 2px;
+  max-width: 62%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(10, 10, 10, 0.56);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+
+.mt-top-reference-media figcaption strong {
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.mt-top-reference-media figcaption span {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.76rem;
+}
+
+.mt-top-reference-body {
+  padding: 28px;
+}
+
+.mt-top-workbench .mt-top-reference-body h3 {
+  margin: 0 0 18px;
+  color: #fff;
+  font-size: 1.34rem;
+  font-weight: 900;
+}
+
+.mt-top-workbench .mt-top-reference-body p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.mt-top-reference-body ul {
+  display: grid;
+  gap: 14px;
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mt-top-reference-body li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.mt-top-reference-body li span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(191, 255, 0, 0.18);
+  color: var(--mt-neon);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.mt-top-reference-muscles {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.mt-top-reference-muscles > span {
+  display: block;
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mt-top-reference-muscles div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.mt-top-reference-muscles em {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.76rem;
+  font-style: normal;
 }
 
 /* ── Hero section ───────────────────────────────────────── */
@@ -5654,6 +6012,16 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-target-area:hover {
 
 /* ── Responsive: 960px collapse ────────────────────────── */
 @media (max-width: 960px) {
+  .mt-top-workbench {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 18px;
+  }
+
+  .mt-top-action-list {
+    max-height: none;
+  }
+
   .mt-hero {
     flex-direction: column;
     align-items: flex-start;
@@ -5677,6 +6045,36 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-target-area:hover {
 }
 
 @media (max-width: 480px) {
+  .mt-content {
+    padding: 16px 14px 32px;
+  }
+
+  .mt-top-panel,
+  .mt-top-reference-body {
+    padding: 20px;
+  }
+
+  .mt-muscle-visual-shell {
+    margin-top: 20px;
+  }
+
+  .mt-top-action-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .mt-top-action-thumb {
+    width: 88px;
+  }
+
+  .mt-top-action-card small {
+    grid-column: 2;
+  }
+
+  .mt-top-reference-head h2 {
+    font-size: 1.58rem;
+  }
+
   .mt-target-grid {
     grid-template-columns: 1fr;
   }
@@ -5725,4 +6123,626 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-hero-title {
 
 body:is(.theme-midnight, .theme-high-contrast) .mt-recommend-title {
   color: var(--text-strong);
+}
+
+/* Route-specific Hermes strength stage. Keeps the new top selector intact while
+   rebuilding the lower GitHub_latest sections into the supplied dark workbench. */
+.runner-dashboard-page:has(.mt-top-workbench) {
+  background: #080808 !important;
+  color: #f7f7f1 !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-shell-sidebar {
+  background: #f2efed !important;
+  color: #111827 !important;
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-dashboard-brand-copy > span:not(.hermes-logo) {
+  color: rgba(17, 24, 39, 0.48) !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-shell-side-link {
+  border-radius: 8px !important;
+  color: rgba(17, 24, 39, 0.72) !important;
+  font-size: 0.86rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-shell-side-link.is-active {
+  background: #fff !important;
+  color: #111 !important;
+  box-shadow: inset 3px 0 0 #c74135, 0 8px 22px rgba(15, 23, 42, 0.08) !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-shell-workout-btn {
+  min-height: 46px !important;
+  border-radius: 10px !important;
+  background: #c74135 !important;
+  color: #fff !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-shell-main {
+  background: #080808 !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-shell-topbar {
+  min-height: 68px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: #080808 !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .runner-shell-canvas.muscle-training-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  background: #080808 !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-content {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 0.95fr);
+  grid-template-areas:
+    "top top"
+    "hero rail"
+    "workbench rail"
+    "controls controls";
+  gap: 28px 40px;
+  max-width: 1360px;
+  padding: 32px 40px 56px;
+  background: #080808;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-top-workbench {
+  grid-area: top;
+  margin-bottom: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero {
+  grid-area: hero;
+  min-height: 148px;
+  margin: 0;
+  padding: 30px 34px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(191, 255, 0, 0.08), transparent 24rem),
+    #151515 !important;
+  box-shadow: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero-left .mt-kicker,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-kicker {
+  color: #bfff00 !important;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero-title {
+  color: #fff !important;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  font-style: italic;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero-desc {
+  color: rgba(255, 255, 255, 0.56) !important;
+  margin-bottom: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero-chips,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-ring-wrap,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-ring-meta {
+  display: none !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 0 30px;
+  border: 0;
+  border-radius: 10px;
+  background: #bfff00;
+  color: #071000;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 900;
+  box-shadow: 0 0 28px rgba(191, 255, 0, 0.12);
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero-cta .app-icon,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero-cta .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-recommend,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-hero + .mt-recommend + .mt-side-grid {
+  display: none !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercises {
+  grid-area: workbench;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercises-head {
+  margin-bottom: 22px;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercises-head .mt-card-title {
+  color: #fff !important;
+  font-size: clamp(1.9rem, 3vw, 2.55rem);
+  font-style: italic;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercises-filter {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(98px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter {
+  display: grid;
+  min-width: 98px;
+  min-height: 132px;
+  place-items: center;
+  gap: 6px;
+  padding: 16px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: #151515 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  text-align: center;
+  box-shadow: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter > span:first-child {
+  position: relative;
+  z-index: 1;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-filter-visual {
+  display: grid;
+  width: 58px;
+  height: 46px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-filter-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.72) contrast(1.05);
+  opacity: 0.82;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter small {
+  display: block;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.72rem;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter:hover,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter:focus-visible,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter.is-active {
+  border-color: rgba(191, 255, 0, 0.72) !important;
+  background: rgba(191, 255, 0, 0.08) !important;
+  color: #bfff00 !important;
+  outline: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter:is(:hover, :focus-visible, .is-active) .mt-filter-visual {
+  border-color: rgba(191, 255, 0, 0.42);
+  background: rgba(191, 255, 0, 0.08);
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-chip--filter:is(:hover, :focus-visible, .is-active) .mt-filter-visual img {
+  filter: saturate(1.05) contrast(1.08);
+  opacity: 1;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-list {
+  display: grid;
+  gap: 14px;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-row {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #fff;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-row.is-selected {
+  border-color: rgba(191, 255, 0, 0.72);
+  background: #151515;
+  box-shadow: 0 0 36px rgba(191, 255, 0, 0.08);
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-main {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 78px;
+  padding: 20px 24px;
+  cursor: pointer;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-main:focus-visible {
+  outline: 2px solid rgba(191, 255, 0, 0.78);
+  outline-offset: -2px;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-num {
+  color: #bfff00;
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 950;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-row.is-selected .mt-exercise-num {
+  font-size: 2.5rem;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-info strong {
+  color: #fff !important;
+  font-size: 1.42rem;
+  font-weight: 900;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-meta {
+  color: rgba(255, 255, 255, 0.56) !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-badge {
+  border: 1px solid rgba(191, 255, 0, 0.38);
+  background: rgba(191, 255, 0, 0.09);
+  color: #bfff00;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-detail {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercises + .mt-side-grid {
+  grid-area: rail;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 28px;
+  margin: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-exercises + .mt-side-grid .mt-history-card {
+  display: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: #151515 !important;
+  color: #fff;
+  box-shadow: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-card:hover {
+  transform: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-card-title {
+  color: #fff !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-media-rail {
+  position: static;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-video-card,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-video-card .mt-card-head {
+  padding: 24px 24px 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-video-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin: 18px 24px 24px;
+  overflow: hidden;
+  border: 1px solid rgba(191, 255, 0, 0.24);
+  border-radius: 16px;
+  background: #050606;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-video-missing {
+  display: grid;
+  min-height: 220px;
+  margin: 18px 24px 24px;
+  place-items: center;
+  gap: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.62);
+  text-align: center;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-video-missing p {
+  margin: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-video-missing a {
+  color: #bfff00;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-media {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #050606;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.08) contrast(1.06);
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-media::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #bfff00 46%, rgba(255, 255, 255, 0.16) 46%);
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-media figcaption {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  display: grid;
+  max-width: min(250px, 70%);
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(10, 10, 10, 0.58);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-media figcaption span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.72rem;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-media figcaption strong {
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-body {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-prescription,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-intent {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-prescription {
+  color: rgba(191, 255, 0, 0.82);
+  font-weight: 800;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-steps {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-steps li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-steps li span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(191, 255, 0, 0.18);
+  color: #bfff00;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-muscles {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+  text-align: center;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-muscles > span {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-muscles div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-reference-muscles em {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.76rem;
+  font-style: normal;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-recovery-card {
+  min-height: 300px;
+  padding: 28px;
+  border-left: 5px solid #ef4b4b;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-recovery-copy,
+.runner-dashboard-page:has(.mt-top-workbench) .mt-recovery-suggestions {
+  color: rgba(255, 255, 255, 0.66) !important;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-recovery-badge {
+  border-color: rgba(239, 75, 75, 0.42);
+  background: rgba(239, 75, 75, 0.12);
+  color: #ff6565;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck {
+  grid-area: controls;
+}
+
+@media (max-width: 1180px) {
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-content {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "top"
+      "hero"
+      "workbench"
+      "rail"
+      "controls";
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-exercises-filter {
+    grid-template-columns: repeat(3, minmax(98px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-content {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 24px 14px 40px;
+    gap: 22px;
+    overflow: hidden;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-top-workbench {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    grid-template-columns: minmax(0, 1fr) !important;
+    overflow: hidden;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-top-panel,
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-top-reference-card,
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-muscle-visual-shell {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-muscle-visual {
+    object-fit: contain;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-hero {
+    padding: 24px 20px;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-hero-right {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-hero-cta {
+    width: 100%;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-exercises-filter {
+    grid-auto-columns: minmax(98px, 35vw);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-main {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-badge,
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-chevron {
+    grid-column: 2;
+  }
+}
+
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:has(.mt-top-workbench) .mt-hero-title,
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:has(.mt-top-workbench) .mt-exercises-head .mt-card-title,
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:has(.mt-top-workbench) .mt-exercise-info strong,
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:has(.mt-top-workbench) .mt-card-title {
+  color: #fff !important;
 }
