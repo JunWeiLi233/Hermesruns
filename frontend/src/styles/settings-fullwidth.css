@@ -126,3 +126,58 @@ body .settings-control-page .st-theme-card {
     margin: 0 auto !important;
   }
 }
+
+/* ============================================================================
+   /workflows + /muscle-training — full-width canvas. Both pages inherit the
+   `.runner-dashboard-page .runner-shell-canvas { width: min(100% - 32px, 1390px) }`
+   clamp from runner-shell.css and were being centered at ~1390 px on a
+   1920 px monitor (leaving ~265 px gutters of empty paper on each side).
+   Match the /settings + /analysis-detail full-width treatment so the canvas
+   spans the full available width between the sidebar and the right edge.
+   ============================================================================ */
+
+body .workflow-builder-page .runner-shell-canvas.workflow-builder-shell-canvas,
+body .workflow-builder-page .runner-shell-canvas {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px clamp(20px, 3vw, 40px) 56px;
+  gap: 28px;
+}
+
+@media (min-width: 1100px) {
+  body .workflow-builder-page.runner-dashboard-page .runner-shell-canvas.workflow-builder-shell-canvas,
+  body .workflow-builder-page.runner-dashboard-page .runner-shell-canvas {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 28px clamp(24px, 3vw, 48px) 64px !important;
+  }
+}
+
+@media (max-width: 720px) {
+  body .workflow-builder-page .runner-shell-canvas {
+    padding: 18px 16px 48px;
+  }
+}
+
+/* /muscle-training already has a full-width rule in
+   `muscle-training-hermes-redesign.css:46-54` gated on
+   `body .runner-dashboard-page .runner-shell-canvas.muscle-training-canvas`,
+   but it only fires at ≥1100 px and is overridden by the lower-specificity
+   `.runner-dashboard-page .runner-shell-canvas { width: min(100% - 32px, 1390px) }`
+   clamp at viewport widths between 720 px and 1099 px. Mirror the
+   workflow + settings pattern with a base block + max-width:720px rebuild
+   so the canvas is full-width at every breakpoint above mobile. */
+body .runner-dashboard-page .runner-shell-canvas.muscle-training-canvas {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px clamp(20px, 3vw, 40px) 56px;
+}
+
+@media (max-width: 720px) {
+  body .runner-dashboard-page .runner-shell-canvas.muscle-training-canvas {
+    padding: 18px 16px 48px;
+  }
+}
