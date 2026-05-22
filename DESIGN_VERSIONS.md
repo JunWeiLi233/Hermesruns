@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-05-22-05
+Date: 2026-05-22
+Surface: Muscle Training restored card workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the pre-merge `mt-*` card-based Muscle Training frontend design on the current page: warm card canvas, hero progress ring, recommendation banner, target filters, session/history cards, and expandable exercise rows.
+Why: The user asked to apply the previous frontend design to the current page after the upstream IRONPULSE merge.
+Rollback target: `ecbe742f`
+Notes: The removed action-diagram implementation remains excluded and is guarded by the smoke test.
+
 ### Version: DV-2026-05-19-07
 Date: 2026-05-19
 Surface: Muscle Training action protocol drawer on `/muscle-training`

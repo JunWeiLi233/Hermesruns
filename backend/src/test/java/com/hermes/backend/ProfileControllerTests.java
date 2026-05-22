@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -269,7 +270,10 @@ class ProfileControllerTests {
         assertThat(body.activities()).isEmpty();
         assertThat(body.races()).isEmpty();
         assertThat(body.quota()).isEqualTo(Map.of());
-        assertThat(body.deferredEnrichment()).isFalse();
+        // coachToday is intentionally deferred so the synchronous Open-Meteo
+        // call inside getTodayWithReadiness no longer blocks first paint; the
+        // frontend lazy-loads it via /api/coach/today when this flag is true.
+        assertThat(body.deferredEnrichment()).isTrue();
     }
 
     @Test
@@ -324,7 +328,9 @@ class ProfileControllerTests {
         assertThat(body.races()).isEmpty();
         assertThat(body.musclePlan()).isNull();
         assertThat(body.quota()).isEqualTo(Map.of());
-        assertThat(body.deferredEnrichment()).isFalse();
+        // coachToday now deferred even when batch enrichment fails — the frontend
+        // always lazy-loads /api/coach/today behind the deferredEnrichment flag.
+        assertThat(body.deferredEnrichment()).isTrue();
     }
 
     @Test
@@ -422,16 +428,20 @@ class ProfileControllerTests {
         ProfileController.ProfileDashboardResponse body = (ProfileController.ProfileDashboardResponse) response.getBody();
         assertThat(body.activities()).hasSize(1);
         assertThat(body.coachState()).isEqualTo(coachState);
-        assertThat(body.coachToday()).isEqualTo(coachToday);
+        // coachToday is deferred (null in the eager payload) so the
+        // synchronous Open-Meteo dew-point fetch no longer blocks first paint.
+        // The frontend lazy-loads it via /api/coach/today when
+        // deferredEnrichment=true.
+        assertThat(body.coachToday()).isNull();
         assertThat(body.personalRecords()).isEqualTo(personalRecords);
         assertThat(body.races()).isEmpty();
         assertThat(body.musclePlan()).isEqualTo(musclePlan);
         assertThat(body.quota()).isEqualTo(quota);
-        assertThat(body.deferredEnrichment()).isFalse();
+        assertThat(body.deferredEnrichment()).isTrue();
         verify(personalRecordService).buildForRunner(runner);
         verify(quotaService).getQuotaStatus(runner);
         verify(automatedCoachService).getCoachState(runner);
-        verify(automatedCoachService).getTodayWithReadiness(runner);
+        verify(automatedCoachService, never()).getTodayWithReadiness(runner);
         verify(automatedCoachService).getSchedule(runner, 7);
         verify(raceEventRepository).findByRunnerOrderByEventDateAsc(runner);
         verify(muscleTrainingPlannerService).getPlan(runner, coachState, schedule);

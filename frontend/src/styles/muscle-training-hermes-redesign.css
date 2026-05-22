@@ -962,3 +962,76 @@
     grid-column: 2;
   }
 }
+
+/* ============================================================================
+   Muscle heatmap (per-exercise card) — wraps the upstream
+   `react-muscle-highlighter` package (MIT, github.com/soroojshehryar/
+   react-muscle-highlighter) with Hermes IRONPULSE design tokens so the body
+   diagram reads on the dark acid-lime page. Component is rendered inside the
+   expanded exercise detail in MuscleTraining.jsx.
+   ============================================================================ */
+
+.mt-ironpulse-page,
+.mt-exercise-heatmap {
+  --mt-heatmap-intensity-1: rgba(255, 195, 175, 0.46);
+  --mt-heatmap-intensity-2: rgba(240, 117, 97, 0.76);
+  --mt-heatmap-intensity-3: rgba(204, 57, 42, 0.94);
+  --mt-heatmap-border: rgba(229, 238, 212, 0.35);
+  --mt-heatmap-default-fill: rgba(229, 238, 212, 0.06);
+  --mt-heatmap-default-stroke: rgba(229, 238, 212, 0.5);
+}
+
+.mt-exercise-heatmap {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 14px;
+  padding: 14px 18px;
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid rgba(204, 255, 0, 0.16);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(204, 255, 0, 0.08), transparent 58%),
+    rgba(14, 15, 14, 0.86);
+  color: var(--mt-ip-text, #f8f8f0);
+}
+
+.muscle-heatmap-figure {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.muscle-heatmap-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.muscle-heatmap__body {
+  display: block;
+  line-height: 0;
+}
+
+.muscle-heatmap__body svg {
+  display: block;
+}
+
+.muscle-heatmap-caption {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mt-ip-muted, #c7cfb7);
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .mt-exercise-heatmap {
+    padding: 10px 12px;
+  }
+  .muscle-heatmap-figure {
+    gap: 14px;
+  }
+}

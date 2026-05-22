@@ -483,6 +483,88 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m11 18-6-6 6-6" />
         </>
       );
+    case 'play_arrow':
+      return titled(
+        <>
+          <path d="M8 5.14v13.72a.5.5 0 0 0 .76.43l10.83-6.86a.5.5 0 0 0 0-.86L8.76 4.71A.5.5 0 0 0 8 5.14Z" />
+        </>
+      );
+    case 'schedule':
+      return titled(
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3.5 2" />
+        </>
+      );
+    case 'self_improvement':
+      return titled(
+        <>
+          <circle cx="12" cy="5" r="2" />
+          <path d="M12 7v5" />
+          <path d="M5 19c2-4 5-5 7-5s5 1 7 5" />
+          <path d="M8 12l-2 4" />
+          <path d="M16 12l2 4" />
+        </>
+      );
+    case 'sports_gymnastics':
+      return titled(
+        <>
+          <circle cx="12" cy="4.5" r="2" />
+          <path d="M12 6.5v6" />
+          <path d="M6 9l6-2 6 2" />
+          <path d="M9 19l3-6 3 6" />
+        </>
+      );
+    case 'chest':
+      return titled(
+        <>
+          <path d="M5 8c0-1.5 1.5-3 3-3h8c1.5 0 3 1.5 3 3v6c0 2-1 4-3 4h-2l-2-3-2 3h-2c-2 0-3-2-3-4V8Z" />
+          <path d="M12 10v6" />
+        </>
+      );
+    case 'shoulders':
+      return titled(
+        <>
+          <circle cx="12" cy="5.5" r="2" />
+          <path d="M3 12c2-4 5-5 9-5s7 1 9 5" />
+          <path d="M6 12c2-2 4-3 6-3s4 1 6 3" />
+        </>
+      );
+    case 'legs':
+      return titled(
+        <>
+          <path d="M9 4h6" />
+          <path d="M9.5 4l-1.5 8l-0.5 8" />
+          <path d="M14.5 4l1.5 8l0.5 8" />
+          <circle cx="7.5" cy="20" r="1" />
+          <circle cx="16.5" cy="20" r="1" />
+        </>
+      );
+    case 'core':
+      return titled(
+        <>
+          <rect x="7.5" y="4" width="9" height="16" rx="2.5" />
+          <path d="M7.5 9h9" />
+          <path d="M7.5 14h9" />
+          <path d="M12 4v16" />
+        </>
+      );
+    case 'arms':
+      return titled(
+        <>
+          <path d="M6 18c-1-3 0-7 3-8c2-1 4 0 5 1c2 2 1 5 0 6" />
+          <path d="M14 11c1 1 2 3 1 5" />
+          <circle cx="9" cy="6" r="2" />
+        </>
+      );
+    case 'back':
+      return titled(
+        <>
+          <circle cx="12" cy="5.5" r="2" />
+          <path d="M9 9c-3 1-5 3-5 6c0 2 1 3 3 3h10c2 0 3-1 3-3c0-3-2-5-5-6" />
+          <path d="M12 9v8" />
+        </>
+      );
     default:
       return titled(
         <>

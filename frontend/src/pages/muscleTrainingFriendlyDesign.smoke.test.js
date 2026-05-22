@@ -5,137 +5,106 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, 'MuscleTraining.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
-const redesignStyleSource = readFileSync(path.join(here, '../styles/muscle-training-hermes-redesign.css'), 'utf8');
+const cssSource = readFileSync(path.join(here, '../styles/_split/muscle-training.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
 
+// ── New mt-* card-based redesign presence ──────────────────────────────────
 assert.match(
   pageSource,
-  /mt-ironpulse-page/,
-  'Muscle Training should use the new IRONPULSE page scope.',
+  /muscle-training-canvas/,
+  'Muscle Training should use the muscle-training-canvas wrapper class.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-content"/,
+  'Muscle Training should use the mt-content wrapper inside the canvas.',
+);
+
+// ── Old IronPulse structures must be gone from page content area ───────────
+assert.doesNotMatch(
+  pageSource,
+  /mt-ironpulse-page|mt-ip-volume-goal|mt-ip-current-split|mt-ip-target-filter-rail|mt-ip-protocol-workbench/,
+  'Old IronPulse mt-ip-* class names must not appear in the redesigned content area.',
 );
 
 assert.doesNotMatch(
   pageSource,
   /data-friendly-strength-lab|muscle-training-page|mt-week-strip|mt-anatomy-command-board|strength-plan-hero-shell/,
-  'The old friendly/Runner Atlas first-screen structures must not remain in MuscleTraining.jsx.',
+  'Older friendly/Runner Atlas first-screen structures must not remain.',
+);
+
+assert.doesNotMatch(
+  pageSource,
+  /ExerciseActionDiagram|data-action-diagram|actionDiagram/,
+  'The removed muscle-training diagram implementation must not be restored with the previous layout.',
+);
+
+assert.doesNotMatch(
+  cssSource,
+  /mt-action-diagram|mt-action-phase-play|mt-action-sweep/,
+  'Removed action-diagram styles must stay out of the active muscle-training stylesheet.',
+);
+
+// ── Hero ring ──────────────────────────────────────────────────────────────
+assert.match(
+  pageSource,
+  /className="mt-hero"/,
+  'The page should start with an mt-hero section.',
 );
 
 assert.match(
   pageSource,
-  /className="mt-ip-volume-goal"/,
-  'The page should start with the centered weekly strength goal ring.',
+  /className="mt-ring-wrap"/,
+  'The hero should include a progress ring (mt-ring-wrap) showing weekly completion.',
 );
 
 assert.match(
   pageSource,
-  /className="mt-ip-current-split"/,
-  'The page should render the current training arrangement split bar.',
+  /volumeCompletion/,
+  'The progress ring should display volumeCompletion percentage.',
+);
+
+// ── Recommendation banner ──────────────────────────────────────────────────
+assert.match(
+  pageSource,
+  /className="mt-recommend"/,
+  'The page should include an mt-recommend recommendation banner.',
+);
+
+// ── Exercise list structure ────────────────────────────────────────────────
+assert.match(
+  pageSource,
+  /className="mt-exercises"/,
+  'The page should include an mt-exercises section for the exercise list.',
 );
 
 assert.match(
   pageSource,
-  /className="mt-ip-target-filter-rail"/,
-  'The page should render a compact target-area filter rail for the protocol workbench.',
-);
-
-assert.match(
-  pageSource,
-  /const \[isTodayPlanExpanded,\s*setIsTodayPlanExpanded\] = useState\(false\)/,
-  'Today plan rows should be collapsed by default so the workbench opens on the exercise library.',
-);
-
-assert.match(
-  pageSource,
-  /className="mt-ip-plan-collapse"/,
-  'The real today plan should render as a compact collapsible group, not as the dominant first row stack.',
-);
-
-assert.match(
-  pageSource,
-  /className="mt-ip-plan-toggle"/,
-  'The collapsed today plan group should have a real toggle button.',
-);
-
-assert.match(
-  pageSource,
-  /isTodayPlanExpanded && filteredProtocolItems\.length > 0/,
-  'Today plan exercise rows should only render when the plan group is expanded.',
+  /className="mt-exercises-filter"/,
+  'The exercise section should include mt-exercises-filter filter chips.',
 );
 
 assert.ok(
-  pageSource.indexOf('className="mt-ip-protocol mt-ip-protocol-workbench"') > pageSource.indexOf('className="mt-ip-current-split"')
-    && pageSource.indexOf('className="mt-ip-protocol mt-ip-protocol-workbench"') < pageSource.indexOf('className="mt-ip-records"'),
-  'The action protocol workbench should be promoted directly after the split bar, before lower-priority record modules.',
+  pageSource.indexOf('className="mt-exercises"') > pageSource.indexOf('className="mt-hero"'),
+  'Exercise list should appear after the hero section.',
+);
+
+// ── Card layout ────────────────────────────────────────────────────────────
+assert.match(
+  pageSource,
+  /className="mt-card mt-session-card"/,
+  'Today\'s session should be displayed as an mt-card mt-session-card.',
 );
 
 assert.match(
   pageSource,
-  /className="mt-ip-protocol mt-ip-protocol-workbench"/,
-  'The protocol should use a practical two-column workbench layout.',
+  /className="mt-card mt-history-card"/,
+  'Load history should be displayed as an mt-card mt-history-card.',
 );
 
-assert.match(
-  pageSource,
-  /const EXERCISE_VIDEO_EMBEDS = \{/,
-  'The action drawer should use explicit real YouTube embed mappings instead of search links or fake media.',
-);
-
-assert.match(
-  pageSource,
-  /youtube-nocookie\.com\/embed\//,
-  'Exercise videos should use privacy-friendly YouTube nocookie embed URLs.',
-);
-
-assert.match(
-  pageSource,
-  /className=\{`mt-ip-detail-drawer/,
-  'The selected exercise details should render as a right-side drawer/sheet, not the old flat card.',
-);
-
-assert.match(
-  pageSource,
-  /className="mt-ip-detail-close"/,
-  'The exercise detail drawer should have a real close button.',
-);
-
-assert.match(
-  pageSource,
-  /className="mt-ip-video-frame"/,
-  'The exercise detail drawer should include a real video iframe frame when a URL exists.',
-);
-
-assert.doesNotMatch(
-  pageSource,
-  /className="mt-ip-video-play"|className="mt-ip-video-progress"|className="mt-ip-video-controls"/,
-  'The action detail drawer must not render fake video controls.',
-);
-
-assert.match(
-  pageSource,
-  /className="mt-ip-video-missing"/,
-  'Exercises without mapped video URLs should show an honest no-video state instead of a fake player.',
-);
-
-assert.match(
-  pageSource,
-  /className="mt-ip-coach-tips"/,
-  'The drawer should show professional tips as interactive accordion rows.',
-);
-
-assert.match(
-  pageSource,
-  /className="mt-ip-step-guide"/,
-  'The drawer should include a high-contrast numbered step guide.',
-);
-
-assert.doesNotMatch(
-  pageSource,
-  /className="mt-ip-target-grid"/,
-  'The large 3x2 target image grid should no longer be the primary interaction path.',
-);
-
+// ── Data integrity: compound library still wired ───────────────────────────
 assert.match(
   pageSource,
   /recentStrengthPlaceholders/,
@@ -181,42 +150,7 @@ assert.match(
   'Optional library exercises should be labelled as not participating in today recommendation calculation.',
 );
 
-assert.match(
-  styleSource,
-  /\.mt-ip-exercise-section-label--library/,
-  'Compound-library rows should have their own dark IRONPULSE section styling.',
-);
-
-assert.match(
-  redesignStyleSource,
-  /\.mt-ip-plan-collapse/,
-  'The live redesign stylesheet should style the collapsed today plan summary.',
-);
-
-assert.match(
-  redesignStyleSource,
-  /\.mt-ip-detail-drawer/,
-  'The live redesign stylesheet should style the exercise detail drawer instead of relying on stale split CSS.',
-);
-
-assert.match(
-  redesignStyleSource,
-  /@media \(max-width:\s*760px\)[\s\S]*\.mt-ip-plan-collapse/,
-  'The collapsed today plan summary should be readable on mobile.',
-);
-
-assert.equal(
-  (pageSource.match(/import target[A-Z][A-Za-z]+Url from '\.\.\/assets\/muscle-training\/target-[a-z]+\.webp';/g) || []).length,
-  6,
-  'The target area cards should use six local dark WebP training photo assets.',
-);
-
-assert.doesNotMatch(
-  pageSource,
-  /target-[a-z]+\.svg/,
-  'The target area cards should not use the old abstract SVG placeholders.',
-);
-
+// ── API endpoints ──────────────────────────────────────────────────────────
 assert.match(
   pageSource,
   /apiJson\('\/api\/training\/muscle\/today'/,
@@ -229,54 +163,38 @@ assert.doesNotMatch(
   'The old check-in endpoint must not remain in the page.',
 );
 
+// ── CSS: new mt-* classes present in split CSS file ───────────────────────
 assert.match(
-  styleSource,
-  /\.hermes-site-frame\[data-route-path="\/muscle-training"\] \.runner-shell-canvas::before\s*\{[\s\S]*display:\s*none !important;/,
-  'The new route should explicitly suppress Runner Atlas white canvas overlays.',
+  cssSource,
+  /\.mt-hero\s*\{/,
+  'muscle-training.css should define .mt-hero for the gradient hero section.',
 );
 
 assert.match(
-  styleSource,
-  /\.mt-ironpulse-page\s*\{[\s\S]*--mt-ironpulse-acid:\s*#ccff00;/,
-  'IRONPULSE styles should be scoped to mt-ironpulse-page and use the acid green accent.',
+  cssSource,
+  /\.mt-exercises-filter\s*\{/,
+  'muscle-training.css should define .mt-exercises-filter for the filter chip row.',
 );
 
 assert.match(
-  styleSource,
-  /\.mt-ip-target-filter-rail/,
-  'Target-area filtering should be styled as a compact rail, not the main visual grid.',
+  cssSource,
+  /\.mt-chip--filter\.is-active/,
+  'Filter chips must have a visible active/selected state.',
 );
 
 assert.match(
-  styleSource,
-  /\.mt-ip-detail-drawer/,
-  'The selected exercise detail drawer should have scoped IRONPULSE styling.',
+  cssSource,
+  /\.mt-ring-progress\s*\{/,
+  'muscle-training.css should define .mt-ring-progress for the SVG ring arc.',
 );
 
 assert.match(
-  styleSource,
-  /\.mt-ip-video-frame/,
-  'The real embedded video frame should have route-scoped dark styling.',
+  cssSource,
+  /@media \(max-width:\s*960px\)/,
+  'muscle-training.css should have a responsive breakpoint for mobile layout.',
 );
 
-assert.match(
-  styleSource,
-  /@media \(max-width:\s*760px\)[\s\S]*\.mt-ip-detail-drawer\s*\{[\s\S]*position:\s*static;/,
-  'On mobile, the detail drawer should become an in-flow sheet rather than a right overlay.',
-);
-
-assert.match(
-  styleSource,
-  /\.mt-ip-filter-chip:is\(:hover,\s*:focus-visible,\s*\.is-active\)/,
-  'Target-area filter chips must keep visible hover, selected, and keyboard focus states.',
-);
-
-assert.match(
-  styleSource,
-  /@media \(max-width:\s*760px\)[\s\S]*\.mt-ip-target-filter-rail\s*\{[\s\S]*overflow-x:\s*auto;/,
-  'Mobile target-area filter chips should scroll horizontally instead of overflowing the viewport.',
-);
-
+// ── Translations ───────────────────────────────────────────────────────────
 for (const [locale, source] of [['en', enSource], ['zh-CN', zhSource]]) {
   assert.match(
     source,
@@ -290,24 +208,19 @@ for (const [locale, source] of [['en', enSource], ['zh-CN', zhSource]]) {
   );
   assert.match(
     source,
-    /"stitch_recent_prs_title"/,
-    `${locale} locale should include the recent strength records heading.`,
-  );
-  assert.match(
-    source,
-    /"stitch_today_plan_title"/,
-    `${locale} locale should include the real-plan section title.`,
-  );
-  assert.match(
-    source,
-    /"stitch_compound_library_title"/,
-    `${locale} locale should include the compound-library section title.`,
-  );
-  assert.match(
-    source,
     /"stitch_optional_library_note"/,
     `${locale} locale should clearly mark library exercises as optional.`,
   );
+  assert.match(
+    source,
+    /"stitch_mt_hero_kicker"/,
+    `${locale} locale should include the redesigned hero kicker label.`,
+  );
+  assert.match(
+    source,
+    /"stitch_mt_exercises_kicker"/,
+    `${locale} locale should include the redesigned exercise section kicker.`,
+  );
 }
 
-console.log('[PASS] Muscle Training IRONPULSE reference-one guardrails passed.');
+console.log('[PASS] Muscle Training redesign guardrails passed.');

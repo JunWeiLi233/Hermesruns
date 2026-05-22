@@ -1,0 +1,822 @@
+/* ============================================================================
+   Cross-surface contrast fixes — WCAG-AA pass for low-ratio text discovered by
+   `.tools/one-shot-contrast-audit.mjs`. Loaded LAST from index.css so it wins
+   the cascade. All overrides anchored on `#root` so they beat the page-scoped
+   `:is(...) :is(...) :is(...)` rules whose multi-class arguments push their
+   specificity to (0, 5, 0) — that's the same trap that hid the insight-card
+   primary headline and now hides H2/STRONG/`.runner-shell-inline-btn` /
+   `.weather-engine-data-pill` text across /runs, /weather, /shoes, /analysis
+   in light mode.
+
+   Each block is followed by a one-line context note linking the original
+   audit finding (ratio | fg | bg) so future contributors can see why the
+   override exists.
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   Pattern 0 — root-cause token bump. The page-scoped rule in analysis.css
+   paints every `p, span, small, em, td` inside the runner-facing shells with
+   `var(--runner-minimal-muted)`, defined as `#787774`. On white that lands at
+   4.32-4.48 contrast — just shy of WCAG AA 4.5 — which is why the
+   one-shot audit returned 100+ findings concentrated on those tags. Bumping
+   the variable to `#595c5d` (the standard `--text-muted` token) lifts every
+   one of those tags to ~6.5 contrast without an `!important` battle, because
+   the source rule reads the variable through `var()`.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-light, .theme-high-contrast-light) #root :is(
+  .analysis-page-shell,
+  .runs-dashboard-page,
+  .weather-engine-page,
+  .shoes-dashboard-page,
+  .races-dashboard-page,
+  .schedule-plan-page,
+  .runner-dashboard-page
+) {
+  --runner-minimal-muted: #595c5d;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern A — runner-facing pages in light theme were inheriting the
+   cream `#fff4e6` headline/strong color from the dark-cinematic page rule
+   `:is(.runs-dashboard-page, .weather-engine-page, .shoes-dashboard-page, …)
+    :is(h1, h2, h3, h4, strong, …) { color: #fff4e6 !important; }`.
+   On light surfaces this drops contrast to 1.09. Pin those headers to
+   `var(--text-strong)` charcoal.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-light, .theme-high-contrast-light) #root :is(
+  .runs-dashboard-page,
+  .weather-engine-page,
+  .shoes-dashboard-page,
+  .races-dashboard-page,
+  .schedule-plan-page,
+  .runner-dashboard-page,
+  .analysis-page-shell
+) :is(h1, h2, h3, h4, .recent-runs-card-top h2, .weather-engine-temp-display, .shoes-card-head h2) {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root :is(
+  .runs-dashboard-page,
+  .weather-engine-page,
+  .shoes-dashboard-page,
+  .races-dashboard-page,
+  .schedule-plan-page,
+  .runner-dashboard-page,
+  .analysis-page-shell
+) :is(
+  .recent-runs-stat-card strong,
+  .recent-runs-card-metric strong,
+  .shoes-overview-metric strong,
+  .shoes-card-metric strong,
+  .weather-engine-hud-value,
+  .weather-engine-engine-stat strong,
+  .race-center-pb-copy strong
+) {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+/* Pattern A' — blanket catch-all for the remaining `<strong>` text in the same
+   page shells. The page-scoped cream rule applies broadly to any `<strong>`
+   inside the shell; the audit confirmed dozens of /weather, /runs, /shoes,
+   /races, /schedule strongs still rendered as cream-on-white at ~1.0 contrast.
+   We exclude the small set of cards that genuinely want light text on a dark
+   gradient (cinematic command cards, judgment hero pills, primary coach plan,
+   the runs insight-card--primary, and muscle-training cinematic blocks). */
+body:is(.theme-light, .theme-high-contrast-light) #root :is(
+  .runs-dashboard-page,
+  .weather-engine-page,
+  .shoes-dashboard-page,
+  .races-dashboard-page,
+  .schedule-plan-page,
+  .runner-dashboard-page,
+  .analysis-page-shell
+) strong {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+/* Restore cream on the dark cinematic command cards that legitimately want
+   light text on a dark gradient. These intentionally override the blanket
+   rule above. */
+body:is(.theme-light, .theme-high-contrast-light) #root :is(
+  .recent-runs-insight-card.recent-runs-insight-card--primary,
+  .analysis-coach-command-hero,
+  .analysis-coach-command-primary-plan,
+  .analysis-intensity-command-judgment,
+  .analysis-cinematic-card--coach,
+  .analysis-load-command-judgment-card,
+  .runner-dashboard-coach-prescription,
+  .runner-dashboard-workout-card,
+  .runner-dashboard-feature-primary,
+  .runner-dashboard-feature-secondary,
+  .mt-ip-current-split,
+  .mt-ip-primary-plan,
+  .mt-ip-judgment-card
+) strong {
+  color: #fff6f2 !important;
+}
+
+/* Pattern A'' — the Runs generated image hero is intentionally photographic
+   even in light mode. Keep its copy in the dark-hero treatment so the text does
+   not fall back to charcoal/muted gray over the image. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-overlay::after {
+  background:
+    linear-gradient(90deg, rgba(18, 16, 13, 0.9) 0%, rgba(18, 16, 13, 0.72) 42%, rgba(18, 16, 13, 0.2) 76%),
+    linear-gradient(180deg, rgba(18, 16, 13, 0.08) 0%, rgba(18, 16, 13, 0.2) 46%, rgba(18, 16, 13, 0.82) 100%) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-copy {
+  color: #fff8ee !important;
+  text-shadow: 0 2px 20px rgba(18, 16, 13, 0.72);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-copy :is(h1, h2, p, span, small, em) {
+  color: inherit !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-copy .recent-runs-hero-kicker {
+  color: rgba(255, 194, 169, 0.94) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern B — footer "条款 / 隐私 / 服务" links rendered as `rgb(242,240,238)`
+   cream on a near-white footer (ratio 1.05) across /runs, /weather, /races,
+   /shoes, /schedule, /analysis, /today-run, /profile. Bump to the Hermes muted
+   ink (#595c5d) so the links read and the underline-on-hover affordance works.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-light, .theme-high-contrast-light) #root :is(.runner-shell-footer, .runner-dashboard-footer) a {
+  color: rgba(44, 47, 48, 0.72) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root :is(.runner-shell-footer, .runner-dashboard-footer) a:hover {
+  color: var(--brand-accent, #a0392a) !important;
+}
+
+/* Pattern B' — the same cream leak hits in-page inline buttons like the
+   /analysis "导入数据" CTA when no runs exist. Pin to charcoal so the call
+   to action is readable on the cream empty-state card. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-inline-btn {
+  color: var(--text-strong, #2c2f30) !important;
+  border-color: rgba(160, 57, 42, 0.24) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-inline-btn:hover {
+  color: var(--brand-accent, #a0392a) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern C — /profile prediction labels and rewards-badge sub-copy used
+   `rgb(168, 162, 158)` on white (ratio 2.52). Bump to a darker tone that
+   matches the muted ink elsewhere in the dashboard.
+   ---------------------------------------------------------------------------- */
+
+#root .hd-predictions-grid .hd-prediction-label,
+#root .hd-rewards-badges .hd-rewards-badge-info span {
+  color: rgba(60, 65, 70, 0.82) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern D — /weather pace-penalty / dew-point / apparent-temp pill text
+   rendered as cream on near-white pill (ratio 1.01 — invisible). The
+   data-pill rework earlier in this stylesheet set the background, but the
+   inner `<strong>` and `<span>` color leaked from the page-scoped cream rule.
+   Anchor with `#root` to override (0, 5, 0)-specificity rules.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-light, .theme-high-contrast-light) #root .weather-engine-page .weather-engine-data-pill strong,
+body:is(.theme-light, .theme-high-contrast-light) #root .weather-engine-page .weather-engine-data-pill span {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern E — badge-style pills that put gray text on pastel / coral
+   backgrounds (ratio 2.1–3.5). Bumps text to a strong ink that holds AA on
+   the pastel backgrounds.
+   ---------------------------------------------------------------------------- */
+
+/* `.race-center-featured-tag` "大满贯" — gray on near-black image overlay. */
+#root .race-center-featured-tag {
+  color: #fff6f2 !important;
+  background: rgba(35, 13, 10, 0.62) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
+}
+
+/* `.shoe-inventory-card-type-badge` "日常" — gray on pastel blue-gray. */
+#root .shoe-inventory-card-type-badge {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+/* `.shoe-rotation-signal-highlight-kicker` "基于数据分析" — gray on light gray. */
+#root .shoe-rotation-signal-highlight-kicker {
+  color: rgba(44, 47, 48, 0.78) !important;
+}
+
+/* `.shoe-rotation-signal-highlight ...` "添加跑鞋" — gray on coral, 1.69. */
+#root .shoe-rotation-signal-highlight span,
+#root :is(.shoe-rotation-signal, .shoe-inventory-card.is-primary) [class*="button"] {
+  color: #fff6f2 !important;
+}
+
+/* `.settings-atlas-hero-badge` "实时同步" — dark ink on coral, 2.61. Switch to
+   a high-contrast cream that pops on the brand-coral background. */
+#root .settings-atlas-hero-badge {
+  color: #fff6f2 !important;
+  background: rgba(35, 13, 10, 0.32) !important;
+}
+
+/* `.analysis-coach-command-live-pill` "你的教练面板" — cream on coral 2.66.
+   Bump to white and add a subtle dark inner shadow so the pill reads on the
+   coral hero gradient. */
+#root .analysis-coach-command-live-pill {
+  color: #ffffff !important;
+  background: rgba(35, 13, 10, 0.42) !important;
+  font-weight: 800 !important;
+}
+
+/* `.rewards-ledger-hero-cta` "去跑步记录" — white on coral 2.83 (sub-AA).
+   Switch CTA to dark ink on cream so it reads instantly. */
+#root .rewards-ledger-hero-cta {
+  background: rgba(35, 13, 10, 0.92) !important;
+  color: #fff6f2 !important;
+  border: 0 !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern F — /analysis injury-prevention soreness buttons used the raw
+   accent colors (green/amber/coral) on near-white at 11.2px regular weight.
+   Bump font weight + darken the accent variants so they pass AA at small
+   sizes.
+   ---------------------------------------------------------------------------- */
+
+#root .analysis-injury-prevention-soreness-btn {
+  font-weight: 800 !important;
+}
+
+#root .analysis-injury-prevention-soreness-btn.is-low {
+  color: #1f3b1d !important;
+  background: rgba(107, 163, 104, 0.18) !important;
+  border-color: rgba(107, 163, 104, 0.45) !important;
+}
+
+#root .analysis-injury-prevention-soreness-btn.is-medium {
+  color: #5a3f0e !important;
+  background: rgba(200, 155, 48, 0.18) !important;
+  border-color: rgba(200, 155, 48, 0.5) !important;
+}
+
+#root .analysis-injury-prevention-soreness-btn.is-high {
+  color: #6f1f17 !important;
+  background: rgba(198, 74, 58, 0.18) !important;
+  border-color: rgba(198, 74, 58, 0.5) !important;
+}
+
+#root .analysis-overview-card--injury .analysis-overview-risk-labels span {
+  color: var(--text-strong, #2c2f30) !important;
+  font-weight: 800 !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern G — /today-run brand fragment "Nike" rendered as slate-400 on white
+   (ratio 2.56). It's a Tailwind utility class chain; override with a sibling
+   selector targeting the exact `text-slate-400` text-bold-10px pill.
+   ---------------------------------------------------------------------------- */
+
+#root .today-run-stitch-shell p.text-slate-400,
+#root .today-run-stitch-shell p.text-bold,
+#root .today-run-stitch-shell .text-slate-400 {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern H — /today-run readiness signal labels (睡眠/心率变异/静息心率/压力)
+   and the blueprint-step meta copy used `rgb(168,162,158)` on white (ratio
+   2.52) at 9-11px. Darken to the muted-ink token so the small bold labels
+   pass AA at small sizes.
+   ---------------------------------------------------------------------------- */
+
+#root .hd-readiness-signal-label,
+#root .hd-blueprint-step-meta {
+  color: rgba(60, 65, 70, 0.86) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern I — /weather forecast-empty loading copy renders gray on the dark
+   cinematic forecast pane (ratio 4.33, just shy of AA). Bump to cream so the
+   loading message reads.
+   ---------------------------------------------------------------------------- */
+
+#root .weather-engine-forecast-empty {
+  color: rgba(255, 246, 242, 0.92) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern J — /shoes rotation-signal highlight kicker "基于数据分析" was
+   cream-on-pastel (ratio 1.41) and the "添加跑鞋" CTA inside the same
+   highlight had the new muted ink on coral (2.54). Both fixes pin to a
+   high-contrast dark ink so the small bold labels read.
+   ---------------------------------------------------------------------------- */
+
+#root .shoe-rotation-signal-highlight-kicker {
+  color: var(--text-strong, #2c2f30) !important;
+}
+
+#root .shoe-rotation-signal-highlight span,
+#root :is(.shoe-rotation-signal, .shoe-inventory-card.is-primary) [class*="button"] {
+  color: #fff6f2 !important;
+  background: rgba(35, 13, 10, 0.62) !important;
+  font-weight: 800 !important;
+}
+
+/* `.shoe-inventory-cta` "添加跑鞋" — the page-level token bump made every span
+   inside the shell muted ink (#595c5d), but this CTA sits on a brand-coral
+   background where that drops to 2.54. Cream on the same coral only hits
+   2.49 — so darken the CTA background to deep brown and use cream for ~9.5
+   contrast. */
+#root .shoe-inventory-cta {
+  color: #fff6f2 !important;
+  background: rgba(35, 13, 10, 0.92) !important;
+  border: 0 !important;
+}
+
+#root .shoe-inventory-cta span,
+#root .shoe-inventory-cta svg {
+  color: #fff6f2 !important;
+  fill: #fff6f2 !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern K — /workflows palette buttons + ReactFlow attribution.
+   `wf-palette-btn` "运行" used `cyan-500` on `cyan-100` (2.11); the danger
+   variant "清空" used `red-500` on `red-50` (3.29); ReactFlow's footer link
+   renders mid-gray on near-white (2.78). Bump all three.
+   ---------------------------------------------------------------------------- */
+
+#root .wf-palette-btn {
+  color: #075985 !important;
+  background: rgba(186, 230, 253, 0.5) !important;
+  border-color: rgba(7, 89, 133, 0.32) !important;
+  font-weight: 800 !important;
+}
+
+#root .wf-palette-btn.wf-palette-btn--danger {
+  color: #7f1d1d !important;
+  background: rgba(254, 202, 202, 0.5) !important;
+  border-color: rgba(127, 29, 29, 0.32) !important;
+}
+
+#root .react-flow__attribution a,
+#root a[href*="reactflow.dev"] {
+  color: rgba(60, 65, 70, 0.82) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern L — runner-shell midnight mode on /schedule was drifting back to the
+   light profile-aligned card set after later cascade passes. Restore the
+   intended dark surfaces and readable copy for the schedule workbench without
+   touching the coral quality-day treatment.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page :is(
+  .schedule-plan-hero,
+  .schedule-plan-day:not(.schedule-plan-day--quality),
+  .schedule-plan-readiness-card,
+  .schedule-plan-next-card,
+  .schedule-plan-route-card,
+  .schedule-plan-coach-card,
+  .schedule-plan-gear-card,
+  .schedule-plan-weekly-summary,
+  .schedule-plan-coach-focus-pill,
+  .schedule-plan-route-target,
+  .schedule-plan-route-empty-panel,
+  .schedule-plan-gear-row
+) {
+  background:
+    radial-gradient(circle at top right, rgba(240, 117, 97, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(35, 30, 24, 0.96), rgba(19, 17, 15, 0.98)) !important;
+  border-color: rgba(255, 238, 221, 0.12) !important;
+  box-shadow:
+    0 22px 44px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 238, 221, 0.06) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page :is(
+  .schedule-plan-hero h1,
+  .schedule-plan-hero-metrics strong,
+  .schedule-plan-hero-summary-chip strong,
+  .schedule-plan-day h2,
+  .schedule-plan-readiness-card h3,
+  .schedule-plan-next-card h3,
+  .schedule-plan-route-content h3,
+  .schedule-plan-coach-card h3,
+  .schedule-plan-gear-card h3,
+  .schedule-plan-weekly-summary-body,
+  .schedule-plan-coach-copy h4,
+  .schedule-plan-coach-focus-pill strong,
+  .schedule-plan-signal-row strong,
+  .schedule-plan-route-target-metric strong,
+  .schedule-plan-gear-row strong
+) {
+  color: #fff8ee !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page :is(
+  .schedule-plan-kicker,
+  .schedule-plan-hero-metrics span,
+  .schedule-plan-hero-summary-chip span,
+  .schedule-plan-day-tag,
+  .schedule-plan-day > div:last-child p,
+  .schedule-plan-readiness-card p,
+  .schedule-plan-next-card p,
+  .schedule-plan-route-content span,
+  .schedule-plan-route-meta,
+  .schedule-plan-route-insight span,
+  .schedule-plan-route-target p,
+  .schedule-plan-coach-card p,
+  .schedule-plan-signal-row span,
+  .schedule-plan-gear-row p,
+  .schedule-plan-weekly-summary-kicker
+) {
+  color: rgba(255, 248, 238, 0.72) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page .schedule-plan-day--quality {
+  background: linear-gradient(135deg, #f07561, #c7523d) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page .schedule-plan-day--quality :is(
+  .schedule-plan-day-tag,
+  .schedule-plan-day-label,
+  h2,
+  p
+) {
+  color: #300d08 !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page .schedule-plan-day.is-today {
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 117, 97, 0.34),
+    0 18px 36px rgba(240, 117, 97, 0.14) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern M — /analysis midnight mode was still rendering the profile-aligned
+   white cards. Keep the same hierarchy, but move the main analysis boards back
+   onto dark surfaces so the existing ink/accent system reads correctly.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell :is(
+  .analysis-profile-primary,
+  .analysis-profile-reference-card,
+  .analysis-profile-bento-card,
+  .analysis-profile-table-grid,
+  .analysis-injury-prevention-section
+) {
+  border-color: rgba(255, 238, 221, 0.12) !important;
+  box-shadow:
+    0 22px 44px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 238, 221, 0.06) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell {
+  --analysis-lab-paper: #131716;
+  --analysis-lab-paper-2: #0f1312;
+  --analysis-lab-surface: #1a1f1d;
+  --analysis-lab-surface-soft: #202725;
+  --analysis-lab-ink: #fff8ee;
+  --analysis-lab-muted: rgba(255, 248, 238, 0.72);
+  --analysis-lab-line: rgba(255, 238, 221, 0.12);
+  --analysis-lab-line-strong: rgba(255, 238, 221, 0.2);
+  --analysis-lab-accent-soft: #1f302d;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-primary {
+  background:
+    linear-gradient(90deg, rgba(15, 118, 110, 0.22) 0, rgba(15, 118, 110, 0.22) 3px, rgba(0, 0, 0, 0) 3px),
+    linear-gradient(145deg, rgba(24, 30, 29, 0.98), rgba(16, 20, 20, 0.96)) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+  background:
+    linear-gradient(145deg, rgba(18, 28, 26, 0.98), rgba(14, 22, 21, 0.96)) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell :is(
+  .analysis-profile-reference-card.is-coach,
+  .analysis-profile-reference-card.is-trend,
+  .analysis-profile-bento-card,
+  .analysis-profile-table-grid,
+  .analysis-injury-prevention-section
+) {
+  background:
+    radial-gradient(circle at top right, rgba(240, 117, 97, 0.12), transparent 30%),
+    linear-gradient(145deg, rgba(34, 29, 24, 0.96), rgba(19, 17, 15, 0.98)) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell :is(
+  .analysis-overview-table-head h2,
+  .analysis-injury-prevention-head h2,
+  .analysis-overview-vdot-trend-heading,
+  .analysis-overview-risk-level
+) {
+  color: #fff8ee !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell :is(
+  .analysis-overview-card-kicker,
+  .analysis-overview-table-head span,
+  .analysis-overview-table thead th,
+  .analysis-overview-table tbody td,
+  .analysis-injury-prevention-head p,
+  .analysis-injury-prevention-section p,
+  .analysis-profile-reference-card p,
+  .analysis-profile-bento-card p,
+  .analysis-overview-status-pill,
+  .analysis-overview-coach-head p
+) {
+  color: rgba(255, 248, 238, 0.72) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-head,
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-copy h3,
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-badge {
+  color: #fff8ee !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-badge {
+  background: rgba(255, 248, 238, 0.08) !important;
+  border-color: rgba(255, 238, 221, 0.12) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern N — after moving /workflows back into the runner shell, midnight
+   mode needed the final palette/button layer to be dark-aware as well. The
+   route CSS handles the main boards; this keeps the last contrast-only fixes
+   from forcing light button colors back onto the dark surface.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-midnight, .theme-high-contrast) #root .workflow-builder-page .wf-palette-btn {
+  color: #ccefff !important;
+  background: rgba(14, 116, 144, 0.26) !important;
+  border-color: rgba(125, 211, 252, 0.22) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .workflow-builder-page .wf-palette-btn.wf-palette-btn--danger {
+  color: #ffe0db !important;
+  background: rgba(127, 29, 29, 0.26) !important;
+  border-color: rgba(248, 113, 113, 0.22) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .workflow-builder-page .react-flow__attribution a,
+body:is(.theme-midnight, .theme-high-contrast) #root .workflow-builder-page a[href*="reactflow.dev"] {
+  color: rgba(255, 248, 238, 0.62) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern L — midnight-theme regressions on profile-aligned runner pages.
+   `/schedule`, `/analysis`, and `/workflows` were still inheriting the light
+   paper surfaces from later profile-alignment passes after the app switched to
+   `theme-midnight`, which left light cards floating on a dark shell or, in the
+   workflow case, light cards paired with dark-mode text leakage. Re-assert the
+   intended midnight surfaces and matching copy colors at the final cascade
+   layer so those routes actually look like dark mode again.
+   ---------------------------------------------------------------------------- */
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page :is(
+  .schedule-plan-hero,
+  .schedule-plan-day,
+  .schedule-plan-readiness-card,
+  .schedule-plan-next-card,
+  .schedule-plan-route-card,
+  .schedule-plan-coach-card,
+  .schedule-plan-gear-card,
+  .schedule-plan-weekly-summary,
+  .schedule-plan-coach-focus-pill,
+  .schedule-plan-route-target,
+  .schedule-plan-signal-group,
+  .schedule-plan-gear-row,
+  .schedule-plan-route-empty-panel
+) {
+  background:
+    linear-gradient(145deg, rgba(35, 30, 24, 0.95), rgba(22, 19, 16, 0.98)) !important;
+  border-color: rgba(255, 238, 226, 0.1) !important;
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 238, 226, 0.06) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page .schedule-plan-hero {
+  box-shadow:
+    inset 4px 0 0 #f49787,
+    0 24px 44px rgba(240, 117, 97, 0.12) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page .schedule-plan-day--quality {
+  background: linear-gradient(135deg, #f07561, #c94e3d) !important;
+  border-color: rgba(240, 117, 97, 0.28) !important;
+  box-shadow: 0 16px 32px rgba(240, 117, 97, 0.18) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page :is(
+  .schedule-plan-hero h1,
+  .schedule-plan-hero-metrics strong,
+  .schedule-plan-hero-summary-chip strong,
+  .schedule-plan-readiness-card h3,
+  .schedule-plan-day h2,
+  .schedule-plan-next-card h3,
+  .schedule-plan-route-content h3,
+  .schedule-plan-coach-card h3,
+  .schedule-plan-gear-card h3,
+  .schedule-plan-coach-copy h4,
+  .schedule-plan-route-target-metric strong
+) {
+  color: #fff7ec !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page :is(
+  .schedule-plan-kicker,
+  .schedule-plan-hero-metrics span,
+  .schedule-plan-hero-summary-chip span,
+  .schedule-plan-day-tag,
+  .schedule-plan-day > div:last-child p,
+  .schedule-plan-readiness-card p,
+  .schedule-plan-next-content > span,
+  .schedule-plan-next-content p,
+  .schedule-plan-route-content span,
+  .schedule-plan-route-content p,
+  .schedule-plan-route-meta,
+  .schedule-plan-route-insight span,
+  .schedule-plan-coach-card p,
+  .schedule-plan-signal-row span,
+  .schedule-plan-weekly-summary-body,
+  .schedule-plan-weekly-summary-kicker,
+  .schedule-plan-coach-focus-pill span,
+  .schedule-plan-gear-card p
+) {
+  color: rgba(255, 247, 236, 0.74) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page .schedule-plan-day--quality :is(
+  .schedule-plan-day-label,
+  .schedule-plan-day-tag,
+  h2,
+  p
+) {
+  color: #300d08 !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell :is(
+  .analysis-profile-primary,
+  .analysis-profile-reference-card,
+  .analysis-profile-bento-card,
+  .analysis-profile-table-grid,
+  .analysis-injury-prevention-section
+) {
+  background:
+    linear-gradient(145deg, rgba(34, 29, 24, 0.96), rgba(20, 18, 16, 0.98)) !important;
+  border-color: rgba(255, 238, 226, 0.1) !important;
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 238, 226, 0.06) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-primary {
+  background:
+    linear-gradient(90deg, rgba(15, 118, 110, 0.2) 0, rgba(15, 118, 110, 0.2) 3px, rgba(0, 0, 0, 0) 3px),
+    linear-gradient(145deg, rgba(25, 33, 31, 0.98), rgba(17, 22, 21, 0.98)) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+  background:
+    linear-gradient(145deg, rgba(21, 33, 31, 0.98), rgba(15, 23, 22, 0.98)) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-injury-prevention-section {
+  background:
+    linear-gradient(90deg, rgba(201, 90, 63, 0.12) 0, rgba(201, 90, 63, 0.12) 3px, rgba(0, 0, 0, 0) 3px),
+    linear-gradient(145deg, rgba(35, 29, 24, 0.96), rgba(21, 18, 16, 0.98)) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell :is(
+  .analysis-profile-primary .analysis-overview-card-head h2,
+  .analysis-overview-table-head h2,
+  .analysis-injury-prevention-head h2,
+  .analysis-overview-card--forecast > strong,
+  .analysis-overview-risk-level,
+  .analysis-overview-intensity-row strong,
+  .analysis-profile-reference-card.is-coach strong,
+  .analysis-profile-reference-card.is-trend strong
+) {
+  color: #fff7ec !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell :is(
+  .analysis-overview-card-kicker,
+  .analysis-overview-coach-head p,
+  .analysis-overview-table-head span,
+  .analysis-injury-prevention-head p,
+  .analysis-overview-table thead th,
+  .analysis-overview-table tbody td,
+  .analysis-overview-table-actions,
+  .analysis-profile-reference-card.is-load p,
+  .analysis-profile-reference-card.is-trend p,
+  .analysis-overview-status-pill,
+  .analysis-overview-risk-labels span
+) {
+  color: rgba(255, 247, 236, 0.72) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-overview-table tbody tr:hover {
+  background: rgba(255, 238, 226, 0.05) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-overview-table-wrap {
+  border-color: rgba(255, 238, 226, 0.08) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Pattern O — midnight-theme auth-flow contrast fixes on /login and /signup.
+   The three concrete failures identified on `body.theme-midnight`:
+
+   1. `.auth-flow-google-g` — The Google "G" badge renders as white text on a
+      Google-colored gradient; when an opaque ancestor is not detected the audit
+      walker falls back to body (near-black), but the badge itself was white on
+      the dark card surface. Switch to the brand-correct cream-pill pair:
+      dark charcoal "G" on a cream pill (#f6f1eb) so the character remains
+      legible and brand-correct in both midnight and light modes.
+
+   2. `.auth-flow-status-note` — cream text at 50 % opacity on the dark card
+      `rgba(32,32,30,0.68)` lands at ~4.49 : 1 (one rounding step below AA).
+      Lift to 72 % so the effective colour clears 4.5 without looking harsh.
+
+   3. `.auth-flow-divider strong` "Or" separator — pinned to 28 % opacity cream
+      on the dark card, which computes to ~2.29 : 1 (clearly sub-AA). The task
+      brief specifies lifting to rgba(246, 241, 235, 0.78) cream to match how
+      the divider reads on cinematic cards elsewhere in the shell.
+   ---------------------------------------------------------------------------- */
+
+/* Fix 1: Google G icon — cream pill pair so the "G" glyph has ≥ 4.5 contrast */
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-flow-btn--google .auth-flow-google-g {
+  background: #f6f1eb !important;
+  color: #2c2f30 !important;
+}
+
+/* Fix 2: status note — lift opacity so effective cream clears WCAG AA 4.5 */
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-flow-status-note {
+  color: rgba(239, 231, 221, 0.72) !important;
+}
+
+/* Fix 3: divider "Or" — lift to 78 % opacity cream to match cinematic card
+   divider treatment used elsewhere in the midnight shell */
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-flow-divider strong {
+  color: rgba(246, 241, 235, 0.78) !important;
+}
+
+/* ============================================================================
+   Pattern P — dark-mode rebuild of /login + /signup page backgrounds.
+
+   `.auth-page--login` and `.auth-page--signup` ship a SPLIT diagonal gradient
+   (`linear-gradient(112deg, #161411 0%, #231d17 45%, #efe5d7 45.2%, #f8f1e8 100%)`)
+   that paints DARK on the left half (brand carousel) and CREAM on the right
+   half (form side). The cream half blends with `.auth-flow-formside::before`
+   which itself paints a `rgba(255, 252, 246, 0.88) → rgba(245, 235, 222, 0.76)`
+   cream panel behind the dark form card. The result reads correctly in light
+   mode (cream right half on cream page) but in midnight / high-contrast mode
+   the cream slab + the cream panel produce a glaring bright halo on the right
+   side of the screen — the bug the user described as "signin and login under
+   dark mode is broken".
+
+   These overrides replace the cream half + cream panel with dark equivalents
+   so the entire auth surface stays warm-charcoal in midnight mode. Light mode
+   is intentionally untouched (the cream split was approved live there).
+   ============================================================================ */
+
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-page--login,
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-page--signup {
+  background:
+    radial-gradient(circle at 16% 14%, rgba(240, 117, 97, 0.22), transparent 30rem),
+    radial-gradient(circle at 86% 78%, rgba(120, 88, 62, 0.18), transparent 34rem),
+    linear-gradient(112deg, #0f0d0a 0%, #1a1612 45%, #1f1a14 60%, #14110d 100%) !important;
+}
+
+/* The cream panel behind the form card (`auth-flow-formside::before`) must
+   flip to a dark-warm gradient that matches the carousel side; keeping it
+   bright is what produces the visible halo. */
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-flow-formside::before {
+  background:
+    linear-gradient(180deg, rgba(28, 22, 17, 0.88), rgba(20, 16, 13, 0.78)) !important;
+  border-color: rgba(255, 244, 236, 0.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 236, 0.04),
+              0 28px 80px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* The `auth-page--signup` shell also paints a `signup-flow-bg` overlay; nudge
+   the supporting subtle hatched lines slightly darker so they don't read as
+   cream stripes on the new dark base. */
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-page--signup .signup-flow-bg {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(240, 117, 97, 0.14), transparent 24rem),
+    radial-gradient(circle at 88% 72%, rgba(255, 244, 236, 0.06), transparent 32rem),
+    repeating-linear-gradient(135deg, rgba(255, 244, 236, 0.025) 0 1px, transparent 1px 24px) !important;
+}
