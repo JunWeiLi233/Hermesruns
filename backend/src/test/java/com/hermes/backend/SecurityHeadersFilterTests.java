@@ -39,4 +39,17 @@ class SecurityHeadersFilterTests {
         assertThat(csp).contains("connect-src");
         assertThat(csp).contains("https://www.google.com/recaptcha/");
     }
+
+    @Test
+    void contentSecurityPolicyAllowsMuscleTrainingYoutubeEmbeds() throws Exception {
+        SecurityHeadersFilter filter = new SecurityHeadersFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/muscle-training");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        String csp = response.getHeader("Content-Security-Policy");
+        assertThat(csp).contains("frame-src");
+        assertThat(csp).contains("https://www.youtube-nocookie.com");
+    }
 }
