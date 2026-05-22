@@ -772,3 +772,51 @@ body:is(.theme-midnight, .theme-high-contrast) #root .auth-flow-status-note {
 body:is(.theme-midnight, .theme-high-contrast) #root .auth-flow-divider strong {
   color: rgba(246, 241, 235, 0.78) !important;
 }
+
+/* ============================================================================
+   Pattern P — dark-mode rebuild of /login + /signup page backgrounds.
+
+   `.auth-page--login` and `.auth-page--signup` ship a SPLIT diagonal gradient
+   (`linear-gradient(112deg, #161411 0%, #231d17 45%, #efe5d7 45.2%, #f8f1e8 100%)`)
+   that paints DARK on the left half (brand carousel) and CREAM on the right
+   half (form side). The cream half blends with `.auth-flow-formside::before`
+   which itself paints a `rgba(255, 252, 246, 0.88) → rgba(245, 235, 222, 0.76)`
+   cream panel behind the dark form card. The result reads correctly in light
+   mode (cream right half on cream page) but in midnight / high-contrast mode
+   the cream slab + the cream panel produce a glaring bright halo on the right
+   side of the screen — the bug the user described as "signin and login under
+   dark mode is broken".
+
+   These overrides replace the cream half + cream panel with dark equivalents
+   so the entire auth surface stays warm-charcoal in midnight mode. Light mode
+   is intentionally untouched (the cream split was approved live there).
+   ============================================================================ */
+
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-page--login,
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-page--signup {
+  background:
+    radial-gradient(circle at 16% 14%, rgba(240, 117, 97, 0.22), transparent 30rem),
+    radial-gradient(circle at 86% 78%, rgba(120, 88, 62, 0.18), transparent 34rem),
+    linear-gradient(112deg, #0f0d0a 0%, #1a1612 45%, #1f1a14 60%, #14110d 100%) !important;
+}
+
+/* The cream panel behind the form card (`auth-flow-formside::before`) must
+   flip to a dark-warm gradient that matches the carousel side; keeping it
+   bright is what produces the visible halo. */
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-flow-formside::before {
+  background:
+    linear-gradient(180deg, rgba(28, 22, 17, 0.88), rgba(20, 16, 13, 0.78)) !important;
+  border-color: rgba(255, 244, 236, 0.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 244, 236, 0.04),
+              0 28px 80px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* The `auth-page--signup` shell also paints a `signup-flow-bg` overlay; nudge
+   the supporting subtle hatched lines slightly darker so they don't read as
+   cream stripes on the new dark base. */
+body:is(.theme-midnight, .theme-high-contrast) #root .auth-page--signup .signup-flow-bg {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(240, 117, 97, 0.14), transparent 24rem),
+    radial-gradient(circle at 88% 72%, rgba(255, 244, 236, 0.06), transparent 32rem),
+    repeating-linear-gradient(135deg, rgba(255, 244, 236, 0.025) 0 1px, transparent 1px 24px) !important;
+}
