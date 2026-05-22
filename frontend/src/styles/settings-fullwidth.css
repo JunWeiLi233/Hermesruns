@@ -181,3 +181,17 @@ body .runner-dashboard-page .runner-shell-canvas.muscle-training-canvas {
     padding: 18px 16px 48px;
   }
 }
+
+/* The outer `.runner-shell-canvas.muscle-training-canvas` is full-width
+   now, but `.mt-content` inside it still clamps at `max-width: 1100px`
+   (`_split/muscle-training.css:4941-4945`), centering itself with
+   `margin: 0 auto`. On a 1920 px monitor that left ~314 px gutters on
+   each side of the actual content — the "blank space" the user
+   reported. Unclamp `.mt-content` so it fills the parent canvas, and
+   trim the inner padding so it doesn't double up with the canvas
+   padding above. */
+body .runner-dashboard-page .runner-shell-canvas.muscle-training-canvas .mt-content {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
