@@ -6,10 +6,12 @@ import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import MuscleHeatmap from '../components/MuscleHeatmap';
 import FooterNavLinks from '../components/FooterNavLinks';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import { muscleSlugsForExercise } from '../utils/muscleSlugMapper';
 import MUSCLE_MASKS from '../utils/muscleMasks.data.json';
 import targetArmsUrl from '../assets/muscle-training/target-arms.webp';
 import targetBackUrl from '../assets/muscle-training/target-back.webp';
@@ -17,6 +19,7 @@ import targetChestUrl from '../assets/muscle-training/target-chest.webp';
 import targetCoreUrl from '../assets/muscle-training/target-core.webp';
 import targetLegsUrl from '../assets/muscle-training/target-legs.webp';
 import targetShouldersUrl from '../assets/muscle-training/target-shoulders.webp';
+import anatomyNeonSelectorUrl from '../assets/muscle-training/anatomy-neon-selector.png';
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -116,6 +119,18 @@ const TARGET_AREA_GROUPS = [
     image: targetCoreUrl,
     match: /core|abs|oblique|trunk|plank|腹|核心|躯干|侧桥/i,
   },
+];
+
+const TOP_MUSCLE_HOTSPOTS = [
+  { key: 'chest', style: { left: '25%', top: '28%', width: '13%', height: '10%' } },
+  { key: 'core', style: { left: '26%', top: '41%', width: '11%', height: '13%' } },
+  { key: 'legs', style: { left: '24%', top: '58%', width: '16%', height: '27%' } },
+  { key: 'shoulders', style: { left: '16%', top: '27%', width: '8%', height: '9%' } },
+  { key: 'shoulders', style: { left: '39%', top: '27%', width: '8%', height: '9%' } },
+  { key: 'arms', style: { left: '10%', top: '38%', width: '12%', height: '17%' } },
+  { key: 'arms', style: { left: '42%', top: '38%', width: '12%', height: '17%' } },
+  { key: 'back', style: { left: '61%', top: '25%', width: '18%', height: '22%' } },
+  { key: 'legs', style: { left: '61%', top: '55%', width: '19%', height: '28%' } },
 ];
 
 const EXERCISE_VIDEO_EMBEDS = {
@@ -1419,9 +1434,37 @@ function resolveExerciseVisualKey(name, muscles = []) {
   }
 }
 
+function getExerciseVideoUrl(name) {
+  const queries = {
+    'Hip airplanes': 'hip airplanes exercise demo',
+    'Calf raises (slow tempo)': 'slow tempo calf raise exercise demo',
+    'Dead bug': 'dead bug exercise demo',
+    'Split squat': 'split squat exercise demo',
+    'Single-leg Romanian deadlift': 'single leg romanian deadlift exercise demo',
+    'Standing calf raise': 'standing calf raise exercise demo',
+    'Side plank': 'side plank exercise demo',
+    'Glute bridge (pause at top)': 'glute bridge pause at top exercise demo',
+    'Tibialis wall raise': 'tibialis wall raise exercise demo',
+    "World's greatest stretch": 'world greatest stretch exercise demo',
+    'Ankle dorsiflexion rocks': 'ankle dorsiflexion rocks exercise demo',
+    'Step-down (knee tracking)': 'step down knee tracking exercise demo',
+    'Hamstring curl (slider or machine)': 'hamstring slider curl exercise demo',
+    'Pallof press': 'pallof press exercise demo',
+    'Farmer carry (suitcase)': 'suitcase carry exercise demo',
+    'Pogo hops': 'pogo hops running drill demo',
+    'Skipping A-drill': 'A skip drill running demo',
+    'Box step-up (explosive)': 'explosive box step up exercise demo',
+    'Single-leg hop (low amplitude)': 'single leg hop low amplitude exercise demo',
+  };
+  const canonicalName = normalizeExerciseName(name);
+  const query = queries[canonicalName] || `${canonicalName} exercise demo`;
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+}
+
 function slugExerciseName(name) {
   return normalizeExerciseName(name)
     .toLowerCase()
+    .replace(/&/g, 'and')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
@@ -1437,8 +1480,8 @@ function getExerciseVideoEmbedUrl(item) {
 function resolveTargetAreaKeyForItem(item, isZh) {
   if (item?.targetKey) return item.targetKey;
   const exercise = item?.exercise;
-  const group = TARGET_AREA_GROUPS.find((target) => exerciseMatchesTargetArea(exercise, isZh, target.key));
-  return group?.key || 'all';
+  const targetGroup = TARGET_AREA_GROUPS.find((group) => exerciseMatchesTargetArea(exercise, isZh, group.key));
+  return targetGroup?.key || 'legs';
 }
 
 function LegacyMuscleMap({ isZh }) {
@@ -2803,8 +2846,8 @@ export default function MuscleTraining() {
   const [shellProfile, setShellProfile] = useState(null);
   const [activeTarget, setActiveTarget] = useState('all');
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
-  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(true);
-  const [openTipIndex, setOpenTipIndex] = useState(0);
+  const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
+  const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -3043,8 +3086,6 @@ export default function MuscleTraining() {
     muscleFocusTitle: t('muscle_training.stitch_muscle_focus_title'),
     coachingCuesTitle: t('muscle_training.stitch_coaching_cues_title'),
     recoveryImpactTitle: t('muscle_training.stitch_recovery_impact_title'),
-    coachDeckTitle: t('muscle_training.stitch_coach_deck_title'),
-    coachDeckHint: t('muscle_training.stitch_coach_deck_hint'),
     support: t('muscle_training.stitch_support'),
     settings: t('muscle_training.stitch_settings'),
     todayLabel: t('muscle_training.stitch_today_label'),
@@ -3075,6 +3116,15 @@ export default function MuscleTraining() {
     bodyMeasureTrainedByLabel: t('muscle_training.stitch_body_measure_trained_by_label'),
     bodyMeasurePlanFocusLabel: t('muscle_training.stitch_body_measure_plan_focus_label'),
     bodyMeasureInspectHint: t('muscle_training.stitch_body_measure_inspect_hint'),
+    topMuscleTitle: t('muscle_training.stitch_top_muscle_title'),
+    topMuscleHint: t('muscle_training.stitch_top_muscle_hint'),
+    topActionsTitle: t('muscle_training.stitch_top_actions_title'),
+    topActionsSelected: t('muscle_training.stitch_top_actions_selected'),
+    topActionsHint: t('muscle_training.stitch_top_actions_hint'),
+    topReferenceKicker: t('muscle_training.stitch_top_reference_kicker'),
+    topReferenceTitle: t('muscle_training.stitch_top_reference_title'),
+    topPlanBadge: t('muscle_training.stitch_top_plan_badge'),
+    topLibraryBadge: t('muscle_training.stitch_top_library_badge'),
     settingsDisclosure: t('muscle_training.stitch_settings_disclosure'),
     emptyStateTitle: t('muscle_training.stitch_empty_state_title'),
     emptyStateAction: t('muscle_training.stitch_empty_state_action'),
@@ -3133,14 +3183,12 @@ export default function MuscleTraining() {
     protocolWorkspaceHint: t('muscle_training.stitch_protocol_workspace_hint'),
     filterAll: t('muscle_training.stitch_filter_all'),
     exerciseDetailTitle: t('muscle_training.stitch_exercise_detail_title'),
-    closeExerciseDetail: t('muscle_training.stitch_close_exercise_detail'),
-    allActions: t('muscle_training.stitch_all_actions'),
+    noExerciseSelected: t('muscle_training.stitch_no_exercise_selected'),
+    stepsLabel: t('muscle_training.stitch_steps_label'),
     videoDemoTitle: t('muscle_training.stitch_video_demo_title'),
     videoUnavailable: t('muscle_training.stitch_video_unavailable'),
     professionalTips: t('muscle_training.stitch_professional_tips'),
-    stepGuide: t('muscle_training.stitch_step_guide'),
-    noExerciseSelected: t('muscle_training.stitch_no_exercise_selected'),
-    stepsLabel: t('muscle_training.stitch_steps_label'),
+    targetMusclesLabel: t('muscle_training.stitch_target_muscles_label'),
     plannedLabel: t('muscle_training.stitch_planned_label'),
     recommendedLabel: t('muscle_training.stitch_recommended_label'),
   }), [t]);
@@ -3273,6 +3321,25 @@ export default function MuscleTraining() {
     ...libraryProtocolItems,
   ], [filteredProtocolItems, libraryProtocolItems]);
 
+  const buildTopRecommendationItems = useCallback((targetKey) => {
+    const planItems = protocolItems
+      .filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey))
+      .map((item) => ({ ...item, source: 'plan', targetKey }));
+    const libraryItems = (COMPOUND_TARGET_LIBRARY[targetKey] || [])
+      .map((definition, exerciseIndex) => createLibraryProtocolItem(
+        targetKey,
+        definition,
+        exerciseIndex,
+        protocolItems.length + exerciseIndex,
+      ));
+    return [...planItems, ...libraryItems].slice(0, 5);
+  }, [isZh, protocolItems]);
+
+  const topRecommendationItems = useMemo(
+    () => buildTopRecommendationItems(selectedMuscleTarget),
+    [buildTopRecommendationItems, selectedMuscleTarget],
+  );
+
   const selectedProtocolItem = useMemo(() => (
     visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
     || visibleExerciseItems[0]
@@ -3289,11 +3356,24 @@ export default function MuscleTraining() {
     [selectedProtocolItem],
   );
 
-  const selectedTargetAreaLabel = useMemo(() => {
-    const targetKey = resolveTargetAreaKeyForItem(selectedProtocolItem, isZh);
-    if (targetKey === 'all') return stitchCopy.allTargets;
-    return targetAreaCards.find((target) => target.key === targetKey)?.label || stitchCopy.allTargets;
-  }, [isZh, selectedProtocolItem, stitchCopy.allTargets, targetAreaCards]);
+  const selectedRailTargetKey = useMemo(
+    () => resolveTargetAreaKeyForItem(selectedProtocolItem, isZh),
+    [isZh, selectedProtocolItem],
+  );
+
+  const selectedMuscleTargetCard = useMemo(
+    () => targetAreaCards.find((target) => target.key === selectedMuscleTarget) || targetAreaCards.find((target) => target.key === 'legs'),
+    [selectedMuscleTarget, targetAreaCards],
+  );
+
+  const selectedRailTargetCard = useMemo(
+    () => targetAreaCards.find((target) => target.key === selectedRailTargetKey)
+      || targetAreaCards.find((target) => target.key === selectedMuscleTarget)
+      || targetAreaCards.find((target) => target.key === 'legs'),
+    [selectedMuscleTarget, selectedRailTargetKey, targetAreaCards],
+  );
+
+  const topReferenceImage = selectedMuscleTargetCard?.image || targetLegsUrl;
 
   const volumeCompletion = useMemo(() => {
     const recommended = Math.max(weekDoseStats.recommended || weekDoseStats.planned || 1, 1);
@@ -3356,6 +3436,8 @@ export default function MuscleTraining() {
 
   function handleTargetAreaSelect(targetKey) {
     setActiveTarget(targetKey);
+    setSelectedMuscleTarget(targetKey === 'all' ? 'legs' : targetKey);
+    setExpandedExerciseIdx(null);
     const nextPlanItem = targetKey === 'all'
       ? protocolItems[0]
       : protocolItems.find(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey));
@@ -3369,17 +3451,32 @@ export default function MuscleTraining() {
     );
     const nextKey = getProtocolItemKey(nextItem);
     setSelectedExerciseKey(nextKey);
-    setIsDetailDrawerOpen(Boolean(nextKey));
-    setOpenTipIndex(0);
     window.setTimeout(() => {
       if (nextKey) document.getElementById(`mt-exercise-${nextKey}`)?.focus();
     }, 0);
   }
 
   function handleExerciseSelect(item) {
+    const nextTargetKey = resolveTargetAreaKeyForItem(item, isZh);
+    setSelectedMuscleTarget(nextTargetKey === 'all' ? selectedMuscleTarget : nextTargetKey);
     setSelectedExerciseKey(getProtocolItemKey(item));
-    setIsDetailDrawerOpen(true);
-    setOpenTipIndex(0);
+  }
+
+  function handleTopMuscleSelect(targetKey) {
+    const nextItems = buildTopRecommendationItems(targetKey);
+    setSelectedMuscleTarget(targetKey);
+    setActiveTarget(targetKey);
+    setExpandedExerciseIdx(null);
+    if (nextItems[0]) {
+      setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
+    }
+  }
+
+  function handleTopExerciseSelect(item) {
+    const nextTargetKey = item.targetKey || selectedMuscleTarget;
+    setSelectedMuscleTarget(nextTargetKey);
+    setActiveTarget(nextTargetKey);
+    setSelectedExerciseKey(getProtocolItemKey(item));
   }
 
   useEffect(() => {
@@ -3391,8 +3488,6 @@ export default function MuscleTraining() {
   useEffect(() => {
     if (selectedExerciseKey && visibleExerciseItems.some((item) => getProtocolItemKey(item) === selectedExerciseKey)) return;
     setSelectedExerciseKey(getProtocolItemKey(visibleExerciseItems[0]));
-    setIsDetailDrawerOpen(Boolean(visibleExerciseItems[0]));
-    setOpenTipIndex(0);
   }, [selectedExerciseKey, visibleExerciseItems]);
 
   useEffect(() => {
@@ -3621,7 +3716,7 @@ export default function MuscleTraining() {
         </header>
 
         <div className="runner-shell-canvas muscle-training-canvas">
-          <div className="dashboard-container page-body mt-ironpulse-page">
+          <div className="mt-content">
 
         {loading && <div style={{ padding: '22px 0', color: 'var(--text-muted)' }}>{copy.loading}</div>}
         {!loading && error && <div className="error-alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
@@ -3636,307 +3731,464 @@ export default function MuscleTraining() {
 
         {!loading && !error && plan && (
           <>
-            <section className="mt-ip-home" data-ironpulse-page="true">
-              <section className="mt-ip-volume-goal" aria-labelledby="mt-ip-volume-title">
-                <h1 id="mt-ip-volume-title">{stitchCopy.volumeGoalTitle}</h1>
-                <div className="mt-ip-ring-card">
-                  <div
-                    className="mt-ip-ring"
-                    aria-label={`${stitchCopy.weeklyCompletion} ${volumeCompletion}%`}
-                  >
-                    <svg viewBox="0 0 140 140" role="img" aria-hidden="true">
-                      <circle cx="70" cy="70" r="58" className="mt-ip-ring-track" />
-                      <circle
-                        cx="70"
-                        cy="70"
-                        r="58"
-                        className="mt-ip-ring-progress"
-                        style={{ strokeDashoffset: 365 - (volumeCompletion / 100) * 365 }}
-                      />
-                    </svg>
-                    <div className="mt-ip-ring-center">
-                      <strong>{volumeCompletion}%</strong>
-                      <span>{stitchCopy.weeklyCompletion}</span>
-                    </div>
-                  </div>
+            <section className="mt-top-workbench" aria-labelledby="mt-top-muscle-title">
+              <article className="mt-top-panel mt-top-muscle-card">
+                <div className="mt-top-panel-head">
+                  <h2 id="mt-top-muscle-title">{stitchCopy.topMuscleTitle}</h2>
                 </div>
-                <div className="mt-ip-volume-metrics">
-                  <article>
-                    <span>{stitchCopy.plannedLabel}</span>
-                    <strong>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</strong>
-                  </article>
-                  <article>
-                    <span>{stitchCopy.activeTime}</span>
-                    <strong>{weeklyStrengthMinutes ? formatMinutes(weeklyStrengthMinutes, isZh) : '-'}</strong>
-                  </article>
-                </div>
-              </section>
-
-              <section className="mt-ip-current-split" aria-labelledby="mt-ip-current-split-title">
-                <div>
-                  <span>{stitchCopy.currentSplitBadge}</span>
-                  <h2 id="mt-ip-current-split-title">{currentSplitLabel}</h2>
-                  <p>{stitchCopy.nextStrengthSession}: {nextStrengthSummary.label}{nextStrengthSummary.meta ? ` · ${nextStrengthSummary.meta}` : ''}</p>
-                </div>
-                <button type="button" className="mt-ip-primary-btn" onClick={scrollToControls}>
-                  <AppIcon name="arrow_forward" className="mt-ip-btn-icon" />
-                  {stitchCopy.startWorkout}
-                </button>
-              </section>
-
-              <section className="mt-ip-protocol mt-ip-protocol-workbench" data-ironpulse-protocol="true" aria-labelledby="mt-ip-protocol-title">
-                <div className="mt-ip-section-head mt-ip-workbench-head">
-                  <div>
-                    <span>{stitchCopy.protocolTitle}</span>
-                    <h2 id="mt-ip-protocol-title">{stitchCopy.protocolWorkspaceTitle}</h2>
-                  </div>
-                  <p>{stitchCopy.protocolWorkspaceHint}</p>
-                </div>
-
-                <div className="mt-ip-target-filter-rail" aria-label={stitchCopy.targetAreasTitle}>
-                  <button
-                    type="button"
-                    className={`mt-ip-filter-chip mt-ip-filter-chip--all${activeTarget === 'all' ? ' is-active' : ''}`}
-                    onClick={() => handleTargetAreaSelect('all')}
-                    aria-pressed={activeTarget === 'all'}
-                  >
-                    <span>{stitchCopy.allTargets}</span>
-                    <small>{formatCopyTemplate(stitchCopy.areaExerciseCount, { count: visibleExerciseItems.length })}</small>
-                  </button>
-                  {targetAreaCards.map((target) => (
-                    <button
-                      key={target.key}
-                      type="button"
-                      className={`mt-ip-filter-chip${activeTarget === target.key ? ' is-active' : ''}`}
-                      onClick={() => handleTargetAreaSelect(target.key)}
-                      aria-pressed={activeTarget === target.key}
-                    >
-                      <img src={target.image} alt="" loading="lazy" aria-hidden="true" />
-                      <span>{target.label}</span>
-                      <small>
-                        {formatCopyTemplate(stitchCopy.areaPlanCount, { count: target.planCount })}
-                        {' · '}
-                        {formatCopyTemplate(stitchCopy.areaLibraryCount, { count: target.libraryCount })}
-                      </small>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-ip-protocol-layout">
-                  <div className="mt-ip-exercise-list">
-                    {filteredProtocolItems.length > 0 && (
-                      <div className="mt-ip-exercise-section-label">
-                        <span>{stitchCopy.todayPlanTitle}</span>
-                        <em>{formatCopyTemplate(stitchCopy.areaExerciseCount, { count: filteredProtocolItems.length })}</em>
-                      </div>
-                    )}
-                    {filteredProtocolItems.map((item) => {
-                      const planItem = { ...item, source: 'plan' };
-                      const { block, exercise, globalIndex } = planItem;
-                      const exerciseCopy = getExerciseContentForItem(planItem, isZh);
-                      const itemKey = getProtocolItemKey(planItem);
-                      const isSelected = itemKey === getProtocolItemKey(selectedProtocolItem);
-                      const equipmentKey = getExerciseEquipmentKey(exercise);
+                <div className="mt-muscle-visual-shell">
+                  <img
+                    src={anatomyNeonSelectorUrl}
+                    alt={stitchCopy.topMuscleTitle}
+                    className="mt-muscle-visual"
+                  />
+                  <div className="mt-muscle-hotspot-layer" aria-label={stitchCopy.topMuscleHint}>
+                    {TOP_MUSCLE_HOTSPOTS.map((hotspot, index) => {
+                      const target = targetAreaCards.find((item) => item.key === hotspot.key);
+                      const isActive = selectedMuscleTarget === hotspot.key;
                       return (
                         <button
-                          key={itemKey}
-                          id={`mt-exercise-${itemKey}`}
+                          key={`${hotspot.key}-${index}`}
                           type="button"
-                          className={`mt-ip-exercise-row${isSelected ? ' is-selected' : ''}`}
-                          onClick={() => handleExerciseSelect(planItem)}
-                          aria-pressed={isSelected}
+                          className={`mt-muscle-hotspot mt-muscle-hotspot--${hotspot.key}${isActive ? ' is-active' : ''}`}
+                          style={hotspot.style}
+                          onClick={() => handleTopMuscleSelect(hotspot.key)}
+                          aria-label={`${stitchCopy.topMuscleTitle} ${target?.label || hotspot.key}`}
+                          aria-pressed={isActive}
                         >
-                          <span>{String(globalIndex + 1).padStart(2, '0')}</span>
-                          <strong>{exerciseCopy.name}</strong>
-                          <em>{formatLocalizedExercisePrescription(exercise, isZh)}</em>
-                          <small>{pickLabel(copy.exerciseEquipment, equipmentKey, equipmentKey)}</small>
-                          <small>{exerciseCopy.muscles.join(' / ')}</small>
-                          <p><b>{stitchCopy.todayPlanTitle}</b>{exerciseCopy.intent || pickLabel(copy.blockTitles, block.title, block.title)}</p>
+                          <span>{target?.label || hotspot.key}</span>
                         </button>
                       );
                     })}
-                    {filteredProtocolItems.length === 0 && activeTarget !== 'all' && (
-                      <div className="mt-ip-empty-panel mt-ip-plan-empty">
-                        <strong>{stitchCopy.noAreaPlanExercises}</strong>
-                        <p>{stitchCopy.optionalLibraryNote}</p>
-                      </div>
+                  </div>
+                </div>
+                <p className="mt-top-muscle-hint">{stitchCopy.topMuscleHint}</p>
+              </article>
+
+              <article className="mt-top-panel mt-top-actions-card">
+                <div className="mt-top-actions-head">
+                  <h2>{stitchCopy.topActionsTitle}</h2>
+                  <span>{stitchCopy.topActionsSelected}</span>
+                </div>
+                <div className="mt-top-action-list" role="list">
+                  {topRecommendationItems.map((item) => {
+                    const itemKey = getProtocolItemKey(item);
+                    const isLibrary = item.source === 'library';
+                    const exerciseCopy = getExerciseContentForItem(item, isZh);
+                    const targetImage = targetAreaCards.find((target) => target.key === (item.targetKey || selectedMuscleTarget))?.image || targetLegsUrl;
+                    const isSelected = selectedExerciseKey === itemKey;
+                    return (
+                      <button
+                        key={`top-action-${itemKey}`}
+                        type="button"
+                        className={`mt-top-action-card${isSelected ? ' is-selected' : ''}`}
+                        onClick={() => handleTopExerciseSelect(item)}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="mt-top-action-thumb">
+                          <img src={targetImage} alt="" aria-hidden="true" />
+                          {isLibrary && <i>{stitchCopy.topLibraryBadge}</i>}
+                        </span>
+                        <span className="mt-top-action-copy">
+                          <strong>{exerciseCopy.name}</strong>
+                          <em>{exerciseCopy.muscles.slice(0, 2).join(' · ') || formatLocalizedExercisePrescription(item.exercise, isZh)}</em>
+                        </span>
+                        {!isLibrary && <small>{stitchCopy.topPlanBadge}</small>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-top-actions-note">{stitchCopy.topActionsHint}</p>
+              </article>
+
+              <aside className="mt-top-reference" aria-labelledby="mt-top-reference-title">
+                <div className="mt-top-reference-head">
+                  <span className="mt-kicker">{stitchCopy.topReferenceKicker}</span>
+                  <h2 id="mt-top-reference-title">{stitchCopy.topReferenceTitle}</h2>
+                </div>
+                <div className="mt-top-reference-card">
+                  <figure className="mt-top-reference-media">
+                    <img src={topReferenceImage} alt="" aria-hidden="true" />
+                    <figcaption>
+                      <strong>{selectedExerciseCopy?.name || selectedMuscleTargetCard?.label}</strong>
+                      <span>{selectedProtocolItem?.exercise ? formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh) : ''}</span>
+                    </figcaption>
+                  </figure>
+                  <div className="mt-top-reference-body">
+                    <h3>{selectedExerciseCopy?.name || selectedMuscleTargetCard?.label}</h3>
+                    <p>{selectedExerciseCopy?.intent || todayCoachNarrative || stitchCopy.guideSubtitle}</p>
+                    {selectedExerciseCopy?.steps?.length > 0 && (
+                      <ul>
+                        {selectedExerciseCopy.steps.slice(0, 2).map((step) => (
+                          <li key={step}>
+                            <span>i</span>
+                            {step}
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                    {libraryProtocolItems.length > 0 && (
-                      <div className="mt-ip-exercise-section-label mt-ip-exercise-section-label--library">
-                        <span>{stitchCopy.compoundLibraryTitle}</span>
-                        <em>{stitchCopy.optionalLibraryNote}</em>
-                      </div>
-                    )}
-                    {libraryProtocolItems.length > 0 ? (
-                      libraryProtocolItems.map((item) => {
-                        const { exercise, globalIndex } = item;
-                        const exerciseCopy = getExerciseContentForItem(item, isZh);
-                        const itemKey = getProtocolItemKey(item);
-                        const isSelected = itemKey === getProtocolItemKey(selectedProtocolItem);
-                        const equipmentKey = getExerciseEquipmentKey(exercise);
-                        return (
-                          <button
-                            key={itemKey}
-                            id={`mt-exercise-${itemKey}`}
-                            type="button"
-                            className={`mt-ip-exercise-row is-library${isSelected ? ' is-selected' : ''}`}
-                            onClick={() => handleExerciseSelect(item)}
-                            aria-pressed={isSelected}
-                          >
-                            <span>{String(globalIndex + 1).padStart(2, '0')}</span>
-                            <strong>{exerciseCopy.name}</strong>
-                            <em>{formatLocalizedExercisePrescription(exercise, isZh)}</em>
-                            <small>{pickLabel(copy.exerciseEquipment, equipmentKey, equipmentKey)}</small>
-                            <small>{exerciseCopy.muscles.join(' / ')}</small>
-                            <p><b>{stitchCopy.compoundBadge}</b>{exerciseCopy.intent}</p>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="mt-ip-empty-panel">
-                        <strong>{stitchCopy.noAreaExercises}</strong>
-                        <p>{stitchCopy.targetCardsHint}</p>
+                    {selectedExerciseCopy?.muscles?.length > 0 && (
+                      <div className="mt-top-reference-muscles">
+                        <span>Target Muscles</span>
+                        <div>
+                          {selectedExerciseCopy.muscles.slice(0, 4).map((muscle) => (
+                            <em key={muscle}>{muscle}</em>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  <aside className={`mt-ip-detail-drawer${isDetailDrawerOpen ? ' is-open' : ' is-closed'}`} aria-label={stitchCopy.exerciseDetailTitle}>
-                    <button
-                      type="button"
-                      className="mt-ip-detail-close"
-                      onClick={() => setIsDetailDrawerOpen(false)}
-                      aria-label={stitchCopy.closeExerciseDetail}
-                    >
-                      x
-                    </button>
-                    {selectedProtocolItem && selectedExerciseCopy ? (
-                      <>
-                        <nav className="mt-ip-detail-breadcrumb" aria-label={stitchCopy.exerciseDetailTitle}>
-                          <span>{stitchCopy.allActions}</span>
-                          <span>/</span>
-                          <span>{selectedTargetAreaLabel}</span>
-                          <span>/</span>
-                          <strong>{selectedExerciseCopy.name}</strong>
-                        </nav>
-                        <h3>{selectedExerciseCopy.name}</h3>
-                        <p>{selectedExerciseCopy.intent}</p>
-                        <div className="mt-ip-detail-tags">
-                          <span>{selectedProtocolItem.source === 'library' ? stitchCopy.optionalLibraryBadge : stitchCopy.todayPlanTitle}</span>
-                          {selectedProtocolItem.source === 'library' && <span>{stitchCopy.compoundBadge}</span>}
-                          <span>{formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh)}</span>
-                          <span>
-                            {selectedProtocolItem.source === 'library'
-                              ? stitchCopy.compoundLibraryTitle
-                              : pickLabel(copy.blockTitles, selectedProtocolItem.block.title, selectedProtocolItem.block.title)}
-                          </span>
-                          <span>{pickLabel(copy.exerciseEquipment, getExerciseEquipmentKey(selectedProtocolItem.exercise), getExerciseEquipmentKey(selectedProtocolItem.exercise))}</span>
-                        </div>
-                        {selectedExerciseVideoUrl ? (
-                          <div className="mt-ip-video-frame">
-                            <iframe
-                              src={selectedExerciseVideoUrl}
-                              title={`${selectedExerciseCopy.name} ${stitchCopy.videoDemoTitle}`}
-                              loading="lazy"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                              allowFullScreen
-                            />
-                          </div>
-                        ) : (
-                          <div className="mt-ip-video-missing">
-                            <p>{stitchCopy.videoUnavailable}</p>
-                          </div>
-                        )}
-                        <div className="mt-ip-coach-tips">
-                          <h4>{stitchCopy.professionalTips}</h4>
-                          {selectedExerciseCopy.steps.map((step, index) => (
-                            <article
-                              key={`${selectedExerciseCopy.name}-tip-${index}`}
-                              className={`mt-ip-tip-row${openTipIndex === index ? ' is-open' : ''}`}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => setOpenTipIndex((current) => (current === index ? -1 : index))}
-                                aria-expanded={openTipIndex === index}
-                              >
-                                <span>{String(index + 1).padStart(2, '0')}</span>
-                                <strong>{step}</strong>
-                                <em>{openTipIndex === index ? '-' : '+'}</em>
-                              </button>
-                              {openTipIndex === index && (
-                                <p>
-                                  {selectedProtocolItem.source === 'library'
-                                    ? stitchCopy.optionalLibraryNote
-                                    : stitchCopy.todayPlanTitle}
-                                </p>
-                              )}
-                            </article>
-                          ))}
-                        </div>
-                        <div className="mt-ip-step-guide">
-                          <h4>{stitchCopy.stepGuide}</h4>
-                          <div>
-                            {selectedExerciseCopy.steps.map((step, index) => (
-                              <article key={`${selectedExerciseCopy.name}-guide-${index}`} className="mt-ip-step-card">
-                                <span>{String(index + 1).padStart(2, '0')}</span>
-                                <p>{step}</p>
-                              </article>
-                            ))}
-                          </div>
-                        </div>
-                        {selectedProtocolItem.source === 'library' && (
-                          <p className="mt-ip-library-note">{stitchCopy.optionalLibraryNote}</p>
-                        )}
-                      </>
-                    ) : (
-                      <div className="mt-ip-video-missing">
-                        <p>{stitchCopy.noExerciseSelected}</p>
-                      </div>
-                    )}
-                  </aside>
                 </div>
-              </section>
-
-              <section className="mt-ip-records" aria-labelledby="mt-ip-records-title">
-                <div className="mt-ip-section-head">
-                  <h2 id="mt-ip-records-title">{stitchCopy.recentPrsTitle}</h2>
-                  <span>{stitchCopy.historyPlaceholderBadge}</span>
-                </div>
-                <div className="mt-ip-record-list">
-                  {recentStrengthPlaceholders.map((record) => (
-                    <article key={record.name} className="mt-ip-record-row">
-                      <div className="mt-ip-record-icon" aria-hidden="true">
-                        <AppIcon name="emoji_events" />
-                      </div>
-                      <div>
-                        <strong>{record.name}</strong>
-                        <p>{record.meta}</p>
-                      </div>
-                      <span>{record.value}</span>
-                    </article>
-                  ))}
-                </div>
-              </section>
-
-              <article className="mt-ip-status-panel">
-                <span>{stitchCopy.recoveryImpactTitle}</span>
-                <h2>{pickLabel(copy.recoveryGate, plan.weekContext?.recoveryGate)}</h2>
-                <p>{todayCoachNarrative || stitchCopy.guideSubtitle}</p>
-                <div className="mt-ip-status-metrics">
-                  <span>{stitchCopy.nextKeyRun}<strong>{nextKeyRunSummary.label}</strong></span>
-                  <span>ACWR<strong>{plan.weekContext?.acwr != null ? trimNumber(plan.weekContext.acwr, 2) : '-'}</strong></span>
-                  <span>{stitchCopy.highIntensity}<strong>{plan.weekContext?.highIntensityRatioLast7d != null ? `${Math.round(plan.weekContext.highIntensityRatioLast7d * 100)}%` : '-'}</strong></span>
-                </div>
-              </article>
+              </aside>
             </section>
 
-            {/* ── COACH CONTROLS: check-in + preferences behind disclosure ── */}
-            <section id="muscle-controls" className="strength-plan-control-deck">
-              <div className="strength-plan-control-head">
-                <div>
-                  <span className="strength-plan-section-label">{stitchCopy.coachDeckTitle}</span>
-                  <p>{stitchCopy.coachDeckHint}</p>
+            {/* ── Hero ── */}
+            <section className="mt-hero" aria-labelledby="mt-hero-title">
+              <div className="mt-hero-left">
+                <span className="mt-kicker">{t('muscle_training.stitch_mt_hero_kicker')}</span>
+                <h1 id="mt-hero-title" className="mt-hero-title">{t('muscle_training.stitch_mt_hero_title')}</h1>
+                <p className="mt-hero-desc">{t('muscle_training.stitch_mt_hero_copy')}</p>
+                <div className="mt-hero-chips">
+                  <span className="mt-chip">
+                    <AppIcon name="directions_run" />
+                    {currentSplitLabel || stitchCopy.currentSplitBadge}
+                  </span>
+                  <span className="mt-chip">
+                    <AppIcon name="schedule" />
+                    {weeklyStrengthMinutes ? formatMinutes(weeklyStrengthMinutes, isZh) : '-'}
+                    &nbsp;{t('muscle_training.stitch_mt_hero_total_time')}
+                  </span>
+                  <span className="mt-chip">
+                    <AppIcon name="calendar_today" />
+                    {`${weekDoseStats.planned}/${weekDoseStats.recommended || 0}`}&nbsp;{t('muscle_training.stitch_mt_hero_sessions')}
+                  </span>
                 </div>
               </div>
+              <div className="mt-hero-right">
+                <button type="button" className="mt-hero-cta" onClick={scrollToControls}>
+                  {stitchCopy.startWorkout}
+                  <AppIcon name="arrow_forward" />
+                </button>
+                <div className="mt-ring-wrap" aria-label={`${stitchCopy.weeklyCompletion} ${volumeCompletion}%`}>
+                  <svg className="mt-ring-svg" viewBox="0 0 88 88" role="img" aria-hidden="true">
+                    <circle cx="44" cy="44" r="34" className="mt-ring-track" />
+                    <circle
+                      cx="44"
+                      cy="44"
+                      r="34"
+                      className="mt-ring-progress"
+                      style={{
+                        strokeDasharray: 2 * Math.PI * 34,
+                        strokeDashoffset: 2 * Math.PI * 34 - (volumeCompletion / 100) * 2 * Math.PI * 34,
+                      }}
+                    />
+                  </svg>
+                  <div className="mt-ring-center">
+                    <strong>{volumeCompletion}%</strong>
+                    <span>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</span>
+                  </div>
+                </div>
+                <div className="mt-ring-meta">
+                  <span>{t('muscle_training.stitch_mt_hero_sessions')}</span>
+                  <strong>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</strong>
+                </div>
+              </div>
+            </section>
+
+            {/* ── Recommendation Banner ── */}
+            <section className="mt-recommend">
+              <div className="mt-recommend-inner">
+                <div className="mt-recommend-left">
+                  <span className="mt-kicker">{t('muscle_training.stitch_mt_recommend_tag')}</span>
+                  <p className="mt-recommend-title">{nextStrengthSummary.label || stitchCopy.guideSubtitle}</p>
+                  <div className="mt-recommend-tags">
+                    {nextStrengthSummary.meta && (
+                      <span className="mt-chip mt-chip--sm">{nextStrengthSummary.meta}</span>
+                    )}
+                  </div>
+                </div>
+                <button type="button" className="mt-recommend-btn" onClick={scrollToControls}>
+                  <AppIcon name="play_arrow" />
+                  {t('muscle_training.stitch_mt_recommend_start')}
+                </button>
+              </div>
+            </section>
+
+            {/* ── Side Grid: Today Session + Target Areas ── */}
+            <div className="mt-side-grid">
+              {/* Today Session card */}
+              <article className="mt-card mt-session-card">
+                <div className="mt-card-head">
+                  <span className="mt-kicker">{t('muscle_training.stitch_mt_session_kicker')}</span>
+                  <h2 className="mt-card-title">{nextStrengthSummary.label || stitchCopy.readyTitle}</h2>
+                </div>
+                <div className="mt-session-meta">
+                  <span>
+                    <AppIcon name="schedule" />
+                    {featuredSession?.durationMinutes ? formatMinutes(featuredSession.durationMinutes, isZh) : '-'}
+                  </span>
+                </div>
+                <p className="mt-session-purpose">{todayCoachNarrative || stitchCopy.guideSubtitle}</p>
+                <div className="mt-session-targets">
+                  {targetAreaCards.filter((ta) => ta.planCount > 0).slice(0, 3).map((ta) => (
+                    <button
+                      key={ta.key}
+                      type="button"
+                      className={`mt-target-pill${activeTarget === ta.key ? ' is-active' : ''}`}
+                      onClick={() => handleTargetAreaSelect(ta.key)}
+                    >
+                      {ta.label}
+                    </button>
+                  ))}
+                </div>
+              </article>
+
+              {/* Target Areas card */}
+              <article className="mt-card mt-targets-card" aria-labelledby="mt-targets-title">
+                <div className="mt-card-head">
+                  <span className="mt-kicker">{t('muscle_training.stitch_mt_targets_kicker')}</span>
+                  <h2 id="mt-targets-title" className="mt-card-title">{stitchCopy.targetAreasTitle}</h2>
+                </div>
+                <div className="mt-target-grid">
+                  {targetAreaCards.map((ta) => {
+                    // Body-part-specific Heroicons-style outline icons. Each
+                    // name maps to a dedicated case in AppIcon.jsx so the
+                    // target-area grid no longer falls back to the generic
+                    // dumbbell or running-figure glyph.
+                    const iconMap = {
+                      chest: 'chest',
+                      shoulders: 'shoulders',
+                      legs: 'legs',
+                      core: 'core',
+                      arms: 'arms',
+                      back: 'back',
+                    };
+                    const icon = iconMap[ta.key] || 'fitness_center';
+                    return (
+                      <button
+                        key={ta.key}
+                        type="button"
+                        className={`mt-target-area${activeTarget === ta.key ? ' is-active' : ''}`}
+                        onClick={() => handleTargetAreaSelect(ta.key)}
+                        aria-pressed={activeTarget === ta.key}
+                      >
+                        <div className="mt-target-icon">
+                          <AppIcon name={icon} />
+                        </div>
+                        <div className="mt-target-info">
+                          <strong>{ta.label}</strong>
+                          <span>{ta.planCount}&nbsp;{t('muscle_training.stitch_mt_targets_exercises')}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </article>
+            </div>
+
+            {/* ── Exercise List ── */}
+            <section className="mt-exercises" aria-labelledby="mt-exercises-title">
+              <div className="mt-exercises-head">
+                <div>
+                  <span className="mt-kicker">{t('muscle_training.stitch_mt_exercises_kicker')}</span>
+                  <h2 id="mt-exercises-title" className="mt-card-title">{stitchCopy.protocolWorkspaceTitle}</h2>
+                </div>
+              </div>
+              <div className="mt-exercises-filter" role="group" aria-label={stitchCopy.targetAreasTitle}>
+                <button
+                  type="button"
+                  className={`mt-chip mt-chip--filter${activeTarget === 'all' ? ' is-active' : ''}`}
+                  onClick={() => handleTargetAreaSelect('all')}
+                  aria-pressed={activeTarget === 'all'}
+                >
+                  {stitchCopy.allTargets}
+                  <small>({visibleExerciseItems.length})</small>
+                </button>
+                {targetAreaCards.map((ta) => (
+                  <button
+                    key={ta.key}
+                    type="button"
+                    className={`mt-chip mt-chip--filter${activeTarget === ta.key ? ' is-active' : ''}`}
+                    onClick={() => handleTargetAreaSelect(ta.key)}
+                    aria-pressed={activeTarget === ta.key}
+                  >
+                    <span>{ta.label}</span>
+                    <span className="mt-filter-visual" aria-hidden="true">
+                      <img src={ta.image} alt="" loading="lazy" />
+                    </span>
+                    <small>({ta.planCount})</small>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-exercise-list" role="list">
+                {visibleExerciseItems.map((item, idx) => {
+                  const isLibrary = item.source === 'library';
+                  const exerciseCopy = getExerciseContentForItem(item, isZh);
+                  const itemKey = getProtocolItemKey(item);
+                  const isSelected = selectedExerciseKey === itemKey;
+                  const isExpanded = expandedExerciseIdx === idx;
+                  return (
+                    <div key={itemKey} className={`mt-exercise-row${isSelected ? ' is-selected' : ''}`} role="listitem">
+                      <div
+                        className="mt-exercise-main"
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        aria-controls={`mt-ex-detail-${idx}`}
+                        onClick={() => {
+                          handleExerciseSelect(item);
+                          setExpandedExerciseIdx(isExpanded ? null : idx);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleExerciseSelect(item);
+                            setExpandedExerciseIdx(isExpanded ? null : idx);
+                          }
+                          if (e.key === 'Escape') {
+                            setExpandedExerciseIdx(null);
+                          }
+                        }}
+                      >
+                        <span className="mt-exercise-num">{String(idx + 1).padStart(2, '0')}</span>
+                        <div className="mt-exercise-info">
+                          <strong>{exerciseCopy.name}</strong>
+                          <span className="mt-exercise-meta">
+                            {formatLocalizedExercisePrescription(item.exercise, isZh)}
+                            {exerciseCopy.muscles.length > 0 && (
+                              <>&nbsp;·&nbsp;{exerciseCopy.muscles.slice(0, 2).join(' / ')}</>
+                            )}
+                          </span>
+                        </div>
+                        <span className={`mt-exercise-badge${isLibrary ? ' is-library' : ' is-plan'}`}>
+                          {isLibrary ? 'OPT' : 'PLAN'}
+                        </span>
+                        <span className="mt-exercise-chevron" aria-hidden="true">
+                          <AppIcon name={isExpanded ? 'expand_less' : 'expand_more'} />
+                        </span>
+                      </div>
+                      {isExpanded && (
+                        <div id={`mt-ex-detail-${idx}`} className="mt-exercise-detail">
+                          {(() => {
+                            const heatmapSlugs = muscleSlugsForExercise(exerciseCopy.muscles);
+                            if (heatmapSlugs.length === 0) return null;
+                            const heatmapData = heatmapSlugs.map((slug) => ({ slug, intensity: 2 }));
+                            const muscleLabel = exerciseCopy.muscles.join(' / ');
+                            return (
+                              <figure
+                                className="mt-exercise-heatmap"
+                                aria-label={`${exerciseCopy.name}${muscleLabel ? ': ' + muscleLabel : ''}`}
+                              >
+                                <MuscleHeatmap
+                                  data={heatmapData}
+                                  frontLabel={isZh ? '正面' : 'Front'}
+                                  backLabel={isZh ? '背面' : 'Back'}
+                                />
+                              </figure>
+                            );
+                          })()}
+                          {exerciseCopy.steps.length > 0 && (
+                            <ol className="mt-exercise-steps">
+                              {exerciseCopy.steps.map((step, si) => (
+                                <li key={si} className="mt-exercise-step">{step}</li>
+                              ))}
+                            </ol>
+                          )}
+                          {exerciseCopy.intent && (
+                            <p className="mt-exercise-intent">{exerciseCopy.intent}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {visibleExerciseItems.length === 0 && (
+                  <div className="mt-exercise-empty">
+                    <strong>{stitchCopy.noAreaPlanExercises}</strong>
+                    <p>{stitchCopy.targetCardsHint}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Side rail: video + exercise reference */}
+            <div className="mt-side-grid mt-media-rail">
+              <article className="mt-card mt-video-card" aria-labelledby="mt-video-title">
+                <div className="mt-card-head">
+                  <span className="mt-kicker">{stitchCopy.topReferenceKicker}</span>
+                  <h2 id="mt-video-title" className="mt-card-title">{stitchCopy.videoDemoTitle}</h2>
+                </div>
+                {selectedExerciseVideoUrl ? (
+                  <div className="mt-video-frame">
+                    <iframe
+                      src={selectedExerciseVideoUrl}
+                      title={`${selectedExerciseCopy?.name || stitchCopy.noExerciseSelected} ${stitchCopy.videoDemoTitle}`}
+                      loading="lazy"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-video-missing">
+                    <p>{stitchCopy.videoUnavailable}</p>
+                    <a href={getExerciseVideoUrl(selectedProtocolItem?.exercise?.name)} target="_blank" rel="noreferrer">
+                      {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
+                    </a>
+                  </div>
+                )}
+              </article>
+
+              <article className="mt-card mt-reference-card" aria-labelledby="mt-reference-title">
+                <figure className="mt-reference-media">
+                  <img src={selectedRailTargetCard?.image || targetLegsUrl} alt="" aria-hidden="true" loading="lazy" />
+                  <figcaption>
+                    <span>{selectedRailTargetCard?.label || stitchCopy.targetLegs}</span>
+                    <strong>{selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}</strong>
+                  </figcaption>
+                </figure>
+                <div className="mt-reference-body">
+                  <span className="mt-kicker">{stitchCopy.professionalTips}</span>
+                  <h2 id="mt-reference-title" className="mt-card-title">
+                    {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
+                  </h2>
+                  {selectedProtocolItem?.exercise && (
+                    <p className="mt-reference-prescription">
+                      {formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh)}
+                    </p>
+                  )}
+                  <p className="mt-reference-intent">
+                    {selectedExerciseCopy?.intent || todayCoachNarrative || stitchCopy.guideSubtitle}
+                  </p>
+                  {selectedExerciseCopy?.steps?.length > 0 && (
+                    <ul className="mt-reference-steps">
+                      {selectedExerciseCopy.steps.slice(0, 3).map((step) => (
+                        <li key={step}>
+                          <span>i</span>
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {selectedExerciseCopy?.muscles?.length > 0 && (
+                    <div className="mt-reference-muscles">
+                      <span>{stitchCopy.targetMusclesLabel}</span>
+                      <div>
+                        {selectedExerciseCopy.muscles.slice(0, 4).map((muscle) => (
+                          <em key={muscle}>{muscle}</em>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </article>
+            </div>
+          </>
+        )}
+
+        {!loading && !error && plan && (
+          <>
+            {/* ── COACH CONTROLS: check-in + preferences behind disclosure ── */}
+            <section id="muscle-controls" className="strength-plan-control-deck">
 
             <details className="mt-settings-disclosure">
               <summary className="mt-settings-summary">

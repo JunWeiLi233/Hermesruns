@@ -196,17 +196,49 @@ public class ProfileController {
         }
 
         Runner runner = runnerOptional.get();
+        // The original layout ran 8 expensive ops sequentially. The long-pole
+        // was `automatedCoachService.getTodayWithReadiness`, which makes a
+        // synchronous HTTP call to Open-Meteo through AcclimatizationService
+        // and could block the entire endpoint for up to the RestTemplate read
+        // timeout. Two wins now: (a) drop the Today payload from the eager
+        // response and let the frontend lazy-load `/api/coach/today` via the
+        // existing deferredEnrichment flow, (b) run the remaining independent
+        // lookups concurrently so wall-clock time is close to the slowest
+        // single op rather than the sum of all six.
         List<Activity> activities = findRunnerRuns(runner);
+
+        java.util.concurrent.CompletableFuture<AutomatedCoachService.CoachStateDto> coachStateFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() ->
+                        safeValue(() -> automatedCoachService.getCoachState(runner), null));
+        java.util.concurrent.CompletableFuture<List<AutomatedCoachService.CoachScheduledWorkoutDto>> scheduleFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() ->
+                        safeValue(() -> automatedCoachService.getSchedule(runner, 7), List.<AutomatedCoachService.CoachScheduledWorkoutDto>of()));
+        java.util.concurrent.CompletableFuture<Object> personalRecordsFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() ->
+                        safeValue(() -> personalRecordService.buildForRunner(runner), null));
+        java.util.concurrent.CompletableFuture<List<RaceEventResponse>> racesFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() ->
+                        safeValue(() -> findRunnerRaces(runner, activities), List.<RaceEventResponse>of()));
+        java.util.concurrent.CompletableFuture<Object> quotaFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() ->
+                        safeValue(() -> quotaService.getQuotaStatus(runner), Map.<String, Object>of()));
+
+        AutomatedCoachService.CoachStateDto coachState = coachStateFuture.join();
+        List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule = scheduleFuture.join();
+        // Muscle plan depends on coachState + schedule, so it runs after the
+        // first wave resolves. Still on the request thread but bounded.
+        Object musclePlan =
+                safeValue(() -> muscleTrainingPlannerService.getPlan(runner, coachState, schedule), null);
 
         return ResponseEntity.ok(new ProfileDashboardResponse(
                 toProfileResponse(runner),
                 toRunFeedItems(activities),
+                coachState,
                 null,
-                null,
-                null,
-                List.of(),
-                null,
-                Map.of(),
+                personalRecordsFuture.join(),
+                racesFuture.join(),
+                musclePlan,
+                quotaFuture.join(),
                 true
         ));
     }

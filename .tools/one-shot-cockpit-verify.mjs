@@ -20,7 +20,7 @@ try {
     await emailEl.click();
     await page.keyboard.type("strava+140971747@hermes.local", { delay: 20 });
     await passEl.click();
-    await page.keyboard.type("HermesLocal1!", { delay: 20 });
+    await page.keyboard.type((process.env.APP_LOCAL_SHARED_RUNNER_PASSWORD || "local-test-password"), { delay: 20 });
     const submitBtn = await page.$("button[type=submit]");
     await Promise.all([
       page.waitForURL((u) => !/\/login\b/.test(u), { timeout: 12000 }).catch(() => {}),

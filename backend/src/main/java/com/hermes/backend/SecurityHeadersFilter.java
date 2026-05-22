@@ -36,7 +36,7 @@ public class SecurityHeadersFilter implements Filter {
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
                 "img-src 'self' data: https: blob:; " +
                 "font-src 'self' https://fonts.gstatic.com; " +
-                "frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; " +
+                "frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ https://www.youtube-nocookie.com; " +
                 "object-src 'none'; " +
                 "base-uri 'self'; " +
                 "form-action 'self'; " +

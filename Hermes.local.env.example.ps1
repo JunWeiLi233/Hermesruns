@@ -85,10 +85,10 @@ $env:STRAVA_SYNC_INTERVAL_MS = "600000"
 # Stripe Billing (Pro Subscription)
 # -----------------------------------------------------------------------------
 # Obtain from https://dashboard.stripe.com/apikeys
-$env:STRIPE_SECRET_KEY = "sk_test_your-stripe-secret-key"
+$env:STRIPE_SECRET_KEY = "your-stripe-secret-key"
 
 # Webhook signing secret from Stripe Dashboard (for POST /api/billing/webhook).
-$env:STRIPE_WEBHOOK_SECRET = "whsec_your-stripe-webhook-secret"
+$env:STRIPE_WEBHOOK_SECRET = "your-stripe-webhook-secret"
 
 # One-time Price ID from Stripe Dashboard (e.g. "price_xxxxxxxxxxxxxxxxxxxxx").
 $env:STRIPE_PRICE_PRO_MONTHLY = "price_xxxxxxxxxxxxxxxxxxxxx"

@@ -25,13 +25,13 @@ pip install mempalace
 Create a Hermes memory store and index your project conversations or notes:
 
 ```bash
-mempalace init C:\Users\Junwei\Downloads\Hermes
+mempalace init <path-to-your-Hermes-checkout>
 ```
 
 After setup, ingest the sources you want MemPalace to remember:
 
 ```bash
-mempalace mine C:\Users\Junwei\Downloads\Hermes
+mempalace mine <path-to-your-Hermes-checkout>
 ```
 
 Use your own preferred data sources for mining if you keep logs or exported chats elsewhere.

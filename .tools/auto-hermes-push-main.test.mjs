@@ -15,6 +15,8 @@ const {
     sourceRef: "HEAD",
     remoteName: "origin",
     targetRemoteUrl: "https://github.com/520HXC/run.git",
+    expectedUserName: "runner-bot",
+    expectedUserEmail: "runner-bot@example.invalid",
     targetBranch: "main",
     backupBranch: "save-old-version",
     message: "publish profile cleanup",
@@ -108,10 +110,10 @@ const {
         return "abc123";
       }
       if (command === "git" && args.join(" ") === "config user.name") {
-        return "JunWeiLi233";
+        return "runner-bot";
       }
       if (command === "git" && args.join(" ") === "config user.email") {
-        return "mcpejunwei@gmail.com";
+        return "runner-bot@example.invalid";
       }
       return "";
     },

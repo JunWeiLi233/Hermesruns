@@ -13,6 +13,6 @@ Workflow:
 6. If the checks pass and the changed files form one meaningful unit:
    - stage only the intended product files plus `.gitignore` when needed
    - create a concise commit with `powershell -File .tools/auto-commit.ps1 -Message "<short description>"`
-   - verify the commit author with `git log -1 --format="%an <%ae>"` and confirm it is `JunWeiLi233 <mcpejunwei@gmail.com>`
+   - verify the commit author with `git log -1 --format="%an <%ae>"` and confirm it uses the project-approved publish identity
 7. Push only if the strict push gates in `CLAUDE.md` pass.
 8. If any gate fails, do not force the push. Report the blocker clearly.

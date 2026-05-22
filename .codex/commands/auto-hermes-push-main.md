@@ -13,7 +13,7 @@ Use `/auto-hermes-push-main` when the current branch is ready for review and mer
 
 The workflow:
 - Always verifies `origin` is `https://github.com/520HXC/run.git`
-- Always verifies git identity is `JunWeiLi233 / mcpejunwei@gmail.com`
+- Verifies git identity when `AUTO_HERMES_EXPECTED_USER_NAME` or `AUTO_HERMES_EXPECTED_USER_EMAIL` is configured
 - Always refreshes `README.md` and architecture diagrams before publishing
 - Always scans for secrets, PII, API keys, config leaks, and sensitive endpoint leaks
 - Pushes the current branch to remote
@@ -44,7 +44,7 @@ node .tools/auto-hermes-push-main.mjs --execute --write \
 
 The helper stops before creating the PR when any gate fails:
 - Wrong or missing `origin`
-- Wrong git identity
+- Wrong git identity when an expected publish identity is configured
 - Publish-blocking secret/PII/API/config leak finding
 - Frontend lint failure
 - Backend compile failure
