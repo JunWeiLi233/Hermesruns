@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, 'MuscleTraining.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const redesignStyleSource = readFileSync(path.join(here, '../styles/muscle-training-hermes-redesign.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
 
@@ -37,6 +38,30 @@ assert.match(
   pageSource,
   /className="mt-ip-target-filter-rail"/,
   'The page should render a compact target-area filter rail for the protocol workbench.',
+);
+
+assert.match(
+  pageSource,
+  /const \[isTodayPlanExpanded,\s*setIsTodayPlanExpanded\] = useState\(false\)/,
+  'Today plan rows should be collapsed by default so the workbench opens on the exercise library.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-ip-plan-collapse"/,
+  'The real today plan should render as a compact collapsible group, not as the dominant first row stack.',
+);
+
+assert.match(
+  pageSource,
+  /className="mt-ip-plan-toggle"/,
+  'The collapsed today plan group should have a real toggle button.',
+);
+
+assert.match(
+  pageSource,
+  /isTodayPlanExpanded && filteredProtocolItems\.length > 0/,
+  'Today plan exercise rows should only render when the plan group is expanded.',
 );
 
 assert.ok(
@@ -160,6 +185,24 @@ assert.match(
   styleSource,
   /\.mt-ip-exercise-section-label--library/,
   'Compound-library rows should have their own dark IRONPULSE section styling.',
+);
+
+assert.match(
+  redesignStyleSource,
+  /\.mt-ip-plan-collapse/,
+  'The live redesign stylesheet should style the collapsed today plan summary.',
+);
+
+assert.match(
+  redesignStyleSource,
+  /\.mt-ip-detail-drawer/,
+  'The live redesign stylesheet should style the exercise detail drawer instead of relying on stale split CSS.',
+);
+
+assert.match(
+  redesignStyleSource,
+  /@media \(max-width:\s*760px\)[\s\S]*\.mt-ip-plan-collapse/,
+  'The collapsed today plan summary should be readable on mobile.',
 );
 
 assert.equal(
