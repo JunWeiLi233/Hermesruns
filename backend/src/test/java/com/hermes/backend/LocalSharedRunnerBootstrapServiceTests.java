@@ -50,7 +50,7 @@ class LocalSharedRunnerBootstrapServiceTests {
         );
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
-                LocalSharedRunnerBootstrapService.BootstrapConfig.localDefault("HermesLocal1!")
+                LocalSharedRunnerBootstrapService.BootstrapConfig.localDefault("local-test-password")
         );
 
         assertThat(result.seededActivities()).isEqualTo(18);
@@ -88,7 +88,7 @@ class LocalSharedRunnerBootstrapServiceTests {
         );
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
-                LocalSharedRunnerBootstrapService.BootstrapConfig.localDefault("HermesLocal1!")
+                LocalSharedRunnerBootstrapService.BootstrapConfig.localDefault("local-test-password")
         );
 
         assertThat(result.seededActivities()).isZero();
@@ -124,7 +124,7 @@ class LocalSharedRunnerBootstrapServiceTests {
         );
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
-                LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("HermesRival1!")
+                LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("local-rival-test-password")
         );
 
         assertThat(result.email()).isEqualTo("territory-rival@hermes.local");
@@ -209,7 +209,7 @@ class LocalSharedRunnerBootstrapServiceTests {
         );
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
-                LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("HermesRival1!")
+                LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("local-rival-test-password")
         );
 
         assertThat(result.seededActivities()).isEqualTo(3);
@@ -272,7 +272,7 @@ class LocalSharedRunnerBootstrapServiceTests {
         );
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
-                LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("HermesRival1!")
+                LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("local-rival-test-password")
         );
 
         assertThat(result.seededActivities()).isEqualTo(1);

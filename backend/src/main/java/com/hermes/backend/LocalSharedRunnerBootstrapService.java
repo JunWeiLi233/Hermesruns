@@ -14,7 +14,6 @@ public class LocalSharedRunnerBootstrapService {
     public static final String DEFAULT_EMAIL = "strava+140971747@hermes.local";
     public static final long DEFAULT_STRAVA_ATHLETE_ID = 140971747L;
     public static final String TERRITORY_RIVAL_EMAIL = "territory-rival@hermes.local";
-    public static final String TERRITORY_RIVAL_PASSWORD = "HermesRival1!";
     public static final long TERRITORY_RIVAL_STRAVA_ATHLETE_ID = 140971748L;
     private static final String DEFAULT_DISPLAY_NAME = "Hermes Shared Runner";
     private static final String TERRITORY_RIVAL_DISPLAY_NAME = "Hermes Temporal Rival";

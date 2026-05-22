@@ -9,8 +9,8 @@ import { runAutoHermesSecurity } from "./auto-hermes-security.mjs";
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
 const EXPECTED_REMOTE_URL = "https://github.com/520HXC/run.git";
-const EXPECTED_USER_NAME = "JunWeiLi233";
-const EXPECTED_USER_EMAIL = "mcpejunwei@gmail.com";
+const DEFAULT_EXPECTED_USER_NAME = process.env.AUTO_HERMES_EXPECTED_USER_NAME || "";
+const DEFAULT_EXPECTED_USER_EMAIL = process.env.AUTO_HERMES_EXPECTED_USER_EMAIL || "";
 
 function parseArgs(argv) {
   const args = {
@@ -22,6 +22,8 @@ function parseArgs(argv) {
     backupBranch: "save-old-version",
     remoteName: "origin",
     targetRemoteUrl: EXPECTED_REMOTE_URL,
+    expectedUserName: DEFAULT_EXPECTED_USER_NAME,
+    expectedUserEmail: DEFAULT_EXPECTED_USER_EMAIL,
     message: "auto-hermes push main",
     prTitle: "",
     prBody: "",
@@ -230,11 +232,17 @@ function assertRemoteMatches(result, actualUrl, expectedUrl) {
   return true;
 }
 
-function assertIdentity(result, userName, userEmail) {
+function assertIdentity(result, userName, userEmail, expectedUserName, expectedUserEmail) {
   result.gitIdentity = { userName, userEmail };
-  if (String(userName).trim() !== EXPECTED_USER_NAME || String(userEmail).trim() !== EXPECTED_USER_EMAIL) {
+  const expectedName = String(expectedUserName || "").trim();
+  const expectedEmail = String(expectedUserEmail || "").trim();
+  if (!expectedName && !expectedEmail) {
+    result.gitIdentityPolicy = "not-configured";
+    return true;
+  }
+  if ((expectedName && String(userName).trim() !== expectedName) || (expectedEmail && String(userEmail).trim() !== expectedEmail)) {
     result.status = "blocked";
-    result.reason = `Git identity must be ${EXPECTED_USER_NAME} / ${EXPECTED_USER_EMAIL} before publishing. Found ${userName || "(missing)"} / ${userEmail || "(missing)"}.`;
+    result.reason = `Git identity does not match the configured publish identity. Found ${userName || "(missing)"} / ${userEmail || "(missing)"}.`;
     return false;
   }
   return true;
@@ -406,7 +414,7 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
     markStep(result, "identity", "running");
     const userName = runGit(runCommand, args.rootDir, ["config", "user.name"]);
     const userEmail = runGit(runCommand, args.rootDir, ["config", "user.email"]);
-    if (!assertIdentity(result, userName, userEmail)) return finish(args, result);
+    if (!assertIdentity(result, userName, userEmail, args.expectedUserName, args.expectedUserEmail)) return finish(args, result);
     markStep(result, "identity", "completed");
 
     markStep(result, "source-branch", "running");

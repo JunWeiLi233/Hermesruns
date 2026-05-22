@@ -6,6 +6,7 @@ import { fetchPasswordRules, getFailedPasswordRuleIds } from '../utils/passwordR
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
+import authBrandSlides from '../data/authBrandSlides';
 
 const SIGNUP_STITCH_COPY = {
   'zh-CN': {
@@ -214,23 +215,71 @@ export default function Signup() {
   if (doneInfo) {
     return (
       <div className="auth-page auth-page--signup">
-        <div className="signup-flow-bg" />
-        <main className="signup-flow-shell signup-flow-shell--done">
-          <section className="signup-flow-copy signup-flow-copy--done">
-            <div className="signup-flow-copy-stack">
-              <Link to="/" className="signup-flow-wordmark">HERMES</Link>
-              <h1 className="signup-flow-hero">
-                <span>{s('done_line_one')}</span>
-                <span className="is-accent">{s('done_line_two')}</span>
-              </h1>
-              <p className="signup-flow-text">{doneInfo.message || t('signup.check_email_body')}</p>
+        <main className="auth-flow-shell">
+          <section className="auth-flow-brand">
+            <div className="auth-flow-brand-inner">
+              <div className="auth-flow-wordmark-wrap">
+                <h1 className="auth-flow-wordmark">HERMES</h1>
+                <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
+              </div>
+
+              <div className="auth-flow-copy auth-flow-copy--carousel" aria-label={t('index.stitch_slides_label')}>
+                <div className="auth-flow-slide-viewport">
+                  <div className="auth-flow-slide-track">
+                    {authBrandSlides.map((slide) => (
+                      <article className="auth-flow-slide" key={slide.id}>
+                        <span className="auth-flow-kicker">{t(slide.kickerKey)}</span>
+                        <h2 className="auth-flow-hero">
+                          <span>{t(slide.lineOneKey)}</span>
+                          <span className="is-accent">{t(slide.lineTwoKey)}</span>
+                        </h2>
+                        <p className="auth-flow-text">{t(slide.copyKey)}</p>
+                        <div className="auth-flow-stats">
+                          {slide.stats.map((stat) => (
+                            <div key={stat.labelKey}>
+                              <strong>{stat.value}</strong>
+                              <span>{t(stat.labelKey)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="auth-flow-dots" aria-hidden="true">
+                {authBrandSlides.map((slide, index) => (
+                  <span className={`auth-flow-dot auth-flow-dot--${index + 1}`} key={slide.id} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="auth-flow-formside">
+            <div className="auth-flow-card">
+              <div className="auth-flow-header">
+                <h3>{s('done_line_one')}</h3>
+                <p>{s('done_line_two')}</p>
+              </div>
+
+              <p className="auth-flow-text">{doneInfo.message || t('signup.check_email_body')}</p>
               {!doneInfo.verificationRequired && (
-                <p className="signup-flow-subtle">{t('signup.no_mail_server_note')}</p>
+                <p className="auth-flow-status-note">{t('signup.no_mail_server_note')}</p>
               )}
-              <button type="button" className="signup-flow-primary" onClick={() => navigate('/login')}>
+
+              <button
+                type="button"
+                className="auth-flow-btn auth-flow-btn--submit"
+                onClick={() => navigate('/login')}
+              >
                 {t('signup.signin_link')}
               </button>
             </div>
+
+            <footer className="auth-flow-legal">
+              <FooterNavLinks publicOnly={true} />
+            </footer>
           </section>
         </main>
       </div>
@@ -239,57 +288,91 @@ export default function Signup() {
 
   return (
     <div className="auth-page auth-page--signup">
-      <div className="signup-flow-bg" />
-
-      <nav className="signup-flow-nav">
-        <Link to="/" className="signup-flow-wordmark">HERMES</Link>
-        <Link to="/login" className="signup-flow-login-link">{s('login_nav')}</Link>
-      </nav>
-
-      <main className="signup-flow-shell">
-        <section className="signup-flow-copy">
-          <div className="signup-flow-copy-stack">
-            <h1 className="signup-flow-hero">
-              <span>{s('hero_line_one')}</span>
-              <span>{s('hero_line_two')}</span>
-              <span className="is-accent">{s('hero_line_three')}</span>
-            </h1>
-            <p className="signup-flow-text">{s('hero_copy')}</p>
-            <div className="signup-flow-standard">
-              <span className="signup-flow-standard-line" />
-              <span>{s('standard')}</span>
+      <main className="auth-flow-shell">
+        <section className="auth-flow-brand">
+          <div className="auth-flow-brand-inner">
+            <div className="auth-flow-wordmark-wrap">
+              <h1 className="auth-flow-wordmark">HERMES</h1>
+              <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
             </div>
-            <div className="signup-flow-rail" aria-hidden="true">
-              <span className="is-active" />
-              <span />
-              <span />
+
+            <div className="auth-flow-copy auth-flow-copy--carousel" aria-label={t('index.stitch_slides_label')}>
+              <div className="auth-flow-slide-viewport">
+                <div className="auth-flow-slide-track">
+                  {authBrandSlides.map((slide) => (
+                    <article className="auth-flow-slide" key={slide.id}>
+                      <span className="auth-flow-kicker">{t(slide.kickerKey)}</span>
+                      <h2 className="auth-flow-hero">
+                        <span>{t(slide.lineOneKey)}</span>
+                        <span className="is-accent">{t(slide.lineTwoKey)}</span>
+                      </h2>
+                      <p className="auth-flow-text">{t(slide.copyKey)}</p>
+                      <div className="auth-flow-stats">
+                        {slide.stats.map((stat) => (
+                          <div key={stat.labelKey}>
+                            <strong>{stat.value}</strong>
+                            <span>{t(stat.labelKey)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="auth-flow-dots" aria-hidden="true">
+              {authBrandSlides.map((slide, index) => (
+                <span className={`auth-flow-dot auth-flow-dot--${index + 1}`} key={slide.id} />
+              ))}
             </div>
           </div>
         </section>
 
-        <section className="signup-flow-panel-wrap">
-          <div className="signup-flow-panel">
-            <button
-              type="button"
-              className="signup-flow-strava"
-              disabled={!stravaConfigured}
-              onClick={() => startOAuth('strava')}
-            >
-              <AppIcon name="directions_run" className="signup-flow-strava-icon" />
-              <span>{stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}</span>
-            </button>
+        <section className="auth-flow-formside">
+          <div className="auth-flow-card">
+            <div className="auth-flow-header">
+              <h3>{s('hero_line_one')} {s('hero_line_two')} <span className="is-accent">{s('hero_line_three')}</span></h3>
+              <p>{s('hero_copy')}</p>
+            </div>
 
-            {!stravaConfigured && (
-              <p className="auth-flow-status-note">{t('common.strava_not_configured')}</p>
-            )}
+            <div className="auth-flow-social">
+              <button
+                type="button"
+                className="auth-flow-btn auth-flow-btn--strava"
+                disabled={!stravaConfigured}
+                onClick={() => startOAuth('strava')}
+              >
+                <span className="auth-flow-btn__icon auth-flow-btn__icon--bolt" aria-hidden="true">+</span>
+                <span>{stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}</span>
+              </button>
 
-            <div className="signup-flow-divider">
+              {!stravaConfigured && (
+                <p className="auth-flow-status-note">{t('common.strava_not_configured')}</p>
+              )}
+
+              <button
+                type="button"
+                className="auth-flow-btn auth-flow-btn--google"
+                disabled={!googleConfigured}
+                onClick={() => startOAuth('google')}
+              >
+                <span className="auth-flow-google-g" aria-hidden="true">G</span>
+                <span>{t(googleConfigured ? 'signup.google' : 'common.google_not_configured')}</span>
+              </button>
+
+              {!googleConfigured && (
+                <p className="auth-flow-status-note">{t('common.google_not_configured')}</p>
+              )}
+            </div>
+
+            <div className="auth-flow-divider">
               <span />
               <strong>{s('email_divider')}</strong>
               <span />
             </div>
 
-            <form className="signup-flow-form" onSubmit={handleSubmit}>
+            <form className="auth-flow-form" onSubmit={handleSubmit}>
               {banner === 'strava_link_confirmation_required' && (
                 <div className="error-alert is-visible" role="alert">{t('profile.strava_link_confirmation_required')}</div>
               )}
@@ -332,7 +415,7 @@ export default function Signup() {
                 </ul>
               </div>
 
-              <div className="signup-flow-field">
+              <div className="form-group form-group--auth">
                 <label htmlFor="email">{t('signup.email_label')}</label>
                 <input
                   type="email"
@@ -345,7 +428,7 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="signup-flow-field">
+              <div className="form-group form-group--auth">
                 <label htmlFor="password">{t('signup.password_label')}</label>
                 <input
                   type="password"
@@ -358,7 +441,7 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="signup-flow-field">
+              <div className="form-group form-group--auth">
                 <label htmlFor="confirm-password">{t('signup.confirm_password_label')}</label>
                 <input
                   type="password"
@@ -371,39 +454,22 @@ export default function Signup() {
                 />
               </div>
 
-              <button type="submit" className="signup-flow-primary" disabled={loading}>
+              <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>
                 {loading ? t('signup.submit_loading') : t('signup.submit')}
               </button>
-
-              <button
-                type="button"
-                className="signup-flow-google"
-                disabled={!googleConfigured}
-                onClick={() => startOAuth('google')}
-              >
-                <span className="auth-flow-google-g" aria-hidden="true">G</span>
-                <span>{t(googleConfigured ? 'signup.google' : 'common.google_not_configured')}</span>
-              </button>
-
-              {!googleConfigured && (
-                <p className="auth-flow-status-note">{t('common.google_not_configured')}</p>
-              )}
             </form>
 
-            <p className="signup-flow-legal">
-              {s('legal_prefix')}{' '}
-              <a href="/terms">{s('footer_terms')}</a>{' '}
-              {s('legal_joiner')}{' '}
-              <a href="/privacy">{s('footer_privacy')}</a>.
-            </p>
+            <div className="signup-link signup-link--auth">
+              <span>{t('signup.signin_prompt')}</span>
+              <Link to="/login">{t('signup.signin_link')}</Link>
+            </div>
           </div>
+
+          <footer className="auth-flow-legal">
+            <FooterNavLinks publicOnly={true} />
+          </footer>
         </section>
       </main>
-
-      <footer className="signup-flow-footer">
-        <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
-        <p>{s('footer_copy')}</p>
-      </footer>
     </div>
   );
 }
