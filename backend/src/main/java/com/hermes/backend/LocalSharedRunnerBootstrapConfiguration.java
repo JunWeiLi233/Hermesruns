@@ -38,7 +38,7 @@ public class LocalSharedRunnerBootstrapConfiguration {
     @Value("${app.local-territory-rival.email:territory-rival@hermes.local}")
     private String territoryRivalEmail;
 
-    @Value("${app.local-territory-rival.password:HermesRival1!}")
+    @Value("${app.local-territory-rival.password:}")
     private String territoryRivalPassword;
 
     @Value("${app.local-territory-rival.strava-athlete-id:140971748}")

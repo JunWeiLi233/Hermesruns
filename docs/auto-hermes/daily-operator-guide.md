@@ -5,8 +5,8 @@ Use this guide for everyday local operation of the Hermes autonomous loops.
 ## Recommended Workspace
 
 - Day-to-day feature work should run from a dedicated worktree, not a dirty primary workspace.
-- For this implementation, the isolated worktree is:
-  - `C:\Users\Junwei\Downloads\Hermes\.worktrees\continuous-website-audit-loop`
+- Use a local path outside your primary checkout, for example:
+  - `<path-to-your-Hermes-checkout>/.worktrees/continuous-website-audit-loop`
 
 ## Daily Use
 

@@ -3,7 +3,7 @@ import fs from "node:fs";
 const REPO_ROOT = path.resolve(".");
 const STATE_DIR = path.join(REPO_ROOT, ".ai-sync", "playwright-state", "default");
 const EMAIL = "strava+140971747@hermes.local";
-const PASSWORD = "HermesLocal1!";
+const PASSWORD = process.env.APP_LOCAL_SHARED_RUNNER_PASSWORD || "local-test-password";
 const { chromium } = await import("playwright");
 const ctx = await chromium.launchPersistentContext(STATE_DIR, { headless: true, viewport: { width: 1440, height: 900 } });
 const page = ctx.pages()[0] || await ctx.newPage();

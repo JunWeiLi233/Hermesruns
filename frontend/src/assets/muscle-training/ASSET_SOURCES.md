@@ -12,3 +12,4 @@ Pexels license: https://www.pexels.com/license/
 | `target-shoulders.webp` | https://www.pexels.com/photo/athletic-man-lifting-dumbbells-in-dark-gym-32695888/ |
 | `target-arms.webp` | https://www.pexels.com/photo/a-man-doing-dumbbell-curls-14793884/ |
 | `target-core.webp` | https://www.pexels.com/photo/a-man-working-out-using-battle-ropes-6390228/ |
+| `anatomy-neon-selector.png` | User-provided Googleusercontent image from the Muscle Training reference HTML in this task. |

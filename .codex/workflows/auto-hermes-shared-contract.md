@@ -25,7 +25,7 @@ Runtime-specific launch details still belong in the command files.
 ## Claim Taxonomy
 
 Hallucination-sensitive runtime claims must use the shared taxonomy in:
-- [auto-hermes-claim-taxonomy.md](C:\Users\Junwei\Downloads\Hermes\.codex\workflows\auto-hermes-claim-taxonomy.md)
+- [auto-hermes-claim-taxonomy.md](./auto-hermes-claim-taxonomy.md)
 
 Allowed claim states:
 - `unavailable`

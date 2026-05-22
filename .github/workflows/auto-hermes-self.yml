@@ -96,10 +96,10 @@ jobs:
           # ref that triggered the workflow.
           ref: ${{ inputs.target_branch || github.ref }}
 
-      - name: Configure git identity (per CLAUDE.md)
+      - name: Configure git identity
         run: |
-          git config user.name  "JunWeiLi233"
-          git config user.email "mcpejunwei@gmail.com"
+          git config user.name  "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
           echo "branch=$(git rev-parse --abbrev-ref HEAD)"
           echo "sha=$(git rev-parse HEAD)"
 
