@@ -31,6 +31,34 @@ function getPrSnapshotStorageKey(email) {
   return `hermes_pr_snapshot_${String(email || '').trim().toLowerCase()}`;
 }
 
+function getDashboardCacheKey(email) {
+  const safe = String(email || '').trim().toLowerCase();
+  return safe ? `hermes_profile_dashboard_${safe}` : 'hermes_profile_dashboard_anon';
+}
+
+// Cap the runs array we write to localStorage. Most accounts have well under
+// this; power users with thousands of activities would otherwise blow past the
+// 5 MB quota. The background revalidate still hydrates the full list into
+// memory, so derived stats stay correct after the first paint.
+const DASHBOARD_CACHE_RUN_LIMIT = 500;
+
+function buildDashboardCacheSnapshot(dashboardData) {
+  if (!dashboardData || !dashboardData.profile) return null;
+  const cappedRuns = Array.isArray(dashboardData.runs)
+    ? dashboardData.runs.slice(0, DASHBOARD_CACHE_RUN_LIMIT)
+    : [];
+  return {
+    cachedAt: Date.now(),
+    profileEmail: dashboardData.profile?.email || null,
+    profile: dashboardData.profile,
+    runs: cappedRuns,
+    coachState: dashboardData.coachState ?? null,
+    coachToday: dashboardData.coachToday ?? null,
+    races: Array.isArray(dashboardData.races) ? dashboardData.races : [],
+    musclePlan: dashboardData.musclePlan ?? null,
+  };
+}
+
 function readJsonStorage(key) {
   if (!key || typeof window === 'undefined') return null;
   try {
@@ -516,7 +544,7 @@ function getCelebrationLabel(entry, t) {
 }
 
 export default function ProfileDashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email: authEmail } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -546,8 +574,39 @@ export default function ProfileDashboard() {
 
     let cancelled = false;
 
+    // Stale-while-revalidate: paint immediately from the last cached payload
+    // for this account, then fetch fresh data in the background. Only the
+    // first-ever login (no cache) shows the loading spinner.
+    const cacheKey = getDashboardCacheKey(authEmail);
+    const cachedSnapshot = readJsonStorage(cacheKey);
+    const cachedMatchesUser =
+      cachedSnapshot
+      && (!authEmail
+        || !cachedSnapshot.profileEmail
+        || String(cachedSnapshot.profileEmail).toLowerCase() === String(authEmail).toLowerCase());
+    const hasUsableCache = Boolean(cachedSnapshot && cachedMatchesUser && Array.isArray(cachedSnapshot.runs));
+
+    if (hasUsableCache) {
+      setProfile(cachedSnapshot.profile || null);
+      setRuns(cachedSnapshot.runs);
+      if (cachedSnapshot.coachState && typeof cachedSnapshot.coachState === 'object') {
+        setCoachState(cachedSnapshot.coachState);
+      }
+      if (cachedSnapshot.coachToday && typeof cachedSnapshot.coachToday === 'object') {
+        setCoachToday(cachedSnapshot.coachToday);
+      }
+      if (Array.isArray(cachedSnapshot.races)) {
+        _setRaces(cachedSnapshot.races);
+        setNextRace(getUpcomingRace(cachedSnapshot.races));
+      }
+      if (cachedSnapshot.musclePlan && typeof cachedSnapshot.musclePlan === 'object' && cachedSnapshot.musclePlan.days) {
+        setMusclePlan(cachedSnapshot.musclePlan);
+      }
+      setLoadState('ready');
+    }
+
     async function loadDashboard() {
-      setLoadState('loading');
+      if (!hasUsableCache) setLoadState('loading');
       try {
         const dashboardData = await loadProfileDashboardData();
 
@@ -583,11 +642,27 @@ export default function ProfileDashboard() {
               });
             }
           }
+
+          // Re-write cache with merged enrichment so next visit hydrates coach
+          // state, today, races, and muscle plan from the cache on first paint.
+          const enrichedSnapshot = buildDashboardCacheSnapshot({
+            ...dashboardData,
+            coachState: enrichmentData.coachState ?? dashboardData.coachState ?? null,
+            coachToday: enrichmentData.coachToday ?? dashboardData.coachToday ?? null,
+            races: Array.isArray(enrichmentData.races) ? enrichmentData.races : dashboardData.races,
+            musclePlan: enrichmentData.musclePlan ?? dashboardData.musclePlan ?? null,
+          });
+          if (enrichedSnapshot) writeJsonStorage(cacheKey, enrichedSnapshot);
         }
 
         setProfile(profileData);
         setRuns(list);
         setLoadState('ready');
+
+        // Write the primary dashboard data to cache right away so the next
+        // page load can paint instantly even if enrichment hasn't merged yet.
+        const primarySnapshot = buildDashboardCacheSnapshot(dashboardData);
+        if (primarySnapshot) writeJsonStorage(cacheKey, primarySnapshot);
 
         const query = new URLSearchParams(window.location.search);
         if (query.get('source') === 'strava') {
@@ -617,7 +692,10 @@ export default function ProfileDashboard() {
           });
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !hasUsableCache) {
+          // Only show the error card when there's no cached snapshot to fall
+          // back on. With cache, we silently keep the stale dashboard visible
+          // and let the next mount retry — better than blanking the user.
           setLoadState('error');
         }
       }
@@ -627,7 +705,7 @@ export default function ProfileDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate, t]);
+  }, [isAuthenticated, navigate, t, authEmail]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
