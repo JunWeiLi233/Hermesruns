@@ -485,7 +485,10 @@ function runPiiLeakHunter(rootDir, inventory) {
 
 function runSecretAndPiiHunter(rootDir) {
   const findings = [];
-  const PII_LITERALS = ["Junwei", "mcpejunwei"]; // Configured PII to redact
+  const PII_LITERALS = (process.env.AUTO_HERMES_PII_LITERALS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
   const SECRET_PATTERNS = [
     { name: "Generic API Key", regex: /[a-f0-9]{32,64}/gi },
     { name: "High Entropy Alphanumeric", regex: /[a-zA-Z0-9\/+]{40,}/g },

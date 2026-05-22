@@ -23,7 +23,7 @@ This file owns commit, push, privacy, and pre-publish rules.
 Before any commit or push:
 
 1. run `git status --short`
-2. ensure git identity is `JunWeiLi233 / mcpejunwei@gmail.com`
+2. ensure git identity matches the project-approved publish identity, preferably using a GitHub noreply address
 3. check for local-only workflow files, screenshots, exports, secrets, and machine-specific artifacts
 4. review `README.md` if the change is user-visible
 5. update `.gitignore` first when local-only artifacts need to stay out of Git

@@ -115,14 +115,14 @@ No prior knowledge of Spring Boot, React, or sports science is required to make 
 >
 > Display name: **Hermes Shared Runner**
 > Email: `strava+140971747@hermes.local`
-> Password: `HermesLocal1!`
+> Password: `<set-local-password>`
 >
 > After login you'll see the dashboard greet you with `早上好, Hermes Shared Runner.` (or `Good morning, Hermes Shared Runner.` in English). If you see a different name, the bootstrap didn't pick up the default — see [How to enable](#how-to-enable) below.
 
 > **Reserved territory rival**
 >
 > Email: `territory-rival@hermes.local`
-> Password: `HermesRival1!`
+> Password: `<set-rival-password>`
 >
 > This second local-only account is reserved for Territory testing. Its simulated runs intentionally overlap the shared runner's later routes with denser GPS samples, so `/territory` can show real contested/conquered land instead of a single-account happy path. Do not repurpose it for normal demos.
 
@@ -140,7 +140,7 @@ Copy-Item Hermes.local.env.example.ps1 Hermes.local.env.ps1
 ```powershell
 $env:APP_LOCAL_SHARED_RUNNER_ENABLED      = "true"
 $env:APP_LOCAL_SHARED_RUNNER_EMAIL        = "strava+140971747@hermes.local"
-$env:APP_LOCAL_SHARED_RUNNER_PASSWORD     = "HermesLocal1!"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD     = "<set-local-password>"
 $env:APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME = "Hermes Shared Runner"
 ```
 
@@ -165,7 +165,7 @@ The relevant lines in `.env.example` (already present):
 ```bash
 APP_LOCAL_SHARED_RUNNER_ENABLED=true
 APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
-APP_LOCAL_SHARED_RUNNER_PASSWORD=HermesLocal1!
+APP_LOCAL_SHARED_RUNNER_PASSWORD=<set-local-password>
 APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME=Hermes Shared Runner
 ```
 
@@ -1200,12 +1200,12 @@ For macOS / Linux, use the PostgreSQL env block above and run the backend agains
 → Short setup guide at [Use the Built-in Mock Account](#mock-account) — start there if you're new.
 
 Hermes can bootstrap a local-only demo account named **Hermes Shared Runner** with seeded shoes and runs:
-`strava+140971747@hermes.local` / `HermesLocal1!`
+`strava+140971747@hermes.local` / `<set-local-password>`
 
 The display name comes from `app.local-shared-runner.display-name`, which defaults to `Hermes Shared Runner` in [`LocalSharedRunnerBootstrapConfiguration.java`](backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapConfiguration.java). Override with `APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME` if you need a different greeting.
 
 It also reserves a territory-conflict test account:
-`territory-rival@hermes.local` / `HermesRival1!`
+`territory-rival@hermes.local` / `<set-rival-password>`
 
 That rival account is only for the real land-conquer game. Its seeded GPS routes overlap the shared runner's routes with denser samples so local `/territory` testing can verify contested ownership and capture behavior.
 
@@ -1214,10 +1214,10 @@ Windows:
 ```powershell
 $env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
 $env:APP_LOCAL_SHARED_RUNNER_EMAIL = "strava+140971747@hermes.local"
-$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "<set-local-password>"
 $env:APP_LOCAL_TERRITORY_RIVAL_ENABLED = "true"
 $env:APP_LOCAL_TERRITORY_RIVAL_EMAIL = "territory-rival@hermes.local"
-$env:APP_LOCAL_TERRITORY_RIVAL_PASSWORD = "HermesRival1!"
+$env:APP_LOCAL_TERRITORY_RIVAL_PASSWORD = "<set-rival-password>"
 .\start_hermes.bat
 ```
 
@@ -1228,10 +1228,10 @@ macOS / Linux:
 ```bash
 export APP_LOCAL_SHARED_RUNNER_ENABLED=true
 export APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
-export APP_LOCAL_SHARED_RUNNER_PASSWORD='HermesLocal1!'
+export APP_LOCAL_SHARED_RUNNER_PASSWORD='<set-local-password>'
 export APP_LOCAL_TERRITORY_RIVAL_ENABLED=true
 export APP_LOCAL_TERRITORY_RIVAL_EMAIL=territory-rival@hermes.local
-export APP_LOCAL_TERRITORY_RIVAL_PASSWORD='HermesRival1!'
+export APP_LOCAL_TERRITORY_RIVAL_PASSWORD='<set-rival-password>'
 cd backend
 ./mvnw spring-boot:run
 ```
@@ -1393,7 +1393,7 @@ Hermes 是你本地运行的**私人跑步教练**，分析你的跑步数据，
 > **登录凭据**
 >
 > 邮箱：`strava+140971747@hermes.local`
-> 密码：`HermesLocal1!`
+> 密码：`<set-local-password>`
 
 #### 如何启用
 
@@ -1409,7 +1409,7 @@ Copy-Item Hermes.local.env.example.ps1 Hermes.local.env.ps1
 ```powershell
 $env:APP_LOCAL_SHARED_RUNNER_ENABLED  = "true"
 $env:APP_LOCAL_SHARED_RUNNER_EMAIL    = "strava+140971747@hermes.local"
-$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "<set-local-password>"
 ```
 
 也可以不修改文件，直接内联设置变量：
@@ -1433,7 +1433,7 @@ cd backend
 ```bash
 APP_LOCAL_SHARED_RUNNER_ENABLED=true
 APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
-APP_LOCAL_SHARED_RUNNER_PASSWORD=HermesLocal1!
+APP_LOCAL_SHARED_RUNNER_PASSWORD=<set-local-password>
 ```
 
 #### 登录后你能看到什么
@@ -2037,14 +2037,14 @@ macOS / Linux 用户请使用上方的 PostgreSQL 环境变量块，直接以 Po
 → 新手快速入口请参阅[使用内置模拟账号](#中文-模拟账号)。
 
 Hermes 可以引导启动一个本地专用的演示账号，预置了跑鞋和跑步数据：
-`strava+140971747@hermes.local` / `HermesLocal1!`
+`strava+140971747@hermes.local` / `<set-local-password>`
 
 Windows：
 
 ```powershell
 $env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
 $env:APP_LOCAL_SHARED_RUNNER_EMAIL = "strava+140971747@hermes.local"
-$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesLocal1!"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "<set-local-password>"
 .\start_hermes.bat
 ```
 
@@ -2055,7 +2055,7 @@ macOS / Linux：
 ```bash
 export APP_LOCAL_SHARED_RUNNER_ENABLED=true
 export APP_LOCAL_SHARED_RUNNER_EMAIL=strava+140971747@hermes.local
-export APP_LOCAL_SHARED_RUNNER_PASSWORD='HermesLocal1!'
+export APP_LOCAL_SHARED_RUNNER_PASSWORD='<set-local-password>'
 cd backend
 ./mvnw spring-boot:run
 ```
