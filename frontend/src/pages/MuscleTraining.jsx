@@ -3019,8 +3019,6 @@ export default function MuscleTraining() {
     muscleFocusTitle: t('muscle_training.stitch_muscle_focus_title'),
     coachingCuesTitle: t('muscle_training.stitch_coaching_cues_title'),
     recoveryImpactTitle: t('muscle_training.stitch_recovery_impact_title'),
-    coachDeckTitle: t('muscle_training.stitch_coach_deck_title'),
-    coachDeckHint: t('muscle_training.stitch_coach_deck_hint'),
     support: t('muscle_training.stitch_support'),
     settings: t('muscle_training.stitch_settings'),
     todayLabel: t('muscle_training.stitch_today_label'),
@@ -3884,12 +3882,6 @@ export default function MuscleTraining() {
           <>
             {/* ── COACH CONTROLS: check-in + preferences behind disclosure ── */}
             <section id="muscle-controls" className="strength-plan-control-deck">
-              <div className="strength-plan-control-head">
-                <div>
-                  <span className="strength-plan-section-label">{stitchCopy.coachDeckTitle}</span>
-                  <p>{stitchCopy.coachDeckHint}</p>
-                </div>
-              </div>
 
             <details className="mt-settings-disclosure">
               <summary className="mt-settings-summary">
