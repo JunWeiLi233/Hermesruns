@@ -34,6 +34,7 @@ import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
 const ROUTE_PREVIEW_CONCURRENCY = 2;
+const ICON_CLS = 'runner-dashboard-side-link-icon';
 const runDate = (r) => new Date(r.startTime || r.startDate || 0);
 
 function localizeStravaSyncMessage(message, t) {
@@ -94,7 +95,7 @@ function RoutePreviewThumb({ preview, provider, runName }) {
         </svg>
       ) : (
         <div className="recent-runs-thumb-route-empty" aria-hidden="true">
-          <AppIcon name="route" className="runner-dashboard-side-link-icon" />
+          <AppIcon name="route" className={ICON_CLS} />
         </div>
       )}
       <div className="recent-runs-thumb-badge">{provider}</div>
@@ -118,10 +119,10 @@ function RunCard({ run, t, lang, routePreviewFallbacks, onOpen }) {
         <div className="recent-runs-card-top">
           <div>
             <h2>{runName}</h2>
-            <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
+            <p className="recent-runs-card-date"><AppIcon name="calendar_today" className={ICON_CLS} />{formatDate(run.startTime || run.startDate, lang)}</p>
           </div>
           <button type="button" className="recent-runs-card-menu" onClick={(event) => event.stopPropagation()} aria-label={t('runs.stitch_more_actions')}>
-            <AppIcon name="more_horiz" className="runner-dashboard-side-link-icon" />
+            <AppIcon name="more_horiz" className={ICON_CLS} />
           </button>
         </div>
         <div className="recent-runs-card-metrics">
@@ -620,7 +621,7 @@ const Runs = memo(function Runs() {
                 onClick={() => navigate(item.route)}
                 aria-label={item.label}
               >
-                <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+                <AppIcon name={item.icon} className={ICON_CLS} />
                 <span className="runner-dashboard-side-link-label">{item.label}</span>
               </button>
             ))}
@@ -651,7 +652,7 @@ const Runs = memo(function Runs() {
               <div className="runner-shell-topbar-profile-actions">
                 <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
                 <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
-                  <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+                  <AppIcon name="settings" className={ICON_CLS} />
                 </button>
                 <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
                   {initials}
@@ -699,7 +700,7 @@ const Runs = memo(function Runs() {
                     <div className="integration-alert-pipeline-list">
                       <article className={`integration-alert-pipeline${stravaLinked ? ' is-live' : ' is-muted'}`}>
                         <div className="integration-alert-pipeline-main">
-                          <div className="integration-alert-pipeline-icon is-strava"><AppIcon name="bolt" className="runner-dashboard-side-link-icon" /></div>
+                          <div className="integration-alert-pipeline-icon is-strava"><AppIcon name="bolt" className={ICON_CLS} /></div>
                           <div>
                             <strong>{t('runs.awaiting_pipeline_strava')}</strong>
                             <p>{t(stravaLinked ? 'runs.awaiting_pipeline_strava_connected' : 'runs.awaiting_pipeline_strava_disconnected')}</p>
@@ -709,7 +710,7 @@ const Runs = memo(function Runs() {
                       </article>
                       <article className="integration-alert-pipeline is-live">
                         <div className="integration-alert-pipeline-main">
-                          <div className="integration-alert-pipeline-icon is-manual"><AppIcon name="folder_open" className="runner-dashboard-side-link-icon" /></div>
+                          <div className="integration-alert-pipeline-icon is-manual"><AppIcon name="folder_open" className={ICON_CLS} /></div>
                           <div>
                             <strong>{t('runs.awaiting_pipeline_manual')}</strong>
                             <p>{t('runs.awaiting_pipeline_manual_ready')}</p>
@@ -719,7 +720,7 @@ const Runs = memo(function Runs() {
                       </article>
                       <article className="integration-alert-pipeline is-standby">
                         <div className="integration-alert-pipeline-main">
-                          <div className="integration-alert-pipeline-icon is-garmin"><AppIcon name="watch" className="runner-dashboard-side-link-icon" /></div>
+                          <div className="integration-alert-pipeline-icon is-garmin"><AppIcon name="watch" className={ICON_CLS} /></div>
                           <div>
                             <strong>{t('runs.awaiting_pipeline_garmin')}</strong>
                             <p>{t('runs.awaiting_pipeline_garmin_ready')}</p>
@@ -729,7 +730,7 @@ const Runs = memo(function Runs() {
                     </div>
                     <button type="button" className="integration-alert-inline-link" onClick={() => navigate('/settings')}>
                       <span>{t('runs.awaiting_pipeline_settings')}</span>
-                      <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
+                      <AppIcon name="chevron_right" className={ICON_CLS} />
                     </button>
                   </section>
                   <section className="integration-alert-support-card">
@@ -780,7 +781,7 @@ const Runs = memo(function Runs() {
               onClick={() => navigate(item.route)}
               aria-label={item.label}
             >
-              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+              <AppIcon name={item.icon} className={ICON_CLS} />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
           ))}
@@ -811,7 +812,7 @@ const Runs = memo(function Runs() {
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
-                <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+                <AppIcon name="settings" className={ICON_CLS} />
               </button>
               <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
                 {initials}
