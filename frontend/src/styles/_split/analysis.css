@@ -536,10 +536,16 @@
     min-height: 40px;
     padding: 0 14px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: rgba(160, 57, 42, 0.12);
+    color: var(--text-strong, #2c2f30);
     font-weight: bold;
     font-size: 0.9rem;
+}
+
+body.theme-midnight .vdot-badge,
+[data-theme="midnight"] .vdot-badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
 }
 
 .vdot-badge-large {
@@ -3789,10 +3795,10 @@
 
 .analysis-intensity-command-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.55fr);
-  gap: 16px;
-  align-items: center;
-  padding: clamp(20px, 2.4vw, 28px) clamp(24px, 3vw, 32px);
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.72fr);
+  gap: 22px;
+  align-items: end;
+  padding: clamp(28px, 4vw, 42px);
 }
 
 .analysis-intensity-command-hero-copy {
@@ -3831,15 +3837,13 @@
 
 .analysis-intensity-command-hero h1 {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 12px;
-  font-size: clamp(2rem, 3.4vw, 3.2rem);
+  flex-direction: column;
+  gap: 4px;
+  font-size: clamp(3.2rem, 8vw, 6.2rem);
   font-style: italic;
   font-weight: 900;
-  letter-spacing: -0.06em;
-  line-height: 1;
+  letter-spacing: -0.08em;
+  line-height: 0.92;
 }
 
 .analysis-intensity-command-hero h1 strong {
@@ -3862,20 +3866,19 @@
 }
 
 .analysis-intensity-command-hero-stat {
-  min-height: auto;
-  padding: 14px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
+  min-height: 148px;
+  padding: 22px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 10px;
 }
 
 .analysis-intensity-command-hero-stat strong {
-  font-size: clamp(1.35rem, 2vw, 1.85rem);
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  letter-spacing: -0.06em;
 }
 
 .analysis-intensity-command-grid {
@@ -4002,25 +4005,24 @@
 }
 
 .analysis-intensity-command-judgment {
-  background: linear-gradient(145deg, rgba(48, 41, 32, 0.96), rgba(36, 30, 24, 0.96));
-  color: #f3ede8;
-  border: 1px solid rgba(240, 117, 97, 0.18);
+  background: linear-gradient(145deg, rgba(240, 117, 97, 0.96), rgba(164, 60, 45, 0.96));
+  color: #260d09;
 }
 
 .analysis-intensity-command-judgment-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: rgba(240, 117, 97, 0.18);
-  color: #f0bcb0;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: rgba(29, 12, 10, 0.12);
+  color: #2f120f;
 }
 
 .analysis-intensity-command-judgment h3,
 .analysis-intensity-command-judgment p {
-  color: #f3ede8;
+  color: #260d09;
 }
 
 .analysis-intensity-command-judgment h3 {
@@ -7130,12 +7132,7 @@
   .mt-today-card,
   .mt-readiness-card--decision
 ) :is(h1, h2, h3, h4, strong, label, .weather-engine-temp-display) {
-  /* Scoped to dark themes only — the cinematic cream-on-dark treatment is
-     correct over the dark gradient, but the runner-minimalist light override
-     downstream flips the background to white in light mode, leaving cream
-     text on white (contrast 1.05–1.18). Default to dark ink; dark themes get
-     the cream back via the higher-specificity sibling rule below. */
-  color: var(--text-strong, #2c2f30) !important;
+  color: #fff4e6 !important;
 }
 
 :is(
