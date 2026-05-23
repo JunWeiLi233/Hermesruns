@@ -36,8 +36,6 @@ import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stra
 
 const ROUTE_PREVIEW_CONCURRENCY = 2;
 const runDate = (r) => new Date(r.startTime || r.startDate || 0);
-const numKm = (r) => Number(r.distanceKm || 0);
-const numSec = (r) => Number(r.movingTimeSeconds || 0);
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -128,8 +126,8 @@ function RunCard({ run, t, lang, routePreviewFallbacks, onOpen }) {
           </button>
         </div>
         <div className="recent-runs-card-metrics">
-          <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(numKm(run), 1, lang)}</strong></div>
-          <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(numKm(run), numSec(run), lang)}</strong></div>
+          <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
+          <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
           <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
         </div>
       </div>
@@ -306,11 +304,11 @@ const Runs = memo(function Runs() {
     }
 
     if (runsSort === 'distance') {
-      result.sort((a, b) => numKm(b) - numKm(a));
+      result.sort((a, b) => Number(b.distanceKm || 0) - Number(a.distanceKm || 0));
     } else if (runsSort === 'pace') {
       result.sort((a, b) => {
-        const paceA = numSec(a) / Math.max(0.1, numKm(a));
-        const paceB = numSec(b) / Math.max(0.1, numKm(b));
+        const paceA = Number(a.movingTimeSeconds || 0) / Math.max(0.1, Number(a.distanceKm || 0));
+        const paceB = Number(b.movingTimeSeconds || 0) / Math.max(0.1, Number(b.distanceKm || 0));
         return paceA - paceB;
       });
     } else {
@@ -364,8 +362,8 @@ const Runs = memo(function Runs() {
     : t('runs.awaiting_status_disconnected'));
   const awaitingPrimaryAction = stravaLinking ? t('profile.strava_link_connecting') : t(stravaLinked ? 'runs.awaiting_retry_sync' : 'runs.awaiting_connect_strava');
   const countText = filteredRuns.length === 0 ? t('runs.count_zero') : t('runs.count_label', { count: filteredRuns.length });
-  const filteredDistanceKm = filteredRuns.reduce((sum, run) => sum + numKm(run), 0);
-  const filteredTimeSeconds = filteredRuns.reduce((sum, run) => sum + numSec(run), 0);
+  const filteredDistanceKm = filteredRuns.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
+  const filteredTimeSeconds = filteredRuns.reduce((sum, run) => sum + Number(run.movingTimeSeconds || 0), 0);
   const totalDistanceText = formatDistance(filteredDistanceKm, 1, lang);
   const totalTimeText = formatDuration(filteredTimeSeconds);
   const avgPaceText = filteredRuns.length > 0
@@ -415,7 +413,7 @@ const Runs = memo(function Runs() {
         groups.push(group);
       }
       group.runs.push(run);
-      group.totalKm += numKm(run)
+      group.totalKm += Number(run.distanceKm || 0)
         || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
     });
     return groups;
@@ -430,12 +428,12 @@ const Runs = memo(function Runs() {
     return uniqueDays.size;
   }, [filteredRuns]);
   const longestRun = useMemo(() => (
-    filteredRuns.reduce((best, run) => (numKm(run) > Number(best?.distanceKm || 0) ? run : best), null)
+    filteredRuns.reduce((best, run) => (Number(run.distanceKm || 0) > Number(best?.distanceKm || 0) ? run : best), null)
   ), [filteredRuns]);
   const fastestRun = useMemo(() => (
     filteredRuns.reduce((best, run) => {
-      const distanceKm = numKm(run);
-      const movingTimeSeconds = numSec(run);
+      const distanceKm = Number(run.distanceKm || 0);
+      const movingTimeSeconds = Number(run.movingTimeSeconds || 0);
       if (distanceKm <= 0 || movingTimeSeconds <= 0) return best;
       const paceSeconds = movingTimeSeconds / distanceKm;
       if (!best || paceSeconds < best.paceSeconds) return { run, paceSeconds };
