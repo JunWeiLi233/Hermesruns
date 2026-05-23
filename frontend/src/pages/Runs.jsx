@@ -35,6 +35,7 @@ import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
 const ROUTE_PREVIEW_CONCURRENCY = 2;
+const runDate = (r) => new Date(r.startTime || r.startDate || 0);
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -181,7 +182,7 @@ const Runs = memo(function Runs() {
     if (fromCache) {
       const hit = readRunsCache(email);
       if (hit) {
-        const sorted = [...hit.runs].sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+        const sorted = [...hit.runs].sort((a, b) => runDate(b) - runDate(a));
         setAllRuns(sorted);
         setProfile(hit.profile);
         setStravaStatus(hit.stravaStatus);
@@ -196,7 +197,7 @@ const Runs = memo(function Runs() {
         apiJson('/api/auth/strava/status').catch(() => null),
       ]);
       const list = Array.isArray(data) ? data : [];
-      list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+      list.sort((a, b) => runDate(b) - runDate(a));
       setAllRuns(list);
       setProfile(profileData);
       setStravaStatus(stravaData);
@@ -286,18 +287,18 @@ const Runs = memo(function Runs() {
 
     if (activeMode === 'year') {
       if (selectedYear != null) {
-        result = result.filter((run) => new Date(run.startTime || run.startDate || 0).getFullYear() === selectedYear);
+        result = result.filter((run) => runDate(run).getFullYear() === selectedYear);
       }
     } else if (activeMode === 'month') {
       const year = selectedYear || now.getFullYear();
       result = result.filter((run) => {
-        const date = new Date(run.startTime || run.startDate || 0);
+        const date = runDate(run);
         if (date.getFullYear() !== year) return false;
         return selectedMonth == null ? true : date.getMonth() === selectedMonth;
       });
     } else if (activeMode === 'day') {
       result = result.filter((run) => {
-        const date = new Date(run.startTime || run.startDate || 0);
+        const date = runDate(run);
         return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
       });
     }
@@ -311,7 +312,7 @@ const Runs = memo(function Runs() {
         return paceA - paceB;
       });
     } else {
-      result.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
+      result.sort((a, b) => runDate(b).getTime() - runDate(a).getTime());
     }
 
     return result;
@@ -320,7 +321,7 @@ const Runs = memo(function Runs() {
   const distinctYears = useMemo(() => {
     const years = new Set();
     allRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime())) years.add(date.getFullYear());
     });
     return [...years].sort((a, b) => b - a);
@@ -330,7 +331,7 @@ const Runs = memo(function Runs() {
     const year = selectedYear || new Date().getFullYear();
     const months = new Set();
     allRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime()) && date.getFullYear() === year) months.add(date.getMonth());
     });
     return [...months].sort((a, b) => a - b);
@@ -395,7 +396,7 @@ const Runs = memo(function Runs() {
       }
     })();
     visibleRuns.forEach((run) => {
-      const started = new Date(run.startTime || run.startDate || 0);
+      const started = runDate(run);
       if (Number.isNaN(started.getTime())) return;
       const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
       let group = groupByKey.get(key);
@@ -421,7 +422,7 @@ const Runs = memo(function Runs() {
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
     filteredRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime())) uniqueDays.add(date.toISOString().slice(0, 10));
     });
     return uniqueDays.size;
