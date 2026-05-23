@@ -50,35 +50,20 @@ function localizeStravaSyncMessage(message, t) {
 
 function buildRoutePreviewModel(points) {
   if (!Array.isArray(points) || points.length < 2) return null;
-
-  let minLat = points[0][0];
-  let maxLat = points[0][0];
-  let minLng = points[0][1];
-  let maxLng = points[0][1];
-
-  points.forEach(([lat, lng]) => {
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
-    minLng = Math.min(minLng, lng);
-    maxLng = Math.max(maxLng, lng);
-  });
-
-  const latSpan = Math.max(0.0001, maxLat - minLat);
-  const lngSpan = Math.max(0.0001, maxLng - minLng);
-  const padding = 12;
-  const width = 100;
-  const height = 100;
-  const innerWidth = width - (padding * 2);
-  const innerHeight = height - (padding * 2);
-
-  const normalized = points.map(([lat, lng]) => {
-    const x = padding + (((lng - minLng) / lngSpan) * innerWidth);
-    const y = padding + (innerHeight - (((lat - minLat) / latSpan) * innerHeight));
-    return [x, y];
-  });
-
+  const lats = points.map((p) => p[0]);
+  const lngs = points.map((p) => p[1]);
+  const minLat = Math.min(...lats);
+  const minLng = Math.min(...lngs);
+  const latSpan = Math.max(0.0001, Math.max(...lats) - minLat);
+  const lngSpan = Math.max(0.0001, Math.max(...lngs) - minLng);
+  const pad = 12;
+  const inner = 76; // 100 viewBox - pad*2
+  const normalized = points.map(([lat, lng]) => [
+    pad + ((lng - minLng) / lngSpan) * inner,
+    pad + inner - ((lat - minLat) / latSpan) * inner,
+  ]);
   return {
-    path: normalized.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
+    path: normalized.map(([x, y], i) => `${i ? 'L' : 'M'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
     start: normalized[0],
     finish: normalized[normalized.length - 1],
   };
