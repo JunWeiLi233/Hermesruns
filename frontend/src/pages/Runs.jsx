@@ -2,26 +2,23 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const RUNS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const RUNS_CACHE_TTL_MS = 86400000;
+const runsCacheKey = (email) => `hermes_runs_v1_${email}`;
 
-function runsCache(email) {
-  const key = `hermes_runs_v1_${email}`;
-  return {
-    read() {
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (!parsed?.cachedAt || Date.now() - parsed.cachedAt > RUNS_CACHE_TTL_MS) return null;
-        return parsed;
-      } catch { return null; }
-    },
-    write(runs, profile, stravaStatus) {
-      try {
-        localStorage.setItem(key, JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
-      } catch { /* quota exceeded — ignore */ }
-    },
-  };
+function readRunsCache(email) {
+  try {
+    const raw = localStorage.getItem(runsCacheKey(email));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.cachedAt || Date.now() - parsed.cachedAt > RUNS_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function writeRunsCache(email, runs, profile, stravaStatus) {
+  try {
+    localStorage.setItem(runsCacheKey(email), JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
+  } catch { /* quota exceeded — ignore */ }
 }
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
@@ -181,10 +178,8 @@ const Runs = memo(function Runs() {
   }, []);
 
   const loadRuns = useCallback(async ({ fromCache = false } = {}) => {
-    const cache = runsCache(email);
-
     if (fromCache) {
-      const hit = cache.read();
+      const hit = readRunsCache(email);
       if (hit) {
         const sorted = [...hit.runs].sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
         setAllRuns(sorted);
@@ -206,7 +201,7 @@ const Runs = memo(function Runs() {
       setProfile(profileData);
       setStravaStatus(stravaData);
       setLoadState('ready');
-      cache.write(list, profileData, stravaData);
+      writeRunsCache(email, list, profileData, stravaData);
     } catch (err) {
       if (err.message !== 'Unauthorized') setLoadState('error');
     }
