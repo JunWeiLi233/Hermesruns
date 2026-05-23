@@ -21,9 +21,6 @@ function runsCache(email) {
         localStorage.setItem(key, JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
       } catch { /* quota exceeded — ignore */ }
     },
-    clear() {
-      try { localStorage.removeItem(key); } catch { /* ignore */ }
-    },
   };
 }
 import { useI18n } from '../contexts/I18nContext';
