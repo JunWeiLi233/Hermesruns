@@ -1266,31 +1266,6 @@ function parseOptionalInteger(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function formatExercisePrescriptionValue(repsOrDuration, isZh) {
-  if (!isZh || !repsOrDuration) return repsOrDuration;
-  return repsOrDuration
-    .replace(/\/side/g, '/侧')
-    .replace(/(\d+(?:-\d+)?)s(?=\/|$)/g, '$1 秒')
-    .replace(/(\d+(?:-\d+)?)m(?=\/|$)/g, '$1 米');
-}
-
-function formatExercisePrescription(exercise, isZh) {
-  return `${exercise.sets} x ${formatExercisePrescriptionValue(exercise.repsOrDuration, isZh)} · RPE ${exercise.targetRpe}`;
-}
-
-function getLocalizedExerciseContent(exercise, isZh) {
-  const definition = getExerciseDefinition(exercise?.name);
-  const locale = isZh ? 'zh' : 'en';
-  return {
-    name: definition?.name?.[locale] || definition?.name?.en || normalizeExerciseName(exercise?.name) || DEFAULT_EXERCISE_COPY.name[locale],
-    muscles: definition?.muscles?.[locale] || DEFAULT_EXERCISE_COPY.muscles[locale],
-    steps: definition?.steps?.[locale] || DEFAULT_EXERCISE_COPY.steps[locale],
-    intent: definition?.intent?.[locale] || exercise?.tempoOrIntent || '',
-    regression: definition?.regression?.[locale] || exercise?.regression || '',
-    progression: definition?.progression?.[locale] || exercise?.progression || '',
-  };
-}
-
 function formatLocalizedExercisePrescriptionValue(repsOrDuration, isZh) {
   if (!isZh || !repsOrDuration) return repsOrDuration;
   return repsOrDuration
@@ -1334,10 +1309,6 @@ function getExerciseContentForItem(item, isZh) {
     };
   }
   return getExerciseCardContent(item?.exercise, isZh);
-}
-
-function getExerciseEquipmentKey(exercise) {
-  return exercise?.equipment || exercise?.equipmentNeeded || '';
 }
 
 function resolveExerciseVisualKey(name, muscles = []) {
@@ -1391,33 +1362,6 @@ function resolveExerciseVisualKey(name, muscles = []) {
       }
       return 'standing';
   }
-}
-
-function getExerciseVideoUrl(name) {
-  const queries = {
-    'Hip airplanes': 'hip airplanes exercise demo',
-    'Calf raises (slow tempo)': 'slow tempo calf raise exercise demo',
-    'Dead bug': 'dead bug exercise demo',
-    'Split squat': 'split squat exercise demo',
-    'Single-leg Romanian deadlift': 'single leg romanian deadlift exercise demo',
-    'Standing calf raise': 'standing calf raise exercise demo',
-    'Side plank': 'side plank exercise demo',
-    'Glute bridge (pause at top)': 'glute bridge pause at top exercise demo',
-    'Tibialis wall raise': 'tibialis wall raise exercise demo',
-    "World's greatest stretch": 'world greatest stretch exercise demo',
-    'Ankle dorsiflexion rocks': 'ankle dorsiflexion rocks exercise demo',
-    'Step-down (knee tracking)': 'step down knee tracking exercise demo',
-    'Hamstring curl (slider or machine)': 'hamstring slider curl exercise demo',
-    'Pallof press': 'pallof press exercise demo',
-    'Farmer carry (suitcase)': 'suitcase carry exercise demo',
-    'Pogo hops': 'pogo hops running drill demo',
-    'Skipping A-drill': 'A skip drill running demo',
-    'Box step-up (explosive)': 'explosive box step up exercise demo',
-    'Single-leg hop (low amplitude)': 'single leg hop low amplitude exercise demo',
-  };
-  const canonicalName = normalizeExerciseName(name);
-  const query = queries[canonicalName] || `${canonicalName} exercise demo`;
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
 
 function LegacyMuscleMap({ isZh }) {
@@ -2384,7 +2328,7 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
   );
 }
 
-function ExerciseIllustration({ exerciseName, muscles = [], isZh = false }) {
+function ExerciseIllustration({ exerciseName, muscles = [], isZh: _isZh = false }) {
   const mode = resolveExerciseVisualKey(exerciseName, muscles);
   const visibleMuscles = (muscles || []).filter(Boolean);
   const muscleSummary = visibleMuscles.join(' / ') || 'Target muscles';
@@ -2636,130 +2580,6 @@ function ExerciseIllustration({ exerciseName, muscles = [], isZh = false }) {
       <text x="126" y="29" textAnchor="middle" className="muscle-map-legend-copy">{active.cue}</text>
     </svg>
   );
-}
-
-function getExerciseGuide(name, isZh) {
-  const guides = {
-    'Hip airplanes': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['单腿站稳，髋部先保持正对前方。', '像门轴一样慢慢打开和合上骨盆。', '膝盖微屈，躯干不要左右乱晃。']
-        : ['Stand tall on one leg with the hips square.', 'Open and close the pelvis slowly like a hinge.', 'Keep a soft knee and avoid trunk wobble.'],
-    },
-    'Calf raises (slow tempo)': {
-      muscles: isZh ? ['小腿'] : ['Calves'],
-      steps: isZh
-        ? ['前脚掌稳稳压地。', '慢慢提起脚跟，在顶部停住一下。', '下放时保持控制，不要直接掉下去。']
-        : ['Press through the ball of the foot.', 'Rise slowly and pause at the top.', 'Lower with control instead of dropping.'],
-    },
-    'Dead bug': {
-      muscles: isZh ? ['核心'] : ['Core'],
-      steps: isZh
-        ? ['仰卧，肋骨收下，腰背贴稳。', '对侧手脚一起伸远。', '全程别让下背拱起来。']
-        : ['Lie on your back with the ribs down.', 'Reach the opposite arm and leg away together.', 'Keep the low back quiet and the core braced.'],
-    },
-    'Split squat': {
-      muscles: isZh ? ['臀部', '腘绳肌'] : ['Glutes', 'Hamstrings'],
-      steps: isZh
-        ? ['前后站开，身体保持直立。', '垂直下沉，再通过前脚发力起身。', '前膝跟着脚尖方向走，不要内扣。']
-        : ['Set up in a split stance.', 'Drop straight down and drive through the front foot.', 'Track the front knee over the toes.'],
-    },
-    'Single-leg Romanian deadlift': {
-      muscles: isZh ? ['臀部', '腘绳肌'] : ['Glutes', 'Hamstrings'],
-      steps: isZh
-        ? ['单腿站稳，另一条腿向后伸。', '从髋部折叠，不要弯腰塌背。', '起身时主动夹臀回正。']
-        : ['Balance on one leg and reach the other leg back.', 'Hinge from the hips instead of rounding forward.', 'Squeeze the glute to return tall.'],
-    },
-    'Standing calf raise': {
-      muscles: isZh ? ['小腿'] : ['Calves'],
-      steps: isZh
-        ? ['双脚平均受力站稳。', '提起脚跟并保持身体拉长。', '缓慢下放，感受小腿发力。']
-        : ['Stand evenly through both feet.', 'Lift the heels and stay tall through the body.', 'Lower slowly to load the calves.'],
-    },
-    'Side plank': {
-      muscles: isZh ? ['核心'] : ['Core'],
-      steps: isZh
-        ? ['身体侧向排成一条线。', '主动提髋，不要塌腰。', '保持稳定呼吸，肩颈放松。']
-        : ['Stack the body in one straight side line.', 'Lift the hips instead of sagging.', 'Breathe steadily and keep the neck relaxed.'],
-    },
-    'Glute bridge (pause at top)': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['仰卧屈膝，双脚踩稳。', '把髋抬高到身体成斜线。', '顶部停住 1 秒，再慢慢放下。']
-        : ['Lie down with knees bent and feet planted.', 'Drive the hips up into a long line.', 'Pause at the top before lowering.'],
-    },
-    'Tibialis wall raise': {
-      muscles: isZh ? ['小腿前侧'] : ['Shins'],
-      steps: isZh
-        ? ['背靠墙或抓稳支撑。', '把前脚掌和脚尖提起来。', '缓慢下放，感受胫骨前侧发力。']
-        : ['Lean back into a stable support.', 'Lift the forefoot and pull the toes up.', 'Lower with control and feel the front of the shin.'],
-    },
-    "World's greatest stretch": {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['进入长弓步位。', '一手撑地，另一手打开胸椎向上转。', '每次动作都带着呼吸和控制。']
-        : ['Step into a long lunge.', 'One hand stays down while the other opens the chest up.', 'Move slowly and breathe through each rep.'],
-    },
-    'Ankle dorsiflexion rocks': {
-      muscles: isZh ? ['踝关节'] : ['Ankles'],
-      steps: isZh
-        ? ['前脚掌和脚跟都踩稳。', '膝盖向前推，但脚跟不离地。', '来回轻推，找到踝关节活动度。']
-        : ['Keep the front foot flat.', 'Drive the knee forward without lifting the heel.', 'Rock in and out to open ankle motion.'],
-    },
-    'Step-down (knee tracking)': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['站在小台阶上。', '慢慢把另一只脚向地面点下去。', '支撑腿的膝盖始终对准脚尖。']
-        : ['Stand on a small step.', 'Lower the free foot toward the floor slowly.', 'Keep the stance knee tracking clean over the foot.'],
-    },
-    'Hamstring curl (slider or machine)': {
-      muscles: isZh ? ['腘绳肌'] : ['Hamstrings'],
-      steps: isZh
-        ? ['先把髋抬稳。', '用脚跟把滑盘或器械拉向身体。', '回程慢放，不要让髋掉下去。']
-        : ['Start from a stable bridged position.', 'Pull the heels toward the body.', 'Return slowly without dropping the hips.'],
-    },
-    'Pallof press': {
-      muscles: isZh ? ['核心'] : ['Core'],
-      steps: isZh
-        ? ['站稳，阻力从身体侧面来。', '双手向前推直。', '全程抗住身体被带偏。']
-        : ['Stand tall with the resistance pulling from the side.', 'Press the hands straight out.', 'Fight rotation and keep the torso quiet.'],
-    },
-    'Farmer carry (suitcase)': {
-      muscles: isZh ? ['核心', '臀部'] : ['Core', 'Glutes'],
-      steps: isZh
-        ? ['单手提重物并站高。', '走路时身体不要向一侧歪。', '步幅短一点，躯干稳定。']
-        : ['Carry the load in one hand and stand tall.', 'Do not lean toward or away from the weight.', 'Walk with short steady steps and a braced trunk.'],
-    },
-    'Pogo hops': {
-      muscles: isZh ? ['小腿'] : ['Calves'],
-      steps: isZh
-        ? ['像弹簧一样通过脚踝快速反弹。', '动作要短、轻、快。', '身体保持高，不做深蹲式跳跃。']
-        : ['Bounce through the ankles like springs.', 'Keep the contacts short, light, and quick.', 'Stay tall instead of turning it into a squat jump.'],
-    },
-    'Skipping A-drill': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['抬膝到接近髋高。', '脚下快速回弹，落点在身体正下方。', '手臂自然配合节奏。']
-        : ['Lift the knee to around hip height.', 'Strike quickly under the body and bounce out.', 'Let the arms match the rhythm.'],
-    },
-    'Box step-up (explosive)': {
-      muscles: isZh ? ['臀部', '小腿'] : ['Glutes', 'Calves'],
-      steps: isZh
-        ? ['整只脚踩上台面。', '快速向上驱动身体。', '下台时轻一点，不要砸地。']
-        : ['Plant the whole foot on the box.', 'Drive up fast through the stance leg.', 'Step down softly with control.'],
-    },
-    'Single-leg hop (low amplitude)': {
-      muscles: isZh ? ['小腿', '核心'] : ['Calves', 'Core'],
-      steps: isZh
-        ? ['单腿轻弹，不追求跳得很高。', '落地时膝盖稳定。', '每一下都像干净的小反弹。']
-        : ['Hop lightly on one leg without chasing height.', 'Land with a quiet stable knee.', 'Think of crisp elastic contacts each rep.'],
-    },
-  };
-
-  return guides[name] || {
-    muscles: isZh ? ['跑者力量'] : ['Runner strength'],
-    steps: isZh ? ['保持稳定。', '动作受控。', '全程均匀呼吸。'] : ['Stay stable.', 'Move with control.', 'Keep your breathing steady.'],
-  };
 }
 
 export default function MuscleTraining() {
@@ -3243,17 +3063,6 @@ export default function MuscleTraining() {
     ...libraryProtocolItems,
   ], [filteredProtocolItems, libraryProtocolItems]);
 
-  const selectedProtocolItem = useMemo(() => (
-    visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
-    || visibleExerciseItems[0]
-    || null
-  ), [selectedExerciseKey, visibleExerciseItems]);
-
-  const selectedExerciseCopy = useMemo(
-    () => (selectedProtocolItem ? getExerciseContentForItem(selectedProtocolItem, isZh) : null),
-    [isZh, selectedProtocolItem],
-  );
-
   const volumeCompletion = useMemo(() => {
     const recommended = Math.max(weekDoseStats.recommended || weekDoseStats.planned || 1, 1);
     return Math.min(100, Math.round((weekDoseStats.planned / recommended) * 100));
@@ -3332,10 +3141,6 @@ export default function MuscleTraining() {
     window.setTimeout(() => {
       if (nextKey) document.getElementById(`mt-exercise-${nextKey}`)?.focus();
     }, 0);
-  }
-
-  function handleExerciseSelect(item) {
-    setSelectedExerciseKey(getProtocolItemKey(item));
   }
 
   useEffect(() => {

@@ -28,7 +28,7 @@ export default function NodePalette({ onDragStart, onClear, onExecute, onAddNode
         <h3 id={paletteTitleId}>{t('workflow.nodes_label')}</h3>
       </div>
       <div className="wf-palette-items" role="list" aria-label={t('workflow.nodes_label')}>
-        {NODE_TYPES.map(({ type, labelKey, ariaKey, icon: Icon, color }) => (
+        {NODE_TYPES.map(({ type, labelKey, ariaKey, icon: _Icon, color }) => (
           <div key={type} role="listitem">
             <button
               type="button"

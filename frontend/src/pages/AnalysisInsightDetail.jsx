@@ -657,7 +657,6 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
   if (daysSinceLastRun != null && daysSinceLastRun >= 2) readinessScore += 6;
   readinessScore = clamp(Math.round(readinessScore), 38, 95);
 
-  const readinessBandLabel = t(readinessScore >= 78 ? 'analysisInsight.readiness_high' : readinessScore >= 62 ? 'analysisInsight.readiness_medium' : 'analysisInsight.readiness_conservative');
   const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
   const sessionTemplates = mergedCoachSessionTemplates(lang, phaseKey);
   const sessionTargets = [
