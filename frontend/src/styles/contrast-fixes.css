@@ -101,7 +101,6 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(
    rule above. */
 body:is(.theme-light, .theme-high-contrast-light) #root :is(
   .recent-runs-insight-card.recent-runs-insight-card--primary,
-  .analysis-coach-command-hero,
   .analysis-coach-command-primary-plan,
   .analysis-intensity-command-judgment,
   .analysis-cinematic-card--coach,
@@ -110,10 +109,49 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(
   .runner-dashboard-workout-card,
   .runner-dashboard-feature-primary,
   .runner-dashboard-feature-secondary,
+  .hd-today-card,
   .mt-ip-current-split,
   .mt-ip-primary-plan,
   .mt-ip-judgment-card
 ) strong {
+  color: #fff6f2 !important;
+}
+
+/* `.analysis-coach-command-hero` used to live in the restore-cream list,
+   but the hero is mixed-surface: the kicker pills sit on a faint coral
+   wash, the `准备好` h1 + paragraph sit on a light cream gradient, the
+   three side metric cards (`.analysis-coach-command-hero-metric`) have a
+   light cream bg `rgba(255, 250, 244, 0.99)`, and the coach identity
+   badge sits on transparent over the same light cream surface. Painting
+   every `<strong>` in this section cream made the metric values
+   ("82" / "快 5:00" / "3:33:25"), the coach name ("Elias Brooks"), and
+   the badge copy effectively invisible (≈1.03 contrast ratio,
+   cream-on-cream). Removing it lets Pattern A's default rule paint these
+   `<strong>` charcoal again, which is what `_split/analysis.css:4360`
+   intended via `.analysis-coach-command-hero-metric strong { color:
+   var(--text-strong) }`. */
+
+/* Restore cream on the .hd-today-card hero on /profile too — its heading
+   (".hd-today-title", an h2) gets caught by the Pattern A blanket rule that
+   pins h1-h4 inside .runner-dashboard-page to charcoal, dropping contrast
+   against the dark warm-gradient background to ~1.05:1. Specifically:
+   "休息" / "6-8 km 日常有氧跑" / "6:31 /公里 - 5:27 /公里" / "58.3 公里"
+   were invisible until this exception was added. The strong values are
+   already covered by the restore-cream block above; this one handles the
+   heading + supporting copy.
+
+   Specificity note: Pattern A's selector uses `:is(h1, h2, h3, h4,
+   .recent-runs-card-top h2, .shoes-card-head h2)` which (per CSS :is()
+   rules) carries the MAX-arm specificity = 1 class + 1 element. Combined
+   with `body:is(...) #root :is(.runner-dashboard-page, ...)` Pattern A
+   resolves to (0,1,4,1). To beat that here we chain the full ancestor
+   path: body + #root + .runner-dashboard-page + .hd-content +
+   .hd-today-card + .hd-today-title = (0,1,5,0), which wins on class count.
+   The matching `.hd-today-copy` covers the supporting body text inside
+   the same card if/when it ships. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-title,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-purpose,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
   color: #fff6f2 !important;
 }
 
