@@ -71,13 +71,16 @@ function buildRoutePreviewModel(points) {
 
 function normalizeRoutePreview(preview) {
   if (!preview || typeof preview !== 'object' || !preview.path) return null;
-  const xy = (key, alt) => Array.isArray(preview[key])
-    ? [Number(preview[key][0]), Number(preview[key][1])]
-    : [Number(preview[`${alt}X`]), Number(preview[`${alt}Y`])];
-  const start = xy('start', 'start');
-  const finish = xy('finish', 'finish');
-  if (![...start, ...finish].every(Number.isFinite)) return null;
-  return { path: preview.path, start, finish };
+  const startX = Array.isArray(preview.start) ? Number(preview.start[0]) : Number(preview.startX);
+  const startY = Array.isArray(preview.start) ? Number(preview.start[1]) : Number(preview.startY);
+  const finishX = Array.isArray(preview.finish) ? Number(preview.finish[0]) : Number(preview.finishX);
+  const finishY = Array.isArray(preview.finish) ? Number(preview.finish[1]) : Number(preview.finishY);
+  if (![startX, startY, finishX, finishY].every(Number.isFinite)) return null;
+  return {
+    path: preview.path,
+    start: [startX, startY],
+    finish: [finishX, finishY],
+  };
 }
 
 function RoutePreviewThumb({ preview, provider, runName }) {
