@@ -490,9 +490,6 @@ const Runs = memo(function Runs() {
     if (pendingRuns.length === 0) return undefined;
 
     async function loadRoutePreviews() {
-      const setFallback = (id, value) => {
-        if (!cancelled) setRoutePreviewFallbacks((current) => ({ ...current, [id]: value }));
-      };
       const workers = Array.from(
         { length: Math.min(ROUTE_PREVIEW_CONCURRENCY, pendingRuns.length) },
         async (_, workerIndex) => {
@@ -501,16 +498,26 @@ const Runs = memo(function Runs() {
             routePreviewInflightRef.current.add(run.id);
             try {
               const response = await apiFetch(`/api/activities/${run.id}/points`);
-              if (!response.ok) { setFallback(run.id, null); continue; }
+              if (!response.ok) {
+                if (!cancelled) {
+                  setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: null }));
+                }
+                continue;
+              }
               const data = await response.json();
               const points = Array.isArray(data)
                 ? data
                   .map((point) => [Number(point.latitude), Number(point.longitude)])
                   .filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude))
                 : [];
-              setFallback(run.id, buildRoutePreviewModel(points));
+              const preview = buildRoutePreviewModel(points);
+              if (!cancelled) {
+                setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: preview }));
+              }
             } catch {
-              setFallback(run.id, null);
+              if (!cancelled) {
+                setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: null }));
+              }
             } finally {
               routePreviewInflightRef.current.delete(run.id);
             }
