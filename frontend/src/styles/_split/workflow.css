@@ -22,6 +22,26 @@
   gap: 24px;
 }
 
+/* Full-screen canvas on /workflows. The base `.runner-shell-canvas` rule
+   clamps inner content to `min(1120px, calc(100% - 40px))` and centers it
+   with `margin: 0 auto`. A separate `.runner-dashboard-page
+   .runner-shell-canvas` rule further pins width to
+   `min(100% - 32px, 1390px) !important`, leaving ~322px of unused
+   right-gutter on a 1920px viewport.
+   The workflow surface benefits from edge-to-edge horizontal room
+   (palette + canvas + hero side-by-side) so override both clamps. Uses
+   `!important` to beat the dashboard-page `!important` rule above.
+   Scoped to `.workflow-builder-page` so other dashboards keep their
+   normal centered layout. Mirrors the existing
+   `.profile-dashboard-page .runner-shell-canvas` and
+   `.rewards-ledger-page .runner-shell-canvas` full-bleed overrides. */
+.runner-dashboard-page.workflow-builder-page .runner-shell-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-inline: clamp(18px, 2.4vw, 36px);
+}
+
 .workflow-builder-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
@@ -602,12 +622,12 @@
   background: rgba(240, 117, 97, 0.08) !important;
 }
 
-body.theme-dark .workflow-builder-hero-copy,
-body.theme-dark .workflow-builder-hero-status,
-body.theme-dark .workflow-builder-panel,
-body.theme-dark .workflow-builder-canvas,
-body.theme-dark .workflow-builder-state,
-body.theme-dark .workflow-builder-empty {
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-hero-copy,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-hero-status,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-panel,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-canvas,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-state,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-empty {
   border-color: rgba(255, 255, 255, 0.06);
   background:
     linear-gradient(155deg, rgba(20, 26, 38, 0.92), rgba(10, 12, 20, 0.9)),
@@ -617,106 +637,106 @@ body.theme-dark .workflow-builder-empty {
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .workflow-builder-hero-copy h1,
-body.theme-dark .workflow-builder-panel h2,
-body.theme-dark .workflow-builder-workspace-copy h2,
-body.theme-dark .workflow-builder-state h2,
-body.theme-dark .workflow-builder-empty h2,
-body.theme-dark .workflow-builder-hero-status strong,
-body.theme-dark .workflow-builder-step-copy h3,
-body.theme-dark .workflow-builder-example-copy h3 {
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-hero-copy h1,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-panel h2,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-workspace-copy h2,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-state h2,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-empty h2,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-hero-status strong,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-step-copy h3,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-example-copy h3 {
   color: var(--text1, #f8fafc);
 }
 
-body.theme-dark .workflow-builder-hero-copy p,
-body.theme-dark .workflow-builder-panel p,
-body.theme-dark .workflow-builder-workspace-copy p,
-body.theme-dark .workflow-builder-state p,
-body.theme-dark .workflow-builder-empty p,
-body.theme-dark .workflow-builder-hero-status p,
-body.theme-dark .workflow-builder-step-copy p,
-body.theme-dark .workflow-builder-example-copy p {
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-hero-copy p,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-panel p,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-workspace-copy p,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-state p,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-empty p,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-hero-status p,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-step-copy p,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-example-copy p {
   color: var(--text2, #cbd5e1);
 }
 
-body.theme-dark .workflow-builder-topnav-pill,
-body.theme-dark .workflow-builder-hero-chip,
-body.theme-dark .workflow-builder-step-index {
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-topnav-pill,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-hero-chip,
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-step-index {
   background: rgba(255, 255, 255, 0.08);
   color: var(--primary, #ffb4a7);
 }
 
-body.theme-dark .workflow-builder-example-card {
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-example-card {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .workflow-builder-example-card.is-active {
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-example-card.is-active {
   border-color: rgba(240, 117, 97, 0.28);
 }
 
-body.theme-dark .workflow-builder-example-btn[aria-pressed="true"] {
+body:is(.theme-midnight, .theme-high-contrast) .workflow-builder-example-btn[aria-pressed="true"] {
   background: rgba(255, 255, 255, 0.12);
   color: var(--text1, #f8fafc);
 }
 
-body.theme-dark .wf-canvas-wrapper {
+body:is(.theme-midnight, .theme-high-contrast) .wf-canvas-wrapper {
   background:
     radial-gradient(circle at 18% 12%, rgba(240, 117, 97, 0.14), transparent 30%),
     radial-gradient(circle at 82% 18%, rgba(6, 182, 212, 0.12), transparent 28%),
     linear-gradient(180deg, rgba(10, 12, 20, 0.98), rgba(13, 18, 28, 0.98));
 }
 
-body.theme-dark .wf-palette {
+body:is(.theme-midnight, .theme-high-contrast) .wf-palette {
   background:
     linear-gradient(180deg, rgba(16, 21, 32, 0.96), rgba(9, 12, 19, 0.94)),
     radial-gradient(circle at top, rgba(240, 117, 97, 0.08), transparent 44%);
   border-left-color: rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .wf-palette-header h3,
-body.theme-dark .wf-node-header,
-body.theme-dark .wf-node-output-text,
-body.theme-dark .wf-node-label,
-body.theme-dark .wf-node-output-preview {
+body:is(.theme-midnight, .theme-high-contrast) .wf-palette-header h3,
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-header,
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-output-text,
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-label,
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-output-preview {
   color: rgba(226, 232, 240, 0.74);
 }
 
-body.theme-dark .wf-palette-item,
-body.theme-dark .wf-node {
+body:is(.theme-midnight, .theme-high-contrast) .wf-palette-item,
+body:is(.theme-midnight, .theme-high-contrast) .wf-node {
   background: rgba(17, 23, 35, 0.96);
   border-color: rgba(255, 255, 255, 0.06);
   color: var(--text1, #f8fafc);
 }
 
-body.theme-dark .wf-node-textarea,
-body.theme-dark .wf-node-select {
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-textarea,
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-select {
   background: rgba(8, 12, 20, 0.88);
   color: var(--text1, #e2e8f0);
   border-color: rgba(255, 255, 255, 0.08);
 }
 
-body.theme-dark .wf-node-textarea:focus,
-body.theme-dark .wf-node-select:focus {
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-textarea:focus,
+body:is(.theme-midnight, .theme-high-contrast) .wf-node-select:focus {
   border-color: rgba(240, 117, 97, 0.34);
   box-shadow: 0 0 0 3px rgba(240, 117, 97, 0.12);
 }
 
-body.theme-dark .wf-handle {
+body:is(.theme-midnight, .theme-high-contrast) .wf-handle {
   border-color: rgba(17, 23, 35, 1);
 }
 
-body.theme-dark .wf-controls,
-body.theme-dark .wf-minimap {
+body:is(.theme-midnight, .theme-high-contrast) .wf-controls,
+body:is(.theme-midnight, .theme-high-contrast) .wf-minimap {
   background: rgba(17, 23, 35, 0.94) !important;
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
-body.theme-dark .wf-controls button {
+body:is(.theme-midnight, .theme-high-contrast) .wf-controls button {
   color: rgba(226, 232, 240, 0.74) !important;
 }
 
-body.theme-dark .wf-controls button:hover {
+body:is(.theme-midnight, .theme-high-contrast) .wf-controls button:hover {
   background: rgba(255, 255, 255, 0.06) !important;
 }
 
@@ -766,7 +786,7 @@ body.theme-dark .wf-controls button:hover {
     border-top: 1px solid rgba(33, 26, 20, 0.08);
   }
 
-  body.theme-dark .wf-palette {
+  body:is(.theme-midnight, .theme-high-contrast) .wf-palette {
     border-top-color: rgba(255, 255, 255, 0.06);
   }
 }
@@ -849,14 +869,19 @@ body.theme-dark .wf-controls button:hover {
 }
 
 .wf-hero-title {
+  /* Kinetic Editorial baseline: hero title sits in a 1.6fr column next to
+     the canvas-status card. The old 4.6rem cap overpowered the right
+     card visually and forced harsh line breaks. Scale down to the
+     reference's 1.8-2.6rem range so the title reads tight but doesn't
+     swallow the rest of the row. */
   margin: 0 0 14px;
-  max-width: 11ch;
+  max-width: 18ch;
   color: var(--text-strong, #2c2f30);
   font-family: var(--font-display, Manrope, sans-serif);
-  font-size: clamp(2.6rem, 4.2vw, 4.6rem);
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
   font-weight: 800;
-  letter-spacing: -0.06em;
-  line-height: 0.92;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
 }
 
 .wf-hero-copy {
@@ -939,18 +964,20 @@ body.theme-dark .wf-controls button:hover {
   line-height: 1.65;
 }
 
-/* mock canvas nodes in hero card */
+/* Mock canvas — Kinetic Editorial flow diagram. Three pill nodes carrying
+   a colored dot + label, joined by dashed SVG edges so the preview reads
+   like a real workflow graph instead of a flat-button row. */
 .wf-mock-canvas {
   position: relative;
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 16px 12px;
+  padding: 18px 14px;
   border-radius: 16px;
   background:
-    radial-gradient(circle at 20% 30%, rgba(240, 117, 97, 0.07), transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(56, 189, 248, 0.07), transparent 40%),
-    rgba(250, 247, 244, 0.9);
+    radial-gradient(circle at 18% 22%, rgba(240, 117, 97, 0.06), transparent 46%),
+    radial-gradient(circle at 82% 78%, rgba(56, 189, 248, 0.05), transparent 46%),
+    rgba(252, 249, 245, 0.96);
   border: 1px solid rgba(33, 26, 20, 0.06);
   overflow: hidden;
 }
@@ -958,28 +985,55 @@ body.theme-dark .wf-controls button:hover {
 .wf-mock-node {
   position: relative;
   z-index: 1;
-  min-width: 72px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(33, 26, 20, 0.08);
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-strong, #2c2f30);
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(91, 68, 44, 0.1);
-  border-top: 3px solid var(--wf-mock-accent, #f07561);
+  text-align: left;
+  box-shadow: 0 3px 8px rgba(91, 68, 44, 0.08);
+  white-space: nowrap;
+}
+
+.wf-mock-label {
+  display: inline-block;
+}
+
+.wf-mock-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--wf-mock-accent, #f07561);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wf-mock-accent, #f07561) 22%, transparent);
 }
 
 .wf-mock-node--input  { --wf-mock-accent: #f07561; }
 .wf-mock-node--agent  { --wf-mock-accent: #14b8a6; }
 .wf-mock-node--output { --wf-mock-accent: #22c55e; }
 
+/* SVG dashed edge between mock nodes. Replaces the prior flat-gradient
+   `<div>` edge with a coral→sage dashed line that matches the reference
+   design's flow-diagram feel. */
 .wf-mock-edge {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 24px;
   height: 2px;
-  background: linear-gradient(90deg, rgba(240, 117, 97, 0.3), rgba(34, 197, 94, 0.3));
-  margin: 0 4px;
+  display: block;
+}
+
+.wf-mock-edge line {
+  stroke: rgba(33, 26, 20, 0.22);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .wf-mock-edge line {
+  stroke: rgba(255, 255, 255, 0.22);
 }
 
 /* start blank button */
@@ -1347,10 +1401,10 @@ body.theme-dark .wf-controls button:hover {
 
 /* ─── Dark mode for Kinetic classes ─────────────────────────────────── */
 
-body.theme-dark .wf-hero,
-body.theme-dark .wf-canvas-card,
-body.theme-dark .wf-steps-card,
-body.theme-dark .wf-templates-card {
+body:is(.theme-midnight, .theme-high-contrast) .wf-hero,
+body:is(.theme-midnight, .theme-high-contrast) .wf-canvas-card,
+body:is(.theme-midnight, .theme-high-contrast) .wf-steps-card,
+body:is(.theme-midnight, .theme-high-contrast) .wf-templates-card {
   border-color: rgba(255, 255, 255, 0.06);
   background:
     linear-gradient(155deg, rgba(20, 26, 38, 0.92), rgba(10, 12, 20, 0.9)),
@@ -1360,98 +1414,98 @@ body.theme-dark .wf-templates-card {
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .wf-hero-title,
-body.theme-dark .wf-card-title,
-body.theme-dark .wf-workspace-copy h2,
-body.theme-dark .wf-step-text h3,
-body.theme-dark .wf-template-copy h3 {
+body:is(.theme-midnight, .theme-high-contrast) .wf-hero-title,
+body:is(.theme-midnight, .theme-high-contrast) .wf-card-title,
+body:is(.theme-midnight, .theme-high-contrast) .wf-workspace-copy h2,
+body:is(.theme-midnight, .theme-high-contrast) .wf-step-text h3,
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-copy h3 {
   color: var(--text1, #f8fafc);
 }
 
-body.theme-dark .wf-hero-copy,
-body.theme-dark .wf-canvas-card-desc,
-body.theme-dark .wf-canvas-card-status,
-body.theme-dark .wf-step-text p,
-body.theme-dark .wf-template-copy p,
-body.theme-dark .wf-workspace-status {
+body:is(.theme-midnight, .theme-high-contrast) .wf-hero-copy,
+body:is(.theme-midnight, .theme-high-contrast) .wf-canvas-card-desc,
+body:is(.theme-midnight, .theme-high-contrast) .wf-canvas-card-status,
+body:is(.theme-midnight, .theme-high-contrast) .wf-step-text p,
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-copy p,
+body:is(.theme-midnight, .theme-high-contrast) .wf-workspace-status {
   color: var(--text2, #cbd5e1);
 }
 
-body.theme-dark .wf-chip {
+body:is(.theme-midnight, .theme-high-contrast) .wf-chip {
   background: rgba(255, 255, 255, 0.08);
   color: var(--primary, #ffb4a7);
 }
 
-body.theme-dark .wf-step-num {
+body:is(.theme-midnight, .theme-high-contrast) .wf-step-num {
   background: rgba(255, 255, 255, 0.08);
   color: var(--primary, #ffb4a7);
 }
 
-body.theme-dark .wf-template-icon {
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-icon {
   background: rgba(255, 255, 255, 0.08);
   color: var(--primary, #ffb4a7);
 }
 
-body.theme-dark .wf-template-item {
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-item {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .wf-template-item.is-loaded {
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-item.is-loaded {
   border-color: rgba(240, 117, 97, 0.28);
 }
 
-body.theme-dark .wf-template-btn {
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-btn {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.1);
   color: var(--primary, #ffb4a7);
 }
 
-body.theme-dark .wf-template-btn:hover,
-body.theme-dark .wf-template-btn.is-loaded {
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-btn:hover,
+body:is(.theme-midnight, .theme-high-contrast) .wf-template-btn.is-loaded {
   background: rgba(240, 117, 97, 0.16);
   color: var(--text1, #f8fafc);
 }
 
-body.theme-dark .wf-workspace-body {
+body:is(.theme-midnight, .theme-high-contrast) .wf-workspace-body {
   border-color: rgba(255, 255, 255, 0.06);
   box-shadow:
     0 24px 64px rgba(0, 0, 0, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .wf-workspace-canvas {
+body:is(.theme-midnight, .theme-high-contrast) .wf-workspace-canvas {
   background:
     radial-gradient(circle at 18% 12%, rgba(240, 117, 97, 0.14), transparent 30%),
     radial-gradient(circle at 82% 18%, rgba(6, 182, 212, 0.12), transparent 28%),
     linear-gradient(180deg, rgba(10, 12, 20, 0.98), rgba(13, 18, 28, 0.98));
 }
 
-body.theme-dark .wf-palette-mock {
+body:is(.theme-midnight, .theme-high-contrast) .wf-palette-mock {
   border-left-color: rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .wf-workspace-empty {
+body:is(.theme-midnight, .theme-high-contrast) .wf-workspace-empty {
   background:
     linear-gradient(135deg, rgba(16, 21, 32, 0.96), rgba(9, 12, 19, 0.92)),
     radial-gradient(circle at top right, rgba(240, 117, 97, 0.14), transparent 36%);
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .wf-workspace-empty h2 {
+body:is(.theme-midnight, .theme-high-contrast) .wf-workspace-empty h2 {
   color: var(--text1, #f8fafc);
 }
 
-body.theme-dark .wf-workspace-empty p {
+body:is(.theme-midnight, .theme-high-contrast) .wf-workspace-empty p {
   color: var(--text2, #cbd5e1);
 }
 
-body.theme-dark .wf-mock-canvas {
+body:is(.theme-midnight, .theme-high-contrast) .wf-mock-canvas {
   background: rgba(17, 23, 35, 0.9);
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark .wf-mock-node {
+body:is(.theme-midnight, .theme-high-contrast) .wf-mock-node {
   background: rgba(17, 23, 35, 0.96);
   border-color: rgba(255, 255, 255, 0.08);
   color: var(--text1, #f8fafc);
@@ -1484,7 +1538,7 @@ body.theme-dark .wf-mock-node {
     border-top: 1px solid rgba(33, 26, 20, 0.08);
   }
 
-  body.theme-dark .wf-palette-mock {
+  body:is(.theme-midnight, .theme-high-contrast) .wf-palette-mock {
     border-top-color: rgba(255, 255, 255, 0.06);
   }
 }
