@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const RUNS_CACHE_TTL_MS = 86400000;
-const runsCacheKey = (email) => `hermes_runs_v1_${email}`;
 
 function readRunsCache(email) {
   try {
-    const raw = localStorage.getItem(runsCacheKey(email));
+    const raw = localStorage.getItem(`hermes_runs_v1_${email}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.cachedAt || Date.now() - parsed.cachedAt > RUNS_CACHE_TTL_MS) return null;
@@ -17,8 +16,8 @@ function readRunsCache(email) {
 
 function writeRunsCache(email, runs, profile, stravaStatus) {
   try {
-    localStorage.setItem(runsCacheKey(email), JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
-  } catch { /* quota exceeded — ignore */ }
+    localStorage.setItem(`hermes_runs_v1_${email}`, JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
+  } catch { /* ignore */ }
 }
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
