@@ -1,6 +1,31 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+
+const RUNS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function runsCache(email) {
+  const key = `hermes_runs_v1_${email}`;
+  return {
+    read() {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.cachedAt || Date.now() - parsed.cachedAt > RUNS_CACHE_TTL_MS) return null;
+        return parsed;
+      } catch { return null; }
+    },
+    write(runs, profile, stravaStatus) {
+      try {
+        localStorage.setItem(key, JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
+      } catch { /* quota exceeded — ignore */ }
+    },
+    clear() {
+      try { localStorage.removeItem(key); } catch { /* ignore */ }
+    },
+  };
+}
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
@@ -11,6 +36,7 @@ import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
+import recentRunsHeroOverlay from '../assets/generated/recent-runs-hero-overlay.jpg';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
@@ -130,7 +156,7 @@ function RunCard({ run, t, lang, routePreviewFallbacks, onOpen }) {
 }
 
 const Runs = memo(function Runs() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -154,31 +180,38 @@ const Runs = memo(function Runs() {
   const [importStatus, setImportStatus] = useState('');
   const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
   const [visibleRunsCount, setVisibleRunsCount] = useState(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
+  // Track which month groups the runner has explicitly collapsed. Default
+  // open: every month starts expanded so all runs render exactly the way
+  // they did before the fold-affordance shipped — runners only feel the
+  // change when they deliberately fold a month. Using a Set of keys keeps
+  // the state O(1) per toggle and short-circuits on the empty default.
+  const [collapsedMonthKeys, setCollapsedMonthKeys] = useState(() => new Set());
   const routePreviewInflightRef = useRef(new Set());
   const loadMoreSentinelRef = useRef(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
+  const toggleMonthFold = useCallback((monthKey) => {
+    setCollapsedMonthKeys((current) => {
+      const next = new Set(current);
+      if (next.has(monthKey)) next.delete(monthKey);
+      else next.add(monthKey);
+      return next;
+    });
+  }, []);
+
+  const loadRuns = useCallback(async ({ fromCache = false } = {}) => {
+    const cache = runsCache(email);
+
+    if (fromCache) {
+      const hit = cache.read();
+      if (hit) {
+        const sorted = [...hit.runs].sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+        setAllRuns(sorted);
+        setProfile(hit.profile);
+        setStravaStatus(hit.stravaStatus);
+        setLoadState('ready');
+      }
     }
-    loadRuns();
-  }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return undefined;
-
-    function handleStravaSyncFinished() {
-      loadRuns();
-    }
-
-    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
-    return () => {
-      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
-    };
-  }, [isAuthenticated]);
-
-  async function loadRuns() {
     try {
       const [data, profileData, stravaData] = await Promise.all([
         apiJson('/api/activities'),
@@ -191,10 +224,32 @@ const Runs = memo(function Runs() {
       setProfile(profileData);
       setStravaStatus(stravaData);
       setLoadState('ready');
+      cache.write(list, profileData, stravaData);
     } catch (err) {
       if (err.message !== 'Unauthorized') setLoadState('error');
     }
-  }
+  }, [email]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    loadRuns({ fromCache: true });
+  }, [isAuthenticated, navigate, loadRuns]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    function handleStravaSyncFinished() {
+      loadRuns();
+    }
+
+    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    return () => {
+      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    };
+  }, [isAuthenticated, loadRuns]);
 
   async function handleStravaConnect() {
     setStravaLinking(true);
@@ -345,6 +400,46 @@ const Runs = memo(function Runs() {
     [visibleRuns],
   );
   const hasMoreRuns = visibleRunsCount < filteredRuns.length;
+
+  // Group the visible runs by YYYY-MM so the page-list renders each month as
+  // its own header + responsive run-card grid. visibleRuns is already sorted
+  // most-recent-first, so a single pass preserves the chronological group
+  // order without an extra sort. Each group also carries an aggregate run
+  // count and total distance so the header copy can summarize the month at
+  // a glance.
+  const runsByMonth = useMemo(() => {
+    const groups = [];
+    const groupByKey = new Map();
+    const monthLabelFormatter = (() => {
+      try {
+        return new Intl.DateTimeFormat(lang || 'en', { year: 'numeric', month: 'long' });
+      } catch {
+        return null;
+      }
+    })();
+    visibleRuns.forEach((run) => {
+      const started = new Date(run.startTime || run.startDate || 0);
+      if (Number.isNaN(started.getTime())) return;
+      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      let group = groupByKey.get(key);
+      if (!group) {
+        group = {
+          key,
+          label: monthLabelFormatter
+            ? monthLabelFormatter.format(started)
+            : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
+          runs: [],
+          totalKm: 0,
+        };
+        groupByKey.set(key, group);
+        groups.push(group);
+      }
+      group.runs.push(run);
+      group.totalKm += Number(run.distanceKm || 0)
+        || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
+    });
+    return groups;
+  }, [visibleRuns, lang]);
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
@@ -756,7 +851,9 @@ const Runs = memo(function Runs() {
               <p>{t('runs.page_copy')}</p>
             </section>
             <section className="recent-runs-hero recent-runs-hero--dashboard">
-              <div className="recent-runs-hero-overlay" />
+              <div className="recent-runs-hero-overlay">
+                <img className="recent-runs-hero-overlay-image" src={recentRunsHeroOverlay} alt="" aria-hidden="true" draggable="false" />
+              </div>
               <div className="recent-runs-hero-copy">
                 <span className="recent-runs-hero-kicker">{t('runs.stitch_pattern_title')}</span>
                 <h2>{t('profile.dashboard_recent_sessions')}</h2>
@@ -824,16 +921,51 @@ const Runs = memo(function Runs() {
           {loadState === 'ready' && filteredRuns.length > 0 ? (
               <>
                 <div className="recent-runs-page-list">
-                  {visibleRuns.map((run) => (
-                    <RunCard
-                      key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
-                      run={run}
-                      t={t}
-                      lang={lang}
-                      routePreviewFallbacks={routePreviewFallbacks}
-                      onOpen={openRun}
-                    />
-                  ))}
+                  {runsByMonth.map((group) => {
+                    const collapsed = collapsedMonthKeys.has(group.key);
+                    const panelId = `recent-runs-month-${group.key}`;
+                    return (
+                      <section
+                        key={group.key}
+                        className={`recent-runs-month-group${collapsed ? ' is-collapsed' : ''}`}
+                        aria-label={group.label}
+                      >
+                        <button
+                          type="button"
+                          className="recent-runs-month-header recent-runs-month-toggle"
+                          aria-expanded={!collapsed}
+                          aria-controls={panelId}
+                          onClick={() => toggleMonthFold(group.key)}
+                        >
+                          <span className="recent-runs-month-toggle-chevron" aria-hidden="true">
+                            <AppIcon name={collapsed ? 'expand_more' : 'expand_less'} />
+                          </span>
+                          <h3 className="recent-runs-month-title">{group.label}</h3>
+                          <span className="recent-runs-month-meta">
+                            {t('runs.count_label', { count: group.runs.length })}
+                            {' · '}
+                            {formatDistance(group.totalKm, 1, lang)}
+                          </span>
+                        </button>
+                        <div
+                          id={panelId}
+                          className="recent-runs-month-grid"
+                          hidden={collapsed}
+                        >
+                          {group.runs.map((run) => (
+                            <RunCard
+                              key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
+                              run={run}
+                              t={t}
+                              lang={lang}
+                              routePreviewFallbacks={routePreviewFallbacks}
+                              onOpen={openRun}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
                 {hasMoreRuns ? (
                   <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
