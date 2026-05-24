@@ -13,7 +13,6 @@ import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDate, formatDistance, formatDuration, formatPaceSeconds } from '../utils/format';
 import {
   buildProgressionAtlas,
-  getNearestProgressionPointIndex,
   PROGRESSION_TIMEFRAMES,
 } from '../utils/progressionAtlas';
 import { getTodayRunRecommendation } from '../utils/todayRun';
@@ -29,6 +28,34 @@ const PR_SNAPSHOT_VERSION = 1;
 
 function getPrSnapshotStorageKey(email) {
   return `hermes_pr_snapshot_${String(email || '').trim().toLowerCase()}`;
+}
+
+function getDashboardCacheKey(email) {
+  const safe = String(email || '').trim().toLowerCase();
+  return safe ? `hermes_profile_dashboard_${safe}` : 'hermes_profile_dashboard_anon';
+}
+
+// Cap the runs array we write to localStorage. Most accounts have well under
+// this; power users with thousands of activities would otherwise blow past the
+// 5 MB quota. The background revalidate still hydrates the full list into
+// memory, so derived stats stay correct after the first paint.
+const DASHBOARD_CACHE_RUN_LIMIT = 500;
+
+function buildDashboardCacheSnapshot(dashboardData) {
+  if (!dashboardData || !dashboardData.profile) return null;
+  const cappedRuns = Array.isArray(dashboardData.runs)
+    ? dashboardData.runs.slice(0, DASHBOARD_CACHE_RUN_LIMIT)
+    : [];
+  return {
+    cachedAt: Date.now(),
+    profileEmail: dashboardData.profile?.email || null,
+    profile: dashboardData.profile,
+    runs: cappedRuns,
+    coachState: dashboardData.coachState ?? null,
+    coachToday: dashboardData.coachToday ?? null,
+    races: Array.isArray(dashboardData.races) ? dashboardData.races : [],
+    musclePlan: dashboardData.musclePlan ?? null,
+  };
 }
 
 function readJsonStorage(key) {
@@ -516,7 +543,7 @@ function getCelebrationLabel(entry, t) {
 }
 
 export default function ProfileDashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email: authEmail } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -526,17 +553,16 @@ export default function ProfileDashboard() {
   const [runs, setRuns] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
-  const [races, _setRaces] = useState([]);
+  const [_races, _setRaces] = useState([]);
   const [nextRace, setNextRace] = useState(null);
   const [loadState, setLoadState] = useState('loading');
   const [banner, setBanner] = useState(null);
   const [prCelebration, setPrCelebration] = useState(null);
   const [dismissedComeback, setDismissedComeback] = useState(false);
   const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
-  const [showInfoModal, setShowInfoModal] = useState(false);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
-  const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
-  const [musclePlan, setMusclePlan] = useState(null);
+  const [_activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
+  const [_musclePlan, setMusclePlan] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -546,8 +572,39 @@ export default function ProfileDashboard() {
 
     let cancelled = false;
 
+    // Stale-while-revalidate: paint immediately from the last cached payload
+    // for this account, then fetch fresh data in the background. Only the
+    // first-ever login (no cache) shows the loading spinner.
+    const cacheKey = getDashboardCacheKey(authEmail);
+    const cachedSnapshot = readJsonStorage(cacheKey);
+    const cachedMatchesUser =
+      cachedSnapshot
+      && (!authEmail
+        || !cachedSnapshot.profileEmail
+        || String(cachedSnapshot.profileEmail).toLowerCase() === String(authEmail).toLowerCase());
+    const hasUsableCache = Boolean(cachedSnapshot && cachedMatchesUser && Array.isArray(cachedSnapshot.runs));
+
+    if (hasUsableCache) {
+      setProfile(cachedSnapshot.profile || null);
+      setRuns(cachedSnapshot.runs);
+      if (cachedSnapshot.coachState && typeof cachedSnapshot.coachState === 'object') {
+        setCoachState(cachedSnapshot.coachState);
+      }
+      if (cachedSnapshot.coachToday && typeof cachedSnapshot.coachToday === 'object') {
+        setCoachToday(cachedSnapshot.coachToday);
+      }
+      if (Array.isArray(cachedSnapshot.races)) {
+        _setRaces(cachedSnapshot.races);
+        setNextRace(getUpcomingRace(cachedSnapshot.races));
+      }
+      if (cachedSnapshot.musclePlan && typeof cachedSnapshot.musclePlan === 'object' && cachedSnapshot.musclePlan.days) {
+        setMusclePlan(cachedSnapshot.musclePlan);
+      }
+      setLoadState('ready');
+    }
+
     async function loadDashboard() {
-      setLoadState('loading');
+      if (!hasUsableCache) setLoadState('loading');
       try {
         const dashboardData = await loadProfileDashboardData();
 
@@ -583,11 +640,27 @@ export default function ProfileDashboard() {
               });
             }
           }
+
+          // Re-write cache with merged enrichment so next visit hydrates coach
+          // state, today, races, and muscle plan from the cache on first paint.
+          const enrichedSnapshot = buildDashboardCacheSnapshot({
+            ...dashboardData,
+            coachState: enrichmentData.coachState ?? dashboardData.coachState ?? null,
+            coachToday: enrichmentData.coachToday ?? dashboardData.coachToday ?? null,
+            races: Array.isArray(enrichmentData.races) ? enrichmentData.races : dashboardData.races,
+            musclePlan: enrichmentData.musclePlan ?? dashboardData.musclePlan ?? null,
+          });
+          if (enrichedSnapshot) writeJsonStorage(cacheKey, enrichedSnapshot);
         }
 
         setProfile(profileData);
         setRuns(list);
         setLoadState('ready');
+
+        // Write the primary dashboard data to cache right away so the next
+        // page load can paint instantly even if enrichment hasn't merged yet.
+        const primarySnapshot = buildDashboardCacheSnapshot(dashboardData);
+        if (primarySnapshot) writeJsonStorage(cacheKey, primarySnapshot);
 
         const query = new URLSearchParams(window.location.search);
         if (query.get('source') === 'strava') {
@@ -603,11 +676,15 @@ export default function ProfileDashboard() {
         if (dashboardData.source === 'batch') {
           applyDashboardEnrichment(dashboardData);
           if (dashboardData.deferredEnrichment) {
-            void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
-              if (!cancelled) applyDashboardEnrichment(enrichmentData);
-            }).catch(() => {
-              // Optional dashboard enrichments should not block the first render.
-            });
+            // The batch already includes coachState, personalRecords, races,
+            // musclePlan, and quota. Only coachToday was intentionally omitted
+            // to avoid blocking the batch on the Open-Meteo HTTP call.
+            // Fetch just that one endpoint instead of all six enrichment calls.
+            void apiJson('/api/coach/today').then((todayData) => {
+              if (!cancelled && todayData && typeof todayData === 'object') {
+                setCoachToday(todayData);
+              }
+            }).catch(() => {});
           }
         } else {
           void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
@@ -617,7 +694,10 @@ export default function ProfileDashboard() {
           });
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !hasUsableCache) {
+          // Only show the error card when there's no cached snapshot to fall
+          // back on. With cache, we silently keep the stale dashboard visible
+          // and let the next mount retry — better than blanking the user.
           setLoadState('error');
         }
       }
@@ -627,7 +707,7 @@ export default function ProfileDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate, t]);
+  }, [isAuthenticated, navigate, t, authEmail]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -712,9 +792,6 @@ export default function ProfileDashboard() {
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
   const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
-  const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
-  const totalRuns = runs.length;
-  const totalDistanceKm = useMemo(() => runs.reduce((sum, r) => sum + resolveRunDistanceKm(r), 0), [runs]);
   const streak = useMemo(() => calculateStreaks(runs), [runs]);
   const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
   const rewardShowcase = useMemo(() => buildRewardShowcase(runs, lang), [runs, lang]);
@@ -743,37 +820,7 @@ export default function ProfileDashboard() {
     }).filter(Boolean);
   }, [profileVdot, runs, lang]);
 
-  const thresholdEstimate = useMemo(() => {
-    if (coachState?.profileMaxHeartRateBpm) return Math.round(coachState.profileMaxHeartRateBpm * 0.88);
-    const maxHr = runs.reduce((best, run) => Math.max(best, Number(run?.maxHeartRate || 0)), 0);
-    return maxHr > 0 ? Math.round(maxHr * 0.88) : null;
-  }, [coachState, runs]);
-
   const restingHrValue = coachState?.lastNightRestingHr ?? coachState?.profileRestingHeartRateBpm ?? null;
-  const sleepScoreValue = coachState?.lastSleepScore ?? null;
-
-  const strengthSummary = useMemo(() => {
-    if (!musclePlan || !Array.isArray(musclePlan.days)) return null;
-    const days = musclePlan.days;
-    const today = days[0] || null;
-    const strengthDays = days.filter((d) => d && d.strength);
-    const sessionCount = strengthDays.length;
-    const sessionMinutes = musclePlan.profile?.sessionMinutes || musclePlan.weekContext?.sessionMinutes || 30;
-    const focus = musclePlan.weekContext?.currentFocus || '';
-    const todayHasStrength = today && today.strength;
-    const todaySessionType = todayHasStrength ? today.strength.sessionType : null;
-    const todayDuration = todayHasStrength ? (today.strength.durationMinutes ?? sessionMinutes) : null;
-    const todayOptional = todayHasStrength ? today.strength.optional : false;
-    return {
-      sessionCount,
-      sessionMinutes,
-      focus,
-      todayHasStrength,
-      todaySessionType,
-      todayDuration,
-      todayOptional,
-    };
-  }, [musclePlan]);
 
   const raceCountdown = useMemo(() => {
     if (!nextRace?.parsedDate) return null;
@@ -782,14 +829,6 @@ export default function ProfileDashboard() {
     const diffTime = nextRace.parsedDate - now;
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }, [nextRace]);
-
-  const racePrepPhase = useMemo(() => {
-    if (raceCountdown === null) return null;
-    if (raceCountdown <= 7) return { key: 'taper', label: t('profile.dashboard_race_phase_taper') };
-    if (raceCountdown <= 21) return { key: 'peak', label: t('profile.dashboard_race_phase_peak') };
-    if (raceCountdown <= 56) return { key: 'specific', label: t('profile.dashboard_race_phase_specific') };
-    return { key: 'base', label: t('profile.dashboard_race_phase_base') };
-  }, [raceCountdown, t]);
 
   const heroWorkout = coachToday?.today || null;
   const heroWorkoutTitle = buildWorkoutHeadline(heroWorkout, todayBundle.recommendation, t);
@@ -800,90 +839,25 @@ export default function ProfileDashboard() {
   const heroLoad = coachState?.volumeKm7d
     ? formatDistance(coachState.volumeKm7d, 1, lang, unit)
     : '--';
-  const recentSessions = runs.slice(0, 3);
-  const featuredSession = recentSessions[0] || null;
-  const featuredSessionMetric = featuredSession ? buildSessionMetric(featuredSession, lang, unit, t) : null;
   const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
   const weeklyProjectedTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.projected || 0), 0);
   const weeklyCompletion = weeklyProjectedTotal > 0
     ? Math.max(0, Math.min(100, Math.round((weeklyActualTotal / weeklyProjectedTotal) * 100)))
     : 0;
-  const profileDecisionMap = useMemo(() => [
-    {
-      key: 'today',
-      icon: 'calendar_today',
-      label: t('profile.dashboard_suggested_workout'),
-      value: heroWorkoutTitle,
-      detail: heroDuration,
-    },
-    {
-      key: 'load',
-      icon: 'show_chart',
-      label: t('profile.dashboard_training_load'),
-      value: formatDistance(weeklyActualTotal, 1, lang, unit),
-      detail: `${weeklyCompletion}% ${t('profile.dashboard_actual')}`,
-    },
-    {
-      key: 'fitness',
-      icon: 'insights',
-      label: t('profile.dashboard_vo2_est'),
-      value: profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--',
-      detail: profileVdot.representativeVdot > 0 && vdotTrend.hasData
-        ? `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)} ${t(`profile.vdot_trend_${vdotTrend.direction}`)}`
-        : t('profile.dashboard_window_active'),
-    },
-    {
-      key: 'race',
-      icon: 'flag',
-      label: t('profile.dashboard_race_countdown_title'),
-      value: nextRace?.name || t('profile.dashboard_race_no_upcoming'),
-      detail: raceCountdown != null
-        ? t('profile.dashboard_race_days_left', { days: raceCountdown })
-        : t('profile.dashboard_nav_races'),
-    },
-  ], [
-    heroDuration,
-    heroWorkoutTitle,
-    lang,
-    nextRace?.name,
-    profileVdot.representativeVdot,
-    raceCountdown,
-    t,
-    unit,
-    vdotTrend.delta,
-    vdotTrend.direction,
-    vdotTrend.hasData,
-    weeklyActualTotal,
-    weeklyCompletion,
-  ]);
   const stamina = useMemo(
     () => coachState?.stamina || buildStaminaFallback(readiness, heroPace, restingHrValue),
     [coachState?.stamina, heroPace, readiness, restingHrValue],
   );
-  const staminaArrowIcon = stamina.direction === 'up'
-    ? 'arrow_upward'
-    : stamina.direction === 'steady'
-      ? 'trending_flat'
-      : 'arrow_downward';
   const staminaPaceLabel = stamina.targetPaceSecondsPerKm != null
     ? formatPaceSeconds(stamina.targetPaceSecondsPerKm)
     : stamina.fallbackPaceLabel || '--';
   const staminaHeartLabel = stamina.targetHeartRateBpm != null ? String(stamina.targetHeartRateBpm) : '--';
   const staminaScorePercent = Math.max(0, Math.min(100, Number(stamina.scorePercent || 0)));
   const staminaCapPercent = Math.max(0, Math.min(100, Number(stamina.recoveryCapPercent || 0)));
-  const staminaCapMarkerLeft = Math.max(4, Math.min(96, staminaCapPercent));
-  const progressionFrames = useMemo(() => PROGRESSION_TIMEFRAMES.map((key) => ({
-    key,
-    label: t(`profile.dashboard_progression_${key}`),
-  })), [t]);
   const progressionAtlas = useMemo(
     () => buildProgressionAtlas(runs, activeProgressionFrame, lang),
     [activeProgressionFrame, lang, runs],
   );
-  const activeProgressionPoint = activeProgressionPointIndex >= 0
-    ? progressionAtlas.chartPoints[activeProgressionPointIndex] || progressionAtlas.latestPoint
-    : progressionAtlas.latestPoint;
-
   useEffect(() => {
     if (progressionAtlas.chartPoints.length === 0) {
       setActiveProgressionPointIndex(-1);
@@ -891,21 +865,6 @@ export default function ProfileDashboard() {
     }
     setActiveProgressionPointIndex(progressionAtlas.chartPoints.length - 1);
   }, [progressionAtlas.chartPoints.length, progressionAtlas.latestPoint?.key]);
-
-  function setNearestProgressionPoint(clientX, currentTarget) {
-    if (!currentTarget || progressionAtlas.chartPoints.length === 0) return;
-
-    const bounds = currentTarget.getBoundingClientRect();
-    if (!bounds.width) return;
-
-    const xPercent = ((clientX - bounds.left) / bounds.width) * 100;
-    const nextIndex = getNearestProgressionPointIndex(progressionAtlas.chartPoints, xPercent);
-    setActiveProgressionPointIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
-  }
-
-  function resetProgressionPoint() {
-    setActiveProgressionPointIndex(progressionAtlas.chartPoints.length - 1);
-  }
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard', active: true },

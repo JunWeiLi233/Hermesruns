@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runsSource = readFileSync(path.join(here, 'Runs.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css'), 'utf8');
 
 assert.match(
   runsSource,
@@ -51,8 +52,20 @@ assert.match(
 
 assert.match(
   runsSource,
-  /visibleRuns\.map\(\(run\) => \(/,
-  'Runs history should render normal page-flow cards rather than a nested virtual scroller.',
+  /runsByMonth\.map\(\(group\) =>[\s\S]*group\.runs\.map\(\(run\) => \(/,
+  'Runs history should render normal page-flow cards grouped by month, rather than a nested virtual scroller.',
+);
+
+assert.match(
+  runsSource,
+  /const runsByMonth = useMemo\(\(\) => \{[\s\S]*visibleRuns\.forEach/,
+  'Runs history month groups should be derived deterministically from visibleRuns (still page-flow, still bounded by the load-more sentinel).',
+);
+
+assert.match(
+  splitRunsStyle,
+  /\.recent-runs-month-grid\s*\{[\s\S]*display:\s*grid;/,
+  'Each month group should render its runs in a responsive grid.',
 );
 
 assert.match(

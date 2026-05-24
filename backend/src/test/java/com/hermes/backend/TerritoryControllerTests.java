@@ -68,6 +68,10 @@ class TerritoryControllerTests {
     @BeforeEach
     void clearPreSeededTerritoryPolygons() {
         territoryPolygonRepository.deleteAll();
+        // Bootstrap runners ("Hermes Shared Runner", "Hermes Temporal Rival") have ActivityPoints
+        // near the test coordinates (37.822, -122.250) and contaminate territory calculations.
+        // Clearing all points here is safe: @Transactional rolls back the deletion after each test.
+        activityPointRepository.deleteAll();
     }
 
     // -----------------------------------------------------------------------

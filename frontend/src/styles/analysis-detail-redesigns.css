@@ -443,7 +443,13 @@ body .analysis-insight-detail-page.is-coach-insight .runner-shell-canvas.analysi
   letter-spacing: 0.16em;
 }
 
-.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-plan-meta span {
+/* Scope the cream meta-span to the PRIMARY plan card only — the primary
+   has a dark coral/red bg where cream reads well, but the secondary plan
+   card has a near-white surface (`rgba(255, 252, 248, 0.97)`) where the
+   same cream made `"11 km"` / `"力量"` / `"快 5:00"` essentially invisible
+   (≈1.04 contrast). On the secondary card the meta-span keeps the
+   default `_split/analysis.css:4687` charcoal styling. */
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan .analysis-coach-command-plan-meta span {
   color: rgba(255, 246, 242, 0.96);
   font-family: var(--font-display);
 }
@@ -830,4 +836,62 @@ body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-
 
 body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill strong {
   color: rgba(160, 57, 42, 0.78) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   /runs — `.recent-runs-insight-card--primary` (the "训练节奏 / 已记录 N 次跑步"
+   tile) was inheriting the cream-on-dark text treatment from a page-scoped
+   `:is(.runs-dashboard-page, …) :is(h1, h2, h3, h4, strong, …) { color: #fff4e6 !important; }`
+   rule that was designed for dark hero cards. After light-theme overrides
+   flipped the card surface to white, the cream `<strong>` headline became
+   invisible and the inset pink rectangle on `<strong>` looked broken. Restore
+   the original primary-card treatment: warm coral surface with white text on
+   the headline, muted ink for kicker + sub-copy.
+   ---------------------------------------------------------------------------- */
+
+/* Anchored on #root so specificity beats the (0, 5, 0) `:is(...) :is(...) :is(...)`
+   page-scoped cream-text rule (which uses multi-class arguments like
+   `.shoe-inventory-card.is-primary` and `.runner-dashboard-page:has(.muscle-training-page)`
+   to claim higher specificity than plain class chains can). One ID selector
+   trivially outranks any number of classes. */
+#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary {
+  background: linear-gradient(150deg, #ffb4a7 0%, #f07561 55%, #a0392a 100%) !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 22px 48px rgba(160, 57, 42, 0.22) !important;
+  color: #fff6f2 !important;
+  padding: 22px 26px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary span,
+#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary strong,
+#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary p {
+  color: #fff6f2 !important;
+  background: transparent !important;
+}
+
+#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary span {
+  color: rgba(255, 246, 242, 0.82) !important;
+  font-size: 0.7rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary strong {
+  font-family: var(--font-display) !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+  font-size: clamp(1.4rem, 2vw, 1.85rem) !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.15 !important;
+}
+
+#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary p {
+  color: rgba(255, 246, 242, 0.86) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.5 !important;
 }

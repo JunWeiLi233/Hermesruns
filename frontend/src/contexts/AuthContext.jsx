@@ -217,6 +217,17 @@ export function AuthProvider({ children }) {
     try {
       localStorage.removeItem('hermes_admin');
     } catch { /* ignore */ }
+    try {
+      // Clear cached dashboard snapshots from every account on this device so
+      // the next runner who signs in does not see another runner's data flash
+      // before the fresh fetch resolves.
+      for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('hermes_profile_dashboard_')) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch { /* ignore */ }
     setToken(null);
     setEmail(null);
     setRole(null);

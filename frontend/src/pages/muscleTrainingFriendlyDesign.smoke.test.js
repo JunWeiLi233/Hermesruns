@@ -897,7 +897,7 @@ assert.match(
 
 assert.match(
   cssSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\(\.mt-card,\s*\.mt-exercises,\s*\.mt-top-panel,\s*\.mt-top-reference-card,\s*\.mt-video-card,\s*\.mt-reference-card,\s*\.strength-plan-control-deck,\s*\.muscle-panel\)\s*\{[\s\S]*color:\s*#172012 !important;/,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\(\.mt-card,\s*\.mt-exercises,\s*\.mt-top-panel,\s*\.mt-top-reference-card,\s*\.mt-video-card,\s*\.mt-reference-card,\s*\.strength-plan-control-deck,\s*\.muscle-panel\)\s*\{[\s\S]*color:\s*#2c2f30 !important;/,
   'White theme should convert main cards to dark text on light surfaces.',
 );
 
@@ -909,13 +909,13 @@ assert.match(
 
 assert.match(
   contrastSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\(\.mt-top-actions-head h2,\s*\.mt-top-reference-head h2,\s*\.mt-reference-body h3,\s*\.mt-top-reference-body h3\)\s*\{[\s\S]*color:\s*#172012 !important;/,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\(\.mt-top-actions-head h2,\s*\.mt-top-reference-head h2,\s*\.mt-reference-body h3,\s*\.mt-top-reference-body h3\)\s*\{[\s\S]*color:\s*#2c2f30 !important;/,
   'White theme contrast guard should force the top recommendation and reference body headings to dark text.',
 );
 
 assert.match(
   contrastSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\(\.mt-reference-body p,\s*\.mt-reference-body li,\s*\.mt-reference-muscles > span,\s*\.mt-top-reference-body p,\s*\.mt-top-reference-body li,\s*\.mt-top-reference-muscles > span\)\s*\{[\s\S]*color:\s*#5d6757 !important;/,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\(\.mt-reference-body p,\s*\.mt-reference-body li,\s*\.mt-reference-muscles > span,\s*\.mt-top-reference-body p,\s*\.mt-top-reference-body li,\s*\.mt-top-reference-muscles > span\)\s*\{[\s\S]*color:\s*#595c5d !important;/,
   'White theme contrast guard should keep reference body copy readable on light cards.',
 );
 
@@ -939,25 +939,25 @@ assert.doesNotMatch(
 
 assert.match(
   cssSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.mt-top-workbench \.mt-top-action-copy strong\s*\{[\s\S]*color:\s*#426000 !important;/,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.mt-top-workbench \.mt-top-action-copy strong\s*\{[\s\S]*color:\s*var\(--brand-accent-strong, #8f2f22\) !important;/,
   'White theme should avoid neon recommendation names on a white card.',
 );
 
 assert.match(
   cssSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.mt-reference-steps li span\s*\{[\s\S]*color:\s*#426000 !important;/,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.mt-reference-steps li span\s*\{[\s\S]*color:\s*var\(--brand-accent-strong, #8f2f22\) !important;/,
   'White theme should keep Reference Dock step icons readable.',
 );
 
 assert.match(
   cssSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*#7aa000 !important;[\s\S]*color:\s*#ffffff !important;/,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*var\(--brand-accent, #c0462b\) !important;[\s\S]*color:\s*#ffffff !important;/,
   'White theme active settings chips should stay readable on the darker green active surface.',
 );
 
 assert.match(
   cssSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck select option\s*\{[\s\S]*background:\s*#ffffff !important;[\s\S]*color:\s*#172012 !important;/,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck select option\s*\{[\s\S]*background:\s*#ffffff !important;[\s\S]*color:\s*#2c2f30 !important;/,
   'White theme select options should use white surfaces with dark text.',
 );
 

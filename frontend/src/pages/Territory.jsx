@@ -130,12 +130,6 @@ function runnerMarkerPositions(territory, leaderboard) {
     .filter(Boolean);
 }
 
-function contestShare(zone) {
-  const raw = Number(zone?.sampleCount || 0);
-  const owner = Math.min(72, Math.max(56, raw || 62));
-  return { owner, challenger: 100 - owner };
-}
-
 /** Read the coral stroke color from CSS custom properties at runtime */
 function getCoralStroke() {
   return getComputedStyle(document.documentElement).getPropertyValue('--accent-coral-strong').trim() || '#f07561';
@@ -429,7 +423,7 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [territory?.center]);
 
   // Paint zone/territory polygons (existing zone view)
   useEffect(() => {
