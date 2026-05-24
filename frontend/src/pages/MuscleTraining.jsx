@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useUnit } from '../contexts/UnitContext';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
@@ -20,6 +21,56 @@ import targetCoreUrl from '../assets/muscle-training/target-core.webp';
 import targetLegsUrl from '../assets/muscle-training/target-legs.webp';
 import targetShouldersUrl from '../assets/muscle-training/target-shoulders.webp';
 import anatomyNeonSelectorUrl from '../assets/muscle-training/anatomy-neon-selector.png';
+
+const EXERCISE_DB_IMAGE_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+const exerciseDbImage = (imagePath) => `${EXERCISE_DB_IMAGE_BASE}${imagePath}`;
+const youtubeThumbnail = (videoId) => `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+const EXERCISE_REFERENCE_IMAGES = {
+  'barbell-bench-press': exerciseDbImage('Barbell_Bench_Press_-_Medium_Grip/0.jpg'),
+  'incline-dumbbell-press': exerciseDbImage('Incline_Dumbbell_Press/0.jpg'),
+  'weighted-dip': exerciseDbImage('Dips_-_Chest_Version/0.jpg'),
+  'push-up': exerciseDbImage('Pushups/0.jpg'),
+  'pull-up': exerciseDbImage('Pullups/0.jpg'),
+  'barbell-row': exerciseDbImage('Bent_Over_Barbell_Row/0.jpg'),
+  'romanian-deadlift': exerciseDbImage('Romanian_Deadlift/0.jpg'),
+  'chest-supported-row': exerciseDbImage('Lying_Cambered_Barbell_Row/0.jpg'),
+  'barbell-squat': exerciseDbImage('Barbell_Squat/0.jpg'),
+  'front-squat': exerciseDbImage('Front_Barbell_Squat/0.jpg'),
+  deadlift: exerciseDbImage('Barbell_Deadlift/0.jpg'),
+  'bulgarian-split-squat': exerciseDbImage('Split_Squat_with_Dumbbells/0.jpg'),
+  'standing-overhead-press': exerciseDbImage('Standing_Military_Press/0.jpg'),
+  'push-press': exerciseDbImage('Push_Press/0.jpg'),
+  'landmine-press': exerciseDbImage('Landmine_Linear_Jammer/0.jpg'),
+  'dumbbell-clean-press': exerciseDbImage('Clean_and_Press/0.jpg'),
+  'chin-up': exerciseDbImage('Chin-Up/0.jpg'),
+  'close-grip-bench': exerciseDbImage('Close-Grip_Barbell_Bench_Press/0.jpg'),
+  'weighted-triceps-dip': exerciseDbImage('Dips_-_Triceps_Version/0.jpg'),
+  'farmer-carry': exerciseDbImage('Farmers_Walk/0.jpg'),
+  'turkish-get-up': exerciseDbImage('Kettlebell_Turkish_Get-Up_Lunge_style/0.jpg'),
+  'front-rack-carry': youtubeThumbnail('Q5kuuxaNDDM'),
+  'hanging-leg-raise': exerciseDbImage('Hanging_Leg_Raise/0.jpg'),
+  'barbell-rollout': exerciseDbImage('Barbell_Ab_Rollout/0.jpg'),
+  'hip-airplanes': exerciseDbImage('Balance_Board/0.jpg'),
+  'calf-raises-slow-tempo': exerciseDbImage('Standing_Calf_Raises/0.jpg'),
+  'dead-bug': exerciseDbImage('Dead_Bug/0.jpg'),
+  'split-squat': exerciseDbImage('Split_Squat_with_Dumbbells/0.jpg'),
+  'single-leg-romanian-deadlift': exerciseDbImage('Romanian_Deadlift/1.jpg'),
+  'standing-calf-raise': exerciseDbImage('Standing_Calf_Raises/0.jpg'),
+  'side-plank': exerciseDbImage('Push_Up_to_Side_Plank/0.jpg'),
+  'glute-bridge-pause-at-top': exerciseDbImage('Barbell_Glute_Bridge/0.jpg'),
+  'tibialis-wall-raise': exerciseDbImage('Anterior_Tibialis-SMR/0.jpg'),
+  'worlds-greatest-stretch': exerciseDbImage('Worlds_Greatest_Stretch/0.jpg'),
+  'ankle-dorsiflexion-rocks': exerciseDbImage('Ankle_Circles/0.jpg'),
+  'step-down-knee-tracking': exerciseDbImage('Dumbbell_Step_Ups/1.jpg'),
+  'hamstring-curl-slider-or-machine': exerciseDbImage('Seated_Band_Hamstring_Curl/0.jpg'),
+  'pallof-press': exerciseDbImage('Pallof_Press/0.jpg'),
+  'farmer-carry-suitcase': exerciseDbImage('Rickshaw_Carry/0.jpg'),
+  'pogo-hops': exerciseDbImage('Front_Cone_Hops_or_hurdle_hops/0.jpg'),
+  'skipping-a-drill': exerciseDbImage('Fast_Skipping/0.jpg'),
+  'box-step-up-explosive': exerciseDbImage('Box_Skip/0.jpg'),
+  'single-leg-hop-low-amplitude': exerciseDbImage('Single-Leg_Hop_Progression/0.jpg'),
+};
 
 const DAY_OPTIONS = [
   { value: 'MONDAY', en: 'Mon', zh: '周一' },
@@ -121,17 +172,25 @@ const TARGET_AREA_GROUPS = [
   },
 ];
 
-const TOP_MUSCLE_HOTSPOTS = [
-  { key: 'chest', style: { left: '25%', top: '28%', width: '13%', height: '10%' } },
-  { key: 'core', style: { left: '26%', top: '41%', width: '11%', height: '13%' } },
-  { key: 'legs', style: { left: '24%', top: '58%', width: '16%', height: '27%' } },
-  { key: 'shoulders', style: { left: '16%', top: '27%', width: '8%', height: '9%' } },
-  { key: 'shoulders', style: { left: '39%', top: '27%', width: '8%', height: '9%' } },
-  { key: 'arms', style: { left: '10%', top: '38%', width: '12%', height: '17%' } },
-  { key: 'arms', style: { left: '42%', top: '38%', width: '12%', height: '17%' } },
-  { key: 'back', style: { left: '61%', top: '25%', width: '18%', height: '22%' } },
-  { key: 'legs', style: { left: '61%', top: '55%', width: '19%', height: '28%' } },
+const TOP_MUSCLE_HIT_ZONES = [
+  { id: 'chest-front', key: 'chest', left: '19%', top: '25%', width: '24%', height: '15%' },
+  { id: 'core-front', key: 'core', left: '22%', top: '39%', width: '18%', height: '18%' },
+  { id: 'back-rear', key: 'back', left: '62%', top: '22%', width: '26%', height: '30%' },
+  { id: 'shoulders-front-left', key: 'shoulders', left: '16%', top: '22%', width: '12%', height: '12%' },
+  { id: 'shoulders-front-right', key: 'shoulders', left: '35%', top: '22%', width: '12%', height: '12%' },
+  { id: 'shoulders-rear-left', key: 'shoulders', left: '61%', top: '23%', width: '11%', height: '11%' },
+  { id: 'shoulders-rear-right', key: 'shoulders', left: '79%', top: '23%', width: '11%', height: '11%' },
+  { id: 'arms-front-left', key: 'arms', left: '5%', top: '30%', width: '16%', height: '28%' },
+  { id: 'arms-front-right', key: 'arms', left: '42%', top: '30%', width: '14%', height: '28%' },
+  { id: 'arms-rear-left', key: 'arms', left: '55%', top: '31%', width: '13%', height: '27%' },
+  { id: 'arms-rear-right', key: 'arms', left: '83%', top: '31%', width: '13%', height: '27%' },
+  { id: 'legs-front', key: 'legs', left: '16%', top: '52%', width: '28%', height: '36%' },
+  { id: 'legs-rear', key: 'legs', left: '63%', top: '50%', width: '26%', height: '34%' },
 ];
+
+function getPrimaryTopMuscleHitZoneId(targetKey) {
+  return TOP_MUSCLE_HIT_ZONES.find((zone) => zone.key === targetKey)?.id || '';
+}
 
 const EXERCISE_VIDEO_EMBEDS = {
   'barbell-bench-press': 'https://www.youtube-nocookie.com/embed/0cXAp6WhSj4',
@@ -1307,31 +1366,6 @@ function parseOptionalInteger(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function formatExercisePrescriptionValue(repsOrDuration, isZh) {
-  if (!isZh || !repsOrDuration) return repsOrDuration;
-  return repsOrDuration
-    .replace(/\/side/g, '/侧')
-    .replace(/(\d+(?:-\d+)?)s(?=\/|$)/g, '$1 秒')
-    .replace(/(\d+(?:-\d+)?)m(?=\/|$)/g, '$1 米');
-}
-
-function formatExercisePrescription(exercise, isZh) {
-  return `${exercise.sets} x ${formatExercisePrescriptionValue(exercise.repsOrDuration, isZh)} · RPE ${exercise.targetRpe}`;
-}
-
-function getLocalizedExerciseContent(exercise, isZh) {
-  const definition = getExerciseDefinition(exercise?.name);
-  const locale = isZh ? 'zh' : 'en';
-  return {
-    name: definition?.name?.[locale] || definition?.name?.en || normalizeExerciseName(exercise?.name) || DEFAULT_EXERCISE_COPY.name[locale],
-    muscles: definition?.muscles?.[locale] || DEFAULT_EXERCISE_COPY.muscles[locale],
-    steps: definition?.steps?.[locale] || DEFAULT_EXERCISE_COPY.steps[locale],
-    intent: definition?.intent?.[locale] || exercise?.tempoOrIntent || '',
-    regression: definition?.regression?.[locale] || exercise?.regression || '',
-    progression: definition?.progression?.[locale] || exercise?.progression || '',
-  };
-}
-
 function formatLocalizedExercisePrescriptionValue(repsOrDuration, isZh) {
   if (!isZh || !repsOrDuration) return repsOrDuration;
   return repsOrDuration
@@ -1375,10 +1409,6 @@ function getExerciseContentForItem(item, isZh) {
     };
   }
   return getExerciseCardContent(item?.exercise, isZh);
-}
-
-function getExerciseEquipmentKey(exercise) {
-  return exercise?.equipment || exercise?.equipmentNeeded || '';
 }
 
 function resolveExerciseVisualKey(name, muscles = []) {
@@ -1467,6 +1497,20 @@ function slugExerciseName(name) {
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function getExerciseReferenceImageKey(item) {
+  if (!item) return '';
+  if (item.libraryKey && EXERCISE_REFERENCE_IMAGES[item.libraryKey]) {
+    return item.libraryKey;
+  }
+  const exerciseSlug = slugExerciseName(item.exercise?.name);
+  return EXERCISE_REFERENCE_IMAGES[exerciseSlug] ? exerciseSlug : '';
+}
+
+function resolveExerciseReferenceImage(item, fallbackImage = targetLegsUrl) {
+  const imageKey = getExerciseReferenceImageKey(item);
+  return imageKey ? EXERCISE_REFERENCE_IMAGES[imageKey] : fallbackImage;
 }
 
 function getExerciseVideoEmbedUrl(item) {
@@ -2448,7 +2492,7 @@ function ReferenceMuscleMap({ isZh, focusMuscles = [], weekContext, weekDoseStat
   );
 }
 
-function ExerciseIllustration({ exerciseName, muscles = [], isZh = false }) {
+function ExerciseIllustration({ exerciseName, muscles = [] }) {
   const mode = resolveExerciseVisualKey(exerciseName, muscles);
   const visibleMuscles = (muscles || []).filter(Boolean);
   const muscleSummary = visibleMuscles.join(' / ') || 'Target muscles';
@@ -2702,135 +2746,13 @@ function ExerciseIllustration({ exerciseName, muscles = [], isZh = false }) {
   );
 }
 
-function getExerciseGuide(name, isZh) {
-  const guides = {
-    'Hip airplanes': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['单腿站稳，髋部先保持正对前方。', '像门轴一样慢慢打开和合上骨盆。', '膝盖微屈，躯干不要左右乱晃。']
-        : ['Stand tall on one leg with the hips square.', 'Open and close the pelvis slowly like a hinge.', 'Keep a soft knee and avoid trunk wobble.'],
-    },
-    'Calf raises (slow tempo)': {
-      muscles: isZh ? ['小腿'] : ['Calves'],
-      steps: isZh
-        ? ['前脚掌稳稳压地。', '慢慢提起脚跟，在顶部停住一下。', '下放时保持控制，不要直接掉下去。']
-        : ['Press through the ball of the foot.', 'Rise slowly and pause at the top.', 'Lower with control instead of dropping.'],
-    },
-    'Dead bug': {
-      muscles: isZh ? ['核心'] : ['Core'],
-      steps: isZh
-        ? ['仰卧，肋骨收下，腰背贴稳。', '对侧手脚一起伸远。', '全程别让下背拱起来。']
-        : ['Lie on your back with the ribs down.', 'Reach the opposite arm and leg away together.', 'Keep the low back quiet and the core braced.'],
-    },
-    'Split squat': {
-      muscles: isZh ? ['臀部', '腘绳肌'] : ['Glutes', 'Hamstrings'],
-      steps: isZh
-        ? ['前后站开，身体保持直立。', '垂直下沉，再通过前脚发力起身。', '前膝跟着脚尖方向走，不要内扣。']
-        : ['Set up in a split stance.', 'Drop straight down and drive through the front foot.', 'Track the front knee over the toes.'],
-    },
-    'Single-leg Romanian deadlift': {
-      muscles: isZh ? ['臀部', '腘绳肌'] : ['Glutes', 'Hamstrings'],
-      steps: isZh
-        ? ['单腿站稳，另一条腿向后伸。', '从髋部折叠，不要弯腰塌背。', '起身时主动夹臀回正。']
-        : ['Balance on one leg and reach the other leg back.', 'Hinge from the hips instead of rounding forward.', 'Squeeze the glute to return tall.'],
-    },
-    'Standing calf raise': {
-      muscles: isZh ? ['小腿'] : ['Calves'],
-      steps: isZh
-        ? ['双脚平均受力站稳。', '提起脚跟并保持身体拉长。', '缓慢下放，感受小腿发力。']
-        : ['Stand evenly through both feet.', 'Lift the heels and stay tall through the body.', 'Lower slowly to load the calves.'],
-    },
-    'Side plank': {
-      muscles: isZh ? ['核心'] : ['Core'],
-      steps: isZh
-        ? ['身体侧向排成一条线。', '主动提髋，不要塌腰。', '保持稳定呼吸，肩颈放松。']
-        : ['Stack the body in one straight side line.', 'Lift the hips instead of sagging.', 'Breathe steadily and keep the neck relaxed.'],
-    },
-    'Glute bridge (pause at top)': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['仰卧屈膝，双脚踩稳。', '把髋抬高到身体成斜线。', '顶部停住 1 秒，再慢慢放下。']
-        : ['Lie down with knees bent and feet planted.', 'Drive the hips up into a long line.', 'Pause at the top before lowering.'],
-    },
-    'Tibialis wall raise': {
-      muscles: isZh ? ['小腿前侧'] : ['Shins'],
-      steps: isZh
-        ? ['背靠墙或抓稳支撑。', '把前脚掌和脚尖提起来。', '缓慢下放，感受胫骨前侧发力。']
-        : ['Lean back into a stable support.', 'Lift the forefoot and pull the toes up.', 'Lower with control and feel the front of the shin.'],
-    },
-    "World's greatest stretch": {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['进入长弓步位。', '一手撑地，另一手打开胸椎向上转。', '每次动作都带着呼吸和控制。']
-        : ['Step into a long lunge.', 'One hand stays down while the other opens the chest up.', 'Move slowly and breathe through each rep.'],
-    },
-    'Ankle dorsiflexion rocks': {
-      muscles: isZh ? ['踝关节'] : ['Ankles'],
-      steps: isZh
-        ? ['前脚掌和脚跟都踩稳。', '膝盖向前推，但脚跟不离地。', '来回轻推，找到踝关节活动度。']
-        : ['Keep the front foot flat.', 'Drive the knee forward without lifting the heel.', 'Rock in and out to open ankle motion.'],
-    },
-    'Step-down (knee tracking)': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['站在小台阶上。', '慢慢把另一只脚向地面点下去。', '支撑腿的膝盖始终对准脚尖。']
-        : ['Stand on a small step.', 'Lower the free foot toward the floor slowly.', 'Keep the stance knee tracking clean over the foot.'],
-    },
-    'Hamstring curl (slider or machine)': {
-      muscles: isZh ? ['腘绳肌'] : ['Hamstrings'],
-      steps: isZh
-        ? ['先把髋抬稳。', '用脚跟把滑盘或器械拉向身体。', '回程慢放，不要让髋掉下去。']
-        : ['Start from a stable bridged position.', 'Pull the heels toward the body.', 'Return slowly without dropping the hips.'],
-    },
-    'Pallof press': {
-      muscles: isZh ? ['核心'] : ['Core'],
-      steps: isZh
-        ? ['站稳，阻力从身体侧面来。', '双手向前推直。', '全程抗住身体被带偏。']
-        : ['Stand tall with the resistance pulling from the side.', 'Press the hands straight out.', 'Fight rotation and keep the torso quiet.'],
-    },
-    'Farmer carry (suitcase)': {
-      muscles: isZh ? ['核心', '臀部'] : ['Core', 'Glutes'],
-      steps: isZh
-        ? ['单手提重物并站高。', '走路时身体不要向一侧歪。', '步幅短一点，躯干稳定。']
-        : ['Carry the load in one hand and stand tall.', 'Do not lean toward or away from the weight.', 'Walk with short steady steps and a braced trunk.'],
-    },
-    'Pogo hops': {
-      muscles: isZh ? ['小腿'] : ['Calves'],
-      steps: isZh
-        ? ['像弹簧一样通过脚踝快速反弹。', '动作要短、轻、快。', '身体保持高，不做深蹲式跳跃。']
-        : ['Bounce through the ankles like springs.', 'Keep the contacts short, light, and quick.', 'Stay tall instead of turning it into a squat jump.'],
-    },
-    'Skipping A-drill': {
-      muscles: isZh ? ['臀部', '核心'] : ['Glutes', 'Core'],
-      steps: isZh
-        ? ['抬膝到接近髋高。', '脚下快速回弹，落点在身体正下方。', '手臂自然配合节奏。']
-        : ['Lift the knee to around hip height.', 'Strike quickly under the body and bounce out.', 'Let the arms match the rhythm.'],
-    },
-    'Box step-up (explosive)': {
-      muscles: isZh ? ['臀部', '小腿'] : ['Glutes', 'Calves'],
-      steps: isZh
-        ? ['整只脚踩上台面。', '快速向上驱动身体。', '下台时轻一点，不要砸地。']
-        : ['Plant the whole foot on the box.', 'Drive up fast through the stance leg.', 'Step down softly with control.'],
-    },
-    'Single-leg hop (low amplitude)': {
-      muscles: isZh ? ['小腿', '核心'] : ['Calves', 'Core'],
-      steps: isZh
-        ? ['单腿轻弹，不追求跳得很高。', '落地时膝盖稳定。', '每一下都像干净的小反弹。']
-        : ['Hop lightly on one leg without chasing height.', 'Land with a quiet stable knee.', 'Think of crisp elastic contacts each rep.'],
-    },
-  };
-
-  return guides[name] || {
-    muscles: isZh ? ['跑者力量'] : ['Runner strength'],
-    steps: isZh ? ['保持稳定。', '动作受控。', '全程均匀呼吸。'] : ['Stay stable.', 'Move with control.', 'Keep your breathing steady.'],
-  };
-}
-
 export default function MuscleTraining() {
   const { isAuthenticated } = useAuth();
   const { lang, t } = useI18n();
+  const { theme } = useTheme();
   const { isMile } = useUnit();
   const navigate = useNavigate();
+  const resolvedMuscleTheme = theme === 'midnight' ? 'dark' : 'white';
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [draft, setDraft] = useState(DEFAULT_PROFILE);
   const [plan, setPlan] = useState(null);
@@ -2848,6 +2770,7 @@ export default function MuscleTraining() {
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
   const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
+  const [selectedMuscleHitZoneId, setSelectedMuscleHitZoneId] = useState(() => getPrimaryTopMuscleHitZoneId('legs'));
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -2868,7 +2791,6 @@ export default function MuscleTraining() {
   const isZh = displayLang === 'zh-CN';
   const distanceUnitLabel = isMile ? t('muscle_training.miles_unit') : t('muscle_training.km_unit');
 
-
   const copy = useMemo(() => ({
     checkInTitle: t('muscle_training.check_in_title'),
     checkInHint: t('muscle_training.check_in_hint'),
@@ -2882,6 +2804,7 @@ export default function MuscleTraining() {
     checkInSaved: t('muscle_training.check_in_saved'),
     checkInResetSuccess: t('muscle_training.check_in_reset_success'),
     checkInUpdatedAt: t('muscle_training.check_in_updated_at'),
+    checkInEffectHint: t('muscle_training.check_in_effect_hint'),
     planSourceLabel: t('muscle_training.plan_source_label'),
     sourcePills: {
       COACH_SCHEDULE: t('muscle_training.source_pill_coach_schedule'),
@@ -2913,6 +2836,26 @@ export default function MuscleTraining() {
     save: t('muscle_training.save_settings'),
     saving: t('muscle_training.saving_settings'),
     saveSuccess: t('muscle_training.save_success'),
+    profileSummaryTitle: t('muscle_training.profile_summary_title'),
+    profileSummarySessions: t('muscle_training.profile_summary_sessions'),
+    profileSummaryNext: t('muscle_training.profile_summary_next'),
+    profileSummaryFocus: t('muscle_training.profile_summary_focus'),
+    profileSummaryDuration: t('muscle_training.profile_summary_duration'),
+    profilePreviewEquipment: t('muscle_training.profile_preview_equipment'),
+    profilePreviewDifficulty: t('muscle_training.profile_preview_difficulty'),
+    profilePreviewDuration: t('muscle_training.profile_preview_duration'),
+    profilePreviewDays: t('muscle_training.profile_preview_days'),
+    profileDirty: t('muscle_training.profile_dirty'),
+    profileSynced: t('muscle_training.profile_synced'),
+    profileExperienceHint: t('muscle_training.profile_experience_hint'),
+    profileEquipmentHint: t('muscle_training.profile_equipment_hint'),
+    profileSessionMinutesHint: t('muscle_training.profile_session_minutes_hint'),
+    profileNoiseHint: t('muscle_training.profile_noise_hint'),
+    profilePreferredDaysHint: t('muscle_training.profile_preferred_days_hint'),
+    profilePlanImpactTitle: t('muscle_training.profile_plan_impact_title'),
+    profileImpactEquipment: t('muscle_training.profile_impact_equipment'),
+    profileImpactNoise: t('muscle_training.profile_impact_noise'),
+    profileImpactDays: t('muscle_training.profile_impact_days'),
     statusTitle: t('muscle_training.status_title'),
     rationaleTitle: t('muscle_training.rationale_title'),
     weekTitle: t('muscle_training.week_title'),
@@ -3125,7 +3068,6 @@ export default function MuscleTraining() {
     topReferenceTitle: t('muscle_training.stitch_top_reference_title'),
     topPlanBadge: t('muscle_training.stitch_top_plan_badge'),
     topLibraryBadge: t('muscle_training.stitch_top_library_badge'),
-    settingsDisclosure: t('muscle_training.stitch_settings_disclosure'),
     emptyStateTitle: t('muscle_training.stitch_empty_state_title'),
     emptyStateAction: t('muscle_training.stitch_empty_state_action'),
     weekStripLabel: t('muscle_training.stitch_week_strip_label'),
@@ -3253,39 +3195,6 @@ export default function MuscleTraining() {
     return t('muscle_training.coach_narrative_no_strength_default');
   }, [copy, displayLang, featuredDay, isZh, t, isMile, plan]);
 
-  const nextRunSummary = useMemo(() => {
-    const days = plan?.days || [];
-    const nextRunIndex = days.findIndex((day) => {
-      const workoutType = day.run?.workoutType;
-      return workoutType && workoutType !== 'REST';
-    });
-
-    if (nextRunIndex < 0) {
-      return {
-        label: stitchCopy.runwayEmpty,
-        meta: stitchCopy.noRunContext,
-      };
-    }
-
-    const nextRunDay = days[nextRunIndex];
-    const runLabel = pickLabel(copy.workoutTypes, nextRunDay.run?.workoutType, stitchCopy.runDayBadge);
-    const dayLabel = nextRunIndex === 0
-      ? stitchCopy.todayBadge
-      : formatDayLabel(nextRunDay.date, nextRunDay.dayLabel, displayLang);
-    const distanceLabel = nextRunDay.run?.plannedDistanceKm != null
-      ? formatDistance(nextRunDay.run.plannedDistanceKm, isZh, isMile)
-      : '';
-    const badges = [
-      nextRunDay.run?.keyRun ? stitchCopy.keyRunBadge : '',
-      nextRunDay.run?.longRun ? stitchCopy.longRunBadge : '',
-    ].filter(Boolean);
-
-    return {
-      label: [dayLabel, runLabel].filter(Boolean).join(' - '),
-      meta: [distanceLabel, ...badges].filter(Boolean).join(' · ') || stitchCopy.weekAlignLabel,
-    };
-  }, [copy.workoutTypes, displayLang, isMile, isZh, plan, stitchCopy]);
-
   const targetAreaCards = useMemo(() => {
     return TARGET_AREA_GROUPS.map((group) => ({
       ...group,
@@ -3373,22 +3282,23 @@ export default function MuscleTraining() {
     [selectedMuscleTarget, selectedRailTargetKey, targetAreaCards],
   );
 
-  const topReferenceImage = selectedMuscleTargetCard?.image || targetLegsUrl;
+  const topReferenceImage = resolveExerciseReferenceImage(
+    selectedProtocolItem,
+    selectedMuscleTargetCard?.image || targetLegsUrl,
+  );
+
+  const selectedExerciseReferenceImage = useMemo(
+    () => resolveExerciseReferenceImage(
+      selectedProtocolItem,
+      selectedRailTargetCard?.image || targetLegsUrl,
+    ),
+    [selectedProtocolItem, selectedRailTargetCard],
+  );
 
   const volumeCompletion = useMemo(() => {
     const recommended = Math.max(weekDoseStats.recommended || weekDoseStats.planned || 1, 1);
     return Math.min(100, Math.round((weekDoseStats.planned / recommended) * 100));
   }, [weekDoseStats]);
-
-  const nextKeyRunSummary = useMemo(() => {
-    const keyDate = plan?.weekContext?.nextKeyRunDate;
-    const keyType = plan?.weekContext?.nextKeyRunType;
-    if (!keyDate && !keyType) return nextRunSummary;
-    return {
-      label: [keyDate ? formatShortDate(keyDate, displayLang) : '', pickLabel(copy.workoutTypes, keyType, '')].filter(Boolean).join(' - '),
-      meta: stitchCopy.weekAlignLabel,
-    };
-  }, [copy.workoutTypes, displayLang, nextRunSummary, plan, stitchCopy.weekAlignLabel]);
 
   const nextStrengthSummary = useMemo(() => {
     const days = plan?.days || [];
@@ -3421,22 +3331,103 @@ export default function MuscleTraining() {
     (plan?.days || []).reduce((sum, day) => sum + (Number(day.strength?.durationMinutes) || 0), 0)
   ), [plan]);
 
-  const recentStrengthPlaceholders = useMemo(() => ([
-    {
-      name: isZh ? '卧推 / 深蹲 / 硬拉' : 'Bench / Squat / Deadlift',
-      meta: stitchCopy.historyPlaceholderBadge,
-      value: stitchCopy.placeholderMetric,
-    },
-    {
-      name: isZh ? '总重量 / 1RM / PR' : 'Total lifted / 1RM / PRs',
-      meta: stitchCopy.historyPlaceholderHint,
-      value: stitchCopy.placeholderMetric,
-    },
-  ]), [isZh, stitchCopy]);
+  const profilePreferredDayLabel = useMemo(() => {
+    const activeDays = new Set(draft.preferredStrengthDays || []);
+    return DAY_OPTIONS
+      .filter((day) => activeDays.has(day.value))
+      .map((day) => (isZh ? day.zh : day.en))
+      .join(' / ');
+  }, [draft.preferredStrengthDays, isZh]);
+
+  const profileHasUnsavedChanges = useMemo(() => {
+    const draftDays = DAY_OPTIONS
+      .filter((day) => (draft.preferredStrengthDays || []).includes(day.value))
+      .map((day) => day.value)
+      .join('|');
+    const profileDays = DAY_OPTIONS
+      .filter((day) => (profile.preferredStrengthDays || []).includes(day.value))
+      .map((day) => day.value)
+      .join('|');
+    return (
+      draft.experienceLevel !== profile.experienceLevel ||
+      draft.equipmentLevel !== profile.equipmentLevel ||
+      draft.noisePreference !== profile.noisePreference ||
+      (Number(draft.sessionMinutes) || DEFAULT_PROFILE.sessionMinutes) !== (Number(profile.sessionMinutes) || DEFAULT_PROFILE.sessionMinutes) ||
+      draftDays !== profileDays
+    );
+  }, [
+    draft.equipmentLevel,
+    draft.experienceLevel,
+    draft.noisePreference,
+    draft.preferredStrengthDays,
+    draft.sessionMinutes,
+    profile.equipmentLevel,
+    profile.experienceLevel,
+    profile.noisePreference,
+    profile.preferredStrengthDays,
+    profile.sessionMinutes,
+  ]);
+
+  const profileSummaryItems = useMemo(() => {
+    const sessionMinutes = Number(draft.sessionMinutes) || DEFAULT_PROFILE.sessionMinutes;
+    const equipment = pickLabel(copy.equipmentOptions, draft.equipmentLevel, draft.equipmentLevel);
+    const experience = pickLabel(copy.experienceOptions, draft.experienceLevel, draft.experienceLevel);
+    return [
+      {
+        label: copy.profilePreviewEquipment,
+        value: equipment,
+      },
+      {
+        label: copy.profilePreviewDifficulty,
+        value: experience,
+      },
+      {
+        label: copy.profilePreviewDuration,
+        value: formatMinutes(sessionMinutes, isZh),
+      },
+      {
+        label: copy.profilePreviewDays,
+        value: profilePreferredDayLabel || '-',
+      },
+    ];
+  }, [
+    copy.equipmentOptions,
+    copy.experienceOptions,
+    copy.profilePreviewDays,
+    copy.profilePreviewDifficulty,
+    copy.profilePreviewDuration,
+    copy.profilePreviewEquipment,
+    draft.equipmentLevel,
+    draft.experienceLevel,
+    draft.sessionMinutes,
+    isZh,
+    profilePreferredDayLabel,
+  ]);
+
+  const profileImpactItems = useMemo(() => {
+    const equipment = pickLabel(copy.equipmentOptions, draft.equipmentLevel, draft.equipmentLevel);
+    const noise = pickLabel(copy.noiseOptions, draft.noisePreference, draft.noisePreference);
+    return [
+      formatCopyTemplate(copy.profileImpactEquipment, { equipment }),
+      formatCopyTemplate(copy.profileImpactNoise, { noise }),
+      formatCopyTemplate(copy.profileImpactDays, { days: profilePreferredDayLabel || '-' }),
+    ];
+  }, [
+    copy.equipmentOptions,
+    copy.noiseOptions,
+    copy.profileImpactDays,
+    copy.profileImpactEquipment,
+    copy.profileImpactNoise,
+    draft.equipmentLevel,
+    draft.noisePreference,
+    profilePreferredDayLabel,
+  ]);
 
   function handleTargetAreaSelect(targetKey) {
+    const nextTargetKey = targetKey === 'all' ? 'legs' : targetKey;
     setActiveTarget(targetKey);
-    setSelectedMuscleTarget(targetKey === 'all' ? 'legs' : targetKey);
+    setSelectedMuscleTarget(nextTargetKey);
+    setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
     setExpandedExerciseIdx(null);
     const nextPlanItem = targetKey === 'all'
       ? protocolItems[0]
@@ -3458,13 +3449,17 @@ export default function MuscleTraining() {
 
   function handleExerciseSelect(item) {
     const nextTargetKey = resolveTargetAreaKeyForItem(item, isZh);
-    setSelectedMuscleTarget(nextTargetKey === 'all' ? selectedMuscleTarget : nextTargetKey);
+    if (nextTargetKey !== 'all') {
+      setSelectedMuscleTarget(nextTargetKey);
+      setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
+    }
     setSelectedExerciseKey(getProtocolItemKey(item));
   }
 
-  function handleTopMuscleSelect(targetKey) {
+  function handleTopMuscleSelect(targetKey, hitZoneId = '') {
     const nextItems = buildTopRecommendationItems(targetKey);
     setSelectedMuscleTarget(targetKey);
+    setSelectedMuscleHitZoneId(hitZoneId || getPrimaryTopMuscleHitZoneId(targetKey));
     setActiveTarget(targetKey);
     setExpandedExerciseIdx(null);
     if (nextItems[0]) {
@@ -3475,6 +3470,7 @@ export default function MuscleTraining() {
   function handleTopExerciseSelect(item) {
     const nextTargetKey = item.targetKey || selectedMuscleTarget;
     setSelectedMuscleTarget(nextTargetKey);
+    setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
     setActiveTarget(nextTargetKey);
     setSelectedExerciseKey(getProtocolItemKey(item));
   }
@@ -3652,7 +3648,10 @@ export default function MuscleTraining() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div
+      className={`runner-shell-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}
+      data-muscle-theme={resolvedMuscleTheme}
+    >
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -3742,25 +3741,47 @@ export default function MuscleTraining() {
                     alt={stitchCopy.topMuscleTitle}
                     className="mt-muscle-visual"
                   />
-                  <div className="mt-muscle-hotspot-layer" aria-label={stitchCopy.topMuscleHint}>
-                    {TOP_MUSCLE_HOTSPOTS.map((hotspot, index) => {
-                      const target = targetAreaCards.find((item) => item.key === hotspot.key);
-                      const isActive = selectedMuscleTarget === hotspot.key;
+                  <div className="mt-muscle-hit-zone-layer" role="group" aria-label={stitchCopy.topMuscleHint}>
+                    {TOP_MUSCLE_HIT_ZONES.map((zone) => {
+                      const target = targetAreaCards.find((item) => item.key === zone.key);
+                      const zoneLabel = target?.label || zone.key;
+                      const isActive = selectedMuscleHitZoneId === zone.id;
                       return (
                         <button
-                          key={`${hotspot.key}-${index}`}
+                          key={zone.id}
                           type="button"
-                          className={`mt-muscle-hotspot mt-muscle-hotspot--${hotspot.key}${isActive ? ' is-active' : ''}`}
-                          style={hotspot.style}
-                          onClick={() => handleTopMuscleSelect(hotspot.key)}
-                          aria-label={`${stitchCopy.topMuscleTitle} ${target?.label || hotspot.key}`}
+                          className={`mt-muscle-hit-zone mt-muscle-hit-zone--${zone.key}${isActive ? ' is-active' : ''}`}
+                          style={{
+                            left: zone.left,
+                            top: zone.top,
+                            width: zone.width,
+                            height: zone.height,
+                          }}
+                          onClick={() => handleTopMuscleSelect(zone.key, zone.id)}
+                          aria-label={zoneLabel}
                           aria-pressed={isActive}
                         >
-                          <span>{target?.label || hotspot.key}</span>
+                          <span className="sr-only">{zoneLabel}</span>
                         </button>
                       );
                     })}
                   </div>
+                </div>
+                <div className="mt-muscle-target-buttons" role="group" aria-label={stitchCopy.topMuscleHint}>
+                  {targetAreaCards.map((target) => {
+                    const isActive = selectedMuscleTarget === target.key;
+                    return (
+                      <button
+                        key={`top-target-${target.key}`}
+                        type="button"
+                        className={`mt-muscle-target-button mt-muscle-target-button--${target.key}${isActive ? ' is-active' : ''}`}
+                        onClick={() => handleTopMuscleSelect(target.key)}
+                        aria-pressed={isActive}
+                      >
+                        <span>{target.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="mt-top-muscle-hint">{stitchCopy.topMuscleHint}</p>
               </article>
@@ -3776,6 +3797,7 @@ export default function MuscleTraining() {
                     const isLibrary = item.source === 'library';
                     const exerciseCopy = getExerciseContentForItem(item, isZh);
                     const targetImage = targetAreaCards.find((target) => target.key === (item.targetKey || selectedMuscleTarget))?.image || targetLegsUrl;
+                    const exerciseImage = resolveExerciseReferenceImage(item, targetImage);
                     const isSelected = selectedExerciseKey === itemKey;
                     return (
                       <button
@@ -3786,7 +3808,7 @@ export default function MuscleTraining() {
                         aria-pressed={isSelected}
                       >
                         <span className="mt-top-action-thumb">
-                          <img src={targetImage} alt="" aria-hidden="true" />
+                          <img src={exerciseImage} alt="" aria-hidden="true" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
                           {isLibrary && <i>{stitchCopy.topLibraryBadge}</i>}
                         </span>
                         <span className="mt-top-action-copy">
@@ -3808,7 +3830,7 @@ export default function MuscleTraining() {
                 </div>
                 <div className="mt-top-reference-card">
                   <figure className="mt-top-reference-media">
-                    <img src={topReferenceImage} alt="" aria-hidden="true" />
+                    <img src={topReferenceImage} alt="" aria-hidden="true" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
                     <figcaption>
                       <strong>{selectedExerciseCopy?.name || selectedMuscleTargetCard?.label}</strong>
                       <span>{selectedProtocolItem?.exercise ? formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh) : ''}</span>
@@ -3829,7 +3851,7 @@ export default function MuscleTraining() {
                     )}
                     {selectedExerciseCopy?.muscles?.length > 0 && (
                       <div className="mt-top-reference-muscles">
-                        <span>Target Muscles</span>
+                        <span>{stitchCopy.targetMusclesLabel}</span>
                         <div>
                           {selectedExerciseCopy.muscles.slice(0, 4).map((muscle) => (
                             <em key={muscle}>{muscle}</em>
@@ -3866,7 +3888,7 @@ export default function MuscleTraining() {
               </div>
               <div className="mt-hero-right">
                 <button type="button" className="mt-hero-cta" onClick={scrollToControls}>
-                  {stitchCopy.startWorkout}
+                  <span className="mt-hero-cta-label">{stitchCopy.startWorkout}</span>
                   <AppIcon name="arrow_forward" />
                 </button>
                 <div className="mt-ring-wrap" aria-label={`${stitchCopy.weeklyCompletion} ${volumeCompletion}%`}>
@@ -4024,6 +4046,7 @@ export default function MuscleTraining() {
                 {visibleExerciseItems.map((item, idx) => {
                   const isLibrary = item.source === 'library';
                   const exerciseCopy = getExerciseContentForItem(item, isZh);
+                  const exercisePrescription = formatLocalizedExercisePrescription(item.exercise, isZh);
                   const itemKey = getProtocolItemKey(item);
                   const isSelected = selectedExerciseKey === itemKey;
                   const isExpanded = expandedExerciseIdx === idx;
@@ -4054,7 +4077,7 @@ export default function MuscleTraining() {
                         <div className="mt-exercise-info">
                           <strong>{exerciseCopy.name}</strong>
                           <span className="mt-exercise-meta">
-                            {formatLocalizedExercisePrescription(item.exercise, isZh)}
+                            {exercisePrescription}
                             {exerciseCopy.muscles.length > 0 && (
                               <>&nbsp;·&nbsp;{exerciseCopy.muscles.slice(0, 2).join(' / ')}</>
                             )}
@@ -4069,34 +4092,41 @@ export default function MuscleTraining() {
                       </div>
                       {isExpanded && (
                         <div id={`mt-ex-detail-${idx}`} className="mt-exercise-detail">
-                          {(() => {
-                            const heatmapSlugs = muscleSlugsForExercise(exerciseCopy.muscles);
-                            if (heatmapSlugs.length === 0) return null;
-                            const heatmapData = heatmapSlugs.map((slug) => ({ slug, intensity: 2 }));
-                            const muscleLabel = exerciseCopy.muscles.join(' / ');
-                            return (
-                              <figure
-                                className="mt-exercise-heatmap"
-                                aria-label={`${exerciseCopy.name}${muscleLabel ? ': ' + muscleLabel : ''}`}
-                              >
-                                <MuscleHeatmap
-                                  data={heatmapData}
-                                  frontLabel={isZh ? '正面' : 'Front'}
-                                  backLabel={isZh ? '背面' : 'Back'}
-                                />
-                              </figure>
-                            );
-                          })()}
-                          {exerciseCopy.steps.length > 0 && (
-                            <ol className="mt-exercise-steps">
-                              {exerciseCopy.steps.map((step, si) => (
-                                <li key={si} className="mt-exercise-step">{step}</li>
-                              ))}
-                            </ol>
-                          )}
-                          {exerciseCopy.intent && (
-                            <p className="mt-exercise-intent">{exerciseCopy.intent}</p>
-                          )}
+                          <div className="mt-exercise-detail-layout">
+                            <div className="mt-exercise-record">
+                              <p className="mt-exercise-record-prescription">{exercisePrescription}</p>
+                              {exerciseCopy.steps.length > 0 && (
+                                <ol className="mt-exercise-steps">
+                                  {exerciseCopy.steps.map((step, si) => (
+                                    <li key={si} className="mt-exercise-step">{step}</li>
+                                  ))}
+                                </ol>
+                              )}
+                              {exerciseCopy.intent && (
+                                <p className="mt-exercise-intent">{exerciseCopy.intent}</p>
+                              )}
+                            </div>
+                            {(() => {
+                              const heatmapSlugs = muscleSlugsForExercise(exerciseCopy.muscles);
+                              if (heatmapSlugs.length === 0) return null;
+                              const heatmapData = heatmapSlugs.map((slug) => ({ slug, intensity: 2 }));
+                              const muscleLabel = exerciseCopy.muscles.join(' / ');
+                              return (
+                                <div className="mt-exercise-anatomy-panel">
+                                  <figure
+                                    className="mt-exercise-heatmap"
+                                    aria-label={`${exerciseCopy.name}${muscleLabel ? ': ' + muscleLabel : ''}`}
+                                  >
+                                    <MuscleHeatmap
+                                      data={heatmapData}
+                                      frontLabel={isZh ? '正面' : 'Front'}
+                                      backLabel={isZh ? '背面' : 'Back'}
+                                    />
+                                  </figure>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -4113,269 +4143,298 @@ export default function MuscleTraining() {
 
             {/* Side rail: video + exercise reference */}
             <div className="mt-side-grid mt-media-rail">
-              <article className="mt-card mt-video-card" aria-labelledby="mt-video-title">
-                <div className="mt-card-head">
-                  <span className="mt-kicker">{stitchCopy.topReferenceKicker}</span>
-                  <h2 id="mt-video-title" className="mt-card-title">{stitchCopy.videoDemoTitle}</h2>
-                </div>
-                {selectedExerciseVideoUrl ? (
-                  <div className="mt-video-frame">
-                    <iframe
-                      src={selectedExerciseVideoUrl}
-                      title={`${selectedExerciseCopy?.name || stitchCopy.noExerciseSelected} ${stitchCopy.videoDemoTitle}`}
-                      loading="lazy"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    />
+              <div className="mt-media-rail-sticky">
+                <article className="mt-card mt-video-card" aria-labelledby="mt-video-title">
+                  <div className="mt-card-head">
+                    <span className="mt-kicker">{stitchCopy.topReferenceKicker}</span>
+                    <h2 id="mt-video-title" className="mt-card-title">{stitchCopy.videoDemoTitle}</h2>
                   </div>
-                ) : (
-                  <div className="mt-video-missing">
-                    <p>{stitchCopy.videoUnavailable}</p>
-                    <a href={getExerciseVideoUrl(selectedProtocolItem?.exercise?.name)} target="_blank" rel="noreferrer">
-                      {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
-                    </a>
-                  </div>
-                )}
-              </article>
-
-              <article className="mt-card mt-reference-card" aria-labelledby="mt-reference-title">
-                <figure className="mt-reference-media">
-                  <img src={selectedRailTargetCard?.image || targetLegsUrl} alt="" aria-hidden="true" loading="lazy" />
-                  <figcaption>
-                    <span>{selectedRailTargetCard?.label || stitchCopy.targetLegs}</span>
-                    <strong>{selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}</strong>
-                  </figcaption>
-                </figure>
-                <div className="mt-reference-body">
-                  <span className="mt-kicker">{stitchCopy.professionalTips}</span>
-                  <h2 id="mt-reference-title" className="mt-card-title">
-                    {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
-                  </h2>
-                  {selectedProtocolItem?.exercise && (
-                    <p className="mt-reference-prescription">
-                      {formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh)}
-                    </p>
-                  )}
-                  <p className="mt-reference-intent">
-                    {selectedExerciseCopy?.intent || todayCoachNarrative || stitchCopy.guideSubtitle}
-                  </p>
-                  {selectedExerciseCopy?.steps?.length > 0 && (
-                    <ul className="mt-reference-steps">
-                      {selectedExerciseCopy.steps.slice(0, 3).map((step) => (
-                        <li key={step}>
-                          <span>i</span>
-                          {step}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {selectedExerciseCopy?.muscles?.length > 0 && (
-                    <div className="mt-reference-muscles">
-                      <span>{stitchCopy.targetMusclesLabel}</span>
-                      <div>
-                        {selectedExerciseCopy.muscles.slice(0, 4).map((muscle) => (
-                          <em key={muscle}>{muscle}</em>
-                        ))}
-                      </div>
+                  {selectedExerciseVideoUrl ? (
+                    <div className="mt-video-frame">
+                      <iframe
+                        src={selectedExerciseVideoUrl}
+                        title={`${selectedExerciseCopy?.name || stitchCopy.noExerciseSelected} ${stitchCopy.videoDemoTitle}`}
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-video-missing">
+                      <p>{stitchCopy.videoUnavailable}</p>
+                      <a href={getExerciseVideoUrl(selectedProtocolItem?.exercise?.name)} target="_blank" rel="noreferrer">
+                        {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
+                      </a>
                     </div>
                   )}
-                </div>
-              </article>
+                </article>
+
+                <article className="mt-card mt-reference-card" aria-labelledby="mt-reference-title">
+                  <figure className="mt-reference-media">
+                    <img
+                      src={selectedExerciseReferenceImage}
+                      alt={selectedExerciseCopy?.name || selectedRailTargetCard?.label || stitchCopy.noExerciseSelected}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                    />
+                    <figcaption>
+                      <span>{selectedRailTargetCard?.label || stitchCopy.targetLegs}</span>
+                      <strong>{selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}</strong>
+                    </figcaption>
+                  </figure>
+                  <div className="mt-reference-body">
+                    <span className="mt-kicker">{stitchCopy.professionalTips}</span>
+                    <h2 id="mt-reference-title" className="mt-card-title">
+                      {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
+                    </h2>
+                    {selectedProtocolItem?.exercise && (
+                      <p className="mt-reference-prescription">
+                        {formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh)}
+                      </p>
+                    )}
+                    <p className="mt-reference-intent">
+                      {selectedExerciseCopy?.intent || todayCoachNarrative || stitchCopy.guideSubtitle}
+                    </p>
+                    {selectedExerciseCopy?.steps?.length > 0 && (
+                      <ul className="mt-reference-steps">
+                        {selectedExerciseCopy.steps.slice(0, 3).map((step) => (
+                          <li key={step}>
+                            <span>i</span>
+                            {step}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {selectedExerciseCopy?.muscles?.length > 0 && (
+                      <div className="mt-reference-muscles">
+                        <span>{stitchCopy.targetMusclesLabel}</span>
+                        <div>
+                          {selectedExerciseCopy.muscles.slice(0, 4).map((muscle) => (
+                            <em key={muscle}>{muscle}</em>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              </div>
             </div>
           </>
         )}
 
         {!loading && !error && plan && (
           <>
-            {/* ── COACH CONTROLS: check-in + preferences behind disclosure ── */}
+            {/* Coach controls stay directly visible so settings are not hidden behind a vague disclosure. */}
             <section id="muscle-controls" className="strength-plan-control-deck">
+              <div className="muscle-controls-grid">
+                <section className="card muscle-panel muscle-preference-panel muscle-checkin-panel muscle-control-card">
+                  <div className="muscle-preference-head muscle-control-head">
+                    <div>
+                      <h2>{copy.checkInTitle}</h2>
+                      <p>{copy.checkInHint}</p>
+                      <p className="muscle-control-source-note">
+                        <strong>{copy.planSourceLabel}</strong>
+                        <span>{pickLabel(copy.sourceSummary, plan.planSource, '')}</span>
+                      </p>
+                      <p className="muscle-control-effect-note">{copy.checkInEffectHint}</p>
+                    </div>
+                    <div className="muscle-preference-baseline muscle-control-pills">
+                      <span className="muscle-pill muscle-pill-source">
+                        {pickLabel(copy.sourcePills, plan.planSource, plan.planSource)}
+                      </span>
+                      {plan.todayCheckIn?.updatedAt && (
+                        <span className="muscle-pill">
+                          {formatCopyTemplate(copy.checkInUpdatedAt, { date: formatTimestamp(plan.todayCheckIn.updatedAt, displayLang) })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-            <details className="mt-settings-disclosure">
-              <summary className="mt-settings-summary">
-                <AppIcon name="settings" className="mt-settings-icon" />
-                {stitchCopy.settingsDisclosure}
-              </summary>
+                  <form onSubmit={handleCheckInSave} className="muscle-pref-grid muscle-checkin-form">
+                    <label className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide">
+                      <span>{copy.checkInStateLabel}</span>
+                      <div className="muscle-choice-row">
+                        {CHECK_IN_ENTRY_STATES.map((state) => (
+                          <button
+                            key={state}
+                            type="button"
+                            className={`muscle-day-chip${checkInDraft.entryState === state ? ' active' : ''}`}
+                            onClick={() => updateCheckInDraft('entryState', state)}
+                          >
+                            {pickLabel(copy.checkInStateOptions, state, state)}
+                          </button>
+                        ))}
+                      </div>
+                    </label>
 
-            <section className="card muscle-panel muscle-preference-panel muscle-checkin-panel">
-              <div className="muscle-preference-head">
-                <div>
-                  <h2>{copy.checkInTitle}</h2>
-                  <p>{copy.checkInHint}</p>
-                </div>
-                <div className="muscle-preference-baseline">
-                  <span className="muscle-pill muscle-pill-source">
-                    {pickLabel(copy.sourcePills, plan.planSource, plan.planSource)}
-                  </span>
-                  {plan.todayCheckIn?.updatedAt && (
-                    <span className="muscle-pill">
-                      {formatCopyTemplate(copy.checkInUpdatedAt, { date: formatTimestamp(plan.todayCheckIn.updatedAt, displayLang) })}
-                    </span>
-                  )}
-                </div>
-              </div>
+                    <label className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide">
+                      <span>{copy.checkInTypeLabel}</span>
+                      <div className="muscle-choice-row">
+                        {CHECK_IN_RUN_TYPES.map((runType) => (
+                          <button
+                            key={runType}
+                            type="button"
+                            className={`muscle-day-chip${checkInDraft.runType === runType ? ' active' : ''}`}
+                            onClick={() => updateCheckInDraft('runType', runType)}
+                            aria-pressed={checkInDraft.runType === runType}
+                          >
+                            {pickLabel(copy.workoutTypes, runType, runType)}
+                          </button>
+                        ))}
+                      </div>
+                    </label>
 
-              <div className="muscle-status-source">
-                <strong>{copy.planSourceLabel}</strong>
-                <span>{pickLabel(copy.sourceSummary, plan.planSource, '')}</span>
-              </div>
+                    <label className="muscle-pref-field">
+                      <span>{`${copy.checkInDistanceLabel} (${distanceUnitLabel})`}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={checkInDraft.distanceKm}
+                        onChange={(event) => updateCheckInDraft('distanceKm', event.target.value)}
+                        placeholder={formatDistanceValue(todayPlan?.run?.plannedDistanceKm, isMile) ?? ''}
+                      />
+                    </label>
 
-              <form onSubmit={handleCheckInSave} className="muscle-pref-grid">
-                <label className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide">
-                  <span>{copy.checkInStateLabel}</span>
-                  <div className="muscle-choice-row">
-                    {CHECK_IN_ENTRY_STATES.map((state) => (
-                      <button
-                        key={state}
-                        type="button"
-                        className={`muscle-day-chip${checkInDraft.entryState === state ? ' active' : ''}`}
-                        onClick={() => updateCheckInDraft('entryState', state)}
-                      >
-                        {pickLabel(copy.checkInStateOptions, state, state)}
+                    <label className="muscle-pref-field">
+                      <span>{copy.checkInDurationLabel}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={checkInDraft.durationMinutes}
+                        onChange={(event) => updateCheckInDraft('durationMinutes', event.target.value)}
+                        placeholder={todayPlan?.run?.plannedDurationMinutes != null ? String(todayPlan.run.plannedDurationMinutes) : ''}
+                      />
+                    </label>
+
+                    <div className="muscle-pref-actions">
+                      <button type="submit" className="primary-action-btn" disabled={checkInSaving}>
+                        {checkInSaving ? copy.checkInSaving : copy.checkInSave}
                       </button>
-                    ))}
-                  </div>
-                </label>
-
-                <label className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide">
-                  <span>{copy.checkInTypeLabel}</span>
-                  <div className="muscle-choice-row">
-                    {CHECK_IN_RUN_TYPES.map((runType) => (
                       <button
-                        key={runType}
                         type="button"
-                        className={`muscle-day-chip${checkInDraft.runType === runType ? ' active' : ''}`}
-                        onClick={() => updateCheckInDraft('runType', runType)}
-                        aria-pressed={checkInDraft.runType === runType}
+                        className="muscle-secondary-btn"
+                        disabled={checkInSaving || !plan.todayCheckIn}
+                        onClick={handleCheckInReset}
                       >
-                        {pickLabel(copy.workoutTypes, runType, runType)}
+                        {copy.checkInReset}
                       </button>
+                      {checkInNotice && <span className="muscle-pref-notice">{checkInNotice}</span>}
+                    </div>
+                  </form>
+                </section>
+
+                <section className="card muscle-panel muscle-preference-panel muscle-profile-panel muscle-control-card" aria-labelledby="muscle-profile-title">
+                  <div className="muscle-preference-head muscle-profile-head">
+                    <div>
+                      <span className="muscle-profile-kicker">{copy.profileSummaryTitle}</span>
+                      <h2 id="muscle-profile-title">{copy.profileTitle}</h2>
+                      <p>{copy.profileHint}</p>
+                    </div>
+                    <div className="muscle-preference-baseline muscle-tuning-status">
+                      <span className={`muscle-pill muscle-sync-pill${profileHasUnsavedChanges ? ' is-dirty' : ''}`}>
+                        {profileHasUnsavedChanges ? copy.profileDirty : copy.profileSynced}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="muscle-profile-summary-strip muscle-profile-summary-strip--compact">
+                    {profileSummaryItems.map((item) => (
+                      <div key={item.label} className="muscle-profile-summary-card">
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                      </div>
                     ))}
                   </div>
-                </label>
 
-                <label className="muscle-pref-field">
-                  <span>{`${copy.checkInDistanceLabel} (${distanceUnitLabel})`}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={checkInDraft.distanceKm}
-                    onChange={(event) => updateCheckInDraft('distanceKm', event.target.value)}
-                    placeholder={formatDistanceValue(todayPlan?.run?.plannedDistanceKm, isMile) ?? ''}
-                  />
-                </label>
+                  <form onSubmit={handleSave} className="muscle-pref-grid muscle-profile-form">
+                    <label className="muscle-pref-field muscle-profile-control">
+                      <span>{copy.experienceLabel}</span>
+                      <select value={draft.experienceLevel} onChange={(event) => updateDraft('experienceLevel', event.target.value)}>
+                        {Object.entries(copy.experienceOptions).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <small className="muscle-pref-help">{copy.profileExperienceHint}</small>
+                    </label>
 
-                <label className="muscle-pref-field">
-                  <span>{copy.checkInDurationLabel}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={checkInDraft.durationMinutes}
-                    onChange={(event) => updateCheckInDraft('durationMinutes', event.target.value)}
-                    placeholder={todayPlan?.run?.plannedDurationMinutes != null ? String(todayPlan.run.plannedDurationMinutes) : ''}
-                  />
-                </label>
+                    <label className="muscle-pref-field muscle-profile-control">
+                      <span>{copy.equipmentLabel}</span>
+                      <select value={draft.equipmentLevel} onChange={(event) => updateDraft('equipmentLevel', event.target.value)}>
+                        {Object.entries(copy.equipmentOptions).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <small className="muscle-pref-help">{copy.profileEquipmentHint}</small>
+                    </label>
 
-                <div className="muscle-pref-actions">
-                  <button type="submit" className="primary-action-btn" disabled={checkInSaving}>
-                    {checkInSaving ? copy.checkInSaving : copy.checkInSave}
-                  </button>
-                  <button
-                    type="button"
-                    className="muscle-secondary-btn"
-                    disabled={checkInSaving || !plan.todayCheckIn}
-                    onClick={handleCheckInReset}
-                  >
-                    {copy.checkInReset}
-                  </button>
-                  {checkInNotice && <span className="muscle-pref-notice">{checkInNotice}</span>}
-                </div>
-              </form>
-            </section>
+                    <label className="muscle-pref-field muscle-profile-control">
+                      <span>{copy.sessionMinutesLabel}</span>
+                      <input
+                        type="number"
+                        min="15"
+                        max="75"
+                        step="5"
+                        value={draft.sessionMinutes}
+                        onChange={(event) => updateDraft('sessionMinutes', event.target.value)}
+                      />
+                      <small className="muscle-pref-help">{copy.profileSessionMinutesHint}</small>
+                    </label>
 
-            <section className="card muscle-panel muscle-preference-panel">
-              <div className="muscle-preference-head">
-                <div>
-                  <h2>{copy.profileTitle}</h2>
-                  <p>{copy.profileHint}</p>
-                </div>
-                <div className="muscle-preference-baseline">
-                  <span className="muscle-pill">{pickLabel(copy.experienceOptions, profile.experienceLevel)}</span>
-                  <span className="muscle-pill">{pickLabel(copy.equipmentOptions, profile.equipmentLevel)}</span>
-                </div>
+                    <label className="muscle-pref-field muscle-profile-control">
+                      <span>{copy.noiseLabel}</span>
+                      <select value={draft.noisePreference} onChange={(event) => updateDraft('noisePreference', event.target.value)}>
+                        {Object.entries(copy.noiseOptions).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <small className="muscle-pref-help">{copy.profileNoiseHint}</small>
+                    </label>
+
+                    <div className="muscle-pref-field muscle-pref-days muscle-profile-control muscle-profile-control--days">
+                      <span>{copy.preferredDaysLabel}</span>
+                      <div className="muscle-day-chip-row">
+                        {DAY_OPTIONS.map((day) => {
+                          const active = (draft.preferredStrengthDays || []).includes(day.value);
+                          return (
+                            <button
+                              key={day.value}
+                              type="button"
+                              className={`muscle-day-chip${active ? ' active' : ''}`}
+                              onClick={() => togglePreferredDay(day.value)}
+                              aria-pressed={active}
+                            >
+                              {isZh ? day.zh : day.en}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <small className="muscle-pref-help">{copy.profilePreferredDaysHint}</small>
+                    </div>
+
+                    <div className="muscle-pref-actions muscle-profile-actions">
+                      <button type="submit" className="primary-action-btn" disabled={saving}>
+                        {saving ? copy.saving : copy.save}
+                      </button>
+                      {notice && <span className="muscle-pref-notice">{notice}</span>}
+                    </div>
+                  </form>
+
+                  <div className="muscle-profile-impact muscle-profile-impact-strip">
+                    <strong>{copy.profilePlanImpactTitle}</strong>
+                    <ul>
+                      {profileImpactItems.map((item) => (
+                        <li key={item}>
+                          <span aria-hidden="true">i</span>
+                          <p>{item}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </section>
               </div>
-
-              <form onSubmit={handleSave} className="muscle-pref-grid">
-                <label className="muscle-pref-field">
-                  <span>{copy.experienceLabel}</span>
-                  <select value={draft.experienceLevel} onChange={(event) => updateDraft('experienceLevel', event.target.value)}>
-                    {Object.entries(copy.experienceOptions).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="muscle-pref-field">
-                  <span>{copy.equipmentLabel}</span>
-                  <select value={draft.equipmentLevel} onChange={(event) => updateDraft('equipmentLevel', event.target.value)}>
-                    {Object.entries(copy.equipmentOptions).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="muscle-pref-field">
-                  <span>{copy.sessionMinutesLabel}</span>
-                  <input
-                    type="number"
-                    min="15"
-                    max="75"
-                    step="5"
-                    value={draft.sessionMinutes}
-                    onChange={(event) => updateDraft('sessionMinutes', event.target.value)}
-                  />
-                </label>
-
-                <label className="muscle-pref-field">
-                  <span>{copy.noiseLabel}</span>
-                  <select value={draft.noisePreference} onChange={(event) => updateDraft('noisePreference', event.target.value)}>
-                    {Object.entries(copy.noiseOptions).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className="muscle-pref-field muscle-pref-days">
-                  <span>{copy.preferredDaysLabel}</span>
-                  <div className="muscle-day-chip-row">
-                    {DAY_OPTIONS.map((day) => {
-                      const active = (draft.preferredStrengthDays || []).includes(day.value);
-                      return (
-                        <button
-                          key={day.value}
-                          type="button"
-                          className={`muscle-day-chip${active ? ' active' : ''}`}
-                          onClick={() => togglePreferredDay(day.value)}
-                          aria-pressed={active}
-                        >
-                          {isZh ? day.zh : day.en}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="muscle-pref-actions">
-                  <button type="submit" className="primary-action-btn" disabled={saving}>
-                    {saving ? copy.saving : copy.save}
-                  </button>
-                  {notice && <span className="muscle-pref-notice">{notice}</span>}
-                </div>
-              </form>
-            </section>
-
-            </details>
 
             </section>
 
