@@ -8,6 +8,7 @@ const landingSource = readFileSync(path.join(here, 'Landing.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
 const revealHookSource = readFileSync(path.join(here, '../hooks/useScrollReveal.js'), 'utf8');
 const heroAssetPath = path.join(here, '../assets/generated/landing-command-hero-background.png');
+const heroWebpPath = path.join(here, '../assets/generated/landing-command-hero-background.webp');
 
 assert.match(
   landingSource,
@@ -85,10 +86,20 @@ assert.ok(
   'Landing command hero background should be a real generated raster asset, not an empty placeholder.',
 );
 
+assert.ok(
+  existsSync(heroWebpPath),
+  'WebP variant of landing command hero background should exist for image-set() WebP-first delivery.',
+);
+
+assert.ok(
+  statSync(heroWebpPath).size < 200000,
+  'WebP variant should be under 200KB — keeps the hero payload tiny on first paint.',
+);
+
 assert.match(
   styleSource,
-  /\.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*url\("\.\.\/assets\/generated\/landing-command-hero-background\.png"\)/,
-  'Landing command hero grid should use the generated hero image as its background.',
+  /\.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*image-set\([\s\S]*landing-command-hero-background\.webp[\s\S]*type\("image\/webp"\)[\s\S]*landing-command-hero-background\.png[\s\S]*type\("image\/png"\)[\s\S]*\)/,
+  'Landing command hero grid should use image-set() with WebP-first and PNG fallback.',
 );
 
 assert.match(
@@ -97,23 +108,13 @@ assert.match(
   'Landing command hero title should stay light over the generated background.',
 );
 
-assert.match(
-  styleSource,
-  /\.landing-cinematic-glyph--logo\s*\{[\s\S]*stroke:\s*none/,
-  'Landing Hermes logo should disable the generic red stroked glyph treatment.',
-);
+// Removed two `.landing-cinematic-glyph--logo` stroke assertions — the CSS rules
+// they pinned were retired with legacy-frame.css in commit 0c921aef. The Hermes
+// brand mark now ships via HermesMarkSvg with inline color, not a global override.
 
-assert.match(
-  styleSource,
-  /\.landing-cinematic-glyph--logo \*\s*\{[\s\S]*stroke:\s*none/,
-  'Landing Hermes logo child paths/rects should not inherit the generic red glyph stroke.',
-);
-
-assert.match(
-  styleSource,
-  /\.landing-strava-logo\s*\{[\s\S]*width:\s*78px/,
-  'Landing Strava logo should have a stable CTA-sized badge style.',
-);
+// Removed `.landing-strava-logo` width assertion — the rule was retired with
+// legacy-frame.css in commit 0c921aef. The Strava CTA logo now scales via
+// the in-component SVG viewBox.
 
 assert.match(
   styleSource,
