@@ -98,6 +98,11 @@ prompt-input*.json
 adidas-search.png
 territory_*.png
 tmp/
+# Backend debug/test artifacts (route overlay images, prompt dumps, etc.)
+backend/*.png
+backend/*.txt
+# Repo-root audit artifacts
+audit-midnight.json
 
 # One-time migration tools
 .tools/H2AddColumn.java
