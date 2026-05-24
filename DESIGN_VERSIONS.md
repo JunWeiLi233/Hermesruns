@@ -11,6 +11,159 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-05-23-17
+Date: 2026-05-23
+Surface: Muscle Training global theme sync on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the route-local strength theme switch and made the page follow the global app theme directly. The light variant now fixes Reference Dock headings, recommendation names, step indicators, card surfaces, and active controls so they stay readable on the white surface.
+Why: The strength page should not have a second theme system, and the first white-theme pass left several titles and neon labels unreadable.
+Rollback target: `DV-2026-05-23-16`
+Notes: Frontend presentation only. Routes, backend APIs, training plan logic, check-in save, profile save, exercise image mapping, and video embeds remain unchanged.
+
+### Version: DV-2026-05-23-16
+Date: 2026-05-23
+Surface: Muscle Training local themes on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a local dark and white theme switch for the strength page, tied the default to the global app theme, persisted manual selection, and rebuilt the white theme surfaces for the workbench, exercise cards, Reference Dock, and settings console.
+Why: The strength page was effectively dark-only because its route CSS overrode the global light theme.
+Rollback target: `DV-2026-05-23-15`
+Notes: Frontend presentation only. Routes, backend APIs, training plan logic, check-in save, profile save, exercise image mapping, and video embeds remain unchanged.
+
+### Version: DV-2026-05-23-15
+Date: 2026-05-23
+Surface: Muscle Training settings purpose on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the training profile panel as plan tuning, added draft-based preview results, field-level impact hints, a synced or unsaved state chip, and clearer save copy that explains the plan refresh.
+Why: The previous settings area looked like a questionnaire and did not clearly show why the user should answer those fields.
+Rollback target: `DV-2026-05-23-14`
+Notes: Frontend presentation and copy only. Check-in, profile save, reset, routes, APIs, fields, and plan generation remain unchanged.
+
+### Version: DV-2026-05-23-14
+Date: 2026-05-23
+Surface: Muscle Training settings chip readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final light-theme override so active settings chips keep dark text on the lime background.
+Why: `body.theme-light` was repainting active settings chips with pale text, leaving `计划中`, `轻松跑`, `周一`, and `周四` at very low contrast.
+Rollback target: `DV-2026-05-23-13`
+Notes: CSS-only readability fix. Check-in, profile save, reset, fields, layout, routes, APIs, and training data are unchanged.
+
+### Version: DV-2026-05-23-13
+Date: 2026-05-23
+Surface: Muscle Training settings console readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Filled enabled settings primary actions with the lime treatment and replaced the low-contrast profile pills with readable light text on a restrained green tint.
+Why: The compact settings console still had dark action text and red-brown preference pills that were hard to read on the black training surface.
+Rollback target: `DV-2026-05-23-12`
+Notes: CSS-only readability fix. Check-in save, profile save, reset, form fields, APIs, routes, training data, and layout structure are unchanged.
+
+### Version: DV-2026-05-23-12
+Date: 2026-05-23
+Surface: Muscle Training hero CTA on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a dedicated label wrapper to the top hero CTA and tightened its internal grid, line-height, icon sizing, and no-wrap behavior so `记录今日训练` stays on one readable line beside the arrow.
+Why: The CTA text could collapse into three stacked Chinese lines, making the main action look broken.
+Rollback target: `DV-2026-05-23-11`
+Notes: The CTA still uses the same localized copy and the same `scrollToControls` click behavior. No settings, training data, recommendation, route, or backend behavior changed.
+
+### Version: DV-2026-05-23-11
+Date: 2026-05-23
+Surface: Muscle Training compact settings console on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the bottom settings area into a compact two-lane control console, with today check-in on the left and training profile preferences on the right. The plan source moved into a lightweight inline note, the profile summary became a compact data strip, and the plan-impact copy became a short bottom strip.
+Why: The previous bottom settings area looked like two large stacked admin forms with heavy blank space and weak hierarchy.
+Rollback target: `DV-2026-05-23-10`
+Notes: Check-in save, check-in reset, profile save, existing fields, backend APIs, training plan generation, muscle selection, exercise details, and Reference Dock behavior are unchanged.
+
+### Version: DV-2026-05-23-10
+Date: 2026-05-23
+Surface: Muscle Training settings visibility and contrast on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the vague coach-settings disclosure button so the check-in and training profile panels are directly visible, then strengthened the dark settings deck contrast for summary cards, form controls, disabled actions, and native select options.
+Why: The grey "Open coach settings" button added no useful meaning, and some settings text was still too dim or washed out when selecting options.
+Rollback target: `DV-2026-05-23-09`
+Notes: Settings functionality, save flows, check-in reset, profile fields, routes, backend APIs, and training logic are unchanged.
+
+### Version: DV-2026-05-23-09
+Date: 2026-05-23
+Surface: Muscle Training settings readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Raised contrast inside the expanded settings deck for the today check-in card and training profile card, including muted copy, summary values, form controls, day chips, and disabled buttons.
+Why: Some words in the dark bottom settings area were too dim to read clearly.
+Rollback target: `DV-2026-05-23-08`
+Notes: CSS-only readability fix. Save flows, profile fields, training data, routes, API contracts, and layout structure are unchanged.
+
+### Version: DV-2026-05-23-08
+Date: 2026-05-23
+Surface: Muscle Training profile controls on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Upgraded the bottom Training Profile preferences panel with a real summary strip and plan-impact notes, while keeping the existing preference fields and save flow.
+Why: The profile record area looked like a plain stacked form and needed clearer information density without adding fake log controls or new backend fields.
+Rollback target: `DV-2026-05-23-07`
+Notes: This only changes the bottom expanded settings profile panel. Muscle selection, recommendations, exercise details, Reference Dock, profile API shape, routes, and training logic are unchanged.
+
+### Version: DV-2026-05-23-07
+Date: 2026-05-23
+Surface: Muscle Training expanded exercise detail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the expanded action detail card so the prescription, steps, and intent stay in a left record area while the existing `MuscleHeatmap` sits inside the same frame on the right.
+Why: The lower half of the muscle-training detail card looked unbalanced, and the requested layout was record content on the left with the anatomy figure on the right.
+Rollback target: `DV-2026-05-23-06`
+Notes: This is a local layout-only change. Top muscle selection, recommended actions, Reference Dock, training logic, routes, backend contracts, videos, and image mappings are unchanged.
+
+### Version: DV-2026-05-23-06
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a persistent selected ring to the anatomy image. Clicking the image keeps that specific ring visible, and clicking a visible muscle button keeps that muscle area's primary ring visible.
+Why: The selector needed to show the current body-part choice after the click instead of losing the visual target immediately.
+Rollback target: `DV-2026-05-23-05`
+Notes: This only changes selector feedback. Training logic, recommendations, videos, exercise images, routes, and backend contracts are unchanged.
+
+### Version: DV-2026-05-23-05
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored anatomy-image body-part clicking with transparent hit zones aligned to the current 512px image, while keeping the six visible muscle buttons as the readable labels.
+Why: Removing the bad hotspot circles also removed the expected body-part click path, so the selector needed clickable anatomy areas without misleading visible markers.
+Rollback target: `DV-2026-05-23-04`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-04
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the anatomy-image hotspot layer because its percentage coordinates did not match the current image. The anatomy image is now visual context only, and the six visible muscle buttons are the only selector.
+Why: The hotspot circles could appear over the abdomen, chest, or empty space while shoulder was selected, creating a misleading interaction.
+Rollback target: `working tree before this change`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-03
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the anatomy image hotspots, made their default hit areas visible, and added six clear muscle shortcut buttons below the image. Both paths now use the same top-muscle selection handler and expose a stronger selected state.
+Why: The previous selector required users to guess where the invisible hotspots were, making the first interaction feel unreliable.
+Rollback target: `working tree before this change`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-02
+Date: 2026-05-23
+Surface: Muscle Training right media rail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Wrapped the right-side video and reference card in an inner sticky rail for desktop, capped its viewport height, and restored normal document flow below 1180px. The page-level overflow rules now avoid creating an outer scroll ancestor that breaks sticky behavior.
+Why: The user wanted the action demo video and professional tip card to stay visible while scrolling the desktop exercise list, without covering the mobile layout.
+Rollback target: `working tree before this change`
+Notes: No exercise selection, image resolution, video embed mapping, or training data behavior changed.
+
+### Version: DV-2026-05-23-01
+Date: 2026-05-23
+Surface: Muscle Training exercise reference rail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/assets/muscle-training/ASSET_SOURCES.md`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the repeated target-area image in the right-side reference rail with action-keyed online exercise images. Top action thumbnails and the top reference dock now use the same exercise image resolver, with target-area imagery only as a fallback.
+Why: The user reported that the right-side image stayed the same across exercises and asked for each action to have its own image from the web.
+Rollback target: `working tree before this change`
+Notes: No backend contract, training recommendation logic, video embed mapping, or route behavior changed.
+
 ### Version: DV-2026-05-22-06
 Date: 2026-05-22
 Surface: Muscle Training top anatomy workbench on `/muscle-training`

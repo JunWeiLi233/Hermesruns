@@ -57,6 +57,22 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(
   color: var(--text-strong, #2c2f30) !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:not([data-muscle-theme="white"]) .mt-top-workbench .mt-top-panel-head h2,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:not([data-muscle-theme="white"]) .mt-top-workbench .mt-top-reference-head .mt-kicker,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:not([data-muscle-theme="white"]) .mt-top-workbench .mt-top-action-copy strong {
+  color: #bfff00 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:not([data-muscle-theme="white"]) .mt-top-workbench .mt-top-actions-head h2,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:not([data-muscle-theme="white"]) .mt-top-workbench .mt-top-reference-head h2,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:not([data-muscle-theme="white"]) .mt-top-workbench .mt-top-reference-body h3 {
+  color: #ffffff !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:not([data-muscle-theme="white"]) .mt-top-workbench :is(p, em, li, figcaption span, .mt-top-actions-head span, .mt-top-actions-note, .mt-top-muscle-hint) {
+  color: rgba(255, 255, 255, 0.64) !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root :is(
   .runs-dashboard-page,
   .weather-engine-page,
@@ -857,4 +873,36 @@ body:is(.theme-midnight, .theme-high-contrast) #root .auth-page--signup .signup-
     radial-gradient(circle at 18% 20%, rgba(240, 117, 97, 0.14), transparent 24rem),
     radial-gradient(circle at 88% 72%, rgba(255, 244, 236, 0.06), transparent 32rem),
     repeating-linear-gradient(135deg, rgba(255, 244, 236, 0.025) 0 1px, transparent 1px 24px) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-hero-title, .mt-card-title, .mt-exercises-head .mt-card-title, .mt-exercise-info strong, .mt-top-reference-head h2, .mt-reference-body h3, .muscle-preference-head h2, .muscle-profile-summary-card strong) {
+  color: #172012 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-top-actions-head h2, .mt-top-reference-head h2, .mt-reference-body h3, .mt-top-reference-body h3) {
+  color: #172012 !important;
+  text-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-hero-desc, .mt-reference-intent, .mt-reference-steps li, .mt-exercise-meta, .mt-top-action-copy em, .mt-top-muscle-hint, .mt-top-actions-head span, .mt-top-actions-note, .muscle-preference-head p, .muscle-pref-help, .muscle-profile-impact p) {
+  color: #5d6757 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-body p, .mt-reference-body li, .mt-reference-muscles > span, .mt-top-reference-body p, .mt-top-reference-body li, .mt-top-reference-muscles > span) {
+  color: #5d6757 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-muscles em, .mt-top-reference-muscles em) {
+  border-color: rgba(66, 82, 54, 0.18) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  color: #172012 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-top-reference-head .mt-kicker, .mt-top-action-copy strong, .mt-reference-prescription, .mt-reference-steps li span) {
+  color: #426000 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .strength-plan-control-deck .muscle-day-chip.active {
+  background: #7aa000 !important;
+  color: #ffffff !important;
 }
