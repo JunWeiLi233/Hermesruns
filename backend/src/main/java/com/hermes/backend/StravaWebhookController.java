@@ -1,13 +1,21 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -43,6 +51,11 @@ public class StravaWebhookController {
 
     @Value("${strava.webhook.verify-token:hermes-strava-webhook}")
     private String verifyToken;
+
+    @Value("${STRAVA_CLIENT_SECRET:}")
+    private String stravaClientSecret;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public StravaWebhookController(RunnerRepository runnerRepository, StravaSyncService stravaSyncService) {
         this.runnerRepository = runnerRepository;
@@ -91,7 +104,25 @@ public class StravaWebhookController {
      * trigger activity processing.</p>
      */
     @PostMapping
-    public ResponseEntity<String> handleEvent(@RequestBody Map<String, Object> event, HttpServletRequest request) {
+    public ResponseEntity<String> handleEvent(
+            @RequestBody String body,
+            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature,
+            HttpServletRequest request) {
+
+        boolean isProd = "production".equals(System.getenv("HERMES_ENV"));
+        if (isProd && (stravaClientSecret == null || stravaClientSecret.isBlank()
+                || !verifyStravaSignature(body, signature))) {
+            log.warn("Strava webhook rejected: HMAC signature mismatch or missing secret");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
+        }
+
+        Map<String, Object> event;
+        try {
+            event = OBJECT_MAPPER.readValue(body, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("Strava webhook rejected: invalid JSON body");
+            return ResponseEntity.badRequest().body("INVALID_JSON");
+        }
 
         String objectType = str(event.get("object_type"));
         String aspectType = str(event.get("aspect_type"));
@@ -190,6 +221,22 @@ public class StravaWebhookController {
                     || result == StravaSyncService.SingleActivitySyncResult.PERMANENT_FAILURE) {
                 return;
             }
+        }
+    }
+
+    private boolean verifyStravaSignature(String body, String signatureHeader) {
+        if (signatureHeader == null || !signatureHeader.startsWith("sha256=")) return false;
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(stravaClientSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] digest = mac.doFinal(body.getBytes(StandardCharsets.UTF_8));
+            String expected = "sha256=" + HexFormat.of().formatHex(digest);
+            return MessageDigest.isEqual(
+                    expected.getBytes(StandardCharsets.UTF_8),
+                    signatureHeader.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.warn("Strava signature verification error: {}", e.getMessage());
+            return false;
         }
     }
 

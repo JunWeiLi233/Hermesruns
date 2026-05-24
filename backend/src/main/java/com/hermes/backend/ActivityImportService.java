@@ -167,6 +167,16 @@ public class ActivityImportService {
             );
         }
 
+        // Structural fingerprint dedup: catches re-imports of the same activity with different
+        // file bytes (re-exported, re-compressed, renamed). Key: (runner, startTime, distanceBucket)
+        // where distanceBucket = distanceMeters rounded to the nearest 10 m.
+        if (parsedActivity.startTime() != null && parsedActivity.distanceMeters() != null) {
+            long distanceBucket = Math.round(parsedActivity.distanceMeters() / 10.0) * 10L;
+            if (activityRepository.existsByRunnerAndStartTimeAndDistanceBucket(runner, parsedActivity.startTime(), distanceBucket)) {
+                return new ImportResult(provider.name(), 0, 0, 1, 0, "This activity was already imported (matched by start time and distance).", List.of());
+            }
+        }
+
         Activity activity = new Activity();
         activity.setRunner(runner);
         activity.setProvider(provider);
