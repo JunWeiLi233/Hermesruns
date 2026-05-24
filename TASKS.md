@@ -796,8 +796,9 @@ Use this file as the working queue for AI agents.
   Done when: The Shoe page tracks not just mileage but also "days since last wear" and surface type (Road vs. Trail), suggesting the optimal shoe for today's recommended run and surface.
   Verify: Schedule a "Trail" run; verify the shoe recommendation favors a shoe tagged as "Trail" with lower recent usage.
 
-- [ ] [Product Opportunity] Coach-Voice "Week in Review" Digest
+- [x] [Product Opportunity] Coach-Voice "Week in Review" Digest
   Files: `backend/src/main/java/com/hermes/backend/WeeklyDigestService.java`, `frontend/src/pages/Profile.jsx`
+  Note: Done in commit 0606671c — ProfileDashboard.jsx fetches GET /api/weekly-digest and shows run count, km, VDOT trend, and coachFocus.message. Translation parity PASS, build PASS.
   Context: Market Intelligence / Retention - Score 7.4/10
   Done when: Every Monday, the runner receives a "Coach Voice" summary of the previous week's training, progress (VDOT change), and wellness trends with one specific focus area for the upcoming week.
   Verify: Verify the Weekly Digest card appears on the Profile page with correct VDOT delta and a personalized coaching focus.
