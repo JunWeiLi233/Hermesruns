@@ -101,6 +101,14 @@ public class RaceController {
             return error(HttpStatus.BAD_REQUEST, validation.message());
         }
 
+        if (request.completedActivityId() != null) {
+            Optional<Activity> ownedActivity = activityRepository.findByIdAndRunner(request.completedActivityId(), runnerOptional.get());
+            if (ownedActivity.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Activity does not belong to you"));
+            }
+        }
+
         RaceEvent raceEvent = new RaceEvent();
         applyRequest(raceEvent, request);
         raceEvent.setRunner(runnerOptional.get());
@@ -128,6 +136,14 @@ public class RaceController {
         Optional<RaceEvent> raceOptional = raceEventRepository.findByIdAndRunner(id, runnerOptional.get());
         if (raceOptional.isEmpty()) {
             return error(HttpStatus.NOT_FOUND, "Race not found.");
+        }
+
+        if (request.completedActivityId() != null) {
+            Optional<Activity> ownedActivity = activityRepository.findByIdAndRunner(request.completedActivityId(), runnerOptional.get());
+            if (ownedActivity.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Activity does not belong to you"));
+            }
         }
 
         RaceEvent raceEvent = raceOptional.get();
@@ -252,6 +268,9 @@ public class RaceController {
 
     @GetMapping("/course-map-image")
     public ResponseEntity<?> courseMapImage(@RequestParam("ref") String imageReference) {
+        if (imageReference != null && (imageReference.contains("..") || imageReference.startsWith("/") || imageReference.contains("\\"))) {
+            return ResponseEntity.badRequest().body("Invalid ref parameter");
+        }
         try {
             RaceCourseMapImageService.DisplayableCourseMapImage image =
                     raceCourseMapService.resolveDisplayableLocalImage(imageReference);
@@ -459,9 +478,11 @@ public class RaceController {
         payload.put("summary", "");
         payload.put("viewportBounds", null);
         payload.put("routePoints", List.of());
+        payload.put("routePointCount", 0);
         payload.put("elevationSamples", List.of());
         payload.put("totalClimbMeters", null);
         payload.put("aiAssisted", false);
+        payload.put("officialRouteVerified", false);
         return payload;
     }
 
@@ -487,9 +508,11 @@ public class RaceController {
         payload.put("summary", result == null || result.summary() == null ? "" : result.summary());
         payload.put("viewportBounds", courseMapAvailable && result != null ? result.overlayBounds() : null);
         payload.put("routePoints", routeAvailable && result != null && result.routePoints() != null ? result.routePoints() : List.of());
+        payload.put("routePointCount", routeAvailable && result != null && result.routePoints() != null ? result.routePoints().size() : 0);
         payload.put("elevationSamples", routeAvailable && result != null && result.elevationSamples() != null ? result.elevationSamples() : List.of());
         payload.put("totalClimbMeters", routeAvailable && result != null ? result.totalClimbMeters() : null);
         payload.put("aiAssisted", courseMapAvailable && result != null && result.aiAssisted());
+        payload.put("officialRouteVerified", routeAvailable && isOfficialGpsRoute(result));
         return payload;
     }
 
@@ -498,6 +521,15 @@ public class RaceController {
                 && result.courseMapDetected()
                 && result.routePoints() != null
                 && !result.routePoints().isEmpty();
+    }
+
+    private boolean isOfficialGpsRoute(RaceCourseMapResult result) {
+        if (!hasVerifiedRoute(result)) return false;
+        String summary = result.summary() == null ? "" : result.summary().toLowerCase(java.util.Locale.ROOT);
+        return summary.contains("official gpx")
+                || summary.contains("official gps")
+                || summary.contains("gpx-grounded")
+                || summary.contains("official-route gpx");
     }
 
     private boolean hasCityLevelReference(RaceCourseMapResult result) {

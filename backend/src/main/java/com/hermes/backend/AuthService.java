@@ -65,6 +65,12 @@ public class AuthService {
     private static final int SESSION_DAYS = 30;
 
     public String issueSessionToken(Runner runner) {
+        // Invalidate any existing session before issuing a new one.
+        // Clearing these fields first ensures no prior token remains valid
+        // even if a flush occurs mid-transaction before the new values are set.
+        runner.setSessionToken(null);
+        runner.setTokenIssuedAt(null);
+
         String token = UUID.randomUUID().toString();
         runner.setSessionToken(hashSessionToken(token));
         runner.setTokenIssuedAt(LocalDateTime.now());
