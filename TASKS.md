@@ -784,7 +784,8 @@ Use this file as the working queue for AI agents.
   Done when: Each flagged endpoint has an appropriate auth guard and returns only the minimum necessary information.
   Verify: Re-run security audit and confirm LOW leak-detector findings are mitigated.
 
-- [ ] [Product Opportunity] Interactive Injury Prevention Dashboard (ACWR + Subjective Feedback)
+- [x] [Product Opportunity] Interactive Injury Prevention Dashboard (ACWR + Subjective Feedback)
+  Note: Already implemented — InjuryRiskService + SorenessLog + risk ring UI in Analysis.jsx all present. Verified 2026-05-24.
   Files: `frontend/src/pages/Analysis.jsx`, `backend/src/main/java/com/hermes/backend/InjuryRiskService.java`
   Context: Market Intelligence / "Reactive" Injury Gap - Score 8.5/10
   Done when: The Analysis page features a dedicated Injury Prevention dashboard that combines the ACWR ratio with a daily "Soreness/Pain" logger, triggering specific coaching advice when risk is high.

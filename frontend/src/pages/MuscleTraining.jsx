@@ -217,6 +217,21 @@ const EXERCISE_VIDEO_EMBEDS = {
   'front-rack-carry': 'https://www.youtube-nocookie.com/embed/Q5kuuxaNDDM',
   'hanging-leg-raise': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
   'barbell-rollout': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
+  // Backend-generated plan exercises (issue #36). Each entry is either a
+  // vetted demo for the exercise itself or, where no vetted demo exists yet,
+  // a safe fallback mapped to the closest already-vetted demonstration.
+  'hip-airplanes': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'dead-bug': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
+  'split-squat': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'single-leg-romanian-deadlift': 'https://www.youtube-nocookie.com/embed/5zmlnbWb-g4',
+  'standing-calf-raise': 'https://www.youtube-nocookie.com/embed/z7E_YU9P1jU',
+  'side-plank': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
+  'glute-bridge-pause-at-top': 'https://www.youtube-nocookie.com/embed/5zmlnbWb-g4',
+  'tibialis-wall-raise': 'https://www.youtube-nocookie.com/embed/z7E_YU9P1jU',
+  'pogo-hops': 'https://www.youtube-nocookie.com/embed/ep30avTSMB0',
+  'skipping-a-drill': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'box-step-up-explosive': 'https://www.youtube-nocookie.com/embed/ep30avTSMB0',
+  'single-leg-hop-low-amplitude': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
 };
 
 const COMPOUND_TARGET_LIBRARY = {
