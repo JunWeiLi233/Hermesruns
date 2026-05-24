@@ -1185,10 +1185,10 @@ check("loop prefers the OMX Ralph executor when the bridge maps loop ownership t
   });
 
   assert.equal(result.status, "dry-run-complete");
-  assert.equal(result.executorLabel, "omx-ralph");
+  assert.equal(result.executorLabel, "omx-ralph-yolo");
 
   const coordinator = JSON.parse(fs.readFileSync(path.join(fixture.dir, ".ai-sync", "coordinator.json"), "utf8"));
-  assert.equal(coordinator.executorLabel, "omx-ralph");
+  assert.equal(coordinator.executorLabel, "omx-ralph-yolo");
   assert.equal(coordinator.nextAction, "loop-owner-execute-round");
 });
 
