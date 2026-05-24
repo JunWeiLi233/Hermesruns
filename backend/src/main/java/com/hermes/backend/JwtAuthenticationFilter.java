@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
             if (runnerOpt.isPresent()) {
                 Runner runner = runnerOpt.get();
+                // Enforce token expiry at the filter level: reject tokens older than 30 days
+                // or tokens with no issuedAt timestamp (cannot verify age).
+                LocalDateTime issuedAt = runner.getTokenIssuedAt();
+                if (issuedAt == null || issuedAt.isBefore(LocalDateTime.now().minusDays(30))) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
                 List<SimpleGrantedAuthority> authorities = authService.isAdmin(runner)
                         ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
                         : Collections.emptyList();

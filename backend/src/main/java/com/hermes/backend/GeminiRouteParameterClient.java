@@ -133,9 +133,10 @@ public class GeminiRouteParameterClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", aiApiKey);
 
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + aiModel + ":generateContent?key=" + aiApiKey;
+                + aiModel + ":generateContent";
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
         ResponseEntity<Map> response = exchangeWithTransientGeminiRetry(url, entity);
 

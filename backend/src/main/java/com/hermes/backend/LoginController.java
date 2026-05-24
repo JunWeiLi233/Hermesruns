@@ -91,14 +91,14 @@ public class LoginController {
         Optional<Runner> runnerOptional = authService.authenticate(email, password);
         if (runnerOptional.isEmpty()) {
             rateLimiter.recordFailure(ip);
-            log.warn("Auth login failed ip={} email={}", ip, email);
+            log.warn("Auth login failed ip={} emailHash={}", ip, emailHash(email));
             return error(HttpStatus.UNAUTHORIZED, "Invalid credentials.");
         }
 
         rateLimiter.recordSuccess(ip);
         Runner runner = runnerOptional.get();
         if (!authService.isAdmin(runner) && !runner.isEmailVerified()) {
-            log.warn("Auth login blocked (email not verified) ip={} email={}", ip, runner.getEmail());
+            log.warn("Auth login blocked (email not verified) ip={} emailHash={}", ip, emailHash(runner.getEmail()));
             return errorWithCode(HttpStatus.FORBIDDEN,
                     "Please verify your email before signing in. Check your inbox or request a new link.",
                     "EMAIL_NOT_VERIFIED");
@@ -186,7 +186,7 @@ public class LoginController {
         try {
             emailVerificationService.resendVerification(opt.get());
         } catch (Exception e) {
-            log.warn("Auth resend verification failed ip={} email={}", ip, email, e);
+            log.warn("Auth resend verification failed ip={} emailHash={}", ip, emailHash(email), e);
             return error(HttpStatus.SERVICE_UNAVAILABLE, "Could not send email. Try again later.");
         }
 
@@ -707,6 +707,21 @@ public class LoginController {
         Map<String, String> response = new HashMap<>();
         response.put("message", message);
         return response;
+    }
+
+    /**
+     * Returns the first 4 bytes of the SHA-256 hash of the email as a hex string (8 chars).
+     * Safe for log correlation without exposing PII.
+     */
+    private static String emailHash(String email) {
+        if (email == null) return "null";
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(email.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return String.format("%02x%02x%02x%02x", digest[0], digest[1], digest[2], digest[3]);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return "?";
+        }
     }
 
     private record RunnerSummary(Long id, String email, String role, String status, String subscriptionTier) {

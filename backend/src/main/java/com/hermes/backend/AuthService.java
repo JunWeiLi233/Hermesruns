@@ -84,28 +84,16 @@ public class AuthService {
 
         String hashedToken = hashSessionToken(token);
 
-        Optional<Runner> hashedMatch = runnerRepository.findBySessionToken(hashedToken)
+        return runnerRepository.findBySessionToken(hashedToken)
                 .filter(runner -> !runner.isDeleted())
                 .filter(this::isTokenValid);
-        if (hashedMatch.isPresent()) {
-            return hashedMatch;
-        }
-
-        Optional<Runner> legacyMatch = runnerRepository.findBySessionToken(token)
-                .filter(runner -> !runner.isDeleted())
-                .filter(this::isTokenValid);
-        legacyMatch.ifPresent(runner -> {
-            runner.setSessionToken(hashedToken);
-            runnerRepository.save(runner);
-        });
-        return legacyMatch;
     }
 
     private boolean isTokenValid(Runner runner) {
         LocalDateTime issuedAt = runner.getTokenIssuedAt();
         if (issuedAt == null) {
-            // Legacy tokens without a timestamp: accept but re-stamp on next issue
-            return true;
+            // No timestamp means age cannot be verified — treat as expired.
+            return false;
         }
         return issuedAt.isAfter(LocalDateTime.now().minusDays(SESSION_DAYS));
     }

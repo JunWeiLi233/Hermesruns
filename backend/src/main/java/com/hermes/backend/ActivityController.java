@@ -396,7 +396,7 @@ public class ActivityController {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
 
-        List<Object[]> rows = activityPointRepository.findHrSamplesByActivityIdOrdered(id);
+        List<Object[]> rows = activityPointRepository.findHrSamplesByActivityIdOrdered(activityOpt.get().getId());
         List<Map<String, Integer>> samples = new ArrayList<>(rows.size());
         for (Object[] row : rows) {
             if (row == null || row.length < 2 || row[0] == null || row[1] == null) continue;

@@ -89,9 +89,10 @@ public class ShoeQueryNormalizationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", aiApiKey);
 
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + aiModel + ":generateContent?key=" + aiApiKey;
+                + aiModel + ":generateContent";
 
         ResponseEntity<Map> response = restTemplate.exchange(
                 url,
