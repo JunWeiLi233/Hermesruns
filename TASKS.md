@@ -411,7 +411,8 @@ Use this file as the working queue for AI agents.
   3. Run the backend compile check and existing tests to confirm behavior is preserved while scope is reduced.
   Done when: ActivityMetrics.java has fewer than 15 methods and its injected dependencies are under 8, with extracted responsibilities moved to focused helpers.
   Verify: `cd backend && ./mvnw -q -DskipTests compile`
-- [ ] Fix swallowed exceptions in QwenPersistentWorkerClient.java
+- [x] Fix swallowed exceptions in QwenPersistentWorkerClient.java
+  Note: Done in commit b83a48ca — Logger added; 4 empty catch blocks replaced with DEBUG-level log + explanatory comments.
   Files: `backend/src/main/java/com/hermes/backend/QwenPersistentWorkerClient.java`
   Context: backend/src/main/java/com/hermes/backend/QwenPersistentWorkerClient.java has 4 catch block(s) that silently swallow exceptions (4 empty catch blocks, 0 with e.printStackTrace() or ignore comments). Swallowed exceptions hide real failures and make debugging extremely difficult.
   Steps:
