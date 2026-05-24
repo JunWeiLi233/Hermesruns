@@ -638,7 +638,7 @@ class BackendStressTests {
         AutomatedCoachService service = new AutomatedCoachService(
                 runnerRepository, activityRepository,
                 stateRepository, scheduleRepository, blockRepository, alertRepository,
-                mock(ShoeTracker.class), mock(CoachRouteService.class), mock(ReadinessService.class));
+                mock(ShoeTrackerService.class), mock(CoachRouteService.class), mock(ReadinessService.class));
 
         assertThatCode(() -> service.nightlyAuditAllRunners()).doesNotThrowAnyException();
 
@@ -884,7 +884,7 @@ class BackendStressTests {
                 scheduleRepository,
                 blockRepository,
                 alertRepository,
-                mock(ShoeTracker.class),
+                mock(ShoeTrackerService.class),
                 mock(CoachRouteService.class),
                 mock(ReadinessService.class)
         );
