@@ -29,7 +29,6 @@ import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
-import recentRunsHeroOverlay from '../assets/generated/recent-runs-hero-overlay.jpg';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
@@ -828,9 +827,7 @@ const Runs = memo(function Runs() {
               <p>{t('runs.page_copy')}</p>
             </section>
             <section className="recent-runs-hero recent-runs-hero--dashboard">
-              <div className="recent-runs-hero-overlay">
-                <img className="recent-runs-hero-overlay-image" src={recentRunsHeroOverlay} alt="" aria-hidden="true" draggable="false" />
-              </div>
+              <div className="recent-runs-hero-overlay" />
               <div className="recent-runs-hero-copy">
                 <span className="recent-runs-hero-kicker">{t('runs.stitch_pattern_title')}</span>
                 <h2>{t('profile.dashboard_recent_sessions')}</h2>

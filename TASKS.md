@@ -483,8 +483,9 @@ Use this file as the working queue for AI agents.
   3. Run the backend compile check and existing tests to confirm behavior is preserved while scope is reduced.
   Done when: ActivityPoint.java has fewer than 15 methods and its injected dependencies are under 8, with extracted responsibilities moved to focused helpers.
   Verify: `cd backend && ./mvnw -q -DskipTests compile`
-- [ ] Fix swallowed exceptions in RaceCourseMapImageService.java
+- [x] Fix swallowed exceptions in RaceCourseMapImageService.java
   Files: `backend/src/main/java/com/hermes/backend/RaceCourseMapImageService.java`
+  Note: Done in commit 589ae522 — silent catch replaced with log.error + RuntimeException rethrow.
   Context: backend/src/main/java/com/hermes/backend/RaceCourseMapImageService.java has 2 catch block(s) that silently swallow exceptions (2 empty catch blocks, 0 with e.printStackTrace() or ignore comments). Swallowed exceptions hide real failures and make debugging extremely difficult.
   Steps:
   1. Audit each empty or swallow catch block in `backend/src/main/java/com/hermes/backend/RaceCourseMapImageService.java` to determine whether the exception should be logged, re-thrown, or handled with a specific recovery path.
