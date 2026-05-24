@@ -150,6 +150,20 @@ public class AiUsageService {
         return status;
     }
 
+    /**
+     * Rollback a previously consumed quota slot when the API call fails.
+     * Decrements the runner's daily counter by 1 (floor at 0) and persists.
+     * No-op for Pro and admin runners (they were never charged).
+     */
+    public synchronized void rollbackConsumedQuota(Runner runner) {
+        if (isProOrAdmin(runner)) return;
+        int current = runner.getAiDailyScansUsed();
+        if (current > 0) {
+            runner.setAiDailyScansUsed(current - 1);
+            runnerRepository.save(runner);
+        }
+    }
+
     public void grantPro(Runner runner, int months) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime currentExpiry = runner.getProExpiresAt();
