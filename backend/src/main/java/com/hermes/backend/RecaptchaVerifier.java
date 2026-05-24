@@ -1,7 +1,12 @@
 package com.hermes.backend;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -24,12 +29,16 @@ public class RecaptchaVerifier {
         if (token == null || token.isBlank()) {
             return false;
         }
-        String url = "https://www.google.com/recaptcha/api/siteverify"
-            + "?secret=" + secretKey
-            + "&response=" + token;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> formBody = new LinkedMultiValueMap<>();
+        formBody.add("secret", secretKey);
+        formBody.add("response", token);
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(formBody, headers);
         try {
             @SuppressWarnings("unchecked")
-            Map<String, Object> result = restTemplate.postForObject(url, null, Map.class);
+            Map<String, Object> result = restTemplate.postForObject(
+                    "https://www.google.com/recaptcha/api/siteverify", entity, Map.class);
             if (result == null || Boolean.TRUE != result.get("success")) {
                 return false;
             }
