@@ -165,7 +165,141 @@ public class AutomatedCoachService {
                 ))
                 .orElse(null);
 
-        return new CoachTodayDto(toScheduledDto(adjusted), toStateDto(runner, state, adjusted), routeRecommendation, shoeRec);
+        String runnerState = computeRunnerState(runner, state);
+        String coachMessage = buildCoachMessage(state, adjusted, runnerState, runner);
+        return new CoachTodayDto(toScheduledDto(adjusted), toStateDto(runner, state, adjusted), routeRecommendation, shoeRec, runnerState, coachMessage);
+    }
+
+    /**
+     * Detects the runner's persona for today's coaching:
+     *  - "new"      = fewer than 3 logged runs total
+     *  - "comeback" = last run > 14 days ago (or 28-day volume effectively zero)
+     *  - "active"   = otherwise
+     */
+    private String computeRunnerState(Runner runner, CoachRunnerState state) {
+        long totalRuns = activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN);
+        if (totalRuns < 3) {
+            return "new";
+        }
+        LocalDateTime now = LocalDateTime.now();
+        List<RunMetricsProjection> last14 = activityRepository.findRunMetricsBetween(
+                runner, ActivityType.RUN, now.minusDays(14), now);
+        if (last14.isEmpty() || state.getVolumeKm28d() <= 0.05) {
+            return "comeback";
+        }
+        return "active";
+    }
+
+    /**
+     * Builds a concise, specific, data-backed coaching sentence for today.
+     * Uses already-aggregated state (volumes, readiness) and today's workout.
+     */
+    private String buildCoachMessage(CoachRunnerState state, CoachScheduledWorkout today, String runnerState, Runner runner) {
+        if ("new".equals(runnerState)) {
+            return "Start easy: run 30–40 minutes at a pace where you can hold a full conversation. We'll calibrate your zones after a few sessions.";
+        }
+        if ("comeback".equals(runnerState)) {
+            long daysSinceLast = daysSinceLastRun(runner);
+            if (daysSinceLast > 0) {
+                return String.format(Locale.ROOT,
+                        "Welcome back — %d days since your last run. Ease in at conversational pace for 25–35 minutes, and hold off on intensity for the first week.",
+                        daysSinceLast);
+            }
+            return "Welcome back. Ease in at conversational pace for 25–35 minutes, and hold off on intensity for the first week.";
+        }
+
+        // Active runner — specific data-backed message.
+        CoachWorkoutType type = today != null ? today.getWorkoutType() : null;
+        double vol7 = state.getVolumeKm7d();
+        double vol28 = state.getVolumeKm28d();
+        // ACWR ≈ acute (7d) / chronic (28d/4 weekly average)
+        Double acwr = null;
+        if (vol28 > 0.1) {
+            double chronicWeekly = vol28 / 4.0;
+            if (chronicWeekly > 0.1) {
+                acwr = Math.round((vol7 / chronicWeekly) * 100.0) / 100.0;
+            }
+        }
+        String acwrClause = (acwr != null && acwr > 0) ? String.format(Locale.ROOT, " (ACWR %.2f)", acwr) : "";
+        Integer readiness = state.getReadinessScore();
+        String verdict = state.getReadinessVerdict();
+
+        if (type == CoachWorkoutType.REST || type == CoachWorkoutType.RECOVERY) {
+            return String.format(Locale.ROOT,
+                    "Rest day%s — recovery is training. %.0f km in the last 7 days is solid work.",
+                    acwrClause, vol7);
+        }
+
+        String paceClause = buildEasyPaceClause(state, runner, type);
+        String workoutLabel = describeWorkout(type);
+        Double dist = today != null ? today.getPlannedDistanceKm() : null;
+        String distClause = (dist != null && dist > 0) ? String.format(Locale.ROOT, " for %.0f km", dist) : "";
+        String readinessClause = (readiness != null && verdict != null && !"GO".equals(verdict))
+                ? String.format(Locale.ROOT, " Readiness %d/100 (%s) — listen to your body.", readiness, verdict)
+                : "";
+
+        return String.format(Locale.ROOT, "%s%s%s.%s%s",
+                workoutLabel, acwrClause, distClause, paceClause, readinessClause);
+    }
+
+    private long daysSinceLastRun(Runner runner) {
+        LocalDateTime now = LocalDateTime.now();
+        List<RunMetricsProjection> recent = activityRepository.findRunMetricsBetween(
+                runner, ActivityType.RUN, now.minusDays(365), now);
+        LocalDateTime latest = null;
+        for (RunMetricsProjection r : recent) {
+            LocalDateTime ts = r.getEffectiveStartTime();
+            if (ts != null && (latest == null || ts.isAfter(latest))) {
+                latest = ts;
+            }
+        }
+        if (latest == null) return 0;
+        return java.time.Duration.between(latest, now).toDays();
+    }
+
+    private String describeWorkout(CoachWorkoutType type) {
+        if (type == null) return "Easy run today";
+        return switch (type) {
+            case EASY -> "Easy run today";
+            case LONG_RUN -> "Long run today";
+            case INTERVALS -> "Quality day — intervals";
+            case THRESHOLD -> "Quality day — threshold";
+            case TEMPO -> "Tempo day";
+            case RECOVERY -> "Recovery shakeout";
+            case REST -> "Rest day";
+            default -> "Run today";
+        };
+    }
+
+    /**
+     * Builds a coarse easy/target pace clause from recent average pace.
+     * Falls back to a conservative range when no usable pace data exists.
+     */
+    private String buildEasyPaceClause(CoachRunnerState state, Runner runner, CoachWorkoutType type) {
+        if (type == CoachWorkoutType.INTERVALS || type == CoachWorkoutType.THRESHOLD || type == CoachWorkoutType.TEMPO) {
+            return ""; // quality sessions carry their own pace guidance elsewhere
+        }
+        LocalDateTime now = LocalDateTime.now();
+        List<RunMetricsProjection> last28 = activityRepository.findRunMetricsBetween(
+                runner, ActivityType.RUN, now.minusDays(28), now);
+        double totalKm = 0, totalSec = 0;
+        for (RunMetricsProjection r : last28) {
+            double km = (r.getDistanceKm() > 0) ? r.getDistanceKm() : (r.getDistanceMeters() / 1000.0);
+            Long dur = r.getDurationSeconds();
+            if (km > 1.0 && dur != null && dur > 60) {
+                totalKm += km;
+                totalSec += dur;
+            }
+        }
+        if (totalKm <= 0 || totalSec <= 0) {
+            return " Aim for conversational pace.";
+        }
+        int avgPaceSec = (int) Math.round(totalSec / totalKm);
+        // Easy zone: ~+30s to +75s/km slower than recent rolling average pace.
+        int slow = avgPaceSec + 75;
+        int fast = avgPaceSec + 30;
+        return String.format(Locale.ROOT, " Target %d:%02d–%d:%02d/km.",
+                fast / 60, fast % 60, slow / 60, slow % 60);
     }
 
     @Transactional
@@ -612,7 +746,8 @@ private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachSchedul
 
     public record CoachTodayDto(
             CoachScheduledWorkoutDto today, CoachStateDto state,
-            CoachRouteRecommendationDto routeRecommendation, CoachRecommendedShoeDto recommendedShoe
+            CoachRouteRecommendationDto routeRecommendation, CoachRecommendedShoeDto recommendedShoe,
+            String runnerState, String coachMessage
     ) {}
 
     public record CoachFeedbackAlertDto(Long id, String alertType, String message, LocalDateTime createdAt) {}

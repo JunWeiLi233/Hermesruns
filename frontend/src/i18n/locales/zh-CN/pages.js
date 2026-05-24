@@ -1181,6 +1181,11 @@ export default {
     "readiness_signal_stress_tooltip": "压力恢复评分，越高代表你身体对昨日压力的应对越好。",
     "shoe_recommendation_title": "建议跑鞋",
     "shoe_recommendation_reason": "{reason}",
+    "new_runner_title": "欢迎 — 我们一起搭起你的基底",
+    "new_runner_body": "第一次跑步决定了一切。先轻松一点：用能说话的配速跑 30–40 分钟。Hermes 会据此为你校准 VDOT 与训练区间。",
+    "new_runner_cta": "记录你的第一次跑步",
+    "comeback_title": "欢迎回来 — 慢慢找回节奏",
+    "comeback_body": "休息之后，先按以往跑量的 60–70% 回归，第一周先不要安排质量课。",
     "readinessDeferred": {
       "notice": "你今天的状态是 {verdict}。教练把 {originalType} 换成了 {newType}。",
     },

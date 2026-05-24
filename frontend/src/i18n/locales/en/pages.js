@@ -1181,6 +1181,11 @@ export default {
     "readiness_signal_stress_tooltip": "Stress recovery score — higher means your body handled yesterday's stress well.",
     "shoe_recommendation_title": "Suggested Shoe",
     "shoe_recommendation_reason": "{reason}",
+    "new_runner_title": "Welcome — let's build your baseline",
+    "new_runner_body": "Your first run sets everything. Start easy: run 30–40 minutes at conversation pace. Hermes will calibrate your VDOT and training zones from there.",
+    "new_runner_cta": "Log your first run",
+    "comeback_title": "Welcome back — ease back in",
+    "comeback_body": "After a break, ease back at 60–70% of your previous volume. Hold off on quality sessions for the first week.",
     "readinessDeferred": {
       "notice": "Your readiness is {verdict}. Coach swapped {originalType} for {newType} today.",
     },
