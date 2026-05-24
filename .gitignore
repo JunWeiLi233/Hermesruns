@@ -299,6 +299,7 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 !.claude/agents/frontend-agent.md
 !.claude/commands/
 !.claude/commands/*.md
+.claude/commands/_*.md
 !.claude/skills/vercel-react-best-practices/
 !.claude/skills/vercel-react-best-practices/SKILL.md
 !.claude/skills/vercel-react-best-practices/agents/
