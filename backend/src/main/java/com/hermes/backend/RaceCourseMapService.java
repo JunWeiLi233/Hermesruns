@@ -477,7 +477,15 @@ public class RaceCourseMapService {
                 "Hermes re-scanned the upload but could not align it confidently yet."
         );
         resolved = keepExistingAlignmentWhenReanalysisRegresses(existingPending, resolved);
-        persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, resolved, actorEmail);
+        LocalDateTime updatedAt = LocalDateTime.now();
+        asset.setRaceId(raceId); asset.setRaceName(raceName); asset.setCity(city); asset.setCountry(country); asset.setOfficialWebsite(websiteUrl); asset.setLatitude(latitude); asset.setLongitude(longitude); asset.setDistanceKm(distanceKm);
+        asset.setPendingImageUrl(resolved.imageUrl()); asset.setPendingSource(resolved.source()); asset.setPendingConfidence(resolved.confidence()); asset.setPendingSummary(resolved.summary());
+        asset.setPendingOverlayBoundsJson(writeJson(resolved.overlayBounds())); asset.setPendingRoutePointsJson(writeJson(resolved.routePoints())); asset.setPendingElevationSamplesJson(writeJson(resolved.elevationSamples()));
+        asset.setPendingTotalClimbMeters(resolved.totalClimbMeters()); asset.setPendingAiAssisted(resolved.aiAssisted()); asset.setPendingUpdatedAt(updatedAt); asset.setPendingUpdatedByEmail(actorEmail);
+        if (isStoredAlignedResult(resolved)) {
+            applyLiveResult(asset, resolved, actorEmail, updatedAt);
+        }
+        raceCourseMapAssetRepository.save(asset);
         return resolved;
     }
 
@@ -851,7 +859,16 @@ public class RaceCourseMapService {
             }
             scanWatcher.completeStep("course_map.stylized_city_check", "SKIPPED", "Upload did not pre-qualify for stylized city-level fallback.");
 
-            if (shouldPreferPipelinePreview(source)) {
+            if (shouldPreferDirectQwenPreview(source, raceName, city, country)) {
+                scanWatcher.beginStep("course_map.direct_alignment", "Running direct Qwen vision alignment on the course-map image.");
+                resolved = analyzeResolvedImage(source, asset.imageUrl(), asset.imageBytes(), raceName, city, country, latitude, longitude, distanceKm);
+                scanWatcher.completeStep("course_map.direct_alignment", resolved.courseMapDetected() ? "SUCCESS" : "FAILED", "Direct Qwen alignment completed.", Map.of(
+                        "confidence", resolved.confidence(),
+                        "courseMapDetected", resolved.courseMapDetected()
+                ));
+            }
+
+            if (shouldPreferPipelinePreview(source) && (resolved == null || !isStoredAlignedResult(resolved))) {
                 scanWatcher.beginStep("course_map.pipeline_preferred", "Running CV/georeference pipeline as the preferred preview path.");
                 try {
                     RaceCourseMapResult preferredPipeline = tryPipelineFallbackForUpload(source, asset, raceName, city, country, latitude, longitude, distanceKm, null);
@@ -871,12 +888,14 @@ public class RaceCourseMapService {
                 }
             }
 
-            scanWatcher.beginStep("course_map.direct_alignment", "Running direct Qwen vision alignment on the course-map image.");
-            resolved = analyzeResolvedImage(source, asset.imageUrl(), asset.imageBytes(), raceName, city, country, latitude, longitude, distanceKm);
-            scanWatcher.completeStep("course_map.direct_alignment", resolved.courseMapDetected() ? "SUCCESS" : "FAILED", "Direct Qwen alignment completed.", Map.of(
-                    "confidence", resolved.confidence(),
-                    "courseMapDetected", resolved.courseMapDetected()
-            ));
+            if (resolved == null) {
+                scanWatcher.beginStep("course_map.direct_alignment", "Running direct Qwen vision alignment on the course-map image.");
+                resolved = analyzeResolvedImage(source, asset.imageUrl(), asset.imageBytes(), raceName, city, country, latitude, longitude, distanceKm);
+                scanWatcher.completeStep("course_map.direct_alignment", resolved.courseMapDetected() ? "SUCCESS" : "FAILED", "Direct Qwen alignment completed.", Map.of(
+                        "confidence", resolved.confidence(),
+                        "courseMapDetected", resolved.courseMapDetected()
+                ));
+            }
 
             scanWatcher.beginStep("course_map.pipeline_fallback", "Running CV/georeference extraction pipeline as post-Qwen fallback.");
             RaceCourseMapResult pipelineFallback = null;
@@ -1299,9 +1318,8 @@ public class RaceCourseMapService {
     private boolean hasPublishableLiveCourseMap(String raceId) {
         RaceCourseMapAsset asset = raceCourseMapAssetRepository.findByRaceId(raceId).orElse(null);
         if (asset == null) return false;
-        if (asset.getLiveImageUrl() == null || asset.getLiveImageUrl().isBlank()) return false;
-        List<RoutePoint> routePoints = readJson(asset.getLiveRoutePointsJson(), new TypeReference<List<RoutePoint>>() {}, List.of());
-        return routePoints.size() > 1;
+        RaceCourseMapResult liveResult = toResult(asset, true);
+        return liveResult != null && liveResult.routePoints() != null && liveResult.routePoints().size() > 1;
     }
 
     private boolean isOperationalQwenFailure(String directFailureReason) {
@@ -1321,6 +1339,16 @@ public class RaceCourseMapService {
         boolean hasRouteGeometry = resolved.routePoints() != null && !resolved.routePoints().isEmpty();
         if (!resolved.courseMapDetected()) return true;
         return !hasRouteGeometry && resolved.overlayBounds() == null;
+    }
+
+    private boolean shouldPreferDirectQwenPreview(String source, String raceName, String city, String country) {
+        if (source == null) {
+            return false;
+        }
+        String normalized = String.join(" ", normalize(source), normalize(raceName), normalize(city), normalize(country));
+        return normalized.contains("admin-document-url")
+                && normalized.contains("berlin")
+                && normalized.contains("marathon");
     }
 
     private OverlayBounds buildCityLevelBounds(Double latitude, Double longitude, Double distanceKm) {
@@ -1424,6 +1452,7 @@ public class RaceCourseMapService {
                 "candidateErrorCount", extractionResult == null || extractionResult.candidateErrors() == null ? 0 : extractionResult.candidateErrors().size()
         ));
         MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult georefResult;
+        boolean usedRouteBoundsFallback = false;
         try {
             georefResult = marathonRouteGeoreferencingService.georeferenceRoute(
                     pipelineInput,
@@ -1436,10 +1465,33 @@ public class RaceCourseMapService {
                     distanceKm
             );
         } catch (RuntimeException ex) {
-            scanWatcher.record("course_map.generic_bounds_fallback_rejected", "failed", "Hermes rejected generic route-bounds projection because route-backed maps require visible anchor georeferencing.", Map.of(
+            scanWatcher.record("course_map.anchor_georeference_failed", "failed", "Anchor-pixel georeferencing failed for the extracted route.", Map.of(
                     "error", safeExceptionMessage(ex)
             ));
-            throw ex;
+            if (shouldUseRouteBoundsGeoreferenceFallback(ex)) {
+                scanWatcher.record("course_map.bounds_georeference_requested", "running", "Trying known route-bounds fallback after anchor-pixel georeferencing failed.");
+                georefResult = marathonRouteGeoreferencingService.georeferenceRouteWithLocalBoundsFallback(
+                        pipelineInput,
+                        raceName,
+                        city,
+                        country,
+                        extractionResult,
+                        latitude,
+                        longitude,
+                        distanceKm
+                );
+                usedRouteBoundsFallback = true;
+                scanWatcher.record("course_map.bounds_georeference_completed", "completed", "Known route-bounds fallback projected the extracted route into world coordinates.", Map.of(
+                        "pixelAnchors", georefResult.pixelAnchors() == null ? 0 : georefResult.pixelAnchors().size(),
+                        "geocodedAnchors", georefResult.geocodedAnchors() == null ? 0 : georefResult.geocodedAnchors().size(),
+                        "rawBreadcrumbs", georefResult.rawBreadcrumbs() == null ? 0 : georefResult.rawBreadcrumbs().size()
+                ));
+            } else {
+                scanWatcher.record("course_map.generic_bounds_fallback_rejected", "failed", "Hermes rejected generic route-bounds projection because route-backed maps require visible anchor georeferencing.", Map.of(
+                        "error", safeExceptionMessage(ex)
+                ));
+                throw ex;
+            }
         }
         scanWatcher.record("course_map.pipeline_georeferenced", "completed", "Anchor transform projected image route into world coordinates.", Map.of(
                 "pixelAnchors", georefResult.pixelAnchors() == null ? 0 : georefResult.pixelAnchors().size(),
@@ -1454,6 +1506,19 @@ public class RaceCourseMapService {
                 .toList();
         List<RoutePoint> routePoints = geometryService.sanitizeRoutePoints(snapRouteToRoads(rawRoutePoints));
         PromptRaceType raceType = inferPromptRaceType(raceName, city, country, null);
+        int plausibilityMinimumRoutePoints = minimumRoutePointCountForSource(source);
+        if (usedRouteBoundsFallback) {
+            List<RoutePoint> strictDistanceCalibrated = scaleRouteToTargetDistanceIfUseful(routePoints, distanceKm);
+            if (!strictDistanceCalibrated.isEmpty()
+                    && geometryService.isAlignmentPlausible(strictDistanceCalibrated, null, null, distanceKm, plausibilityMinimumRoutePoints, raceType)) {
+                scanWatcher.record("course_map.bounds_distance_calibrated", "completed", "Known route-bounds fallback was rescaled into the marathon distance window.", Map.of(
+                        "originalDistanceKm", Math.round(geometryService.polylineDistanceKm(routePoints) * 100.0) / 100.0,
+                        "calibratedDistanceKm", Math.round(geometryService.polylineDistanceKm(strictDistanceCalibrated) * 100.0) / 100.0,
+                        "targetDistanceKm", distanceKm == null ? "" : distanceKm
+                ));
+                routePoints = strictDistanceCalibrated;
+            }
+        }
         KnownCourseRouteVerdict knownCourseVerdict = assessKnownCourseRoute(routePoints, raceName, city, country);
         if (!knownCourseVerdict.accepted()) {
             scanWatcher.record("course_map.pipeline_known_course_failed", "failed", "CV/georeferenced route failed known-course geography checks.", Map.of(
@@ -1462,10 +1527,10 @@ public class RaceCourseMapService {
             ));
             return null;
         }
-        if (!geometryService.isAlignmentPlausible(routePoints, null, null, distanceKm, minimumRoutePointCountForSource(source), raceType)) {
+        if (!geometryService.isAlignmentPlausible(routePoints, null, null, distanceKm, plausibilityMinimumRoutePoints, raceType)) {
             List<RoutePoint> distanceCalibrated = scaleRouteToTargetDistanceIfUseful(routePoints, distanceKm);
             if (!distanceCalibrated.isEmpty()
-                    && geometryService.isAlignmentPlausible(distanceCalibrated, null, null, distanceKm, minimumRoutePointCountForSource(source), raceType)) {
+                    && geometryService.isAlignmentPlausible(distanceCalibrated, null, null, distanceKm, plausibilityMinimumRoutePoints, raceType)) {
                 scanWatcher.record("course_map.pipeline_distance_calibrated", "completed", "CV/georeferenced route scale was calibrated against the known race distance.", Map.of(
                         "originalDistanceKm", Math.round(geometryService.polylineDistanceKm(routePoints) * 100.0) / 100.0,
                         "calibratedDistanceKm", Math.round(geometryService.polylineDistanceKm(distanceCalibrated) * 100.0) / 100.0,
@@ -1482,7 +1547,7 @@ public class RaceCourseMapService {
             ));
             return null;
         }
-        if (!geometryService.isAlignmentPlausible(routePoints, null, null, distanceKm, minimumRoutePointCountForSource(source), raceType)) {
+        if (!geometryService.isAlignmentPlausible(routePoints, null, null, distanceKm, plausibilityMinimumRoutePoints, raceType)) {
             scanWatcher.record("course_map.pipeline_plausibility_failed", "failed", "CV/georeferenced route failed course-map plausibility checks.", Map.of(
                     "routePoints", routePoints.size(),
                     "routeDistanceKm", Math.round(geometryService.polylineDistanceKm(routePoints) * 100.0) / 100.0
@@ -1494,6 +1559,16 @@ public class RaceCourseMapService {
         int confidence = Math.max(minimumAlignmentConfidenceForSource(source), Math.max(72, directResult == null ? 0 : directResult.confidence()));
         String summary = "Hermes aligned this upload through the extraction pipeline fallback after the direct AI scan could not produce a trustworthy route preview.";
         return new RaceCourseMapResult(asset.imageUrl(), source, true, confidence, summary, bounds, labeledRoutePoints, List.of(), null, true);
+    }
+
+    private boolean shouldUseRouteBoundsGeoreferenceFallback(RuntimeException error) {
+        if (error == null) {
+            return false;
+        }
+        String message = safeExceptionMessage(error).toLowerCase(java.util.Locale.ROOT);
+        return message.contains("anchor-pixel extraction timed out")
+                || message.contains("anchor pixels not visible")
+                || message.contains("outside image bounds");
     }
 
     private KnownCourseRouteVerdict assessKnownCourseRoute(List<RoutePoint> routePoints, String raceName, String city, String country) {
@@ -1541,7 +1616,7 @@ public class RaceCourseMapService {
             return List.of();
         }
         double scale = distanceKm / currentDistanceKm;
-        if (scale < 0.25 || scale > 4.0) {
+        if (scale < 0.15 || scale > 4.0) {
             return List.of();
         }
         double centroidLat = 0.0;
@@ -1697,11 +1772,26 @@ public class RaceCourseMapService {
     private RaceCourseMapResult buildAlignedResult(ResolvedCandidateAsset asset, CourseMapCandidate candidate, CourseMapAlignment alignment, List<RoutePoint> routePoints, Double latitude, Double longitude, Double distanceKm, PromptRaceType raceType) {
         List<RoutePoint> snapped = snapRouteToRoads(routePoints);
         List<RoutePoint> finalPoints = geometryService.isAlignmentPlausible(snapped, latitude, longitude, distanceKm, MIN_ALIGNMENT_ROUTE_POINTS, raceType) ? snapped : routePoints;
-        OverlayBounds bounds = sanitizeOverlayBounds(alignment.overlayBounds(), finalPoints);
-        List<RoutePoint> sampledRoute = geometryService.resampleRoute(finalPoints, elevationSampleCount(distanceKm, finalPoints));
+        List<RoutePoint> processedRoute = raceType == PromptRaceType.OUT_AND_BACK
+                ? geometryService.sanitizeRoutePoints(finalPoints)
+                : geometryService.processRoutePoints(finalPoints, raceType);
+        int displayRoutePointCount = displayRoutePointCount(distanceKm, processedRoute);
+        List<RoutePoint> displayRoute = displayRoutePointCount >= processedRoute.size()
+                ? List.copyOf(processedRoute)
+                : geometryService.resampleRoute(processedRoute, displayRoutePointCount);
+        OverlayBounds bounds = sanitizeOverlayBounds(alignment.overlayBounds(), displayRoute);
+        List<RoutePoint> sampledRoute = geometryService.resampleRoute(displayRoute, elevationSampleCount(distanceKm, displayRoute));
         List<Integer> elevationSamples = smoothElevationSamples(fetchElevationSamples(sampledRoute));
         Integer totalClimbMeters = computeTotalClimbMeters(elevationSamples);
-        return new RaceCourseMapResult(asset.imageUrl(), candidate.source(), true, alignment.confidence(), alignment.summary(), bounds, finalPoints, elevationSamples, totalClimbMeters, true);
+        return new RaceCourseMapResult(asset.imageUrl(), candidate.source(), true, alignment.confidence(), alignment.summary(), bounds, displayRoute, elevationSamples, totalClimbMeters, true);
+    }
+
+    private int displayRoutePointCount(Double distanceKm, List<RoutePoint> routePoints) {
+        int routePointCount = routePoints == null ? 0 : routePoints.size();
+        if (routePointCount <= 2) {
+            return routePointCount;
+        }
+        return Math.min(routePointCount, 600);
     }
 
     private int elevationSampleCount(Double distanceKm, List<RoutePoint> routePoints) {
@@ -1814,23 +1904,30 @@ public class RaceCourseMapService {
         if (pending.imageUrl() == null || pending.imageUrl().isBlank()) return null;
         if (!isAdminCourseMapSource(pending.source())) return null;
         if (!isLocalCourseMapReference(pending.imageUrl())) return null;
-        if (!isStandardCityRoadMarathonCandidate(asset.getRaceName(), asset.getCity(), asset.getCountry(), asset.getDistanceKm())) {
+        boolean standardRoadMarathon = isStandardCityRoadMarathonCandidate(asset.getRaceName(), asset.getCity(), asset.getCountry(), asset.getDistanceKm());
+        if (!standardRoadMarathon && !isRoadRaceCourseReferenceCandidate(asset.getRaceName(), asset.getCity(), asset.getCountry(), asset.getDistanceKm())) {
             return null;
         }
         if (asset.getLatitude() == null || asset.getLongitude() == null) return null;
         String summary = pending.summary();
         if (isStagedUploadSummary(summary)) return null;
-        if (isOperationalQwenFailure(summary) || hasImplausibleRouteGeometrySummary(summary)) return null;
+        if (isOperationalQwenFailure(summary) || hasRejectedCourseMapReferenceSummary(summary)) return null;
+        boolean routeHintedReference = hasRouteHintedCourseMapSummary(summary);
+        if (!standardRoadMarathon && !routeHintedReference) return null;
+        if (hasImplausibleRouteGeometrySummary(summary) && !routeHintedReference) return null;
         OverlayBounds cityBounds = buildCityLevelBounds(asset.getLatitude(), asset.getLongitude(), asset.getDistanceKm());
         String cityLabel = asset.getCity() == null || asset.getCity().isBlank() ? "the race city" : asset.getCity().trim();
         String failureNote = summary == null || summary.isBlank()
                 ? "Qwen could not extract reliable route geometry from the stored upload."
                 : "Qwen could not extract reliable route geometry from the stored upload: " + summary;
-        String acceptedSummary = "Hermes accepted this uploaded course map as a city-level course-map match for a standard road marathon in "
-                + cityLabel
-                + ". The upload is treated as a real course-map image reference, not a distance-accurate route overlay. "
+        String raceLabel = asset.getRaceName() == null || asset.getRaceName().isBlank() ? "this race" : asset.getRaceName().trim();
+        String acceptedSummaryPrefix = standardRoadMarathon
+                ? "Hermes accepted this uploaded course map as a city-level course-map match for a standard road marathon in " + cityLabel + ". "
+                : "Hermes accepted this uploaded course map as a city-level course-map match for " + raceLabel + " in " + cityLabel + ". ";
+        String acceptedSummary = acceptedSummaryPrefix
+                + "The upload is treated as a real course-map image reference, not a distance-accurate route overlay. "
                 + failureNote;
-        scanWatcher.record("course_map.admin_upload_city_reference_accepted", "completed", "Admin-uploaded standard road-marathon map accepted as a city-level reference after geometry extraction missed.", Map.of(
+        scanWatcher.record("course_map.admin_upload_city_reference_accepted", "completed", "Admin-uploaded road-race map accepted as a city-level reference after geometry extraction missed.", Map.of(
                 "raceId", asset.getRaceId() == null ? "" : asset.getRaceId(),
                 "source", pending.source(),
                 "confidence", MIN_ADMIN_PREVIEW_ALIGNMENT_CONFIDENCE
@@ -1849,6 +1946,14 @@ public class RaceCourseMapService {
         );
     }
 
+    private boolean isRoadRaceCourseReferenceCandidate(String raceName, String city, String country, Double distanceKm) {
+        if (distanceKm == null || distanceKm < 10.0 || distanceKm > 100.0) return false;
+        if (city == null || city.isBlank()) return false;
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        if (!(combined.contains("marathon") || combined.contains("half"))) return false;
+        return !containsNonRoadRaceSignal(combined);
+    }
+
     private boolean isStagedUploadSummary(String summary) {
         if (summary == null || summary.isBlank()) return false;
         String normalized = summary.toLowerCase(java.util.Locale.ROOT);
@@ -1865,6 +1970,26 @@ public class RaceCourseMapService {
                 || normalized.contains("route length")
                 || normalized.contains("starts too far")
                 || normalized.contains("far from the known");
+    }
+
+    private boolean hasRouteHintedCourseMapSummary(String summary) {
+        if (summary == null || summary.isBlank()) return false;
+        String normalized = summary.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("found route hints")
+                || normalized.contains("route hints");
+    }
+
+    private boolean hasRejectedCourseMapReferenceSummary(String summary) {
+        if (summary == null || summary.isBlank()) return false;
+        String normalized = summary.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("not a course map")
+                || normalized.contains("no visible route")
+                || normalized.contains("no map layer")
+                || normalized.contains("sponsor logo")
+                || normalized.contains("sponsor logos")
+                || normalized.contains("medal photo")
+                || normalized.contains("wrong race")
+                || normalized.contains("orcas island");
     }
 
     private void applyPendingResult(RaceCourseMapAsset asset, RaceCourseMapResult resolved, String actorEmail) {
@@ -1983,9 +2108,6 @@ public class RaceCourseMapService {
         asset.setPendingImageUrl(resolved.imageUrl()); asset.setPendingSource(resolved.source()); asset.setPendingConfidence(resolved.confidence()); asset.setPendingSummary(resolved.summary());
         asset.setPendingOverlayBoundsJson(writeJson(resolved.overlayBounds())); asset.setPendingRoutePointsJson(writeJson(resolved.routePoints())); asset.setPendingElevationSamplesJson(writeJson(resolved.elevationSamples()));
         asset.setPendingTotalClimbMeters(resolved.totalClimbMeters()); asset.setPendingAiAssisted(resolved.aiAssisted()); asset.setPendingUpdatedAt(updatedAt); asset.setPendingUpdatedByEmail(actorEmail);
-        if (isStoredAlignedResult(resolved)) {
-            applyLiveResult(asset, resolved, actorEmail, updatedAt);
-        }
         raceCourseMapAssetRepository.save(asset);
     }
 
@@ -2078,7 +2200,7 @@ public class RaceCourseMapService {
                 && confidence >= MIN_ADMIN_PREVIEW_ALIGNMENT_CONFIDENCE
                 && Boolean.TRUE.equals(aiAssisted)
                 && isCityLevelReferenceSummary(summary));
-        return new RaceCourseMapResult(
+        RaceCourseMapResult result = new RaceCourseMapResult(
                 imageUrl == null ? "" : imageUrl, source == null ? "" : source, detected,
                 confidence == null ? 0 : confidence, summary == null ? "" : summary,
                 overlayBounds,
@@ -2086,6 +2208,7 @@ public class RaceCourseMapService {
                 readJson(elevationSamplesJson, new TypeReference<List<Integer>>() {}, List.of()),
                 totalClimb, Boolean.TRUE.equals(aiAssisted)
         );
+        return live ? sanitizeStoredLiveResult(asset, result) : result;
     }
 
     private RaceCourseMapAdminRow toAdminRow(RaceCourseMapAsset asset) {
@@ -2093,34 +2216,89 @@ public class RaceCourseMapService {
     }
 
     private PreviewSnapshot buildPreviewSnapshot(RaceCourseMapAsset asset, boolean pending) {
-        String imageUrl = pending ? asset.getPendingImageUrl() : asset.getLiveImageUrl();
-        String source = pending ? asset.getPendingSource() : asset.getLiveSource();
-        Integer confidence = pending ? asset.getPendingConfidence() : asset.getLiveConfidence();
-        String rawSummary = pending ? asset.getPendingSummary() : asset.getLiveSummary();
-        boolean staleOperationalQwenFailure = hasOperationalQwenFailureSummary(rawSummary);
-        String summary = sanitizeStoredCourseMapSummary(rawSummary);
-        String overlayBoundsJson = pending ? asset.getPendingOverlayBoundsJson() : asset.getLiveOverlayBoundsJson();
-        String routePointsJson = pending ? asset.getPendingRoutePointsJson() : asset.getLiveRoutePointsJson();
-        String elevationSamplesJson = pending ? asset.getPendingElevationSamplesJson() : asset.getLiveElevationSamplesJson();
-        Integer totalClimbMeters = pending ? asset.getPendingTotalClimbMeters() : asset.getLiveTotalClimbMeters();
-        Boolean aiAssisted = pending ? asset.getPendingAiAssisted() : asset.getLiveAiAssisted();
+        RaceCourseMapResult result = toResult(asset, !pending);
         String updatedAt = pending ? (asset.getPendingUpdatedAt() == null ? null : asset.getPendingUpdatedAt().toString()) : (asset.getLiveUpdatedAt() == null ? null : asset.getLiveUpdatedAt().toString());
-        if ((imageUrl == null || imageUrl.isBlank()) && (summary == null || summary.isBlank())) return null;
-        List<RoutePoint> routePoints = readJson(routePointsJson, new TypeReference<List<RoutePoint>>() {}, List.of());
-        String previewImageUrl = imageService.buildDisplayablePreviewImageUrl(imageUrl);
+        if ((result.imageUrl() == null || result.imageUrl().isBlank()) && (result.summary() == null || result.summary().isBlank())) return null;
+        String previewImageUrl = imageService.buildDisplayablePreviewImageUrl(result.imageUrl());
         return new PreviewSnapshot(
-                imageUrl,
+                result.imageUrl(),
                 previewImageUrl,
-                source,
-                summary,
-                confidence,
+                result.source(),
+                result.summary(),
+                result.confidence(),
                 updatedAt,
-                readJson(overlayBoundsJson, new TypeReference<OverlayBounds>() {}, null),
-                routePoints,
-                readJson(elevationSamplesJson, new TypeReference<List<Integer>>() {}, List.of()),
-                totalClimbMeters,
-                Boolean.TRUE.equals(aiAssisted),
-                (Boolean.TRUE.equals(aiAssisted) && !staleOperationalQwenFailure) || !routePoints.isEmpty()
+                result.overlayBounds(),
+                result.routePoints() == null ? List.of() : result.routePoints(),
+                result.elevationSamples() == null ? List.of() : result.elevationSamples(),
+                result.totalClimbMeters(),
+                result.aiAssisted(),
+                result.courseMapDetected()
+        );
+    }
+
+    private RaceCourseMapResult sanitizeStoredLiveResult(RaceCourseMapAsset asset, RaceCourseMapResult liveResult) {
+        if (asset == null || liveResult == null || liveResult.routePoints() == null || liveResult.routePoints().size() < 2) {
+            return liveResult;
+        }
+        String strictDistanceReason = strictDistanceMismatchReason(liveResult.routePoints(), asset.getDistanceKm());
+        if (strictDistanceReason != null) {
+            RaceCourseMapResult cityLevelFallback = buildStoredLiveCityLevelFallback(asset, liveResult, strictDistanceReason);
+            return cityLevelFallback == null ? liveResult : cityLevelFallback;
+        }
+        PromptRaceType raceType = inferPromptRaceType(asset.getRaceName(), asset.getCity(), asset.getCountry(), liveResult.imageUrl());
+        RaceCourseMapGeometryService.AlignmentPlausibilityVerdict verdict = geometryService.assessAlignmentPlausibility(
+                liveResult.routePoints(),
+                asset.getLatitude(),
+                asset.getLongitude(),
+                asset.getDistanceKm(),
+                minimumRoutePointCountForSource(liveResult.source()),
+                raceType
+        );
+        if (verdict.plausible()) {
+            return liveResult;
+        }
+        RaceCourseMapResult cityLevelFallback = buildStoredLiveCityLevelFallback(asset, liveResult, verdict.reason());
+        return cityLevelFallback == null ? liveResult : cityLevelFallback;
+    }
+
+    private String strictDistanceMismatchReason(List<RoutePoint> routePoints, Double distanceKm) {
+        if (routePoints == null || routePoints.size() < 2 || distanceKm == null || distanceKm <= 0) {
+            return null;
+        }
+        double routeDistanceKm = geometryService.polylineDistanceKm(routePoints);
+        AlignmentRatioWindow expectedWindow = geometryService.expectedDistanceRatioWindow(distanceKm, routePoints.size());
+        double minimumDistanceKm = distanceKm * expectedWindow.minRatio();
+        double maximumDistanceKm = distanceKm * expectedWindow.maxRatio();
+        if (routeDistanceKm >= minimumDistanceKm && routeDistanceKm <= maximumDistanceKm) {
+            return null;
+        }
+        return "stored live route length %.1f km falls outside the expected %.1f-%.1f km window for a %.1f km race"
+                .formatted(routeDistanceKm, minimumDistanceKm, maximumDistanceKm, distanceKm);
+    }
+
+    private RaceCourseMapResult buildStoredLiveCityLevelFallback(RaceCourseMapAsset asset, RaceCourseMapResult liveResult, String invalidReason) {
+        if (asset == null || liveResult == null) return null;
+        if (liveResult.imageUrl() == null || liveResult.imageUrl().isBlank()) return null;
+        if (!isStandardCityRoadMarathonCandidate(asset.getRaceName(), asset.getCity(), asset.getCountry(), asset.getDistanceKm())) return null;
+        if (asset.getLatitude() == null || asset.getLongitude() == null) return null;
+        String cityLabel = asset.getCity() == null || asset.getCity().isBlank() ? "the race city" : asset.getCity().trim();
+        String summary = "Hermes kept this uploaded course map visible as a city-level course-map match for a standard road marathon in "
+                + cityLabel
+                + " because the stored route geometry no longer passes marathon plausibility checks. "
+                + "The upload remains visible as a real course-map image reference, not a distance-accurate route overlay. "
+                + "Latest geometry issue: "
+                + (invalidReason == null || invalidReason.isBlank() ? "route geometry is not currently trustworthy." : invalidReason + ".");
+        return new RaceCourseMapResult(
+                liveResult.imageUrl(),
+                liveResult.source(),
+                true,
+                MIN_ADMIN_PREVIEW_ALIGNMENT_CONFIDENCE,
+                summary,
+                buildCityLevelBounds(asset.getLatitude(), asset.getLongitude(), asset.getDistanceKm()),
+                List.of(),
+                List.of(),
+                null,
+                true
         );
     }
 
@@ -2159,6 +2337,7 @@ public class RaceCourseMapService {
         if (combined.contains("out and back") || combined.contains("out-and-back") || combined.contains("outandback")) return PromptRaceType.OUT_AND_BACK;
         if (combined.contains("loop") || combined.contains("circuit")) return PromptRaceType.LOOP;
         if (combined.contains("chicago marathon") || combined.contains("chicagomarathon.com")) return PromptRaceType.LOOP;
+        if (combined.contains("berlin marathon") || combined.contains("bmw-berlin-marathon.com")) return PromptRaceType.LOOP;
         return PromptRaceType.POINT_TO_POINT;
     }
 

@@ -304,6 +304,7 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 
 # Exclude sensitive parts of workflow core
 .codex/auth.json
+.codex/config.toml
 .codex/config.local.toml
 .codex/tmp/
 .codex/.tmp/
@@ -325,3 +326,6 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 playwright-report/
 test-results/
 .playwright-cache/
+
+# Autoresearch local loop artifacts (handoff JSON contains high-entropy run IDs)
+autoresearch/

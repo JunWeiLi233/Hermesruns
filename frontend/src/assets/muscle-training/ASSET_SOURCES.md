@@ -13,3 +13,15 @@ Pexels license: https://www.pexels.com/license/
 | `target-arms.webp` | https://www.pexels.com/photo/a-man-doing-dumbbell-curls-14793884/ |
 | `target-core.webp` | https://www.pexels.com/photo/a-man-working-out-using-battle-ropes-6390228/ |
 | `anatomy-neon-selector.png` | User-provided Googleusercontent image from the Muscle Training reference HTML in this task. |
+
+## Exercise Reference Images
+
+The exercise-specific reference rail uses remote images keyed by action slug in `MuscleTraining.jsx`.
+
+Primary source: `yuhonas/free-exercise-db`
+
+- Repository: https://github.com/yuhonas/free-exercise-db
+- License: Unlicense
+- Image pattern: `https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/{imagePath}`
+
+Fallback source for movements not covered by that dataset: YouTube video thumbnails from the existing exercise demo video mapping.

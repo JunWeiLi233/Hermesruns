@@ -102,7 +102,10 @@ public class RaceCourseMapImageService {
         if (isPdfFileUrl(imageReference)) {
             byte[] pdfBytes = fetchDocumentBytes(imageReference);
             if (pdfBytes == null) return null;
-            return renderPdfCandidate(pdfBytes);
+            RaceCourseMapService.ResolvedCandidateAsset pdfResult = renderPdfCandidate(pdfBytes);
+            if (pdfResult != null) return pdfResult;
+            // Server returned non-PDF bytes despite .pdf URL; treat as raw image.
+            return new RaceCourseMapService.ResolvedCandidateAsset(imageReference, pdfBytes);
         }
         byte[] imageBytes = fetchImageBytes(imageReference);
         if (imageBytes == null) return null;

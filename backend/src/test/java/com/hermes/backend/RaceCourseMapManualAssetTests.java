@@ -785,6 +785,103 @@ class RaceCourseMapManualAssetTests {
         assertThat(result.summary()).doesNotContain("REQUEST_DENIED");
     }
 
+    @Test
+    void uploadPendingCourseMapUsesKnownBoundsFallbackWhenAnchorPixelsTimeOut() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        MarathonRouteExtractionService extractionService = mock(MarathonRouteExtractionService.class);
+        MarathonRouteGeoreferencingService georeferencingService = mock(MarathonRouteGeoreferencingService.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(repository.findByRaceId("chicago-official-pdf-test")).thenReturn(Optional.empty());
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(restTemplate.exchange(
+                eq("https://example.com/chicago-official-course-map.png"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(samplePng()));
+        when(restTemplate.exchange(
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(ResponseEntity.ok(geminiDetectedButEmptyAlignmentResponse()));
+
+        RouteParametersDTO routeParameters = new RouteParametersDTO("#1565C0", List.of("Grant Park", "Lincoln Park", "West Loop", "Chinatown"));
+        RoutePathExtractionResultDTO extractionResult = new RoutePathExtractionResultDTO(
+                routeParameters,
+                List.of(
+                        new RoutePixelPointDTO(10, 10),
+                        new RoutePixelPointDTO(50, 20),
+                        new RoutePixelPointDTO(90, 60),
+                        new RoutePixelPointDTO(120, 90),
+                        new RoutePixelPointDTO(150, 120),
+                        new RoutePixelPointDTO(170, 150)
+                ),
+                6,
+                2000,
+                300,
+                "palette:#1565C0",
+                List.of()
+        );
+        when(extractionService.extractRoutePath(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(42.195)))
+                .thenReturn(extractionResult);
+        when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
+        doThrow(new IllegalStateException("Qwen anchor-pixel extraction timed out after 120 seconds."))
+                .when(georeferencingService)
+                .georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
+
+        MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult boundsFallback =
+                new MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult(
+                        routeParameters,
+                        List.of(
+                                new RouteAnchorPixelPointDTO("route bounds northwest", 10, 10),
+                                new RouteAnchorPixelPointDTO("route bounds northeast", 170, 10),
+                                new RouteAnchorPixelPointDTO("route bounds southeast", 170, 150),
+                                new RouteAnchorPixelPointDTO("route bounds southwest", 10, 150)
+                        ),
+                        List.of(
+                                new GeocodedAnchorPointDTO("northwest", 41.9900, -87.7200, "Chicago bounds"),
+                                new GeocodedAnchorPointDTO("northeast", 41.9900, -87.5900, "Chicago bounds"),
+                                new GeocodedAnchorPointDTO("southeast", 41.7650, -87.5900, "Chicago bounds"),
+                                new GeocodedAnchorPointDTO("southwest", 41.7650, -87.7200, "Chicago bounds")
+                        ),
+                        new AffineTransformCoefficientsDTO(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                        List.of(
+                                new RawBreadcrumbPointDTO(41.8789, -87.6190),
+                                new RawBreadcrumbPointDTO(41.8925, -87.6341),
+                                new RawBreadcrumbPointDTO(41.9214, -87.6513),
+                                new RawBreadcrumbPointDTO(41.8807, -87.6668),
+                                new RawBreadcrumbPointDTO(41.8526, -87.6334),
+                                new RawBreadcrumbPointDTO(41.8789, -87.6190)
+                        )
+                );
+        when(georeferencingService.georeferenceRouteWithLocalBoundsFallback(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195)))
+                .thenReturn(boundsFallback);
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService);
+
+        RaceCourseMapResult result = service.uploadPendingCourseMap(
+                "chicago-official-pdf-test",
+                "Chicago Marathon",
+                "Chicago",
+                "United States",
+                "https://www.chicagomarathon.com/",
+                41.8781,
+                -87.6298,
+                42.195,
+                "https://example.com/chicago-official-course-map.png",
+                "admin@hermes.test"
+        );
+
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).isNotEmpty();
+        assertThat(result.summary()).contains("pipeline fallback");
+        verify(georeferencingService).georeferenceRouteWithLocalBoundsFallback(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
+    }
+
     private RaceCourseMapService createService(RestTemplate restTemplate, SystemConfigService systemConfigService, RaceCourseMapAssetRepository repository) {
         return createService(restTemplate, systemConfigService, repository, null, null);
     }

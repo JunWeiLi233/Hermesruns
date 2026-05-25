@@ -469,6 +469,22 @@ export default function TodayRun() {
     [runs],
   );
   const acwrInsight = useMemo(() => getTodayRunAcwrInsight(metrics.acwr), [metrics.acwr]);
+
+  const runnerPersona = useMemo(() => {
+    if (!Array.isArray(runs) || runs.length === 0) return 'new';
+    if (coachPayload?.runnerState === 'new') return 'new';
+    if (coachPayload?.runnerState === 'comeback') return 'comeback';
+    if (coachPayload?.runnerState === 'active') return 'active';
+    const sorted = [...runs].sort((a, b) => (
+      new Date(b?.startTime || b?.startDate || 0).getTime()
+      - new Date(a?.startTime || a?.startDate || 0).getTime()
+    ));
+    const lastTs = new Date(sorted[0]?.startTime || sorted[0]?.startDate || 0).getTime();
+    if (!Number.isFinite(lastTs) || lastTs <= 0) return 'active';
+    const daysAgo = (Date.now() - lastTs) / 86400000;
+    if (daysAgo > 14) return 'comeback';
+    return 'active';
+  }, [runs, coachPayload]);
   const acwrNarrative = useMemo(
     () => ({
       title: t(acwrInsight.calloutTitleKey, acwrInsight.calloutParams),
@@ -591,7 +607,32 @@ export default function TodayRun() {
         </header>
 
         <div className="runner-shell-canvas today-run-plan-canvas today-run-command-canvas">
+          {runnerPersona === 'new' ? (
+            <section className="today-run-coaching-strip today-run-coaching-strip--onboarding" aria-label={t('today_run.coaching_intelligence_title')}>
+              <div className="today-run-coaching-strip-inner">
+                <article className="today-run-coaching-answer today-run-coaching-answer--onboarding">
+                  <span className="today-run-coaching-answer-kicker">{t('today_run.readiness_label')}</span>
+                  <strong className="today-run-coaching-answer-value">{t('today_run.new_runner_title')}</strong>
+                  <span className="today-run-coaching-answer-sub">{t('today_run.new_runner_body')}</span>
+                  <button
+                    type="button"
+                    className="today-run-stitch-primary-btn"
+                    onClick={() => navigate('/runs')}
+                    style={{ marginTop: '12px' }}
+                  >
+                    {t('today_run.new_runner_cta')}
+                  </button>
+                </article>
+              </div>
+            </section>
+          ) : (
           <section className="today-run-coaching-strip" aria-label={t('today_run.coaching_intelligence_title')}>
+            {runnerPersona === 'comeback' && (
+              <div className="today-run-coaching-strip-banner today-run-coaching-strip-banner--comeback" role="status">
+                <strong>{t('today_run.comeback_title')}</strong>
+                <p>{t('today_run.comeback_body')}</p>
+              </div>
+            )}
             <div className="today-run-coaching-strip-inner">
               <article className={`today-run-coaching-answer today-run-coaching-answer--readiness is-verdict-${(coachPayload?.state?.readinessVerdict || tone.key).toLowerCase()}`}>
                 <span className="today-run-coaching-answer-kicker">{t('today_run.readiness_label')}</span>
@@ -605,6 +646,9 @@ export default function TodayRun() {
                         : t('today_run.coaching_intelligence_run'))}
                 </strong>
                 <span className="today-run-coaching-answer-sub">{coachPayload?.state?.readinessScore != null ? `${coachPayload.state.readinessScore}/100` : recommendation.purpose}</span>
+                {runnerPersona === 'active' && coachPayload?.coachMessage && (
+                  <p className="today-run-coaching-answer-coach-message">{coachPayload.coachMessage}</p>
+                )}
                 <div className="today-run-readiness-signals">
                   {coachPayload?.state?.readinessSleep != null && (
                     <span
@@ -735,6 +779,7 @@ export default function TodayRun() {
               </article>
             </div>
           </section>
+          )}
 
           <section className="today-run-plan-hero today-run-command-hero">
             <div className="today-run-plan-hero-copy today-run-command-hero-copy">

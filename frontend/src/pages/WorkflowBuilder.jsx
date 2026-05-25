@@ -93,13 +93,26 @@ function CanvasStatusCard({ t, executionStatus, statusCopy, onStartBlank }) {
         </div>
       </div>
 
-      {/* mock canvas preview */}
+      {/* mock canvas preview — three flow nodes joined by dashed SVG edges */}
       <div className="wf-mock-canvas" aria-hidden="true">
-        <div className="wf-mock-node wf-mock-node--input">{t('workflow_builder.input_node_type')}</div>
-        <div className="wf-mock-edge" />
-        <div className="wf-mock-node wf-mock-node--agent">{t('workflow_builder.agent_node_type')}</div>
-        <div className="wf-mock-edge" />
-        <div className="wf-mock-node wf-mock-node--output">{t('workflow_builder.output_node_type')}</div>
+        <div className="wf-mock-node wf-mock-node--input">
+          <span className="wf-mock-dot" />
+          <span className="wf-mock-label">{t('workflow_builder.input_node_type')}</span>
+        </div>
+        <svg className="wf-mock-edge" viewBox="0 0 60 2" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="1" x2="60" y2="1" strokeWidth="1.5" strokeDasharray="4 3" />
+        </svg>
+        <div className="wf-mock-node wf-mock-node--agent">
+          <span className="wf-mock-dot" />
+          <span className="wf-mock-label">{t('workflow_builder.agent_node_type')}</span>
+        </div>
+        <svg className="wf-mock-edge" viewBox="0 0 60 2" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="1" x2="60" y2="1" strokeWidth="1.5" strokeDasharray="4 3" />
+        </svg>
+        <div className="wf-mock-node wf-mock-node--output">
+          <span className="wf-mock-dot" />
+          <span className="wf-mock-label">{t('workflow_builder.output_node_type')}</span>
+        </div>
       </div>
 
       <button type="button" className="wf-start-blank-btn" onClick={onStartBlank}>

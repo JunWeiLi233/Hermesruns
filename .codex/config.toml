@@ -1,0 +1,72 @@
+# oh-my-codex top-level settings (must be before any [table])
+notify = ["node", ".codex/runtime/omx-launcher.mjs", "scripts/notify-hook.js"]
+model_reasoning_effort = "high"
+developer_instructions = "You have oh-my-codex installed. AGENTS.md is your orchestration brain and the main orchestration surface. Use skill/keyword routing like $name plus spawned role-specialized subagents for specialized work. Codex native subagents are available via .codex/agents and may be used for independent parallel subtasks within a single session or team pane. Skills are loaded from installed SKILL.md files under .codex/skills, not from native agent TOMLs. Use workflow skills via $name when explicitly invoked or clearly routed by AGENTS.md. Treat installed prompts as narrower internal execution surfaces under AGENTS.md authority, even when user-facing docs prefer $name keywords."
+model = "gpt-5.4"
+model_context_window = 1000000
+model_auto_compact_token_limit = 900000
+
+[features]
+multi_agent = true
+child_agents_md = true
+codex_hooks = true
+
+[env]
+USE_OMX_EXPLORE_CMD = "1"
+
+[agents]
+max_threads = 6
+max_depth = 2
+
+# ============================================================
+# oh-my-codex (OMX) Configuration
+# Managed by omx setup - manual edits preserved on next setup
+# ============================================================
+
+# OMX State Management MCP Server
+[mcp_servers.omx_state]
+command = "node"
+args = [".codex/runtime/omx-launcher.mjs", "mcp/state-server.js"]
+enabled = true
+startup_timeout_sec = 20
+
+# OMX Project Memory MCP Server
+[mcp_servers.omx_memory]
+command = "node"
+args = [".codex/runtime/omx-launcher.mjs", "mcp/memory-server.js"]
+enabled = true
+startup_timeout_sec = 15
+
+# OMX Code Intelligence MCP Server (LSP diagnostics, AST search)
+[mcp_servers.omx_code_intel]
+command = "node"
+args = [".codex/runtime/omx-launcher.mjs", "mcp/code-intel-server.js"]
+enabled = true
+startup_timeout_sec = 20
+
+[mcp_servers.omx_code_intel.tools.lsp_diagnostics]
+approval_mode = "approve"
+
+[mcp_servers.omx_code_intel.tools.lsp_document_symbols]
+approval_mode = "approve"
+
+# OMX Trace MCP Server (agent flow timeline & statistics)
+[mcp_servers.omx_trace]
+command = "node"
+args = [".codex/runtime/omx-launcher.mjs", "mcp/trace-server.js"]
+enabled = true
+startup_timeout_sec = 15
+
+# OMX Wiki MCP Server (persistent project knowledge base)
+[mcp_servers.omx_wiki]
+command = "node"
+args = [".codex/runtime/omx-launcher.mjs", "mcp/wiki-server.js"]
+enabled = true
+startup_timeout_sec = 15
+
+# OMX TUI StatusLine (Codex CLI v0.101.0+)
+[tui]
+status_line = ["model-with-reasoning", "git-branch", "context-remaining", "total-input-tokens", "total-output-tokens", "five-hour-limit", "weekly-limit"]
+
+# ============================================================
+# End oh-my-codex
