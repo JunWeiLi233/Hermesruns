@@ -32,6 +32,7 @@ class WellnessControllerTests {
         controller = new WellnessController(
                 mock(AppleHealthImportService.class),
                 mock(GoogleHealthImportService.class),
+                mock(OuraWellnessImportService.class),
                 authService,
                 runnerRepository,
                 readinessService

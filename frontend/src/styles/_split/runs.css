@@ -1219,6 +1219,77 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.run-detail-shoe-browser {
+  margin-top: 14px;
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.run-detail-shoe-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.run-detail-shoe-brand-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.run-detail-shoe-brand-head .shoe-brand-logo-svg,
+.run-detail-shoe-brand-head .shoe-brand-logo-img {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.run-detail-shoe-brand-head span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(229, 226, 225, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.run-detail-shoe-series {
+  display: flex;
+  flex-direction: column;
+}
+
+.run-detail-shoe-series-label {
+  padding: 4px 4px 2px 30px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: rgba(229, 226, 225, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.run-detail-shoe-browser .shoe-run-option {
+  padding: 8px 12px 8px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shoe-run-option-name {
+  font-size: 0.88rem;
+  color: #f4f0ea;
+}
+
+.shoe-run-option-mileage {
+  font-size: 0.72rem;
+  color: rgba(229, 226, 225, 0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .run-detail-info-list,
 .run-detail-stat-list {
   display: grid;
@@ -1744,6 +1815,119 @@
 .recent-runs-page-list {
   display: grid;
   gap: 10px;
+}
+
+/* Month-grouped run grid. Each `.recent-runs-month-group` carries a sticky
+   month header + a responsive RunCard grid below it. Mobile-first: single
+   column at ≤640px, 2 columns ≥720px, 3 columns ≥1200px. The cards are the
+   existing `.recent-runs-card` (renders RunCard) — month grouping is a
+   structural overlay only, no card visual changes. */
+.recent-runs-month-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recent-runs-month-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px 6px;
+  border-bottom: 1px solid rgba(240, 117, 97, 0.18);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 245, 0.96) 0%, rgba(255, 250, 245, 0.78) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Make the header itself the fold control — `<button>` for keyboard +
+   screen-reader semantics, but visually unstyled so the month-label
+   typography reads the same as before. The grid panel below is shown /
+   hidden by the React-side `hidden` attribute, so no CSS animation is
+   required and there's no flash-of-mounted-cards on toggle. */
+.recent-runs-month-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.recent-runs-month-toggle:focus-visible {
+  outline: 2px solid var(--accent-coral, #f07561);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.recent-runs-month-toggle-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted, #6a6e6f);
+  transition: transform 180ms ease;
+  flex: 0 0 auto;
+}
+
+.recent-runs-month-toggle-chevron svg {
+  width: 100%;
+  height: 100%;
+}
+
+.recent-runs-month-group.is-collapsed .recent-runs-month-header {
+  border-bottom-color: rgba(240, 117, 97, 0.06);
+}
+
+.recent-runs-month-group .recent-runs-month-meta {
+  margin-left: auto;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
+  background:
+    linear-gradient(180deg, rgba(18, 16, 13, 0.94) 0%, rgba(18, 16, 13, 0.7) 100%);
+  border-bottom-color: rgba(240, 117, 97, 0.28);
+}
+
+.recent-runs-month-title {
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-strong, #2c2f30);
+}
+
+.recent-runs-month-meta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #6a6e6f);
+  white-space: nowrap;
+}
+
+.recent-runs-month-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 720px) {
+  .recent-runs-month-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .recent-runs-month-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .recent-runs-load-more-sentinel {

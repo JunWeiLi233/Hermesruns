@@ -54,8 +54,8 @@ body.theme-midnight .hd-content {
   --hd-bg-today-text: #f6f1eb;
   --hd-bg-input: rgba(255,255,255,0.04);
   --hd-text-primary: #ece5dd;
-  --hd-text-secondary: #8c857e;
-  --hd-text-tertiary: #5c5650;
+  --hd-text-secondary: #9e988f;
+  --hd-text-tertiary: #7a7368;
   --hd-accent: #f07561;
   --hd-accent-soft: rgba(240,117,97,0.1);
   --hd-accent-medium: rgba(240,117,97,0.18);
@@ -196,6 +196,9 @@ body.theme-midnight .hd-content {
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
+  /* Cream color on the dark hero card is enforced by the .hd-today-card
+     exception block in contrast-fixes.css (Pattern A restore-cream list);
+     don't duplicate it here. */
 }
 
 .hd-today-purpose {
@@ -228,6 +231,9 @@ body.theme-midnight .hd-content {
 .hd-today-stat strong {
   font-size: 1.2rem;
   font-weight: 800;
+  /* Cream color on the dark hero card is enforced by the .hd-today-card
+     exception block in contrast-fixes.css (Pattern A restore-cream list);
+     don't duplicate it here. */
 }
 
 .hd-today-actions {
@@ -638,6 +644,32 @@ body.theme-midnight .hd-content {
   background: var(--hd-bg-card);
   backdrop-filter: blur(12px);
   animation: hd-fadeUp 0.5s 0.28s ease-out both;
+
+  /* Mount a 3-column grid that mirrors `.hd-bottom-grid` below so the
+     progression chart visually sits "across" the same column rhythm as
+     the race-predictions / readiness / nudge cards directly under it.
+     All immediate children explicitly span the full grid via
+     `grid-column: 1 / -1`; the summary row can also pull individual
+     stats into their own grid cells on wider viewports so the chart
+     line below aligns column-by-column with the cards below. Mobile
+     breakpoint at ≤960px collapses the columns back to a single track
+     so the existing mobile flex layout still works. */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 16px;
+  row-gap: 20px;
+}
+
+.hd-progression-head,
+.hd-progression-summary,
+.hd-progression-chart-area {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 960px) {
+  .hd-progression {
+    grid-template-columns: 1fr;
+  }
 }
 
 .hd-progression-head {
@@ -645,7 +677,8 @@ body.theme-midnight .hd-content {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  /* margin-bottom removed: parent .hd-progression is now a grid with
+     row-gap: 20px, so the per-row spacing comes from the grid layer. */
   flex-wrap: wrap;
 }
 
@@ -685,7 +718,7 @@ body.theme-midnight .hd-content {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 20px;
+  /* margin-bottom removed: parent grid's row-gap handles row spacing. */
   flex-wrap: wrap;
 }
 

@@ -1,6 +1,5 @@
 import { formatDuration, formatPaceSeconds } from './format.js';
 import {
-  calculateVdot,
   buildOrderedRacePredictions,
   collectAllVdotEntries,
   estimateCurrentVdot,
@@ -40,9 +39,17 @@ export function kmOf(run) {
   return Number(run?.distanceKm || 0) || (Number(run?.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
 }
 
+// Linear remap %HRmax → vo2Fraction calibrated so the boundaries below
+// match Daniels' running-zone literature:
+//   80% HRmax → vo2Fraction 0.75 (marathon / Z3 floor)
+//  100% HRmax → vo2Fraction 1.00 (vo2max ceiling)
+// Old anchor (`- 37) / 64`) effectively assumed resting HR ≈ 37% of HRmax
+// for everyone, which pushed the marathon-zone floor up to ~85% HRmax and
+// caused tempo / threshold runs at 80-84% HRmax to be misclassified as
+// "easy" instead of Z3. New anchor `(- 20) / 80` matches Daniels' HR zones.
 export function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
-  return Math.max(0, (((Math.min(1, avgHr / hrMax) * 100) - 37) / 64));
+  return Math.max(0, (((Math.min(1, avgHr / hrMax) * 100) - 20) / 80));
 }
 
 export function paceToVo2Fraction(paceSecPerKm, vdot) {

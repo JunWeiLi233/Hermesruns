@@ -32,6 +32,149 @@ const SEVERITY_ORDER = {
   CRITICAL: 4,
 };
 
+export const ANTHROPIC_CYBERSECURITY_SKILLS_SOURCE = {
+  id: "mukul975/Anthropic-Cybersecurity-Skills",
+  name: "Anthropic Cybersecurity Skills",
+  owner: "mukul975",
+  repo: "Anthropic-Cybersecurity-Skills",
+  url: "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
+  installHint: "npx skills add mukul975/Anthropic-Cybersecurity-Skills",
+  policy: "external-reference-only",
+  description: "External 754-skill cybersecurity library for AI agents, mapped across five security frameworks.",
+  domains: [
+    "application-security",
+    "cloud-security",
+    "dfir",
+    "identity-and-access",
+    "offensive-security",
+    "threat-hunting",
+  ],
+  frameworks: [
+    "MITRE ATT&CK",
+    "NIST CSF 2.0",
+    "MITRE ATLAS",
+    "MITRE D3FEND",
+    "NIST AI RMF",
+  ],
+};
+
+export const SECURITY_SKILL_PHASE_MAP = {
+  "auth-bypass": {
+    focus: "Broken authentication, authorization bypass, and privilege escalation checks.",
+    queryTerms: ["authentication-bypass", "broken-access-control", "privilege-escalation"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0"],
+  },
+  "data-leak": {
+    focus: "Sensitive data exposure, configuration leakage, and exfiltration review.",
+    queryTerms: ["sensitive-data-exposure", "secret-discovery", "exfiltration"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0", "MITRE D3FEND"],
+  },
+  idor: {
+    focus: "Object-level authorization and tenant/user boundary testing.",
+    queryTerms: ["idor", "broken-object-level-authorization", "access-control"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0"],
+  },
+  injection: {
+    focus: "Input validation, SQL injection, XSS, and command/data injection review.",
+    queryTerms: ["sql-injection", "xss", "input-validation"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0", "MITRE D3FEND"],
+  },
+  "mass-assignment": {
+    focus: "Over-posting, unsafe model binding, and role/plan escalation review.",
+    queryTerms: ["mass-assignment", "unsafe-model-binding", "privilege-escalation"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0"],
+  },
+  "webhook-abuse": {
+    focus: "Webhook trust-boundary, signature validation, and event forgery review.",
+    queryTerms: ["webhook-security", "signature-validation", "supply-chain"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0", "MITRE D3FEND"],
+  },
+  cors: {
+    focus: "Cross-origin policy, credentialed requests, and browser trust controls.",
+    queryTerms: ["cors-misconfiguration", "cross-origin", "browser-security"],
+    frameworks: ["NIST CSF 2.0", "MITRE D3FEND"],
+  },
+  "rate-limit": {
+    focus: "Brute-force resistance, credential stuffing controls, and abuse throttling.",
+    queryTerms: ["credential-stuffing", "brute-force", "rate-limiting"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0", "MITRE D3FEND"],
+  },
+  "security-headers": {
+    focus: "Browser hardening, secure headers, CSP, HSTS, and clickjacking controls.",
+    queryTerms: ["security-headers", "content-security-policy", "clickjacking"],
+    frameworks: ["NIST CSF 2.0", "MITRE D3FEND"],
+  },
+  "url-enumeration": {
+    focus: "Reconnaissance, exposed tooling, config paths, and source-control leakage.",
+    queryTerms: ["reconnaissance", "endpoint-discovery", "information-disclosure"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0"],
+  },
+  "user-enumeration": {
+    focus: "Identity privacy leaks and account-discovery response differentials.",
+    queryTerms: ["user-enumeration", "identity-privacy", "account-discovery"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0"],
+  },
+  "admin-enumeration": {
+    focus: "Admin-surface discovery and privileged route reconnaissance.",
+    queryTerms: ["admin-discovery", "privileged-surface", "reconnaissance"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0"],
+  },
+  "admin-credential-stuffing": {
+    focus: "Admin credential stuffing, weak default credentials, and lockout controls.",
+    queryTerms: ["credential-stuffing", "default-credentials", "account-lockout"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0", "MITRE D3FEND"],
+  },
+  "admin-data-exfil": {
+    focus: "Privileged data extraction, PII exposure, and exfiltration evidence review.",
+    queryTerms: ["data-exfiltration", "pii-exposure", "privileged-access"],
+    frameworks: ["MITRE ATT&CK", "NIST CSF 2.0", "MITRE D3FEND"],
+  },
+};
+
+function cloneSkillSource() {
+  return {
+    ...ANTHROPIC_CYBERSECURITY_SKILLS_SOURCE,
+    domains: [...ANTHROPIC_CYBERSECURITY_SKILLS_SOURCE.domains],
+    frameworks: [...ANTHROPIC_CYBERSECURITY_SKILLS_SOURCE.frameworks],
+  };
+}
+
+function clonePhaseLens(lens) {
+  return {
+    ...lens,
+    queryTerms: [...lens.queryTerms],
+    frameworks: [...lens.frameworks],
+  };
+}
+
+export function buildAnthropicCybersecuritySkillsManifest() {
+  return {
+    schema: "auto-hermes-security-skills/v1",
+    command: "/auto-hermes-security",
+    rule: "Use this as an external reference lens for phase prompts and report context; do not claim local skill execution unless installed or vendored.",
+    sources: [cloneSkillSource()],
+    phaseMap: Object.fromEntries(
+      Object.entries(SECURITY_SKILL_PHASE_MAP).map(([phase, lens]) => [phase, clonePhaseLens(lens)]),
+    ),
+  };
+}
+
+export function securitySkillContextForPhase(phase) {
+  const normalized = String(phase || "").trim().toLowerCase();
+  const manifest = buildAnthropicCybersecuritySkillsManifest();
+  const lens = manifest.phaseMap[normalized] || {
+    focus: "General cybersecurity review and evidence calibration.",
+    queryTerms: ["security-review", "vulnerability-analysis"],
+    frameworks: [...ANTHROPIC_CYBERSECURITY_SKILLS_SOURCE.frameworks],
+  };
+  return {
+    source: manifest.sources[0],
+    phase: normalized,
+    phaseLabel: PHASE_META[normalized]?.label || normalized || "general",
+    lens,
+  };
+}
+
 function parseArgs(rawArgs) {
   const args = {
     rootDir: ROOT,
@@ -44,6 +187,7 @@ function parseArgs(rawArgs) {
     writeTasks: false,
     aggressive: false,
     json: false,
+    phase: "",
   };
 
   for (let index = 0; index < rawArgs.length; index += 1) {
@@ -52,6 +196,7 @@ function parseArgs(rawArgs) {
     else if (arg === "--write-tasks") args.writeTasks = true;
     else if (arg === "--aggressive") args.aggressive = true;
     else if (arg === "--json") args.json = true;
+    else if (arg === "--phase" && index + 1 < rawArgs.length) { args.phase = rawArgs[index + 1]; index += 1; }
     else if (arg.startsWith("--")) {
       const key = arg
         .slice(2)
@@ -177,6 +322,7 @@ function isIgnoredSecurityScanPath(relPath) {
   if (rel.startsWith("frontend/dist/")) return true;
   if (rel.startsWith("frontend/node_modules/") || rel.startsWith("node_modules/") || rel.includes("/node_modules/")) return true;
   if (rel.startsWith("course-map-images/") || rel.startsWith("backend/course-map-images/")) return true;
+  if (rel.startsWith("autoresearch/")) return true;
   if (rel.endsWith(".lock.db") || rel.endsWith(".trace.db") || rel.endsWith(".mv.db")) return true;
   return false;
 }
@@ -1750,6 +1896,121 @@ async function runActiveAdminDataExfilProbe(baseUrl) {
   return findings;
 }
 
+export const PHASE_META = {
+  "auth-bypass":        { label: "Auth Bypass",        desc: "Can we get in without credentials?",                     risk: "HIGH — data leak or privilege escalation" },
+  "data-leak":          { label: "Data Leak",           desc: "Is sensitive config or billing data exposed?",          risk: "HIGH — credential or secret exposure" },
+  "idor":               { label: "IDOR",                desc: "Can we access another user's data by changing an ID?",   risk: "HIGH — unauthorized data access" },
+  "injection":          { label: "Injection",           desc: "Does the app trust user input too much?",               risk: "CRITICAL — full db read/write or XSS" },
+  "mass-assignment":    { label: "Mass Assignment",     desc: "Can we escalate privileges via extra signup fields?",    risk: "HIGH — privilege escalation" },
+  "webhook-abuse":      { label: "Webhook Abuse",       desc: "Can we forge webhook calls to inject data?",             risk: "HIGH — unauthorized data injection" },
+  "cors":               { label: "CORS",                desc: "Can another site make requests as a logged-in user?",    risk: "MEDIUM — CSRF-style attacks" },
+  "rate-limit":         { label: "Rate Limit",          desc: "Does login have brute-force protection?",               risk: "MEDIUM — credential stuffing" },
+  "security-headers":   { label: "Security Headers",    desc: "Are browser-level protections missing?",                risk: "MEDIUM — XSS, clickjacking" },
+  "url-enumeration":    { label: "URL Enumeration",     desc: "Are internal tools, configs, or git exposed?",         risk: "HIGH — information disclosure" },
+  "user-enumeration":   { label: "User Enumeration",    desc: "Can we tell if an email is registered?",               risk: "LOW — privacy leak" },
+  "admin-enumeration":  { label: "Admin Enumeration",   desc: "Can we discover the admin panel?",                     risk: "CRITICAL — admin access" },
+  "admin-credential-stuffing": { label: "Credential Stuffing", desc: "Can we guess admin passwords?",                 risk: "CRITICAL — full admin access" },
+  "admin-data-exfil":   { label: "Admin Data Exfil",    desc: "Can we extract admin-level data?",                     risk: "CRITICAL — full database access" },
+};
+
+export function hackerBox(label, subtitle) {
+  const pad = 2;
+  const inner = `  ${label}  `;
+  const line = `║${inner}${" ".repeat(Math.max(0, 52 - inner.length))}║`;
+  const sub = subtitle ? `║  "${subtitle}"${" ".repeat(Math.max(0, 48 - subtitle.length))}║` : null;
+  const top = `╔${"═".repeat(54)}╗`;
+  const bot = `╚${"═".repeat(54)}╝`;
+  return sub ? `${top}\n${line}\n${sub}\n${bot}` : `${top}\n${line}\n${bot}`;
+}
+
+const PHASE_PROBE_MAP = {
+  "auth-bypass": runActiveAuthBypassProbe,
+  "data-leak": runActiveDataLeakProbe,
+  "idor": runActiveIdorProbe,
+  "injection": runActiveInjectionProbe,
+  "mass-assignment": runActiveMassAssignmentProbe,
+  "webhook-abuse": runActiveWebhookAbuseProbe,
+  "cors": runActiveCorsProbe,
+  "rate-limit": runActiveRateLimitProbe,
+  "security-headers": runActiveSecurityHeadersProbe,
+  "url-enumeration": runActiveAuthBypassUrlsProbe,
+  "user-enumeration": null,
+  "admin-enumeration": runActiveAdminEnumerationProbe,
+  "admin-credential-stuffing": runActiveAdminCredentialStuffingProbe,
+  "admin-data-exfil": runActiveAdminDataExfilProbe,
+};
+
+async function runWalkthroughPhase(phase, baseUrl, rootDir) {
+  const meta = PHASE_META[phase];
+  if (!meta) {
+    process.stderr.write(`[!] Unknown phase: ${phase}\n`);
+    process.stderr.write(`    Available: ${Object.keys(PHASE_META).join(", ")}\n`);
+    return [];
+  }
+
+  process.stderr.write(`\n${hackerBox(meta.label, meta.desc)}\n\n`);
+  process.stderr.write(`[!] Risk if vulnerable: ${meta.risk}\n\n`);
+  const skillContext = securitySkillContextForPhase(phase);
+  process.stderr.write(`[*] Skill lens: ${skillContext.source.id}\n`);
+  process.stderr.write(`    Focus: ${skillContext.lens.focus}\n`);
+  process.stderr.write(`    Frameworks: ${skillContext.lens.frameworks.join(", ")}\n\n`);
+
+  const probeFn = PHASE_PROBE_MAP[phase];
+  if (!probeFn && phase !== "user-enumeration") {
+    process.stderr.write(`[!] No probe function for phase: ${phase}\n`);
+    return [];
+  }
+
+  process.stderr.write("[*] Sending probe payloads...\n");
+
+  let findings = [];
+  if (phase === "user-enumeration") {
+    const baseUrlClean = baseUrl.replace(/\/$/, "");
+    const targets = ["/api/auth/login", "/api/auth/forgot-password"];
+    for (const target of targets) {
+      process.stderr.write(`    → POST ${target}... `);
+      const resp1 = await safeFetch(`${baseUrlClean}${target}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "nonexistent@test.hermes.local" }),
+        timeout: 4000,
+      });
+      const resp2 = await safeFetch(`${baseUrlClean}${target}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "admin@hermes.local" }),
+        timeout: 4000,
+      });
+      const status1 = resp1 ? resp1.status : "timeout";
+      const status2 = resp2 ? resp2.status : "timeout";
+      if (status1 !== status2 && status1 !== "timeout" && status2 !== "timeout") {
+        process.stderr.write(`DIFFERENT (${status1} vs ${status2}) — user enumeration possible\n`);
+        findings.push({ severity: "LOW", checker: "user-enumeration", summary: `User enumeration via ${target}: ${status1} vs ${status2}`, target, verification: "runtime-verified" });
+      } else {
+        process.stderr.write(`IDENTICAL (${status1}) — no differential\n`);
+      }
+    }
+  } else if (probeFn) {
+    const probeArgs = phase.startsWith("admin-") ? [baseUrl, rootDir] : [baseUrl];
+    try {
+      const result = await probeFn(...probeArgs);
+      if (Array.isArray(result)) findings = result;
+      for (const f of findings) {
+        const icon = f.severity === "CRITICAL" || f.severity === "HIGH" ? "!" : "•";
+        process.stderr.write(`    ${icon} [${f.severity}] ${f.summary}\n`);
+      }
+      if (findings.length === 0) {
+        process.stderr.write("    ✓ No findings — target appears protected\n");
+      }
+    } catch (err) {
+      process.stderr.write(`    ✗ Probe error: ${err.message}\n`);
+    }
+  }
+
+  process.stderr.write(`\n[+] ${meta.label} complete. ${findings.length} finding(s).\n`);
+  return findings;
+}
+
 function sortFindings(findings) {
   return findings.slice().sort((left, right) => {
     const severityDelta = (SEVERITY_ORDER[right.severity] || 0) - (SEVERITY_ORDER[left.severity] || 0);
@@ -1815,6 +2076,22 @@ function renderMarkdown(report) {
     `Base URL: ${report.runtime.baseUrl || "not-provided"}`,
     `Local/Dev Eligible: ${report.runtime.localDev ? "yes" : "no"}`,
     "",
+    "## External Skill Sources",
+  ];
+
+  if (report.skillSources?.length) {
+    for (const source of report.skillSources) {
+      lines.push(`- ${source.id}: ${source.url}`);
+      lines.push(`  Policy: ${source.policy}`);
+      lines.push(`  Frameworks: ${(source.frameworks || []).join(", ") || "n/a"}`);
+      if (source.installHint) lines.push(`  Install hint: ${source.installHint}`);
+    }
+  } else {
+    lines.push("No external skill sources recorded.");
+  }
+
+  lines.push(
+    "",
     "## Active Probes",
     `Attempted: ${report.activeProbes?.attempted ? "yes" : "no"}`,
     `Skipped: ${report.activeProbes?.skipped ? "yes" : "no"}`,
@@ -1833,7 +2110,7 @@ function renderMarkdown(report) {
     `Forms: ${report.inventory.forms.length}`,
     "",
     "## Findings",
-  ];
+  );
 
   if (report.findings.length === 0) {
     lines.push("No findings recorded.");
@@ -1890,11 +2167,14 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
     merged.writeTasks = merged.writeTasks === true;
     merged.aggressive = merged.aggressive === true;
     merged.json = merged.json === true;
+    merged.phase = String(merged.phase || "").trim();
     Object.assign(args, merged);
   }
   const runtime = parseRuntimeTarget(args.runtimeBaseUrl);
   const runId = makeRunId(args.commandName);
   const generatedAt = nowIso();
+  const securitySkillsManifest = buildAnthropicCybersecuritySkillsManifest();
+  const skillSources = securitySkillsManifest.sources;
   let activeProbes = makeActiveProbeState({
     coverage: args.mode === "attack" ? attackProbeCoverage(Boolean(args.aggressive)) : [],
   });
@@ -1918,6 +2198,8 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
       aggressive: Boolean(args.aggressive),
       status: "blocked",
       summary: "Active attack simulation is limited to local/dev targets. The supplied runtime target is not local/dev eligible.",
+      skillSources,
+      securitySkills: securitySkillsManifest,
       runtime,
       activeProbes,
       cleanup,
@@ -1943,6 +2225,47 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
       output: args.json ? `${JSON.stringify(report, null, 2)}\n` : renderMarkdown(report),
     };
     }
+
+  /* walkthrough mode — run single phase with human-hacker output */
+  if (args.mode === "walkthrough") {
+    if (!runtime.provided || !runtime.localDev) {
+      const msg = "Walkthrough mode requires a local/dev runtime target. Provide --runtime-base-url http://localhost:8080";
+      console.error(msg);
+      return { report: { status: "blocked", summary: msg, skillSources, securitySkills: securitySkillsManifest, findings: [] }, exitCode: 1, output: msg + "\n" };
+    }
+    if (!args.phase) {
+      const msg = `Walkthrough mode requires --phase <name>. Available phases: ${Object.keys(PHASE_META).join(", ")}`;
+      console.error(msg);
+      return { report: { status: "blocked", summary: msg, skillSources, securitySkills: securitySkillsManifest, findings: [] }, exitCode: 1, output: msg + "\n" };
+    }
+    const baseUrl = runtime.baseUrl.replace(/\/$/, "");
+    const reachability = await checkRuntimeReachable(baseUrl);
+    if (!reachability.reachable) {
+      const msg = `Cannot reach ${baseUrl}. Start your local Hermes server first.`;
+      console.error(msg);
+      return { report: { status: "unreachable", summary: msg, skillSources, securitySkills: securitySkillsManifest, findings: [] }, exitCode: 1, output: msg + "\n" };
+    }
+    const phaseSkillContext = securitySkillContextForPhase(args.phase);
+    const findings = await runWalkthroughPhase(args.phase, baseUrl, args.rootDir);
+    const sorted = sortFindings(findings);
+    return {
+      report: {
+        runId: makeRunId(args.commandName),
+        commandName: args.commandName,
+        mode: "walkthrough",
+        phase: args.phase,
+        aggressive: Boolean(args.aggressive),
+        status: "completed",
+        summary: `${PHASE_META[args.phase]?.label || args.phase} complete. ${sorted.length} finding(s).`,
+        skillSources,
+        securitySkills: securitySkillsManifest,
+        phaseSkillContext,
+        runtime,
+        findings: sorted,
+      },
+      output: sorted.map((f) => `[${f.severity}] ${f.checker} :: ${f.summary} (${f.target})`).join("\n") || "No findings.",
+    };
+  }
 
   const inventory = discoverSecurityInventory(args.rootDir);
   const staticFindings = sortFindings([
@@ -2047,6 +2370,8 @@ export async function runAutoHermesSecurity(rawArgs = process.argv.slice(2)) {
     aggressive: Boolean(args.aggressive),
     status: "completed",
     summary,
+    skillSources,
+    securitySkills: securitySkillsManifest,
     runtime,
     activeProbes,
     cleanup,
