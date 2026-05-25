@@ -885,11 +885,11 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-hero-desc, .mt-reference-intent, .mt-reference-steps li, .mt-exercise-meta, .mt-top-action-copy em, .mt-top-muscle-hint, .mt-top-actions-head span, .mt-top-actions-note, .muscle-preference-head p, .muscle-pref-help, .muscle-profile-impact p) {
-  color: #5d6757 !important;
+  color: #595c5d !important;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-body p, .mt-reference-body li, .mt-reference-muscles > span, .mt-top-reference-body p, .mt-top-reference-body li, .mt-top-reference-muscles > span) {
-  color: #5d6757 !important;
+  color: #595c5d !important;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-muscles em, .mt-top-reference-muscles em) {
@@ -903,6 +903,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .strength-plan-control-deck .muscle-day-chip.active {
+  border-color: var(--brand-accent, #c0462b) !important;
   background: var(--brand-accent, #c0462b) !important;
   color: #ffffff !important;
 }
