@@ -34845,12 +34845,9 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-sa
   margin-top: 0;
 }
 
-.prediction-detail-page .runner-shell-main {
-  margin-left: 0;
-}
-
 .prediction-detail-page .runner-shell-canvas {
-  width: min(1400px, calc(100% - 32px));
+  width: calc(100% - 48px);
+  max-width: none;
 }
 
 /* Prediction hero */
