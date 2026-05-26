@@ -4,10 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiJson } from '../api';
-import AppIcon from '../components/AppIcon';
-import HermesLogo from '../components/HermesLogo';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
+import AppIcon from '../components/AppIcon';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import {
   collectAllVdotEntries,
@@ -312,26 +311,6 @@ export default function PredictionDetail() {
 
   return (
     <div className="runner-shell-page runner-dashboard-page prediction-detail-page" style={{ '--prediction-accent': DIST_COLORS[distKey] || '#f07561' }}>
-      <aside className="runner-shell-sidebar">
-        <div className="runner-shell-brand runner-dashboard-brand">
-          <HermesLogo dark />
-        </div>
-        <nav className="runner-shell-side-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
-              onClick={() => navigate(item.route)}
-              aria-label={item.label}
-            >
-              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
-              <span className="runner-dashboard-side-link-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
-
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
