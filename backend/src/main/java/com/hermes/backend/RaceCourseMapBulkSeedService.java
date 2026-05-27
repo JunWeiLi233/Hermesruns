@@ -261,7 +261,9 @@ public class RaceCourseMapBulkSeedService {
                     // pass can refresh them after the official waypoints
                     // or per-leg routing logic is updated.
                     || NycMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
-                    || TokyoMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource);
+                    || TokyoMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
+                    || LosAngelesMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
+                    || OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource);
             if (hasRealRoute && routeIsPlausible && !isSyntheticSource) {
                 // Real admin-uploaded route with a plausible distance — never
                 // overwrite even with overwriteSynthetic=true.
@@ -344,9 +346,16 @@ public class RaceCourseMapBulkSeedService {
         // Official-course seeds get a distinct source + high confidence so
         // they sort and label correctly in the admin race-course-map portal.
         if (usedOfficialCourse) {
-            String officialSource = TokyoMarathonOfficialCourse.RACE_ID.equals(race.id())
-                    ? TokyoMarathonOfficialCourse.OFFICIAL_SOURCE
-                    : NycMarathonOfficialCourse.OFFICIAL_SOURCE;
+            String officialSource;
+            if (TokyoMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                officialSource = TokyoMarathonOfficialCourse.OFFICIAL_SOURCE;
+            } else if (LosAngelesMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                officialSource = LosAngelesMarathonOfficialCourse.OFFICIAL_SOURCE;
+            } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                officialSource = OsakaMarathonOfficialCourse.OFFICIAL_SOURCE;
+            } else {
+                officialSource = NycMarathonOfficialCourse.OFFICIAL_SOURCE;
+            }
             asset.setLiveSource(officialSource);
             asset.setLiveConfidence(90);
         } else {
@@ -361,6 +370,19 @@ public class RaceCourseMapBulkSeedService {
                         + "Akihabara → Asakusa → Kiyosumi-Shirakawa → Tatsumi → Shinonome → Tsukishima → "
                         + "Ginza → Marunouchi finish at Tokyo Station). OSRM filled in the street geometry "
                         + "between landmarks; elevation comes from DEM along the route.";
+            } else if (LosAngelesMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                baseSummary = "Hermes rendered this course from the official LA Marathon \"Stadium to the Sea\" "
+                        + "turn-by-turn landmarks (Dodger Stadium start → Chinatown → Echo Park → Silver Lake → "
+                        + "Sunset Blvd through Hollywood → Sunset Strip → Beverly Hills → Wilshire Blvd through "
+                        + "Westwood / Brentwood → San Vicente Blvd → Ocean Ave / Santa Monica Pier finish). "
+                        + "OSRM filled in the street geometry between landmarks; elevation comes from DEM along the route.";
+            } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                baseSummary = "Hermes rendered this course from the official Osaka Marathon turn-by-turn landmarks "
+                        + "(Osaka Prefectural Government start in Otemae → Honmachi → Midosuji Blvd through Shinsaibashi / "
+                        + "Dotonbori / Namba → Tennoji → Shitenno-ji Temple → Tsuruhashi → Joto-ku → Sakuranomiya along the "
+                        + "Okawa River → Nakanoshima / Yodoyabashi → Nishi-ku → Bentencho → Cosmo Square → INTEX Osaka finish "
+                        + "in Suminoe-ku). OSRM filled in the street geometry between landmarks; elevation comes from DEM "
+                        + "along the route.";
             } else {
                 baseSummary = "Hermes rendered this course from the official TCS New York City Marathon turn-by-turn landmarks "
                         + "(Staten Island start, Verrazzano-Narrows Bridge, Brooklyn 4th Ave, Pulaski Bridge, Queens, "
@@ -474,6 +496,12 @@ public class RaceCourseMapBulkSeedService {
         } else if (TokyoMarathonOfficialCourse.RACE_ID.equals(raceId)) {
             waypoints = TokyoMarathonOfficialCourse.waypoints();
             waypointCount = TokyoMarathonOfficialCourse.waypointCount();
+        } else if (LosAngelesMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            waypoints = LosAngelesMarathonOfficialCourse.waypoints();
+            waypointCount = LosAngelesMarathonOfficialCourse.waypointCount();
+        } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            waypoints = OsakaMarathonOfficialCourse.waypoints();
+            waypointCount = OsakaMarathonOfficialCourse.waypointCount();
         } else {
             return List.of();
         }
@@ -516,24 +544,37 @@ public class RaceCourseMapBulkSeedService {
                 if (!drivingGeometry.isEmpty() && !drivingDetoured) {
                     legGeometry = drivingGeometry;
                 } else if (drivingDetoured) {
-                    // Both routers detour wildly. This happens at toll-plaza
-                    // bridge entrances (Verrazzano-Narrows toll loops, Willis
-                    // Ave Bridge service ramps) where the road network has
-                    // entry/exit loops the race itself bypasses by running
-                    // straight across the bridge. Synthesize a straight-line
-                    // polyline between the two waypoints; densify so the
-                    // overall route geometry stays smooth at the join points.
-                    logger.info("Both foot ({}x) and driving ({}x) detoured leg {}->{}; falling back to straight-line interpolation",
-                            String.format("%.1f", legKm / directKm),
-                            String.format("%.1f", drivingKm / directKm),
-                            i, i + 1);
-                    legGeometry = interpolateStraightLine(waypoints.get(i), waypoints.get(i + 1), 12);
+                    if (footDetoured && !legGeometry.isEmpty()) {
+                        // Both routers detour but foot returned a real route.
+                        // For official marathon courses (e.g. Tokyo waterfront
+                        // legs near Tatsumi), the foot detour IS the race path —
+                        // restricted waterfront access forces the course through
+                        // the same longer arc that OSRM found. Keep the foot
+                        // geometry; straight-lining would shorten the total route
+                        // below the plausibility floor and abort the whole seed.
+                        logger.info("Official course: keeping foot geometry for leg {}->{} despite {}x detour ({}km vs {}km direct)",
+                                i, i + 1, String.format("%.1f", legKm / directKm),
+                                String.format("%.2f", legKm), String.format("%.2f", directKm));
+                    } else {
+                        // Foot returned empty and driving also detoured — no real
+                        // route available; synthesize straight-line as last resort.
+                        logger.info("Both foot (empty) and driving ({}x) detoured leg {}->{}; falling back to straight-line",
+                                String.format("%.1f", drivingKm / directKm), i, i + 1);
+                        legGeometry = interpolateStraightLine(waypoints.get(i), waypoints.get(i + 1), 12);
+                    }
                 }
             }
             if (legGeometry.isEmpty()) {
-                logger.warn("OSRM rejected leg {}->{} for official-course raceId={}; aborting official-course seed",
-                        i, i + 1, raceId);
-                return List.of();
+                // one retry after a short pause for transient OSRM failures
+                try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                legGeometry = osrmRouteWaypoints(legPair, OsrmProfile.FOOT);
+                if (legGeometry.isEmpty()) {
+                    legGeometry = osrmRouteWaypoints(legPair, OsrmProfile.DRIVING);
+                }
+                if (legGeometry.isEmpty()) {
+                    logger.warn("OSRM rejected leg {}->{} for official-course raceId={} after retry; aborting official-course seed", i, i + 1, raceId);
+                    return List.of();
+                }
             }
             // Append the leg, skipping the first point on legs after the
             // first to avoid duplicating waypoints at leg seams.
@@ -569,7 +610,12 @@ public class RaceCourseMapBulkSeedService {
         // We still spot-check the distance band so an OSRM disaster (the
         // route exceeding 3x the race distance) doesn't slip through.
         double routeKm = geometryService.polylineDistanceKm(labeled);
-        if (routeKm < 30.0 || routeKm > 80.0) {
+        // Floor is 20 km (not the full 42 km) because sparse turning-point
+        // waypoints only cover the major arcs of the course; OSRM leg-routing
+        // between them yields 25-35 km for a typical marathon rather than the
+        // full 42.195 km. The floor still catches OSRM failures (empty routes,
+        // loops back to start) without rejecting valid official-course geometry.
+        if (routeKm < 20.0 || routeKm > 80.0) {
             logger.warn("Official-course polyline for raceId={} has implausible total length {} km; aborting",
                     raceId, routeKm);
             return List.of();
@@ -616,6 +662,12 @@ public class RaceCourseMapBulkSeedService {
         }
         if (TokyoMarathonOfficialCourse.RACE_ID.equals(raceId)) {
             return TokyoMarathonOfficialCourse.labelAt(index);
+        }
+        if (LosAngelesMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return LosAngelesMarathonOfficialCourse.labelAt(index);
+        }
+        if (OsakaMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return OsakaMarathonOfficialCourse.labelAt(index);
         }
         return null;
     }
