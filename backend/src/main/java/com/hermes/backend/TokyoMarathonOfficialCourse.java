@@ -10,9 +10,10 @@ import java.util.List;
  *
  * <p>These are landmark turning-point coordinates in route order. The bulk-seed
  * flow feeds them per-leg to OSRM (pedestrian profile) so the resulting polyline
- * follows real streets through central Tokyo: Shinjuku → Ichigaya → Kudanshita
- * → Kanda → Akihabara → Asakusa → Kiyosumi-Shirakawa → Tatsumi →
- * Shinonome → Tsukishima → Ginza → Nihonbashi → Tokyo Station.</p>
+ * follows real streets through central Tokyo: Shinjuku → Yotsuya → Ichigaya →
+ * Kudanshita → Kanda → Akihabara → Asakusa → Kiyosumi-Shirakawa →
+ * Fukagawa → Tatsumi 2-chome (southernmost turn, max east ~139.806°E) →
+ * Shinonome → Tsukishima → Ginza → Tokyo Station.</p>
  *
  * <p>Coordinates verified against the official Tokyo Marathon course map and
  * OpenStreetMap landmarks; updated 2026-05-27.</p>
@@ -25,46 +26,45 @@ final class TokyoMarathonOfficialCourse {
 
     private static final double[][] WAYPOINTS = new double[][]{
             // ===== Start — Shinjuku =====
-            { 35.6894, 139.6917 }, // Start - Tokyo Metropolitan Government Building
-            // ===== East through central Tokyo =====
-            { 35.6893, 139.7020 }, // Shinjuku-dori / Yotsuya-sanchome
-            { 35.6920, 139.7160 }, // Yotsuya
-            { 35.6940, 139.7254 }, // Ichigaya
-            { 35.6948, 139.7479 }, // Kudanshita
-            { 35.6953, 139.7545 }, // Jimbocho
-            { 35.6966, 139.7671 }, // Kanda
-            { 35.6985, 139.7734 }, // Akihabara
+            { 35.6894, 139.6917 }, // [0]  Start - Tokyo Metropolitan Government Building
+            // ===== East-northeast through central Tokyo =====
+            { 35.6858, 139.7154 }, // [1]  Yotsuya-sanchome
+            { 35.6912, 139.7377 }, // [2]  Ichigaya
+            { 35.6948, 139.7518 }, // [3]  Kudanshita
+            { 35.6953, 139.7545 }, // [4]  Jimbocho
+            { 35.6966, 139.7671 }, // [5]  Kanda
+            { 35.6985, 139.7734 }, // [6]  Akihabara
             // ===== North to Asakusa =====
-            { 35.7060, 139.7740 }, // Ueno-Okachimachi
-            { 35.7108, 139.7964 }, // Asakusa — Kaminarimon / Senso-ji
-            // ===== Southeast through Koto-ku to southernmost turn =====
-            { 35.6980, 139.8130 }, // Kiyosumi-Shirakawa
-            { 35.6880, 139.8220 }, // Koto — Etchujima area
-            { 35.6760, 139.8300 }, // Kameido / Ryogoku south
-            { 35.6630, 139.8420 }, // Tatsumi approach
-            { 35.6440, 139.8040 }, // Tatsumi / Shinonome (southernmost turn)
+            { 35.7060, 139.7740 }, // [7]  Ueno-Okachimachi
+            { 35.7108, 139.7964 }, // [8]  Asakusa — Kaminarimon / Senso-ji
+            // ===== South through Koto-ku to Tatsumi turn =====
+            // Max east ~139.806°E — the course never enters Tokyo Bay
+            { 35.6841, 139.8012 }, // [9]  Kiyosumi-Shirakawa (near Shin-Ohashi bridge)
+            { 35.6740, 139.8048 }, // [10] Fukagawa / Etchujima
+            { 35.6570, 139.8058 }, // [11] Shinonome approach
+            { 35.6490, 139.8058 }, // [12] Tatsumi 2-chome (southernmost turn)
             // ===== West along the waterfront =====
-            { 35.6480, 139.7980 }, // Shinonome
-            { 35.6520, 139.7800 }, // Tsukishima / Harumi
+            { 35.6498, 139.7970 }, // [13] Shinonome (heading west)
+            { 35.6520, 139.7800 }, // [14] Tsukishima / Harumi
             // ===== Northwest through Ginza to Tokyo Station =====
-            { 35.6630, 139.7681 }, // Ginza / Tsukiji
-            { 35.6715, 139.7650 }, // Ginza north
-            { 35.6812, 139.7671 }, // Finish — Tokyo Station / Marunouchi
+            { 35.6630, 139.7681 }, // [15] Ginza / Tsukiji
+            { 35.6715, 139.7650 }, // [16] Ginza north
+            { 35.6812, 139.7671 }, // [17] Finish — Tokyo Station / Marunouchi
     };
 
     private static final String[] LABELS;
     static {
         LABELS = new String[WAYPOINTS.length];
         LABELS[0]  = "Start - Metropolitan Govt Building";
-        LABELS[3]  = "Ichigaya";
-        LABELS[4]  = "Kudanshita";
-        LABELS[6]  = "Kanda";
-        LABELS[7]  = "Akihabara";
-        LABELS[9]  = "Asakusa - Kaminarimon";
-        LABELS[10] = "Kiyosumi-Shirakawa";
-        LABELS[14] = "Tatsumi (south turn)";
-        LABELS[16] = "Tsukishima";
-        LABELS[17] = "Ginza / Tsukiji";
+        LABELS[2]  = "Ichigaya";
+        LABELS[3]  = "Kudanshita";
+        LABELS[5]  = "Kanda";
+        LABELS[6]  = "Akihabara";
+        LABELS[8]  = "Asakusa - Kaminarimon";
+        LABELS[9]  = "Kiyosumi-Shirakawa";
+        LABELS[12] = "Tatsumi (south turn)";
+        LABELS[14] = "Tsukishima";
+        LABELS[15] = "Ginza / Tsukiji";
         LABELS[WAYPOINTS.length - 1] = "Finish - Tokyo Station";
     }
 
