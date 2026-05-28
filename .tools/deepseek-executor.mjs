@@ -30,8 +30,12 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dir = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dir, '..');
+// Resolve --brief / --out / auto-apply paths relative to the CALLER's working
+// directory, not the executor's install location. This makes the script
+// location-independent: the same file works whether it lives in a project's
+// .tools/ folder or is installed globally at ~/.claude/tools/. Absolute paths
+// pass through resolve() unchanged.
+const CWD = process.cwd();
 
 // ── Arg parsing ──────────────────────────────────────────────────────────────
 function arg(flag) {
@@ -106,7 +110,7 @@ async function main() {
     console.error('[deepseek-executor] ERROR: --brief <path> is required.');
     return 1;
   }
-  const absBrief = resolve(ROOT, briefPath);
+  const absBrief = resolve(CWD, briefPath);
   if (!existsSync(absBrief)) {
     console.error(`[deepseek-executor] ERROR: Brief file not found: ${absBrief}`);
     return 1;
@@ -191,7 +195,7 @@ async function main() {
   }
 
   // 4. Write output + log token usage.
-  const absOut = resolve(ROOT, outPath);
+  const absOut = resolve(CWD, outPath);
   mkdirSync(dirname(absOut), { recursive: true });
   writeFileSync(absOut, content, 'utf8');
   const usage = json.usage || {};
@@ -211,7 +215,7 @@ async function main() {
     const applied = [];
     while ((match = blockRe.exec(content)) !== null) {
       const [, filePath, fileContent] = match;
-      const absFilePath = resolve(ROOT, filePath.trim());
+      const absFilePath = resolve(CWD, filePath.trim());
       mkdirSync(dirname(absFilePath), { recursive: true });
       writeFileSync(absFilePath, fileContent, 'utf8');
       applied.push(filePath.trim());
