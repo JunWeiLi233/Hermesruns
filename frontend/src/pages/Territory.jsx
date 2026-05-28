@@ -400,6 +400,11 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
         zoomControl: false,
         attributionControl: false,
         preferCanvas: true,
+        // The polygon-paint effects call flyToBounds right after mount, which
+        // interrupts Leaflet's tile fade-in and leaves tiles stuck at inline
+        // opacity:0 (invisible base map). Disabling the fade renders tiles at
+        // full opacity immediately so the dark CARTO map is always visible.
+        fadeAnimation: false,
       });
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -556,7 +561,7 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
             opacity: 0.88,
             fillColor: color,
             fillOpacity: 0.22,
-          }).bindTooltip(`${areaKm2} km虏`).addTo(layer);
+          }).bindTooltip(`${areaKm2} km²`).addTo(layer);
           poly.coordinates.forEach((coord) => allCoords.push(coord));
           return;
         }

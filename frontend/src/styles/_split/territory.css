@@ -2022,8 +2022,12 @@
   filter: saturate(0.9) contrast(1.16) brightness(0.84);
 }
 
-.territory-heatmap-outline .territory-real-world-tile,
-.territory-heatmap-outline img.leaflet-tile {
+/* Leaflet stock CSS ships `.leaflet-container img.leaflet-tile { mix-blend-mode: plus-lighter }`
+   (a Chromium tile-seam workaround) and lazy-loads its chunk AFTER this file, so an
+   equal-specificity override loses the cascade. Adding `.leaflet-container` raises this to
+   (0,3,1) > Leaflet's (0,2,1) so the dark CARTO base map renders instead of washing out. */
+.territory-heatmap-outline .leaflet-container .territory-real-world-tile,
+.territory-heatmap-outline .leaflet-container img.leaflet-tile {
   opacity: 1;
   mix-blend-mode: normal;
 }
