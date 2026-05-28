@@ -152,14 +152,14 @@ Direct `browser-harness -c '...'` is permitted only when the wrapper cannot expr
 
 #### Alternative — Microsoft Playwright (`.tools/auto-hermes-playwright.mjs`)
 
-A second wrapper, [`.tools/auto-hermes-playwright.mjs`](.tools/auto-hermes-playwright.mjs), drives a managed headless Chromium via [Microsoft Playwright](https://github.com/microsoft/playwright). It mirrors the browser-harness wrapper's subcommand surface (`goto` / `eval` / `screenshot` / `status` / `reset` / `doctor`) so callers can swap implementations without rewriting the proof step.
+A second wrapper, [`.tools/auto-hermes-playwright.mjs`](.tools/auto-hermes-playwright.mjs), drives a managed headless Chromium via [Microsoft Playwright](https://github.com/microsoft/playwright). It mirrors the browser-harness wrapper's subcommand surface (`goto` / `eval` / `screenshot` / `status` / `reset` / `doctor`) and adds `signin` for interactive credential entry so callers can swap implementations without rewriting the proof step.
 
 **Prefer Playwright over browser-harness when:**
 
 - the user is actively using Chrome and the round should not steal their tab focus
 - the page needs auth and the round should reuse a persisted login deterministically across rounds (cookies + localStorage are saved under `.ai-sync/playwright-state/<state>/`)
 - the round runs unattended / in CI / over SSH without a foreground browser
-- a previous round was blocked at a `/login` redirect — sign in once with `--headed`, then every later round inherits the storage
+- a previous round was blocked at a `/login` redirect — run `signin --state <name>` once to complete the credential entry interactively, then every later round inherits the storage
 
 **Stay on browser-harness when:**
 
@@ -177,14 +177,19 @@ node .tools/auto-hermes-playwright.mjs doctor
 **Round usage (mirrors browser-harness subcommands):**
 
 ```bash
-# First time on an auth-walled route: run --headed so you can sign in manually,
-# state is persisted afterwards.
-node .tools/auto-hermes-playwright.mjs goto --url http://localhost:8080/login --headed
+# First time on an auth-walled route — interactive sign-in. The browser stays
+# open until the URL leaves /login (and any OAuth bounce), then cookies +
+# localStorage are persisted to .ai-sync/playwright-state/<state>/Default/.
+# Default timeout is 5 minutes so OAuth flows can complete.
+#
+# Plain `goto --headed` does NOT work for sign-in — it closes the browser the
+# moment the page reports networkidle, well before a human can finish typing.
+node .tools/auto-hermes-playwright.mjs signin --state muscle-training
 
 # Subsequent calls reuse the persisted login state (headless by default).
-node .tools/auto-hermes-playwright.mjs goto --url http://localhost:8080/muscle-training --wait-ms 12000
-node .tools/auto-hermes-playwright.mjs eval --js "JSON.stringify({url:location.href,h1:document.querySelector('h1')?.innerText})"
-node .tools/auto-hermes-playwright.mjs screenshot --out task-images/<lane>-<route>.jpg
+node .tools/auto-hermes-playwright.mjs goto --state muscle-training --url http://localhost:8080/muscle-training --wait-ms 12000
+node .tools/auto-hermes-playwright.mjs eval --state muscle-training --js "JSON.stringify({url:location.href,h1:document.querySelector('h1')?.innerText})"
+node .tools/auto-hermes-playwright.mjs screenshot --state muscle-training --out task-images/<lane>-<route>.jpg
 ```
 
 Use a different `--state <name>` per role when two parallel lanes need disjoint sessions (e.g. one signed in as the local-shared-runner, one anonymous). State directories under `.ai-sync/playwright-state/` are gitignored and never push.
@@ -192,6 +197,36 @@ Use a different `--state <name>` per role when two parallel lanes need disjoint 
 Both wrappers emit a single JSON line on stdout per call — parse the `ok`, `url`, `consoleErrorCount`, and `out` fields into the round result packet identically regardless of which wrapper produced them.
 
 Capture route URL, console clean/error summary, and screenshot/DOM evidence into the round result packet. If the chosen wrapper is unavailable (browser-harness daemon down, Playwright not installed), try the other wrapper before recording a browser-proof blocker. Never claim browser proof you didn't actually capture. For browser-visible frontend quality work, also load `.tools/auto-hermes-skills.mjs --json` and apply `web-quality-audit` from `https://officialskills.sh/addyosmani/skills/web-quality-audit` (GitHub: `https://github.com/addyosmani/web-quality-skills/tree/main/skills/web-quality-audit`): performance, accessibility, SEO, best practices, browser proof, console state, and Lighthouse-style observations.
+
+#### Dev Account & Browser Login
+
+The local dev runner is created automatically on every non-production backend startup. Use it for all browser-proof steps — never use real user credentials or the reCAPTCHA signup form.
+
+| Account | Email | Password | Role |
+|---------|-------|----------|------|
+| Dev runner (mock data, all runner pages) | `strava+140971747@hermes.local` | `HermesDev2026!` | USER |
+
+**Login via localStorage injection** (works because reCAPTCHA only guards the signup form, not the API login endpoint):
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"strava+140971747@hermes.local","password":"HermesDev2026!"}' \
+  | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+browser-harness -c "
+smart_open('http://localhost:8080/')
+wait_for_load()
+wait(2000)
+js(\"localStorage.setItem('hermes_jwt', '$TOKEN'); localStorage.setItem('hermes_email', 'strava+140971747@hermes.local');\")
+js(\"window.location.href = '/profile';\")
+wait_for_load()
+wait(4000)
+print(page_info())
+"
+```
+
+Verify login: `js("localStorage.getItem('hermes_email')")` should return the email; the URL must NOT be `/login`. If the backend is not running, start it: `cd backend && ./mvnw -Dmaven.test.skip=true spring-boot:run > /tmp/hermes-backend.log 2>&1 &` and wait ~50s.
 
 ### Step 8 — Close the board
 
