@@ -35,6 +35,26 @@ public class ShoeImageController {
 
     private static final long MAX_SCAN_IMAGE_BYTES = 6L * 1024L * 1024L; // 6MB
 
+    // Magic byte signatures for supported image formats
+    private static final Map<String, byte[]> IMAGE_MAGIC = Map.of(
+            "PNG",       new byte[]{(byte)0x89, 0x50, 0x4E, 0x47},
+            "JPEG",      new byte[]{(byte)0xFF, (byte)0xD8, (byte)0xFF},
+            "GIF",       new byte[]{0x47, 0x49, 0x46, 0x38},
+            "WEBP_RIFF", new byte[]{0x52, 0x49, 0x46, 0x46}
+    );
+
+    private boolean hasImageMagicBytes(byte[] data) {
+        if (data == null || data.length < 8) return false;
+        for (byte[] magic : IMAGE_MAGIC.values()) {
+            boolean match = true;
+            for (int i = 0; i < magic.length; i++) {
+                if (data[i] != magic[i]) { match = false; break; }
+            }
+            if (match) return true;
+        }
+        return false;
+    }
+
     public ShoeImageController(
             AuthService authService,
             ShoeRepository shoeRepository,
@@ -551,6 +571,9 @@ public class ShoeImageController {
             }
 
             byte[] imageBytes = image.getBytes();
+            if (!hasImageMagicBytes(imageBytes)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid image format."));
+            }
             String base64 = Base64.getEncoder().encodeToString(imageBytes);
 
             String text = aiShoeScanService.callAi(base64, mediaType);
@@ -580,10 +603,18 @@ public class ShoeImageController {
 
         } catch (HttpStatusCodeException e) {
             logger.error("AI API error {}: {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            if (!quotaService.isPro(runner)) {
+                aiUsageService.rollbackConsumedQuota(runner);
+                quotaService.rollbackConsumedFeature(runner, "shoe-scan");
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "AI service temporarily unavailable. Please try again later."));
         } catch (Exception e) {
             logger.error("Shoe image scan failed: {}", e.getMessage(), e);
+            if (!quotaService.isPro(runner)) {
+                aiUsageService.rollbackConsumedQuota(runner);
+                quotaService.rollbackConsumedFeature(runner, "shoe-scan");
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to analyze image. Please try again."));
         }

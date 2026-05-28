@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class ShoeTrackerTests {
+class ShoeTrackerServiceTests {
 
     @Test
     void recommendShoeForTrailSurfacePrefersTrailShoeWithLowerRecentUsage() {
@@ -45,7 +45,7 @@ class ShoeTrackerTests {
                         catalogModel("Nike", "Pegasus 41", "daily")
                 ));
 
-        ShoeTracker tracker = new ShoeTracker(shoeRepository, modelRepository, activityRepository);
+        ShoeTrackerService tracker = new ShoeTrackerService(shoeRepository, modelRepository, activityRepository);
 
         assertThat(tracker.recommendShoe(runner, CoachWorkoutType.EASY, "trail"))
                 .containsSame(restedTrail);
@@ -76,7 +76,7 @@ class ShoeTrackerTests {
                 .thenReturn(List.of());
         when(modelRepository.findAll()).thenReturn(List.of());
 
-        ShoeTracker tracker = new ShoeTracker(shoeRepository, modelRepository, activityRepository);
+        ShoeTrackerService tracker = new ShoeTrackerService(shoeRepository, modelRepository, activityRepository);
 
         assertThat(tracker.recommendShoe(runner, CoachWorkoutType.EASY, "trail"))
                 .containsSame(trailShoe);

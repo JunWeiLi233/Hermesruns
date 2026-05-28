@@ -5593,20 +5593,63 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
 }
 
 .mt-muscle-visual-shell {
-  position: relative;
   margin-top: 18px;
-  aspect-ratio: 4 / 3;
-  max-height: 300px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   background: #050606;
+  border-radius: 10px;
+  padding: 12px 8px;
+  min-height: 180px;
 }
 
-.mt-muscle-visual {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.mt-muscle-heatmap-visual {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mt-muscle-heatmap-visual .muscle-heatmap-figure {
+  justify-content: center;
+}
+
+.muscle-heatmap__body--interactive svg path {
+  cursor: pointer;
+}
+
+.muscle-heatmap__body--interactive svg path:hover {
+  filter: brightness(1.3);
+}
+
+.mt-muscle-click-callout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 12px;
+  background: rgba(251, 146, 60, 0.15);
+  border: 1px solid rgba(251, 146, 60, 0.4);
+  border-radius: 20px;
+  animation: mt-callout-fade-in 0.2s ease;
+}
+
+@keyframes mt-callout-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mt-muscle-click-icon {
+  color: var(--accent-coral, #fb923c);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.mt-muscle-click-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-coral, #fb923c);
+  letter-spacing: 0.01em;
 }
 
 .mt-muscle-hit-zone-layer {
@@ -7501,11 +7544,8 @@ body:has(.runner-dashboard-page .mt-top-workbench) #root {
 
   .runner-dashboard-page:has(.mt-top-workbench) .mt-muscle-visual-shell {
     margin-top: 12px;
-    max-height: 180px;
-  }
-
-  .runner-dashboard-page:has(.mt-top-workbench) .mt-muscle-visual {
-    object-fit: contain;
+    padding: 8px 4px;
+    min-height: 140px;
   }
 
   .runner-dashboard-page:has(.mt-top-workbench) .mt-muscle-target-buttons {

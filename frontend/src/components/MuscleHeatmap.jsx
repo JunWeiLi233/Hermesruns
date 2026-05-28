@@ -86,6 +86,7 @@ function normalizeHeatmapData(data) {
 function resolveViews(data, side) {
   if (side === 'front') return { front: true, back: false };
   if (side === 'back') return { front: false, back: true };
+  if (side === 'both') return { front: true, back: true };
   const hasFront = data.some((part) => FRONT_SLUGS.has(part.slug));
   const hasBack = data.some((part) => BACK_SLUGS.has(part.slug));
   return {
@@ -94,10 +95,13 @@ function resolveViews(data, side) {
   };
 }
 
-function HeatmapBody({ side, data, scale, label }) {
+function HeatmapBody({ side, data, scale, label, onMuscleClick }) {
   return (
     <div className="muscle-heatmap-cell">
-      <div className="muscle-heatmap__body" aria-hidden="true">
+      <div
+        className={`muscle-heatmap__body${onMuscleClick ? ' muscle-heatmap__body--interactive' : ''}`}
+        aria-hidden="true"
+      >
         <Body
           data={data}
           side={side}
@@ -108,6 +112,7 @@ function HeatmapBody({ side, data, scale, label }) {
           defaultFill="var(--mt-heatmap-default-fill)"
           defaultStroke="var(--mt-heatmap-default-stroke)"
           defaultStrokeWidth={0.8}
+          onBodyPartPress={onMuscleClick}
         />
       </div>
       <span className="muscle-heatmap-caption">{label}</span>
@@ -122,6 +127,7 @@ function MuscleHeatmap({
   ariaLabel,
   frontLabel = 'Front',
   backLabel = 'Back',
+  onMuscleClick,
 }) {
   const normalizedData = useMemo(() => normalizeHeatmapData(data), [data]);
   const views = useMemo(() => resolveViews(normalizedData, side), [normalizedData, side]);
@@ -134,10 +140,10 @@ function MuscleHeatmap({
       aria-hidden={ariaLabel ? undefined : 'true'}
     >
       {views.front && (
-        <HeatmapBody side="front" data={normalizedData} scale={scale} label={frontLabel} />
+        <HeatmapBody side="front" data={normalizedData} scale={scale} label={frontLabel} onMuscleClick={onMuscleClick} />
       )}
       {views.back && (
-        <HeatmapBody side="back" data={normalizedData} scale={scale} label={backLabel} />
+        <HeatmapBody side="back" data={normalizedData} scale={scale} label={backLabel} onMuscleClick={onMuscleClick} />
       )}
     </div>
   );

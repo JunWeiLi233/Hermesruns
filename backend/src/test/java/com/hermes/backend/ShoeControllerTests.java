@@ -157,7 +157,7 @@ class ShoeControllerTests {
         ActivityRepository actRepo = mock(ActivityRepository.class);
         ShoeIdentityService identSvc = mock(ShoeIdentityService.class);
         ShoeCatalogModelRepository catalogRepo = mock(ShoeCatalogModelRepository.class);
-        ShoeTracker shoeTracker = mock(ShoeTracker.class);
+        ShoeTrackerService shoeTracker = mock(ShoeTrackerService.class);
         CoachScheduledWorkoutRepository scheduleRepo = mock(CoachScheduledWorkoutRepository.class);
         Runner runner = runner();
         Shoe recommended = shoe(11L, runner);

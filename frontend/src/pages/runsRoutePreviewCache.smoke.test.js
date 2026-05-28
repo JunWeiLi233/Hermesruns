@@ -10,7 +10,7 @@ const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css')
 
 assert.match(
   runsSource,
-  /function RoutePreviewThumb\(\{ preview, provider, runName \}\)/,
+  /function RoutePreviewThumb\(\{ preview, provider, runName(?:, [a-zA-Z]+)* \}\)/,
   'Runs route thumbnails should consume a preview model instead of requiring the full raw point list every time.',
 );
 

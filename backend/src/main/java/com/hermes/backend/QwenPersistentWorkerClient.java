@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 
 @Service
 public class QwenPersistentWorkerClient {
+    private static final Logger log = LoggerFactory.getLogger(QwenPersistentWorkerClient.class);
     private final ObjectMapper objectMapper;
     private final Object workerLock = new Object();
     private ExecutorService responseReader = newWorkerIoExecutor("qwen-worker-response");
@@ -180,7 +183,9 @@ public class QwenPersistentWorkerClient {
                     }
                 }
             }
-        } catch (IOException ignored) {
+        } catch (IOException ex) {
+            // Stream closes when the worker process exits; this is expected during normal shutdown.
+            log.debug("Qwen worker stderr stream closed during drain.", ex);
         }
     }
 
@@ -215,7 +220,9 @@ public class QwenPersistentWorkerClient {
         if (process != null) {
             try {
                 process.destroyForcibly();
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                // destroyForcibly is best-effort; the OS may have already reaped the process.
+                log.debug("Qwen worker process could not be forcibly destroyed during cleanup.", ex);
             }
         }
         process = null;
@@ -226,7 +233,9 @@ public class QwenPersistentWorkerClient {
         if (closeable == null) return;
         try {
             closeable.close();
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            // Stream may already be closed if the worker process exited; safe to ignore.
+            log.debug("Ignored exception while closing Qwen worker stream.", ex);
         }
     }
 
@@ -240,7 +249,9 @@ public class QwenPersistentWorkerClient {
             if (process != null) {
                 try {
                     process.destroyForcibly();
-                } catch (Exception ignored) {
+                } catch (Exception ex) {
+                    // destroyForcibly is best-effort during shutdown; the process may already be gone.
+                    log.debug("Qwen worker process could not be forcibly destroyed during shutdown.", ex);
                 }
             }
             process = null;

@@ -316,84 +316,82 @@ export default function WeatherEngine() {
     }
 
     let cancelled = false;
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), WEATHER_PAGE_REQUEST_TIMEOUT_MS);
+    const contextController = new AbortController();
+    const forecastController = new AbortController();
+    const contextTimeout = window.setTimeout(
+      () => contextController.abort(),
+      WEATHER_PAGE_REQUEST_TIMEOUT_MS,
+    );
 
     async function loadPage() {
       setLoadState('loading');
+      setForecastState('loading');
       try {
         const [profileData, weatherData] = await Promise.all([
-          apiJson('/api/profile/me', { signal: controller.signal }).catch(() => null),
-          apiJson('/api/v1/weather/context', { signal: controller.signal }).catch(() => null),
+          apiJson('/api/profile/me', { signal: contextController.signal }).catch(() => null),
+          apiJson('/api/v1/weather/context', { signal: contextController.signal }).catch(() => null),
         ]);
 
         if (cancelled) return;
+        window.clearTimeout(contextTimeout);
         setProfile(profileData && typeof profileData === 'object' ? profileData : null);
-        setWeatherContext(weatherData && typeof weatherData === 'object' ? weatherData : null);
+        const ctx = weatherData && typeof weatherData === 'object' ? weatherData : null;
+        setWeatherContext(ctx);
         setLoadState('ready');
+
+        // Start forecast fetch immediately — no re-render hop needed.
+        const latitude = toFiniteNumber(ctx?.latitude);
+        const longitude = toFiniteNumber(ctx?.longitude);
+        if (!ctx?.available || latitude === null || longitude === null) {
+          setLiveWeather(null);
+          setForecast([]);
+          setForecastState('empty');
+          return;
+        }
+
+        const forecastTimeout = window.setTimeout(
+          () => forecastController.abort(),
+          WEATHER_FORECAST_REQUEST_TIMEOUT_MS,
+        );
+        const url = new URL('https://api.open-meteo.com/v1/forecast');
+        url.searchParams.set('latitude', latitude);
+        url.searchParams.set('longitude', longitude);
+        url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code');
+        url.searchParams.set('hourly', 'temperature_2m,weather_code');
+        url.searchParams.set('forecast_days', '2');
+        url.searchParams.set('timezone', 'auto');
+
+        try {
+          const res = await fetch(url, { signal: forecastController.signal });
+          window.clearTimeout(forecastTimeout);
+          if (!res.ok) throw new Error('weather-fetch-failed');
+          const payload = await res.json();
+          if (cancelled) return;
+          setLiveWeather(payload?.current || null);
+          setForecast(buildHourlyForecast(payload, lang, t));
+          setForecastState('ready');
+        } catch {
+          window.clearTimeout(forecastTimeout);
+          if (!cancelled) {
+            setLiveWeather(null);
+            setForecast([]);
+            setForecastState('error');
+          }
+        }
       } catch {
+        window.clearTimeout(contextTimeout);
         if (!cancelled) setLoadState('error');
-      } finally {
-        window.clearTimeout(timeoutId);
       }
     }
 
     loadPage();
     return () => {
       cancelled = true;
-      window.clearTimeout(timeoutId);
-      controller.abort();
+      window.clearTimeout(contextTimeout);
+      contextController.abort();
+      forecastController.abort();
     };
-  }, [isAuthenticated, navigate]);
-
-  useEffect(() => {
-    const latitude = toFiniteNumber(weatherContext?.latitude);
-    const longitude = toFiniteNumber(weatherContext?.longitude);
-
-    if (!weatherContext?.available || latitude === null || longitude === null) {
-      setLiveWeather(null);
-      setForecast([]);
-      setForecastState('empty');
-      return undefined;
-    }
-
-    let disposed = false;
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), WEATHER_FORECAST_REQUEST_TIMEOUT_MS);
-    setForecastState('loading');
-    const url = new URL('https://api.open-meteo.com/v1/forecast');
-    url.searchParams.set('latitude', latitude);
-    url.searchParams.set('longitude', longitude);
-    url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code');
-    url.searchParams.set('hourly', 'temperature_2m,weather_code');
-    url.searchParams.set('forecast_days', '2');
-    url.searchParams.set('timezone', 'auto');
-
-    fetch(url, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error('weather-fetch-failed'))))
-      .then((payload) => {
-        if (controller.signal.aborted) return;
-        setLiveWeather(payload?.current || null);
-        setForecast(buildHourlyForecast(payload, lang, t));
-        setForecastState('ready');
-      })
-      .catch(() => {
-        if (!disposed) {
-          setLiveWeather(null);
-          setForecast([]);
-          setForecastState('error');
-        }
-      })
-      .finally(() => {
-        window.clearTimeout(timeoutId);
-      });
-
-    return () => {
-      disposed = true;
-      window.clearTimeout(timeoutId);
-      controller.abort();
-    };
-  }, [lang, t, weatherContext]);
+  }, [isAuthenticated, lang, navigate, t]);
 
   const initials = getDisplayName(profile, t('profile.default_name')).slice(0, 1).toUpperCase();
   const navItems = useMemo(
