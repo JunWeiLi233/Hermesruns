@@ -27,8 +27,9 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { homedir } from 'node:os';
 
 // Resolve --brief / --out / auto-apply paths relative to the CALLER's working
 // directory, not the executor's install location. This makes the script
@@ -36,6 +37,31 @@ import { fileURLToPath } from 'node:url';
 // .tools/ folder or is installed globally at ~/.claude/tools/. Absolute paths
 // pass through resolve() unchanged.
 const CWD = process.cwd();
+
+// ── Dedicated DeepSeek key/config holder ─────────────────────────────────────
+// A single global holder JUST for the deepseek command, read by every runtime
+// (Claude, Codex, ad-hoc CLI). Lives at ~/.deepseek/config.json so the key
+// doesn't have to be duplicated into each runtime's env block. Honored fields:
+//   { "apiKey": "sk-...", "baseUrl": "https://api.deepseek.com",
+//     "model": "deepseek-v4-flash", "maxTokens": 8192 }
+// Override precedence (highest first): CLI flag → env var → holder → built-in default.
+const HOLDER_PATH = join(
+  process.env.DEEPSEEK_CONFIG || join(homedir(), '.deepseek', 'config.json'),
+);
+function loadHolder() {
+  try {
+    if (!existsSync(HOLDER_PATH)) return {};
+    const cfg = JSON.parse(readFileSync(HOLDER_PATH, 'utf8'));
+    return cfg && typeof cfg === 'object' ? cfg : {};
+  } catch {
+    return {};
+  }
+}
+const holder = loadHolder();
+const holderApiKey = holder.apiKey || holder.DEEPSEEK_API_KEY || null;
+const holderBaseUrl = holder.baseUrl || holder.DEEPSEEK_BASE_URL || null;
+const holderModel = holder.model || holder.DEEPSEEK_MODEL || null;
+const holderMaxTokens = holder.maxTokens || holder.DEEPSEEK_MAX_TOKENS || null;
 
 // ── Arg parsing ──────────────────────────────────────────────────────────────
 function arg(flag) {
@@ -48,10 +74,18 @@ function hasFlag(name) {
 
 const briefPath  = arg('brief');
 const outPath    = arg('out') || '.ai-sync/deepseek-output.md';
-const model      = arg('model') || process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash';
-const maxTokens  = parseInt(arg('max-tokens') || process.env.DEEPSEEK_MAX_TOKENS || '8192', 10);
-const baseUrl    = (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/$/, '');
-const apiKey     = process.env.DEEPSEEK_API_KEY;
+const model      = arg('model') || process.env.DEEPSEEK_MODEL || holderModel || 'deepseek-v4-flash';
+const maxTokens  = parseInt(arg('max-tokens') || process.env.DEEPSEEK_MAX_TOKENS || holderMaxTokens || '8192', 10);
+const baseUrl    = (process.env.DEEPSEEK_BASE_URL || holderBaseUrl || 'https://api.deepseek.com').replace(/\/$/, '');
+// Key precedence: a REAL env value wins; but a placeholder env value (e.g. a
+// runtime that injects "YOUR_DEEPSEEK_KEY_HERE" into every session) must NOT
+// shadow a real key in the dedicated holder. So: env-if-real → holder → env
+// (the last so the "not set / placeholder" error still reports the env value
+// when neither source has a real key). looksLikeApiKeyPlaceholder is a hoisted
+// function declaration, so it's callable here.
+const envKey     = process.env.DEEPSEEK_API_KEY;
+const envKeyReal = envKey && !looksLikeApiKeyPlaceholder(envKey);
+const apiKey     = envKeyReal ? envKey : (holderApiKey || envKey);
 const dryRun     = hasFlag('dry-run');
 const autoApply  = hasFlag('apply');
 
@@ -89,21 +123,23 @@ Your job is to implement the plan exactly — no extra features, no redesign.
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  // 1. Validate env + args before any network call.
+  // 1. Validate key + args before any network call.
   if (!apiKey) {
-    console.error('[deepseek-executor] ERROR: DEEPSEEK_API_KEY env var is not set.');
+    console.error('[deepseek-executor] ERROR: no DeepSeek API key found.');
+    console.error(`  Preferred: put it in the dedicated holder ${HOLDER_PATH}`);
+    console.error('    { "apiKey": "sk-..." }');
+    console.error('  Or set the env var:  $env:DEEPSEEK_API_KEY="sk-..."  (PowerShell)');
+    console.error('                       export DEEPSEEK_API_KEY="sk-..."  (bash/zsh)');
     console.error('  Get a key at https://platform.deepseek.com/api_keys');
-    console.error('  Then set it:  $env:DEEPSEEK_API_KEY="sk-..."  (PowerShell)');
-    console.error('               export DEEPSEEK_API_KEY="sk-..."  (bash/zsh)');
     return 1;
   }
   if (looksLikeApiKeyPlaceholder(apiKey)) {
     const k = apiKey.trim();
     const masked = k.length <= 8 ? k : `${k.slice(0, 4)}…${k.slice(-4)} (${k.length} chars)`;
-    console.error(`[deepseek-executor] ERROR: DEEPSEEK_API_KEY looks like a placeholder: ${masked}`);
+    console.error(`[deepseek-executor] ERROR: the DeepSeek API key looks like a placeholder: ${masked}`);
     console.error('  Real DeepSeek keys start with "sk-" and are ~35+ characters.');
-    console.error('  Get a real key at https://platform.deepseek.com/api_keys');
-    console.error('  Replace the placeholder in your env (or Hermes.local.env.ps1) before retrying.');
+    console.error(`  Set a real key in the dedicated holder ${HOLDER_PATH} ({ "apiKey": "sk-..." })`);
+    console.error('  or in the DEEPSEEK_API_KEY env var. Get one at https://platform.deepseek.com/api_keys');
     return 1;
   }
   if (!briefPath) {
@@ -121,10 +157,13 @@ async function main() {
   // 2. --dry-run short-circuits before the API call. Useful in CI smoke tests
   //    to confirm env + brief are valid without burning DeepSeek credits.
   if (dryRun) {
+    const keySource = envKeyReal
+      ? 'env DEEPSEEK_API_KEY'
+      : (holderApiKey ? `holder ${HOLDER_PATH}` : 'env DEEPSEEK_API_KEY');
     console.log('[deepseek-executor] --dry-run OK');
     console.log(`  Model: ${model}`);
     console.log(`  Base URL: ${baseUrl}`);
-    console.log(`  API key: ${apiKey.slice(0, 4)}…${apiKey.slice(-4)} (${apiKey.length} chars)`);
+    console.log(`  API key: ${apiKey.slice(0, 4)}…${apiKey.slice(-4)} (${apiKey.length} chars) — from ${keySource}`);
     console.log(`  Brief: ${briefPath} (${brief.length} chars)`);
     console.log(`  Max tokens: ${maxTokens}`);
     return 0;
