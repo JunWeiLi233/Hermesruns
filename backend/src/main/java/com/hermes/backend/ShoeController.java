@@ -28,7 +28,7 @@ public class ShoeController {
     private final ActivityRepository activityRepository;
     private final ShoeIdentityService shoeIdentityService;
     private final ShoeCatalogModelRepository shoeCatalogModelRepository;
-    private final ShoeTracker shoeTracker;
+    private final ShoeTrackerService shoeTrackerService;
     private final CoachScheduledWorkoutRepository scheduledWorkoutRepository;
 
     @Autowired
@@ -36,14 +36,14 @@ public class ShoeController {
                           ActivityRepository activityRepository,
                           ShoeIdentityService shoeIdentityService,
                           ShoeCatalogModelRepository shoeCatalogModelRepository,
-                          ShoeTracker shoeTracker,
+                          ShoeTrackerService shoeTrackerService,
                           CoachScheduledWorkoutRepository scheduledWorkoutRepository) {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
         this.activityRepository = activityRepository;
         this.shoeIdentityService = shoeIdentityService;
         this.shoeCatalogModelRepository = shoeCatalogModelRepository;
-        this.shoeTracker = shoeTracker;
+        this.shoeTrackerService = shoeTrackerService;
         this.scheduledWorkoutRepository = scheduledWorkoutRepository;
     }
 
@@ -58,8 +58,8 @@ public class ShoeController {
                           ActivityRepository activityRepository,
                           ShoeIdentityService shoeIdentityService,
                           ShoeCatalogModelRepository shoeCatalogModelRepository,
-                          ShoeTracker shoeTracker) {
-        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, shoeTracker, null);
+                          ShoeTrackerService shoeTrackerService) {
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, shoeTrackerService, null);
     }
 
     public ShoeController(AuthService authService, ShoeRepository shoeRepository,
@@ -104,9 +104,9 @@ public class ShoeController {
         SurfacePreference surfacePreference = resolveSurfacePreference(surfaceOverride, scheduledWorkout);
         CoachWorkoutType workoutType = scheduledWorkout == null ? null : scheduledWorkout.getWorkoutType();
 
-        Optional<Shoe> recommended = shoeTracker == null
+        Optional<Shoe> recommended = shoeTrackerService == null
                 ? Optional.empty()
-                : shoeTracker.recommendShoe(user.get(), workoutType, surfacePreference.surface());
+                : shoeTrackerService.recommendShoe(user.get(), workoutType, surfacePreference.surface());
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("scheduledDate", today);

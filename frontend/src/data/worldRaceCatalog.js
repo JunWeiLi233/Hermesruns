@@ -1,6 +1,6 @@
 // Static race data lives in worldRaceCatalog.json (Vite resolves JSON imports natively).
 // All named exports and the default export are preserved for backward-compatibility.
-import raceData from './worldRaceCatalog.json';
+import raceData from './worldRaceCatalog.json' with { type: "json" };
 
 const worldRaceCatalog = raceData;
 

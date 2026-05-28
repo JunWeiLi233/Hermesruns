@@ -179,16 +179,51 @@ Skill guidance is advisory. Hermes queue ownership, human gate, runtime proof, v
 
 **Builder** — implement only the chosen work unit. Triggers: `team` (cross-stack), `ralph` (mustFixCount 2+), `subagent-driven-development` (genuinely parallelizable, disjoint ownership), `systematic-debugging` (any error; first on must-fix). Frontend: coach-voice copy; design-quality review when layout/hierarchy/states change.
 
-**Browser Visual Gate** (frontend, silent + single-tab): the runtime preview must use `.tools/auto-hermes-browser.mjs`, never `browser-harness -c '...'` directly. The wrapper consolidates duplicate Hermes tabs, reuses the single survivor, and never calls `Target.activateTarget` / `Page.bringToFront`, so it cannot pop the browser to the foreground or pile up tabs across rounds.
+**Browser Visual Gate** (frontend, silent + single-tab-per-agent): the runtime preview must use `.tools/auto-hermes-browser.mjs`, never `browser-harness -c '...'` directly. The wrapper consolidates duplicate Hermes tabs *within the same agent slot*, reuses the single survivor, and never calls `Target.activateTarget` / `Page.bringToFront`, so it cannot pop the browser to the foreground or pile up tabs across rounds.
+
+For parallel-agent rounds (e.g. `/auto-hermes-max` lanes), pass `--agent <laneId>` (or set `HERMES_BROWSER_AGENT=<laneId>` in the lane's env). Each agent gets its own dedicated tab keyed by a `#__hermes_agent=<id>` hash marker; another lane's tab is never closed by your `cleanup`/`reset`. Use `node .tools/auto-hermes-browser.mjs list` for cross-agent visibility, `reset --all-agents` for a full sweep, and `node .tools/auto-hermes-browser-multi-agent.test.mjs` to regression-test the partitioning after harness changes.
 ```bash
 cd frontend && npm run dev         # background, only if not already serving
-node .tools/auto-hermes-browser.mjs cleanup
-node .tools/auto-hermes-browser.mjs goto --url http://localhost:5173/<route> --wait-ms 10000
-node .tools/auto-hermes-browser.mjs screenshot --out task-images/<round>-<route>.jpg
+node .tools/auto-hermes-browser.mjs cleanup [--agent <laneId>]
+node .tools/auto-hermes-browser.mjs goto --url http://localhost:5173/<route> --wait-ms 10000 [--agent <laneId>]
+node .tools/auto-hermes-browser.mjs screenshot --out task-images/<round>-<route>.jpg [--agent <laneId>]
 ```
 Skip if the wrapper or the underlying Browser Harness is unavailable, note `browser-visual-gate: skipped` in the round packet, and capture the nearest verified fallback (build artifact, runtime sync proof). Raw `browser-harness -c '...'` is permitted only when the wrapper cannot express the action and the caller manually honors the single-tab + no-focus-stealing rules.
 
 **Alternative — Playwright wrapper.** When the page is auth-walled, the user is using Chrome for other work, or the round runs unattended, swap `auto-hermes-browser.mjs` for [`.tools/auto-hermes-playwright.mjs`](.tools/auto-hermes-playwright.mjs) — same subcommand surface (`goto` / `eval` / `screenshot` / `status` / `reset` / `doctor`), but runs a managed headless Chromium via [Microsoft Playwright](https://github.com/microsoft/playwright) with cookies + localStorage persisted at `.ai-sync/playwright-state/<state>/`. Sign in once with `--headed`, every later round inherits the storage. One-time install: `npm i -D @playwright/test && npx playwright install chromium`.
+
+**Dev account & browser login (AI-agent use only).** The local dev runner is created automatically on every non-production backend startup via `LocalSharedRunnerBootstrapConfiguration`. Use it for all browser-proof steps — never use real user credentials.
+
+| Account | Email | Password | Role |
+|---------|-------|----------|------|
+| Dev runner (mock data, all runner pages) | `strava+140971747@hermes.local` | `HermesDev2026!` | USER |
+| Admin (admin API, no runner data) | set via `APP_BOOTSTRAP_ADMIN_EMAIL` env var | set via `APP_BOOTSTRAP_ADMIN_PASSWORD` env var | ADMIN |
+
+**The dev runner logs in via localStorage injection** — do NOT use the reCAPTCHA-gated signup form or the OAuth buttons:
+```bash
+# 1. Get a fresh session token via API (no reCAPTCHA required)
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"strava+140971747@hermes.local","password":"HermesDev2026!"}' \
+  | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+# 2. Inject token into the browser (must be on http://localhost:8080 origin first)
+browser-harness -c "
+smart_open('http://localhost:8080/')
+wait_for_load()
+wait(2000)
+js(\"localStorage.setItem('hermes_jwt', '$TOKEN'); localStorage.setItem('hermes_email', 'strava+140971747@hermes.local');\")
+js(\"window.location.href = '/profile';\")
+wait_for_load()
+wait(4000)
+print(page_info())
+"
+
+# 3. Verify login succeeded (should show runner's greeting, NOT redirect to /login)
+# Confirm: js("JSON.stringify({url: location.href, email: localStorage.getItem('hermes_email')})")
+```
+
+If the backend is NOT running when the round starts, start it first: `cd backend && ./mvnw -Dmaven.test.skip=true spring-boot:run > /tmp/hermes-backend.log 2>&1 &` then wait ~50s for startup. The dev runner is auto-created on first startup after a fresh DB, seeded with mock shoes and activities.
 
 **Customer Pass (step 8, runner-facing surfaces)** — three personas (Competitor, Builder, Enthusiast) check UI hierarchy, feature gaps, data correctness, coach-voice. Verdicts: `customer-approved` / `customer-must-fix` / `customer-flagged`.
 

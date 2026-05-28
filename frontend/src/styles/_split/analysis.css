@@ -5287,8 +5287,11 @@ body.theme-midnight .vdot-badge,
   margin-top: 0;
 }
 
-.prediction-detail-page .runner-shell-canvas {
-  width: min(1400px, calc(100% - 32px));
+.runner-dashboard-page.prediction-detail-page .runner-shell-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-inline: clamp(16px, 2.5vw, 40px) !important;
 }
 
 /* Prediction hero */

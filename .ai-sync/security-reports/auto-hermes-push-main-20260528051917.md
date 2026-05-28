@@ -1,9 +1,9 @@
 # auto-hermes-push-main
 
-Run Id: auto-hermes-push-main-20260524200555
+Run Id: auto-hermes-push-main-20260528051917
 Mode: audit
 Status: completed
-Generated: 2026-05-24T20:05:55.263Z
+Generated: 2026-05-28T05:19:17.374Z
 
 ## Summary
 Repo-aware security review completed in static/code-config mode because no runtime target was provided.
@@ -32,7 +32,7 @@ Notes: n/a
 
 ## Inventory
 Tables: 30
-Endpoints: 176
+Endpoints: 175
 Forms: 15
 
 ## Findings
@@ -117,6 +117,10 @@ Forms: 15
   File: .tools/H2ToPostgresMigrator.java
   Verification: static-only
 - [MEDIUM] injection-hunter :: Possible SQL Injection: Dynamic query construction with unescaped input.
+  Target: .tools/agent-login.mjs
+  File: .tools/agent-login.mjs
+  Verification: static-only
+- [MEDIUM] injection-hunter :: Possible SQL Injection: Dynamic query construction with unescaped input.
   Target: .tools/auto-hermes-controller.mjs
   File: .tools/auto-hermes-controller.mjs
   Verification: static-only
@@ -178,9 +182,5 @@ Forms: 15
   Verification: static-only
 - [LOW] leak-detector :: Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.
   Target: GET /api/wellness/google-health/status
-  File: backend/src/main/java/com/hermes/backend/WellnessController.java
-  Verification: static-only
-- [LOW] leak-detector :: Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.
-  Target: GET /api/wellness/oura/status
   File: backend/src/main/java/com/hermes/backend/WellnessController.java
   Verification: static-only

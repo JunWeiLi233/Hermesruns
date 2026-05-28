@@ -42,7 +42,7 @@ public class AutomatedCoachService {
     private final CoachScheduledWorkoutRepository coachScheduledWorkoutRepository;
     private final CoachTrainingBlockRepository coachTrainingBlockRepository;
     private final CoachFeedbackAlertRepository coachFeedbackAlertRepository;
-    private final ShoeTracker shoeTracker;
+    private final ShoeTrackerService shoeTrackerService;
     private final CoachRouteService coachRouteService;
     private final ReadinessService readinessService;
 
@@ -53,7 +53,7 @@ public class AutomatedCoachService {
             CoachScheduledWorkoutRepository coachScheduledWorkoutRepository,
             CoachTrainingBlockRepository coachTrainingBlockRepository,
             CoachFeedbackAlertRepository coachFeedbackAlertRepository,
-            ShoeTracker shoeTracker,
+            ShoeTrackerService shoeTrackerService,
             CoachRouteService coachRouteService,
             ReadinessService readinessService
     ) {
@@ -63,7 +63,7 @@ public class AutomatedCoachService {
         this.coachScheduledWorkoutRepository = coachScheduledWorkoutRepository;
         this.coachTrainingBlockRepository = coachTrainingBlockRepository;
         this.coachFeedbackAlertRepository = coachFeedbackAlertRepository;
-        this.shoeTracker = shoeTracker;
+        this.shoeTrackerService = shoeTrackerService;
         this.coachRouteService = coachRouteService;
         this.readinessService = readinessService;
     }
@@ -156,7 +156,7 @@ public class AutomatedCoachService {
         CoachRouteRecommendationDto routeRecommendation = coachRouteService.buildRouteRecommendation(runner, adjusted, rows);
         
         String preferredSurface = inferScheduledSurface(adjusted);
-        CoachRecommendedShoeDto shoeRec = shoeTracker.recommendShoe(runner, adjusted.getWorkoutType(), preferredSurface)
+        CoachRecommendedShoeDto shoeRec = shoeTrackerService.recommendShoe(runner, adjusted.getWorkoutType(), preferredSurface)
                 .map(s -> new CoachRecommendedShoeDto(
                         s.getId(), s.getBrand(), s.getModel(), s.getNickname(), s.getPhotoUrl(),
                         s.getCurrentDistanceKm(), s.getMaxDistanceKm(), s.getType(), s.getSurfaceType(),

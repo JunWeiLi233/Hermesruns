@@ -15,7 +15,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ShoeTracker {
+public class ShoeTrackerService {
     private static final Duration CATALOG_TYPE_CACHE_TTL = Duration.ofMinutes(30);
 
     private final ShoeRepository shoeRepository;
@@ -24,8 +24,8 @@ public class ShoeTracker {
     private final TtlCacheStore cacheStore;
 
     @Autowired
-    public ShoeTracker(ShoeRepository shoeRepository, 
-                       ShoeCatalogModelRepository modelRepository, 
+    public ShoeTrackerService(ShoeRepository shoeRepository,
+                       ShoeCatalogModelRepository modelRepository,
                        ActivityRepository activityRepository,
                        TtlCacheStore cacheStore) {
         this.shoeRepository = shoeRepository;
@@ -34,7 +34,7 @@ public class ShoeTracker {
         this.cacheStore = cacheStore;
     }
 
-    public ShoeTracker(ShoeRepository shoeRepository,
+    public ShoeTrackerService(ShoeRepository shoeRepository,
                        ShoeCatalogModelRepository modelRepository,
                        ActivityRepository activityRepository) {
         this(shoeRepository, modelRepository, activityRepository,

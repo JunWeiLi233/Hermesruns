@@ -393,10 +393,10 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
       const L = await loadLeaflet();
       if (cancelled || !mapRef.current) return;
 
-      const center = territory?.center || DEMO_TERRITORY.center;
+      const { latitude, longitude, zoom } = DEMO_TERRITORY.center;
       const map = L.map(mapRef.current, {
-        center: [center.latitude, center.longitude],
-        zoom: center.zoom || 14,
+        center: [latitude, longitude],
+        zoom: zoom || 14,
         zoomControl: false,
         attributionControl: false,
         preferCanvas: true,
@@ -423,7 +423,7 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
         mapInstanceRef.current = null;
       }
     };
-  }, [territory?.center]);
+  }, []); // mount once — center updates handled by paint effects via fitBounds
 
   // Paint zone/territory polygons (existing zone view)
   useEffect(() => {
@@ -439,7 +439,6 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
         layerRef.current.remove();
         layerRef.current = null;
       }
-      if (showPolygons) return;
       const layer = L.layerGroup().addTo(map);
       const cells = Array.isArray(territory?.territories) ? territory.territories : [];
       const visibleCells = cells.filter((cell) => {
@@ -451,32 +450,69 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
 
       visibleCells.forEach((cell) => {
         const color = safeColor(cell.color);
-        L.polygon(cell.polygon, {
+        const ownedByActive = isOwnedByActive(cell);
+        const poly = L.polygon(cell.polygon, {
           color,
-          weight: cell.contested ? 2.2 : 1.5,
-          opacity: cell.contested ? 0.84 : 0.62,
+          weight: cell.contested ? 3 : 2,
+          opacity: cell.contested ? 0.92 : 0.78,
           fillColor: color,
-          fillOpacity: isOwnedByActive(cell) ? 0.35 : 0.2,
-          dashArray: cell.contested ? '6 4' : null,
-        }).bindTooltip(`${cell.name} - ${cell.ownerName || 'Unclaimed'}`).addTo(layer);
+          fillOpacity: ownedByActive ? 0.45 : 0.3,
+          dashArray: cell.contested ? '8 3' : null,
+          className: cell.contested ? 'terr-contested-polygon' : null,
+        });
+        // Permanent zone name label centered on the polygon — makes territory
+        // ownership readable at a glance without requiring a hover.
+        poly.bindTooltip(cell.name || (cell.ownerName || 'Unclaimed'), {
+          permanent: true,
+          direction: 'center',
+          opacity: 0.88,
+          className: 'terr-zone-label',
+        });
+        poly.bindPopup(
+          `<strong>${cell.name}</strong><br/>` +
+          `Owner: ${cell.ownerName || 'Unclaimed'}` +
+          (cell.contested ? `<br/><em>Contested by ${cell.challengerName || '?'}</em>` : '') +
+          `<br/>Runs recorded: ${cell.sampleCount || 0}`,
+        );
+        poly.addTo(layer);
       });
 
+      // Stagger the idle shimmer so all 5 rival markers don't blink in sync.
+      const RIVAL_DELAYS = ['0s', '0.8s', '1.6s', '2.4s', '3.2s'];
+      let rivalIndex = 0;
       runnerMarkerPositions(territory, leaderboard).forEach((runner) => {
         const color = safeColor(runner.color);
-        const size = runner.active ? 16 : 10;
+        // Rival markers are 26px — larger than the previous 22px so all five
+        // show up clearly at zoom 14 without overlapping the active chip.
+        const size = runner.active ? 32 : 26;
+        const initial = String(runner.name || 'R').trim().slice(0, 1).toUpperCase();
+        const activeClass = runner.active ? ' terr-runner-marker--active' : '';
+        const delay = runner.active ? '' : `--terr-rival-delay:${RIVAL_DELAYS[rivalIndex % RIVAL_DELAYS.length]};`;
+        if (!runner.active) rivalIndex += 1;
+        const html = `<div class="terr-runner-marker${activeClass}" style="--terr-runner-color:${color};${delay}">${initial}</div>`;
         const icon = L.divIcon({
           className: 'terr-marker',
-          html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.6);box-shadow:0 0 12px ${color}80;"></div>`,
+          html,
           iconSize: [size, size],
           iconAnchor: [size / 2, size / 2],
         });
-        L.marker(runner.position, { icon }).addTo(layer);
+        const areaStr = runner.areaKm2 != null ? `${runner.areaKm2} km²` : '—';
+        const cellStr = runner.cellCount != null ? `${runner.cellCount} zones` : '';
+        const marker = L.marker(runner.position, { icon, zIndexOffset: runner.active ? 1000 : 0 });
+        marker.bindPopup(
+          `<strong>${runner.name}</strong><br/>` +
+          `Area: ${areaStr}` + (cellStr ? `&nbsp;·&nbsp;${cellStr}` : '') +
+          (runner.sampleCount ? `<br/>Runs: ${runner.sampleCount}` : ''),
+        );
+        marker.addTo(layer);
       });
 
       if (visibleCells.length > 0) {
         const bounds = L.latLngBounds(visibleCells.flatMap((cell) => cell.polygon));
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [34, 34], maxZoom: 14 });
+          // flyToBounds replaces the instant jump of fitBounds with a smooth
+          // ~800ms cubic ease — feels controlled instead of jarring on recenter.
+          map.flyToBounds(bounds, { padding: [34, 34], maxZoom: 14, duration: 0.8 });
         }
       }
       layerRef.current = layer;
@@ -597,7 +633,9 @@ function TerritoryMap({ territory, filter, leaderboard, polygons, showPolygons, 
       if (allCoords.length > 0) {
         const bounds = L.latLngBounds(allCoords);
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [34, 34], maxZoom: 14 });
+          // Smooth animated fit instead of an instant jump — matches the
+          // recenter button's UX so all camera moves feel consistent.
+          map.flyToBounds(bounds, { padding: [34, 34], maxZoom: 14, duration: 0.8 });
         }
       }
 
@@ -617,7 +655,7 @@ export default function Territory() {
   const navigate = useNavigate();
   const { isAuthenticated, authHydrated } = useAuth();
   const { t, lang } = useI18n();
-  const [territory, setTerritory] = useState(null);
+  const [territory, setTerritory] = useState(DEMO_TERRITORY);
   const [polygonData, setPolygonData] = useState(null);
   const [profile, setProfile] = useState(null);
   const [recenterSignal, setRecenterSignal] = useState(0);
@@ -671,6 +709,8 @@ export default function Territory() {
 
   const leaderboard = territory?.leaderboard?.length ? territory.leaderboard : DEMO_TERRITORY.leaderboard;
   const polygons = useMemo(() => polygonData?.polygons || [], [polygonData]);
+  // Show GPS polygon fills (real run data) when available; fall back to zone territory + runner markers in demo
+  const showPolygons = polygons.length > 0;
   const navItems = useMemo(
     () => getRunnerShellNavItems({ t, lang, activeKey: 'territory' }),
     [lang, t],
@@ -741,7 +781,7 @@ export default function Territory() {
               filter="all"
               leaderboard={leaderboard}
               polygons={polygons}
-              showPolygons
+              showPolygons={showPolygons}
               recenterSignal={recenterSignal}
             />
           </section>

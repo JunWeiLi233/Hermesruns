@@ -176,7 +176,11 @@ public class RaceCourseMapService {
             Double latitude, Double longitude, Double distanceKm
     ) {
         RaceCourseMapAsset asset = raceCourseMapAssetRepository.findByRaceId(raceId).orElse(null);
-        if (asset != null && asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) {
+        // Return the stored live result when EITHER an image URL OR a route
+        // polyline is present. Bulk-seeded official courses (e.g. NYC) live
+        // without a scanned image — the OSM base map + route polyline is the
+        // intended rendering. Requiring an image hid these rows entirely.
+        if (asset != null && hasLiveCourseData(asset)) {
             RaceCourseMapResult liveResult = toResult(asset, true);
             return liveResult;
         }
@@ -185,6 +189,13 @@ public class RaceCourseMapService {
             persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, resolved, "system-scan");
         }
         return resolved;
+    }
+
+    private boolean hasLiveCourseData(RaceCourseMapAsset asset) {
+        if (asset == null) return false;
+        if (asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) return true;
+        String routeJson = asset.getLiveRoutePointsJson();
+        return routeJson != null && !routeJson.isBlank() && !"[]".equals(routeJson.trim());
     }
 
     private RaceCourseMapResult doResolveCourseMap(
@@ -1558,7 +1569,24 @@ public class RaceCourseMapService {
         OverlayBounds bounds = geometryService.boundsFromRoute(labeledRoutePoints);
         int confidence = Math.max(minimumAlignmentConfidenceForSource(source), Math.max(72, directResult == null ? 0 : directResult.confidence()));
         String summary = "Hermes aligned this upload through the extraction pipeline fallback after the direct AI scan could not produce a trustworthy route preview.";
-        return new RaceCourseMapResult(asset.imageUrl(), source, true, confidence, summary, bounds, labeledRoutePoints, List.of(), null, true);
+        // Derive elevation samples from the real terrain along the aligned route
+        // so the runner-facing elevation chart matches the course's actual climb
+        // profile instead of falling back to Bing-image OCR on an unrelated
+        // photo. The route here passed plausibility + known-course checks, so
+        // open-meteo terrain samples are trustworthy enough to render.
+        RouteTerrainElevation terrainProfile = deriveRouteTerrainElevation(labeledRoutePoints, distanceKm);
+        return new RaceCourseMapResult(
+                asset.imageUrl(),
+                source,
+                true,
+                confidence,
+                summary,
+                bounds,
+                labeledRoutePoints,
+                terrainProfile.samples(),
+                terrainProfile.totalClimbMeters(),
+                true
+        );
     }
 
     private boolean shouldUseRouteBoundsGeoreferenceFallback(RuntimeException error) {
@@ -1780,10 +1808,8 @@ public class RaceCourseMapService {
                 ? List.copyOf(processedRoute)
                 : geometryService.resampleRoute(processedRoute, displayRoutePointCount);
         OverlayBounds bounds = sanitizeOverlayBounds(alignment.overlayBounds(), displayRoute);
-        List<RoutePoint> sampledRoute = geometryService.resampleRoute(displayRoute, elevationSampleCount(distanceKm, displayRoute));
-        List<Integer> elevationSamples = smoothElevationSamples(fetchElevationSamples(sampledRoute));
-        Integer totalClimbMeters = computeTotalClimbMeters(elevationSamples);
-        return new RaceCourseMapResult(asset.imageUrl(), candidate.source(), true, alignment.confidence(), alignment.summary(), bounds, displayRoute, elevationSamples, totalClimbMeters, true);
+        RouteTerrainElevation terrainProfile = deriveRouteTerrainElevation(displayRoute, distanceKm);
+        return new RaceCourseMapResult(asset.imageUrl(), candidate.source(), true, alignment.confidence(), alignment.summary(), bounds, displayRoute, terrainProfile.samples(), terrainProfile.totalClimbMeters(), true);
     }
 
     private int displayRoutePointCount(Double distanceKm, List<RoutePoint> routePoints) {
@@ -1802,6 +1828,27 @@ public class RaceCourseMapService {
         int distanceBasedCount = (int) Math.ceil(distanceKm * ELEVATION_SAMPLES_PER_KILOMETER) + 1;
         return Math.max(Math.max(DEFAULT_ELEVATION_SAMPLE_COUNT, routePointCount), distanceBasedCount);
     }
+
+    /**
+     * Resample the supplied (already aligned + plausibility-checked) route, then
+     * pull real terrain elevation from open-meteo and smooth it into the same
+     * shape Hermes uses for the runner-facing elevation chart. Returns empty
+     * samples + null climb when the route is too short to query meaningfully,
+     * which lets callers gracefully fall back to the OCR pipeline.
+     */
+    private RouteTerrainElevation deriveRouteTerrainElevation(List<RoutePoint> routePoints, Double distanceKm) {
+        if (routePoints == null || routePoints.size() < 2) {
+            return new RouteTerrainElevation(List.of(), null);
+        }
+        List<RoutePoint> sampledRoute = geometryService.resampleRoute(routePoints, elevationSampleCount(distanceKm, routePoints));
+        List<Integer> samples = smoothElevationSamples(fetchElevationSamples(sampledRoute));
+        if (samples == null || samples.isEmpty()) {
+            return new RouteTerrainElevation(List.of(), null);
+        }
+        return new RouteTerrainElevation(samples, computeTotalClimbMeters(samples));
+    }
+
+    private record RouteTerrainElevation(List<Integer> samples, Integer totalClimbMeters) {}
 
     private List<Integer> fetchElevationSamples(List<RoutePoint> routePoints) {
         if (routePoints == null || routePoints.isEmpty()) return List.of();
@@ -2240,6 +2287,16 @@ public class RaceCourseMapService {
         if (asset == null || liveResult == null || liveResult.routePoints() == null || liveResult.routePoints().size() < 2) {
             return liveResult;
         }
+        // Hand-curated official-course sources (currently NYC) are trusted by
+        // construction — the polyline traces real-world landmark waypoints
+        // and OSRM filled in the streets between them. Skip the heuristic
+        // plausibility checks which were tuned for AI-extracted routes
+        // and over-trigger on bridge-heavy point-to-point courses (NYC
+        // has 5 bridge crossings whose OSRM approach ramps each register
+        // as self-intersections).
+        if (isHandCuratedOfficialCourseSource(liveResult.source())) {
+            return liveResult;
+        }
         String strictDistanceReason = strictDistanceMismatchReason(liveResult.routePoints(), asset.getDistanceKm());
         if (strictDistanceReason != null) {
             RaceCourseMapResult cityLevelFallback = buildStoredLiveCityLevelFallback(asset, liveResult, strictDistanceReason);
@@ -2259,6 +2316,13 @@ public class RaceCourseMapService {
         }
         RaceCourseMapResult cityLevelFallback = buildStoredLiveCityLevelFallback(asset, liveResult, verdict.reason());
         return cityLevelFallback == null ? liveResult : cityLevelFallback;
+    }
+
+    private boolean isHandCuratedOfficialCourseSource(String source) {
+        return NycMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
+                || TokyoMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
+                || LosAngelesMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
+                || OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source);
     }
 
     private String strictDistanceMismatchReason(List<RoutePoint> routePoints, Double distanceKm) {

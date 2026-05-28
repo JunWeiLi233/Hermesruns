@@ -196,7 +196,7 @@ class AutomatedCoachServiceTests {
     void getTodayWithReadinessThreadsScheduledTrailSurfaceIntoShoeRecommendation() {
         CoachRunnerStateRepository stateRepository = mock(CoachRunnerStateRepository.class);
         CoachScheduledWorkoutRepository scheduleRepository = mock(CoachScheduledWorkoutRepository.class);
-        ShoeTracker shoeTracker = mock(ShoeTracker.class);
+        ShoeTrackerService shoeTracker = mock(ShoeTrackerService.class);
 
         Runner runner = runner();
         CoachRunnerState state = new CoachRunnerState();
@@ -272,7 +272,7 @@ class AutomatedCoachServiceTests {
             CoachTrainingBlockRepository blockRepository,
             ReadinessService readinessService
     ) {
-        return service(stateRepository, scheduleRepository, blockRepository, readinessService, mock(ShoeTracker.class));
+        return service(stateRepository, scheduleRepository, blockRepository, readinessService, mock(ShoeTrackerService.class));
     }
 
     private AutomatedCoachService service(
@@ -280,7 +280,7 @@ class AutomatedCoachServiceTests {
             CoachScheduledWorkoutRepository scheduleRepository,
             CoachTrainingBlockRepository blockRepository,
             ReadinessService readinessService,
-            ShoeTracker shoeTracker
+            ShoeTrackerService shoeTracker
     ) {
         return new AutomatedCoachService(
                 mock(RunnerRepository.class),

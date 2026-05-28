@@ -311,6 +311,12 @@
   gap: 10px;
   color: rgba(232, 226, 220, 0.66);
   font-size: 0.78rem;
+  /* Reserve enough room for the wind card's <strong> direction so the
+     humidity card's slimmer meter bar doesn't shrink the foot row. Without
+     this, the card's `align-content: space-between` shifts the HUD value
+     text up on the humidity card and "85%" misaligns with "10 km/h". */
+  align-content: end;
+  min-height: 2.9rem;
 }
 
 .weather-engine-hud-foot strong {

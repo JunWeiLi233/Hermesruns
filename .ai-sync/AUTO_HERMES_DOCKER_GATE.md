@@ -1,8 +1,8 @@
 # Auto-Hermes Docker Gate
 
-Generated: 2026-05-24T20:06:05.507Z
+Generated: 2026-05-28T05:19:26.513Z
 Passed: no
-Git Head: 68820bd31db39b258ec75374b9df9145d8a0b3eb
+Git Head: e5e78ef53cf4508e0799a8a44cd1d5aeabc54951
 Command: docker build -f C:\Users\Junwei\Downloads\Hermes\Dockerfile -t hermes-autohermes-gate:local .
 Reason: Docker publish gate failed for the current working tree.
 
@@ -10,105 +10,57 @@ Reason: Docker publish gate failed for the current working tree.
 ```text
 M .ai-sync/AGENT_SYNC.json
  M .ai-sync/AGENT_SYNC.md
+ M .ai-sync/AUTO_HERMES_DOCKER_GATE.json
+ M .ai-sync/AUTO_HERMES_DOCKER_GATE.md
  M .ai-sync/CONTEXT_LEDGER.md
  M .ai-sync/HUMAN_LOOP.md
- M .claude/commands/auto-hermes-attack.md
- M .claude/commands/auto-hermes-max.md
- M .claude/commands/auto-hermes-self.md
- M .claude/commands/auto-hermes-tech-debt.md
- M .claude/commands/auto-hermes.md
- M .codex/commands/auto-hermes-attack.md
- M .codex/commands/auto-hermes-max.md
- M .codex/commands/auto-hermes-push-main.md
- M .codex/commands/auto-hermes-security.md
- M .codex/commands/auto-hermes-self.md
- M .codex/commands/auto-hermes-tech-debt.md
- M .codex/commands/auto-hermes.md
- M .codex/config.toml
- M .opencode/commands/auto-hermes-max.md
- M .opencode/commands/auto-hermes-self.md
- M .opencode/commands/auto-hermes.md
- M .tools/auto-hermes-loop.mjs
- M .tools/auto-hermes-max-loop.mjs
- M .tools/auto-hermes-security.test.mjs
+ M .tools/auto-hermes-browser.mjs
+ M .tools/auto-hermes-playwright.mjs
  M .tools/auto-hermes-self-loop.mjs
- M DESIGN_VERSIONS.md
+ M AGENTS.md
  M TASKS.md
- M backend/src/main/java/com/hermes/backend/GoogleGeocodingClient.java
- M backend/src/main/java/com/hermes/backend/MarathonRouteExtractionService.java
- M backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java
- M backend/src/main/java/com/hermes/backend/MarathonRouteMatchAndExportService.java
- M backend/src/main/java/com/hermes/backend/MuscleTrainingCheckIn.java
- M backend/src/main/java/com/hermes/backend/MuscleTrainingCheckInService.java
- M backend/src/main/java/com/hermes/backend/MuscleTrainingController.java
- M backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java
- M backend/src/main/java/com/hermes/backend/MuscleTrainingSessionService.java
- M backend/src/main/java/com/hermes/backend/QwenAnchorPixelClient.java
- M backend/src/main/java/com/hermes/backend/QwenCourseMapAlignmentClient.java
- M backend/src/main/java/com/hermes/backend/QwenImagePreprocessor.java
- M backend/src/main/java/com/hermes/backend/RaceController.java
- M backend/src/main/java/com/hermes/backend/RaceCourseMapAiService.java
- M backend/src/main/java/com/hermes/backend/RaceCourseMapPromptBuilder.java
- M backend/src/main/java/com/hermes/backend/RaceElevationProfileService.java
- M backend/src/main/java/com/hermes/backend/RoutePlannerController.java
- M backend/src/main/java/com/hermes/backend/RoutePlannerService.java
- M backend/src/main/java/com/hermes/backend/Runner.java
- M backend/src/main/java/com/hermes/backend/TodayCheckInDto.java
- M backend/src/main/java/com/hermes/backend/TodayCheckInUpdate.java
- M backend/src/main/java/com/hermes/backend/WellnessController.java
- M backend/src/main/resources/application.properties
- M backend/src/main/resources/python/analyze_course_map_alignment_qwen.py
- M backend/src/main/resources/python/extract_route_path.py
- M backend/src/main/resources/python/qwen_course_map_worker.py
- M backend/src/test/java/com/hermes/backend/GoogleGeocodingClientTests.java
- M backend/src/test/java/com/hermes/backend/MarathonRouteExtractionServiceTests.java
- M backend/src/test/java/com/hermes/backend/MarathonRouteMatchAndExportServiceTests.java
- M backend/src/test/java/com/hermes/backend/MuscleTrainingControllerTests.java
- M backend/src/test/java/com/hermes/backend/QwenAnchorPixelClientTests.java
- M backend/src/test/java/com/hermes/backend/QwenCourseMapAlignmentClientTests.java
- M backend/src/test/java/com/hermes/backend/RaceControllerTests.java
- M backend/src/test/java/com/hermes/backend/RaceCourseMapAiServiceTests.java
- M backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java
- M backend/src/test/java/com/hermes/backend/RaceElevationProfileServiceTests.java
- M docs/auto-hermes/daily-operator-guide.md
- M docs/auto-hermes/index.md
- M docs/repo-rules/truth-and-memory.md
- M frontend/src/components/workflow/NodePalette.jsx
- M frontend/src/data/shoeCatalog.js
- M frontend/src/data/worldRaceCatalog.js
- M frontend/src/i18n/locales/en/components.js
- M frontend/src/pages/AddShoes.jsx
- M frontend/src/pages/Dashboard.jsx
- M frontend/src/pages/RacesDetail.jsx
- M frontend/src/pages/RunDetail.jsx
- M frontend/src/pages/Schedule.jsx
- M frontend/src/pages/Settings.jsx
- M frontend/src/pages/dashboardCourseMapPreview.smoke.test.js
- M frontend/src/pages/dashboardCourseMapPublishStatus.smoke.test.js
- M frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js
- M frontend/src/pages/landingCommandHeroBackground.smoke.test.js
- M frontend/src/pages/profileDashboardBrandCarouselLightMode.smoke.test.js
- M frontend/src/pages/profileWeeklyProgressTooltip.smoke.test.js
- M frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
- M frontend/src/pages/workflowBuilderStatesA11y.smoke.test.js
- M frontend/src/styles/_split/landing.css
- M frontend/src/styles/_split/light-theme-overrides.css
- M frontend/src/styles/_split/profile.css
- M frontend/src/styles/_split/races.css
- M frontend/src/styles/_split/settings.css
- M frontend/src/styles/_split/shoes.css
- M frontend/src/styles/_split/today-run.css
- M frontend/src/styles/style.css
- M frontend/src/utils/addShoeCatalog.test.js
- M frontend/src/utils/copilotPromptFiles.smoke.test.js
- M frontend/src/utils/raceDetailElevationCentering.smoke.test.js
- M frontend/src/utils/raceDetailMapPerformance.smoke.test.js
- M frontend/src/utils/raceDetailMapVisualBaseline.smoke.test.js
-?? .claude/commands/_skill-stack.md
+M  backend/src/main/java/com/hermes/backend/AcclimatizationService.java
+M  backend/src/main/java/com/hermes/backend/AdminRacePortalController.java
+A  backend/src/main/java/com/hermes/backend/LosAngelesMarathonOfficialCourse.java
+M  backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java
+M  backend/src/main/java/com/hermes/backend/NycMarathonOfficialCourse.java
+A  backend/src/main/java/com/hermes/backend/OsakaMarathonOfficialCourse.java
+M  backend/src/main/java/com/hermes/backend/RaceCourseMapService.java
+M  backend/src/main/java/com/hermes/backend/WeatherContextController.java
+A  backend/src/test/java/com/hermes/backend/BostonMarathonRouteAccuracyTests.java
+D  frontend/src/assets/generated/landing-command-hero-background.png
+A  frontend/src/assets/generated/landing-command-hero-background.webp
+A  frontend/src/assets/generated/recent-runs-hero-overlay.jpg
+M  frontend/src/components/AppIcon.jsx
+M  frontend/src/components/MuscleHeatmap.jsx
+A  frontend/src/components/appIconCoverage.smoke.test.js
+M  frontend/src/i18n/locales/en/pages.js
+M  frontend/src/i18n/locales/zh-CN/pages.js
+M  frontend/src/pages/MuscleTraining.jsx
+M  frontend/src/pages/ProfileDashboard.jsx
+M  frontend/src/pages/Runs.jsx
+M  frontend/src/pages/Territory.jsx
+M  frontend/src/pages/WeatherEngine.jsx
+M  frontend/src/pages/landingCommandHeroBackground.smoke.test.js
+A  frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js
+A  frontend/src/pages/runsHeroOverlayContrast.smoke.test.js
+M  frontend/src/pages/runsRoutePreviewCache.smoke.test.js
+A  frontend/src/pages/runsThumbDarkMapTile.smoke.test.js
+A  frontend/src/pages/territoryMultiPlayerMarkers.smoke.test.js
+M  frontend/src/styles/_split/analysis.css
+M  frontend/src/styles/_split/landing.css
+M  frontend/src/styles/_split/muscle-training.css
+M  frontend/src/styles/_split/profile.css
+M  frontend/src/styles/_split/runs.css
+M  frontend/src/styles/_split/settings.css
+M  frontend/src/styles/_split/territory.css
+M  frontend/src/styles/_split/weather.css
+M  frontend/src/styles/style.css
 ?? .claude/commands/auto-hermes-structure-update.md
 ?? .codex/commands/auto-hermes-language.md
 ?? .codex/commands/auto-hermes-structure-update.md
 ?? .codex/commands/auto-hermes-submit-main.md
+?? .codex/commands/deepseek.md
 ?? .codex/workflows/auto-hermes-structure-update-contract.md
 ?? .opencode/commands/auto-hermes-attack.md
 ?? .opencode/commands/auto-hermes-find-shoe.md
@@ -119,37 +71,17 @@ M .ai-sync/AGENT_SYNC.json
 ?? .opencode/commands/auto-hermes-security.md
 ?? .opencode/commands/auto-hermes-structure-update.md
 ?? .opencode/commands/auto-hermes-tech-debt.md
+?? .opencode/commands/deepseek.md
 ?? .tools/_split-locales-once.mjs
+?? .tools/agent-login.mjs
 ?? .tools/audit-course-maps.ps1
+?? .tools/auto-hermes-browser-multi-agent.test.mjs
 ?? .tools/auto-hermes-worktree-audit.mjs
-?? .tools/untrack-volatile-ai-sync.sh
-?? audit-midnight.json
-?? backend/berlin-qwen-crop.png
-?? backend/berlin-qwen-short-prompt.txt
-?? backend/berlin-qwen-tight.png
-?? backend/berlin-route-00329D.png
-?? backend/berlin-route-affine7.png
-?? backend/berlin-route-anchored.png
-?? backend/berlin-route-anchored7.png
-?? backend/berlin-route-anchored7b.png
-?? backend/berlin-route-anchored7c.png
-?? backend/berlin-route-current.png
-?? backend/berlin-route-landmark-affine.png
-?? backend/berlin-route-overlay.png
-?? backend/berlin-route-quadratic.png
-?? backend/berlin-route-render.png
-?? backend/berlin-route-subset.png
-?? backend/src/main/java/com/hermes/backend/BerlinMarathonOfficialCourse.java
-?? backend/src/main/java/com/hermes/backend/OuraWellnessImportService.java
+?? backend/src/main/java/com/hermes/backend/OuraWellnessImportService.java.disabled
 ?? backend/test
 ?? docs/auto-hermes/attack.md
 ?? docs/auto-hermes/market.md
 ?? docs/auto-hermes/security.md
-?? frontend/src/assets/generated/landing-command-hero-background.webp
-?? frontend/src/assets/generated/recent-runs-hero-overlay.jpg
-?? frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js
-?? frontend/src/pages/runsHeroOverlayContrast.smoke.test.js
-?? frontend/src/styles/dark-mode-final-fixes.css
 ?? opencode.json
 ```
 

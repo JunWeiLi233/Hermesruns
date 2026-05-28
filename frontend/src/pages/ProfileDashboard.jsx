@@ -551,6 +551,7 @@ export default function ProfileDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [runsFreshness, setRunsFreshness] = useState('unknown');
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [_races, _setRaces] = useState([]);
@@ -563,6 +564,8 @@ export default function ProfileDashboard() {
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [_activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
   const [_musclePlan, setMusclePlan] = useState(null);
+  const [weeklyDigest, setWeeklyDigest] = useState(null);
+  const [weeklyDigestLoading, setWeeklyDigestLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -587,6 +590,7 @@ export default function ProfileDashboard() {
     if (hasUsableCache) {
       setProfile(cachedSnapshot.profile || null);
       setRuns(cachedSnapshot.runs);
+      setRunsFreshness('cache');
       if (cachedSnapshot.coachState && typeof cachedSnapshot.coachState === 'object') {
         setCoachState(cachedSnapshot.coachState);
       }
@@ -655,6 +659,7 @@ export default function ProfileDashboard() {
 
         setProfile(profileData);
         setRuns(list);
+        setRunsFreshness('fresh');
         setLoadState('ready');
 
         // Write the primary dashboard data to cache right away so the next
@@ -776,6 +781,23 @@ export default function ProfileDashboard() {
       window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
     }
   }, [isAuthenticated, t]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let cancelled = false;
+    setWeeklyDigestLoading(true);
+    apiJson('/api/weekly-digest')
+      .then((data) => {
+        if (!cancelled) setWeeklyDigest(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setWeeklyDigest(null);
+      })
+      .finally(() => {
+        if (!cancelled) setWeeklyDigestLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
 
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const currentDateLine = useMemo(() => {
@@ -1035,7 +1057,10 @@ export default function ProfileDashboard() {
                 <button type="button" onClick={() => setBanner(null)} aria-label={t('profile.close')}>x</button>
               </section>
             )}
-            {!dismissedComeback && daysOff >= 3 && (
+            {/* Only render after a fresh fetch confirms the day count, so a stale
+                cached snapshot can't keep nagging "you haven't run for N days"
+                after the runner has logged a new run. */}
+            {runsFreshness === 'fresh' && !dismissedComeback && daysOff >= 3 && (
               <ComebackMessage daysOff={daysOff} onDismiss={() => setDismissedComeback(true)} />
             )}
             {loadState === 'loading' && (
@@ -1332,6 +1357,71 @@ export default function ProfileDashboard() {
                     </div>
                   </div>
                 </section>
+
+                {/* 5b. Weekly Digest */}
+                {(() => {
+                  const hasDigestData = weeklyDigest
+                    && weeklyDigest.coachFocus?.message
+                    && weeklyDigest.vdotTrend?.hasData !== false;
+                  const showEmpty = !weeklyDigestLoading && (!weeklyDigest || !hasDigestData);
+                  const vdotDir = weeklyDigest?.vdotTrend?.direction || 'stable';
+                  const vdotLabel = vdotDir === 'improving'
+                    ? t('profile.weekly_digest_vdot_up')
+                    : vdotDir === 'declining'
+                      ? t('profile.weekly_digest_vdot_down')
+                      : t('profile.weekly_digest_vdot_stable');
+                  const vdotArrow = vdotDir === 'improving' ? '↑' : vdotDir === 'declining' ? '↓' : '→';
+                  const runCount = weeklyDigest?.summary?.runCount ?? 0;
+                  const totalKm = weeklyDigest?.summary?.totalDistanceKm != null
+                    ? Number(weeklyDigest.summary.totalDistanceKm).toFixed(1)
+                    : null;
+                  return (
+                    <section className="profile-weekly-digest-card hd-card">
+                      <div className="hd-card-head profile-weekly-digest-head">
+                        <div>
+                          <span className="hd-card-kicker">{t('profile.weekly_digest_kicker')}</span>
+                          <h3 className="hd-card-title">{t('profile.weekly_digest_title')}</h3>
+                        </div>
+                      </div>
+                      {weeklyDigestLoading && (
+                        <p className="profile-weekly-digest-loading">{t('runs.loading')}</p>
+                      )}
+                      {!weeklyDigestLoading && showEmpty && (
+                        <p className="profile-weekly-digest-empty">{t('profile.weekly_digest_empty')}</p>
+                      )}
+                      {!weeklyDigestLoading && !showEmpty && (
+                        <div className="profile-weekly-digest-body">
+                          {runCount > 0 && totalKm && (
+                            <div className="profile-weekly-digest-summary">
+                              <span className="profile-weekly-digest-runs">
+                                {t('profile.weekly_digest_runs', { n: runCount, km: totalKm })}
+                              </span>
+                              {weeklyDigest?.vdotTrend?.hasData && (
+                                <span className={`profile-weekly-digest-vdot-badge profile-weekly-digest-vdot-${vdotDir}`}>
+                                  <span className="profile-weekly-digest-arrow" aria-hidden="true">{vdotArrow}</span>
+                                  {vdotLabel}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {weeklyDigest?.coachFocus?.message && (() => {
+                            const focusKey = weeklyDigest.coachFocus.key;
+                            const i18nKey = focusKey ? `profile.weekly_digest_focus_msg_${focusKey}` : null;
+                            const translated = i18nKey ? t(i18nKey) : null;
+                            const message = translated && translated !== i18nKey
+                              ? translated
+                              : weeklyDigest.coachFocus.message;
+                            return (
+                              <blockquote className="profile-weekly-digest-focus">
+                                {message}
+                              </blockquote>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })()}
 
                 {/* 6. Bottom Grid */}
                 <div className="hd-bottom-grid">
