@@ -14,7 +14,7 @@ Before the first round of any session, run the inline session checklist:
 2. `node .tools/auto-hermes-self-loop.mjs --write --runtime claude` to refresh loop state.
 3. Confirm browser proof is reachable (`node .tools/auto-hermes-browser.mjs status` or `.tools/auto-hermes-playwright.mjs doctor`) only if the round will touch browser-visible code.
 4. `node .tools/auto-hermes-issues.mjs --list` to scan open GitHub issues for must-fix overlap.
-5. Re-read `.claude/skills/_TRIGGERS.md` so skill triggers are fresh.
+5. Re-read `.claude/skills/_TRIGGERS.md` (if present) so skill triggers are fresh; skip if absent.
 
 ## Loop Entry
 1. **Refresh state:** `node .tools/auto-hermes-self-loop.mjs --write --runtime claude`
@@ -29,7 +29,7 @@ Verify the loop ability is intact before each round. If a previous task broke lo
 | Last round touched loop-critical files | Read `.ai-sync/AUTO_HERMES_SELF_ROUND_RESULT.json`. Loop-critical: `.codex/commands/auto-hermes-self.md`, `.claude/commands/auto-hermes-self.md`, `.tools/auto-hermes-self-loop.mjs`, `.tools/auto-hermes-loop.mjs`, `.tools/auto-hermes-teamwork.mjs`, `.tools/auto-hermes-browser.mjs`. None touched means skip remaining checks. | - |
 | Scripts parse | `node --check .tools/auto-hermes-self-loop.mjs && node --check .tools/auto-hermes-loop.mjs && node --check .tools/auto-hermes-teamwork.mjs && node --check .tools/auto-hermes-browser.mjs` | syntax error |
 | Contract intact | `node .tools/auto-hermes-self-loop.mjs --write --runtime claude --dry-run`, then verify `.ai-sync/AUTO_HERMES_SELF_LOOP.json` has `selfExecutionContract == "claude-self-executing"` | not claude-self-executing |
-| Protocol present | `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md` contains `## Claude Self-Loop Protocol (Active Execution)`, `claude-execute-round`, and `Browser Harness Skill` | missing |
+| Protocol present | `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md` contains `## Claude Self-Loop Protocol (Active Execution)` and `claude-execute-round` | missing |
 
 **On failure:** apply the minimal targeted fix to restore the previous working state. This gate authorizes self-repair of the Ralph mechanism. Record as `ralph-integrity-fix: <what>` in round-close evidence.
 
