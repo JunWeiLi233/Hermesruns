@@ -32,11 +32,46 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api")
 public class OAuthController {
     private static final Logger logger = LoggerFactory.getLogger(OAuthController.class);
+
+    // ── OAuth CSRF state cache ──────────────────────────────────────
+    // Maps CSRF token → Object[]{String originalIntent, Long expiryEpochMs}. TTL: 10 minutes.
+    private final ConcurrentHashMap<String, Object[]> pendingStateEntries = new ConcurrentHashMap<>();
+    private static final long STATE_TTL_MS = 10 * 60 * 1000L;
+
+    /**
+     * Generates a random CSRF token, stores it with the original intent value and a TTL,
+     * and returns the token to embed in the OAuth redirect URL.
+     */
+    private String generateStateToken(String originalIntent) {
+        String token = UUID.randomUUID().toString();
+        long expiry = System.currentTimeMillis() + STATE_TTL_MS;
+        pendingStateEntries.put(token, new Object[]{originalIntent, expiry});
+        // Evict expired entries opportunistically on each generation
+        pendingStateEntries.entrySet().removeIf(e -> System.currentTimeMillis() > (Long) e.getValue()[1]);
+        return token;
+    }
+
+    /**
+     * Validates the returned CSRF token. Returns the original intent string that was
+     * passed to generateStateToken(), or throws IllegalArgumentException on failure.
+     */
+    private String validateStateToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Missing OAuth state parameter");
+        }
+        Object[] entry = pendingStateEntries.remove(token);
+        if (entry == null || System.currentTimeMillis() > (Long) entry[1]) {
+            throw new IllegalArgumentException("Invalid or expired OAuth state");
+        }
+        return (String) entry[0];
+    }
 
     private final RunnerRepository runnerRepository;
     private final AuthService authService;
@@ -136,15 +171,14 @@ public class OAuthController {
             );
         }
 
+        String csrfToken = generateStateToken(state != null ? state : "");
+
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
                 .queryParam("client_id", googleClientId)
                 .queryParam("redirect_uri", googleRedirectUri)
                 .queryParam("response_type", "code")
-                .queryParam("scope", "email profile");
-
-        if (state != null && !state.isBlank()) {
-            builder.queryParam("state", state);
-        }
+                .queryParam("scope", "email profile")
+                .queryParam("state", csrfToken);
 
         return new RedirectView(builder.toUriString());
     }
@@ -162,8 +196,16 @@ public class OAuthController {
             );
         }
 
+        String originalIntent;
+        try {
+            originalIntent = validateStateToken(state);
+        } catch (IllegalArgumentException e) {
+            logger.warn("[Hermes] Google OAuth callback rejected — invalid state: {}", e.getMessage());
+            return errorRedirectCode("OAUTH_STATE_INVALID", "OAuth state validation failed. Please try signing in again.", null);
+        }
+
         if (code == null || code.isBlank()) {
-            return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
+            return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", originalIntent.isBlank() ? null : originalIntent);
         }
 
         RestTemplate restTemplate = this.restTemplate;
@@ -190,7 +232,7 @@ public class OAuthController {
             Map<String, Object> tokenBody = tokenResponse.getBody();
             String accessToken = tokenBody == null ? null : stringValue(tokenBody.get("access_token"));
             if (accessToken == null || accessToken.isBlank()) {
-                return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
+                return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", originalIntent.isBlank() ? null : originalIntent);
             }
 
             HttpHeaders userInfoHeaders = new HttpHeaders();
@@ -207,7 +249,7 @@ public class OAuthController {
             Map<String, Object> infoBody = infoResponse.getBody();
             String googleEmail = authService.normalizeEmail(infoBody == null ? null : stringValue(infoBody.get("email")));
             if (googleEmail == null || googleEmail.isBlank()) {
-                return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
+                return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", originalIntent.isBlank() ? null : originalIntent);
             }
 
             Runner runner = runnerRepository.findByEmailIgnoreCase(googleEmail)
@@ -232,7 +274,7 @@ public class OAuthController {
                             + "&email=" + urlEncode(runner.getEmail())
             );
         } catch (Exception exception) {
-            return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", state);
+            return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", originalIntent.isBlank() ? null : originalIntent);
         }
     }
 
@@ -247,7 +289,8 @@ public class OAuthController {
                     state
             );
         }
-        return new RedirectView(stravaTokenService.buildStravaAuthUrl(state));
+        String csrfToken = generateStateToken(state != null ? state : "");
+        return new RedirectView(stravaTokenService.buildStravaAuthUrl(csrfToken));
     }
 
     @PostMapping("/auth/strava/link-url")
@@ -263,8 +306,10 @@ public class OAuthController {
                     .body(Map.of("error", "Strava sign-in is not configured."));
         }
 
+        String profileLinkIntent = stravaTokenService.createProfileLinkState(runnerOptional.get());
+        String csrfToken = generateStateToken(profileLinkIntent);
         return ResponseEntity.ok(Map.of(
-                "url", stravaTokenService.buildStravaAuthUrl(stravaTokenService.createProfileLinkState(runnerOptional.get())),
+                "url", stravaTokenService.buildStravaAuthUrl(csrfToken),
                 "expiresInSeconds", 600L
         ));
     }
@@ -280,8 +325,17 @@ public class OAuthController {
             return errorRedirectCode(
                     "STRAVA_NOT_CONFIGURED",
                     "Strava OAuth is not configured on this server.",
-                    state
+                    null
             );
+        }
+
+        // Validate the CSRF state token and recover the original intent value.
+        String originalIntent;
+        try {
+            originalIntent = validateStateToken(state);
+        } catch (IllegalArgumentException e) {
+            logger.warn("[Hermes] Strava OAuth callback rejected — invalid state: {}", e.getMessage());
+            return errorRedirectCode("OAUTH_STATE_INVALID", "OAuth state validation failed. Please try signing in again.", null);
         }
 
         if (error != null && !error.isBlank()) {
@@ -289,7 +343,7 @@ public class OAuthController {
             return errorRedirectCode(
                     "STRAVA_OAUTH_ERROR",
                     "Strava returned an error.",
-                    state
+                    originalIntent.isBlank() ? null : originalIntent
             );
         }
 
@@ -298,7 +352,7 @@ public class OAuthController {
             return errorRedirectCode(
                     "STRAVA_MISSING_CODE",
                     "Strava callback is missing the authorization code.",
-                    state
+                    originalIntent.isBlank() ? null : originalIntent
             );
         }
 
@@ -328,7 +382,7 @@ public class OAuthController {
                 return errorRedirectCode(
                         "STRAVA_OAUTH_INVALID_RESPONSE",
                         "Strava token response was empty/invalid.",
-                        state
+                        originalIntent.isBlank() ? null : originalIntent
                 );
             }
 
@@ -342,11 +396,12 @@ public class OAuthController {
                 return errorRedirectCode(
                         "STRAVA_OAUTH_INVALID_RESPONSE",
                         "Strava token response missing access_token/athlete id.",
-                        state
+                        originalIntent.isBlank() ? null : originalIntent
                 );
             }
 
-            Optional<StravaTokenService.PendingStravaLinkRequest> pendingLinkRequest = stravaTokenService.decodeProfileLinkState(state);
+            // Use originalIntent (the pre-CSRF-token intent value) for all downstream routing.
+            Optional<StravaTokenService.PendingStravaLinkRequest> pendingLinkRequest = stravaTokenService.decodeProfileLinkState(originalIntent);
             Optional<Runner> linkedRunner = runnerRepository.findByStravaAthleteId(athleteId)
                     .filter(existingRunner -> !existingRunner.isDeleted());
             Optional<Runner> legacyShadowRunner = runnerRepository.findByEmailIgnoreCase(stravaTokenService.stravaEmail(athleteId))
@@ -364,11 +419,10 @@ public class OAuthController {
                 );
             }
             if (linkedRunner.isEmpty() && legacyShadowRunner.isEmpty()) {
-                if (shouldAutoProvisionStravaRunner(state)) {
+                if (shouldAutoProvisionStravaRunner(originalIntent)) {
                     Runner newRunner = buildNewStravaRunner(athlete, athleteId, accessToken, refreshToken, expiresAt);
                     newRunner = runnerRepository.save(newRunner);
 
-                    Long runnerId = newRunner.getId();
                     stravaSyncService.scheduleStravaSync(newRunner, accessToken, false, "oauth_login");
 
                     String token = authService.issueSessionToken(newRunner);
@@ -381,7 +435,7 @@ public class OAuthController {
                                     + "&email=" + urlEncode(newRunner.getEmail())
                     );
                 }
-                return stravaLinkConfirmationRedirect(state, athleteId, athlete);
+                return stravaLinkConfirmationRedirect(originalIntent, athleteId, athlete);
             }
 
             Runner runner = linkedRunner.orElseGet(legacyShadowRunner::get);
@@ -430,7 +484,7 @@ public class OAuthController {
             return errorRedirectCode(
                     "STRAVA_OAUTH_FAILED",
                     exception.getClass().getSimpleName() + ": " + safeMessage(exception),
-                    state
+                    originalIntent.isBlank() ? null : originalIntent
             );
         }
     }

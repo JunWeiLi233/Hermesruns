@@ -858,7 +858,7 @@ class RaceCourseMapManualAssetTests {
                                 new RawBreadcrumbPointDTO(41.8789, -87.6190)
                         )
                 );
-        when(georeferencingService.georeferenceRouteWithLocalBoundsFallback(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195)))
+        when(georeferencingService.georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195)))
                 .thenReturn(boundsFallback);
 
         RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService);
@@ -879,7 +879,7 @@ class RaceCourseMapManualAssetTests {
         assertThat(result.courseMapDetected()).isTrue();
         assertThat(result.routePoints()).isNotEmpty();
         assertThat(result.summary()).contains("pipeline fallback");
-        verify(georeferencingService).georeferenceRouteWithLocalBoundsFallback(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
+        verify(georeferencingService).georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
     }
 
     private RaceCourseMapService createService(RestTemplate restTemplate, SystemConfigService systemConfigService, RaceCourseMapAssetRepository repository) {

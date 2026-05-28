@@ -14,6 +14,30 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     boolean existsByRunnerAndProviderAndSourceChecksum(Runner runner, ImportProvider provider, String sourceChecksum);
 
+    /**
+     * Structural-fingerprint duplicate check: catches re-imports of the same activity with different
+     * file bytes (e.g. re-exported with a different header, re-compressed, renamed). The distance
+     * bucket rounds to the nearest 10 m so minor GPS rounding differences across export formats are
+     * tolerated. startTime must match exactly (to the second, as parsed from the file).
+     *
+     * @param runner          the owning runner
+     * @param startTime       parsed activity start time (UTC, second-precision)
+     * @param distanceBucket  distanceMeters rounded to the nearest 10 m (long)
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+            FROM Activity a
+            WHERE a.runner = :runner
+              AND a.startTime = :startTime
+              AND a.distanceMeters IS NOT NULL
+              AND (ROUND(a.distanceMeters / 10.0) * 10) = :distanceBucket
+            """)
+    boolean existsByRunnerAndStartTimeAndDistanceBucket(
+            @Param("runner") Runner runner,
+            @Param("startTime") java.time.LocalDateTime startTime,
+            @Param("distanceBucket") long distanceBucket
+    );
+
     Optional<Activity> findByRunnerAndProviderAndSourceChecksum(Runner runner, ImportProvider provider, String sourceChecksum);
 
     Optional<Activity> findByIdAndRunner(Long id, Runner runner);

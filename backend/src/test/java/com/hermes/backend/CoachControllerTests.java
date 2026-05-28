@@ -78,6 +78,8 @@ class CoachControllerTests {
                         2,
                         new CoachRoutePreviewDto("M 10.00 10.00 L 20.00 20.00", 10.0, 10.0, 20.0, 20.0)
                 ),
+                null,
+                null,
                 null
         );
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));

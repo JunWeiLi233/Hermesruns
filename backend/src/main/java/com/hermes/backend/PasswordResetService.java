@@ -32,6 +32,9 @@ public class PasswordResetService {
     @Value("${app.billing.public-base-url:http://localhost:8080}")
     private String publicBaseUrl;
 
+    @Value("${APP_BASE_URL:http://localhost:8080}")
+    private String appBaseUrl;
+
     public PasswordResetService(AuthService authService, RunnerRepository runnerRepository) {
         this.authService = authService;
         this.runnerRepository = runnerRepository;
@@ -77,11 +80,11 @@ public class PasswordResetService {
         runner.setPasswordResetExpiresAt(null);
     }
 
-    private static String trimTrailingSlash(String url) {
-        if (url == null) return "http://localhost:8080";
+    private String trimTrailingSlash(String url) {
+        if (url == null) return appBaseUrl;
         String u = url.trim();
         while (u.endsWith("/")) u = u.substring(0, u.length() - 1);
-        return u.isEmpty() ? "http://localhost:8080" : u;
+        return u.isEmpty() ? appBaseUrl : u;
     }
 
     private static String newPlainToken() {

@@ -3097,6 +3097,17 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   width: 1rem;
   height: 1rem;
   flex: 0 0 auto;
+  /* Behave predictably whether the parent is flex or inline text. Without
+     display:inline-block, an inline SVG sits on the text baseline and
+     introduces a phantom descender, so adjacent text jumps a pixel up. */
+  display: inline-block;
+  vertical-align: -0.125em;
+  /* Inherit currentColor from the parent. AppIcon uses stroke="currentColor",
+     so this keeps icons in sync with the surrounding text colour even when
+     a parent overrides via .is-active, .is-positive, etc. */
+  color: inherit;
+  fill: none;
+  stroke: currentColor;
 }
 
 .runner-dashboard-brand {

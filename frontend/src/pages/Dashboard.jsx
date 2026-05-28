@@ -1834,7 +1834,7 @@ const Dashboard = memo(function Dashboard() {
   );
 
   const liveCourseMapPreview = useMemo(
-    () => getCourseMapRenderableLive(selectedCourseMapItem),
+    () => getCourseMapCurrentLive(selectedCourseMapItem) || getCourseMapLive(selectedCourseMapItem),
     [selectedCourseMapItem],
   );
   const courseMapSourcePreview = useMemo(

@@ -3433,11 +3433,12 @@
 
 /* Settings full-bleed control room pass */
 
-.settings-control-page .runner-shell-canvas.settings-control-canvas,
-.settings-control-page .settings-atlas-canvas {
-  width: calc(100% - clamp(28px, 3.2vw, 64px));
+.runner-dashboard-page.settings-control-page .runner-shell-canvas.settings-control-canvas,
+.runner-dashboard-page.settings-control-page .settings-atlas-canvas {
+  width: 100% !important;
   max-width: none !important;
-  margin-inline: auto;
+  margin: 0 !important;
+  padding-inline: clamp(16px, 2.5vw, 40px) !important;
 }
 
 .settings-atlas-workbench {
@@ -5096,7 +5097,7 @@ body:is(.theme-midnight, .theme-high-contrast) .st-brief-toggle {
 /* ── Bottom grid (wellness) ── */
 .st-bottom-grid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 

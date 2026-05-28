@@ -364,6 +364,8 @@ class ProfileControllerTests {
                 null,
                 coachState,
                 null,
+                null,
+                null,
                 null
         );
         PersonalRecordService.PersonalRecordsResponse personalRecords = new PersonalRecordService.PersonalRecordsResponse(
@@ -574,6 +576,8 @@ class ProfileControllerTests {
         AutomatedCoachService.CoachTodayDto coachToday = new AutomatedCoachService.CoachTodayDto(
                 null,
                 coachState,
+                null,
+                null,
                 null,
                 null
         );

@@ -20,7 +20,6 @@ import targetChestUrl from '../assets/muscle-training/target-chest.webp';
 import targetCoreUrl from '../assets/muscle-training/target-core.webp';
 import targetLegsUrl from '../assets/muscle-training/target-legs.webp';
 import targetShouldersUrl from '../assets/muscle-training/target-shoulders.webp';
-import anatomyNeonSelectorUrl from '../assets/muscle-training/anatomy-neon-selector.png';
 
 const EXERCISE_DB_IMAGE_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const exerciseDbImage = (imagePath) => `${EXERCISE_DB_IMAGE_BASE}${imagePath}`;
@@ -188,9 +187,6 @@ const TOP_MUSCLE_HIT_ZONES = [
   { id: 'legs-rear', key: 'legs', left: '63%', top: '50%', width: '26%', height: '34%' },
 ];
 
-function getPrimaryTopMuscleHitZoneId(targetKey) {
-  return TOP_MUSCLE_HIT_ZONES.find((zone) => zone.key === targetKey)?.id || '';
-}
 
 const EXERCISE_VIDEO_EMBEDS = {
   'barbell-bench-press': 'https://www.youtube-nocookie.com/embed/0cXAp6WhSj4',
@@ -217,6 +213,21 @@ const EXERCISE_VIDEO_EMBEDS = {
   'front-rack-carry': 'https://www.youtube-nocookie.com/embed/Q5kuuxaNDDM',
   'hanging-leg-raise': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
   'barbell-rollout': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
+  // Backend-generated plan exercises (issue #36). Each entry is either a
+  // vetted demo for the exercise itself or, where no vetted demo exists yet,
+  // a safe fallback mapped to the closest already-vetted demonstration.
+  'hip-airplanes': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'dead-bug': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
+  'split-squat': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'single-leg-romanian-deadlift': 'https://www.youtube-nocookie.com/embed/5zmlnbWb-g4',
+  'standing-calf-raise': 'https://www.youtube-nocookie.com/embed/z7E_YU9P1jU',
+  'side-plank': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
+  'glute-bridge-pause-at-top': 'https://www.youtube-nocookie.com/embed/5zmlnbWb-g4',
+  'tibialis-wall-raise': 'https://www.youtube-nocookie.com/embed/z7E_YU9P1jU',
+  'pogo-hops': 'https://www.youtube-nocookie.com/embed/ep30avTSMB0',
+  'skipping-a-drill': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'box-step-up-explosive': 'https://www.youtube-nocookie.com/embed/ep30avTSMB0',
+  'single-leg-hop-low-amplitude': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
 };
 
 const COMPOUND_TARGET_LIBRARY = {
@@ -689,6 +700,37 @@ const COMPOUND_TARGET_LIBRARY = {
     }),
   ],
 };
+const TARGET_MUSCLE_SLUGS = {
+  chest: ['chest'],
+  back: ['upper-back', 'lower-back', 'trapezius'],
+  legs: ['quadriceps', 'hamstring', 'gluteal', 'calves'],
+  shoulders: ['deltoids', 'trapezius'],
+  arms: ['biceps', 'triceps', 'forearm'],
+  core: ['abs', 'obliques'],
+};
+
+const SLUG_TO_TARGET = Object.entries(TARGET_MUSCLE_SLUGS).reduce((acc, [target, slugs]) => {
+  slugs.forEach((slug) => { if (!acc[slug]) acc[slug] = target; });
+  return acc;
+}, {});
+
+const MUSCLE_SLUG_LABEL = {
+  chest: { zh: '胸部', en: 'Chest' },
+  'upper-back': { zh: '上背', en: 'Upper Back' },
+  'lower-back': { zh: '下背', en: 'Lower Back' },
+  trapezius: { zh: '斜方肌', en: 'Trapezius' },
+  quadriceps: { zh: '股四头肌', en: 'Quads' },
+  hamstring: { zh: '腘绳肌', en: 'Hamstrings' },
+  gluteal: { zh: '臀部', en: 'Glutes' },
+  calves: { zh: '小腿', en: 'Calves' },
+  deltoids: { zh: '三角肌', en: 'Deltoids' },
+  biceps: { zh: '二头肌', en: 'Biceps' },
+  triceps: { zh: '三头肌', en: 'Triceps' },
+  forearm: { zh: '前臂', en: 'Forearms' },
+  abs: { zh: '腹肌', en: 'Abs' },
+  obliques: { zh: '腹斜肌', en: 'Obliques' },
+};
+
 const DEFAULT_CHECK_IN_DRAFT = {
   runType: 'EASY',
   entryState: 'PLANNED',
@@ -2770,7 +2812,7 @@ export default function MuscleTraining() {
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
   const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
-  const [selectedMuscleHitZoneId, setSelectedMuscleHitZoneId] = useState(() => getPrimaryTopMuscleHitZoneId('legs'));
+  const [clickedMuscleSlug, setClickedMuscleSlug] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -3249,6 +3291,11 @@ export default function MuscleTraining() {
     [buildTopRecommendationItems, selectedMuscleTarget],
   );
 
+  const muscleVisualHeatmapData = useMemo(() => {
+    const slugs = TARGET_MUSCLE_SLUGS[selectedMuscleTarget] || [];
+    return slugs.map((slug) => ({ slug, intensity: 2 }));
+  }, [selectedMuscleTarget]);
+
   const selectedProtocolItem = useMemo(() => (
     visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
     || visibleExerciseItems[0]
@@ -3427,7 +3474,6 @@ export default function MuscleTraining() {
     const nextTargetKey = targetKey === 'all' ? 'legs' : targetKey;
     setActiveTarget(targetKey);
     setSelectedMuscleTarget(nextTargetKey);
-    setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
     setExpandedExerciseIdx(null);
     const nextPlanItem = targetKey === 'all'
       ? protocolItems[0]
@@ -3451,15 +3497,13 @@ export default function MuscleTraining() {
     const nextTargetKey = resolveTargetAreaKeyForItem(item, isZh);
     if (nextTargetKey !== 'all') {
       setSelectedMuscleTarget(nextTargetKey);
-      setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
     }
     setSelectedExerciseKey(getProtocolItemKey(item));
   }
 
-  function handleTopMuscleSelect(targetKey, hitZoneId = '') {
+  function handleTopMuscleSelect(targetKey) {
     const nextItems = buildTopRecommendationItems(targetKey);
     setSelectedMuscleTarget(targetKey);
-    setSelectedMuscleHitZoneId(hitZoneId || getPrimaryTopMuscleHitZoneId(targetKey));
     setActiveTarget(targetKey);
     setExpandedExerciseIdx(null);
     if (nextItems[0]) {
@@ -3467,10 +3511,16 @@ export default function MuscleTraining() {
     }
   }
 
+  function handleMusclePartClick(bodyPart) {
+    const slug = bodyPart?.slug;
+    if (!slug || !SLUG_TO_TARGET[slug]) return;
+    setClickedMuscleSlug(slug);
+    handleTopMuscleSelect(SLUG_TO_TARGET[slug]);
+  }
+
   function handleTopExerciseSelect(item) {
     const nextTargetKey = item.targetKey || selectedMuscleTarget;
     setSelectedMuscleTarget(nextTargetKey);
-    setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
     setActiveTarget(nextTargetKey);
     setSelectedExerciseKey(getProtocolItemKey(item));
   }
@@ -3736,36 +3786,28 @@ export default function MuscleTraining() {
                   <h2 id="mt-top-muscle-title">{stitchCopy.topMuscleTitle}</h2>
                 </div>
                 <div className="mt-muscle-visual-shell">
-                  <img
-                    src={anatomyNeonSelectorUrl}
-                    alt={stitchCopy.topMuscleTitle}
-                    className="mt-muscle-visual"
-                  />
-                  <div className="mt-muscle-hit-zone-layer" role="group" aria-label={stitchCopy.topMuscleHint}>
-                    {TOP_MUSCLE_HIT_ZONES.map((zone) => {
-                      const target = targetAreaCards.find((item) => item.key === zone.key);
-                      const zoneLabel = target?.label || zone.key;
-                      const isActive = selectedMuscleHitZoneId === zone.id;
-                      return (
-                        <button
-                          key={zone.id}
-                          type="button"
-                          className={`mt-muscle-hit-zone mt-muscle-hit-zone--${zone.key}${isActive ? ' is-active' : ''}`}
-                          style={{
-                            left: zone.left,
-                            top: zone.top,
-                            width: zone.width,
-                            height: zone.height,
-                          }}
-                          onClick={() => handleTopMuscleSelect(zone.key, zone.id)}
-                          aria-label={zoneLabel}
-                          aria-pressed={isActive}
-                        >
-                          <span className="sr-only">{zoneLabel}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <figure
+                    className="mt-muscle-heatmap-visual"
+                    aria-label={stitchCopy.topMuscleTitle}
+                  >
+                    <MuscleHeatmap
+                      data={muscleVisualHeatmapData}
+                      side="both"
+                      frontLabel={isZh ? '正面' : 'Front'}
+                      backLabel={isZh ? '背面' : 'Back'}
+                      onMuscleClick={handleMusclePartClick}
+                    />
+                  </figure>
+                  {clickedMuscleSlug && MUSCLE_SLUG_LABEL[clickedMuscleSlug] && (
+                    <div className="mt-muscle-click-callout" aria-live="polite">
+                      <span className="mt-muscle-click-icon">→</span>
+                      <span className="mt-muscle-click-label">
+                        {isZh
+                          ? `${MUSCLE_SLUG_LABEL[clickedMuscleSlug].zh} · 推荐动作`
+                          : `${MUSCLE_SLUG_LABEL[clickedMuscleSlug].en} · Exercises`}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-muscle-target-buttons" role="group" aria-label={stitchCopy.topMuscleHint}>
                   {targetAreaCards.map((target) => {

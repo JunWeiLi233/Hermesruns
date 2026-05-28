@@ -1,6 +1,6 @@
 {
-  "runId": "auto-hermes-push-main-20260524200555",
-  "generatedAt": "2026-05-24T20:05:55.263Z",
+  "runId": "auto-hermes-push-main-20260528051917",
+  "generatedAt": "2026-05-28T05:19:17.374Z",
   "commandName": "auto-hermes-push-main",
   "mode": "audit",
   "aggressive": false,
@@ -616,6 +616,18 @@
         "controller": "AdminRacePortalController",
         "method": "DELETE",
         "path": "/api/admin/race-course-maps/{raceId}/pending"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminRacePortalController.java",
+        "controller": "AdminRacePortalController",
+        "method": "POST",
+        "path": "/api/admin/race-course-maps/bulk-seed"
+      },
+      {
+        "file": "backend/src/main/java/com/hermes/backend/AdminRacePortalController.java",
+        "controller": "AdminRacePortalController",
+        "method": "POST",
+        "path": "/api/admin/race-course-maps/{raceId}/seed"
       },
       {
         "file": "backend/src/main/java/com/hermes/backend/AdminRouteExtractionController.java",
@@ -1486,24 +1498,6 @@
         "controller": "WellnessController",
         "method": "GET",
         "path": "/api/wellness/google-health/status"
-      },
-      {
-        "file": "backend/src/main/java/com/hermes/backend/WellnessController.java",
-        "controller": "WellnessController",
-        "method": "POST",
-        "path": "/api/wellness/oura/token"
-      },
-      {
-        "file": "backend/src/main/java/com/hermes/backend/WellnessController.java",
-        "controller": "WellnessController",
-        "method": "GET",
-        "path": "/api/wellness/oura/status"
-      },
-      {
-        "file": "backend/src/main/java/com/hermes/backend/WellnessController.java",
-        "controller": "WellnessController",
-        "method": "POST",
-        "path": "/api/wellness/oura/import"
       }
     ],
     "forms": [
@@ -2075,7 +2069,7 @@
     "configFiles": [
       {
         "file": "backend/src/main/resources/application.properties",
-        "content": "spring.application.name=backend\r\n\r\n# deployment: set HERMES_ENV=production on public servers (enforces stronger Strava webhook settings when Strava is enabled)\r\nhermes.environment=${HERMES_ENV:development}\r\n\r\n# hide stack traces from default error responses (controllers still return explicit JSON errors)\r\nserver.error.include-stacktrace=never\r\nserver.error.include-exception=false\r\n\r\n# trust X-Forwarded-* from reverse proxy (nginx, cloud load balancer)\r\nserver.forward-headers-strategy=framework\r\n\r\n# production: enforce HTTPS at the app layer (safe behind reverse proxy)\r\napp.security.force-https=${APP_FORCE_HTTPS:false}\r\n\r\n# optional: comma-separated origins if the React app is not served from the same host as /api (e.g. https://app.example.com)\r\napp.cors.allowed-origins=${APP_CORS_ALLOWED_ORIGINS:}\r\n\r\n# set true only when the site is served over HTTPS everywhere (via reverse TLS termination is OK)\r\napp.security.enable-hsts=${APP_ENABLE_HSTS:true}\r\n\r\n# Database configuration\r\n# Default storage is local H2. To switch to PostgreSQL, provide APP_DB_URL, APP_DB_USERNAME,\r\n# APP_DB_PASSWORD, and APP_DB_DRIVER=org.postgresql.Driver before startup.\r\nspring.datasource.url=${APP_DB_URL:jdbc:h2:file:./hermes_db_v2;AUTO_SERVER=TRUE}\r\nspring.datasource.driverClassName=${APP_DB_DRIVER:org.h2.Driver}\r\nspring.datasource.username=${APP_DB_USERNAME:sa}\r\nspring.datasource.password=${APP_DB_PASSWORD:}\r\n\r\n# Schema management\r\nspring.jpa.hibernate.ddl-auto=${APP_JPA_DDL_AUTO:update}\r\nspring.jpa.show-sql=false\r\nspring.h2.console.enabled=false\r\n\r\n# File upload limits (phone screenshots can be 5–10 MB)\r\nspring.servlet.multipart.max-file-size=20MB\r\nspring.servlet.multipart.max-request-size=20MB\r\n\r\n# Google OAuth 2.0 Credentials\r\n# Configure these with environment variables before starting Hermes.\r\ngoogle.client.id=${APP_GOOGLE_CLIENT_ID:${GOOGLE_CLIENT_ID:}}\r\ngoogle.client.secret=${APP_GOOGLE_CLIENT_SECRET:${GOOGLE_CLIENT_SECRET:}}\r\napp.google.redirect-uri=${APP_GOOGLE_REDIRECT_URI:${GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/google/callback}}\r\n\r\n# Strava OAuth 2.0 Credentials\r\n# Configure these with environment variables before starting Hermes.\r\n# Strava token storage also requires APP_DATA_ENCRYPTION_KEY.\r\nstrava.client.id=${STRAVA_CLIENT_ID:${APP_STRAVA_CLIENT_ID:}}\r\nstrava.client.secret=${STRAVA_CLIENT_SECRET:${APP_STRAVA_CLIENT_SECRET:}}\r\napp.strava.redirect-uri=${STRAVA_REDIRECT_URI:${APP_STRAVA_REDIRECT_URI:http://localhost:8080/api/auth/strava/callback}}\r\n\r\n# Automated coach (polarized 80/20, nightly audit)\r\napp.coach.nightly.enabled=true\r\napp.coach.nightly.cron=0 0 3 * * *\r\n\r\n# Background Strava pull (uses stored refresh tokens; Hermes must stay running)\r\nstrava.sync.enabled=true\r\n# Default 10 minutes — pulls recent activities for every Strava-linked runner\r\nstrava.sync.interval-ms=${STRAVA_SYNC_INTERVAL_MS:600000}\r\n# Pages × 200 activities max per runner per scheduled run (newest pages first; stops early if no new runs)\r\nstrava.sync.max-pages-recent=5\r\n# Full history cap (login / manual resync)\r\nstrava.sync.max-pages-full=50\r\n\r\ngarmin.wellness.sync.enabled=${GARMIN_WELLNESS_SYNC_ENABLED:true}\r\ngarmin.wellness.sync.interval-ms=${GARMIN_WELLNESS_SYNC_INTERVAL_MS:1800000}\r\ngarmin.wellness.sync.days-back=${GARMIN_WELLNESS_SYNC_DAYS_BACK:30}\r\ngarmin.wellness.sync.initial-days-back=${GARMIN_WELLNESS_SYNC_INITIAL_DAYS_BACK:90}\r\n\r\n# Strava Webhook (push notifications for new activities)\r\n# Create a subscription once via Strava API:\r\n#   POST https://www.strava.com/api/v3/push_subscriptions\r\n#   client_id, client_secret, callback_url=https://YOUR_DOMAIN/api/strava/webhook,\r\n#   verify_token=<same value as below>\r\nstrava.webhook.verify-token=${STRAVA_WEBHOOK_VERIFY_TOKEN:}\r\n\r\n# AI Vision API (for shoe image scanning)\r\n# Set APP_AI_API_KEY to enable AI-powered shoe mileage extraction from screenshots.\r\napp.ai.api-key=${APP_AI_API_KEY:}\r\napp.ai.model=${APP_AI_MODEL:gemini-2.5-flash}\r\napp.ai.provider=${APP_AI_PROVIDER:gemini}\r\napp.ai.course-map.provider=${APP_AI_COURSE_MAP_PROVIDER:qwen-local}\r\napp.ai.course-map.pdf-render-page-limit=${APP_AI_COURSE_MAP_PDF_RENDER_PAGE_LIMIT:2}\r\napp.ai.free-tier.per-runner-daily-limit=${APP_AI_FREE_TIER_PER_RUNNER_DAILY_LIMIT:5}\r\napp.ai.free-tier.project-daily-limit=${APP_AI_FREE_TIER_PROJECT_DAILY_LIMIT:200}\r\napp.ai.free-tier.project-daily-reserve=${APP_AI_FREE_TIER_PROJECT_DAILY_RESERVE:20}\r\n\r\n# Marathon route extraction pipeline\r\n# Step 1 uses local Qwen structured JSON output. Step 2 shells out to the local Python/OpenCV worker.\r\napp.route-extraction.python-command=${APP_ROUTE_EXTRACTION_PYTHON_COMMAND:python}\r\napp.route-extraction.python-script=${APP_ROUTE_EXTRACTION_PYTHON_SCRIPT:}\r\napp.route-extraction.qwen.model-id=${APP_ROUTE_EXTRACTION_QWEN_MODEL_ID:Qwen/Qwen2.5-VL-7B-Instruct}\r\napp.route-extraction.qwen.device-map=${APP_ROUTE_EXTRACTION_QWEN_DEVICE_MAP:auto}\r\napp.route-extraction.qwen.cache-dir=${APP_ROUTE_EXTRACTION_QWEN_CACHE_DIR:}\r\napp.route-extraction.qwen.timeout-seconds=${APP_ROUTE_EXTRACTION_QWEN_TIMEOUT_SECONDS:120}\r\napp.route-extraction.qwen.alignment-timeout-seconds=${APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_TIMEOUT_SECONDS:180}\r\napp.route-extraction.qwen.parameters-script=${APP_ROUTE_EXTRACTION_QWEN_PARAMETERS_SCRIPT:}\r\napp.route-extraction.qwen.anchor-script=${APP_ROUTE_EXTRACTION_QWEN_ANCHOR_SCRIPT:}\r\napp.route-extraction.qwen.alignment-script=${APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_SCRIPT:}\r\n\r\n# Marathon route map matching\r\napp.route-matching.osrm.base-url=${APP_ROUTE_MATCHING_OSRM_BASE_URL:https://router.project-osrm.org}\r\napp.route-matching.osrm.profile=${APP_ROUTE_MATCHING_OSRM_PROFILE:driving}\r\n\r\n# Stripe Checkout (Pro subscription — one-time payment per checkout, extends Pro by line-item quantity months)\r\n# Create a one-time Price in Stripe Dashboard and paste its price_xxx id. Webhook: POST /api/billing/webhook\r\napp.billing.stripe.secret-key=${STRIPE_SECRET_KEY:}\r\napp.billing.stripe.webhook-secret=${STRIPE_WEBHOOK_SECRET:}\r\napp.billing.stripe.price-pro-monthly=${STRIPE_PRICE_PRO_MONTHLY:}\r\napp.billing.public-base-url=${APP_PUBLIC_BASE_URL:http://localhost:8080}\r\n# Optional: shown in the Profile UI only (e.g. $9 / month or ¥68/月)\r\napp.billing.price-display-label=${APP_BILLING_PRICE_LABEL:}\r\n\r\n# Email (verification links for password sign-up). If SPRING_MAIL_HOST is empty, new accounts skip inbox verification (dev only).\r\nspring.mail.host=${SPRING_MAIL_HOST:}\r\nspring.mail.port=${SPRING_MAIL_PORT:587}\r\nspring.mail.username=${SPRING_MAIL_USERNAME:}\r\nspring.mail.password=${SPRING_MAIL_PASSWORD:}\r\nspring.mail.properties.mail.smtp.auth=true\r\nspring.mail.properties.mail.smtp.starttls.enable=true\r\nspring.mail.properties.mail.smtp.starttls.required=true\r\napp.mail.from=${APP_MAIL_FROM:noreply@localhost}\r\n\r\n# Feature quota gating (premium feature limits for free users; -1 = unlimited for Pro)\r\napp.quota.free.shoe-scan=2\r\napp.quota.free.muscle-plan=0\r\napp.quota.pro.shoe-scan=-1\r\napp.quota.pro.muscle-plan=-1\r\n"
+        "content": "spring.application.name=backend\r\n\r\n# deployment: set HERMES_ENV=production on public servers (enforces stronger Strava webhook settings when Strava is enabled)\r\nhermes.environment=${HERMES_ENV:development}\r\n\r\n# hide stack traces from default error responses (controllers still return explicit JSON errors)\r\nserver.error.include-stacktrace=never\r\nserver.error.include-exception=false\r\n\r\n# trust X-Forwarded-* from reverse proxy (nginx, cloud load balancer)\r\nserver.forward-headers-strategy=framework\r\n\r\n# production: enforce HTTPS at the app layer (safe behind reverse proxy)\r\napp.security.force-https=${APP_FORCE_HTTPS:false}\r\n\r\n# optional: comma-separated origins if the React app is not served from the same host as /api (e.g. https://app.example.com)\r\napp.cors.allowed-origins=${APP_CORS_ALLOWED_ORIGINS:}\r\n\r\n# set true only when the site is served over HTTPS everywhere (via reverse TLS termination is OK)\r\napp.security.enable-hsts=${APP_ENABLE_HSTS:true}\r\n\r\n# Database configuration\r\n# Default storage is local H2. To switch to PostgreSQL, provide APP_DB_URL, APP_DB_USERNAME,\r\n# APP_DB_PASSWORD, and APP_DB_DRIVER=org.postgresql.Driver before startup.\r\nspring.datasource.url=${APP_DB_URL:jdbc:h2:file:./hermes_db_v2;AUTO_SERVER=TRUE}\r\nspring.datasource.driverClassName=${APP_DB_DRIVER:org.h2.Driver}\r\nspring.datasource.username=${APP_DB_USERNAME:sa}\r\nspring.datasource.password=${APP_DB_PASSWORD:}\r\n\r\n# Schema management\r\nspring.jpa.hibernate.ddl-auto=${APP_JPA_DDL_AUTO:update}\r\nspring.jpa.show-sql=false\r\nspring.h2.console.enabled=false\r\n\r\n# File upload limits (phone screenshots can be 5–10 MB)\r\nspring.servlet.multipart.max-file-size=20MB\r\nspring.servlet.multipart.max-request-size=20MB\r\n\r\n# Google OAuth 2.0 Credentials\r\n# Configure these with environment variables before starting Hermes.\r\ngoogle.client.id=${APP_GOOGLE_CLIENT_ID:${GOOGLE_CLIENT_ID:}}\r\ngoogle.client.secret=${APP_GOOGLE_CLIENT_SECRET:${GOOGLE_CLIENT_SECRET:}}\r\napp.google.redirect-uri=${APP_GOOGLE_REDIRECT_URI:${GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/google/callback}}\r\n\r\n# Strava OAuth 2.0 Credentials\r\n# Configure these with environment variables before starting Hermes.\r\n# Strava token storage also requires APP_DATA_ENCRYPTION_KEY.\r\nstrava.client.id=${STRAVA_CLIENT_ID:${APP_STRAVA_CLIENT_ID:}}\r\nstrava.client.secret=${STRAVA_CLIENT_SECRET:${APP_STRAVA_CLIENT_SECRET:}}\r\napp.strava.redirect-uri=${STRAVA_REDIRECT_URI:${APP_STRAVA_REDIRECT_URI:http://localhost:8080/api/auth/strava/callback}}\r\n\r\n# Automated coach (polarized 80/20, nightly audit)\r\napp.coach.nightly.enabled=true\r\napp.coach.nightly.cron=0 0 3 * * *\r\n\r\n# Background Strava pull (uses stored refresh tokens; Hermes must stay running)\r\nstrava.sync.enabled=true\r\n# Default 10 minutes — pulls recent activities for every Strava-linked runner\r\nstrava.sync.interval-ms=${STRAVA_SYNC_INTERVAL_MS:600000}\r\n# Pages × 200 activities max per runner per scheduled run (newest pages first; stops early if no new runs)\r\nstrava.sync.max-pages-recent=5\r\n# Full history cap (login / manual resync)\r\nstrava.sync.max-pages-full=50\r\n\r\ngarmin.wellness.sync.enabled=${GARMIN_WELLNESS_SYNC_ENABLED:true}\r\ngarmin.wellness.sync.interval-ms=${GARMIN_WELLNESS_SYNC_INTERVAL_MS:1800000}\r\ngarmin.wellness.sync.days-back=${GARMIN_WELLNESS_SYNC_DAYS_BACK:30}\r\ngarmin.wellness.sync.initial-days-back=${GARMIN_WELLNESS_SYNC_INITIAL_DAYS_BACK:90}\r\n\r\n# Strava Webhook (push notifications for new activities)\r\n# Create a subscription once via Strava API:\r\n#   POST https://www.strava.com/api/v3/push_subscriptions\r\n#   client_id, client_secret, callback_url=https://YOUR_DOMAIN/api/strava/webhook,\r\n#   verify_token=<same value as below>\r\nstrava.webhook.verify-token=${STRAVA_WEBHOOK_VERIFY_TOKEN:}\r\n\r\n# AI Vision API (for shoe image scanning)\r\n# Set APP_AI_API_KEY to enable AI-powered shoe mileage extraction from screenshots.\r\napp.ai.api-key=${APP_AI_API_KEY:}\r\napp.ai.model=${APP_AI_MODEL:gemini-2.5-flash}\r\napp.ai.provider=${APP_AI_PROVIDER:gemini}\r\napp.ai.course-map.provider=${APP_AI_COURSE_MAP_PROVIDER:qwen-local}\r\napp.ai.course-map.pdf-render-page-limit=${APP_AI_COURSE_MAP_PDF_RENDER_PAGE_LIMIT:2}\r\napp.ai.free-tier.per-runner-daily-limit=${APP_AI_FREE_TIER_PER_RUNNER_DAILY_LIMIT:5}\r\napp.ai.free-tier.project-daily-limit=${APP_AI_FREE_TIER_PROJECT_DAILY_LIMIT:200}\r\napp.ai.free-tier.project-daily-reserve=${APP_AI_FREE_TIER_PROJECT_DAILY_RESERVE:20}\r\n\r\n# Marathon route extraction pipeline\r\n# Step 1 uses local Qwen structured JSON output. Step 2 shells out to the local Python/OpenCV worker.\r\napp.route-extraction.python-command=${APP_ROUTE_EXTRACTION_PYTHON_COMMAND:python}\r\napp.route-extraction.python-script=${APP_ROUTE_EXTRACTION_PYTHON_SCRIPT:}\r\napp.route-extraction.qwen.model-id=${APP_ROUTE_EXTRACTION_QWEN_MODEL_ID:Qwen/Qwen2.5-VL-7B-Instruct}\r\napp.route-extraction.qwen.device-map=${APP_ROUTE_EXTRACTION_QWEN_DEVICE_MAP:auto}\r\napp.route-extraction.qwen.cache-dir=${APP_ROUTE_EXTRACTION_QWEN_CACHE_DIR:}\r\napp.route-extraction.qwen.timeout-seconds=${APP_ROUTE_EXTRACTION_QWEN_TIMEOUT_SECONDS:300}\r\napp.route-extraction.qwen.alignment-timeout-seconds=${APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_TIMEOUT_SECONDS:720}\r\napp.route-extraction.qwen.parameters-script=${APP_ROUTE_EXTRACTION_QWEN_PARAMETERS_SCRIPT:}\r\napp.route-extraction.qwen.anchor-script=${APP_ROUTE_EXTRACTION_QWEN_ANCHOR_SCRIPT:}\r\napp.route-extraction.qwen.alignment-script=${APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_SCRIPT:}\r\n\r\n# Marathon route map matching\r\napp.route-matching.osrm.base-url=${APP_ROUTE_MATCHING_OSRM_BASE_URL:https://router.project-osrm.org}\r\napp.route-matching.osrm.profile=${APP_ROUTE_MATCHING_OSRM_PROFILE:driving}\r\n\r\n# Stripe Checkout (Pro subscription — one-time payment per checkout, extends Pro by line-item quantity months)\r\n# Create a one-time Price in Stripe Dashboard and paste its price_xxx id. Webhook: POST /api/billing/webhook\r\napp.billing.stripe.secret-key=${STRIPE_SECRET_KEY:}\r\napp.billing.stripe.webhook-secret=${STRIPE_WEBHOOK_SECRET:}\r\napp.billing.stripe.price-pro-monthly=${STRIPE_PRICE_PRO_MONTHLY:}\r\napp.billing.public-base-url=${APP_PUBLIC_BASE_URL:http://localhost:8080}\r\n# Optional: shown in the Profile UI only (e.g. $9 / month or ¥68/月)\r\napp.billing.price-display-label=${APP_BILLING_PRICE_LABEL:}\r\n\r\n# Email (verification links for password sign-up). If SPRING_MAIL_HOST is empty, new accounts skip inbox verification (dev only).\r\nspring.mail.host=${SPRING_MAIL_HOST:}\r\nspring.mail.port=${SPRING_MAIL_PORT:587}\r\nspring.mail.username=${SPRING_MAIL_USERNAME:}\r\nspring.mail.password=${SPRING_MAIL_PASSWORD:}\r\nspring.mail.properties.mail.smtp.auth=true\r\nspring.mail.properties.mail.smtp.starttls.enable=true\r\nspring.mail.properties.mail.smtp.starttls.required=true\r\napp.mail.from=${APP_MAIL_FROM:noreply@localhost}\r\n\r\n# Local dev mock runner — created automatically on every non-production startup so AI agents and\r\n# browser-based testing always have a logged-in runner with pre-seeded mock activities and shoes.\r\n# Override APP_LOCAL_SHARED_RUNNER_ENABLED=false in production env vars to suppress this.\r\napp.local-shared-runner.enabled=${APP_LOCAL_SHARED_RUNNER_ENABLED:true}\r\napp.local-shared-runner.password=${APP_LOCAL_SHARED_RUNNER_PASSWORD:HermesDev2026!}\r\napp.local-shared-runner.seed-mock-data=true\r\n\r\n# Feature quota gating (premium feature limits for free users; -1 = unlimited for Pro)\r\napp.quota.free.shoe-scan=2\r\napp.quota.free.muscle-plan=0\r\napp.quota.pro.shoe-scan=-1\r\napp.quota.pro.muscle-plan=-1\r\n"
       },
       {
         "file": "backend/src/main/resources/application-production.properties",
@@ -2348,6 +2342,19 @@
       "confidence": 0.9
     },
     {
+      "id": "injection-hunter:.tools-agent-login.mjs:possible-sql-injection:-dynamic-query-construction-with-unescaped-input.",
+      "checker": "injection-hunter",
+      "severity": "MEDIUM",
+      "summary": "Possible SQL Injection: Dynamic query construction with unescaped input.",
+      "target": ".tools/agent-login.mjs",
+      "file": ".tools/agent-login.mjs",
+      "evidence": [
+        "Detected SQL-like text combined with dynamic variable concatenation."
+      ],
+      "verification": "static-only",
+      "confidence": 0.9
+    },
+    {
       "id": "injection-hunter:.tools-auto-hermes-controller.mjs:possible-sql-injection:-dynamic-query-construction-with-unescaped-input.",
       "checker": "injection-hunter",
       "severity": "MEDIUM",
@@ -2551,19 +2558,6 @@
       "file": "backend/src/main/java/com/hermes/backend/WellnessController.java",
       "evidence": [
         "Controller route /api/wellness/google-health/status matched the config/export/status review heuristic."
-      ],
-      "verification": "static-only",
-      "confidence": 0.5
-    },
-    {
-      "id": "leak-detector:get-api-wellness-oura-status:endpoint-shape-suggests-configuration-export-or-status-data-that-should-be-reviewed-for-oversharing.",
-      "checker": "leak-detector",
-      "severity": "LOW",
-      "summary": "Endpoint shape suggests configuration, export, or status data that should be reviewed for oversharing.",
-      "target": "GET /api/wellness/oura/status",
-      "file": "backend/src/main/java/com/hermes/backend/WellnessController.java",
-      "evidence": [
-        "Controller route /api/wellness/oura/status matched the config/export/status review heuristic."
       ],
       "verification": "static-only",
       "confidence": 0.5

@@ -82,6 +82,41 @@ public class MarathonRouteGeoreferencingService {
         return georeferenceRouteWhenEnabled(imageFilePath, raceName, city, country, routePath, geocodedAnchors, null, null, null);
     }
 
+    /**
+     * Pipeline-fallback georeferencing for course-map uploads where Qwen could
+     * not pin down anchor pixels in the image (the most common reason
+     * {@link #georeferenceRoute} throws). We synthesise route-bounds pixel
+     * anchors from the extracted route polyline, resolve matching geographic
+     * route-bounds anchors via the local catalog (or, if absent, derive them
+     * from the race's {@code (latitude, longitude, distanceKm)} hint), then
+     * project the route through an affine transform. This is the only escape
+     * hatch the admin upload pipeline has when Qwen anchor extraction fails,
+     * so without it the upload silently fails to render a map.
+     */
+    public MarathonRouteGeoreferencingResult georeferenceRouteWithLocalBoundsFallback(
+            String imageFilePath,
+            String raceName,
+            String city,
+            String country,
+            RoutePathExtractionResultDTO routePath,
+            Double fallbackLatitude,
+            Double fallbackLongitude,
+            Double distanceKm
+    ) {
+        validateText("imageFilePath", imageFilePath);
+        validateText("raceName", raceName);
+        if (routePath == null || routePath.routeParameters() == null) {
+            throw new IllegalArgumentException("Route parameters are required for georeferencing.");
+        }
+        List<GeocodedAnchorPointDTO> geocodedAnchors = routeBoundsGeoAnchors(
+                raceName, city, country, fallbackLatitude, fallbackLongitude, distanceKm);
+        if (geocodedAnchors.size() != 4) {
+            throw new IllegalStateException("Route-bounds fallback could not assemble 4 geographic anchors for "
+                    + raceName + " (city=" + city + ", country=" + country + ").");
+        }
+        return georeferenceRouteWithBounds(imageFilePath, routePath, geocodedAnchors);
+    }
+
     private MarathonRouteGeoreferencingResult georeferenceRouteWhenEnabled(
             String imageFilePath,
             String raceName,

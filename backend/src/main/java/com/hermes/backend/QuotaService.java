@@ -76,6 +76,25 @@ public class QuotaService {
     }
 
     /**
+     * Rollback one consumed use of a feature when the downstream API call fails.
+     * Decrements the feature counter by 1 (floor at 0) and persists.
+     * No-op for Pro/admin runners (they were never charged).
+     */
+    public void rollbackConsumedFeature(Runner runner, String featureKey) {
+        if (isPro(runner)) return;
+        switch (featureKey) {
+            case "shoe-scan" -> {
+                int current = runner.getShoeScanCount();
+                if (current > 0) {
+                    runner.setShoeScanCount(current - 1);
+                    runnerRepository.save(runner);
+                }
+            }
+            default -> { /* no counter to roll back */ }
+        }
+    }
+
+    /**
      * Get remaining quota for a feature. Returns -1 for unlimited (Pro).
      */
     public int remainingQuota(Runner runner, String featureKey) {

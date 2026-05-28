@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
@@ -45,6 +47,7 @@ import java.util.Set;
 
 @Service
 public class RaceCourseMapImageService {
+    private static final Logger log = LoggerFactory.getLogger(RaceCourseMapImageService.class);
     private static final int MAX_IMAGE_BYTES = 6 * 1024 * 1024;
     private static final int MAX_DOCUMENT_BYTES = 12 * 1024 * 1024;
     private static final int MIN_IMAGE_DIMENSION_PX = 200;
@@ -456,14 +459,39 @@ public class RaceCourseMapImageService {
         return fileName.lastIndexOf('-', extensionSeparator - 17);
     }
 
+    private void validateImageUrl(String url) {
+        java.net.URI uri;
+        try {
+            uri = java.net.URI.create(url);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid image URL: " + url);
+        }
+        String host = uri.getHost();
+        if (host == null) throw new IllegalArgumentException("Image URL has no host");
+        // Block internal IPs and loopback
+        if (host.equals("localhost") || host.equals("127.0.0.1") || host.startsWith("169.254.")
+                || host.startsWith("10.") || host.startsWith("192.168.")
+                || host.matches("172\\.(1[6-9]|2[0-9]|3[0-1])\\..*")
+                || host.equals("::1") || host.equals("[::1]")) {
+            throw new IllegalArgumentException("Image URL points to internal address: " + host);
+        }
+        // Only allow http(s)
+        String scheme = uri.getScheme();
+        if (!"https".equals(scheme) && !"http".equals(scheme)) {
+            throw new IllegalArgumentException("Image URL must use http(s)");
+        }
+    }
+
     private byte[] fetchBinaryBytes(String url, int maxBytes) {
         try {
+            validateImageUrl(url);
             ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
             byte[] body = response.getBody();
             if (body == null || body.length == 0 || body.length > maxBytes) return null;
             return body;
-        } catch (Exception ignored) {
-            return null;
+        } catch (Exception e) {
+            log.error("Failed to fetch image URL={}: {}", url, e.getMessage());
+            throw new RuntimeException("Image fetch failed", e);
         }
     }
 

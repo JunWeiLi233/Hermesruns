@@ -29194,6 +29194,11 @@ body.theme-light .auth-page .error-alert--success {
   width: 1rem;
   height: 1rem;
   flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: -0.125em;
+  color: inherit;
+  fill: none;
+  stroke: currentColor;
 }
 
 .runner-shell-side-link.is-active {
@@ -34846,7 +34851,8 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-intensity-command-sa
 }
 
 .prediction-detail-page .runner-shell-canvas {
-  width: min(1400px, calc(100% - 32px));
+  width: calc(100% - 48px);
+  max-width: none;
 }
 
 /* Prediction hero */
@@ -44465,11 +44471,28 @@ body.theme-light .settings-control-theme-card.is-active {
     linear-gradient(180deg, #2b2525 0%, #231f20 100%);
 }
 
+.recent-runs-thumb.has-route-tile {
+  background: #15171c;
+}
+
+.recent-runs-thumb-route-tile {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.7) saturate(0.75) contrast(1.05);
+  opacity: 0.96;
+  pointer-events: none;
+  user-select: none;
+}
+
 .recent-runs-thumb-route-svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
 }
 
 .recent-runs-thumb-route-shadow {
@@ -48069,6 +48092,12 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-page .runner-shell-
   gap: 10px;
   color: rgba(232, 226, 220, 0.66);
   font-size: 0.78rem;
+  /* Reserve enough room for the wind card's <strong> direction so the
+     humidity card's slimmer meter bar doesn't shrink the foot row. Without
+     this, the card's `align-content: space-between` shifts the HUD value
+     text up on the humidity card and "85%" misaligns with "10 km/h". */
+  align-content: end;
+  min-height: 2.9rem;
 }
 
 .weather-engine-hud-foot strong {
@@ -66362,7 +66391,9 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-minimalist 
   background-image:
     linear-gradient(180deg, rgba(246, 241, 232, 0.34) 0%, rgba(25, 21, 17, 0.16) 36%, rgba(18, 15, 12, 0.64) 76%, rgba(18, 15, 12, 0.78) 100%),
     linear-gradient(90deg, rgba(18, 15, 12, 0.36), transparent 44%),
-    url("../assets/generated/landing-command-hero-background.png") !important;
+    image-set(
+      url("../assets/generated/landing-command-hero-background.webp") type("image/webp")
+    ) !important;
   background-position: center;
   background-size: cover;
 }
@@ -75275,7 +75306,9 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   background:
     linear-gradient(90deg, rgba(16, 12, 9, 0.9) 0%, rgba(16, 12, 9, 0.68) 39%, rgba(16, 12, 9, 0.22) 66%, rgba(16, 12, 9, 0.58) 100%),
     radial-gradient(circle at 76% 28%, rgba(221, 92, 70, 0.16), transparent 34%),
-    url("../assets/generated/landing-command-hero-background.png");
+    image-set(
+      url("../assets/generated/landing-command-hero-background.webp") type("image/webp")
+    );
   background-position: center;
   background-size: cover;
   box-shadow:
@@ -78973,6 +79006,63 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page {
     top: 238px;
     left: 14px;
   }
+}
+
+/* Multi-player runner markers + smoother territory polish */
+
+.terr-runner-marker {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--terr-runner-color, #f07561);
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 0 14px rgba(0, 0, 0, 0.45),
+    0 0 8px color-mix(in srgb, var(--terr-runner-color, #f07561) 50%, transparent);
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  will-change: transform;
+  transform: translateZ(0);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease;
+}
+
+.terr-runner-marker--active {
+  font-size: 0.9rem;
+  border-width: 3px;
+  animation: terr-runner-pulse 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes terr-runner-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 14px rgba(0, 0, 0, 0.45),
+      0 0 0 0 color-mix(in srgb, var(--terr-runner-color, #f07561) 65%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(0, 0, 0, 0.45),
+      0 0 0 12px color-mix(in srgb, var(--terr-runner-color, #f07561) 0%, transparent);
+  }
+}
+
+.terr-contested-polygon {
+  animation: terr-contested-march 28s linear infinite;
+}
+
+@keyframes terr-contested-march {
+  to { stroke-dashoffset: -240; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terr-runner-marker--active { animation: none; }
+  .terr-contested-polygon { animation: none; }
+  .terr-runner-marker { transition: none; }
 }
 
 

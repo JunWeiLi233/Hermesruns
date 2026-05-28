@@ -1,11 +1,14 @@
 package com.hermes.backend;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.concurrent.TimeUnit;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +41,9 @@ public class WeatherContextController {
 
         try {
             AcclimatizationService.WeatherContextResponse response = acclimatizationService.buildContext(runnerOpt.get());
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok()
+                    .cacheControl(CacheControl.maxAge(15, TimeUnit.MINUTES).mustRevalidate())
+                    .body(response);
         } catch (IllegalArgumentException exception) {
             return error(HttpStatus.BAD_REQUEST, exception.getMessage());
         } catch (Exception exception) {

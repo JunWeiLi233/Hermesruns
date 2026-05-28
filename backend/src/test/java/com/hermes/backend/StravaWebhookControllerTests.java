@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import static org.mockito.Mockito.when;
 class StravaWebhookControllerTests {
 
     private static final String VALID_TOKEN = "hermes-strava-webhook";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
     void validateSubscriptionRejectsWrongVerifyToken() {
@@ -53,7 +56,7 @@ class StravaWebhookControllerTests {
     void handleEventRejectsMissingRequiredFields() {
         StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
 
-        ResponseEntity<String> response = controller.handleEvent(event("object_type", "activity"), null);
+        ResponseEntity<String> response = controller.handleEvent(event("object_type", "activity"), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isEqualTo("MISSING_REQUIRED_FIELDS");
@@ -66,7 +69,7 @@ class StravaWebhookControllerTests {
         ResponseEntity<String> response = controller.handleEvent(event(Map.of(
                 "aspect_type", "create",
                 "owner_id", 321L
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isEqualTo("MISSING_REQUIRED_FIELDS");
@@ -81,7 +84,7 @@ class StravaWebhookControllerTests {
                 "object_type", "activity",
                 "aspect_type", "create",
                 "owner_id", 321L
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
@@ -100,7 +103,7 @@ class StravaWebhookControllerTests {
                 "aspect_type", "create",
                 "owner_id", 321L,
                 "object_id", 99999L
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
@@ -119,7 +122,7 @@ class StravaWebhookControllerTests {
                 "aspect_type", "update",
                 "owner_id", 321L,
                 "updates", "not-a-map"
-        )), null));
+        )), null, null));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
@@ -141,7 +144,7 @@ class StravaWebhookControllerTests {
                 "aspect_type", "create",
                 "owner_id", 321L,
                 "object_id", 98765L
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
@@ -163,7 +166,7 @@ class StravaWebhookControllerTests {
                 "aspect_type", "update",
                 "owner_id", "321",
                 "object_id", "98765"
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
@@ -184,7 +187,7 @@ class StravaWebhookControllerTests {
                 "aspect_type", "delete",
                 "owner_id", 321L,
                 "object_id", 98765L
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
@@ -204,7 +207,7 @@ class StravaWebhookControllerTests {
                 "aspect_type", "update",
                 "owner_id", 321L,
                 "object_id", 98765L
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody()).isEqualTo("UNKNOWN_OWNER");
@@ -229,7 +232,7 @@ class StravaWebhookControllerTests {
                 "aspect_type", "create",
                 "owner_id", 321L,
                 "object_id", 98765L
-        )), null);
+        )), null, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("EVENT_RECEIVED");
@@ -237,15 +240,18 @@ class StravaWebhookControllerTests {
         verify(stravaSyncService, never()).deleteStravaActivity(runner, 98765L);
     }
 
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> event(Map<String, ?> source) {
-        return new HashMap<>(source);
+    private static String event(Map<String, ?> source) {
+        try {
+            return MAPPER.writeValueAsString(source);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private static Map<String, Object> event(String key, Object value) {
+    private static String event(String key, Object value) {
         Map<String, Object> map = new HashMap<>();
         map.put(key, value);
-        return map;
+        return event(map);
     }
 
     private StravaWebhookController createController(RunnerRepository runnerRepository, StravaSyncService stravaSyncService) {
