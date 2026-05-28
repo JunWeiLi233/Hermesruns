@@ -297,6 +297,52 @@ class RaceCourseMapBulkSeedServiceTests {
         assertThat(summary.skipped()).isEqualTo(0);
     }
 
+    @Test
+    void officialCourseFallsBackToStraightLineCorridorWhenOsrmUnavailable() {
+        // Regression: Osaka/LA/NYC official courses degraded to a generic
+        // geographic loop ("cycle") when they were seeded during an OSRM outage,
+        // because generateOfficialCoursePolyline aborted to an empty result and
+        // the runtime then layered a synthetic loop on top. With the straight-line
+        // corridor fallback the method must instead trace the real official
+        // waypoints (start -> ... -> finish) and NEVER return empty.
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.exchange(any(RequestEntity.class), any(ParameterizedTypeReference.class)))
+                .thenAnswer(invocation -> {
+                    RequestEntity<?> req = invocation.getArgument(0);
+                    String url = req.getUrl() == null ? "" : req.getUrl().toString();
+                    if (url.contains("/route/v1/")) {
+                        // Simulate OSRM down: non-Ok response for every leg + retry.
+                        return ResponseEntity.ok(Map.of("code", "Error"));
+                    }
+                    return ResponseEntity.ok(Map.of());
+                });
+
+        RaceCourseMapBulkSeedService service = newService(restTemplate, mock(RaceCourseMapAssetRepository.class));
+        service.osrmRetryDelayMs = 0L; // no backoff between leg retries in tests
+
+        List<RoutePoint> route = service.generateOfficialCoursePolyline(OsakaMarathonOfficialCourse.RACE_ID);
+
+        // Before the fix this was empty -> runtime rendered a generic cycle.
+        assertThat(route).isNotEmpty();
+        assertThat(route.size()).isGreaterThanOrEqualTo(8);
+
+        double[] firstWp = OsakaMarathonOfficialCourse.waypoints().get(0);
+        double[] lastWp = OsakaMarathonOfficialCourse.waypoints()
+                .get(OsakaMarathonOfficialCourse.waypointCount() - 1);
+        RoutePoint head = route.get(0);
+        RoutePoint tail = route.get(route.size() - 1);
+        // Corridor starts at the official start and ends at the official finish.
+        assertThat(haversineKm(head.lat(), head.lng(), firstWp[0], firstWp[1])).isLessThan(0.5);
+        assertThat(haversineKm(tail.lat(), tail.lng(), lastWp[0], lastWp[1])).isLessThan(0.5);
+        // Point-to-point (start != finish) — proves it is NOT a closed loop/cycle.
+        assertThat(haversineKm(head.lat(), head.lng(), tail.lat(), tail.lng())).isGreaterThan(5.0);
+        // Total corridor length stays in a plausible marathon band.
+        assertThat(polylineKm(route)).isBetween(15.0, 80.0);
+        // Landmark labels survive the fallback so the runner card still reads right.
+        assertThat(route).anyMatch(p -> p.label() != null && p.label().contains("Start"));
+        assertThat(route).anyMatch(p -> p.label() != null && p.label().contains("Finish"));
+    }
+
     private RaceCourseMapBulkSeedService newService(RestTemplate restTemplate, RaceCourseMapAssetRepository repository) {
         RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
         return new RaceCourseMapBulkSeedService(repository, geometryService, objectMapper, restTemplate);
