@@ -3,22 +3,27 @@ package com.hermes.backend;
 import java.util.List;
 
 /**
- * Real waypoints along the Osaka Marathon course — point-to-point from
- * the Osaka Prefectural Government / Osaka Castle area in Chuo-ku, south
- * down Midosuji Boulevard through the Yodoyabashi / Honmachi / Shinsaibashi
- * / Namba corridor, across to Tennoji and Shitenno-ji Temple, east through
- * Tsuruhashi and Joto-ku, north along the Okawa River past Sakuranomiya,
- * then south-west along Yotsubashi and Bentencho corridors out to the
- * Osaka Bay finish at INTEX Osaka on Cosmo Square (Suminoe-ku).
+ * Real waypoints along the CURRENT Osaka Marathon course (the 2024 redesign
+ * used for the Feb 2026 edition), a single loop that both starts and finishes
+ * at the Osaka Castle area — NOT the obsolete pre-2018 route that finished out
+ * at INTEX Osaka on the bay.
  *
- * <p>Waypoints are turning-point landmarks rather than dense GPS samples:
- * the bulk-seed flow feeds them to the pedestrian OSRM (FOSSGIS
- * routed-foot) as a multi-leg routing request so the resulting polyline
- * follows real streets between landmarks. The full course is roughly
- * 42.195 km from start in Chuo-ku to finish at INTEX Osaka.</p>
+ * <p>Course: start at the Osaka Prefectural Government Office (大阪府庁) on the
+ * west side of Osaka Castle Park, run north to the Okawa River (大川) and back
+ * down to Nakanoshima (中之島, ~6 km), south down the iconic Midosuji boulevard
+ * (御堂筋) through Honmachi / Shinsaibashi to Namba / Dotonbori (~12 km), west
+ * to Kyocera Dome Osaka (京セラドーム, ~16 km), south/east along the Naniwasuji
+ * corridor, up onto the Uemachi plateau (上町台地) past Shinsekai / Tennoji /
+ * Shitenno-ji (the ~30 km climb), east through Tsuruhashi to Imazato (今里,
+ * ~36 km), then north-west via Morinomiya to the finish inside Osaka Castle
+ * Park (大阪城公園). Roughly 42.195 km.</p>
  *
- * <p>Coordinates verified against the Osaka Marathon's official course
- * map and OpenStreetMap landmarks; updated 2026-05-27.</p>
+ * <p>Waypoints are turning-point landmarks rather than dense GPS samples: the
+ * bulk-seed flow feeds them to the pedestrian OSRM (FOSSGIS routed-foot) as a
+ * multi-leg routing request so the resulting polyline follows real streets
+ * between landmarks. Coordinates verified against the official Osaka Marathon
+ * course map and OpenStreetMap landmarks; updated 2026-05-28 to the current
+ * castle-to-castle loop.</p>
  */
 final class OsakaMarathonOfficialCourse {
 
@@ -27,70 +32,62 @@ final class OsakaMarathonOfficialCourse {
     static final String OFFICIAL_SOURCE = "osaka-official-course";
 
     private static final double[][] WAYPOINTS = new double[][]{
-            // ===== Start: Osaka Prefectural Government / Otemae (大手前) =====
-            { 34.6863, 135.5232 }, // Start - Osaka Prefectural Government Office (Otemae)
-            // ===== North along Tanimachi-suji toward Osaka Castle west side =====
-            { 34.6855, 135.5217 }, // Tanimachi 4-chome
-            { 34.6826, 135.5198 }, // Tanimachi 6-chome
-            // ===== West along Honmachi-dori to Midosuji =====
-            { 34.6824, 135.5128 }, // Honmachi (本町) - Sakaisuji
-            { 34.6829, 135.5018 }, // Honmachi - Midosuji (御堂筋) junction
+            // ===== Start: Osaka Prefectural Government (大阪府庁) / Otemae =====
+            { 34.6861, 135.5205 }, // Start - Osaka Prefectural Government Office
+            // ===== North to the Okawa River (大川), then back down =====
+            { 34.6905, 135.5158 }, // Temmabashi (天満橋)
+            { 34.6978, 135.5115 }, // Okawa River - Sakuranomiya bend (桜ノ宮)
+            { 34.6938, 135.5055 }, // Tenjinbashi (天神橋)
+            { 34.6928, 135.5008 }, // Nakanoshima (中之島) - ~6 km return
             // ===== South down Midosuji (御堂筋) =====
-            { 34.6790, 135.5021 }, // Midosuji - Awaza
-            { 34.6735, 135.5017 }, // Midosuji - Shinsaibashi (心斎橋)
-            { 34.6680, 135.5017 }, // Midosuji - Dotonbori (道頓堀)
-            { 34.6645, 135.5018 }, // Midosuji - Namba (難波)
-            { 34.6610, 135.5023 }, // Midosuji - Naniwa-ku
-            { 34.6555, 135.5023 }, // Midosuji - Imamiya (今宮)
-            // ===== Tennoji / Shitenno-ji =====
-            { 34.6502, 135.5078 }, // Naniwa-ku - Ebisucho
-            { 34.6477, 135.5141 }, // Tennoji (天王寺) - JR Tennoji Station
-            { 34.6535, 135.5167 }, // Shitenno-ji Temple (四天王寺)
-            // ===== East through Tsuruhashi / Higashi-Nari =====
-            { 34.6648, 135.5210 }, // Uemachi - Tamatsukuri
-            { 34.6660, 135.5290 }, // Tsuruhashi (鶴橋)
-            { 34.6705, 135.5360 }, // Higashinari-ku - Imazato
-            // ===== North through Joto-ku =====
-            { 34.6790, 135.5400 }, // Joto-ku - Hanaten
-            { 34.6870, 135.5440 }, // Joto-ku - Sekime
-            { 34.6950, 135.5400 }, // Joto-ku - Gamo-yonchome
-            // ===== West along Okawa River through Sakuranomiya =====
-            { 34.6995, 135.5310 }, // Sakuranomiya (桜ノ宮) - Okawa River east bank
-            { 34.7000, 135.5210 }, // Sakuranomiya - Tenmabashi area
-            // ===== South-west back through Naka-no-shima =====
-            { 34.6935, 135.5100 }, // Nakanoshima (中之島) - east end
-            { 34.6920, 135.5010 }, // Nakanoshima - Yodoyabashi (淀屋橋)
-            // ===== West through Nishi-ku via Tosabori-dori =====
-            { 34.6890, 135.4920 }, // Tosabori (土佐堀)
-            { 34.6845, 135.4830 }, // Nishi-ku - Edobori
-            { 34.6800, 135.4750 }, // Nishi-ku - Awaza
-            // ===== South-west along Sennichimae-dori / Asahi-dori =====
-            { 34.6720, 135.4690 }, // Nishi-ku - Kujo (九条)
-            { 34.6680, 135.4625 }, // Minato-ku - Bentencho (弁天町)
-            // ===== South-west to Osaka Bay / Cosmo Square area =====
-            { 34.6580, 135.4530 }, // Minato-ku - Tempozan area
-            { 34.6480, 135.4440 }, // Cosmo Square - Trade Center Mae
-            { 34.6420, 135.4310 }, // Cosmo Square - Asia & Pacific Trade Center
-            // ===== Finish: INTEX Osaka =====
-            { 34.6342, 135.4194 }  // Finish - INTEX Osaka (Suminoe-ku)
+            { 34.6824, 135.5003 }, // Honmachi (本町) - Midosuji
+            { 34.6736, 135.5006 }, // Shinsaibashi (心斎橋)
+            { 34.6687, 135.5013 }, // Dotonbori (道頓堀)
+            { 34.6659, 135.5011 }, // Namba (難波) - ~12 km
+            // ===== West to Kyocera Dome Osaka (京セラドーム) =====
+            { 34.6655, 135.4915 }, // Sakuragawa (桜川)
+            { 34.6685, 135.4790 }, // Kujo (九条)
+            { 34.6694, 135.4762 }, // Kyocera Dome Osaka (京セラドーム大阪) - ~16 km
+            // ===== South-east along the Naniwasuji corridor =====
+            { 34.6620, 135.4730 }, // Taisho (大正)
+            { 34.6545, 135.4790 }, // Tsukamoto-minami / south-west turn
+            { 34.6520, 135.4885 }, // Naniwasuji (なにわ筋) - ~22 km
+            { 34.6490, 135.4965 }, // Hanazonocho (花園町)
+            { 34.6470, 135.5010 }, // Daikokucho (大国町)
+            // ===== Up onto the Uemachi plateau (上町台地) =====
+            { 34.6470, 135.5078 }, // Shinsekai / Tsutenkaku (新世界・通天閣)
+            { 34.6465, 135.5135 }, // Tennoji (天王寺)
+            { 34.6539, 135.5167 }, // Shitenno-ji (四天王寺) - ~30 km climb
+            // ===== East through Tsuruhashi to Imazato (今里) =====
+            { 34.6610, 135.5232 }, // Tamatsukuri (玉造)
+            { 34.6660, 135.5310 }, // Tsuruhashi (鶴橋)
+            { 34.6688, 135.5390 }, // Imazato (今里) - ~36 km
+            // ===== North-west back to Osaka Castle Park (大阪城公園) =====
+            { 34.6778, 135.5402 }, // Joto-ku (城東区)
+            { 34.6842, 135.5358 }, // Morinomiya (森ノ宮) - ~40 km
+            { 34.6875, 135.5298 }, // Osaka Castle Park - east approach
+            // ===== Finish: inside Osaka Castle Park (大阪城公園) =====
+            { 34.6888, 135.5262 }  // Finish - Osaka Castle Park
     };
 
     private static final String[] LABELS;
     static {
         LABELS = new String[WAYPOINTS.length];
         LABELS[0] = "Start - Osaka Prefectural Government";
-        LABELS[4] = "Honmachi - Midosuji";
-        LABELS[6] = "Shinsaibashi - Midosuji";
+        LABELS[2] = "Okawa River";
+        LABELS[4] = "Nakanoshima";
+        LABELS[5] = "Honmachi - Midosuji";
+        LABELS[6] = "Shinsaibashi";
         LABELS[8] = "Namba";
-        LABELS[12] = "Tennoji";
-        LABELS[13] = "Shitenno-ji Temple";
-        LABELS[15] = "Tsuruhashi";
-        LABELS[19] = "Joto-ku - Gamo-yonchome";
-        LABELS[20] = "Sakuranomiya - Okawa River";
-        LABELS[23] = "Nakanoshima - Yodoyabashi";
-        LABELS[28] = "Minato-ku - Bentencho";
-        LABELS[30] = "Cosmo Square - Trade Center Mae";
-        LABELS[WAYPOINTS.length - 1] = "Finish - INTEX Osaka";
+        LABELS[11] = "Kyocera Dome Osaka";
+        LABELS[14] = "Naniwasuji";
+        LABELS[17] = "Shinsekai - Tsutenkaku";
+        LABELS[18] = "Tennoji";
+        LABELS[19] = "Shitenno-ji Temple";
+        LABELS[21] = "Tsuruhashi";
+        LABELS[22] = "Imazato";
+        LABELS[24] = "Morinomiya";
+        LABELS[WAYPOINTS.length - 1] = "Finish - Osaka Castle Park";
     }
 
     private OsakaMarathonOfficialCourse() {

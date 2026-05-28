@@ -378,10 +378,10 @@ public class RaceCourseMapBulkSeedService {
                         + "OSRM filled in the street geometry between landmarks; elevation comes from DEM along the route.";
             } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(race.id())) {
                 baseSummary = "Hermes rendered this course from the official Osaka Marathon turn-by-turn landmarks "
-                        + "(Osaka Prefectural Government start in Otemae → Honmachi → Midosuji Blvd through Shinsaibashi / "
-                        + "Dotonbori / Namba → Tennoji → Shitenno-ji Temple → Tsuruhashi → Joto-ku → Sakuranomiya along the "
-                        + "Okawa River → Nakanoshima / Yodoyabashi → Nishi-ku → Bentencho → Cosmo Square → INTEX Osaka finish "
-                        + "in Suminoe-ku). OSRM filled in the street geometry between landmarks; elevation comes from DEM "
+                        + "(Osaka Prefectural Government start → Okawa River → Nakanoshima → Midosuji Blvd through "
+                        + "Shinsaibashi / Dotonbori / Namba → Kyocera Dome Osaka → Naniwasuji → Shinsekai / Tennoji / "
+                        + "Shitenno-ji up the Uemachi plateau → Tsuruhashi → Imazato → Morinomiya → finish inside Osaka "
+                        + "Castle Park). OSRM filled in the street geometry between landmarks; elevation comes from DEM "
                         + "along the route.";
             } else {
                 baseSummary = "Hermes rendered this course from the official TCS New York City Marathon turn-by-turn landmarks "
