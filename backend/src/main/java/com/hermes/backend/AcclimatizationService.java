@@ -234,7 +234,9 @@ public class AcclimatizationService {
     }
 
     private String dewPointCacheKey(double lat, double lon, LocalDate start, LocalDate end) {
-        return String.format(Locale.ROOT, "%.3f|%.3f|%s|%s", lat, lon, start, end);
+        // Round to 2 decimal places (~1.1 km) so normal GPS jitter between runs
+        // doesn't bust the 24-hour cache and trigger a fresh archive API call.
+        return String.format(Locale.ROOT, "%.2f|%.2f|%s|%s", lat, lon, start, end);
     }
 
     private double computeBaseline(Map<LocalDate, Double> series, Set<LocalDate> runDates) {

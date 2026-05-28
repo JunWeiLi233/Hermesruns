@@ -1983,11 +1983,35 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
     linear-gradient(180deg, #2b2525 0%, #231f20 100%);
 }
 
+/* When a concrete dark map tile is rendered, swap the abstract gradient for a
+   solid dark base so the loading flash before the tile paints stays calm and
+   matches the CartoDB dark_nolabels palette. */
+.recent-runs-thumb.has-route-tile {
+  background: #15171c;
+}
+
+.recent-runs-thumb-route-tile {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Slightly dim + desaturate so the orange route line stays the focal point.
+     Saturation drop also avoids any one-off CartoDB tile (water, parks, roads)
+     from drawing the eye away from the route. */
+  filter: brightness(0.7) saturate(0.75) contrast(1.05);
+  opacity: 0.96;
+  pointer-events: none;
+  user-select: none;
+}
+
 .recent-runs-thumb-route-svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  /* Keep the route SVG above the tile image. */
+  z-index: 1;
 }
 
 .recent-runs-thumb-route-shadow {

@@ -44,25 +44,49 @@ function localizeStravaSyncMessage(message, t) {
   return raw;
 }
 
+function computeBboxFromPoints(points) {
+  if (!Array.isArray(points) || points.length < 2) return null;
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [lat, lng] of points) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  }
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return null;
+  return { minLat, maxLat, minLng, maxLng };
+}
+
 function buildRoutePreviewModel(points) {
   if (!Array.isArray(points) || points.length < 2) return null;
-  const lats = points.map((p) => p[0]);
-  const lngs = points.map((p) => p[1]);
-  const minLat = Math.min(...lats);
-  const minLng = Math.min(...lngs);
-  const latSpan = Math.max(0.0001, Math.max(...lats) - minLat);
-  const lngSpan = Math.max(0.0001, Math.max(...lngs) - minLng);
+  const bbox = computeBboxFromPoints(points);
+  if (!bbox) return null;
+  const latSpan = Math.max(0.0001, bbox.maxLat - bbox.minLat);
+  const lngSpan = Math.max(0.0001, bbox.maxLng - bbox.minLng);
   const pad = 12;
   const inner = 76; // 100 viewBox - pad*2
   const normalized = points.map(([lat, lng]) => [
-    pad + ((lng - minLng) / lngSpan) * inner,
-    pad + inner - ((lat - minLat) / latSpan) * inner,
+    pad + ((lng - bbox.minLng) / lngSpan) * inner,
+    pad + inner - ((lat - bbox.minLat) / latSpan) * inner,
   ]);
   return {
     path: normalized.map(([x, y], i) => `${i ? 'L' : 'M'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
     start: normalized[0],
     finish: normalized[normalized.length - 1],
+    bbox,
   };
+}
+
+function readBboxFromPreview(preview) {
+  if (!preview || typeof preview !== 'object') return null;
+  const direct = preview.bbox && typeof preview.bbox === 'object' ? preview.bbox : preview;
+  const minLat = Number(direct.minLat);
+  const maxLat = Number(direct.maxLat);
+  const minLng = Number(direct.minLng);
+  const maxLng = Number(direct.maxLng);
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return null;
+  if (minLat === maxLat && minLng === maxLng) return null;
+  return { minLat, maxLat, minLng, maxLng };
 }
 
 function normalizeRoutePreview(preview) {
@@ -76,14 +100,85 @@ function normalizeRoutePreview(preview) {
     path: preview.path,
     start: [startX, startY],
     finish: [finishX, finishY],
+    bbox: readBboxFromPreview(preview),
   };
 }
 
-function RoutePreviewThumb({ preview, provider, runName }) {
+// Real-world dark-mode map tile helpers — renders a concrete OpenStreetMap
+// area under each thumbnail's SVG route so a runner sees where the run
+// actually happened, not just an abstract gradient.
+const ROUTE_TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
+const ROUTE_TILE_MIN_ZOOM = 2;
+const ROUTE_TILE_MAX_ZOOM = 16;
+
+function pickRouteTileZoom(latSpan, lngSpan) {
+  // Pick the smallest zoom whose single 256-tile width exceeds the route span,
+  // so the whole route fits in roughly one tile. log2(360 / span) gives the
+  // zoom at which one tile equals `span` degrees of longitude; subtract 1 so
+  // the route sits comfortably with margin.
+  const span = Math.max(latSpan * 2, lngSpan, 0.0005);
+  const rawZoom = Math.floor(Math.log2(360 / span)) - 1;
+  if (!Number.isFinite(rawZoom)) return 12;
+  return Math.max(ROUTE_TILE_MIN_ZOOM, Math.min(ROUTE_TILE_MAX_ZOOM, rawZoom));
+}
+
+function buildRouteTileUrl(bbox) {
+  if (!bbox) return null;
+  const centerLat = (bbox.minLat + bbox.maxLat) / 2;
+  const centerLng = (bbox.minLng + bbox.maxLng) / 2;
+  const zoom = pickRouteTileZoom(bbox.maxLat - bbox.minLat, bbox.maxLng - bbox.minLng);
+  const n = 2 ** zoom;
+  const x = Math.floor(((centerLng + 180) / 360) * n);
+  const latRad = (centerLat * Math.PI) / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x >= n || y >= n) return null;
+  // Mirror Heatmap / Territory choice but use no-labels variant — at thumb
+  // size, street-name labels are illegible noise; the dark basemap alone
+  // already conveys "real place", and the SVG route still pops on top.
+  const sub = ROUTE_TILE_SUBDOMAINS[(x + y) % ROUTE_TILE_SUBDOMAINS.length];
+  return `https://${sub}.basemaps.cartocdn.com/dark_nolabels/${zoom}/${x}/${y}.png`;
+}
+
+// Persist bbox per run id so subsequent loads don't re-fetch the point list
+// just to recompute the same 4 numbers. Bbox never changes for a given run.
+const ROUTE_BBOX_CACHE_PREFIX = 'hermes_run_bbox_v1_';
+const ROUTE_BBOX_CACHE_TTL_MS = 30 * 86400000; // 30 days
+
+function readBboxCache(runId) {
+  try {
+    const raw = localStorage.getItem(`${ROUTE_BBOX_CACHE_PREFIX}${runId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.cachedAt || Date.now() - parsed.cachedAt > ROUTE_BBOX_CACHE_TTL_MS) return null;
+    return readBboxFromPreview(parsed.bbox);
+  } catch { return null; }
+}
+
+function writeBboxCache(runId, bbox) {
+  if (!bbox) return;
+  try {
+    localStorage.setItem(`${ROUTE_BBOX_CACHE_PREFIX}${runId}`, JSON.stringify({ bbox, cachedAt: Date.now() }));
+  } catch { /* quota — ignore */ }
+}
+
+function RoutePreviewThumb({ preview, provider, runName, bbox }) {
   const normalizedPreview = normalizeRoutePreview(preview);
+  const resolvedBbox = bbox || (normalizedPreview ? normalizedPreview.bbox : null);
+  const tileUrl = resolvedBbox ? buildRouteTileUrl(resolvedBbox) : null;
 
   return (
-    <div className={`recent-runs-thumb${normalizedPreview ? ' is-route-preview' : ''}`}>
+    <div className={`recent-runs-thumb${normalizedPreview ? ' is-route-preview' : ''}${tileUrl ? ' has-route-tile' : ''}`}>
+      {tileUrl ? (
+        <img
+          className="recent-runs-thumb-route-tile"
+          src={tileUrl}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : null}
       {normalizedPreview ? (
         <svg className="recent-runs-thumb-route-svg" viewBox="0 0 100 100" aria-hidden="true">
           <path className="recent-runs-thumb-route-shadow" d={normalizedPreview.path} />
@@ -105,14 +200,17 @@ function RoutePreviewThumb({ preview, provider, runName }) {
 const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;
 const RECENT_RUNS_LOAD_BATCH_SIZE = 6;
 
-function RunCard({ run, t, lang, routePreviewFallbacks, onOpen }) {
+function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen }) {
   const provider = run.provider || t('runs.manual_import');
   const runName = run.name || t('runs.default_run_name');
   const preview = run.routePreview || routePreviewFallbacks[run.id] || null;
+  // Bbox priority: explicit override (cached from a previous fallback fetch) →
+  // bbox embedded in the preview (today only happens via the fallback path).
+  const bbox = routeBboxes[run.id] || readBboxFromPreview(preview);
 
   return (
     <article className="recent-runs-card" onClick={() => onOpen(run)}>
-      <RoutePreviewThumb preview={preview} provider={provider} runName={runName} />
+      <RoutePreviewThumb preview={preview} provider={provider} runName={runName} bbox={bbox} />
       <div className="recent-runs-card-body">
         <div className="recent-runs-card-top">
           <div>
@@ -157,6 +255,10 @@ const Runs = memo(function Runs() {
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const [importStatus, setImportStatus] = useState('');
   const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
+  // Per-run geographic bbox keyed by run id. Used to render a concrete dark
+  // OpenStreetMap tile under each thumbnail. Seeded from localStorage so a
+  // repeat page load doesn't re-fetch the same point list to recompute it.
+  const [routeBboxes, setRouteBboxes] = useState({});
   const [visibleRunsCount, setVisibleRunsCount] = useState(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
   // Track which month groups the runner has explicitly collapsed. Default
   // open: every month starts expanded so all runs render exactly the way
@@ -165,6 +267,7 @@ const Runs = memo(function Runs() {
   // the state O(1) per toggle and short-circuits on the empty default.
   const [collapsedMonthKeys, setCollapsedMonthKeys] = useState(() => new Set());
   const routePreviewInflightRef = useRef(new Set());
+  const routeBboxInflightRef = useRef(new Set());
   const loadMoreSentinelRef = useRef(null);
 
   const toggleMonthFold = useCallback((monthKey) => {
@@ -188,21 +291,40 @@ const Runs = memo(function Runs() {
       }
     }
 
-    try {
-      const [data, profileData, stravaData] = await Promise.all([
-        apiJson('/api/activities'),
-        apiJson('/api/profile/me').catch(() => null),
-        apiJson('/api/auth/strava/status').catch(() => null),
-      ]);
-      const list = Array.isArray(data) ? data : [];
-      list.sort((a, b) => runDate(b) - runDate(a));
-      setAllRuns(list);
-      setProfile(profileData);
-      setStravaStatus(stravaData);
-      setLoadState('ready');
-      writeRunsCache(email, list, profileData, stravaData);
-    } catch (err) {
-      if (err.message !== 'Unauthorized') setLoadState('error');
+    // Fire the three calls in parallel but apply each result as it resolves,
+    // so the (heavy) runs payload paints as soon as it arrives instead of
+    // waiting for /api/profile/me and /api/auth/strava/status to finish too.
+    let latestRuns = null;
+    let latestProfile = null;
+    let latestStrava = null;
+    let runsFailed = false;
+
+    const runsPromise = apiJson('/api/activities')
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        list.sort((a, b) => runDate(b) - runDate(a));
+        setAllRuns(list);
+        setLoadState('ready');
+        latestRuns = list;
+      })
+      .catch((err) => {
+        runsFailed = true;
+        if (err && err.message !== 'Unauthorized') {
+          setLoadState((prev) => (prev === 'ready' ? prev : 'error'));
+        }
+      });
+
+    const profilePromise = apiJson('/api/profile/me')
+      .then((data) => { setProfile(data); latestProfile = data; })
+      .catch(() => {});
+
+    const stravaPromise = apiJson('/api/auth/strava/status')
+      .then((data) => { setStravaStatus(data); latestStrava = data; })
+      .catch(() => {});
+
+    await Promise.allSettled([runsPromise, profilePromise, stravaPromise]);
+    if (!runsFailed && latestRuns) {
+      writeRunsCache(email, latestRuns, latestProfile, latestStrava);
     }
   }, [email]);
 
@@ -531,6 +653,83 @@ const Runs = memo(function Runs() {
       cancelled = true;
     };
   }, [routePreviewFallbacks, routePreviewRuns]);
+
+  // Ensure every currently-visible run has a geographic bbox (for the dark map
+  // tile under each thumb). Reuses the points endpoint that the preview fallback
+  // already calls, but runs even when the backend has cached the SVG path
+  // (since that cache doesn't carry bbox today). Cap at 50 visible runs to
+  // mirror the existing routePreviewRuns slice.
+  useEffect(() => {
+    if (!Array.isArray(visibleRuns) || visibleRuns.length === 0) return undefined;
+    const cappedVisibleRuns = visibleRuns.slice(0, 50);
+
+    // 1. Hydrate from localStorage for any visible run we haven't loaded yet.
+    const seeded = {};
+    for (const run of cappedVisibleRuns) {
+      if (!run?.id) continue;
+      if (run.id in routeBboxes) continue;
+      const cached = readBboxCache(run.id);
+      if (cached) seeded[run.id] = cached;
+    }
+    if (Object.keys(seeded).length > 0) {
+      setRouteBboxes((current) => ({ ...current, ...seeded }));
+      return undefined; // Re-run after the seed lands; next pass picks the still-missing runs.
+    }
+
+    // 2. Fetch points for any visible run still missing a bbox (and not in flight).
+    const pendingRuns = cappedVisibleRuns.filter((run) => (
+      run?.id
+      && !(run.id in routeBboxes)
+      && !readBboxFromPreview(run.routePreview || routePreviewFallbacks[run.id])
+      && !routeBboxInflightRef.current.has(run.id)
+    ));
+    if (pendingRuns.length === 0) return undefined;
+
+    let cancelled = false;
+    async function loadBboxes() {
+      const workers = Array.from(
+        { length: Math.min(ROUTE_PREVIEW_CONCURRENCY, pendingRuns.length) },
+        async (_, workerIndex) => {
+          for (let index = workerIndex; index < pendingRuns.length; index += ROUTE_PREVIEW_CONCURRENCY) {
+            const run = pendingRuns[index];
+            routeBboxInflightRef.current.add(run.id);
+            try {
+              const response = await apiFetch(`/api/activities/${run.id}/points`);
+              if (!response.ok) {
+                if (!cancelled) {
+                  setRouteBboxes((current) => ({ ...current, [run.id]: null }));
+                }
+                continue;
+              }
+              const data = await response.json();
+              const points = Array.isArray(data)
+                ? data
+                  .map((point) => [Number(point.latitude), Number(point.longitude)])
+                  .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng))
+                : [];
+              const bbox = computeBboxFromPoints(points);
+              if (bbox) writeBboxCache(run.id, bbox);
+              if (!cancelled) {
+                setRouteBboxes((current) => ({ ...current, [run.id]: bbox }));
+              }
+            } catch {
+              if (!cancelled) {
+                setRouteBboxes((current) => ({ ...current, [run.id]: null }));
+              }
+            } finally {
+              routeBboxInflightRef.current.delete(run.id);
+            }
+          }
+        }
+      );
+      await Promise.all(workers);
+    }
+
+    loadBboxes();
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleRuns, routeBboxes, routePreviewFallbacks]);
 
   function renderSecondaryFilterRow() {
     if (activeMode === 'year') {
@@ -933,6 +1132,7 @@ const Runs = memo(function Runs() {
                               t={t}
                               lang={lang}
                               routePreviewFallbacks={routePreviewFallbacks}
+                              routeBboxes={routeBboxes}
                               onOpen={openRun}
                             />
                           ))}

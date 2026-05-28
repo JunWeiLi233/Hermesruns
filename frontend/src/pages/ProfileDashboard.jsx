@@ -551,6 +551,7 @@ export default function ProfileDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [runsFreshness, setRunsFreshness] = useState('unknown');
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [_races, _setRaces] = useState([]);
@@ -589,6 +590,7 @@ export default function ProfileDashboard() {
     if (hasUsableCache) {
       setProfile(cachedSnapshot.profile || null);
       setRuns(cachedSnapshot.runs);
+      setRunsFreshness('cache');
       if (cachedSnapshot.coachState && typeof cachedSnapshot.coachState === 'object') {
         setCoachState(cachedSnapshot.coachState);
       }
@@ -657,6 +659,7 @@ export default function ProfileDashboard() {
 
         setProfile(profileData);
         setRuns(list);
+        setRunsFreshness('fresh');
         setLoadState('ready');
 
         // Write the primary dashboard data to cache right away so the next
@@ -1054,7 +1057,10 @@ export default function ProfileDashboard() {
                 <button type="button" onClick={() => setBanner(null)} aria-label={t('profile.close')}>x</button>
               </section>
             )}
-            {!dismissedComeback && daysOff >= 3 && (
+            {/* Only render after a fresh fetch confirms the day count, so a stale
+                cached snapshot can't keep nagging "you haven't run for N days"
+                after the runner has logged a new run. */}
+            {runsFreshness === 'fresh' && !dismissedComeback && daysOff >= 3 && (
               <ComebackMessage daysOff={daysOff} onDismiss={() => setDismissedComeback(true)} />
             )}
             {loadState === 'loading' && (
@@ -1398,11 +1404,19 @@ export default function ProfileDashboard() {
                               )}
                             </div>
                           )}
-                          {weeklyDigest?.coachFocus?.message && (
-                            <blockquote className="profile-weekly-digest-focus">
-                              {weeklyDigest.coachFocus.message}
-                            </blockquote>
-                          )}
+                          {weeklyDigest?.coachFocus?.message && (() => {
+                            const focusKey = weeklyDigest.coachFocus.key;
+                            const i18nKey = focusKey ? `profile.weekly_digest_focus_msg_${focusKey}` : null;
+                            const translated = i18nKey ? t(i18nKey) : null;
+                            const message = translated && translated !== i18nKey
+                              ? translated
+                              : weeklyDigest.coachFocus.message;
+                            return (
+                              <blockquote className="profile-weekly-digest-focus">
+                                {message}
+                              </blockquote>
+                            );
+                          })()}
                         </div>
                       )}
                     </section>

@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const landingSource = readFileSync(path.join(here, 'Landing.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const splitLandingStyle = readFileSync(path.join(here, '../styles/_split/landing.css'), 'utf8');
 const revealHookSource = readFileSync(path.join(here, '../hooks/useScrollReveal.js'), 'utf8');
-const heroAssetPath = path.join(here, '../assets/generated/landing-command-hero-background.png');
+const heroLegacyPngPath = path.join(here, '../assets/generated/landing-command-hero-background.png');
 const heroWebpPath = path.join(here, '../assets/generated/landing-command-hero-background.webp');
 
 assert.match(
@@ -77,18 +78,8 @@ assert.doesNotMatch(
 );
 
 assert.ok(
-  existsSync(heroAssetPath),
-  'Generated landing command hero background asset should exist in the repo asset pipeline.',
-);
-
-assert.ok(
-  statSync(heroAssetPath).size > 250000,
-  'Landing command hero background should be a real generated raster asset, not an empty placeholder.',
-);
-
-assert.ok(
   existsSync(heroWebpPath),
-  'WebP variant of landing command hero background should exist for image-set() WebP-first delivery.',
+  'WebP variant of landing command hero background should exist as the primary hero asset.',
 );
 
 assert.ok(
@@ -96,10 +87,30 @@ assert.ok(
   'WebP variant should be under 200KB — keeps the hero payload tiny on first paint.',
 );
 
+// The original 1.97 MB PNG was retired because the image-set() fallback path
+// was never hit by any modern browser (every browser that supports image-set
+// also supports WebP). Re-introducing it would re-add ~1.9 MB to the bundle.
+assert.ok(
+  !existsSync(heroLegacyPngPath),
+  'Legacy 1.97 MB landing-command-hero-background.png should stay removed — image-set() now ships WebP-only.',
+);
+
 assert.match(
   styleSource,
-  /\.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*image-set\([\s\S]*landing-command-hero-background\.webp[\s\S]*type\("image\/webp"\)[\s\S]*landing-command-hero-background\.png[\s\S]*type\("image\/png"\)[\s\S]*\)/,
-  'Landing command hero grid should use image-set() with WebP-first and PNG fallback.',
+  /\.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*image-set\([\s\S]*landing-command-hero-background\.webp[\s\S]*type\("image\/webp"\)[\s\S]*\)/,
+  'Landing command hero grid should keep the WebP-only image-set() declaration.',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  /landing-command-hero-background\.png/,
+  'Bundled style.css should not reference the retired PNG fallback.',
+);
+
+assert.doesNotMatch(
+  splitLandingStyle,
+  /landing-command-hero-background\.png/,
+  'Split landing.css should not reference the retired PNG fallback.',
 );
 
 assert.match(

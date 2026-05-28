@@ -4284,8 +4284,7 @@
     linear-gradient(180deg, rgba(246, 241, 232, 0.34) 0%, rgba(25, 21, 17, 0.16) 36%, rgba(18, 15, 12, 0.64) 76%, rgba(18, 15, 12, 0.78) 100%),
     linear-gradient(90deg, rgba(18, 15, 12, 0.36), transparent 44%),
     image-set(
-      url("../../assets/generated/landing-command-hero-background.webp") type("image/webp"),
-      url("../../assets/generated/landing-command-hero-background.png") type("image/png")
+      url("../../assets/generated/landing-command-hero-background.webp") type("image/webp")
     ) !important;
   background-position: center;
   background-size: cover;
@@ -4511,8 +4510,7 @@
     linear-gradient(90deg, rgba(16, 12, 9, 0.9) 0%, rgba(16, 12, 9, 0.68) 39%, rgba(16, 12, 9, 0.22) 66%, rgba(16, 12, 9, 0.58) 100%),
     radial-gradient(circle at 76% 28%, rgba(221, 92, 70, 0.16), transparent 34%),
     image-set(
-      url("../../assets/generated/landing-command-hero-background.webp") type("image/webp"),
-      url("../../assets/generated/landing-command-hero-background.png") type("image/png")
+      url("../../assets/generated/landing-command-hero-background.webp") type("image/webp")
     );
   background-position: center;
   background-size: cover;

@@ -30,10 +30,16 @@ final class NycMarathonOfficialCourse {
 
     private static final double[][] WAYPOINTS = new double[][]{
             // ===== Staten Island start + Verrazzano-Narrows Bridge =====
-            { 40.6055, -74.0563 }, // Start - Fort Wadsworth toll plaza area
-            { 40.6066, -74.0512 }, // Verrazzano-Narrows Bridge (Staten Island approach)
-            { 40.6112, -74.0450 }, // Verrazzano-Narrows Bridge midspan
-            { 40.6155, -74.0395 }, // Verrazzano-Narrows Bridge (Brooklyn approach)
+            // Coordinates verified against OpenStreetMap landmarks (2026-05).
+            // The Verrazzano-Narrows runs essentially east-west between its
+            // two towers — going from south-west to north-east instead
+            // would make the straight-line bridge interpolation cut diagonally
+            // across The Narrows in a way that visually misses the actual
+            // bridge structure.
+            { 40.6055, -74.0563 }, // Start - Fort Wadsworth toll plaza
+            { 40.6066, -74.0468 }, // Verrazzano-Narrows Bridge (Staten Island tower)
+            { 40.6076, -74.0412 }, // Verrazzano-Narrows Bridge midspan
+            { 40.6087, -74.0379 }, // Verrazzano-Narrows Bridge (Brooklyn tower)
             // ===== Brooklyn (~13 miles / 21 km) =====
             { 40.6228, -74.0298 }, // Bay Ridge - 92nd St & 4th Ave
             { 40.6357, -74.0202 }, // Sunset Park - 65th St & 4th Ave

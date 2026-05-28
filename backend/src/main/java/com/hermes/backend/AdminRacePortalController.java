@@ -24,16 +24,28 @@ public class AdminRacePortalController {
     private final AdminPortalService adminService;
     private final AdminBackgroundJobService adminBackgroundJobService;
     private final CourseMapScanWatcher courseMapScanWatcher;
+    private final RaceCourseMapBulkSeedService bulkSeedService;
 
+    /** Kept for tests that exercise non-seed endpoints; passes null for the bulk-seed service. */
     public AdminRacePortalController(AdminPortalService adminService, AdminBackgroundJobService adminBackgroundJobService) {
-        this(adminService, adminBackgroundJobService, new CourseMapScanWatcher());
+        this(adminService, adminBackgroundJobService, new CourseMapScanWatcher(), null);
+    }
+
+    public AdminRacePortalController(AdminPortalService adminService,
+                                     AdminBackgroundJobService adminBackgroundJobService,
+                                     RaceCourseMapBulkSeedService bulkSeedService) {
+        this(adminService, adminBackgroundJobService, new CourseMapScanWatcher(), bulkSeedService);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
-    public AdminRacePortalController(AdminPortalService adminService, AdminBackgroundJobService adminBackgroundJobService, CourseMapScanWatcher courseMapScanWatcher) {
+    public AdminRacePortalController(AdminPortalService adminService,
+                                     AdminBackgroundJobService adminBackgroundJobService,
+                                     CourseMapScanWatcher courseMapScanWatcher,
+                                     RaceCourseMapBulkSeedService bulkSeedService) {
         this.adminService = adminService;
         this.adminBackgroundJobService = adminBackgroundJobService;
         this.courseMapScanWatcher = courseMapScanWatcher;
+        this.bulkSeedService = bulkSeedService;
     }
 
     @GetMapping
@@ -328,6 +340,91 @@ public class AdminRacePortalController {
             return ResponseEntity.ok(Map.of("cleared", true));
         } catch (IllegalArgumentException ex) {
             return AdminApiResponses.error(HttpStatus.BAD_REQUEST, ex.getMessage(), "invalid_race_course_map");
+        }
+    }
+
+    /**
+     * Bulk-seeds synthetic geographic-loop course maps for every catalog race
+     * that does not yet have a live map asset. The synthetic loop guarantees
+     * each race-detail page renders a map + elevation chart even before the
+     * official course map is uploaded. Real admin uploads (anything whose
+     * {@code liveSource != "synthetic-geographic-loop"}) are NEVER overwritten
+     * by this endpoint, regardless of the {@code overwriteSynthetic} flag.
+     *
+     * <p>Request body (all optional):
+     * <pre>{ "overwriteSynthetic": false, "catalogPath": "../frontend/src/data/worldRaceCatalog.json" }</pre>
+     */
+    @PostMapping("/bulk-seed")
+    public ResponseEntity<?> bulkSeedRaceCourseMaps(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                                    @RequestBody(required = false) Map<String, Object> body) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        if (bulkSeedService == null) {
+            return AdminApiResponses.error(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Bulk seed service is not wired in this runtime.", "bulk_seed_unavailable");
+        }
+        Runner admin = adminOptional.get();
+        boolean overwriteSynthetic = body != null && Boolean.TRUE.equals(body.get("overwriteSynthetic"));
+        Object catalogPathRaw = body == null ? null : body.get("catalogPath");
+        java.nio.file.Path catalogPath = catalogPathRaw instanceof String s && !s.isBlank()
+                ? java.nio.file.Path.of(s)
+                : null;
+        try {
+            RaceCourseMapBulkSeedService.BulkSeedSummary summary =
+                    bulkSeedService.seedAllMissingFromCatalog(catalogPath, admin.getEmail(), overwriteSynthetic);
+            safeAuditLog(admin, "race_course_map.bulk_seeded", "race_course_map", "*",
+                    "Bulk-seeded synthetic course maps: " + summary);
+            return ResponseEntity.ok(Map.of(
+                    "catalogSize", summary.catalogSize(),
+                    "seeded", summary.seeded(),
+                    "skipped", summary.skipped(),
+                    "failed", summary.failed(),
+                    "overwriteSynthetic", overwriteSynthetic
+            ));
+        } catch (IllegalStateException ex) {
+            return AdminApiResponses.error(HttpStatus.BAD_REQUEST, ex.getMessage(), "bulk_seed_failed");
+        } catch (RuntimeException ex) {
+            log.error("bulk-seed failed", ex);
+            return AdminApiResponses.error(HttpStatus.INTERNAL_SERVER_ERROR, "Bulk seed failed: " + ex.getMessage(), "bulk_seed_failed");
+        }
+    }
+
+    /**
+     * Seeds or re-seeds the official course map for a single race identified by
+     * {@code raceId}. Reads the race entry from the world catalog, then calls
+     * the same {@link RaceCourseMapBulkSeedService#seedRace} path as the bulk
+     * endpoint. Useful for refreshing a single race without triggering a
+     * full catalog pass.
+     * <pre>{ "overwriteSynthetic": true }</pre>
+     */
+    @PostMapping("/{raceId}/seed")
+    public ResponseEntity<?> seedRaceCourseMap(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @PathVariable String raceId,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        if (bulkSeedService == null) {
+            return AdminApiResponses.error(HttpStatus.SERVICE_UNAVAILABLE, "Bulk seed service is not wired in this runtime.", "bulk_seed_unavailable");
+        }
+        InputSanitizer.rejectControlAndHtmlChars(raceId, "raceId");
+        boolean overwriteSynthetic = body != null && Boolean.TRUE.equals(body.get("overwriteSynthetic"));
+        try {
+            List<RaceCourseMapBulkSeedService.CatalogRace> catalog = bulkSeedService.readCatalog(null);
+            RaceCourseMapBulkSeedService.CatalogRace race = catalog.stream()
+                    .filter(r -> raceId.equals(r.id()))
+                    .findFirst()
+                    .orElse(null);
+            if (race == null) {
+                return AdminApiResponses.error(HttpStatus.NOT_FOUND, "Race not found in catalog: " + raceId, "race_not_found");
+            }
+            RaceCourseMapBulkSeedService.SeedOutcome outcome = bulkSeedService.seedRace(race, adminOptional.get().getEmail(), overwriteSynthetic);
+            return ResponseEntity.ok(Map.of("raceId", raceId, "outcome", outcome.name()));
+        } catch (IllegalArgumentException ex) {
+            return AdminApiResponses.error(HttpStatus.BAD_REQUEST, ex.getMessage(), "invalid_input");
+        } catch (RuntimeException ex) {
+            log.error("single-race seed failed for raceId={}", raceId, ex);
+            return AdminApiResponses.error(HttpStatus.INTERNAL_SERVER_ERROR, "Seed failed: " + ex.getMessage(), "seed_failed");
         }
     }
 
