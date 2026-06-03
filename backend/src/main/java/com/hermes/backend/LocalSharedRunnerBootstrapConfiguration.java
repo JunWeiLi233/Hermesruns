@@ -50,6 +50,60 @@ public class LocalSharedRunnerBootstrapConfiguration {
     @Value("${app.local-territory-rival.seed-mock-data:true}")
     private boolean territoryRivalSeedMockData;
 
+    @Value("${app.local-territory-flushing.enabled:true}")
+    private boolean territoryFlushingEnabled;
+
+    @Value("${app.local-territory-flushing.email:territory-flushing@hermes.local}")
+    private String territoryFlushingEmail;
+
+    @Value("${app.local-territory-flushing.password:}")
+    private String territoryFlushingPassword;
+
+    @Value("${app.local-territory-flushing.strava-athlete-id:140971749}")
+    private Long territoryFlushingStravaAthleteId;
+
+    @Value("${app.local-territory-flushing.display-name:Hermes Flushing Territory Tester}")
+    private String territoryFlushingDisplayName;
+
+    @Value("${app.local-territory-flushing.seed-mock-data:true}")
+    private boolean territoryFlushingSeedMockData;
+
+    @Value("${app.local-territory-flushing-inner.enabled:true}")
+    private boolean territoryFlushingInnerEnabled;
+
+    @Value("${app.local-territory-flushing-inner.email:territory-flushing-inner@hermes.local}")
+    private String territoryFlushingInnerEmail;
+
+    @Value("${app.local-territory-flushing-inner.password:}")
+    private String territoryFlushingInnerPassword;
+
+    @Value("${app.local-territory-flushing-inner.strava-athlete-id:140971750}")
+    private Long territoryFlushingInnerStravaAthleteId;
+
+    @Value("${app.local-territory-flushing-inner.display-name:Hermes Inner Flushing Occupier}")
+    private String territoryFlushingInnerDisplayName;
+
+    @Value("${app.local-territory-flushing-inner.seed-mock-data:true}")
+    private boolean territoryFlushingInnerSeedMockData;
+
+    @Value("${app.local-territory-berlin.enabled:true}")
+    private boolean territoryBerlinEnabled;
+
+    @Value("${app.local-territory-berlin.email:territory-berlin@hermes.local}")
+    private String territoryBerlinEmail;
+
+    @Value("${app.local-territory-berlin.password:}")
+    private String territoryBerlinPassword;
+
+    @Value("${app.local-territory-berlin.strava-athlete-id:140971751}")
+    private Long territoryBerlinStravaAthleteId;
+
+    @Value("${app.local-territory-berlin.display-name:Hermes Berlin Land Conqueror}")
+    private String territoryBerlinDisplayName;
+
+    @Value("${app.local-territory-berlin.seed-mock-data:true}")
+    private boolean territoryBerlinSeedMockData;
+
     @Bean
     ApplicationRunner localSharedRunnerBootstrapRunner(LocalSharedRunnerBootstrapService bootstrapService) {
         return args -> {
@@ -83,31 +137,153 @@ public class LocalSharedRunnerBootstrapConfiguration {
                     result.seededActivities()
             );
 
-            if (!territoryRivalEnabled) {
+            if (territoryRivalEnabled) {
+                if (territoryRivalPassword == null || territoryRivalPassword.isBlank()) {
+                    log.warn("[Hermes] Local territory rival bootstrap is enabled, but APP_LOCAL_TERRITORY_RIVAL_PASSWORD is missing.");
+                } else {
+                    LocalSharedRunnerBootstrapService.BootstrapResult rivalResult = bootstrapService.bootstrap(
+                            new LocalSharedRunnerBootstrapService.BootstrapConfig(
+                                    territoryRivalEmail,
+                                    territoryRivalPassword,
+                                    territoryRivalStravaAthleteId,
+                                    territoryRivalDisplayName,
+                                    territoryRivalSeedMockData,
+                                    LocalSharedRunnerBootstrapService.SeedProfile.TERRITORY_RIVAL
+                            )
+                    );
+                    log.info(
+                            "[Hermes] Reserved territory rival {} is ready (seeded shoes={}, seeded activities={}).",
+                            rivalResult.email(),
+                            rivalResult.seededShoes(),
+                            rivalResult.seededActivities()
+                    );
+                }
+            }
+
+            if (!territoryFlushingEnabled) {
                 return;
             }
 
-            if (territoryRivalPassword == null || territoryRivalPassword.isBlank()) {
-                log.warn("[Hermes] Local territory rival bootstrap is enabled, but APP_LOCAL_TERRITORY_RIVAL_PASSWORD is missing.");
+            if (territoryFlushingPassword == null || territoryFlushingPassword.isBlank()) {
+                log.warn("[Hermes] Local Flushing territory bootstrap is enabled, but APP_LOCAL_TERRITORY_FLUSHING_PASSWORD is missing.");
                 return;
             }
 
-            LocalSharedRunnerBootstrapService.BootstrapResult rivalResult = bootstrapService.bootstrap(
+            LocalSharedRunnerBootstrapService.BootstrapResult flushingResult = bootstrapService.bootstrap(
                     new LocalSharedRunnerBootstrapService.BootstrapConfig(
-                            territoryRivalEmail,
-                            territoryRivalPassword,
-                            territoryRivalStravaAthleteId,
-                            territoryRivalDisplayName,
-                            territoryRivalSeedMockData,
-                            LocalSharedRunnerBootstrapService.SeedProfile.TERRITORY_RIVAL
+                            territoryFlushingEmail,
+                            territoryFlushingPassword,
+                            territoryFlushingStravaAthleteId,
+                            territoryFlushingDisplayName,
+                            territoryFlushingSeedMockData,
+                            LocalSharedRunnerBootstrapService.SeedProfile.FLUSHING_TERRITORY
                     )
             );
             log.info(
-                    "[Hermes] Reserved territory rival {} is ready (seeded shoes={}, seeded activities={}).",
-                    rivalResult.email(),
-                    rivalResult.seededShoes(),
-                    rivalResult.seededActivities()
+                    "[Hermes] Flushing territory test account {} is ready (seeded shoes={}, seeded activities={}).",
+                    flushingResult.email(),
+                    flushingResult.seededShoes(),
+                    flushingResult.seededActivities()
+            );
+
+            if (!territoryFlushingInnerEnabled) {
+                return;
+            }
+
+            if (territoryFlushingInnerPassword == null || territoryFlushingInnerPassword.isBlank()) {
+                log.warn("[Hermes] Local inner-Flushing territory bootstrap is enabled, but APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD is missing.");
+                return;
+            }
+
+            LocalSharedRunnerBootstrapService.BootstrapResult innerFlushingResult = bootstrapService.bootstrap(
+                    new LocalSharedRunnerBootstrapService.BootstrapConfig(
+                            territoryFlushingInnerEmail,
+                            territoryFlushingInnerPassword,
+                            territoryFlushingInnerStravaAthleteId,
+                            territoryFlushingInnerDisplayName,
+                            territoryFlushingInnerSeedMockData,
+                            LocalSharedRunnerBootstrapService.SeedProfile.INNER_FLUSHING_TERRITORY
+                    )
+            );
+            log.info(
+                    "[Hermes] Inner-Flushing territory occupier {} is ready (seeded shoes={}, seeded activities={}).",
+                    innerFlushingResult.email(),
+                    innerFlushingResult.seededShoes(),
+                    innerFlushingResult.seededActivities()
+            );
+
+            if (!territoryBerlinEnabled) {
+                return;
+            }
+
+            if (territoryBerlinPassword == null || territoryBerlinPassword.isBlank()) {
+                log.warn("[Hermes] Local Berlin territory bootstrap is enabled, but APP_LOCAL_TERRITORY_BERLIN_PASSWORD is missing.");
+                return;
+            }
+
+            LocalSharedRunnerBootstrapService.BootstrapResult berlinResult = bootstrapService.bootstrap(
+                    new LocalSharedRunnerBootstrapService.BootstrapConfig(
+                            territoryBerlinEmail,
+                            territoryBerlinPassword,
+                            territoryBerlinStravaAthleteId,
+                            territoryBerlinDisplayName,
+                            territoryBerlinSeedMockData,
+                            LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_TERRITORY
+                    )
+            );
+            log.info(
+                    "[Hermes] Berlin territory conqueror {} is ready (seeded shoes={}, seeded activities={}).",
+                    berlinResult.email(),
+                    berlinResult.seededShoes(),
+                    berlinResult.seededActivities()
+            );
+
+            bootstrapBerlinRival(
+                    bootstrapService,
+                    territoryBerlinPassword,
+                    LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_BLUE
+            );
+            bootstrapBerlinRival(
+                    bootstrapService,
+                    territoryBerlinPassword,
+                    LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_GREEN
+            );
+            bootstrapBerlinRival(
+                    bootstrapService,
+                    territoryBerlinPassword,
+                    LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_GOLD
+            );
+            bootstrapBerlinRival(
+                    bootstrapService,
+                    territoryBerlinPassword,
+                    LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_PINK
+            );
+            bootstrapBerlinRival(
+                    bootstrapService,
+                    territoryBerlinPassword,
+                    LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_LIME
+            );
+            bootstrapBerlinRival(
+                    bootstrapService,
+                    territoryBerlinPassword,
+                    LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_CYAN
             );
         };
+    }
+
+    private void bootstrapBerlinRival(
+            LocalSharedRunnerBootstrapService bootstrapService,
+            String password,
+            LocalSharedRunnerBootstrapService.SeedProfile seedProfile
+    ) {
+        LocalSharedRunnerBootstrapService.BootstrapResult result = bootstrapService.bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.berlinRivalDefault(password, seedProfile)
+        );
+        log.info(
+                "[Hermes] Berlin territory rival {} is ready (seeded shoes={}, seeded activities={}).",
+                result.email(),
+                result.seededShoes(),
+                result.seededActivities()
+        );
     }
 }

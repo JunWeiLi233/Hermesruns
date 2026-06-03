@@ -1,60 +1,49 @@
 {
-  "updatedAt": "2026-04-19T04:53:20.868Z",
+  "updatedAt": "2026-06-03T17:14:27.204Z",
   "activeClaims": [],
-  "recentlyCompleted": [
-    {
-      "key": "races-detail-restore-real-world-osm-tile-rendering-on-race-detail-route-map",
-      "task": "Restore real-world OSM tile rendering on race detail route map",
-      "surface": "Races Detail",
-      "agent": "claude",
-      "owner": "frontend",
-      "files": [
-        "frontend/src/pages/RacesDetail.jsx"
-      ],
-      "verify": [
-        "eslint PASS | vite build PASS | runtime sync PASS"
-      ],
-      "rollbackTarget": "",
-      "rollbackFiles": [],
-      "review": "",
-      "note": "",
-      "next": "",
-      "status": "completed",
-      "completedAt": "2026-04-19T04:53:20.868Z"
-    },
-    {
-      "key": "races-detail-map-stage-full-width-world-map",
-      "task": "Redesign the race-detail lower map area into a full-width OpenStreetMap Leaflet stage with the readiness card below it",
-      "surface": "Races Detail",
-      "agent": "codex",
-      "owner": "frontend",
-      "status": "completed",
-      "startedAt": "",
-      "completedAt": "2026-04-19T04:23:30.000",
-      "verify": [],
-      "files": [],
-      "rollbackTarget": "",
-      "rollbackFiles": [],
-      "review": "",
-      "note": "",
-      "next": ""
-    }
-  ],
+  "recentlyCompleted": [],
   "mustFixQueue": [
     {
-      "key": "dashboard-fix-broken-ui",
-      "task": "fix broken UI",
-      "surface": "dashboard",
+      "key": "runner-shell-sidebar-fix-squeezed-left-sidebar-collapsed-state",
+      "task": "Fix squeezed left sidebar collapsed state",
+      "surface": "runner shell sidebar",
+      "agent": "codex",
+      "owner": "codex",
+      "status": "must-fix",
+      "completedAt": "",
+      "startedAt": "2026-06-03T17:14:27.204Z",
+      "verify": [
+        "node frontend/src/components/runnerShellSidebarRedesign.smoke.test.js; cd frontend; node scripts/run-vite-build.mjs; node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/styles/_split/profile.css,frontend/src/styles/style.css,frontend/src/components/runnerShellSidebarRedesign.smoke.test.js; localhost CSS asset signature check for 96px rail, icon-only brand, hidden counters, bounded 52x60 squeeze button"
+      ],
+      "files": [
+        "frontend/src/styles/_split/profile.css",
+        "frontend/src/styles/style.css",
+        "frontend/src/components/runnerShellSidebarRedesign.smoke.test.js"
+      ],
+      "rollbackTarget": "",
+      "rollbackFiles": [],
+      "review": "ralph-gate-must-fix",
+      "note": "",
+      "next": ""
+    },
+    {
+      "key": "profile-fix-profile-empty-state",
+      "task": "Fix Profile empty state",
+      "surface": "Profile",
       "agent": "codex",
       "owner": "",
       "status": "must-fix",
-      "startedAt": "2026-04-17T03:20:25.830",
+      "startedAt": "2026-05-31T21:24:38.122Z",
       "completedAt": "",
-      "verify": [],
-      "files": [],
+      "verify": [
+        "`cd frontend && npm run lint && npm run build`"
+      ],
+      "files": [
+        "frontend/src/pages/Profile.jsx"
+      ],
       "rollbackTarget": "",
       "rollbackFiles": [],
-      "review": "",
+      "review": "ralph-gate-must-fix",
       "note": "",
       "next": ""
     }

@@ -40,7 +40,7 @@ Humans can steer, pause, approve, reject, or reverse the loop here without editi
 - If you ask for a rollback, name the target commit, design version, or surface.
 
 ## Agent Writeback Format
-- Last round verdict: pass - Enhanced /auto-hermes-attack with 9 active runtime probe functions, completed attack simulation against localhost:8080 with 6 runtime-verified findings. Added security tasks to TASKS.md. Rate limiting confirmed active. Auth bypass on protected routes confirmed blocked (401/403/404). 3 HIGH findings: config/status leak, billing/config leak, Strava webhook forgery.
-- Current owned surface: Security Attack Tool Enhancement
-- Next intended round: self-loop continues
-- Self-loop state: active
+- Last round verdict: must-fix - 
+- Current owned surface: runner shell sidebar
+- Next intended round: [file-audit 2026-05-20] Prune historical auto-hermes tech-debt snapshots (active-task) on [file
+- Self-loop state: continue-self-loop - promoted next bounded round: [file-audit 2026-05-20] Prune historical auto-hermes tech-debt snapshots

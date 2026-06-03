@@ -258,6 +258,7 @@ On a true stop:
 - run the auto-commit finish action if product source files changed
 - `needed` means the run reached a true clean stop and publishable product files remain after policy filtering; workflow-only, memory, and local-only files never qualify on their own
 - for `/auto-hermes` and `/auto-hermes-max`, a true clean stop that produces a publishable product commit is the `needed` case for auto-push
+- a true clean stop may also auto-push an already-committed current branch when no new working-tree files remain, the branch still has unpublished local commits, and the normal push gates pass
 - commit when commit gates pass
 - push only when a real publish need exists, push gates pass, and `origin` still points to `https://github.com/520HXC/run.git`
 - local commit is the default finish state
