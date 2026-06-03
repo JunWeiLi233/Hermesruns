@@ -11,6 +11,11 @@ const contrastSource = readFileSync(path.join(here, '../styles/contrast-fixes.cs
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
 const anatomyAssetPath = path.join(here, '../assets/muscle-training/anatomy-neon-selector.png');
+const controlDeckCssMatch = cssSource.match(
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck[\s\S]*?@media \(max-width:\s*980px\)/,
+);
+assert.ok(controlDeckCssMatch, 'The strength settings control deck should keep a dedicated CSS scope.');
+const controlDeckCss = controlDeckCssMatch[0];
 
 // ── New mt-* card-based redesign presence ──────────────────────────────────
 assert.match(
@@ -615,19 +620,19 @@ assert.match(
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone:hover,[\s\S]*\.mt-muscle-hit-zone:focus-visible,[\s\S]*\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*background:\s*rgba\(191,\s*255,\s*0,\s*0\.12\);[\s\S]*outline-color:\s*rgba\(191,\s*255,\s*0,\s*0\.88\);/,
+  /\.mt-muscle-hit-zone:hover,[\s\S]*\.mt-muscle-hit-zone:focus-visible,[\s\S]*\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.12\);[\s\S]*outline-color:\s*rgba\(240,\s*117,\s*97,\s*0\.88\);/,
   'Anatomy hit zones should reveal feedback on hover, keyboard focus, and the selected persistent ring.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*box-shadow:\s*0 0 0 2px rgba\(191,\s*255,\s*0,\s*0\.78\) inset/,
+  /\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*box-shadow:\s*0 0 0 2px rgba\(240,\s*117,\s*97,\s*0\.78\) inset/,
   'The selected anatomy hit zone should keep a persistent visible ring after click or bottom-button selection.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone:active\s*\{[\s\S]*background:\s*rgba\(191,\s*255,\s*0,\s*0\.18\);/,
+  /\.mt-muscle-hit-zone:active\s*\{[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.18\);/,
   'Anatomy hit zones should show pressed feedback without persistent default circles.',
 );
 
@@ -741,20 +746,38 @@ assert.match(
 
 assert.match(
   cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.primary-action-btn:not\(:disabled\)\s*\{[\s\S]*background:\s*#ccff00 !important;[\s\S]*color:\s*#071007 !important;/,
-  'Enabled settings primary actions should keep a filled high-contrast lime treatment.',
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.primary-action-btn:not\(:disabled\)\s*\{[\s\S]*background:\s*linear-gradient\(135deg,\s*#ff8b74,\s*#e96651\) !important;[\s\S]*color:\s*#170807 !important;/,
+  'Enabled settings primary actions should use the red-coral treatment instead of the old lime treatment.',
 );
 
 assert.match(
   cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-preference-baseline \.muscle-pill\s*\{[\s\S]*background:\s*rgba\(204,\s*255,\s*0,\s*0\.14\) !important;[\s\S]*color:\s*#f7fbe8 !important;/,
-  'Settings preference pills should not use low-contrast red-on-dark copy.',
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-preference-baseline \.muscle-pill\s*\{[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.16\) !important;[\s\S]*color:\s*#f7fbe8 !important;/,
+  'Settings preference pills should use a readable red-coral tint.',
 );
 
 assert.match(
   cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*#ccff00 !important;[\s\S]*color:\s*#071007 !important;/,
-  'Active settings chips must keep dark text after light-theme overrides.',
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*linear-gradient\(135deg,\s*#ff8b74,\s*#e96651\) !important;[\s\S]*color:\s*#170807 !important;/,
+  'Active settings chips must keep readable red-coral styling after light-theme overrides.',
+);
+
+assert.doesNotMatch(
+  controlDeckCss,
+  /#ccff00|204,\s*255,\s*0|var\(--mt-iron-accent\)/,
+  'The settings control deck should not keep the old acid-lime active palette.',
+);
+
+assert.match(
+  cssSource,
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-profile-impact-strip\s*\{[\s\S]*border-color:\s*rgba\(240,\s*117,\s*97,\s*0\.28\);[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.09\);/,
+  'The settings plan-impact strip should match the red-coral control palette.',
+);
+
+assert.match(
+  contrastSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*var\(--brand-accent,\s*#c0462b\) !important;[\s\S]*color:\s*#ffffff !important;/,
+  'White-theme final contrast guard should keep active settings chips red and readable.',
 );
 
 assert.match(
@@ -889,6 +912,48 @@ assert.match(
   'White theme should be scoped to the muscle-training page root.',
 );
 
+assert.doesNotMatch(
+  cssSource,
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.runner-shell-sidebar\s*\{[\s\S]*background:\s*#f2efed !important;/,
+  'Muscle Training sidebar must not be forced to the light shell before data-muscle-theme is applied.',
+);
+
+assert.match(
+  cssSource,
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\):not\(\[data-muscle-theme="white"\]\) \.runner-shell-sidebar\s*\{[\s\S]*background:[\s\S]*#080808/,
+  'Dark muscle-training theme should keep the shared sidebar dark instead of turning it white.',
+);
+
+assert.match(
+  cssSource,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.runner-shell-sidebar\s*\{[\s\S]*background:[\s\S]*#f2efed/,
+  'White muscle-training theme should be the only place that uses the light sidebar surface.',
+);
+
+assert.doesNotMatch(
+  cssSource,
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\):not\(\[data-muscle-theme="white"\]\) \.runner-shell-side-link\s*\{[^}]*font-size:/,
+  'Dark muscle-training sidebar should inherit shared nav font size instead of enlarging it.',
+);
+
+assert.doesNotMatch(
+  cssSource,
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\):not\(\[data-muscle-theme="white"\]\) \.runner-shell-side-link\s*\{[^}]*font-weight:/,
+  'Dark muscle-training sidebar should inherit shared nav font weight instead of changing it.',
+);
+
+assert.doesNotMatch(
+  cssSource,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.runner-shell-side-link\s*\{[^}]*font-size:/,
+  'White muscle-training sidebar should inherit shared nav font size instead of enlarging it.',
+);
+
+assert.doesNotMatch(
+  cssSource,
+  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.runner-shell-side-link\s*\{[^}]*font-weight:/,
+  'White muscle-training sidebar should inherit shared nav font weight instead of changing it.',
+);
+
 assert.match(
   cssSource,
   /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.mt-top-workbench\s*\{[\s\S]*background:/,
@@ -959,6 +1024,36 @@ assert.match(
   cssSource,
   /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck select option\s*\{[\s\S]*background:\s*#ffffff !important;[\s\S]*color:\s*#2c2f30 !important;/,
   'White theme select options should use white surfaces with dark text.',
+);
+
+assert.match(
+  cssSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.muscle-preference-head h2,[\s\S]*\.muscle-profile-impact-strip > strong\)\s*\{[\s\S]*color:\s*#232629 !important;/,
+  'White theme control deck headings and summary values should use explicit dark text after global light overrides.',
+);
+
+assert.match(
+  cssSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.muscle-preference-head p,[\s\S]*\.muscle-profile-impact-strip p\)\s*\{[\s\S]*color:\s*#4d5650 !important;/,
+  'White theme control deck descriptions and helper copy should use readable muted text on light surfaces.',
+);
+
+assert.match(
+  cssSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.muscle-pref-field input,[\s\S]*\.muscle-day-chip:not\(\.active\),[\s\S]*\.muscle-secondary-btn:not\(:disabled\)\)\s*\{[\s\S]*background:\s*#fffaf6 !important;[\s\S]*color:\s*#232629 !important;/,
+  'White theme controls, normal day chips, and secondary actions should not inherit pale dark-theme text.',
+);
+
+assert.match(
+  cssSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck select option\s*\{[\s\S]*background:\s*#fffaf6 !important;[\s\S]*color:\s*#232629 !important;/,
+  'White theme native select options should keep a high-contrast light menu palette.',
+);
+
+assert.match(
+  cssSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.primary-action-btn:disabled,[\s\S]*\.muscle-secondary-btn:disabled\)\s*\{[\s\S]*color:\s*#6e625d !important;/,
+  'White theme disabled settings buttons should stay visibly disabled without becoming unreadable.',
 );
 
 assert.match(
