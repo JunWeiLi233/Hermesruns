@@ -14,8 +14,14 @@ assert.match(
 
 assert.match(
   todayRunSource,
-  /today-run-load-callout/,
-  'TodayRun.jsx should render the ACWR load callout block'
+  /today-run-coaching-answer--load is-acwr-\$\{acwrInsight\.zone\}/,
+  'TodayRun.jsx should render the ACWR load block with the insight zone class'
+);
+
+assert.match(
+  todayRunSource,
+  /acwrNarrative\.stripLabel[\s\S]*acwrNarrative\.title[\s\S]*acwrNarrative\.body/,
+  'TodayRun.jsx should render the translated ACWR strip, title, and body copy from the insight helper'
 );
 
 assert.match(

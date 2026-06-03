@@ -69,11 +69,12 @@ class ShoeQueryNormalizationServiceTests {
 
         ArgumentCaptor<HttpEntity<Map<String, Object>>> entityCaptor = ArgumentCaptor.forClass(httpEntityMapClass());
         verify(restTemplate).exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"),
                 eq(HttpMethod.POST),
                 entityCaptor.capture(),
                 eq(Map.class)
         );
+        assertEquals("test-key", entityCaptor.getValue().getHeaders().getFirst("x-goog-api-key"));
         Map<String, Object> request = entityCaptor.getValue().getBody();
         assertInstanceOf(Map.class, request.get("generationConfig"));
         assertTrue(String.valueOf(request).contains("Translate any Chinese brand/model names"));

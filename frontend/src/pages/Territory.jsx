@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -1444,6 +1445,15 @@ export default function Territory() {
   return (
     <div className="runner-shell-page territory-page territory-heatmap-outline territory-map-only runner-dashboard-page">
       <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_territory') || tc('pageTitle')}
+              navigate={navigate}
+            />
+          </div>
+        </header>
         <div className="runner-shell-canvas territory-canvas">
           <section className="terr-map-section terr-map-section--lands-only" aria-label="Territory land map">
             <div className="terr-map-topbar terr-map-titlebar" aria-label={tc('pageTitle')}>

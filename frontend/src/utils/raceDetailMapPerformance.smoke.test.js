@@ -14,8 +14,8 @@ assert.match(
 
 assert.match(
   racesDetailSource,
-  /const applyRouteMapViewport = \(\) => \{/,
-  'RacesDetail should define a dedicated viewport helper for the Leaflet race map.',
+  /const applyRouteMapViewport = \(\{ force = false \} = \{\}\) => \{/,
+  'RacesDetail should define a dedicated viewport helper for the Leaflet race map with a force option.',
 );
 
 assert.match(

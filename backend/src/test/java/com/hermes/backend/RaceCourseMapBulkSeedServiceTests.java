@@ -335,7 +335,9 @@ class RaceCourseMapBulkSeedServiceTests {
         assertThat(haversineKm(head.lat(), head.lng(), firstWp[0], firstWp[1])).isLessThan(0.5);
         assertThat(haversineKm(tail.lat(), tail.lng(), lastWp[0], lastWp[1])).isLessThan(0.5);
         // Point-to-point (start != finish) — proves it is NOT a closed loop/cycle.
-        assertThat(haversineKm(head.lat(), head.lng(), tail.lat(), tail.lng())).isGreaterThan(5.0);
+        double expectedEndpointKm = haversineKm(firstWp[0], firstWp[1], lastWp[0], lastWp[1]);
+        assertThat(haversineKm(head.lat(), head.lng(), tail.lat(), tail.lng()))
+                .isCloseTo(expectedEndpointKm, org.assertj.core.data.Offset.offset(1.0));
         // Total corridor length stays in a plausible marathon band.
         assertThat(polylineKm(route)).isBetween(15.0, 80.0);
         // Landmark labels survive the fallback so the runner card still reads right.

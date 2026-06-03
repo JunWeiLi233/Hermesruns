@@ -10,12 +10,13 @@ function getCanonicalSeriesName(modelName) {
 
 function filterBrandToSeriesModels(entry) {
   const models = Array.isArray(entry?.models) ? entry.models : [];
+  const modelNames = new Set(models.map((item) => trimModelName(item?.model).toLowerCase()).filter(Boolean));
   const filteredModels = models.filter((item) => {
     const modelName = trimModelName(item?.model);
     if (!modelName) return false;
     const canonicalSeriesName = getCanonicalSeriesName(modelName);
     if (!canonicalSeriesName) return true;
-    return canonicalSeriesName === modelName;
+    return canonicalSeriesName === modelName || !modelNames.has(canonicalSeriesName.toLowerCase());
   });
 
   return {

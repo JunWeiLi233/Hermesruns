@@ -59,7 +59,7 @@ assert.match(
 
 assert.match(
   weatherSource,
-  /const latitude = toFiniteNumber\(weatherContext\?\.latitude\);[\s\S]*const longitude = toFiniteNumber\(weatherContext\?\.longitude\);/,
+  /const latitude = toFiniteNumber\((?:weatherContext|ctx)\?\.latitude\);[\s\S]*const longitude = toFiniteNumber\((?:weatherContext|ctx)\?\.longitude\);/,
   'Weather page should accept numeric-string coordinates from the backend context response.',
 );
 
@@ -71,7 +71,7 @@ assert.match(
 
 assert.match(
   weatherSource,
-  /apiJson\('\/api\/profile\/me', \{ signal: controller\.signal \}\)[\s\S]*apiJson\('\/api\/v1\/weather\/context', \{ signal: controller\.signal \}\)/,
+  /apiJson\('\/api\/profile\/me', \{ signal: (?:controller|contextController)\.signal \}\)[\s\S]*apiJson\('\/api\/v1\/weather\/context', \{ signal: (?:controller|contextController)\.signal \}\)/,
   'Weather page should attach the timeout abort signal to its initial profile and weather context requests.',
 );
 
@@ -83,7 +83,7 @@ assert.match(
 
 assert.match(
   weatherSource,
-  /const timeoutId = window\.setTimeout\(\(\) => controller\.abort\(\), WEATHER_FORECAST_REQUEST_TIMEOUT_MS\);[\s\S]*fetch\(url, \{ signal: controller\.signal \}\)[\s\S]*if \(!disposed\) \{[\s\S]*setForecastState\('error'\);/,
+  /const forecastTimeout = window\.setTimeout\(\s*\(\) => forecastController\.abort\(\),\s*WEATHER_FORECAST_REQUEST_TIMEOUT_MS,\s*\);[\s\S]*fetch\(url, \{ signal: forecastController\.signal \}\)[\s\S]*if \(!cancelled\) \{[\s\S]*setForecastState\('error'\);/,
   'Weather page should turn forecast timeout failures into the existing fallback state instead of staying in loading.',
 );
 

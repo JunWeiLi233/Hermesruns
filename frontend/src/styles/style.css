@@ -16953,6 +16953,30 @@ body.theme-midnight .polarized-target-marker {
   gap: 8px;
 }
 
+.mt-strength-composer {
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(251, 146, 60, 0.18);
+  background:
+    radial-gradient(circle at top left, rgba(251, 146, 60, 0.14), transparent 38%),
+    color-mix(in srgb, var(--surface, #ffffff) 88%, transparent);
+}
+
+.mt-strength-composer p,
+.mt-strength-composer em {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.mt-strength-composer strong {
+  color: var(--text-strong);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .muscle-pref-actions {
   grid-column: 1 / -1;
   display: flex;
@@ -44023,6 +44047,7 @@ body.theme-light .settings-control-theme-card.is-active {
 .add-shoes-form { display: grid; gap: 14px; }
 .add-shoes-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .add-shoes-field { display: grid; gap: 10px; }
+.add-shoes-field .modal-label { color: rgba(243, 237, 232, 0.74); font-size: 0.76rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .add-shoes-toggle {
   display: inline-flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.05); color: rgba(243, 237, 232, 0.78); font-weight: 700;
 }
@@ -44465,11 +44490,26 @@ body.theme-light .settings-control-theme-card.is-active {
     linear-gradient(180deg, #2b2525 0%, #231f20 100%);
 }
 
+.recent-runs-thumb.has-route-tile {
+  background: #15171c;
+}
+
+.recent-runs-thumb-route-tile {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.82;
+  filter: saturate(0.82) contrast(1.08) brightness(0.74);
+}
+
 .recent-runs-thumb-route-svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
 }
 
 .recent-runs-thumb-route-shadow {
@@ -66358,7 +66398,9 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-minimalist 
   background-image:
     linear-gradient(180deg, rgba(246, 241, 232, 0.34) 0%, rgba(25, 21, 17, 0.16) 36%, rgba(18, 15, 12, 0.64) 76%, rgba(18, 15, 12, 0.78) 100%),
     linear-gradient(90deg, rgba(18, 15, 12, 0.36), transparent 44%),
-    url("../assets/generated/landing-command-hero-background.png") !important;
+    image-set(
+      url("../assets/generated/landing-command-hero-background.webp") type("image/webp")
+    ) !important;
   background-position: center;
   background-size: cover;
 }
@@ -75271,7 +75313,9 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   background:
     linear-gradient(90deg, rgba(16, 12, 9, 0.9) 0%, rgba(16, 12, 9, 0.68) 39%, rgba(16, 12, 9, 0.22) 66%, rgba(16, 12, 9, 0.58) 100%),
     radial-gradient(circle at 76% 28%, rgba(221, 92, 70, 0.16), transparent 34%),
-    url("../assets/generated/landing-command-hero-background.png");
+    image-set(
+      url("../assets/generated/landing-command-hero-background.webp") type("image/webp")
+    );
   background-position: center;
   background-size: cover;
   box-shadow:
@@ -82427,4 +82471,19 @@ body .rewards-ledger-page .rewards-ledger-signoff {
   .mt-ip-volume-metrics {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.profile-dashboard-page .hd-bar-tooltip {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(44, 47, 48, 0.92);
+  color: #fff7ec;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  box-shadow: 0 14px 30px rgba(44, 47, 48, 0.18);
+}
+
+.profile-dashboard-page .hd-bar-tooltip strong {
+  color: #fff7ec;
 }

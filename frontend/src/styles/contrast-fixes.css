@@ -889,7 +889,11 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-body p, .mt-reference-body li, .mt-reference-muscles > span, .mt-top-reference-body p, .mt-top-reference-body li, .mt-top-reference-muscles > span) {
-  color: #5d6757 !important;
+  color: #595c5d !important;
+}
+
+.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-body p, .mt-reference-body li, .mt-reference-muscles > span, .mt-top-reference-body p, .mt-top-reference-body li, .mt-top-reference-muscles > span) {
+  color: #595c5d !important;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-muscles em, .mt-top-reference-muscles em) {

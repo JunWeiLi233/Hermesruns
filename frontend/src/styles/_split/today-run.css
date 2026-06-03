@@ -1821,6 +1821,18 @@
   opacity: 0.84;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page {
+  --tr-command-ink: #261f1a;
+  --tr-command-soft: rgba(38, 31, 26, 0.68);
+  --tr-command-muted: rgba(38, 31, 26, 0.5);
+  --tr-command-panel: rgba(255, 255, 255, 0.74);
+  --tr-command-panel-strong: rgba(255, 255, 255, 0.9);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(240, 117, 97, 0.14), transparent 24rem),
+    radial-gradient(circle at 86% 18%, rgba(160, 57, 42, 0.08), transparent 22rem),
+    linear-gradient(180deg, #fbf7f1 0%, #f5eee6 52%, #efe6dd 100%) !important;
+}
+
 @media (max-width: 1180px) {
   .today-run-command-page .today-run-coaching-strip-inner,
   .today-run-command-page .today-run-command-hero,

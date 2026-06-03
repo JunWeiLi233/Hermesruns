@@ -40,6 +40,9 @@ public class AdminControllerTests {
     private ActivityRepository activityRepository;
 
     @Autowired
+    private ShoeRepository shoeRepository;
+
+    @Autowired
     private AdminBackgroundJobRepository adminBackgroundJobRepository;
 
     @Autowired
@@ -60,6 +63,7 @@ public class AdminControllerTests {
         coachTrainingBlockRepository.deleteAll();
         coachRunnerStateRepository.deleteAll();
         activityRepository.deleteAll();
+        shoeRepository.deleteAll();
         adminBackgroundJobRepository.deleteAll();
         runnerRepository.deleteAll();
     }

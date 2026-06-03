@@ -19,8 +19,8 @@ const outputNodeSource = read('components/workflow/nodes/OutputNode.jsx');
 const transformNodeSource = read('components/workflow/nodes/TransformNode.jsx');
 const agentNodeSource = read('components/workflow/nodes/AgentNode.jsx');
 const styleSource = read('styles/style.css');
-const enSource = read('i18n/locales/en.js');
-const zhSource = read('i18n/locales/zh-CN.js');
+const enSource = read('i18n/locales/en/pages.js');
+const zhSource = read('i18n/locales/zh-CN/pages.js');
 
 assert.match(
   appSource,
@@ -36,7 +36,7 @@ assert.match(
 
 assert.match(
   pageSource,
-  /const \[isCanvasLoading,\s*setIsCanvasLoading\] = useState\(true\);[\s\S]*window\.requestAnimationFrame\(\(\) => \{[\s\S]*setIsCanvasLoading\(false\);/,
+  /const \[isCanvasLoading,\s*setIsCanvasLoading\] = useState\(true\);[\s\S]*window\.requestAnimationFrame\(\(\) => (?:\{[\s\S]*setIsCanvasLoading\(false\);|setIsCanvasLoading\(false\))/,
   'WorkflowBuilder should show a bounded loading state before mounting the canvas.',
 );
 
@@ -54,13 +54,19 @@ assert.match(
 
 assert.match(
   pageSource,
-  /const isCanvasEmpty = !isCanvasLoading && !canvasError && nodes\.length === 0;[\s\S]*aria-live="polite"[\s\S]*workflow_builder\.empty_title[\s\S]*workflow_builder\.empty_cta/,
+  /const isCanvasEmpty = !isCanvasLoading && !canvasError && nodes\.length === 0;/,
+  'WorkflowBuilder should derive empty state only after loading completes and no canvas error exists.',
+);
+
+assert.match(
+  pageSource,
+  /aria-live="polite"[\s\S]*workflow_builder\.empty_title[\s\S]*workflow_builder\.empty_cta/,
   'WorkflowBuilder should render a localized empty state with a CTA when no nodes exist.',
 );
 
 assert.match(
   pageSource,
-  /const handleEmptyCta = \(\) => \{[\s\S]*addNode\('input', \{ x: 120, y: 120 \}\);[\s\S]*\};/,
+  /const (?:handleEmptyCta|handleStartBlank) = \(\) => \{[\s\S]*addNode\('input', \{ x: 120, y: 120 \}\);[\s\S]*\};/,
   'WorkflowBuilder empty CTA should start the user with an input node.',
 );
 
@@ -90,7 +96,7 @@ assert.match(
 
 assert.match(
   paletteSource,
-  /event\.key !== 'Enter' && event\.key !== ' '[\s\S]*onAddNode\?\.\(type, DEFAULT_POSITIONS\[type\]\);[\s\S]*onKeyDown=\{\(e\) => handlePaletteKeyDown\(e, type\)\}/,
+  /event\.key !== 'Enter' && event\.key !== ' '[\s\S]*onAddNode\?\.\(type, DEFAULT_POSITIONS\[type\]\);[\s\S]*onKeyDown=\{\((?:e|event)\) => handlePaletteKeyDown\((?:e|event), type\)\}/,
   'Node palette items should support keyboard add via Enter and Space.',
 );
 

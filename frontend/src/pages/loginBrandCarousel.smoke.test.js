@@ -5,13 +5,23 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const loginSource = readFileSync(path.join(here, 'Login.jsx'), 'utf8');
+const slideSource = readFileSync(path.join(here, '../data/authBrandSlides.js'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
-const translationsSource = readFileSync(path.join(here, '../i18n/translations.js'), 'utf8');
+const translationsSource = [
+  readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8'),
+  readFileSync(path.join(here, '../i18n/locales/zh-CN/pages.js'), 'utf8'),
+].join('\n');
 
 assert.match(
   loginSource,
-  /authBrandSlides\s*=/,
-  'Login should define a reusable slide list for the brand introduction carousel.',
+  /import authBrandSlides from '\.\.\/data\/authBrandSlides';/,
+  'Login should use the shared brand slide list for the brand introduction carousel.',
+);
+
+assert.match(
+  slideSource,
+  /const authBrandSlides\s*=\s*\[/,
+  'Shared auth brand carousel data should define the reusable slide list.',
 );
 
 assert.match(

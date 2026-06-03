@@ -269,7 +269,7 @@ export default function SettingsAtlasLayout({
               </div>
               <button
                 type="button"
-                className={`st-service-btn${stravaConnected ? '' : ' is-connect'}`}
+                className={`settings-atlas-service-action${stravaConnected ? '' : ' is-connect'}`}
                 onClick={stravaConnected ? disconnectStrava : connectStrava}
                 disabled={stravaLinking}
               >
@@ -303,10 +303,14 @@ export default function SettingsAtlasLayout({
                 <span>{garminLane.limitLabel}</span>
                 <strong>{garminLane.limitValue}</strong>
               </div>
-              <div className="st-service-stat">
+              <button
+                type="button"
+                className="st-service-stat settings-atlas-import-drop--garmin"
+                onClick={() => navigate('/settings/import-data')}
+              >
                 <span>{garminLane.manualLabel}</span>
                 <strong>{garminLane.manualValue}</strong>
-              </div>
+              </button>
             </div>
           </div>
         </div>

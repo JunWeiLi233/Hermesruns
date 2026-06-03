@@ -43,6 +43,9 @@ class AdminPortalControllerTests {
     private ShoeRepository shoeRepository;
 
     @Autowired
+    private ActivityRepository activityRepository;
+
+    @Autowired
     private RunnerAdminNoteRepository runnerAdminNoteRepository;
 
     @Autowired
@@ -70,6 +73,7 @@ class AdminPortalControllerTests {
         coachRunnerStateRepository.deleteAll();
         adminSavedFilterRepository.deleteAll();
         runnerAdminNoteRepository.deleteAll();
+        activityRepository.deleteAll();
         shoeRepository.deleteAll();
         adminBackgroundJobRepository.deleteAll();
         runnerRepository.deleteAll();
