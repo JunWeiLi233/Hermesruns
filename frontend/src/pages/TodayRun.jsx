@@ -20,6 +20,7 @@ import { formatDistance } from '../utils/format';
 import { computeVdotTrend } from '../utils/vdot';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import { buildRecentShoeSignal, predictRetirement } from '../utils/shoeRotation';
+import { resolveRunnerPersona } from '../utils/resolveRunnerPersona';
 import { interpretWellness } from '../utils/wellnessInterpretation';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 
@@ -471,20 +472,11 @@ export default function TodayRun() {
   const acwrInsight = useMemo(() => getTodayRunAcwrInsight(metrics.acwr), [metrics.acwr]);
 
   const runnerPersona = useMemo(() => {
-    if (!Array.isArray(runs) || runs.length === 0) return 'new';
-    if (coachPayload?.runnerState === 'new') return 'new';
-    if (coachPayload?.runnerState === 'comeback') return 'comeback';
-    if (coachPayload?.runnerState === 'active') return 'active';
-    const sorted = [...runs].sort((a, b) => (
-      new Date(b?.startTime || b?.startDate || 0).getTime()
-      - new Date(a?.startTime || a?.startDate || 0).getTime()
-    ));
-    const lastTs = new Date(sorted[0]?.startTime || sorted[0]?.startDate || 0).getTime();
-    if (!Number.isFinite(lastTs) || lastTs <= 0) return 'active';
-    const daysAgo = (Date.now() - lastTs) / 86400000;
-    if (daysAgo > 14) return 'comeback';
-    return 'active';
-  }, [runs, coachPayload]);
+    return resolveRunnerPersona({
+      runs,
+      runnerState: coachPayload?.runnerState,
+    });
+  }, [runs, coachPayload?.runnerState]);
   const acwrNarrative = useMemo(
     () => ({
       title: t(acwrInsight.calloutTitleKey, acwrInsight.calloutParams),

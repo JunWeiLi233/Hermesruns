@@ -37,6 +37,41 @@ What changed: Rebuilt the land-mask edge as layered Leaflet canvas strokes: dark
 Why: The Territory page needed stronger visual proof that occupied land is concrete territory, not overlapping translucent sectors or route traces.
 Rollback target: `working tree before DV-2026-06-01-01`
 Notes: Frontend presentation only. Territory APIs, auth, route data, ownership rules, and seeded test accounts remain unchanged.
+### Version: DV-2026-05-24-04
+Date: 2026-05-24
+Surface: Muscle Training light-theme settings contrast on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a high-specificity white-theme guard for the bottom training check-in and plan tuning console so headings, helper copy, form controls, normal day chips, select options, summary values, impact copy, and disabled buttons use dark readable text on light surfaces.
+Why: The light theme inherited dark-route pale text colors inside the settings console, making several labels, values, and controls nearly invisible on white cards.
+Rollback target: `DV-2026-05-24-03`
+Notes: CSS and smoke-test guard only. Dark theme styling, red active states, training data, save/reset/profile APIs, exercise selection, Reference Dock, and sidebar behavior remain unchanged.
+
+### Version: DV-2026-05-24-03
+Date: 2026-05-24
+Surface: Muscle Training sidebar typography on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the strength-route sidebar overrides for nav link font size, weight, letter spacing, and text transform while keeping the dark and white sidebar color branches intact.
+Why: Entering the strength page made the shared left navigation text look larger than the rest of the site.
+Rollback target: `DV-2026-05-24-02`
+Notes: CSS and smoke-test guard only. Strength page content, global theme selection, training logic, save APIs, and the red settings control deck remain unchanged.
+
+### Version: DV-2026-05-24-02
+Date: 2026-05-24
+Surface: Muscle Training settings control deck on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the bottom training check-in and plan tuning console's leftover lime active states with the red and coral control palette used elsewhere in Hermes. Primary actions, active chips, sync pills, hover and focus states, summary borders, and the plan-impact strip now share the same red tone in both dark and white muscle themes.
+Why: The settings console visually drifted from the rest of the page and still used neon green for important states, making the lower section feel disconnected.
+Rollback target: `DV-2026-05-24-01`
+Notes: CSS and smoke-test guard only. Check-in save, reset, profile save, fields, routes, backend APIs, exercise recommendations, Reference Dock, and training plan generation remain unchanged.
+
+### Version: DV-2026-05-24-01
+Date: 2026-05-24
+Surface: Strength route sidebar theme sync on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Split the strength-route sidebar styling into dark-default and white-theme branches so the shared runner sidebar follows the strength page `data-muscle-theme` instead of always rendering as a light shell.
+Why: The user reported that entering the strength area made the left sidebar turn white while the strength page itself stayed dark.
+Rollback target: `DV-2026-05-19-06`
+Notes: This is a scoped visual repair for `/muscle-training`. It does not change the global theme switch, training logic, exercise selection, media, or save APIs.
 
 ### Version: DV-2026-05-23-17
 Date: 2026-05-23
