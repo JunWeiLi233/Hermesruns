@@ -892,6 +892,10 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
   color: #595c5d !important;
 }
 
+.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-body p, .mt-reference-body li, .mt-reference-muscles > span, .mt-top-reference-body p, .mt-top-reference-body li, .mt-top-reference-muscles > span) {
+  color: #595c5d !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) :is(.mt-reference-muscles em, .mt-top-reference-muscles em) {
   border-color: rgba(160, 57, 42, 0.18) !important;
   background: rgba(255, 255, 255, 0.72) !important;

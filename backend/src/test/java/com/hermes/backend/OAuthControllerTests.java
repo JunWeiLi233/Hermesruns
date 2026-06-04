@@ -93,7 +93,8 @@ class OAuthControllerTests {
         when(stravaTokenService.isStravaConfigured()).thenReturn(true);
         when(stravaTokenService.isProfileLinkState(any())).thenReturn(true);
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(currentRunner));
-        when(stravaTokenService.buildStravaAuthUrl(any())).thenReturn("https://www.strava.com/oauth/authorize?client_id=client-id&state=profile-link:test");
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenAnswer(invocation ->
+                "https://www.strava.com/oauth/authorize?client_id=client-id&state=" + invocation.getArgument(0));
         when(stravaTokenService.createProfileLinkState(currentRunner)).thenReturn("profile-link:encoded.signature");
         @SuppressWarnings("unchecked")
         Map<String, Object> linkBody = (Map<String, Object>) controller.createStravaLinkUrl("Bearer session-token").getBody();
@@ -115,7 +116,7 @@ class OAuthControllerTests {
                         "lastname", "Runner"
                 )
         )));
-        when(stravaTokenService.decodeProfileLinkState(state)).thenReturn(
+        when(stravaTokenService.decodeProfileLinkState("profile-link:encoded.signature")).thenReturn(
                 Optional.of(new StravaTokenService.PendingStravaLinkRequest(12L, System.currentTimeMillis() + 600_000, "hashed-session-token")));
         when(runnerRepository.findByStravaAthleteId(989898L)).thenReturn(Optional.empty());
         when(stravaTokenService.stravaEmail(989898L)).thenReturn("strava+989898@hermes.local");
@@ -174,7 +175,8 @@ class OAuthControllerTests {
         when(stravaTokenService.isStravaConfigured()).thenReturn(true);
         when(stravaTokenService.isProfileLinkState(any())).thenReturn(true);
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(currentRunner));
-        when(stravaTokenService.buildStravaAuthUrl(any())).thenReturn("https://www.strava.com/oauth/authorize?client_id=client-id&state=profile-link:test");
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenAnswer(invocation ->
+                "https://www.strava.com/oauth/authorize?client_id=client-id&state=" + invocation.getArgument(0));
         when(stravaTokenService.createProfileLinkState(currentRunner)).thenReturn("profile-link:encoded.signature");
         @SuppressWarnings("unchecked")
         Map<String, Object> linkBody = (Map<String, Object>) firstController.createStravaLinkUrl("Bearer session-token").getBody();
@@ -196,7 +198,7 @@ class OAuthControllerTests {
                         "lastname", "Proof"
                 )
         )));
-        when(stravaTokenService.decodeProfileLinkState(state)).thenReturn(
+        when(stravaTokenService.decodeProfileLinkState("profile-link:encoded.signature")).thenReturn(
                 Optional.of(new StravaTokenService.PendingStravaLinkRequest(34L, System.currentTimeMillis() + 600_000, "hashed-session-token")));
         when(runnerRepository.findByStravaAthleteId(121212L)).thenReturn(Optional.empty());
         when(stravaTokenService.stravaEmail(121212L)).thenReturn("strava+121212@hermes.local");
@@ -245,7 +247,8 @@ class OAuthControllerTests {
         when(stravaTokenService.isStravaConfigured()).thenReturn(true);
         when(stravaTokenService.isProfileLinkState(any())).thenReturn(true);
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(currentRunner));
-        when(stravaTokenService.buildStravaAuthUrl(any())).thenReturn("https://www.strava.com/oauth/authorize?client_id=client-id&state=profile-link:test");
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenAnswer(invocation ->
+                "https://www.strava.com/oauth/authorize?client_id=client-id&state=" + invocation.getArgument(0));
         when(stravaTokenService.createProfileLinkState(currentRunner)).thenReturn("profile-link:encoded.signature");
         @SuppressWarnings("unchecked")
         Map<String, Object> linkBody = (Map<String, Object>) controller.createStravaLinkUrl("Bearer session-token").getBody();
@@ -268,7 +271,7 @@ class OAuthControllerTests {
                         "lastname", "Proof"
                 )
         )));
-        when(stravaTokenService.decodeProfileLinkState(state)).thenReturn(
+        when(stravaTokenService.decodeProfileLinkState("profile-link:encoded.signature")).thenReturn(
                 Optional.of(new StravaTokenService.PendingStravaLinkRequest(56L, System.currentTimeMillis() + 600_000, "hashed-session-token")));
         when(runnerRepository.findByStravaAthleteId(565656L)).thenReturn(Optional.empty());
         when(stravaTokenService.stravaEmail(565656L)).thenReturn("strava+565656@hermes.local");
@@ -312,6 +315,8 @@ class OAuthControllerTests {
         when(stravaTokenService.isStravaConfigured()).thenReturn(true);
         when(stravaTokenService.isProfileLinkState("login")).thenReturn(false);
         when(stravaTokenService.decodeProfileLinkState("login")).thenReturn(Optional.empty());
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenAnswer(invocation ->
+                "https://www.strava.com/oauth/authorize?client_id=client-id&state=" + invocation.getArgument(0));
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
@@ -342,7 +347,8 @@ class OAuthControllerTests {
         when(stravaSyncService.scheduleStravaSync(any(Runner.class), eq("fresh-token"), eq(false), eq("oauth_login")))
                 .thenReturn(StravaSyncService.SyncLaunchResult.STARTED);
 
-        RedirectView redirectView = controller.handleStravaCallback("oauth-code", null, "login");
+        String state = extractQueryParam(controller.startStravaAuth("login").getUrl(), "state");
+        RedirectView redirectView = controller.handleStravaCallback("oauth-code", null, state);
 
         assertNotNull(redirectView.getUrl());
         assertTrue(redirectView.getUrl().contains("/profile#source=strava"));
@@ -684,7 +690,10 @@ class OAuthControllerTests {
 
         when(stravaTokenService.isStravaConfigured()).thenReturn(true);
 
-        RedirectView redirect = controller.handleStravaCallback(null, "access_denied", "state");
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenAnswer(invocation ->
+                "https://www.strava.com/oauth/authorize?client_id=client-id&state=" + invocation.getArgument(0));
+        String state = extractQueryParam(controller.startStravaAuth("login").getUrl(), "state");
+        RedirectView redirect = controller.handleStravaCallback(null, "access_denied", state);
 
         assertNotNull(redirect.getUrl());
         assertTrue(redirect.getUrl().contains("STRAVA_OAUTH_ERROR"));
@@ -708,7 +717,10 @@ class OAuthControllerTests {
 
         when(stravaTokenService.isStravaConfigured()).thenReturn(true);
 
-        RedirectView redirect = controller.handleStravaCallback(null, null, "state");
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenAnswer(invocation ->
+                "https://www.strava.com/oauth/authorize?client_id=client-id&state=" + invocation.getArgument(0));
+        String state = extractQueryParam(controller.startStravaAuth("login").getUrl(), "state");
+        RedirectView redirect = controller.handleStravaCallback(null, null, state);
 
         assertNotNull(redirect.getUrl());
         assertTrue(redirect.getUrl().contains("STRAVA_MISSING_CODE"));
@@ -732,6 +744,8 @@ class OAuthControllerTests {
         setField(controller, "stravaRedirectUri", "http://localhost:8080/api/auth/strava/callback");
 
         when(stravaTokenService.isStravaConfigured()).thenReturn(true);
+        when(stravaTokenService.buildStravaAuthUrl(any())).thenAnswer(invocation ->
+                "https://www.strava.com/oauth/authorize?client_id=client-id&state=" + invocation.getArgument(0));
         when(restTemplate.exchange(
                 eq("https://www.strava.com/oauth/token"),
                 eq(HttpMethod.POST),
@@ -739,7 +753,8 @@ class OAuthControllerTests {
                 anyTypeRef()
         )).thenReturn(ResponseEntity.ok(Map.of("access_token", "", "athlete", Map.of("id", 12345L))));
 
-        RedirectView redirect = controller.handleStravaCallback("code", null, "state");
+        String state = extractQueryParam(controller.startStravaAuth("login").getUrl(), "state");
+        RedirectView redirect = controller.handleStravaCallback("code", null, state);
 
         assertNotNull(redirect.getUrl());
         assertTrue(redirect.getUrl().contains("STRAVA_OAUTH_INVALID_RESPONSE"));

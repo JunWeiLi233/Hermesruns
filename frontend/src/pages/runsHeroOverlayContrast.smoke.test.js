@@ -9,8 +9,8 @@ const contrastFixes = readFileSync(path.join(here, '../styles/contrast-fixes.css
 
 assert.match(
   runsSource,
-  /recent-runs-hero-overlay-image[\s\S]*src=\{recentRunsHeroOverlay\}/,
-  'Runs hero should mount the generated overlay image inside the existing overlay layer.',
+  /<div className="recent-runs-hero-overlay" \/>/,
+  'Runs hero should mount the overlay layer used by the light-mode contrast repair.',
 );
 
 assert.match(

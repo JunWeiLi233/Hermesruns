@@ -7,6 +7,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -280,19 +282,29 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
-    void differentRunnersHaveIndependentSyncStates() {
+    void differentRunnersHaveIndependentSyncStates() throws Exception {
         Runner runner1 = runner(1L);
         Runner runner2 = runner(2L);
+        CountDownLatch importsEnteredRepository = new CountDownLatch(2);
+        CountDownLatch releaseImports = new CountDownLatch(1);
         when(wellnessSummaryRepository.findByRunnerAndProviderAndDate(any(), any(), any()))
-                .thenReturn(Optional.empty());
+                .thenAnswer(invocation -> {
+                    importsEnteredRepository.countDown();
+                    releaseImports.await(2, TimeUnit.SECONDS);
+                    return Optional.empty();
+                });
+        when(coachRunnerStateRepository.findByRunner(any())).thenReturn(Optional.empty());
 
-        assertThat(service.importWellnessData(runner1, List.of())).isTrue();
-        assertThat(service.importWellnessData(runner2, List.of())).isTrue();
+        Map<String, Object> point = Map.of("type", "wellness", "date", "2026-04-20", "restingHeartRate", 58);
+        assertThat(service.importWellnessData(runner1, List.of(point))).isTrue();
+        assertThat(service.importWellnessData(runner2, List.of(point))).isTrue();
+        assertThat(importsEnteredRepository.await(2, TimeUnit.SECONDS)).isTrue();
 
         AppleHealthImportService.HealthSyncStatus status1 = service.getStatus(1L);
         AppleHealthImportService.HealthSyncStatus status2 = service.getStatus(2L);
         assertThat(status1.running()).isTrue();
         assertThat(status2.running()).isTrue();
+        releaseImports.countDown();
     }
 
     private Runner runner(Long id) {

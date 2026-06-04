@@ -235,6 +235,7 @@ HERMES_SELF_EVOLVING_ENGINE.md
 .tools/auto-hermes-self-check.mjs
 .tools/rtk-codex-health.ps1
 .tools/codex-local.exe
+!.tools/auto-hermes-finish.mjs
 .tools/token_tester/
 .tools/package-auto-hermes-share.ps1
 .tools/verify-backend-runtime-sync.mjs

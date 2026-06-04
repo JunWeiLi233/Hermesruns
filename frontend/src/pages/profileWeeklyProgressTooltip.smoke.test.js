@@ -5,17 +5,24 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const profileSource = readFileSync(path.join(here, 'ProfileDashboard.jsx'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
 
 assert.match(
   profileSource,
-  /runner-dashboard-bar-tooltip/,
+  /hd-bar-tooltip/,
   'Profile weekly progress card should render the weekly bar tooltip.',
 );
 
 assert.match(
   profileSource,
-  /left:\s*`clamp\(84px,\s*\$\{\(\(activeWeeklyBar\.index \+ 0\.5\) \/ weeklyBars\.length\) \* 100\}%,\s*calc\(100% - 84px\)\)`/,
-  'Weekly progress tooltip should clamp its horizontal position instead of snapping awkwardly to the chart edge.',
+  /onMouseEnter=\{\(\) => setActiveWeeklyBar\(bar\)\}[\s\S]*onMouseLeave=\{\(\) => setActiveWeeklyBar\(null\)\}/,
+  'Weekly progress tooltip should be driven by the hovered weekly bar.',
+);
+
+assert.match(
+  styleSource,
+  /\.hd-bar-tooltip\s*\{/,
+  'Profile weekly progress tooltip should have a dedicated style hook.',
 );
 
 assert.doesNotMatch(

@@ -509,6 +509,7 @@ function getCourseMapActionProgress(action) {
 const COURSE_MAP_ACTION_STATUS_KEYS = {
   upload: 'dashboard.course_maps_status_running_upload',
   queued: 'dashboard.course_maps_status_running_queued',
+  processing: 'dashboard.course_maps_status_running_processing',
   scan: 'dashboard.course_maps_status_running_scan',
   reanalyze: 'dashboard.course_maps_status_running_reanalyze',
   accept: 'dashboard.course_maps_status_running_accept',
@@ -908,6 +909,11 @@ const Dashboard = memo(function Dashboard() {
       if (areCourseMapActionsEqual(current[raceId], next)) return current;
       return { ...current, [raceId]: next };
     });
+  }
+
+  function setCourseMapAction(nextAction) {
+    if (!nextAction?.raceId) return;
+    setCourseMapActionForRace(nextAction.raceId, nextAction);
   }
 
   function clearCourseMapActionForRace(raceId, jobId = null) {
@@ -1562,9 +1568,8 @@ const Dashboard = memo(function Dashboard() {
       });
       activeJobId = jobId;
       announceCourseMapAction(raceId, { type: 'queued', progress: 12, jobId, jobStatus: 'PENDING' });
-      const job = await waitForAdminJob(jobId, {
-        onProgress: (nextJob) => announceCourseMapAction(raceId, getCourseMapActionFromJob(raceId, 'queued', nextJob)),
-      });
+      setCourseMapAction({ raceId, type: 'processing' });
+      const job = await waitForAdminJob(jobId);
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
       if (job.status === 'FAILED') {
         throw new Error(job.summary || 'Course-map upload failed.');
@@ -1621,9 +1626,7 @@ const Dashboard = memo(function Dashboard() {
       });
       activeJobId = jobId;
       announceCourseMapAction(raceId, { type: 'reanalyze', progress: 12, jobId, jobStatus: 'PENDING' });
-      const job = await waitForAdminJob(jobId, {
-        onProgress: (nextJob) => announceCourseMapAction(raceId, getCourseMapActionFromJob(raceId, 'reanalyze', nextJob)),
-      });
+      const job = await waitForAdminJob(jobId);
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
       if (job.status === 'FAILED') {
         throw new Error(job.summary || 'Course-map re-analysis failed.');
@@ -1668,11 +1671,12 @@ const Dashboard = memo(function Dashboard() {
     }
   }
 
-  async function waitForAdminJob(jobId, options = {}) {
+  async function waitForAdminJob(jobId, maxAttempts = 180) {
     if (!jobId) {
       throw new Error('Missing admin job id.');
     }
-    const configuredAttempts = typeof options === 'number' ? options : options?.maxAttempts;
+    const options = typeof maxAttempts === 'object' && maxAttempts !== null ? maxAttempts : {};
+    const configuredAttempts = typeof maxAttempts === 'number' ? maxAttempts : options?.maxAttempts;
     const attemptLimit = Number(configuredAttempts);
     const hasAttemptLimit = Number.isFinite(attemptLimit) && attemptLimit > 0;
     const onProgress = typeof options?.onProgress === 'function' ? options.onProgress : null;
@@ -1824,8 +1828,8 @@ const Dashboard = memo(function Dashboard() {
 
   const selectedCourseMapItem = useMemo(() => {
     const queueItem = courseMapQueueItems.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null;
-    const selectedDetail = getCourseMapRaceId(courseMapDetail) === selectedCourseMapId ? courseMapDetail : null;
-    return selectedDetail ? buildCourseMapWorkspaceSource({ queueItem, detail: selectedDetail }) : queueItem;
+    const detail = getCourseMapRaceId(courseMapDetail) === selectedCourseMapId ? courseMapDetail : null;
+    return buildCourseMapWorkspaceSource({ queueItem, detail });
   }, [courseMapDetail, courseMapQueueItems, selectedCourseMapId]);
 
   const pendingCourseMapPreview = useMemo(
@@ -3610,7 +3614,7 @@ const Dashboard = memo(function Dashboard() {
                           `}</style>
                           <div className="admin-jobs-detail__section-head">
                             <span className="section-intro-kicker">{t('dashboard.course_maps_timeline_label')}</span>
-                            <strong>{t('dashboard.course_maps_timeline_title')}</strong>
+                            <strong>{t('dashboard.course_maps_scan_timeline_title')}</strong>
                             {courseMapTimelineLoadState === 'loading' && <span>{t('dashboard.course_maps_timeline_loading')}</span>}
                             {courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 && (
                               <span>{courseMapScanTimeline.length} {t('dashboard.course_maps_timeline_steps')}</span>

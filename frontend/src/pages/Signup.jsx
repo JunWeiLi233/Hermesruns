@@ -278,7 +278,7 @@ export default function Signup() {
             </div>
 
             <footer className="auth-flow-legal">
-              <FooterNavLinks publicOnly={true} />
+              <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
             </footer>
           </section>
         </main>
@@ -466,7 +466,7 @@ export default function Signup() {
           </div>
 
           <footer className="auth-flow-legal">
-            <FooterNavLinks publicOnly={true} />
+            <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
           </footer>
         </section>
       </main>

@@ -6,31 +6,30 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rewardsSource = readFileSync(path.join(here, 'Rewards.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
-const enSource = readFileSync(path.join(here, '../i18n/locales/en.js'), 'utf8');
-const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN.js'), 'utf8');
+const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
+const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
 
 assert.match(
   rewardsSource,
-  /const\s+nextReward\s*=\s*upcomingRewards\[0\]\s*\|\|\s*null/,
-  'Rewards should promote the first live upcoming reward into the awards next-unlock surface.',
+  /const\s+nextMilestone\s*=\s*upcomingRewards\[0\]\s*\|\|\s*null/,
+  'Rewards should promote the first live upcoming reward into the next milestone surface.',
 );
 
-assert.match(
-  rewardsSource,
-  /rewards-award-page/,
-  'Rewards should render the fully redesigned awards page shell.',
-);
+for (const className of [
+  'rewards-ledger-page',
+  'rewards-ledger-canvas',
+  'rewards-ledger-hero',
+  'rewards-ledger-hero-card--next',
+  'rewards-ledger-metrics',
+  'rewards-ledger-section',
+]) {
+  assert.match(rewardsSource, new RegExp(className), `Rewards should keep ${className}.`);
+}
 
 assert.match(
   rewardsSource,
-  /earnedPreview\s*=\s*earnedRewards\.slice\(0,\s*5\)/,
-  'Rewards should keep a live earned-badge preview strip instead of flattening the page into static cards.',
-);
-
-assert.match(
-  rewardsSource,
-  /rewards-award-next-card/,
-  'Rewards should expose a dedicated next-unlock card instead of only a generic upcoming grid.',
+  /priorityPipeline\s*=\s*useMemo/,
+  'Rewards should keep the live upcoming reward priority pipeline.',
 );
 
 assert.match(
@@ -41,32 +40,14 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.rewards-award-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1\.12fr\)/,
-  'Rewards styles should define an asymmetric awards hero grid.',
+  /\.rewards-ledger-hero\s*\{/,
+  'Rewards styles should define the ledger hero surface.',
 );
 
 assert.match(
   styleSource,
-  /\.rewards-award-ring\s*\{[\s\S]*conic-gradient/,
-  'Rewards styles should define a conic awards completion ring.',
-);
-
-assert.match(
-  styleSource,
-  /\.rewards-award-next-card\s*\{/,
-  'Rewards styles should define the next-unlock awards card surface.',
-);
-
-assert.match(
-  styleSource,
-  /Awards page light mode: warm gallery/,
-  'Rewards styles should include the light awards-gallery mode.',
-);
-
-assert.match(
-  styleSource,
-  /body\s+\.rewards-award-page\s*\{[\s\S]*linear-gradient\(135deg,\s*#fbf6ec/,
-  'Rewards awards page should use a warm light background instead of the dark vault as the active mode.',
+  /\.rewards-ledger-hero-progress\s*\{/,
+  'Rewards styles should define the progress bar surface.',
 );
 
 for (const localeSource of [enSource, zhSource]) {

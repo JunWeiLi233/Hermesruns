@@ -21,7 +21,7 @@ assert.match(
 
 assert.match(
   dashboardSource,
-  /const selectedCourseMapItem = useMemo\([\s\S]*const queueItem = courseMapQueueItems\.find\(item => getCourseMapRaceId\(item\) === selectedCourseMapId\) \|\| null;[\s\S]*buildCourseMapWorkspaceSource\(\{ queueItem, detail: courseMapDetail \}\)/,
+  /const selectedCourseMapItem = useMemo\([\s\S]*const queueItem = courseMapQueueItems\.find\(item => getCourseMapRaceId\(item\) === selectedCourseMapId\) \|\| null;[\s\S]*const detail = getCourseMapRaceId\(courseMapDetail\) === selectedCourseMapId \? courseMapDetail : null;[\s\S]*buildCourseMapWorkspaceSource\(\{ queueItem, detail \}\)/,
   'Dashboard selected course-map detail should preserve catalog lat/lng through buildCourseMapWorkspaceSource so the live/pending review grids can always render a city-level OSM fallback map.'
 );
 
