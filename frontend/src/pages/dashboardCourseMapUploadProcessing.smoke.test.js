@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
-const translationsSource = readFileSync(path.join(here, '../i18n/translations.js'), 'utf8');
+const translationsSource = [
+  readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8'),
+  readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8'),
+].join('\n');
 
 assert.match(
   dashboardSource,

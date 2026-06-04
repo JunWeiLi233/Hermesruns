@@ -16,6 +16,20 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - After a meaningful verified round, refresh the matching capsule.
 
 ## Surface Capsules
+### runner shell sidebar
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### Territory /territory (Leaflet CARTO base map + polygon tooltips)
+- Goal: Make claimed land read as layered territory on the same dark CARTO-style map: every owner keeps ownership, overlaps are covered visually by newer claims.
+- Changed: `/api/territory/polygons` now preserves overlapping cells per owner instead of globally consuming them; the Leaflet renderer paints older masks first and newest masks as the top layer.
+- Preserve: Keep backend masks as concrete land cells, exact underlay + smoothed fill + single neon contour, nonzero SVG fill rules, heatmap base map styling, auth/routing, and the separate `/api/territory` score-board behavior.
+- Next Risk: Future ownership fixes could reintroduce `claimedCells`/`claimedTiles` pruning or active-owner sorting, which would delete covered-down ownership instead of only changing visual layer order.
+- Rollback Target: working tree before this round
+
 ### Auto-Hermes control plane
 - Goal: Future browser-visible rounds should keep proof gates active even when browser-harness.exe is blocked by local policy.
 - Changed: Replaced the stale browser-harness hard-block fallback with the repo Playwright wrapper and fixed the wrapper to restore last URL across commands.
@@ -94,10 +108,10 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Rollback Target: ee6113b6^ (before injury prevention commit)
 
 ### /territory
-- Goal:
-- Changed:
-- Preserve:
-- Next Risk:
+- Goal: Preserve layered concrete land ownership where overlap stacks rather than deletes older claims.
+- Changed: Backend polygon masks and frontend render guards now keep older and newer overlapping territory layers.
+- Preserve: Newest claim paints on top, older covered-down territory remains owned underneath.
+- Next Risk: Cache or visual fallback changes could accidentally restore latest-wins cell removal.
 - Rollback Target: working tree before this round
 
 ### /runs

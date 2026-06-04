@@ -12,17 +12,17 @@ const splitTerritoryCss = readFileSync(
 const bundledStyle = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
 
 // ── 1. Smoother camera ──────────────────────────────────────────────────────
-// fitBounds snaps the viewport instantly. flyToBounds animates with a
-// configurable duration. Every camera-fit in Territory should be flyToBounds.
+// Initial camera placement should be instant and centered on the user's live
+// territory center; explicit recenter actions should still animate to full bounds.
 assert.match(
   territorySource,
-  /map\.flyToBounds\([\s\S]*?duration:\s*0\.8/,
-  'Territory map should use flyToBounds with an animated duration instead of an instant fitBounds.',
+  /if \(recenterSignal > 0\) \{[\s\S]*map\.flyToBounds\([\s\S]*?duration:\s*0\.8/,
+  'Territory map should keep flyToBounds animation for explicit recenter actions.',
 );
-assert.doesNotMatch(
+assert.match(
   territorySource,
-  /map\.fitBounds\(/,
-  'Territory should not call map.fitBounds — replaced by flyToBounds for smoother camera moves.',
+  /map\.setView\(\[latitude, longitude\], territoryInitialZoom\(center\), \{ animate:\s*false \}\)[\s\S]*?function territoryInitialZoom\(center\)[\s\S]*?Math\.max\(Number\.isFinite\(zoom\) \? zoom : 14, 14\)/,
+  'Territory should use non-animated setView with a minimum zoom so disconnected territory components do not force a sparse map.',
 );
 
 // ── 2. Concrete multi-player markers ────────────────────────────────────────

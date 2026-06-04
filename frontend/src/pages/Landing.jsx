@@ -394,6 +394,46 @@ export default function Landing() {
                   <span>{t('landing.cinematic_trust_method')}</span>
                 </div>
               </div>
+              <aside className="landing-command-board landing-cinematic-hero-proof" aria-label={t('landing.cinematic_hud_label')}>
+                <div className="landing-command-board-head">
+                  <span>{t('landing.cinematic_hud_kicker')}</span>
+                  <strong>{t('landing.cinematic_hud_workout_title', heroWorkout)}</strong>
+                  <p>{t('landing.cinematic_hud_workout_copy', heroWorkout)}</p>
+                </div>
+                <div className="landing-command-board-map" aria-hidden="true">
+                  <span className="landing-command-map-line" />
+                  <span className="landing-command-map-line is-secondary" />
+                  <span className="landing-command-map-pin is-start" />
+                  <span className="landing-command-map-pin is-finish" />
+                  <span className="landing-command-scanline" />
+                </div>
+                <div className="landing-command-board-metrics">
+                  <article className="landing-cinematic-proof-card">
+                    <ReadinessRing value={82} />
+                    <div>
+                      <span>{t('landing.cinematic_hud_readiness')}</span>
+                      <strong>82</strong>
+                      <em>{t('landing.cinematic_formula_recovery', formulaValues)}</em>
+                    </div>
+                  </article>
+                  <article className="landing-cinematic-proof-card">
+                    <LandingGlyph name="vdot" className="landing-cinematic-proof-icon" />
+                    <div>
+                      <span>{t('landing.cinematic_formula_vdot_label')}</span>
+                      <strong>{formulaValues.vdot}</strong>
+                      <em>{t('landing.cinematic_formula_paces', formulaValues)}</em>
+                    </div>
+                  </article>
+                  <article className="landing-cinematic-proof-card">
+                    <LandingGlyph name="shoe" className="landing-cinematic-proof-icon" />
+                    <div>
+                      <span>{t('landing.cinematic_hud_shoe', heroWorkout)}</span>
+                      <strong>{formulaValues.distance}</strong>
+                      <em>{formulaValues.pace}</em>
+                    </div>
+                  </article>
+                </div>
+              </aside>
             </RevealSection>
           </PageWidth>
         </section>

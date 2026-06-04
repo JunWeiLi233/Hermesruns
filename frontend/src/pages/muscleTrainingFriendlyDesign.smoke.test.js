@@ -620,19 +620,19 @@ assert.match(
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone:hover,[\s\S]*\.mt-muscle-hit-zone:focus-visible,[\s\S]*\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.12\);[\s\S]*outline-color:\s*rgba\(240,\s*117,\s*97,\s*0\.88\);/,
+  /\.mt-muscle-hit-zone:hover,[\s\S]*\.mt-muscle-hit-zone:focus-visible,[\s\S]*\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*background:\s*rgba\(191,\s*255,\s*0,\s*0\.12\);[\s\S]*outline-color:\s*rgba\(191,\s*255,\s*0,\s*0\.88\);/,
   'Anatomy hit zones should reveal feedback on hover, keyboard focus, and the selected persistent ring.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*box-shadow:\s*0 0 0 2px rgba\(240,\s*117,\s*97,\s*0\.78\) inset/,
+  /\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*box-shadow:\s*0 0 0 2px rgba\(191,\s*255,\s*0,\s*0\.78\) inset/,
   'The selected anatomy hit zone should keep a persistent visible ring after click or bottom-button selection.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone:active\s*\{[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.18\);/,
+  /\.mt-muscle-hit-zone:active\s*\{[\s\S]*background:\s*rgba\(191,\s*255,\s*0,\s*0\.18\);/,
   'Anatomy hit zones should show pressed feedback without persistent default circles.',
 );
 

@@ -38,7 +38,7 @@ class GeminiAnchorPixelClientTests {
         @SuppressWarnings("unchecked")
         HttpEntity<Map<String, Object>>[] requestHolder = new HttpEntity[1];
         when(restTemplate.exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 any(ParameterizedTypeReference.class)
@@ -89,6 +89,7 @@ class GeminiAnchorPixelClientTests {
 
         Map<String, Object> requestBody = requestHolder[0].getBody();
         assertThat(requestBody).isNotNull();
+        assertThat(requestHolder[0].getHeaders().getFirst("x-goog-api-key")).isEqualTo("test-key");
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> contents = (List<Map<String, Object>>) requestBody.get("contents");
         @SuppressWarnings("unchecked")
@@ -122,7 +123,7 @@ class GeminiAnchorPixelClientTests {
         @SuppressWarnings("unchecked")
         HttpEntity<Map<String, Object>>[] requestHolder = new HttpEntity[1];
         when(restTemplate.exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 any(ParameterizedTypeReference.class)
@@ -343,7 +344,7 @@ class GeminiAnchorPixelClientTests {
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         when(systemConfigService.isAiConfigured()).thenReturn(true);
         when(restTemplate.exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 any(ParameterizedTypeReference.class)
@@ -395,7 +396,7 @@ class GeminiAnchorPixelClientTests {
                         org.assertj.core.groups.Tuple.tuple("Finish", 456, 789)
                 );
         verify(restTemplate, times(2)).exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 any(ParameterizedTypeReference.class)

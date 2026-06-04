@@ -34,6 +34,12 @@ class SecurityHardeningTests {
     private RunnerRepository runnerRepository;
 
     @Autowired
+    private ActivityRepository activityRepository;
+
+    @Autowired
+    private ShoeRepository shoeRepository;
+
+    @Autowired
     private CoachScheduledWorkoutRepository coachScheduledWorkoutRepository;
 
     @Autowired
@@ -50,6 +56,8 @@ class SecurityHardeningTests {
         coachScheduledWorkoutRepository.deleteAll();
         coachTrainingBlockRepository.deleteAll();
         coachRunnerStateRepository.deleteAll();
+        activityRepository.deleteAll();
+        shoeRepository.deleteAll();
         runnerRepository.deleteAll();
     }
 

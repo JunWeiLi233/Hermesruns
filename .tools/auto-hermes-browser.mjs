@@ -180,7 +180,7 @@ else:
 `;
 }
 
-function pythonScreenshot({ out, format, quality }) {
+function pythonScreenshot({ out, format, quality, clip }) {
   const absOut = path.isAbsolute(out) ? out : path.join(REPO_ROOT, out);
   fs.mkdirSync(path.dirname(absOut), { recursive: true });
   const pyOut = absOut.replace(/\\/g, "/");
@@ -189,9 +189,13 @@ function pythonScreenshot({ out, format, quality }) {
   // still adequate for visual proof.
   const fmt = (format || "jpeg").toLowerCase();
   const qty = Math.max(40, Math.min(100, Number(quality) || 78));
-  const paramsJson = fmt === "png"
-    ? `{"format": "png"}`
-    : `{"format": "jpeg", "quality": ${qty}}`;
+  const params = fmt === "png"
+    ? { format: "png" }
+    : { format: "jpeg", quality: qty };
+  if (clip) {
+    params.clip = clip;
+  }
+  const paramsJson = JSON.stringify(params);
   return `
 __keep = consolidate_existing()
 if __keep is None:
@@ -328,6 +332,182 @@ function die(code, payload) {
   process.exit(code);
 }
 
+async function browserWsEndpoint() {
+  const base = process.env.BU_CDP_URL || "http://127.0.0.1:9333";
+  const response = await fetch(`${base.replace(/\/$/, "")}/json/version`);
+  if (!response.ok) {
+    throw new Error(`CDP version endpoint failed: ${response.status}`);
+  }
+  const data = await response.json();
+  if (!data.webSocketDebuggerUrl) {
+    throw new Error("CDP version endpoint did not include webSocketDebuggerUrl");
+  }
+  return data.webSocketDebuggerUrl;
+}
+
+class NodeCdpConnection {
+  constructor(wsUrl) {
+    this.wsUrl = wsUrl;
+    this.nextId = 1;
+    this.pending = new Map();
+    this.ws = null;
+  }
+
+  async connect() {
+    this.ws = new WebSocket(this.wsUrl);
+    this.ws.addEventListener("message", (event) => {
+      const payload = JSON.parse(String(event.data || "{}"));
+      if (!payload.id) return;
+      const pending = this.pending.get(payload.id);
+      if (!pending) return;
+      this.pending.delete(payload.id);
+      if (payload.error) {
+        pending.reject(new Error(JSON.stringify(payload.error)));
+      } else {
+        pending.resolve(payload.result || {});
+      }
+    });
+    await new Promise((resolve, reject) => {
+      this.ws.addEventListener("open", resolve, { once: true });
+      this.ws.addEventListener("error", reject, { once: true });
+    });
+  }
+
+  send(method, params = {}, sessionId = null) {
+    const id = this.nextId;
+    this.nextId += 1;
+    const message = { id, method, params };
+    if (sessionId) message.sessionId = sessionId;
+    const result = new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      setTimeout(() => {
+        if (!this.pending.has(id)) return;
+        this.pending.delete(id);
+        reject(new Error(`CDP command timed out: ${method}`));
+      }, 30_000);
+    });
+    this.ws.send(JSON.stringify(message));
+    return result;
+  }
+
+  close() {
+    try {
+      this.ws?.close();
+    } catch {
+      // no-op
+    }
+  }
+}
+
+async function withNodeCdp(run) {
+  const conn = new NodeCdpConnection(await browserWsEndpoint());
+  await conn.connect();
+  try {
+    return await run(conn);
+  } finally {
+    conn.close();
+  }
+}
+
+function targetIsHermes(target, markers) {
+  const url = String(target?.url || "");
+  return target?.type === "page" && markers.some((marker) => url.includes(marker));
+}
+
+async function nodeCdpConsolidate(conn, markers) {
+  const targets = await conn.send("Target.getTargets");
+  const tabs = (targets.targetInfos || []).filter((target) => targetIsHermes(target, markers));
+  if (!tabs.length) return null;
+  const keep = tabs[0].targetId;
+  await Promise.all(tabs.slice(1).map((target) => conn.send("Target.closeTarget", { targetId: target.targetId }).catch(() => null)));
+  return keep;
+}
+
+async function nodeCdpAttach(conn, targetId) {
+  const result = await conn.send("Target.attachToTarget", { targetId, flatten: true });
+  if (!result.sessionId) throw new Error("CDP attachToTarget did not return sessionId");
+  return result.sessionId;
+}
+
+async function nodeCdpWaitForLoad(conn, sessionId, maxMs = 15_000) {
+  const deadline = Date.now() + maxMs;
+  while (Date.now() < deadline) {
+    const result = await conn.send("Runtime.evaluate", {
+      expression: "document.readyState",
+      returnByValue: true,
+    }, sessionId);
+    if (result?.result?.value === "complete") return true;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  return false;
+}
+
+async function runNodeCdpGoto({ url, waitMs }) {
+  const markers = hermesMarkers();
+  return withNodeCdp(async (conn) => {
+    let targetId = await nodeCdpConsolidate(conn, markers);
+    if (!targetId) {
+      const created = await conn.send("Target.createTarget", { url, background: true });
+      targetId = created.targetId;
+    }
+    const sessionId = await nodeCdpAttach(conn, targetId);
+    await conn.send("Page.navigate", { url }, sessionId);
+    const loaded = await nodeCdpWaitForLoad(conn, sessionId, waitMs || 15_000);
+    const final = await conn.send("Runtime.evaluate", {
+      expression: "location.href",
+      returnByValue: true,
+    }, sessionId);
+    return { ok: true, targetId, loaded, url: final?.result?.value || url, fallback: "node-cdp" };
+  });
+}
+
+async function runNodeCdpEval({ js, awaitPromise }) {
+  const markers = hermesMarkers();
+  return withNodeCdp(async (conn) => {
+    const targetId = await nodeCdpConsolidate(conn, markers);
+    if (!targetId) return { ok: false, error: "no Hermes tab - call 'goto' first", fallback: "node-cdp" };
+    const sessionId = await nodeCdpAttach(conn, targetId);
+    const result = await conn.send("Runtime.evaluate", {
+      expression: js,
+      returnByValue: true,
+      awaitPromise: Boolean(awaitPromise),
+    }, sessionId);
+    const exception = result?.exceptionDetails?.text;
+    return { ok: !exception, value: result?.result?.value, exception, fallback: "node-cdp" };
+  });
+}
+
+async function runNodeCdpScreenshot({ out, format, quality, clip }) {
+  const markers = hermesMarkers();
+  const absOut = path.isAbsolute(out) ? out : path.join(REPO_ROOT, out);
+  fs.mkdirSync(path.dirname(absOut), { recursive: true });
+  return withNodeCdp(async (conn) => {
+    const targetId = await nodeCdpConsolidate(conn, markers);
+    if (!targetId) return { ok: false, error: "no Hermes tab - call 'goto' first", fallback: "node-cdp" };
+    const sessionId = await nodeCdpAttach(conn, targetId);
+    const params = (format || "jpeg").toLowerCase() === "png"
+      ? { format: "png" }
+      : { format: "jpeg", quality: Math.max(40, Math.min(100, Number(quality) || 78)) };
+    if (clip) params.clip = clip;
+    const screenshot = await conn.send("Page.captureScreenshot", params, sessionId);
+    if (!screenshot.data) return { ok: false, error: "screenshot returned no data", fallback: "node-cdp" };
+    fs.writeFileSync(absOut, Buffer.from(screenshot.data, "base64"));
+    return { ok: true, path: absOut, fallback: "node-cdp" };
+  });
+}
+
+async function fallbackOrDie(pythonResult, code, fallback) {
+  if (pythonResult.ok) {
+    die(code, pythonResult);
+  }
+  try {
+    const result = await fallback();
+    die(result.ok ? code : 1, result);
+  } catch (error) {
+    die(1, { ...pythonResult, fallbackError: error.message });
+  }
+}
+
 function printHelp() {
   process.stdout.write([
     "Single-tab, silent Hermes wrapper around browser-harness.",
@@ -335,7 +515,7 @@ function printHelp() {
     "Subcommands:",
     "  goto       --url <url> [--wait-ms 15000] [--markers <list>]",
     "  eval       --js <expr> [--await] [--markers <list>]",
-    "  screenshot --out <path> [--markers <list>]",
+    "  screenshot --out <path> [--markers <list>] [--clip x,y,width,height]",
     "  status     [--markers <list>]",
     "  cleanup    [--markers <list>]    # close duplicate Hermes tabs",
     "  reset      [--markers <list>]    # close ALL Hermes tabs",
@@ -359,8 +539,14 @@ switch (subcommand) {
     const url = readArg("url");
     if (!url) die(2, { ok: false, error: "--url is required" });
     const waitMs = Number(readArg("wait-ms", "15000"));
-    const out = runPython(pythonGoto({ url, waitMs }));
-    if (!out.ok) die(1, out);
+    let out = runPython(pythonGoto({ url, waitMs }));
+    if (!out.ok) {
+      try {
+        out = await runNodeCdpGoto({ url, waitMs });
+      } catch (error) {
+        die(1, { ...out, fallbackError: error.message });
+      }
+    }
     if (!out.loaded) die(3, { ...out, error: "page did not reach readyState=complete in time" });
     if (typeof out.url === "string" && out.url.startsWith("chrome-error://")) {
       die(1, { ...out, ok: false, error: `navigation failed — landed on ${out.url}. Target likely unreachable.` });
@@ -374,7 +560,7 @@ switch (subcommand) {
     if (!js) die(2, { ok: false, error: "--js is required" });
     const awaitPromise = readFlag("await");
     const out = runPython(pythonEval({ js, awaitPromise }));
-    die(out.ok ? 0 : 1, out);
+    await fallbackOrDie(out, out.ok ? 0 : 1, () => runNodeCdpEval({ js, awaitPromise }));
     break;
   }
 
@@ -383,8 +569,24 @@ switch (subcommand) {
     if (!out) die(2, { ok: false, error: "--out is required" });
     const format = readArg("format", "jpeg");
     const quality = readArg("quality", "78");
-    const result = runPython(pythonScreenshot({ out, format, quality }));
-    die(result.ok ? 0 : 1, result);
+    const clipArg = readArg("clip");
+    let clip = null;
+    if (clipArg) {
+      const parts = clipArg.split(",").map((part) => Number(part.trim()));
+      if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part) || part < 0)
+        || parts[2] <= 0 || parts[3] <= 0) {
+        die(2, { ok: false, error: "--clip must be x,y,width,height with positive width/height" });
+      }
+      clip = {
+        x: parts[0],
+        y: parts[1],
+        width: parts[2],
+        height: parts[3],
+        scale: 1,
+      };
+    }
+    const result = runPython(pythonScreenshot({ out, format, quality, clip }));
+    await fallbackOrDie(result, result.ok ? 0 : 1, () => runNodeCdpScreenshot({ out, format, quality, clip }));
     break;
   }
 

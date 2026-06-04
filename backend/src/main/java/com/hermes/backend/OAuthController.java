@@ -66,6 +66,9 @@ public class OAuthController {
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("Missing OAuth state parameter");
         }
+        if (stravaTokenService.isProfileLinkState(token)) {
+            return token;
+        }
         Object[] entry = pendingStateEntries.remove(token);
         if (entry == null || System.currentTimeMillis() > (Long) entry[1]) {
             throw new IllegalArgumentException("Invalid or expired OAuth state");
@@ -307,9 +310,8 @@ public class OAuthController {
         }
 
         String profileLinkIntent = stravaTokenService.createProfileLinkState(runnerOptional.get());
-        String csrfToken = generateStateToken(profileLinkIntent);
         return ResponseEntity.ok(Map.of(
-                "url", stravaTokenService.buildStravaAuthUrl(csrfToken),
+                "url", stravaTokenService.buildStravaAuthUrl(profileLinkIntent),
                 "expiresInSeconds", 600L
         ));
     }

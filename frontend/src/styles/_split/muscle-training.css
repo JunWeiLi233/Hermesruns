@@ -963,9 +963,33 @@
 }
 
 .muscle-choice-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mt-strength-composer {
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid rgba(251, 146, 60, 0.18);
+    background:
+        radial-gradient(circle at top left, rgba(251, 146, 60, 0.14), transparent 38%),
+        color-mix(in srgb, var(--surface, #ffffff) 88%, transparent);
+}
+
+.mt-strength-composer p,
+.mt-strength-composer em {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.mt-strength-composer strong {
+    color: var(--text-strong);
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .muscle-pref-actions {
@@ -5680,26 +5704,26 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
 .mt-muscle-hit-zone:hover,
 .mt-muscle-hit-zone:focus-visible,
 .mt-muscle-hit-zone.is-active {
-  background: rgba(240, 117, 97, 0.12);
-  box-shadow: 0 0 0 1px rgba(240, 117, 97, 0.72) inset, 0 0 24px rgba(240, 117, 97, 0.28);
-  outline-color: rgba(240, 117, 97, 0.88);
+  background: rgba(191, 255, 0, 0.12);
+  box-shadow: 0 0 0 1px rgba(191, 255, 0, 0.72) inset, 0 0 24px rgba(191, 255, 0, 0.28);
+  outline-color: rgba(191, 255, 0, 0.88);
 }
 
 .mt-muscle-hit-zone.is-active {
-  background: rgba(240, 117, 97, 0.1);
-  box-shadow: 0 0 0 2px rgba(240, 117, 97, 0.78) inset, 0 0 22px rgba(240, 117, 97, 0.24);
+  background: rgba(191, 255, 0, 0.12);
+  box-shadow: 0 0 0 2px rgba(191, 255, 0, 0.78) inset, 0 0 22px rgba(191, 255, 0, 0.24);
 }
 
 .mt-muscle-hit-zone:active {
-  background: rgba(240, 117, 97, 0.18);
-  box-shadow: 0 0 0 1px rgba(240, 117, 97, 0.86) inset, 0 0 30px rgba(240, 117, 97, 0.36);
+  background: rgba(191, 255, 0, 0.18);
+  box-shadow: 0 0 0 1px rgba(191, 255, 0, 0.86) inset, 0 0 30px rgba(191, 255, 0, 0.36);
   transform: scale(0.985);
 }
 
 .mt-muscle-target-buttons {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   margin-top: 12px;
 }
 

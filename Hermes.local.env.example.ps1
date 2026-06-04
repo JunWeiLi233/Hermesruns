@@ -53,6 +53,34 @@ $env:APP_BOOTSTRAP_ADMIN_EMAIL = "admin@local.hermes"
 $env:APP_BOOTSTRAP_ADMIN_PASSWORD = "set-a-strong-admin-password"
 
 # -----------------------------------------------------------------------------
+# Local mock accounts (development only)
+# -----------------------------------------------------------------------------
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
+$env:APP_LOCAL_SHARED_RUNNER_EMAIL = "strava+140971747@hermes.local"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME = "Hermes Shared Runner"
+
+$env:APP_LOCAL_TERRITORY_RIVAL_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_RIVAL_EMAIL = "territory-rival@hermes.local"
+$env:APP_LOCAL_TERRITORY_RIVAL_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_RIVAL_DISPLAY_NAME = "Hermes Temporal Rival"
+
+$env:APP_LOCAL_TERRITORY_FLUSHING_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_FLUSHING_EMAIL = "territory-flushing@hermes.local"
+$env:APP_LOCAL_TERRITORY_FLUSHING_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_FLUSHING_DISPLAY_NAME = "Hermes Flushing Territory Tester"
+
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_EMAIL = "territory-flushing-inner@hermes.local"
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_DISPLAY_NAME = "Hermes Inner Flushing Occupier"
+
+$env:APP_LOCAL_TERRITORY_BERLIN_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_BERLIN_EMAIL = "territory-berlin@hermes.local"
+$env:APP_LOCAL_TERRITORY_BERLIN_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_BERLIN_DISPLAY_NAME = "Hermes Berlin Land Conqueror"
+
+# -----------------------------------------------------------------------------
 # Google OAuth 2.0
 # -----------------------------------------------------------------------------
 # Obtain credentials from https://console.cloud.google.com/apis/credentials

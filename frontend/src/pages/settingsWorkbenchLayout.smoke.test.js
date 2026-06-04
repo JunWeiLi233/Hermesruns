@@ -5,18 +5,21 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const layoutSource = readFileSync(path.join(here, '..', 'components', 'SettingsAtlasLayout.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '..', 'styles', 'style.css'), 'utf8');
+const styleSource = [
+  readFileSync(path.join(here, '..', 'styles', 'style.css'), 'utf8'),
+  readFileSync(path.join(here, '..', 'styles', '_split', 'settings.css'), 'utf8'),
+].join('\n');
 
 assert.match(
   layoutSource,
-  /settings-atlas-workbench/,
-  'Settings should use the redesigned workbench wrapper instead of the old loose three-column layout.',
+  /settings-control-canvas settings-atlas-canvas/,
+  'Settings should mount inside the full-bleed atlas canvas instead of the old constrained shell.',
 );
 
 assert.match(
   layoutSource,
-  /settings-atlas-column--preferences[\s\S]*settings-atlas-action-rail[\s\S]*settings-atlas-column--ecosystem/,
-  'Settings workbench should group preferences, the action rail, and the ecosystem area explicitly.',
+  /st-hero[\s\S]*st-main-grid[\s\S]*st-main-grid[\s\S]*st-services[\s\S]*st-bottom-grid/,
+  'Settings atlas should group profile, preferences, setup, services, and wellness sections explicitly.',
 );
 
 assert.doesNotMatch(
@@ -40,8 +43,8 @@ for (const handlerName of [
 
 assert.match(
   styleSource,
-  /\.settings-atlas-workbench\s*{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(310px,\s*360px\)/,
-  'Desktop settings workbench should turn empty right space into a bounded rail.',
+  /\.st-main-grid\s*{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/,
+  'Desktop settings atlas should use balanced two-column cards instead of a loose three-column layout.',
 );
 
 assert.match(
@@ -52,8 +55,8 @@ assert.match(
 
 assert.match(
   styleSource,
-  /@media \(min-width:\s*1540px\)\s*{[\s\S]*?\.settings-control-page \.settings-atlas-workbench\s*{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(430px,\s*500px\)/,
-  'Wide screens should expand the Settings action rail instead of leaving an empty right side.',
+  /\.st-services-grid\s*{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/,
+  'Connected services should use a two-column desktop grid instead of leaving empty right-side space.',
 );
 
 assert.ok(
@@ -63,20 +66,20 @@ assert.ok(
 
 assert.match(
   styleSource,
-  /\.settings-atlas-action-rail\s*{[\s\S]*?position:\s*sticky[\s\S]*?top:\s*92px/,
-  'The desktop action rail should remain visible without consuming the whole page width.',
+  /\.st-bottom-grid\s*{[\s\S]*?grid-template-columns:\s*1fr/,
+  'The lower Settings area should avoid an empty right rail when only wellness content is present.',
 );
 
 assert.match(
   styleSource,
-  /@media \(max-width:\s*1180px\)\s*{[\s\S]*?\.settings-atlas-workbench\s*{[\s\S]*?grid-template-columns:\s*1fr[\s\S]*?\.settings-atlas-action-rail\s*{[\s\S]*?position:\s*static/,
-  'The workbench should collapse cleanly before the right rail becomes cramped.',
+  /@media \(max-width:\s*960px\)\s*{[\s\S]*?\.st-main-grid,[\s\S]*?\.st-services-grid,[\s\S]*?\.st-bottom-grid\s*{[\s\S]*?grid-template-columns:\s*1fr/,
+  'The Settings atlas should collapse cleanly before desktop columns become cramped.',
 );
 
 assert.match(
   styleSource,
-  /\.settings-atlas-quick-grid\s*{[\s\S]*?grid-template-columns:\s*1fr/,
-  'Quick controls must stay one-column so localized labels remain readable.',
+  /\.st-service-meta\s*{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/,
+  'Service metadata must stay in readable cards for localized labels.',
 );
 
 console.log('[PASS] Settings workbench layout guardrails passed.');

@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scheduleSource = readFileSync(path.join(here, 'Schedule.jsx'), 'utf8');
 // Translations are split into locale files; check both
-const enSource = readFileSync(path.join(here, '../i18n/locales/en.js'), 'utf8');
-const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN.js'), 'utf8');
+const enSource = readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8');
+const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/pages.js'), 'utf8');
 
 assert.match(
   scheduleSource,

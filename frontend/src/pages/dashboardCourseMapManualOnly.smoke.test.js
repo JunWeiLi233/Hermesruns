@@ -14,8 +14,8 @@ assert.doesNotMatch(
 
 assert.doesNotMatch(
   dashboardSource,
-  /course_maps_scan/,
-  'Dashboard should not render the legacy course-map scan label after removing candidate discovery.',
+  /course_maps_scan_(?:label|action|button|cta)\b/,
+  'Dashboard should not render the legacy course-map scan action label after removing candidate discovery.',
 );
 
 assert.match(

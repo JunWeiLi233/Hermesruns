@@ -42,4 +42,40 @@ assert.match(
   'Small screens should turn the sidebar nav into a horizontal rail instead of a tall fixed desktop column.',
 );
 
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed\s*\{[\s\S]*--runner-nav-collapsed-width:\s*96px;/,
+  'Collapsed runner sidebar should reserve enough width for a centered icon rail instead of clipping against the viewport edge.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand\s*\{[\s\S]*overflow:\s*hidden;/,
+  'Collapsed runner sidebar should intentionally contain the brand area instead of leaving partial HERMES letters visible.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand \.runner-dashboard-brand-copy > span:not\(\.hermes-logo\)\s*\{[\s\S]*display:\s*none;/,
+  'Collapsed runner sidebar should remove non-logo brand text from layout.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand \.hermes-logo__word,\s*\n\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand \.hermes-logo__mark\s*\{[\s\S]*display:\s*none;/,
+  'Collapsed runner sidebar should show the compact icon mark instead of clipping the HERMES wordmark.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-side-link::before\s*\{[\s\S]*display:\s*none;/,
+  'Collapsed runner sidebar should hide route numbers so active icons do not squeeze.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-dashboard-workout-btn,\s*\n\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-workout-btn\s*\{[\s\S]*width:\s*52px;[\s\S]*height:\s*60px;/,
+  'Collapsed squeeze button should be a bounded pill, not an oversized red slab.',
+);
+
 console.log('[PASS] Runner shell sidebar redesign guardrails passed.');
