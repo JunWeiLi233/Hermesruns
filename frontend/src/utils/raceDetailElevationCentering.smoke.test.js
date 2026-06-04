@@ -14,13 +14,13 @@ assert.match(
 
 assert.match(
   racesDetailSource,
-  /requestAnimationFrame\(\(\) => requestAnimationFrame\(centerChartViewport\)\)/,
+  /(?:window\.)?requestAnimationFrame\(\(\) => (?:window\.)?requestAnimationFrame\(centerChartViewport\)\)/,
   'RacesDetail should run a double requestAnimationFrame centering pass so the elevation chart scroll position is applied after layout settles.',
 );
 
 assert.match(
   racesDetailSource,
-  /setTimeout\(centerChartViewport,\s*1\d{2}\)/,
+  /(?:window\.)?setTimeout\(centerChartViewport,\s*1\d{2}\)/,
   'RacesDetail should keep a delayed centering retry so the elevation chart does not reopen at 0 km when the stage finishes sizing late.',
 );
 

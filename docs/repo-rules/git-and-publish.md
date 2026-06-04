@@ -84,6 +84,7 @@ For `/auto-hermes` finish behavior, the canonical helper is:
 
 `needed` means the run hit a true clean stop and there are publishable product files left after policy filtering.
 For `/auto-hermes` and `/auto-hermes-max`, `needed` for auto-push means the run reached a true clean stop and is already producing a publishable product commit.
+That same true-stop auto-push path also applies when the working tree is already clean but the current branch still has unpublished local commits and the normal push gates pass.
 
 Not `needed`:
 - the loop only refreshed workflow or memory artifacts

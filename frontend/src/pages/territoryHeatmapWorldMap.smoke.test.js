@@ -15,6 +15,12 @@ assert.match(
 
 assert.match(
   territorySource,
+  /basemaps\.cartocdn\.com\/dark_all/,
+  'Territory should use the same CARTO dark_all base map as the Heatmap page.',
+);
+
+assert.match(
+  territorySource,
   /className:\s*'territory-real-world-tile'/,
   'Territory Leaflet tiles should be explicitly marked as real-world map tiles.',
 );
@@ -28,13 +34,13 @@ assert.match(
 assert.match(
   territorySource,
   /className="terr-map-utility-rail terr-map-utility-rail--navigation-only"/,
-  'Territory map-only view should keep only the compact navigation rail over the land map.',
+  'Territory keeps the navigation rail in markup so routing remains available if the cinematic map chrome is re-enabled.',
 );
 
 assert.match(
   territorySource,
   /className="terr-map-topbar terr-map-titlebar"/,
-  'Territory should keep the Heatmap-style title strip over the land map.',
+  'Territory keeps the title strip in markup while map-only styling can hide it for a reference-style game board.',
 );
 
 assert.match(
@@ -69,14 +75,14 @@ assert.doesNotMatch(
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.leaflet-container[\s\S]*filter: saturate\(0\.9\) contrast\(1\.16\) brightness\(0\.84\);/,
-  'Territory full-screen map should inherit the Heatmap real-world tile treatment.',
+  /\.territory-heatmap-outline \.leaflet-container[\s\S]*background: #05070a;[\s\S]*filter: none;/,
+  'Territory full-screen map container should match the Heatmap dark-map base without extra container filtering.',
 );
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.territory-real-world-tile,[\s\S]*mix-blend-mode: normal;/,
-  'Territory real-world tiles should remain visible rather than being washed out by blend effects.',
+  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*filter: none;[\s\S]*mix-blend-mode: normal;/,
+  'Territory dark_all map tiles should not receive an extra Territory-specific darkening filter.',
 );
 
 assert.match(
@@ -87,20 +93,20 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-map-only \.leaflet-control-container[\s\S]*display: none !important;/,
-  'Territory map-only view should suppress Leaflet chrome so only the land map remains.',
-);
-
-assert.match(
-  styleSource,
   /\.territory-map-only \.terr-map-utility-rail--navigation-only[\s\S]*display: grid !important;/,
-  'Territory map-only view should explicitly preserve the necessary navigation rail.',
+  'Territory map-only view should keep the full vertical navigation rail available like the Heatmap page.',
 );
 
 assert.match(
   styleSource,
   /\.territory-map-only \.terr-map-titlebar[\s\S]*display: grid !important;/,
-  'Territory map-only view should explicitly preserve the title/action strip.',
+  'Territory map-only view should keep the title/action strip available for recenter, runs, settings, and profile navigation.',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  /\.territory-map-only \.runner-shell-sidebar,[\s\S]*\.territory-map-only \.runner-shell-topbar,[\s\S]*display: none !important;/,
+  'Territory map-only view must not hide the shared top/sidebar navigation because that strands the user on the map.',
 );
 
 console.log('[PASS] Territory Heatmap world-map styling guard passed.');

@@ -321,6 +321,52 @@ class TerritoryControllerTests {
     }
 
     @Test
+    void polygonsEndpointPreservesDisconnectedClaimedRegionsAsSeparateTerritories() throws Exception {
+        Runner runner = createRunner("territory-components@test.local");
+        Activity westActivity = createActivity(runner);
+        Activity eastActivity = createActivity(runner);
+
+        double baseLat = 37.822;
+        double baseLng = -122.250;
+        double cellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double latStep = cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+
+        TerritoryPolygon westCell = new TerritoryPolygon();
+        westCell.setUserId(runner.getId());
+        westCell.setActivityId(westActivity.getId());
+        westCell.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                List.of(new TerritoryPolygonComputer.MaskCell(baseLat, baseLng)),
+                cellMeters
+        ));
+        westCell.setAreaSquareMeters(cellMeters * cellMeters);
+        territoryPolygonRepository.save(westCell);
+
+        TerritoryPolygon eastCell = new TerritoryPolygon();
+        eastCell.setUserId(runner.getId());
+        eastCell.setActivityId(eastActivity.getId());
+        eastCell.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                List.of(new TerritoryPolygonComputer.MaskCell(baseLat + latStep * 18, baseLng + lngStep * 18)),
+                cellMeters
+        ));
+        eastCell.setAreaSquareMeters(cellMeters * cellMeters);
+        territoryPolygonRepository.save(eastCell);
+
+        MvcResult result = mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygonCount").value(2))
+                .andExpect(jsonPath("$.polygons.length()").value(2))
+                .andExpect(jsonPath("$.polygons[0].active").value(true))
+                .andExpect(jsonPath("$.polygons[1].active").value(true))
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertThat(root.path("polygons").get(0).path("cells")).hasSize(1);
+        assertThat(root.path("polygons").get(1).path("cells")).hasSize(1);
+    }
+
+    @Test
     void polygonsEndpointDoesNotKeepWarmingForRunsWithoutGpsPoints() throws Exception {
         Runner runner = createRunner("territory-no-gps-run@test.local");
         createActivity(runner);
@@ -365,6 +411,87 @@ class TerritoryControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
                 .andExpect(jsonPath("$.polygons[0].cells.length()").value(25));
+    }
+
+    @Test
+    void polygonsEndpointDoesNotFloodFillLargeSparseMaskIntoSlab() throws Exception {
+        Runner runner = createRunner("territory-large-sparse-fill@test.local");
+        Activity activity = createActivity(runner);
+        double baseLat = 40.741;
+        double baseLng = -73.797;
+        double cellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double latStep = cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+        List<TerritoryPolygonComputer.MaskCell> ring = new ArrayList<>();
+        for (int y = -45; y <= 45; y += 1) {
+            for (int x = -45; x <= 45; x += 1) {
+                if (Math.abs(x) != 45 && Math.abs(y) != 45) {
+                    continue;
+                }
+                ring.add(new TerritoryPolygonComputer.MaskCell(baseLat + y * latStep, baseLng + x * lngStep));
+            }
+        }
+
+        TerritoryPolygon polygon = new TerritoryPolygon();
+        polygon.setUserId(runner.getId());
+        polygon.setActivityId(activity.getId());
+        polygon.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(ring, cellMeters));
+        polygon.setAreaSquareMeters(ring.size() * cellMeters * cellMeters);
+        territoryPolygonRepository.save(polygon);
+
+        MvcResult result = mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode cells = root.path("polygons").get(0).path("cells");
+        assertThat(cells).hasSizeLessThan(500);
+        assertThat(containsExactMaskCell(cells, baseLat, baseLng)).isFalse();
+    }
+
+    @Test
+    void polygonsEndpointFillsLargeIrregularClosedTerritoryWithoutLeavingCenterGap() throws Exception {
+        Runner runner = createRunner("territory-large-irregular-fill@test.local");
+        Activity activity = createActivity(runner);
+        double baseLat = 40.741;
+        double baseLng = -73.797;
+        double cellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double latStep = cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+        List<TerritoryPolygonComputer.MaskCell> loop = new ArrayList<>();
+        int[][] vertices = {
+                {-45, -25},
+                {-12, -45},
+                {46, -18},
+                {38, 34},
+                {4, 45},
+                {-42, 26},
+                {-45, -25}
+        };
+        for (int i = 1; i < vertices.length; i += 1) {
+            addGridSegmentCells(loop, baseLat, baseLng, latStep, lngStep,
+                    vertices[i - 1][0], vertices[i - 1][1], vertices[i][0], vertices[i][1]);
+        }
+
+        TerritoryPolygon polygon = new TerritoryPolygon();
+        polygon.setUserId(runner.getId());
+        polygon.setActivityId(activity.getId());
+        polygon.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(loop, cellMeters));
+        polygon.setAreaSquareMeters(loop.size() * cellMeters * cellMeters);
+        territoryPolygonRepository.save(polygon);
+
+        MvcResult result = mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[0].shapeType").value("land-mask"))
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode cells = root.path("polygons").get(0).path("cells");
+        assertThat(cells.size()).isGreaterThan(loop.size() * 4);
+        assertThat(containsNearbyMaskCell(cells, baseLat, baseLng, latStep, lngStep)).isTrue();
     }
 
     @Test
@@ -477,7 +604,7 @@ class TerritoryControllerTests {
     }
 
     @Test
-    void polygonsEndpointIncludesEveryRegisteredRunnerLandMaskOnWorldMap() throws Exception {
+    void polygonsEndpointIncludesActiveUserAndLocalRivalsOnly() throws Exception {
         Runner active = createRunner("territory-world-active@test.local");
         Runner nearbyRival = createRunner("territory-world-nearby@test.local");
         nearbyRival.setDisplayName("Nearby Concrete Rival");
@@ -506,15 +633,14 @@ class TerritoryControllerTests {
         mockMvc.perform(get("/api/territory/polygons")
                         .header("Authorization", bearer(active)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Distant Concrete Rival')]").isNotEmpty())
-                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Distant Concrete Rival')].active").value(hasItem(false)))
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Distant Concrete Rival')]").isEmpty())
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Nearby Concrete Rival')]").isNotEmpty())
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Nearby Concrete Rival')].active").value(hasItem(false)))
                 .andExpect(jsonPath("$.polygons[?(@.active == true)].ownerName").value(hasItem("You")));
     }
 
     @Test
-    void polygonsEndpointRecolorsOverlappedConcreteLandToNewestRunner() throws Exception {
+    void polygonsEndpointStacksOverlappedConcreteLandWithNewestRunnerFirst() throws Exception {
         Runner active = createRunner("territory-concrete-fill-active@test.local");
         Runner rival = createRunner("territory-concrete-fill-rival@test.local");
         rival.setDisplayName("Latest Concrete Rival");
@@ -535,15 +661,18 @@ class TerritoryControllerTests {
         mockMvc.perform(get("/api/territory/polygons")
                         .header("Authorization", bearer(active)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[0].ownerName").value("Latest Concrete Rival"))
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')]").isNotEmpty())
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')].active").value(hasItem(false)))
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')].color").value(hasItem("#5b9cf5")))
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Latest Concrete Rival')].cells").isNotEmpty())
-                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")]").isEmpty());
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")].active").value(hasItem(true)))
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")].cells").isNotEmpty());
     }
 
     @Test
-    void polygonsEndpointRefreshesCachedOwnershipWhenNewerRivalMaskAppears() throws Exception {
+    void polygonsEndpointRefreshesCachedLayersWhenNewerRivalMaskAppears() throws Exception {
         Runner active = createRunner("territory-cache-fill-active@test.local");
         Runner rival = createRunner("territory-cache-fill-rival@test.local");
         rival.setDisplayName("Cache Fill Rival");
@@ -571,14 +700,81 @@ class TerritoryControllerTests {
         mockMvc.perform(get("/api/territory/polygons")
                         .header("Authorization", bearer(active)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.polygons[?(@.active == true)]").isEmpty())
+                .andExpect(jsonPath("$.polygons[0].ownerName").value("Cache Fill Rival"))
+                .andExpect(jsonPath("$.polygons[?(@.active == true)]").isNotEmpty())
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Cache Fill Rival')]").isNotEmpty())
                 .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Cache Fill Rival')].active").value(hasItem(false)))
-                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")]").isEmpty());
+                .andExpect(jsonPath("$.polygons[?(@.activityId == " + activeActivity.getId() + ")]").isNotEmpty());
     }
 
     @Test
-    void polygonsEndpointDoesNotLetOlderLoopRefillNewerConsumedInteriorCell() throws Exception {
+    void polygonsEndpointStacksNewerActiveLoopOverOlderRivalInteriorCell() throws Exception {
+        Runner active = createRunner("territory-loop-newer-active@test.local");
+        Runner rival = createRunner("territory-loop-older-rival@test.local");
+        rival.setDisplayName("Older Interior Rival");
+        runnerRepository.save(rival);
+
+        Activity rivalActivity = createActivity(rival);
+        rivalActivity.setStartTime(LocalDateTime.now().minusHours(2));
+        activityRepository.save(rivalActivity);
+
+        Activity activeActivity = createActivity(active);
+        activeActivity.setStartTime(LocalDateTime.now().minusMinutes(5));
+        activityRepository.save(activeActivity);
+
+        double baseLat = 37.822;
+        double baseLng = -122.250;
+        double cellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double latStep = cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+
+        TerritoryPolygon rivalCenter = new TerritoryPolygon();
+        rivalCenter.setUserId(rival.getId());
+        rivalCenter.setActivityId(rivalActivity.getId());
+        rivalCenter.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                List.of(new TerritoryPolygonComputer.MaskCell(baseLat, baseLng)),
+                cellMeters
+        ));
+        rivalCenter.setAreaSquareMeters(cellMeters * cellMeters);
+        territoryPolygonRepository.save(rivalCenter);
+
+        List<TerritoryPolygonComputer.MaskCell> newerLoopRing = new ArrayList<>();
+        for (int y = -2; y <= 2; y += 1) {
+            for (int x = -2; x <= 2; x += 1) {
+                if (Math.abs(x) != 2 && Math.abs(y) != 2) {
+                    continue;
+                }
+                newerLoopRing.add(new TerritoryPolygonComputer.MaskCell(baseLat + y * latStep, baseLng + x * lngStep));
+            }
+        }
+
+        TerritoryPolygon activeLoop = new TerritoryPolygon();
+        activeLoop.setUserId(active.getId());
+        activeLoop.setActivityId(activeActivity.getId());
+        activeLoop.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(newerLoopRing, cellMeters));
+        activeLoop.setAreaSquareMeters(newerLoopRing.size() * cellMeters * cellMeters);
+        territoryPolygonRepository.save(activeLoop);
+
+        MvcResult result = mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(active)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.active == true)]").isNotEmpty())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode activePolygon = firstPolygonByActive(root, true);
+        JsonNode rivalPolygon = firstPolygonByOwner(root, "Older Interior Rival");
+
+        assertThat(activePolygon).isNotNull();
+        assertThat(activePolygon.path("cells")).hasSize(25);
+        assertThat(containsNearbyMaskCell(activePolygon.path("cells"), baseLat, baseLng, latStep, lngStep)).isTrue();
+        assertThat(rivalPolygon).isNotNull();
+        assertThat(rivalPolygon.path("cells")).hasSize(1);
+        assertThat(containsExactMaskCell(rivalPolygon.path("cells"), baseLat, baseLng)).isTrue();
+    }
+
+    @Test
+    void polygonsEndpointKeepsOlderLoopInteriorUnderNewerCenterLayer() throws Exception {
         Runner active = createRunner("territory-loop-consume-active@test.local");
         Runner rival = createRunner("territory-loop-consume-rival@test.local");
         rival.setDisplayName("Loop Consumer");
@@ -638,10 +834,82 @@ class TerritoryControllerTests {
 
         assertThat(activePolygon).isNotNull();
         assertThat(rivalPolygon).isNotNull();
-        assertThat(activePolygon.path("cells")).hasSize(24);
+        assertThat(activePolygon.path("cells")).hasSize(25);
         assertThat(rivalPolygon.path("cells")).hasSize(1);
-        assertThat(containsExactMaskCell(activePolygon.path("cells"), baseLat, baseLng)).isFalse();
+        assertThat(containsNearbyMaskCell(activePolygon.path("cells"), baseLat, baseLng, latStep, lngStep)).isTrue();
         assertThat(containsExactMaskCell(rivalPolygon.path("cells"), baseLat, baseLng)).isTrue();
+    }
+
+    @Test
+    void polygonsEndpointKeepsOuterFlushingLandUnderInnerFlushingLayer() throws Exception {
+        Runner outerFlushing = createRunner("territory-flushing-outer-occupy@test.local");
+        outerFlushing.setDisplayName("Hermes Flushing Territory Tester");
+        runnerRepository.save(outerFlushing);
+
+        Runner innerFlushing = createRunner("territory-flushing-inner-occupy@test.local");
+        innerFlushing.setDisplayName("Hermes Inner Flushing Occupier");
+        runnerRepository.save(innerFlushing);
+
+        Activity outerActivity = createActivity(outerFlushing);
+        outerActivity.setStartTime(LocalDateTime.now().minusHours(2));
+        activityRepository.save(outerActivity);
+
+        Activity innerActivity = createActivity(innerFlushing);
+        innerActivity.setStartTime(LocalDateTime.now().minusMinutes(5));
+        activityRepository.save(innerActivity);
+
+        double baseLat = 40.750;
+        double baseLng = -73.820;
+        double cellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double latStep = cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double lngStep = latStep / Math.cos(Math.toRadians(baseLat));
+
+        List<TerritoryPolygonComputer.MaskCell> outerCells = new ArrayList<>();
+        for (int y = -3; y <= 3; y += 1) {
+            for (int x = -3; x <= 3; x += 1) {
+                outerCells.add(new TerritoryPolygonComputer.MaskCell(baseLat + y * latStep, baseLng + x * lngStep));
+            }
+        }
+
+        TerritoryPolygon outerMask = new TerritoryPolygon();
+        outerMask.setUserId(outerFlushing.getId());
+        outerMask.setActivityId(outerActivity.getId());
+        outerMask.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(outerCells, cellMeters));
+        outerMask.setAreaSquareMeters(outerCells.size() * cellMeters * cellMeters);
+        territoryPolygonRepository.save(outerMask);
+
+        List<TerritoryPolygonComputer.MaskCell> innerCells = new ArrayList<>();
+        for (int y = -1; y <= 1; y += 1) {
+            for (int x = -1; x <= 1; x += 1) {
+                innerCells.add(new TerritoryPolygonComputer.MaskCell(baseLat + y * latStep, baseLng + x * lngStep));
+            }
+        }
+
+        TerritoryPolygon innerMask = new TerritoryPolygon();
+        innerMask.setUserId(innerFlushing.getId());
+        innerMask.setActivityId(innerActivity.getId());
+        innerMask.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(innerCells, cellMeters));
+        innerMask.setAreaSquareMeters(innerCells.size() * cellMeters * cellMeters);
+        territoryPolygonRepository.save(innerMask);
+
+        MvcResult result = mockMvc.perform(get("/api/territory/polygons")
+                        .header("Authorization", bearer(outerFlushing)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Hermes Inner Flushing Occupier')]").isNotEmpty())
+                .andExpect(jsonPath("$.polygons[?(@.ownerName == 'Hermes Inner Flushing Occupier')].active").value(hasItem(false)))
+                .andExpect(jsonPath("$.polygons[?(@.active == true)]").isNotEmpty())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode outerPolygon = firstPolygonByActive(root, true);
+        JsonNode innerPolygon = firstPolygonByOwner(root, "Hermes Inner Flushing Occupier");
+
+        assertThat(outerPolygon).isNotNull();
+        assertThat(innerPolygon).isNotNull();
+        assertThat(outerPolygon.path("cells")).hasSize(49);
+        assertThat(innerPolygon.path("cells")).hasSize(9);
+        assertThat(containsExactMaskCell(outerPolygon.path("cells"), baseLat, baseLng)).isTrue();
+        assertThat(containsExactMaskCell(innerPolygon.path("cells"), baseLat, baseLng)).isTrue();
     }
 
     @Test
@@ -920,5 +1188,41 @@ class TerritoryControllerTests {
             }
         }
         return false;
+    }
+
+    private static boolean containsNearbyMaskCell(JsonNode cells,
+                                                  double latitude,
+                                                  double longitude,
+                                                  double latStep,
+                                                  double lngStep) {
+        for (JsonNode cell : cells) {
+            double cellLat = cell.path("latitude").asDouble(Double.NaN);
+            double cellLng = cell.path("longitude").asDouble(Double.NaN);
+            if (Double.isFinite(cellLat)
+                    && Double.isFinite(cellLng)
+                    && Math.abs(cellLat - latitude) <= latStep * 0.55
+                    && Math.abs(cellLng - longitude) <= lngStep * 0.55) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void addGridSegmentCells(List<TerritoryPolygonComputer.MaskCell> cells,
+                                            double baseLat,
+                                            double baseLng,
+                                            double latStep,
+                                            double lngStep,
+                                            int startX,
+                                            int startY,
+                                            int endX,
+                                            int endY) {
+        int steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
+        for (int i = 0; i <= steps; i += 1) {
+            double t = steps == 0 ? 0.0 : i / (double) steps;
+            int x = (int) Math.round(startX + (endX - startX) * t);
+            int y = (int) Math.round(startY + (endY - startY) * t);
+            cells.add(new TerritoryPolygonComputer.MaskCell(baseLat + y * latStep, baseLng + x * lngStep));
+        }
     }
 }

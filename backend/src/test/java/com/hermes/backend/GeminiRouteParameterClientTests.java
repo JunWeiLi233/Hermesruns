@@ -37,7 +37,7 @@ class GeminiRouteParameterClientTests {
         @SuppressWarnings("unchecked")
         HttpEntity<Map<String, Object>>[] requestHolder = new HttpEntity[1];
         when(restTemplate.exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(Map.class)
@@ -79,6 +79,7 @@ class GeminiRouteParameterClientTests {
 
         Map<String, Object> requestBody = requestHolder[0].getBody();
         assertThat(requestBody).isNotNull();
+        assertThat(requestHolder[0].getHeaders().getFirst("x-goog-api-key")).isEqualTo("test-key");
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> contents = (List<Map<String, Object>>) requestBody.get("contents");
         @SuppressWarnings("unchecked")
@@ -151,7 +152,7 @@ class GeminiRouteParameterClientTests {
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         when(systemConfigService.isAiConfigured()).thenReturn(true);
         when(restTemplate.exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(Map.class)
@@ -190,7 +191,7 @@ class GeminiRouteParameterClientTests {
         assertThat(result.routeHexColor()).isEqualTo("#00FF88");
         assertThat(result.anchorPoints()).containsExactly("start arch", "river bend", "downtown turn", "finish gantry");
         verify(restTemplate, times(2)).exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(Map.class)

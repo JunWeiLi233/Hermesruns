@@ -126,8 +126,20 @@ Use this file as the working queue for AI agents.
   Done when: The Today Run page answers "Should I run, and how hard?" within 10 seconds with a clear, personalized recommendation backed by VDOT, ACWR, and recent training data. Every runner persona finds the recommendation actionable.
   Verify: Fresh runner with 0 runs sees onboarding guidance. Enthusiast with inconsistent history sees comeback messaging. Competitor sees VDOT/ACWR-informed quality decision.
   Note: Completed 2026-05-24. Backend: CoachTodayDto enriched with runnerState ("new"/"comeback"/"active") and coachMessage (data-backed coaching sentence with ACWR, pace range, workout type). Frontend: TodayRun.jsx shows onboarding card for new runners, comeback banner for 14+ day gaps, specific coach message for active runners. coachVoice.js no longer outputs "VDOT 0.0" for new runners. Lint PASS, translations PASS, build PASS. Commits: 68820bd3.
+- [ ] [file-audit 2026-05-20] Prune historical auto-hermes tech-debt snapshots
+  Files: `.ai-sync/tech-debt/auto-hermes-tech-debt-*.json`, `.ai-sync/tech-debt/`
+  Context: Eight dated `.ai-sync/tech-debt/auto-hermes-tech-debt-*.json` snapshots are tracked and total about 6.5 MB. They are historical generated audit outputs, while `TASKS.md` now carries the durable bounded debt tasks. Keeping every generated snapshot in git makes review noisy and duplicates the task ledger.
+  Done when: only the current snapshot needed by active automation remains tracked, or the snapshot directory is ignored and regenerated on demand with a clear retention rule.
+  Verify: run the auto-hermes tech-debt/audit command that owns this directory, confirm it can regenerate current state, and confirm `TASKS.md` still contains the durable cleanup tasks.
 
 ## Tech Debt Tasks
+
+### Territory Map Debt
+- [ ] [territory 2026-05-28] Declutter overlapping permanent zone labels on dense real data
+  Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`
+  Context: Every zone cell binds a `permanent: true` center tooltip (`terr-zone-label`, Territory.jsx ~L465). With demo data (9 spread cells) this reads fine, but real `/api/territory` data returns ~19 geographically dense cells whose center labels pile into an unreadable "SECTOR ###" stack (verified in browser on the dev runner). Leaflet does no tooltip collision handling. The permanent-labels feature itself is intended/recent — preserve it; only declutter.
+  Done when: with ~19 dense real zones, labels no longer overlap into an unreadable cluster — e.g. permanent labels only for the active runner's owned zones (others on hover/click), or a zoom/size threshold, or simple centroid-distance collision skipping. Permanent-label intent for prominent owned zones is preserved.
+  Verify: `cd frontend && npm run build` passes; browser proof on `/territory` (dev runner `strava+140971747@hermes.local`) shows readable, non-overlapping zone labels at the default fit-bounds zoom; no new console errors.
 
 ### Repository Hygiene Debt
 - [x] [file-audit 2026-05-20] Untrack committed npm cache artifacts
@@ -149,12 +161,6 @@ Use this file as the working queue for AI agents.
   Done when: generated hashed bundles are removed from git tracking and the documented release/runtime path is clear: local builds may recreate them, but source review should happen in `frontend/`, not committed hashed output.
   Verify: `git ls-files backend/src/main/resources/static/assets backend/src/main/resources/static/index.html` prints nothing, `cd frontend && npm run build` regenerates the local static bundle, and `.tools/verify-frontend-runtime-sync.mjs` passes when a live frontend/backend runtime is expected.
   Note: Already complete at round start — `.gitignore` rules on lines 146-147 cover these paths and `git ls-files` returned 0. No action needed; marked verified 2026-05-20.
-
-- [ ] [file-audit 2026-05-20] Prune historical auto-hermes tech-debt snapshots
-  Files: `.ai-sync/tech-debt/auto-hermes-tech-debt-*.json`, `.ai-sync/tech-debt/`
-  Context: Eight dated `.ai-sync/tech-debt/auto-hermes-tech-debt-*.json` snapshots are tracked and total about 6.5 MB. They are historical generated audit outputs, while `TASKS.md` now carries the durable bounded debt tasks. Keeping every generated snapshot in git makes review noisy and duplicates the task ledger.
-  Done when: only the current snapshot needed by active automation remains tracked, or the snapshot directory is ignored and regenerated on demand with a clear retention rule.
-  Verify: run the auto-hermes tech-debt/audit command that owns this directory, confirm it can regenerate current state, and confirm `TASKS.md` still contains the durable cleanup tasks.
 
 - [x] [file-audit 2026-05-20] Remove one-off translation repair scripts and log artifacts
   Files: `fix_missing.js`, `fix_missing2.js`, `trans_output.txt`, `backend_err.txt`, `backend/test`
@@ -609,6 +615,7 @@ Use this file as the working queue for AI agents.
   Done when: The explicit debt markers in .tools/auto-hermes-tech-debt.test.mjs are either resolved or removed because they no longer describe real work.
   Verify: `node .tools/auto-hermes-tech-debt.test.mjs`
   Note: Converted TODO debt marker into explicit helpers (scoreQueueActivity, formatQueueStatus). Updated assertion category. 2/3 tests pass (3rd failure is pre-existing missing .opencode file).
+
 ## Suggested Next Tasks
 ### Market Intelligence Opportunities (auto-hermes-market 2026-05-21)
 

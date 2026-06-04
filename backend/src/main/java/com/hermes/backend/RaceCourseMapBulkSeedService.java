@@ -378,10 +378,10 @@ public class RaceCourseMapBulkSeedService {
                         + "OSRM filled in the street geometry between landmarks; elevation comes from DEM along the route.";
             } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(race.id())) {
                 baseSummary = "Hermes rendered this course from the official Osaka Marathon turn-by-turn landmarks "
-                        + "(Osaka Prefectural Government start in Otemae → Honmachi → Midosuji Blvd through Shinsaibashi / "
-                        + "Dotonbori / Namba → Tennoji → Shitenno-ji Temple → Tsuruhashi → Joto-ku → Sakuranomiya along the "
-                        + "Okawa River → Nakanoshima / Yodoyabashi → Nishi-ku → Bentencho → Cosmo Square → INTEX Osaka finish "
-                        + "in Suminoe-ku). OSRM filled in the street geometry between landmarks; elevation comes from DEM "
+                        + "(Osaka Prefectural Government start → Okawa River → Nakanoshima → Midosuji Blvd through "
+                        + "Shinsaibashi / Dotonbori / Namba → Kyocera Dome Osaka → Naniwasuji → Shinsekai / Tennoji / "
+                        + "Shitenno-ji up the Uemachi plateau → Tsuruhashi → Imazato → Morinomiya → finish inside Osaka "
+                        + "Castle Park). OSRM filled in the street geometry between landmarks; elevation comes from DEM "
                         + "along the route.";
             } else {
                 baseSummary = "Hermes rendered this course from the official TCS New York City Marathon turn-by-turn landmarks "
@@ -486,6 +486,12 @@ public class RaceCourseMapBulkSeedService {
      * The waypoint set is point-to-point (not a closed loop) so the route
      * carries no self-intersections by construction.
      */
+    // OSRM retry backoff between a failed leg and its retry. Package-private so
+    // tests can zero it out; production keeps the 2s pause for transient OSRM
+    // hiccups. A full official-course seed during a real OSRM outage hits this
+    // once per leg, which is acceptable for a background admin operation.
+    long osrmRetryDelayMs = 2000L;
+
     List<RoutePoint> generateOfficialCoursePolyline(String raceId) {
         if (raceId == null) return List.of();
         List<double[]> waypoints;
@@ -566,14 +572,21 @@ public class RaceCourseMapBulkSeedService {
             }
             if (legGeometry.isEmpty()) {
                 // one retry after a short pause for transient OSRM failures
-                try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                try { if (osrmRetryDelayMs > 0) Thread.sleep(osrmRetryDelayMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 legGeometry = osrmRouteWaypoints(legPair, OsrmProfile.FOOT);
                 if (legGeometry.isEmpty()) {
                     legGeometry = osrmRouteWaypoints(legPair, OsrmProfile.DRIVING);
                 }
                 if (legGeometry.isEmpty()) {
-                    logger.warn("OSRM rejected leg {}->{} for official-course raceId={} after retry; aborting official-course seed", i, i + 1, raceId);
-                    return List.of();
+                    // OSRM is unavailable for this leg even after a retry (e.g. the
+                    // routing host is down or rate-limiting — exactly what produced
+                    // the generic-cycle fallback for Osaka/LA/NYC when those courses
+                    // were seeded during an OSRM outage). Trace the leg as a straight
+                    // line between the two real official waypoints so the course still
+                    // follows the real corridor instead of aborting (which the runtime
+                    // then renders as a meaningless geographic loop).
+                    logger.warn("OSRM unavailable for leg {}->{} of official-course raceId={} after retry; using straight-line corridor fallback", i, i + 1, raceId);
+                    legGeometry = interpolateStraightLine(waypoints.get(i), waypoints.get(i + 1), 12);
                 }
             }
             // Append the leg, skipping the first point on legs after the
@@ -584,8 +597,8 @@ public class RaceCourseMapBulkSeedService {
             }
         }
         if (stitched.size() < 8) {
-            logger.warn("Per-leg OSRM stitched polyline too short for official-course raceId={}; aborting", raceId);
-            return List.of();
+            logger.warn("Per-leg OSRM stitched polyline too short for official-course raceId={}; falling back to straight-line corridor through official waypoints", raceId);
+            return straightLineThroughWaypoints(waypoints, waypointCount, raceId);
         }
         // For official courses, keep the dense pedestrian-routed geometry
         // rather than resampling to LOOP_POINT_COUNT — the resample throws
@@ -616,11 +629,53 @@ public class RaceCourseMapBulkSeedService {
         // full 42.195 km. The floor still catches OSRM failures (empty routes,
         // loops back to start) without rejecting valid official-course geometry.
         if (routeKm < 20.0 || routeKm > 80.0) {
-            logger.warn("Official-course polyline for raceId={} has implausible total length {} km; aborting",
+            logger.warn("Official-course polyline for raceId={} has implausible total length {} km; falling back to straight-line corridor through official waypoints",
                     raceId, routeKm);
+            // An OSRM disaster (massive detours that survived the per-leg checks)
+            // can still produce an implausible total. Prefer a straight-line trace
+            // of the real waypoints over aborting to a generic cycle — only abort
+            // if even the straight-line corridor is implausible.
+            List<RoutePoint> straight = straightLineThroughWaypoints(waypoints, waypointCount, raceId);
+            double straightKm = straight.isEmpty() ? 0.0 : geometryService.polylineDistanceKm(straight);
+            // The straight-line corridor traces the real official waypoints, so it
+            // is always shorter than the street-routed course and is legitimate
+            // below the 20 km OSRM floor. Accept it unless it is degenerate
+            // (collapsed to the start) or absurdly long.
+            if (!straight.isEmpty() && straightKm >= 5.0 && straightKm <= 90.0) {
+                return straight;
+            }
+            logger.warn("Straight-line corridor fallback for raceId={} also implausible ({} km); aborting official-course seed", raceId, straightKm);
             return List.of();
         }
         return labeled;
+    }
+
+    /**
+     * Last-resort fallback for the official-course path: trace the course as a
+     * straight-line polyline through every official waypoint. When OSRM routing
+     * is unavailable (host down / rate-limited) an official course used to abort
+     * to an empty result, which the runtime then rendered as a generic geographic
+     * loop ("cycle") centred on the race location — the exact Osaka/LA/NYC bug.
+     * Tracing straight lines between the real turning-point landmarks keeps the
+     * rendered course faithful to the actual corridor (start -> ... -> finish)
+     * instead of a meaningless circle, and carries the same landmark labels.
+     */
+    private List<RoutePoint> straightLineThroughWaypoints(List<double[]> waypoints, int waypointCount, String raceId) {
+        if (waypoints == null || waypoints.size() < 2) {
+            return List.of();
+        }
+        List<RoutePoint> line = new ArrayList<>();
+        for (int i = 0; i < waypoints.size() - 1; i++) {
+            List<RoutePoint> leg = interpolateStraightLine(waypoints.get(i), waypoints.get(i + 1), 12);
+            int startIndex = line.isEmpty() ? 0 : 1;
+            for (int j = startIndex; j < leg.size(); j++) {
+                line.add(leg.get(j));
+            }
+        }
+        if (line.size() < 4) {
+            return List.of();
+        }
+        return stampOfficialCourseLabels(line, waypoints, waypointCount, raceId);
     }
 
     /**

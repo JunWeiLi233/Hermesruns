@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const racesDetailSource = readFileSync(path.join(here, '../pages/RacesDetail.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const mapCanvasRule = styleSource.match(/\.race-detail-map-canvas\s*\{[\s\S]*?\n\}/)?.[0] || '';
 
 assert.match(
   racesDetailSource,
@@ -38,14 +39,14 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  styleSource,
-  /\.race-detail-map-canvas\s*\{[\s\S]*background:\s*#ece7df;/,
+  mapCanvasRule,
+  /background:\s*#ece7df;/,
   'Race detail map canvas should keep only a very light atmospheric wash so the OpenStreetMap layer reads as the true bottom layer.',
 );
 
 assert.doesNotMatch(
-  styleSource,
-  /\.race-detail-map-canvas\s*\{[\s\S]*radial-gradient\(circle at 16% 18%/,
+  mapCanvasRule,
+  /radial-gradient\(circle at 16% 18%/,
   'Race detail map canvas should not keep the stronger decorative radial tints once OpenStreetMap is meant to be the clear bottom layer.',
 );
 

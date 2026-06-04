@@ -85,6 +85,25 @@ function ensureStateDir() {
   return dir;
 }
 
+function lastUrlPath() {
+  return path.join(STATE_DIR_BASE, stateName, "last-url.txt");
+}
+
+function readLastUrl() {
+  try {
+    const url = fs.readFileSync(lastUrlPath(), "utf8").trim();
+    return url && /^https?:\/\//.test(url) ? url : "";
+  } catch {
+    return "";
+  }
+}
+
+function writeLastUrl(url) {
+  if (!url || !/^https?:\/\//.test(url)) return;
+  ensureStateDir();
+  fs.writeFileSync(lastUrlPath(), url, "utf8");
+}
+
 async function openContext(pw) {
   const userDataDir = ensureStateDir();
   return pw.chromium.launchPersistentContext(userDataDir, {
@@ -94,7 +113,7 @@ async function openContext(pw) {
   });
 }
 
-async function withPage(fn) {
+async function withPage(fn, options = {}) {
   const pw = await loadPlaywright();
   const context = await openContext(pw);
   const errors = [];
@@ -103,6 +122,13 @@ async function withPage(fn) {
     if (!page) page = await context.newPage();
     page.on("pageerror", (e) => errors.push(String((e && e.message) || e)));
     page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
+    if (options.restoreLastUrl !== false && page.url() === "about:blank") {
+      const lastUrl = readLastUrl();
+      if (lastUrl) {
+        await page.goto(lastUrl, { waitUntil: "domcontentloaded", timeout: 12000 });
+        try { await page.waitForLoadState("networkidle", { timeout: 8000 }); } catch { /* best effort */ }
+      }
+    }
     const out = await fn(page);
     return { ...out, consoleErrorCount: errors.length, consoleErrors: errors.slice(0, 5) };
   } finally {
@@ -118,8 +144,9 @@ async function cmdGoto() {
     const r = await withPage(async (page) => {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: waitMs });
       try { await page.waitForLoadState("networkidle", { timeout: Math.min(8000, waitMs) }); } catch { /* best effort */ }
+      writeLastUrl(page.url());
       return { ok: true, action: "goto", url: page.url(), title: await page.title() };
-    });
+    }, { restoreLastUrl: false });
     emit(r);
   } catch (e) {
     fail(1, "goto failed", { detail: String((e && e.message) || e), url });
@@ -151,17 +178,45 @@ async function cmdScreenshot() {
   const absOut = path.isAbsolute(out) ? out : path.join(REPO_ROOT, out);
   fs.mkdirSync(path.dirname(absOut), { recursive: true });
   const fullPage = readFlag("full-page");
+  const clipValue = readArg("clip");
+  const clip = clipValue
+    ? (() => {
+      const [x, y, width, height] = String(clipValue).split(",").map((part) => Number(part.trim()));
+      if (![x, y, width, height].every((number) => Number.isFinite(number)) || width <= 0 || height <= 0) {
+        fail(2, `Invalid --clip value. Expected "x,y,width,height", received: ${clipValue}`);
+      }
+      return {
+        x: Math.max(0, Math.floor(x)),
+        y: Math.max(0, Math.floor(y)),
+        width: Math.floor(width),
+        height: Math.floor(height),
+      };
+    })()
+    : undefined;
   const lower = absOut.toLowerCase();
-  const isJpeg = lower.endsWith(".jpg") || lower.endsWith(".jpeg");
+  const requestedFormat = readArg("format", "").toLowerCase();
+  const isJpeg = requestedFormat === "jpeg"
+    || requestedFormat === "jpg"
+    || lower.endsWith(".jpg")
+    || lower.endsWith(".jpeg");
+  const requestedQuality = Number(readArg("quality", ""));
+  const quality = Number.isFinite(requestedQuality)
+    ? Math.min(100, Math.max(1, Math.floor(requestedQuality)))
+    : 82;
+  const preJs = readArg("pre-js");
   try {
     const r = await withPage(async (page) => {
+      if (preJs) {
+        await page.evaluate(`(async () => { return (${preJs}); })()`);
+      }
       await page.screenshot({
         path: absOut,
         fullPage,
+        clip,
         type: isJpeg ? "jpeg" : "png",
-        quality: isJpeg ? 82 : undefined,
+        quality: isJpeg ? quality : undefined,
       });
-      return { ok: true, action: "screenshot", url: page.url(), out: absOut };
+      return { ok: true, action: "screenshot", url: page.url(), out: absOut, path: absOut };
     });
     emit(r);
   } catch (e) {

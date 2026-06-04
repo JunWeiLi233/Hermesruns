@@ -20,6 +20,7 @@ import targetChestUrl from '../assets/muscle-training/target-chest.webp';
 import targetCoreUrl from '../assets/muscle-training/target-core.webp';
 import targetLegsUrl from '../assets/muscle-training/target-legs.webp';
 import targetShouldersUrl from '../assets/muscle-training/target-shoulders.webp';
+import anatomyNeonSelectorUrl from '../assets/muscle-training/anatomy-neon-selector.png';
 
 const EXERCISE_DB_IMAGE_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const exerciseDbImage = (imagePath) => `${EXERCISE_DB_IMAGE_BASE}${imagePath}`;
@@ -91,6 +92,8 @@ const DEFAULT_PROFILE = {
 
 const CHECK_IN_RUN_TYPES = ['REST', 'EASY', 'RECOVERY', 'QUALITY', 'LONG_RUN', 'CROSS_TRAIN'];
 const CHECK_IN_ENTRY_STATES = ['PLANNED', 'ACTUAL'];
+const STRENGTH_FOCUS_OPTIONS = ['COACH_PICK', 'LEG_DAY', 'POSTERIOR_CHAIN', 'CALVES_ANKLES', 'CORE_STABILITY', 'MOBILITY_RESET'];
+const STRENGTH_DOSE_OPTIONS = ['MICRO', 'STANDARD', 'STRONG'];
 function compoundLibraryExercise({
   key,
   zhName,
@@ -736,6 +739,8 @@ const DEFAULT_CHECK_IN_DRAFT = {
   entryState: 'PLANNED',
   distanceKm: '',
   durationMinutes: '',
+  strengthFocus: 'COACH_PICK',
+  strengthDose: 'STANDARD',
 };
 const KM_PER_MILE = 1.60934;
 
@@ -759,6 +764,17 @@ function createLibraryProtocolItem(targetKey, definition, exerciseIndex, globalI
     globalIndex,
     libraryContent: definition.content,
   };
+}
+
+function pickStrengthSessionLabel(copy, sessionType) {
+  const customMatch = /^CUSTOM_(.+)_(MICRO|STANDARD|STRONG)$/.exec(sessionType || '');
+  if (customMatch) {
+    const [, focus, dose] = customMatch;
+    const focusLabel = pickLabel(copy.strengthFocusOptions, focus, focus);
+    const doseLabel = pickLabel(copy.strengthDoseOptions, dose, dose);
+    return `${focusLabel} · ${doseLabel}`;
+  }
+  return pickLabel(copy.sessionTypes, sessionType, sessionType || '');
 }
 
 function exerciseMatchesTargetArea(exercise, isZh, targetKey) {
@@ -2812,6 +2828,7 @@ export default function MuscleTraining() {
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
   const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
+  const [selectedMuscleHitZoneId, setSelectedMuscleHitZoneId] = useState('legs-front');
   const [clickedMuscleSlug, setClickedMuscleSlug] = useState(null);
 
   useEffect(() => {
@@ -2959,6 +2976,24 @@ export default function MuscleTraining() {
       INTERVALS: t('muscle_training.workout_intervals'),
       LONG_RUN: t('muscle_training.workout_long_run'),
       CROSS_TRAIN: t('muscle_training.workout_cross_train'),
+    },
+    strengthComposerTitle: t('muscle_training.strength_composer_title'),
+    strengthComposerHint: t('muscle_training.strength_composer_hint'),
+    strengthComposerSafety: t('muscle_training.strength_composer_safety'),
+    strengthFocusLabel: t('muscle_training.strength_focus_label'),
+    strengthDoseLabel: t('muscle_training.strength_dose_label'),
+    strengthFocusOptions: {
+      COACH_PICK: t('muscle_training.strength_focus_coach_pick'),
+      LEG_DAY: t('muscle_training.strength_focus_leg_day'),
+      POSTERIOR_CHAIN: t('muscle_training.strength_focus_posterior_chain'),
+      CALVES_ANKLES: t('muscle_training.strength_focus_calves_ankles'),
+      CORE_STABILITY: t('muscle_training.strength_focus_core_stability'),
+      MOBILITY_RESET: t('muscle_training.strength_focus_mobility_reset'),
+    },
+    strengthDoseOptions: {
+      MICRO: t('muscle_training.strength_dose_micro'),
+      STANDARD: t('muscle_training.strength_dose_standard'),
+      STRONG: t('muscle_training.strength_dose_strong'),
     },
     loadStatus: {
       CONSERVATIVE: t('muscle_training.load_status_conservative'),
@@ -3497,13 +3532,19 @@ export default function MuscleTraining() {
     const nextTargetKey = resolveTargetAreaKeyForItem(item, isZh);
     if (nextTargetKey !== 'all') {
       setSelectedMuscleTarget(nextTargetKey);
+      setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
     }
     setSelectedExerciseKey(getProtocolItemKey(item));
   }
 
-  function handleTopMuscleSelect(targetKey) {
+  function getPrimaryTopMuscleHitZoneId(targetKey) {
+    return TOP_MUSCLE_HIT_ZONES.find((zone) => zone.key === targetKey)?.id || 'legs-front';
+  }
+
+  function handleTopMuscleSelect(targetKey, hitZoneId = getPrimaryTopMuscleHitZoneId(targetKey)) {
     const nextItems = buildTopRecommendationItems(targetKey);
     setSelectedMuscleTarget(targetKey);
+    setSelectedMuscleHitZoneId(hitZoneId);
     setActiveTarget(targetKey);
     setExpandedExerciseIdx(null);
     if (nextItems[0]) {
@@ -3660,6 +3701,8 @@ export default function MuscleTraining() {
         entryState: checkInDraft.entryState,
         distanceKm: distanceValue != null ? (isMile ? distanceValue * KM_PER_MILE : distanceValue) : null,
         durationMinutes: parseOptionalInteger(checkInDraft.durationMinutes),
+        strengthFocus: checkInDraft.strengthFocus,
+        strengthDose: checkInDraft.strengthDose,
       };
       await apiJson('/api/training/muscle/today', {
         method: 'PUT',
@@ -3790,13 +3833,25 @@ export default function MuscleTraining() {
                     className="mt-muscle-heatmap-visual"
                     aria-label={stitchCopy.topMuscleTitle}
                   >
-                    <MuscleHeatmap
-                      data={muscleVisualHeatmapData}
-                      side="both"
-                      frontLabel={isZh ? '正面' : 'Front'}
-                      backLabel={isZh ? '背面' : 'Back'}
-                      onMuscleClick={handleMusclePartClick}
-                    />
+                    <img src={anatomyNeonSelectorUrl} alt="" aria-hidden="true" />
+                    <div className="mt-muscle-hit-zone-layer" aria-label={stitchCopy.topMuscleHint}>
+                      {TOP_MUSCLE_HIT_ZONES.map((zone) => (
+                        <button
+                          key={zone.id}
+                          type="button"
+                          className={`mt-muscle-hit-zone mt-muscle-hit-zone--${zone.id}${selectedMuscleHitZoneId === zone.id ? ' is-active' : ''}`}
+                          style={{
+                            left: zone.left,
+                            top: zone.top,
+                            width: zone.width,
+                            height: zone.height,
+                          }}
+                          onClick={() => handleTopMuscleSelect(zone.key, zone.id)}
+                          aria-label={targetAreaCards.find((target) => target.key === zone.key)?.label || zone.key}
+                          aria-pressed={selectedMuscleHitZoneId === zone.id}
+                        />
+                      ))}
+                    </div>
                   </figure>
                   {clickedMuscleSlug && MUSCLE_SLUG_LABEL[clickedMuscleSlug] && (
                     <div className="mt-muscle-click-callout" aria-live="polite">
@@ -4325,6 +4380,40 @@ export default function MuscleTraining() {
                           </button>
                         ))}
                       </div>
+                    </label>
+
+                    <label className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide mt-strength-composer">
+                      <span>{copy.strengthComposerTitle}</span>
+                      <p>{copy.strengthComposerHint}</p>
+                      <strong>{copy.strengthFocusLabel}</strong>
+                      <div className="muscle-choice-row">
+                        {STRENGTH_FOCUS_OPTIONS.map((focus) => (
+                          <button
+                            key={focus}
+                            type="button"
+                            className={`muscle-day-chip${checkInDraft.strengthFocus === focus ? ' active' : ''}`}
+                            onClick={() => updateCheckInDraft('strengthFocus', focus)}
+                            aria-pressed={checkInDraft.strengthFocus === focus}
+                          >
+                            {pickLabel(copy.strengthFocusOptions, focus, focus)}
+                          </button>
+                        ))}
+                      </div>
+                      <strong>{copy.strengthDoseLabel}</strong>
+                      <div className="muscle-choice-row">
+                        {STRENGTH_DOSE_OPTIONS.map((dose) => (
+                          <button
+                            key={dose}
+                            type="button"
+                            className={`muscle-day-chip${checkInDraft.strengthDose === dose ? ' active' : ''}`}
+                            onClick={() => updateCheckInDraft('strengthDose', dose)}
+                            aria-pressed={checkInDraft.strengthDose === dose}
+                          >
+                            {pickLabel(copy.strengthDoseOptions, dose, dose)}
+                          </button>
+                        ))}
+                      </div>
+                      <em>{copy.strengthComposerSafety}</em>
                     </label>
 
                     <label className="muscle-pref-field">

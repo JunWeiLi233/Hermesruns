@@ -22,6 +22,8 @@ class LocalSharedRunnerBootstrapServiceTests {
     private final ShoeRepository shoeRepository = mock(ShoeRepository.class);
     private final ActivityRepository activityRepository = mock(ActivityRepository.class);
     private final ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+    private final TerritoryPolygonRepository territoryPolygonRepository = mock(TerritoryPolygonRepository.class);
+    private final TerritoryPolygonComputer territoryPolygonComputer = new TerritoryPolygonComputer();
     private final AuthService authService = mock(AuthService.class);
 
     @Test
@@ -41,13 +43,7 @@ class LocalSharedRunnerBootstrapServiceTests {
             return null;
         }).when(authService).storePassword(any(Runner.class), any(String.class));
 
-        LocalSharedRunnerBootstrapService service = new LocalSharedRunnerBootstrapService(
-                runnerRepository,
-                shoeRepository,
-                activityRepository,
-                activityPointRepository,
-                authService
-        );
+        LocalSharedRunnerBootstrapService service = newService();
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
                 LocalSharedRunnerBootstrapService.BootstrapConfig.localDefault("local-test-password")
@@ -79,13 +75,7 @@ class LocalSharedRunnerBootstrapServiceTests {
         when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(activityRepository.countByRunner(existing)).thenReturn(4L);
 
-        LocalSharedRunnerBootstrapService service = new LocalSharedRunnerBootstrapService(
-                runnerRepository,
-                shoeRepository,
-                activityRepository,
-                activityPointRepository,
-                authService
-        );
+        LocalSharedRunnerBootstrapService service = newService();
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
                 LocalSharedRunnerBootstrapService.BootstrapConfig.localDefault("local-test-password")
@@ -115,13 +105,7 @@ class LocalSharedRunnerBootstrapServiceTests {
             return null;
         }).when(authService).storePassword(any(Runner.class), any(String.class));
 
-        LocalSharedRunnerBootstrapService service = new LocalSharedRunnerBootstrapService(
-                runnerRepository,
-                shoeRepository,
-                activityRepository,
-                activityPointRepository,
-                authService
-        );
+        LocalSharedRunnerBootstrapService service = newService();
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
                 LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("local-rival-test-password")
@@ -200,13 +184,7 @@ class LocalSharedRunnerBootstrapServiceTests {
             return null;
         }).when(authService).storePassword(any(Runner.class), any(String.class));
 
-        LocalSharedRunnerBootstrapService service = new LocalSharedRunnerBootstrapService(
-                runnerRepository,
-                shoeRepository,
-                activityRepository,
-                activityPointRepository,
-                authService
-        );
+        LocalSharedRunnerBootstrapService service = newService();
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
                 LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("local-rival-test-password")
@@ -263,13 +241,7 @@ class LocalSharedRunnerBootstrapServiceTests {
                 5
         )).thenReturn(seedCells);
 
-        LocalSharedRunnerBootstrapService service = new LocalSharedRunnerBootstrapService(
-                runnerRepository,
-                shoeRepository,
-                activityRepository,
-                activityPointRepository,
-                authService
-        );
+        LocalSharedRunnerBootstrapService service = newService();
 
         LocalSharedRunnerBootstrapService.BootstrapResult result = service.bootstrap(
                 LocalSharedRunnerBootstrapService.BootstrapConfig.territoryRivalDefault("local-rival-test-password")
@@ -279,6 +251,376 @@ class LocalSharedRunnerBootstrapServiceTests {
         ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
         verify(activityRepository).save(activityCaptor.capture());
         assertThat(activityCaptor.getValue().getSourceChecksum()).isEqualTo("local-territory-rival-live-v5-marker");
+    }
+
+    @Test
+    void bootstrapCreatesFlushingTerritoryAccountWithReadyLandMasks() {
+        when(authService.normalizeEmail("territory-flushing@hermes.local")).thenReturn("territory-flushing@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("territory-flushing@hermes.local")).thenReturn(Optional.empty());
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> {
+            Runner runner = invocation.getArgument(0);
+            if (runner.getId() == null) runner.setId(140971749L);
+            return runner;
+        });
+        when(activityRepository.countByRunner(any(Runner.class))).thenReturn(0L);
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(any(Runner.class))).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(9_000L + activity.getName().hashCode() % 1_000L);
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.flushingTerritoryDefault("local-flushing-test-password")
+        );
+
+        assertThat(result.email()).isEqualTo("territory-flushing@hermes.local");
+        assertThat(result.seededActivities()).isEqualTo(3);
+        assertThat(result.seededShoes()).isEqualTo(3);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(3)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .allSatisfy(activity -> {
+                    assertThat(activity.getName()).contains("Flushing");
+                    assertThat(activity.getPoints()).hasSizeGreaterThanOrEqualTo(330);
+                    assertThat(diagonalSegmentCount(activity)).isGreaterThan(60);
+                    assertThat(activity.getPoints())
+                            .anySatisfy(point -> {
+                                assertThat(point.getLatitude()).isBetween(40.731, 40.781);
+                                assertThat(point.getLongitude()).isBetween(-73.858, -73.778);
+                            });
+                });
+
+        verify(territoryPolygonRepository, times(3)).deleteByActivityId(any(Long.class));
+        ArgumentCaptor<TerritoryPolygon> polygonCaptor = ArgumentCaptor.forClass(TerritoryPolygon.class);
+        verify(territoryPolygonRepository, times(3)).save(polygonCaptor.capture());
+        assertThat(polygonCaptor.getAllValues())
+                .allSatisfy(polygon -> {
+                    assertThat(polygon.getUserId()).isEqualTo(140971749L);
+                    assertThat(polygon.getAreaSquareMeters()).isGreaterThan(1_000_000.0);
+                    assertThat(TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()).cells())
+                            .hasSizeGreaterThan(1_000);
+                });
+
+        verify(runnerRepository).save(org.mockito.ArgumentMatchers.argThat(runner ->
+                "territory-flushing@hermes.local".equals(runner.getEmail())
+                        && "Hermes Flushing Territory Tester".equals(runner.getDisplayName())
+                        && "hermes-flushing-territory-tester".equals(runner.getStravaUsername())
+                        && Long.valueOf(140971749L).equals(runner.getStravaAthleteId())
+        ));
+    }
+
+    @Test
+    void bootstrapCreatesInnerFlushingTerritoryAccountInsideOuterFlushingMask() {
+        when(authService.normalizeEmail("territory-flushing-inner@hermes.local")).thenReturn("territory-flushing-inner@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("territory-flushing-inner@hermes.local")).thenReturn(Optional.empty());
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> {
+            Runner runner = invocation.getArgument(0);
+            if (runner.getId() == null) runner.setId(140971750L);
+            return runner;
+        });
+        when(activityRepository.countByRunner(any(Runner.class))).thenReturn(0L);
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(any(Runner.class))).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(20_000L + Math.abs(activity.getName().hashCode() % 1_000L));
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.innerFlushingTerritoryDefault("local-inner-flushing-test-password")
+        );
+
+        assertThat(result.email()).isEqualTo("territory-flushing-inner@hermes.local");
+        assertThat(result.seededActivities()).isEqualTo(2);
+        assertThat(result.seededShoes()).isEqualTo(3);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(2)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .allSatisfy(activity -> {
+                    assertThat(activity.getName()).contains("Inner Flushing");
+                    assertThat(activity.getPoints()).hasSizeGreaterThanOrEqualTo(190);
+                    assertThat(activity.getPoints())
+                            .allSatisfy(point -> {
+                                assertThat(point.getLatitude()).isBetween(40.742, 40.760);
+                                assertThat(point.getLongitude()).isBetween(-73.834, -73.803);
+                            });
+                });
+
+        ArgumentCaptor<TerritoryPolygon> polygonCaptor = ArgumentCaptor.forClass(TerritoryPolygon.class);
+        verify(territoryPolygonRepository, times(2)).save(polygonCaptor.capture());
+        assertThat(polygonCaptor.getAllValues())
+                .allSatisfy(polygon -> {
+                    assertThat(polygon.getUserId()).isEqualTo(140971750L);
+                    assertThat(polygon.getAreaSquareMeters()).isGreaterThan(250_000.0);
+                    assertThat(TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()).cells())
+                            .hasSizeGreaterThan(250);
+                });
+
+        verify(runnerRepository).save(org.mockito.ArgumentMatchers.argThat(runner ->
+                "territory-flushing-inner@hermes.local".equals(runner.getEmail())
+                        && "Hermes Inner Flushing Occupier".equals(runner.getDisplayName())
+                        && "hermes-inner-flushing-occupier".equals(runner.getStravaUsername())
+                        && Long.valueOf(140971750L).equals(runner.getStravaAthleteId())
+        ));
+    }
+
+    @Test
+    void bootstrapCreatesBerlinTerritoryAccountWithConquerableLandMasks() {
+        when(authService.normalizeEmail("territory-berlin@hermes.local")).thenReturn("territory-berlin@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("territory-berlin@hermes.local")).thenReturn(Optional.empty());
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> {
+            Runner runner = invocation.getArgument(0);
+            if (runner.getId() == null) runner.setId(140971751L);
+            return runner;
+        });
+        when(activityRepository.countByRunner(any(Runner.class))).thenReturn(0L);
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(any(Runner.class))).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(30_000L + Math.abs(activity.getName().hashCode() % 1_000L));
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.berlinTerritoryDefault("local-berlin-test-password")
+        );
+
+        assertThat(result.email()).isEqualTo("territory-berlin@hermes.local");
+        assertThat(result.seededActivities()).isEqualTo(3);
+        assertThat(result.seededShoes()).isEqualTo(3);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(3)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .allSatisfy(activity -> {
+                    assertThat(activity.getName()).contains("Berlin");
+                    assertThat(activity.getPoints()).hasSizeGreaterThanOrEqualTo(240);
+                    assertThat(activity.getPoints())
+                            .allSatisfy(point -> {
+                                assertThat(point.getLatitude()).isBetween(52.500, 52.535);
+                                assertThat(point.getLongitude()).isBetween(13.352, 13.442);
+                            });
+                });
+
+        ArgumentCaptor<TerritoryPolygon> polygonCaptor = ArgumentCaptor.forClass(TerritoryPolygon.class);
+        verify(territoryPolygonRepository, times(3)).save(polygonCaptor.capture());
+        List<TerritoryPolygonComputer.DecodedTerritoryMask> berlinMasks = polygonCaptor.getAllValues().stream()
+                .map(polygon -> TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()))
+                .toList();
+        assertThat(polygonCaptor.getAllValues())
+                .allSatisfy(polygon -> {
+                    assertThat(polygon.getUserId()).isEqualTo(140971751L);
+                    assertThat(polygon.getAreaSquareMeters()).isGreaterThan(500_000.0);
+                    assertThat(TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()).cells())
+                            .hasSizeGreaterThan(500);
+                });
+        List<Double> centerLongitudes = berlinMasks.stream()
+                .map(this::maskCenterLongitude)
+                .sorted()
+                .toList();
+        assertThat(centerLongitudes.get(1) - centerLongitudes.get(0)).isGreaterThan(0.012);
+        assertThat(centerLongitudes.get(2) - centerLongitudes.get(1)).isGreaterThan(0.012);
+
+        verify(runnerRepository).save(org.mockito.ArgumentMatchers.argThat(runner ->
+                "territory-berlin@hermes.local".equals(runner.getEmail())
+                        && "Hermes Berlin Land Conqueror".equals(runner.getDisplayName())
+                        && "hermes-berlin-land-conqueror".equals(runner.getStravaUsername())
+                        && Long.valueOf(140971751L).equals(runner.getStravaAthleteId())
+        ));
+    }
+
+    @Test
+    void bootstrapCreatesBerlinRivalAccountForMultiColorTerritoryCompetition() {
+        when(authService.normalizeEmail("territory-berlin-blue@hermes.local")).thenReturn("territory-berlin-blue@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("territory-berlin-blue@hermes.local")).thenReturn(Optional.empty());
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> {
+            Runner runner = invocation.getArgument(0);
+            if (runner.getId() == null) runner.setId(140971752L);
+            return runner;
+        });
+        when(activityRepository.countByRunner(any(Runner.class))).thenReturn(0L);
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(any(Runner.class))).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(40_000L + Math.abs(activity.getName().hashCode() % 1_000L));
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.berlinRivalDefault(
+                        "local-berlin-rival-test-password",
+                        LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_BLUE
+                )
+        );
+
+        assertThat(result.email()).isEqualTo("territory-berlin-blue@hermes.local");
+        assertThat(result.seededActivities()).isEqualTo(3);
+        assertThat(result.seededShoes()).isEqualTo(3);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(3)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .extracting(Activity::getSourceChecksum)
+                .containsExactly(
+                        "local-berlin-rival-loop-v5-1-1",
+                        "local-berlin-rival-loop-v5-1-2",
+                        "local-berlin-rival-loop-v5-1-3"
+                );
+        assertThat(activityCaptor.getAllValues())
+                .allSatisfy(activity -> {
+                    assertThat(activity.getName()).contains("Berlin");
+                    assertThat(activity.getName()).contains("blue rival");
+                    assertThat(activity.getPoints()).hasSizeGreaterThanOrEqualTo(240);
+                });
+        assertThat(activityCaptor.getAllValues().get(0).getPoints())
+                .allSatisfy(point -> {
+                    assertThat(point.getLatitude()).isBetween(52.514, 52.536);
+                    assertThat(point.getLongitude()).isBetween(13.350, 13.383);
+                });
+
+        ArgumentCaptor<TerritoryPolygon> polygonCaptor = ArgumentCaptor.forClass(TerritoryPolygon.class);
+        verify(territoryPolygonRepository, times(3)).save(polygonCaptor.capture());
+        assertThat(polygonCaptor.getAllValues())
+                .allSatisfy(polygon -> {
+                    assertThat(polygon.getUserId()).isEqualTo(140971752L);
+                    assertThat(polygon.getAreaSquareMeters()).isGreaterThan(250_000.0);
+                    assertThat(TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()).cells())
+                            .hasSizeGreaterThan(250);
+                });
+
+        verify(runnerRepository).save(org.mockito.ArgumentMatchers.argThat(runner ->
+                "territory-berlin-blue@hermes.local".equals(runner.getEmail())
+                        && "Hermes Berlin Blue Rival".equals(runner.getDisplayName())
+                        && "hermes-berlin-blue-rival".equals(runner.getStravaUsername())
+                        && Long.valueOf(140971752L).equals(runner.getStravaAthleteId())
+        ));
+    }
+
+    @Test
+    void berlinDenseRivalProfilesUseDistinctAccountsForPackedTerritoryBoard() {
+        assertThat(LocalSharedRunnerBootstrapService.BootstrapConfig.berlinRivalDefault(
+                "local-berlin-rival-test-password",
+                LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_PINK
+        ))
+                .extracting(
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::email,
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::stravaAthleteId,
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::displayName
+                )
+                .containsExactly(
+                        "territory-berlin-pink@hermes.local",
+                        140971755L,
+                        "Hermes Berlin Pink Rival"
+                );
+        assertThat(LocalSharedRunnerBootstrapService.BootstrapConfig.berlinRivalDefault(
+                "local-berlin-rival-test-password",
+                LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_LIME
+        ))
+                .extracting(
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::email,
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::stravaAthleteId,
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::displayName
+                )
+                .containsExactly(
+                        "territory-berlin-lime@hermes.local",
+                        140971756L,
+                        "Hermes Berlin Lime Rival"
+                );
+        assertThat(LocalSharedRunnerBootstrapService.BootstrapConfig.berlinRivalDefault(
+                "local-berlin-rival-test-password",
+                LocalSharedRunnerBootstrapService.SeedProfile.BERLIN_RIVAL_CYAN
+        ))
+                .extracting(
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::email,
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::stravaAthleteId,
+                        LocalSharedRunnerBootstrapService.BootstrapConfig::displayName
+                )
+                .containsExactly(
+                        "territory-berlin-cyan@hermes.local",
+                        140971757L,
+                        "Hermes Berlin Cyan Rival"
+                );
+    }
+
+    @Test
+    void bootstrapRepairsOldRectangularFlushingSeedBeforeReseeding() {
+        Runner existing = new Runner();
+        existing.setId(140971749L);
+        existing.setEmail("territory-flushing@hermes.local");
+        Activity oldRectangularSeed = new Activity();
+        oldRectangularSeed.setId(410L);
+        oldRectangularSeed.setRunner(existing);
+        oldRectangularSeed.setSourceFileName("local-flushing-territory-bootstrap");
+        oldRectangularSeed.setSourceChecksum("local-flushing-territory-loop-v1-1");
+        Activity unrelatedRun = new Activity();
+        unrelatedRun.setId(411L);
+        unrelatedRun.setRunner(existing);
+        unrelatedRun.setSourceChecksum("manual-user-run");
+
+        when(authService.normalizeEmail("territory-flushing@hermes.local")).thenReturn("territory-flushing@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("territory-flushing@hermes.local")).thenReturn(Optional.of(existing));
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(activityRepository.countByRunner(existing)).thenReturn(2L, 1L);
+        when(activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                existing,
+                ImportProvider.STRAVA,
+                "local-flushing-territory-loop-v2-1"
+        )).thenReturn(false);
+        when(activityRepository.findByRunnerOrderByIdDesc(existing)).thenReturn(List.of(oldRectangularSeed, unrelatedRun));
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(existing)).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(10_000L + activity.getName().hashCode() % 1_000L);
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.flushingTerritoryDefault("local-flushing-test-password")
+        );
+
+        assertThat(result.seededActivities()).isEqualTo(3);
+        verify(territoryPolygonRepository).deleteByActivityId(410L);
+        verify(activityRepository).delete(oldRectangularSeed);
+        verify(activityRepository, never()).delete(unrelatedRun);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(3)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .extracting(Activity::getSourceChecksum)
+                .containsExactly(
+                        "local-flushing-territory-loop-v2-1",
+                        "local-flushing-territory-loop-v2-2",
+                        "local-flushing-territory-loop-v2-3"
+                );
+    }
+
+    private static long diagonalSegmentCount(Activity activity) {
+        List<ActivityPoint> points = activity.getPoints();
+        long diagonals = 0;
+        for (int i = 1; i < points.size(); i += 1) {
+            ActivityPoint previous = points.get(i - 1);
+            ActivityPoint current = points.get(i);
+            if (Math.abs(current.getLatitude() - previous.getLatitude()) > 0.0000001
+                    && Math.abs(current.getLongitude() - previous.getLongitude()) > 0.0000001) {
+                diagonals += 1;
+            }
+        }
+        return diagonals;
+    }
+
+    private LocalSharedRunnerBootstrapService newService() {
+        return new LocalSharedRunnerBootstrapService(
+                runnerRepository,
+                shoeRepository,
+                activityRepository,
+                activityPointRepository,
+                territoryPolygonRepository,
+                territoryPolygonComputer,
+                authService
+        );
     }
 
     private static double sharedRouteLatitude(int activityIndex, int sample, int sampleCount) {
@@ -298,6 +640,13 @@ class LocalSharedRunnerBootstrapServiceTests {
     private static String territoryCellKey(double latitude, double longitude) {
         double cellDegrees = 0.0065;
         return (int) Math.floor(latitude / cellDegrees) + ":" + (int) Math.floor(longitude / cellDegrees);
+    }
+
+    private double maskCenterLongitude(TerritoryPolygonComputer.DecodedTerritoryMask mask) {
+        return mask.cells().stream()
+                .mapToDouble(TerritoryPolygonComputer.MaskCell::longitude)
+                .average()
+                .orElseThrow();
     }
 
 }

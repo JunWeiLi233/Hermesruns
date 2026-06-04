@@ -126,6 +126,27 @@ No prior knowledge of Spring Boot, React, or sports science is required to make 
 >
 > This second local-only account is reserved for Territory testing. Its simulated runs intentionally overlap the shared runner's later routes with denser GPS samples, so `/territory` can show real contested/conquered land instead of a single-account happy path. Do not repurpose it for normal demos.
 
+> **Flushing territory test account**
+>
+> Email: `territory-flushing@hermes.local`
+> Password: `HermesDev2026!` by default, or the value of `APP_LOCAL_TERRITORY_FLUSHING_PASSWORD`
+>
+> This local-only account is dedicated to `/territory` visual testing. It seeds closed-loop GPS activities and land-mask polygons across Flushing, Queens so the Territory page can open with a large occupied Flushing area without importing real activity files. Do not use it as a normal demo runner.
+
+> **Inner Flushing territory occupier**
+>
+> Email: `territory-flushing-inner@hermes.local`
+> Password: `HermesDev2026!` by default, or the value of `APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD`
+>
+> This local-only account is nested inside the Flushing territory account. Its newer closed-loop land masks occupy the center of the larger Flushing mask so `/territory` can verify that conquest consumes opponent land instead of simply drawing overlapping fills. Do not use it as a normal demo runner.
+
+> **Berlin territory conqueror**
+>
+> Email: `territory-berlin@hermes.local`
+> Password: `HermesDev2026!` by default, or the value of `APP_LOCAL_TERRITORY_BERLIN_PASSWORD`
+>
+> This local-only account is dedicated to Berlin `/territory` screenshots and conquest testing. It seeds closed-loop GPS activities and persisted land-mask polygons around Tiergarten, Mitte, and Alexanderplatz so the map opens on occupied Berlin land without importing real activity files.
+
 #### How to enable
 
 **Windows** — copy the example env file then start Hermes:
@@ -1209,6 +1230,21 @@ It also reserves a territory-conflict test account:
 
 That rival account is only for the real land-conquer game. Its seeded GPS routes overlap the shared runner's routes with denser samples so local `/territory` testing can verify contested ownership and capture behavior.
 
+It also creates a Flushing occupation test account:
+`territory-flushing@hermes.local` / `HermesDev2026!` by default
+
+That Flushing account is only for Territory page testing. Its seeded closed-loop GPS activities and persisted land-mask polygons cover Flushing, Queens so you can verify large occupied territory rendering without connecting Strava or importing files. Override it with `APP_LOCAL_TERRITORY_FLUSHING_EMAIL`, `APP_LOCAL_TERRITORY_FLUSHING_PASSWORD`, or `APP_LOCAL_TERRITORY_FLUSHING_ENABLED=false`.
+
+It also creates an inner Flushing occupation account:
+`territory-flushing-inner@hermes.local` / `HermesDev2026!` by default
+
+That inner account is only for Territory conquest testing. Its newer seeded loops sit inside the larger Flushing account so local `/territory` checks can confirm the newer owner consumes the overlapped cells instead of appearing as a translucent overlap. Override it with `APP_LOCAL_TERRITORY_FLUSHING_INNER_EMAIL`, `APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD`, or `APP_LOCAL_TERRITORY_FLUSHING_INNER_ENABLED=false`.
+
+It also creates a Berlin territory conqueror account:
+`territory-berlin@hermes.local` / `HermesDev2026!` by default
+
+That Berlin account is only for Territory page testing. Its seeded closed-loop GPS activities and persisted land masks occupy central Berlin around Tiergarten, Mitte, and Alexanderplatz so you can capture a Berlin conquest map without importing files. Override it with `APP_LOCAL_TERRITORY_BERLIN_EMAIL`, `APP_LOCAL_TERRITORY_BERLIN_PASSWORD`, or `APP_LOCAL_TERRITORY_BERLIN_ENABLED=false`.
+
 Windows:
 
 ```powershell
@@ -1218,10 +1254,19 @@ $env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "<set-local-password>"
 $env:APP_LOCAL_TERRITORY_RIVAL_ENABLED = "true"
 $env:APP_LOCAL_TERRITORY_RIVAL_EMAIL = "territory-rival@hermes.local"
 $env:APP_LOCAL_TERRITORY_RIVAL_PASSWORD = "<set-rival-password>"
+$env:APP_LOCAL_TERRITORY_FLUSHING_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_FLUSHING_EMAIL = "territory-flushing@hermes.local"
+$env:APP_LOCAL_TERRITORY_FLUSHING_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_EMAIL = "territory-flushing-inner@hermes.local"
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_BERLIN_ENABLED = "true"
+$env:APP_LOCAL_TERRITORY_BERLIN_EMAIL = "territory-berlin@hermes.local"
+$env:APP_LOCAL_TERRITORY_BERLIN_PASSWORD = "HermesDev2026!"
 .\start_hermes.bat
 ```
 
-`start_hermes.bat` forwards shell-set `APP_LOCAL_SHARED_RUNNER_*` values into the backend window, so this works without editing `Hermes.local.env.ps1`.
+`start_hermes.bat` forwards shell-set `APP_LOCAL_SHARED_RUNNER_*` and local territory test-account values into the backend window, so this works without editing `Hermes.local.env.ps1`.
 
 macOS / Linux:
 
@@ -1232,6 +1277,15 @@ export APP_LOCAL_SHARED_RUNNER_PASSWORD='<set-local-password>'
 export APP_LOCAL_TERRITORY_RIVAL_ENABLED=true
 export APP_LOCAL_TERRITORY_RIVAL_EMAIL=territory-rival@hermes.local
 export APP_LOCAL_TERRITORY_RIVAL_PASSWORD='<set-rival-password>'
+export APP_LOCAL_TERRITORY_FLUSHING_ENABLED=true
+export APP_LOCAL_TERRITORY_FLUSHING_EMAIL=territory-flushing@hermes.local
+export APP_LOCAL_TERRITORY_FLUSHING_PASSWORD='HermesDev2026!'
+export APP_LOCAL_TERRITORY_FLUSHING_INNER_ENABLED=true
+export APP_LOCAL_TERRITORY_FLUSHING_INNER_EMAIL=territory-flushing-inner@hermes.local
+export APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD='HermesDev2026!'
+export APP_LOCAL_TERRITORY_BERLIN_ENABLED=true
+export APP_LOCAL_TERRITORY_BERLIN_EMAIL=territory-berlin@hermes.local
+export APP_LOCAL_TERRITORY_BERLIN_PASSWORD='HermesDev2026!'
 cd backend
 ./mvnw spring-boot:run
 ```

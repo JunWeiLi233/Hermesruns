@@ -129,14 +129,14 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.hermes-site-frame\[data-gpt-taste-system="gpt-taste"\]\.is-public \.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*!important/,
-  'Landing command hero should collapse to a single hero column after removing the proof board.',
+  /\.landing-command-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*0\.92fr\)\s+minmax\(520px,\s*1\.08fr\);/,
+  'Landing command hero should keep the restored two-column command board composition.',
 );
 
-assert.doesNotMatch(
+assert.match(
   landingSource,
   /landing-command-board landing-cinematic-hero-proof/,
-  'Landing hero should not render the removed command-board proof panel.',
+  'Landing hero should render the command-board proof panel.',
 );
 
 assert.doesNotMatch(

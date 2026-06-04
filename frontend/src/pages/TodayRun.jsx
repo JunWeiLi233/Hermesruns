@@ -742,6 +742,8 @@ export default function TodayRun() {
                   {metrics.acwr != null ? metrics.acwr.toFixed(2) : '--'}
                 </strong>
                 <span className="today-run-coaching-answer-sub">{acwrNarrative.stripLabel}</span>
+                <span className="today-run-coaching-answer-title">{acwrNarrative.title}</span>
+                <p className="today-run-coaching-answer-copy">{acwrNarrative.body}</p>
               </article>
 
               <article className="today-run-coaching-answer today-run-coaching-answer--shoe">

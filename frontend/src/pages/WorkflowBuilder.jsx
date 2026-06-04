@@ -207,6 +207,7 @@ function CanvasWorkspace({
   canvasError,
   canvasInstanceKey,
   onError,
+  onRetry,
   onStartBlank,
   onRun,
   onClear,
@@ -229,6 +230,9 @@ function CanvasWorkspace({
       {canvasError?.message ? (
         <p className="workflow-builder-state-detail">{canvasError.message}</p>
       ) : null}
+      <button type="button" className="wf-start-blank-btn" onClick={onRetry}>
+        {t('workflow_builder.retry')}
+      </button>
     </div>
   );
 
@@ -394,6 +398,11 @@ export default function WorkflowBuilder() {
 
   const handleCanvasError = (err) => setCanvasError(err);
 
+  const handleCanvasRetry = () => {
+    setCanvasError(null);
+    setCanvasInstanceKey((k) => k + 1);
+  };
+
   const handleDragStart = (_event, _type) => { /* drag data already set in NodePalette */ };
 
   return (
@@ -513,6 +522,7 @@ export default function WorkflowBuilder() {
             canvasError={canvasError}
             canvasInstanceKey={canvasInstanceKey}
             onError={handleCanvasError}
+            onRetry={handleCanvasRetry}
             onStartBlank={handleStartBlank}
             onRun={handleRun}
             onClear={handleClear}

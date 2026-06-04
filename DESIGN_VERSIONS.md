@@ -11,6 +11,32 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-03-02
+Date: 2026-06-03
+Surface: Territory layered ownership on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed territory polygon ownership from deleting older overlapping cells to preserving every owner's claimed land as stacked layers. The API keeps older and newer overlapping masks, while the frontend paints older layers first and the most recent claim on top.
+Why: The user clarified that overlapping claims should cover one another visually, not remove ownership from the covered-down territory.
+Rollback target: `DV-2026-06-03-01`
+Notes: Territory score ranking remains separate; this entry covers the concrete land-mask polygon stack used by `/api/territory/polygons` and the Leaflet territory view.
+
+### Version: DV-2026-06-03-01
+Date: 2026-06-03
+Surface: Territory exact coverage and smoothed claim map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Split territory land rendering into a visible exact ownership underlay plus brighter smoothed land fills and a single neon owner contour, using less aggressive smoothing and nonzero SVG fill rules so narrow claimed areas stay covered instead of being clipped by the visual path.
+Why: The previous count-based fix still let smoothed fill geometry leave user-owned cells visually uncovered around red, blue, and green overlaps.
+Rollback target: `working tree before DV-2026-06-03-01`
+Notes: Frontend rendering and proof-harness update only. Backend ownership cells, auth, routing, and territory API contracts remain unchanged.
+
+### Version: DV-2026-06-01-01
+Date: 2026-06-01
+Surface: Territory concrete land border on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the land-mask edge as layered Leaflet canvas strokes: dark undercut, warm cement bevel, chipped aggregate grit, and owner-color seam. The active territory remains a sealed conquest surface while the border reads more like a physical concrete landmass than a flat vector outline.
+Why: The Territory page needed stronger visual proof that occupied land is concrete territory, not overlapping translucent sectors or route traces.
+Rollback target: `working tree before DV-2026-06-01-01`
+Notes: Frontend presentation only. Territory APIs, auth, route data, ownership rules, and seeded test accounts remain unchanged.
 ### Version: DV-2026-05-24-04
 Date: 2026-05-24
 Surface: Muscle Training light-theme settings contrast on `/muscle-training`
