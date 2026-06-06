@@ -55,13 +55,15 @@ function projectedRaceDate(race) {
   return new Date(year, month - 1, day, 8, 0, 0, 0);
 }
 
-function buildCountdownParts(targetDate) {
-  const remainingMs = Math.max(0, targetDate.getTime() - Date.now());
-  const totalMinutes = Math.floor(remainingMs / 60000);
+function buildCountdownParts(targetDate, now = Date.now()) {
+  const remainingMs = Math.max(0, targetDate.getTime() - now);
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const totalMinutes = Math.floor(totalSeconds / 60);
   const days = Math.floor(totalMinutes / (60 * 24));
   const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
   const minutes = totalMinutes % 60;
-  return { days, hours, minutes };
+  const seconds = totalSeconds % 60;
+  return { days, hours, minutes, seconds };
 }
 
 function padCountdown(value) {
@@ -463,6 +465,7 @@ export default function RacesDetail() {
   const [routeMapReady, setRouteMapReady] = useState(false);
   const [routeMapPainted, setRouteMapPainted] = useState(false);
   const [streetTileFallback, setStreetTileFallback] = useState(null);
+  const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const raceDetailElevationChartRef = useRef(null);
   const raceDetailElevationStageRef = useRef(null);
   const elevationSvgRef = useRef(null);
@@ -701,7 +704,7 @@ export default function RacesDetail() {
     [courseMapData.totalClimbMeters, raceMeta],
   );
   const targetDate = useMemo(() => projectedRaceDate(race), [race]);
-  const countdown = useMemo(() => buildCountdownParts(targetDate), [targetDate]);
+  const countdown = useMemo(() => buildCountdownParts(targetDate, countdownNow), [countdownNow, targetDate]);
   const bestVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
   const prediction = useMemo(() => {
     if (!race || !raceMeta || !bestVdot || bestVdot <= 0) return null;
@@ -783,6 +786,12 @@ export default function RacesDetail() {
   const coachInsight = useMemo(() => buildCoachInsight(t, race, raceMeta, prediction), [prediction, race, raceMeta, t]);
   const heroLabels = useMemo(() => buildRaceHeroLabels(race), [race]);
   const topnavTitle = useMemo(() => buildRaceTopnavTitle(heroLabels, race), [heroLabels, race]);
+
+  useEffect(() => {
+    const countdownTimer = setInterval(() => setCountdownNow(Date.now()), 1000);
+    return () => clearInterval(countdownTimer);
+  }, []);
+
   const mapCardCopy = useMemo(() => {
     const city = race?.city || race?.name || '';
     if (hasAlignedRoute) {
@@ -1174,7 +1183,7 @@ export default function RacesDetail() {
                   </div>
                 </div>
 
-                <div className="race-detail-countdown">
+                <div className="race-detail-countdown" aria-live="polite">
                   <div className="race-detail-count-card">
                     <strong>{padCountdown(countdown.days)}</strong>
                     <span>{t('races.detail_count_days')}</span>
@@ -1186,6 +1195,10 @@ export default function RacesDetail() {
                   <div className="race-detail-count-card">
                     <strong>{padCountdown(countdown.minutes)}</strong>
                     <span>{t('races.detail_count_minutes')}</span>
+                  </div>
+                  <div className="race-detail-count-card is-seconds">
+                    <strong key={`seconds-${countdown.seconds}`}>{padCountdown(countdown.seconds)}</strong>
+                    <span>{t('races.detail_count_seconds')}</span>
                   </div>
                 </div>
               </div>

@@ -1535,6 +1535,7 @@ export default {
     "detail_count_days": "天",
     "detail_count_hours": "小时",
     "detail_count_minutes": "分钟",
+    "detail_count_seconds": "秒",
     "detail_stat_distance": "赛事距离",
     "detail_stat_prediction": "预测完赛",
     "detail_stat_confidence": "状态",

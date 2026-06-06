@@ -1536,6 +1536,7 @@ export default {
     "detail_count_days": "Days",
     "detail_count_hours": "Hrs",
     "detail_count_minutes": "Mins",
+    "detail_count_seconds": "Secs",
     "detail_stat_distance": "Distance",
     "detail_stat_prediction": "Predicted time",
     "detail_stat_confidence": "Status",
