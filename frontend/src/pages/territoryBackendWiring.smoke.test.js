@@ -499,7 +499,7 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.68, rival: 0\.12 \};[\s\S]*?function paintLandRegions\(entries, renderer\)[\s\S]*?entries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?renderer,[\s\S]*?stroke: false,[\s\S]*?fillRule: 'nonzero'[\s\S]*?className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`/,
+  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.72, rival: 0\.2 \};[\s\S]*?function paintLandRegions\(entries, renderer\)[\s\S]*?entries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?renderer,[\s\S]*?stroke: false,[\s\S]*?fillRule: 'nonzero'[\s\S]*?className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`/,
   'Territory backend render should paint active concrete land as the primary surface while keeping rival land subdued and separately targetable in CSS.',
 );
 
@@ -535,14 +535,26 @@ assert.match(
 
 assert.match(
   source,
-  /const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 8;[\s\S]*?const LAND_MASK_CONTOUR_CUBIC_TENSION = 0\.42;[\s\S]*?const LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO = 0\.72;[\s\S]*?function dedupeLayerPoints\(points, tolerancePixels = 0\.75\)[\s\S]*?function simplifyClosedLayerPoints\(points, tolerancePixels = LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX\)[\s\S]*?function clampLayerControlPoint\(control, start, end\)[\s\S]*?segmentLength \* LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO[\s\S]*?function cubicContourControls\(previous, current, next, following\)[\s\S]*?function smoothContourSvgPath\(map, region\)[\s\S]*?simplifyClosedLayerPoints\(dedupeLayerPoints\(closedMaskLoopOpenPoints\(region\)[\s\S]*?map\.latLngToLayerPoint\(point\)[\s\S]*?path \+= `C\$\{first\.x\} \$\{first\.y\} \$\{second\.x\} \$\{second\.y\} \$\{next\.x\} \$\{next\.y\}`[\s\S]*?return `\$\{path\}Z`;/,
-  'Territory should rewrite fill and contour paths with cubic SVG curves and enough screen simplification to suppress tiny pixel-grid steps.',
+  /const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 0\.25;[\s\S]*?const LAND_MASK_CONTOUR_REFERENCE_ZOOM = 14;[\s\S]*?const LAND_MASK_CONTOUR_CUBIC_TENSION = 0\.62;[\s\S]*?const LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO = 0\.72;[\s\S]*?function dedupeLayerPoints\(points, tolerancePixels = 0\.75\)[\s\S]*?function simplifyClosedLayerPoints\(points, tolerancePixels = LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX\)[\s\S]*?function stableContourLatLngPoints\(map, region\)[\s\S]*?map\.project\(point, LAND_MASK_CONTOUR_REFERENCE_ZOOM\)[\s\S]*?const stableReferencePoints = softenAxisAlignedLayerSegments\(basePoints\)[\s\S]*?map\.unproject\(point, LAND_MASK_CONTOUR_REFERENCE_ZOOM\)[\s\S]*?function stableContourSignature\(points\)[\s\S]*?point\.lat\.toFixed\(7\)[\s\S]*?function clampLayerControlPoint\(control, start, end\)[\s\S]*?segmentLength \* LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO[\s\S]*?function cubicContourControls\(previous, current, next, following\)[\s\S]*?function smoothContourSvgPath\(map, stableRegion\)[\s\S]*?const points = stableRegion[\s\S]*?map\.latLngToLayerPoint\(point\)[\s\S]*?path \+= `C\$\{first\.x\} \$\{first\.y\} \$\{second\.x\} \$\{second\.y\} \$\{next\.x\} \$\{next\.y\}`[\s\S]*?return `\$\{path\}Z`;/,
+  'Territory should build stable contour geometry at a fixed reference zoom, then only reproject that geometry while zooming.',
 );
 
 assert.match(
   source,
-  /const LAND_MASK_AXIS_SEGMENT_SOFTEN_PX = 64;[\s\S]*?const LAND_MASK_AXIS_SEGMENT_MIN_PX = 10;[\s\S]*?function softenAxisAlignedLayerSegments\(points\)[\s\S]*?axisSkew > 0\.12[\s\S]*?segmentLength \* 0\.24[\s\S]*?const points = softenAxisAlignedLayerSegments\(basePoints\)/,
-  'Territory should soften long tile-derived axis segments on both outer and shared paths so inner territory borders do not read as pixel-grid edges.',
+  /const LAND_MASK_AXIS_SEGMENT_SOFTEN_PX = 64;[\s\S]*?const LAND_MASK_AXIS_SEGMENT_MIN_PX = 10;[\s\S]*?function softenAxisAlignedLayerSegments\(points\)[\s\S]*?axisSkew > 0\.12[\s\S]*?segmentLength \* 0\.24[\s\S]*?const stableReferencePoints = softenAxisAlignedLayerSegments\(basePoints\)/,
+  'Territory should soften long tile-derived axis segments once at the stable reference zoom so zooming cannot reshape the border.',
+);
+
+assert.doesNotMatch(
+  source,
+  /function smoothContourSvgPath\(map, region\)[\s\S]*?simplifyClosedLayerPoints\(dedupeLayerPoints\(closedMaskLoopOpenPoints\(region\)[\s\S]*?map\.latLngToLayerPoint\(point\)/,
+  'Territory should not simplify the contour after projecting to the current zoom because that changes the border while zooming.',
+);
+
+assert.doesNotMatch(
+  source,
+  /function smoothContourSvgPath\(map, stableRegion\)[\s\S]*?dedupeLayerPoints\(stableRegion[\s\S]*?map\.latLngToLayerPoint\(point\)/,
+  'Territory should not dedupe stable contour points after projecting to the current zoom because low zoom can drop SVG commands.',
 );
 
 assert.match(
@@ -559,8 +571,8 @@ assert.match(
 
 assert.match(
   source,
-  /function attachSmoothTerritoryPath\(map, territoryPath, region\)[\s\S]*?pathElement\.setAttribute\('d', path\)[\s\S]*?map\.off\('zoomend viewreset moveend', updatePath\)[\s\S]*?map\.on\('zoomend viewreset moveend', updatePath\)/,
-  'Territory should keep the curved border path synchronized with Leaflet zoom and movement without adding a second helper layer.',
+  /function attachSmoothTerritoryPath\(map, territoryPath, region\)[\s\S]*?const stableRegion = stableContourLatLngPoints\(map, region\)[\s\S]*?const stableSignature = stableContourSignature\(stableRegion\)[\s\S]*?const path = smoothContourSvgPath\(map, stableRegion\)[\s\S]*?pathElement\.setAttribute\('d', path\)[\s\S]*?pathElement\.dataset\.hermesContourReferenceZoom = String\(LAND_MASK_CONTOUR_REFERENCE_ZOOM\)[\s\S]*?pathElement\.dataset\.hermesStableContourSignature = stableSignature[\s\S]*?map\.off\('zoomend viewreset moveend', updatePath\)[\s\S]*?map\.on\('zoomend viewreset moveend', updatePath\)/,
+  'Territory should keep the curved border synchronized with Leaflet movement using precomputed stable geometry, without adding a second helper layer.',
 );
 
 assert.match(
@@ -601,7 +613,7 @@ assert.match(
 
 assert.match(
   territoryCss,
-  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.24\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 10px rgba\(240, 117, 97, 0\.52\)\) drop-shadow\(0 1px 0 rgba\(255, 244, 225, 0\.28\)\);[\s\S]*?\}/,
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 18px rgba\(240, 117, 97, 0\.38\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 14px rgba\(240, 117, 97, 0\.68\)\) drop-shadow\(0 1px 0 rgba\(255, 244, 225, 0\.36\)\);[\s\S]*?\}/,
   'Territory CSS should separate the active border from the fill so the territory edge reads crisply without dashed or marching boundary noise.',
 );
 
@@ -663,6 +675,12 @@ assert.match(
   runtimeVerifierSource,
   /activeContours = q\('\.terr-land-mask-contour--active'\)[\s\S]*?activeConcreteLands = q\('\.terr-land-mask-concrete-land--active'\)[\s\S]*?assert\(proof\?\.activeContours > 0[\s\S]*?sample\.strokeWidth === \(isActive \? '4\.4' : '1\.25'\)[\s\S]*?sample\.strokeOpacity === \(isActive \? '0\.98' : '0\.26'\)/,
   'Runtime proof should require active territory classes and a crisp active contour that remains stronger than rival territory.',
+);
+
+assert.match(
+  runtimeVerifierSource,
+  /function readZoomStableContourProof\(\)[\s\S]*?map\.setZoom\(lowZoom, \{ animate: false \}\)[\s\S]*?map\.setZoom\(highZoom, \{ animate: false \}\)[\s\S]*?stableSignatureStable[\s\S]*?assert\(zoomStabilityProof\.commandCountsStable[\s\S]*?assert\(zoomStabilityProof\.stableSignatureStable[\s\S]*?sample\.referenceZoom === '14'/,
+  'Runtime proof should zoom the map and verify the active contour keeps the same geographic endpoint signature.',
 );
 
 assert.match(

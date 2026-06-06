@@ -11,6 +11,24 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-06-09
+Date: 2026-06-06
+Surface: Territory ownership color and real-world map color on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Switched Territory to the Heatmap dark real-world tile source, matched the Heatmap tile color filter, strengthened active and rival land opacity, and increased the active ownership glow while preserving the stable contour renderer.
+Why: The territory color was too hard to read over the previous real-world map treatment, and the user requested the real-world Territory map to share the Heatmap map color.
+Rollback target: `eeff7a7a`
+Notes: Territory ownership rendering, map tile color, and runtime proof coverage only. Routing, auth, data ownership, bilingual copy, and the no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-08
+Date: 2026-06-06
+Surface: Territory zoom-stable ownership border on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Moved Territory contour simplification and axis softening to a fixed reference zoom, reprojected the same stable LatLng contour during Leaflet zoom and pan updates, and tuned the stable spline to preserve a rounded anti-grid silhouette.
+Why: The border was being simplified, deduped, and softened in current screen pixels, so zooming could regenerate a different SVG outline even when the territory geometry had not changed.
+Rollback target: `eeff7a7a`
+Notes: Rendering stability and proof coverage only. Stroke styling, territory ownership data, auth, route navigation, bilingual copy, and the no-reference policy remain unchanged.
+
 ### Version: DV-2026-06-06-07
 Date: 2026-06-06
 Surface: Territory map border clarity on `/territory`

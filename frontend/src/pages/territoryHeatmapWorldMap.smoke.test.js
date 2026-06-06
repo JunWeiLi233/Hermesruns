@@ -22,14 +22,14 @@ assert.match(
 
 assert.match(
   territorySource,
-  /basemaps\.cartocdn\.com\/rastertiles\/voyager\/\{z\}/,
-  'Territory should use labelled street-map tiles so the territory view reads as a real game map with place context.',
+  /basemaps\.cartocdn\.com\/dark_all\/\{z\}/,
+  'Territory should use the same dark real-world tile family as Heatmap so ownership color stays readable over the map.',
 );
 
 assert.doesNotMatch(
   territorySource,
-  /basemaps\.cartocdn\.com\/dark_all/,
-  'Territory should not use CARTO dark_all because it creates black areas that read as broken territory borders.',
+  /basemaps\.cartocdn\.com\/rastertiles\/voyager/,
+  'Territory should not use Voyager tiles because the light street-map treatment competes with territory ownership color.',
 );
 
 assert.match(
@@ -166,8 +166,8 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*opacity: 0\.84 !important;[\s\S]*filter: grayscale\(1\) invert\(1\) hue-rotate\(175deg\) saturate\(0\.48\) brightness\(0\.56\) contrast\(1\.04\);/,
-  'Territory full-screen map should use a restrained labelled tile treatment behind the ownership overlays.',
+  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*opacity: 1 !important;[\s\S]*filter: saturate\(0\.9\) contrast\(1\.16\) brightness\(0\.84\);/,
+  'Territory full-screen map should use the Heatmap dark-tile color treatment behind the ownership overlays.',
 );
 
 assert.match(
@@ -202,7 +202,7 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.24\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 10px rgba\(240, 117, 97, 0\.52\)\) drop-shadow\(0 1px 0 rgba\(255, 244, 225, 0\.28\)\);[\s\S]*?\.territory-map-only \.terr-game-campaign-panel[\s\S]*width: min\(318px, calc\(100vw - 760px\)\);[\s\S]*?\.territory-map-only \.terr-game-hud,[\s\S]*?\.territory-map-only \.terr-game-territory-dock \{[\s\S]*?display: none !important;/,
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 18px rgba\(240, 117, 97, 0\.38\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 14px rgba\(240, 117, 97, 0\.68\)\) drop-shadow\(0 1px 0 rgba\(255, 244, 225, 0\.36\)\);[\s\S]*?\.territory-map-only \.terr-game-campaign-panel[\s\S]*width: min\(318px, calc\(100vw - 760px\)\);[\s\S]*?\.territory-map-only \.terr-game-hud,[\s\S]*?\.territory-map-only \.terr-game-territory-dock \{[\s\S]*?display: none !important;/,
   'Territory split CSS should make the active border read crisply above the owned land and remove permanent HUD/dock clutter.',
 );
 

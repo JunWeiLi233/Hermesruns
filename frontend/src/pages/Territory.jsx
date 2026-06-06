@@ -277,11 +277,12 @@ const LAND_MASK_CONTOUR_CORE_MIN_NEIGHBORS = 4;
 const LAND_MASK_LARGE_COMPONENT_MIN_TILES = 40;
 const LAND_MASK_CONTOUR_WEIGHT = { active: 4.4, rival: 1.25 };
 const LAND_MASK_CONTOUR_OPACITY = { active: 0.98, rival: 0.26 };
-const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.68, rival: 0.12 };
+const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.72, rival: 0.2 };
 const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;
 const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = { active: 0, rival: 0 };
-const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 8;
-const LAND_MASK_CONTOUR_CUBIC_TENSION = 0.42;
+const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 0.25;
+const LAND_MASK_CONTOUR_REFERENCE_ZOOM = 14;
+const LAND_MASK_CONTOUR_CUBIC_TENSION = 0.62;
 const LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO = 0.72;
 const LAND_MASK_AXIS_SEGMENT_SOFTEN_PX = 64;
 const LAND_MASK_AXIS_SEGMENT_MIN_PX = 10;
@@ -1323,6 +1324,33 @@ function softenAxisAlignedLayerSegments(points) {
   return softened;
 }
 
+function stableContourLatLngPoints(map, region) {
+  if (!map || !Array.isArray(region) || region.length < 4) return [];
+
+  const referencePoints = dedupeLayerPoints(closedMaskLoopOpenPoints(region)
+    .map((point) => map.project(point, LAND_MASK_CONTOUR_REFERENCE_ZOOM))
+    .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y)));
+  const basePoints = simplifyClosedLayerPoints(referencePoints);
+  const stableReferencePoints = softenAxisAlignedLayerSegments(basePoints);
+  return stableReferencePoints
+    .map((point) => map.unproject(point, LAND_MASK_CONTOUR_REFERENCE_ZOOM))
+    .filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng));
+}
+
+function stableContourSignature(points) {
+  if (!Array.isArray(points) || points.length === 0) return '0:0';
+
+  let hash = 2166136261;
+  points.forEach((point) => {
+    const token = `${point.lat.toFixed(7)},${point.lng.toFixed(7)};`;
+    for (let index = 0; index < token.length; index += 1) {
+      hash ^= token.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+  });
+  return `${points.length}:${(hash >>> 0).toString(36)}`;
+}
+
 function clampLayerControlPoint(control, start, end) {
   const segmentLength = Math.sqrt(((end.x - start.x) ** 2) + ((end.y - start.y) ** 2));
   const padding = Math.max(4, segmentLength * LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO);
@@ -1348,13 +1376,12 @@ function cubicContourControls(previous, current, next, following) {
   return { first, second };
 }
 
-function smoothContourSvgPath(map, region) {
-  if (!map || !Array.isArray(region) || region.length < 4) return '';
+function smoothContourSvgPath(map, stableRegion) {
+  if (!map || !Array.isArray(stableRegion) || stableRegion.length < 3) return '';
 
-  const basePoints = simplifyClosedLayerPoints(dedupeLayerPoints(closedMaskLoopOpenPoints(region)
+  const points = stableRegion
     .map((point) => map.latLngToLayerPoint(point))
-    .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y))));
-  const points = softenAxisAlignedLayerSegments(basePoints);
+    .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y));
   if (points.length < 3) return '';
 
   let path = `M${points[0].x} ${points[0].y}`;
@@ -1371,13 +1398,18 @@ function smoothContourSvgPath(map, region) {
 
 function attachSmoothTerritoryPath(map, territoryPath, region) {
   if (!map || !territoryPath || !Array.isArray(region)) return;
+  const stableRegion = stableContourLatLngPoints(map, region);
+  const stableSignature = stableContourSignature(stableRegion);
 
   const updatePath = () => {
     const pathElement = territoryPath._path;
     if (!pathElement) return;
-    const path = smoothContourSvgPath(map, region);
+    const path = smoothContourSvgPath(map, stableRegion);
     if (path) {
       pathElement.setAttribute('d', path);
+      pathElement.dataset.hermesContourReferenceZoom = String(LAND_MASK_CONTOUR_REFERENCE_ZOOM);
+      pathElement.dataset.hermesStableContourPoints = String(stableRegion.length);
+      pathElement.dataset.hermesStableContourSignature = stableSignature;
     }
   };
 
@@ -1422,7 +1454,7 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
       });
       map.setView([latitude, longitude], territoryInitialZoom(center), { animate: false });
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
         maxZoom: 20,
         className: 'territory-real-world-tile',

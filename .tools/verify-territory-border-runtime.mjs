@@ -460,6 +460,7 @@ function readTerritoryDomProof() {
           containerBackground: containerStyle?.backgroundColor || null,
           containerFilter: containerStyle?.filter || null,
           tileFilter: tileStyle?.filter || null,
+          tileOpacity: tileStyle?.opacity || null,
           tileMixBlendMode: tileStyle?.mixBlendMode || null,
         },
         paneProof,
@@ -672,6 +673,93 @@ async function waitForProofMap(setView = null, timeoutMs = 12_000) {
   return result;
 }
 
+function readZoomStableContourProof() {
+  return runBrowser([
+    'eval',
+    '--markers',
+    markers,
+    '--json',
+    '--js',
+    `(() => {
+      const map = document.querySelector('.terr-leaflet-map')?.__hermesTerritoryMap;
+      const activeContour = () => document.querySelector('.terr-land-mask-contour--active');
+      if (!map || !activeContour()) return { ok: false, error: 'missing-map-or-active-contour' };
+
+      const pathEndpointProof = () => {
+        const node = activeContour();
+        const d = node?.getAttribute('d') || '';
+        const numbers = (d.match(/-?\\d*\\.?\\d+(?:e[-+]?\\d+)?/gi) || [])
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value));
+        const layerPoints = [];
+        if (numbers.length >= 2) {
+          layerPoints.push({ x: numbers[0], y: numbers[1] });
+        }
+        for (let index = 2; index + 5 < numbers.length; index += 6) {
+          layerPoints.push({ x: numbers[index + 4], y: numbers[index + 5] });
+        }
+        const geoEndpoints = layerPoints
+          .map((point) => map.layerPointToLatLng(point))
+          .filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng))
+          .map((point) => ({ lat: point.lat, lng: point.lng }));
+        return {
+          zoom: map.getZoom(),
+          referenceZoom: node?.dataset?.hermesContourReferenceZoom || null,
+          stableContourPoints: node?.dataset?.hermesStableContourPoints || null,
+          stableContourSignature: node?.dataset?.hermesStableContourSignature || null,
+          commandCount: (d.match(/[MC]/g) || []).length,
+          cubicCount: (d.match(/C/g) || []).length,
+          endpointCount: geoEndpoints.length,
+          geoEndpoints,
+          firstEndpoint: geoEndpoints[0] || null,
+          lastEndpoint: geoEndpoints[geoEndpoints.length - 1] || null,
+        };
+      };
+
+      const startZoom = map.getZoom();
+      const lowZoom = Math.max(12, startZoom - 3);
+      const highZoom = Math.min(19, startZoom + 1);
+      map.setZoom(lowZoom, { animate: false });
+      const low = pathEndpointProof();
+      map.setZoom(highZoom, { animate: false });
+      const high = pathEndpointProof();
+      map.setZoom(startZoom, { animate: false });
+      const restored = pathEndpointProof();
+      const samples = [low, high, restored];
+      const commandCountsStable = samples.every((sample) => sample.commandCount === low.commandCount);
+      const endpointCountsStable = samples.every((sample) => sample.endpointCount === low.endpointCount);
+      const stableSignatureStable = samples.every((sample) => sample.stableContourSignature === low.stableContourSignature);
+      const referenceZoomStable = samples.every((sample) => sample.referenceZoom === low.referenceZoom);
+      let maxGeoEndpointDelta = Number.POSITIVE_INFINITY;
+      if (endpointCountsStable && low.geoEndpoints.length > 0) {
+        maxGeoEndpointDelta = 0;
+        samples.slice(1).forEach((sample) => {
+          sample.geoEndpoints.forEach((point, index) => {
+            const baseline = low.geoEndpoints[index];
+            maxGeoEndpointDelta = Math.max(
+              maxGeoEndpointDelta,
+              Math.abs(point.lat - baseline.lat),
+              Math.abs(point.lng - baseline.lng),
+            );
+          });
+        });
+      }
+      return {
+        ok: true,
+        startZoom,
+        lowZoom,
+        highZoom,
+        commandCountsStable,
+        endpointCountsStable,
+        stableSignatureStable,
+        referenceZoomStable,
+        maxGeoEndpointDelta,
+        samples: samples.map(({ geoEndpoints, ...sample }) => sample),
+      };
+    })()`,
+  ]).value;
+}
+
 const server = proofMode === 'fixture-server'
   ? spawn(nodeBin, ['.tools/territory-visual-proof-server.mjs'], {
     cwd: root,
@@ -742,9 +830,10 @@ try {
   );
   assert(proof.mapStyle?.containerFilter === 'none', `Map container filter should be none: ${proof.mapStyle?.containerFilter}`);
   assert(
-    proof.mapStyle?.tileFilter === 'grayscale(1) invert(1) hue-rotate(175deg) saturate(0.48) brightness(0.56) contrast(1.04)',
+    proof.mapStyle?.tileFilter === 'saturate(0.9) contrast(1.16) brightness(0.84)',
     `Unexpected real-world tile filter: ${proof.mapStyle?.tileFilter}`,
   );
+  assert(proof.mapStyle?.tileOpacity === '1', `Real-world tile opacity should match Heatmap dark-map color: ${proof.mapStyle?.tileOpacity}`);
   assert(
     proof.mapStyle?.tileMixBlendMode === 'normal',
     `Real-world tile blend mode should be normal: ${proof.mapStyle?.tileMixBlendMode}`,
@@ -767,6 +856,16 @@ try {
   assert(activeContourSample, 'Active territory contour must be included in the sampled path proof.');
   assert(activeContourSample.strokeWidth === '4.4', `Active contour should render as a crisp 4.4px border: ${activeContourSample.strokeWidth}`);
   assert(activeContourSample.strokeOpacity === '0.98', `Active contour should render nearly solid above the fill: ${activeContourSample.strokeOpacity}`);
+  const zoomStabilityProof = readZoomStableContourProof();
+  assert(zoomStabilityProof?.ok, `Could not read active contour zoom stability proof: ${JSON.stringify(zoomStabilityProof)}`);
+  assert(zoomStabilityProof.commandCountsStable, `Active contour command count changes while zooming: ${JSON.stringify(zoomStabilityProof)}`);
+  assert(zoomStabilityProof.endpointCountsStable, `Active contour endpoint count changes while zooming: ${JSON.stringify(zoomStabilityProof)}`);
+  assert(zoomStabilityProof.stableSignatureStable, `Active contour stable geometry signature changes while zooming: ${JSON.stringify(zoomStabilityProof)}`);
+  assert(zoomStabilityProof.referenceZoomStable, `Active contour reference zoom changes while zooming: ${JSON.stringify(zoomStabilityProof)}`);
+  assert(
+    zoomStabilityProof.samples.every((sample) => sample.referenceZoom === '14' && Number(sample.stableContourPoints) > 0),
+    `Active contour zoom proof did not read reference-zoom stable geometry metadata: ${JSON.stringify(zoomStabilityProof)}`,
+  );
   assert(proof.surfaceSample.length === 0, 'Surface land fill should be absent so only the concrete contour can paint territory ownership.');
   proof.concreteLandSample.forEach((sample) => {
     const isActive = sample.className.includes('terr-land-mask-concrete-land--active');
@@ -777,7 +876,7 @@ try {
       assert(sample.filter !== 'none', `Active concrete land should have a visible ownership filter: ${sample.filter}`);
     }
     assert(sample.fillRule === 'nonzero', `Concrete land should use nonzero fill rule so smoothed paths cannot cut interior holes: ${sample.fillRule}`);
-    assert(sample.fillOpacity === (isActive ? '0.68' : '0.12'), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
+    assert(sample.fillOpacity === (isActive ? '0.72' : '0.2'), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
     assert(sample.d && sample.d.length > 0, 'Concrete land fill should have a rendered Leaflet SVG path.');
   });
   assert(proof.exactUnderlaySample.length === 0, 'Exact coverage underlay sample should be absent from the current concrete-land stack.');
@@ -952,6 +1051,7 @@ try {
     surfaceSample: printableSurfaceSample,
     concreteLandSample: printableConcreteLandSample,
     exactUnderlaySample: printableExactUnderlaySample,
+    zoomStabilityProof,
     substrateMetrics,
     territoryColorMetrics,
     territorySeamMetrics,
