@@ -58,14 +58,14 @@ assert.match(
 
 assert.match(
   territorySource,
-  /MAP_CHROME_COPY[\s\S]*gameHud:[\s\S]*localBattle:[\s\S]*playerTerritory:[\s\S]*ownedSectors:[\s\S]*nextTarget:/,
-  'Territory game HUD and personal territory dock should use bilingual local copy instead of hardcoded text.',
+  /MAP_CHROME_COPY[\s\S]*gameHud:[\s\S]*localBattle:[\s\S]*playerTerritory:[\s\S]*ownedSectors:[\s\S]*campaignTitle:[\s\S]*sectorValue:/,
+  'Territory game HUD, campaign panel, and personal territory dock should use bilingual local copy instead of hardcoded text.',
 );
 
 assert.match(
   territorySource,
-  /className="terr-game-hud"[\s\S]*className="terr-game-mode-tabs"[\s\S]*className="terr-game-territory-dock"[\s\S]*className="terr-game-zone-panel"[\s\S]*className="terr-game-rival-stack"/,
-  'Territory should render a neutral game HUD plus a user-territory dock over the map.',
+  /className="terr-game-campaign-panel"[\s\S]*className="terr-game-campaign-title"[\s\S]*className="terr-game-campaign-primary"[\s\S]*navigate\('\/today-run'\)[\s\S]*className="terr-game-hud"[\s\S]*className="terr-game-territory-dock"/,
+  'Territory should render a neutral campaign-quality game panel with real navigation before the HUD and user-territory dock.',
 );
 
 assert.match(
@@ -196,8 +196,14 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-map-only \.terr-game-hud[\s\S]*width: min\(430px, calc\(100vw - 132px\)\);[\s\S]*\.territory-map-only \.terr-game-territory-dock[\s\S]*\.territory-map-only \.terr-game-zone-panel/,
-  'Territory split CSS should style a compact map game HUD and user-territory dock used by the current page.',
+  /\.territory-map-only \.terr-game-campaign-panel[\s\S]*border-radius: 34px;[\s\S]*\.territory-map-only \.terr-game-campaign-title[\s\S]*font-size: clamp\(3rem, 5\.2vw, 5\.55rem\);[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*width: min\(430px, calc\(100vw - 132px\)\);[\s\S]*\.territory-map-only \.terr-game-territory-dock[\s\S]*\.territory-map-only \.terr-game-zone-panel/,
+  'Territory split CSS should style a premium campaign panel, compact map game HUD, and user-territory dock used by the current page.',
+);
+
+assert.match(
+  styleSource,
+  /@media \(max-width: 760px\)[\s\S]*\.territory-map-only \.terr-game-campaign-panel[\s\S]*top: 312px;[\s\S]*\.territory-map-only \.terr-map-utility-rail--navigation-only[\s\S]*right: 14px;[\s\S]*width: calc\(100vw - 28px\);[\s\S]*max-width: none;[\s\S]*margin-left: 0;[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*display: none;[\s\S]*max-height: 24vh;/,
+  'Territory mobile layout should prioritize the campaign panel and dock without rail overflow or stacked desktop HUD panels.',
 );
 
 assert.doesNotMatch(

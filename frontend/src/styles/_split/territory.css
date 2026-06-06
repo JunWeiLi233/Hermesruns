@@ -2548,6 +2548,190 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   z-index: 620;
 }
 
+.territory-map-only .terr-game-campaign-panel {
+  position: absolute;
+  top: 104px;
+  left: 96px;
+  z-index: 638;
+  display: grid;
+  width: min(450px, calc(100vw - 600px));
+  gap: 14px;
+  overflow: hidden;
+  border-radius: 34px;
+  padding: 22px;
+  color: #fffaf4;
+  background:
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--terr-active-color, #f07561) 40%, transparent), transparent 46%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 28%),
+    rgba(8, 8, 8, 0.92);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 34px 92px rgba(0, 0, 0, 0.52);
+  pointer-events: auto;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.territory-map-only .terr-game-campaign-panel::before,
+.territory-map-only .terr-game-campaign-panel::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.territory-map-only .terr-game-campaign-panel::before {
+  inset: 0;
+  opacity: 0.14;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0 1px, transparent 1px 12px),
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--terr-rival-color, #82ffd8) 32%, transparent), transparent 40%);
+  mask-image: linear-gradient(110deg, #000, transparent 72%);
+}
+
+.territory-map-only .terr-game-campaign-panel::after {
+  width: 150px;
+  height: 150px;
+  right: -42px;
+  bottom: -58px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent 62%);
+}
+
+.territory-map-only .terr-game-campaign-kicker,
+.territory-map-only .terr-game-campaign-title,
+.territory-map-only .terr-game-campaign-body,
+.territory-map-only .terr-game-campaign-actions,
+.territory-map-only .terr-game-campaign-strip {
+  position: relative;
+  z-index: 1;
+}
+
+.territory-map-only .terr-game-campaign-kicker {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 9px;
+  border-radius: 999px;
+  padding: 8px 11px;
+  color: #15100f;
+  background: #fffaf4;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.territory-map-only .terr-game-campaign-kicker svg {
+  width: 15px;
+  height: 15px;
+  color: var(--terr-active-color, #f07561);
+}
+
+.territory-map-only .terr-game-campaign-title {
+  max-width: 8ch;
+  margin: 0;
+  color: #fffaf4;
+  font-family: "Space Grotesk", "Satoshi", "Manrope", sans-serif;
+  font-size: clamp(3rem, 5.2vw, 5.55rem);
+  font-weight: 950;
+  letter-spacing: -0.095em;
+  line-height: 0.82;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.territory-map-only .terr-game-campaign-body {
+  max-width: 34rem;
+  margin: 0;
+  color: rgba(255, 250, 244, 0.72);
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.48;
+  text-wrap: pretty;
+}
+
+.territory-map-only .terr-game-campaign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.territory-map-only .terr-game-campaign-primary,
+.territory-map-only .terr-game-campaign-secondary {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 16px;
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.territory-map-only .terr-game-campaign-primary {
+  color: #17100f;
+  background: var(--terr-active-color, #f07561);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--terr-active-color, #f07561) 32%, transparent);
+}
+
+.territory-map-only .terr-game-campaign-secondary {
+  color: #fffaf4;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.territory-map-only .terr-game-campaign-primary:hover,
+.territory-map-only .terr-game-campaign-secondary:hover {
+  transform: translateY(-2px);
+}
+
+.territory-map-only .terr-game-campaign-primary:active,
+.territory-map-only .terr-game-campaign-secondary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.territory-map-only .terr-game-campaign-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.92fr) minmax(0, 0.92fr);
+  gap: 8px;
+}
+
+.territory-map-only .terr-game-campaign-strip span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.territory-map-only .terr-game-campaign-strip small {
+  overflow: hidden;
+  color: rgba(255, 250, 244, 0.56);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.territory-map-only .terr-game-campaign-strip strong {
+  overflow: hidden;
+  color: #fffaf4;
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .territory-map-only .terr-game-hud {
   position: absolute;
   top: 96px;
@@ -2987,6 +3171,16 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 }
 
 @media (max-width: 980px) {
+  .territory-map-only .terr-game-campaign-panel {
+    left: 88px;
+    width: min(380px, calc(100vw - 540px));
+    padding: 18px;
+  }
+
+  .territory-map-only .terr-game-campaign-title {
+    font-size: clamp(2.45rem, 5vw, 4.2rem);
+  }
+
   .territory-map-only .terr-game-hud,
   .territory-map-only .terr-game-territory-dock {
     right: 14px;
@@ -3003,11 +3197,41 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 }
 
 @media (max-width: 760px) {
-  .territory-map-only .terr-game-hud {
+  .territory-map-only .terr-game-campaign-panel {
     top: 312px;
-    left: 14px;
     right: 14px;
+    left: 14px;
     width: auto;
+    gap: 10px;
+    border-radius: 28px;
+    padding: 16px;
+  }
+
+  .territory-map-only .terr-game-campaign-title {
+    max-width: 9ch;
+    font-size: clamp(2.25rem, 10vw, 3rem);
+  }
+
+  .territory-map-only .terr-game-campaign-body {
+    display: none;
+  }
+
+  .territory-map-only .terr-game-campaign-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .territory-map-only .terr-map-utility-rail--navigation-only {
+    box-sizing: border-box;
+    right: 14px;
+    left: 14px;
+    width: calc(100vw - 28px);
+    max-width: none;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .territory-map-only .terr-game-hud {
+    display: none;
   }
 
   .territory-map-only .terr-game-mode-tabs {
@@ -3034,7 +3258,7 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
     bottom: 14px;
     left: 14px;
     width: auto;
-    max-height: 30vh;
+    max-height: 24vh;
     border-radius: 24px;
   }
 

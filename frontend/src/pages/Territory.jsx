@@ -50,6 +50,13 @@ const MAP_CHROME_COPY = {
     nextTarget: 'Next target',
     samplesToContest: 'Samples to contest',
     samples: 'samples',
+    campaignPanel: 'Territory campaign',
+    campaignKicker: 'Live conquest board',
+    campaignTitle: 'Run. Claim. Defend.',
+    campaignBody: 'Every run adds real ground to your board. Hold your strongest sectors and pressure the next target.',
+    startRun: 'Start next run',
+    targetPressure: 'Target pressure',
+    sectorValue: 'Every 1KM\u00b2 strengthens control',
   },
   'zh-CN': {
     pageTitle: '\u9886\u5730',
@@ -83,6 +90,13 @@ const MAP_CHROME_COPY = {
     nextTarget: '\u4e0b\u4e00\u76ee\u6807',
     samplesToContest: '\u4e89\u593a\u6240\u9700\u91c7\u6837',
     samples: '\u91c7\u6837',
+    campaignPanel: '\u9886\u5730\u6218\u5c40',
+    campaignKicker: '\u5b9e\u65f6\u5360\u9886\u68cb\u76d8',
+    campaignTitle: '\u5954\u8dd1\u3002\u5360\u9886\u3002\u5b88\u4f4f\u3002',
+    campaignBody: '\u6bcf\u6b21\u8dd1\u6b65\u90fd\u4f1a\u4e3a\u4f60\u7684\u68cb\u76d8\u589e\u52a0\u771f\u5b9e\u5730\u9762\u3002\u5b88\u4f4f\u6700\u5f3a\u533a\u5757\uff0c\u5411\u4e0b\u4e00\u76ee\u6807\u65bd\u538b\u3002',
+    startRun: '\u5f00\u59cb\u4e0b\u4e00\u6b21\u8dd1\u6b65',
+    targetPressure: '\u76ee\u6807\u538b\u529b',
+    sectorValue: '\u6bcf 1KM\u00b2 \u90fd\u4f1a\u589e\u5f3a\u63a7\u5236\u529b',
   },
 };
 
@@ -1717,6 +1731,44 @@ export default function Territory() {
                 </button>
               ))}
             </nav>
+
+            <aside
+              className="terr-game-campaign-panel"
+              aria-label={tc('campaignPanel')}
+              style={{
+                '--terr-active-color': activeColor,
+                '--terr-rival-color': rivalColor,
+              }}
+            >
+              <span className="terr-game-campaign-kicker">
+                <AppIcon name="territory" />
+                {tc('campaignKicker')}
+              </span>
+              <h1 className="terr-game-campaign-title">{tc('campaignTitle')}</h1>
+              <p className="terr-game-campaign-body">{tc('campaignBody')}</p>
+              <div className="terr-game-campaign-actions">
+                <button type="button" className="terr-game-campaign-primary" onClick={() => navigate('/today-run')}>
+                  {tc('startRun')}
+                </button>
+                <button type="button" className="terr-game-campaign-secondary" onClick={() => setRecenterSignal((value) => value + 1)}>
+                  {tc('recenter')}
+                </button>
+              </div>
+              <div className="terr-game-campaign-strip" aria-label={tc('targetPressure')}>
+                <span>
+                  <small>{tc('nextTarget')}</small>
+                  <strong>{nextTarget?.name || rivalName}</strong>
+                </span>
+                <span>
+                  <small>{tc('samplesToContest')}</small>
+                  <strong>{formatSampleCount(nextTarget?.samplesToContest)} {tc('samples')}</strong>
+                </span>
+                <span>
+                  <small>{tc('sectorValue')}</small>
+                  <strong>{formatTerritoryArea(summary.areaKm2)}</strong>
+                </span>
+              </div>
+            </aside>
 
             <div
               className="terr-game-hud"

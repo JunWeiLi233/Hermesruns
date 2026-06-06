@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-06-03
+Date: 2026-06-06
+Surface: Territory campaign-quality game layer on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a black/coral campaign panel with oversized conquest messaging, live next-target pressure, start-run and recenter actions, and responsive mobile prioritization that avoids stacking every HUD panel at once.
+Why: The prior pass improved data hierarchy but still lacked the bold game proposition, premium contrast, and app-poster confidence requested for the Territory surface.
+Rollback target: `e4b9622e`
+Notes: Frontend presentation only. Territory APIs, auth, route navigation, ownership logic, land-mask rendering, and verifier no-reference policy remain unchanged.
+
 ### Version: DV-2026-06-06-02
 Date: 2026-06-06
 Surface: Territory personal layout on `/territory`
