@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-06-01
+Date: 2026-06-06
+Surface: Territory game-map HUD on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryMultiPlayerMarkers.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the map-only Territory page as a live territory game board with labelled dark street tiles, an over-map mode selector, active runner status, local battle meter, and bottom leaderboard drawer powered by the existing `/api/territory` leaderboard and summary data.
+Why: The prior page still read as a sparse utility map and did not surface capture, battle, rank, and leaderboard state strongly enough.
+Rollback target: `DV-2026-06-03-02`
+Notes: Frontend presentation only. Backend territory ownership, polygon masks, auth, route navigation, and latest-wins land rendering remain unchanged.
+
 ### Version: DV-2026-06-03-02
 Date: 2026-06-03
 Surface: Territory layered ownership on `/territory`

@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const territorySource = readFileSync(path.join(here, 'Territory.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/_split/territory.css'), 'utf8');
+const externalReferenceNamePattern = new RegExp(['in', 'tv', 'l'].join(''), 'i');
 
 assert.match(
   territorySource,
@@ -21,8 +22,8 @@ assert.match(
 
 assert.match(
   territorySource,
-  /basemaps\.cartocdn\.com\/rastertiles\/voyager_nolabels/,
-  'Territory should use a grayable street-map basemap so unclaimed land remains visible instead of becoming dark map voids.',
+  /basemaps\.cartocdn\.com\/rastertiles\/voyager\/\{z\}/,
+  'Territory should use labelled street-map tiles so the territory view reads as a real game map with place context.',
 );
 
 assert.doesNotMatch(
@@ -53,6 +54,24 @@ assert.match(
   territorySource,
   /MAP_CHROME_COPY[\s\S]*recenter:[\s\S]*viewRuns:[\s\S]*settings:/,
   'Territory title strip should include bilingual labels for recenter, runs, and settings.',
+);
+
+assert.match(
+  territorySource,
+  /MAP_CHROME_COPY[\s\S]*gameHud:[\s\S]*localBattle:[\s\S]*leaderboard:[\s\S]*zonesControlled:/,
+  'Territory game HUD should use bilingual local copy instead of hardcoded text.',
+);
+
+assert.match(
+  territorySource,
+  /className="terr-game-hud"[\s\S]*className="terr-game-mode-tabs"[\s\S]*className="terr-game-leaderboard-drawer"/,
+  'Territory should render a neutral game HUD, mode selector, and leaderboard drawer over the map.',
+);
+
+assert.doesNotMatch(
+  territorySource,
+  externalReferenceNamePattern,
+  'Territory script should not reference the external product name in identifiers or copy.',
 );
 
 assert.match(
@@ -129,8 +148,8 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*filter: none;/,
-  'Territory full-screen map should leave real-world tiles unfiltered so ownership overlays are verified directly.',
+  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*filter: invert\(1\) hue-rotate\(185deg\) saturate\(0\.78\) brightness\(0\.72\) contrast\(1\.12\);/,
+  'Territory full-screen map should use a dark labelled tile treatment behind the ownership overlays.',
 );
 
 assert.match(
@@ -161,6 +180,18 @@ assert.match(
   styleSource,
   /\.territory-map-only \.terr-map-titlebar[\s\S]*display: grid !important;/,
   'Territory map-only view should explicitly preserve the title/action strip.',
+);
+
+assert.match(
+  styleSource,
+  /\.territory-map-only \.terr-game-hud[\s\S]*\.territory-map-only \.terr-game-leaderboard-drawer/,
+  'Territory split CSS should style the map game HUD and leaderboard drawer used by the current page.',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  externalReferenceNamePattern,
+  'Territory split CSS should not reference the external product name.',
 );
 
 console.log('[PASS] Territory Heatmap world-map styling guard passed.');

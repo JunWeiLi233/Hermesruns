@@ -24,6 +24,23 @@ const MAP_CHROME_COPY = {
     loadingTerritory: 'Loading territory',
     viewRuns: 'View runs',
     settings: 'Open settings',
+    gameHud: 'Territory game status',
+    modeTabs: 'Territory modes',
+    myTerritories: 'My Territories',
+    singlePlayer: 'Single Player',
+    myClub: 'My Club',
+    kingOfArea: 'King of the area',
+    territoryRunner: 'Territory runner',
+    localBattle: 'Local battle',
+    you: 'You',
+    opponent: 'Opponent',
+    leaderboard: 'Leaderboard',
+    events: 'Events',
+    territoriesTab: 'Territories',
+    history: 'History',
+    overall: 'Overall',
+    totalArea: 'Total area',
+    zonesControlled: 'Zones',
   },
   'zh-CN': {
     pageTitle: '\u9886\u5730',
@@ -31,6 +48,23 @@ const MAP_CHROME_COPY = {
     loadingTerritory: '\u6b63\u5728\u8f7d\u5165\u9886\u5730',
     viewRuns: '\u67e5\u770b\u8dd1\u6b65\u8bb0\u5f55',
     settings: '\u6253\u5f00\u8bbe\u7f6e',
+    gameHud: '\u9886\u5730\u6e38\u620f\u72b6\u6001',
+    modeTabs: '\u9886\u5730\u6a21\u5f0f',
+    myTerritories: '\u6211\u7684\u9886\u5730',
+    singlePlayer: '\u5355\u4eba\u6a21\u5f0f',
+    myClub: '\u6211\u7684\u4ff1\u4e50\u90e8',
+    kingOfArea: '\u533a\u57df\u4e4b\u738b',
+    territoryRunner: '\u9886\u5730\u8dd1\u8005',
+    localBattle: '\u672c\u5730\u5bf9\u6218',
+    you: '\u4f60',
+    opponent: '\u5bf9\u624b',
+    leaderboard: '\u6392\u884c\u699c',
+    events: '\u6d3b\u52a8',
+    territoriesTab: '\u9886\u5730',
+    history: '\u5386\u53f2',
+    overall: '\u603b\u699c',
+    totalArea: '\u603b\u9762\u79ef',
+    zonesControlled: '\u63a7\u5236\u533a',
   },
 };
 
@@ -68,13 +102,75 @@ function formatCenterLabel(center) {
   return `${lat} / ${lng}`;
 }
 
+function formatTerritoryArea(value, fallback = '0KM\u00b2') {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  const fixed = numeric >= 100 ? numeric.toFixed(0) : numeric >= 10 ? numeric.toFixed(1) : numeric.toFixed(2);
+  return `${fixed.replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1')}KM\u00b2`;
+}
+
+function runnerDisplayName(runner, profile, fallback = 'You') {
+  const runnerName = String(runner?.name || '').trim();
+  if (runner?.active) {
+    const profileName = String(profile?.displayName || profile?.email || '').trim();
+    if (profileName) return profileName;
+  }
+  return runnerName || fallback;
+}
+
+function runnerInitials(name) {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return 'H';
+  return words.slice(0, 2).map((word) => word.slice(0, 1).toUpperCase()).join('');
+}
+
+function territoryLeaderboardRows(territory, profile) {
+  const rows = Array.isArray(territory?.leaderboard) ? territory.leaderboard : [];
+  if (rows.length) return rows.slice(0, 8);
+  return [{
+    id: 'active-runner',
+    name: runnerDisplayName(null, profile),
+    color: '#f07561',
+    active: true,
+    areaKm2: Number(territory?.summary?.areaKm2) || 0,
+    coveragePct: Number(territory?.summary?.coveragePct) || 0,
+    cellCount: Number(territory?.summary?.cellCount) || 0,
+  }];
+}
+
+function activeTerritoryRunner(territory, profile) {
+  const rows = territoryLeaderboardRows(territory, profile);
+  return rows.find((runner) => runner?.active) || rows[0] || null;
+}
+
+function rivalTerritoryRunner(territory) {
+  const rows = Array.isArray(territory?.leaderboard) ? territory.leaderboard : [];
+  return rows.find((runner) => !runner?.active) || null;
+}
+
+function clampShare(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, numeric));
+}
+
+function territoryBattleShares(territory, activeRunner, rivalRunner) {
+  const activeShare = clampShare(activeRunner?.coveragePct ?? territory?.summary?.coveragePct);
+  const rivalShare = rivalRunner ? clampShare(rivalRunner.coveragePct) : Math.max(0, 100 - activeShare);
+  const total = Math.max(activeShare + rivalShare, 1);
+  return {
+    active: (activeShare / total) * 100,
+    rival: (rivalShare / total) * 100,
+  };
+}
+
 function isValidMapCenter(center) {
   return Number.isFinite(Number(center?.latitude)) && Number.isFinite(Number(center?.longitude));
 }
 
 function territoryInitialZoom(center) {
   const zoom = Number(center?.zoom);
-  return Math.max(Number.isFinite(zoom) ? zoom : 14, 14);
+  return Math.min(Math.max(Number.isFinite(zoom) ? zoom : 13, 12), 14);
 }
 
 /** Read the coral stroke color from CSS custom properties at runtime */
@@ -1230,7 +1326,7 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
       });
       map.setView([latitude, longitude], territoryInitialZoom(center), { animate: false });
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
         maxZoom: 20,
         className: 'territory-real-world-tile',
@@ -1492,6 +1588,15 @@ export default function Territory() {
   const tc = (key) => mapChromeCopy(lang, key);
   const center = territory?.center || null;
   const initials = String(profile?.displayName || profile?.email || 'H').trim().slice(0, 1).toUpperCase() || 'H';
+  const leaderboardRows = territoryLeaderboardRows(territory, profile);
+  const activeLeader = activeTerritoryRunner(territory, profile);
+  const rivalLeader = rivalTerritoryRunner(territory);
+  const battleShares = territoryBattleShares(territory, activeLeader, rivalLeader);
+  const activeName = runnerDisplayName(activeLeader, profile, tc('you'));
+  const rivalName = runnerDisplayName(rivalLeader, null, tc('opponent'));
+  const activeColor = safeColor(activeLeader?.color);
+  const rivalColor = safeColor(rivalLeader?.color, '#82ffd8');
+  const summary = territory?.summary || EMPTY_TERRITORY.summary;
 
   return (
     <div className="runner-shell-page territory-page territory-heatmap-outline territory-map-only runner-dashboard-page">
@@ -1549,6 +1654,98 @@ export default function Territory() {
                 </button>
               ))}
             </nav>
+
+            <div
+              className="terr-game-hud"
+              aria-label={tc('gameHud')}
+              style={{
+                '--terr-active-color': activeColor,
+                '--terr-rival-color': rivalColor,
+                '--terr-active-share': `${battleShares.active}%`,
+                '--terr-rival-share': `${battleShares.rival}%`,
+              }}
+            >
+              <div className="terr-game-mode-tabs" role="tablist" aria-label={tc('modeTabs')}>
+                <span role="tab" aria-selected="false">{tc('myTerritories')}</span>
+                <span role="tab" aria-selected="true">{tc('singlePlayer')}</span>
+                <span role="tab" aria-selected="false">{tc('myClub')}</span>
+              </div>
+
+              <div className="terr-game-player-card">
+                <span className="terr-game-alert" aria-hidden="true">
+                  <AppIcon name="notifications" />
+                </span>
+                <span className="terr-game-player-avatar">{runnerInitials(activeName)}</span>
+                <div className="terr-game-player-copy">
+                  <strong>{activeName}</strong>
+                  <span>
+                    <AppIcon name="workspace_premium" />
+                    {activeLeader?.active ? tc('kingOfArea') : tc('territoryRunner')}
+                  </span>
+                </div>
+                <strong className="terr-game-area-score">{formatTerritoryArea(activeLeader?.areaKm2 ?? summary.areaKm2)}</strong>
+              </div>
+
+              <div className="terr-game-battle-card" aria-label={tc('localBattle')}>
+                <div className="terr-game-battle-labels">
+                  <span>{tc('you')}</span>
+                  <strong>{tc('localBattle')}</strong>
+                  <span>{tc('opponent')}</span>
+                </div>
+                <div className="terr-game-battle-meter" aria-hidden="true">
+                  <span className="is-you" />
+                  <span className="is-rival" />
+                </div>
+                <div className="terr-game-battle-names">
+                  <span>{activeName}</span>
+                  <span>{rivalName}</span>
+                </div>
+              </div>
+            </div>
+
+            <aside className="terr-game-leaderboard-drawer" aria-label={tc('leaderboard')}>
+              <span className="terr-game-drawer-handle" aria-hidden="true" />
+              <div className="terr-game-drawer-tabs" role="tablist" aria-label={tc('leaderboard')}>
+                <span role="tab" aria-selected="true">{tc('leaderboard')}</span>
+                <span role="tab" aria-selected="false">{tc('events')}</span>
+                <span role="tab" aria-selected="false">{tc('territoriesTab')}</span>
+                <span role="tab" aria-selected="false">{tc('history')}</span>
+              </div>
+              <div className="terr-game-stat-pills" aria-label={tc('overall')}>
+                <span>
+                  <AppIcon name="territory" />
+                  {tc('overall')}
+                </span>
+                <span>
+                  <AppIcon name="map" />
+                  {formatTerritoryArea(summary.areaKm2)}
+                </span>
+                <span>
+                  <AppIcon name="workspace_premium" />
+                  {summary.cellCount || 0} {tc('zonesControlled')}
+                </span>
+              </div>
+              <div className="terr-game-leaderboard-list">
+                {leaderboardRows.map((runner, index) => {
+                  const rowName = runnerDisplayName(runner, profile, tc('opponent'));
+                  return (
+                    <div
+                      key={runner.id || `${rowName}-${index}`}
+                      className={`terr-game-leaderboard-row${runner.active ? ' is-active' : ''}`}
+                      style={{ '--terr-row-color': safeColor(runner.color, index % 2 === 0 ? '#5b9cf5' : '#86efac') }}
+                    >
+                      <strong className="terr-game-row-rank">{runner.rank || index + 1}</strong>
+                      <span className="terr-game-row-avatar">{runnerInitials(rowName)}</span>
+                      <span className="terr-game-row-name">
+                        <strong>{rowName}</strong>
+                        <small>{runner.active ? tc('you') : tc('opponent')}</small>
+                      </span>
+                      <strong className="terr-game-row-area">{formatTerritoryArea(runner.areaKm2)}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+            </aside>
 
             <TerritoryMap
               territory={territory}

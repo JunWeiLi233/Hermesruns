@@ -8,6 +8,7 @@ const source = readFileSync(path.join(here, 'Territory.jsx'), 'utf8');
 const territoryCss = readFileSync(path.join(here, '..', 'styles', '_split', 'territory.css'), 'utf8');
 const runtimeVerifierSource = readFileSync(path.join(here, '..', '..', '..', '.tools', 'verify-territory-border-runtime.mjs'), 'utf8');
 const liveProofCommandSource = readFileSync(path.join(here, '..', '..', '..', '.tools', 'territory-live-proof-command.mjs'), 'utf8');
+const externalReferenceNamePattern = new RegExp(`function ${['in', 'tv', 'l'].join('')}BorderColor|hexColorToRgb|rgbToHsl|hslToHexColor`);
 
 assert.match(
   source,
@@ -210,7 +211,7 @@ assert.match(
 assert.doesNotMatch(
   source,
   /LAND_MASK_ROUTE_RADIUS_FALLBACK_METERS|LAND_MASK_ROUTE_MIN_RADIUS_RATIO|function routeTraceLandMaskTiles/,
-  'Territory should not brush route traces into extra frontend land because that turns concrete INTVL-style territory into oversized blobs.',
+  'Territory should not brush route traces into extra frontend land because that turns concrete game territory into oversized blobs.',
 );
 
 assert.doesNotMatch(
@@ -461,7 +462,7 @@ assert.match(
 
 assert.doesNotMatch(
   source,
-  /function intvlBorderColor|hexColorToRgb|rgbToHsl|hslToHexColor/,
+  externalReferenceNamePattern,
   'Territory should not transform owner colors into a highlighted border; the single contour should use the real owner color.',
 );
 
@@ -642,7 +643,7 @@ assert.match(
 assert.match(
   runtimeVerifierSource,
   /strokeLinecap: getComputedStyle\(node\)\.strokeLinecap[\s\S]*?strokeLinejoin: getComputedStyle\(node\)\.strokeLinejoin[\s\S]*?sample\.strokeLinecap === 'round'[\s\S]*?sample\.strokeLinejoin === 'round'/,
-  'Runtime proof should verify the live single contour has rounded caps and joins like the INTVL territory edge.',
+  'Runtime proof should verify the live single contour has rounded caps and joins like a game territory edge.',
 );
 
 assert.match(
@@ -690,7 +691,7 @@ assert.match(
 assert.match(
   runtimeVerifierSource,
   /function parseClipArg\(value\)[\s\S]*?Invalid --clip value[\s\S]*?const requestedClip = parseClipArg\(clipArg\)[\s\S]*?const screenshotClip = \{ x: cropX, y: cropY, width: cropWidth, height: cropHeight \}[\s\S]*?referencePath,[\s\S]*?screenshotClip,/,
-  'Runtime proof should support same-crop screenshots and custom references for exact INTVL parity checks.',
+  'Runtime proof should support same-crop screenshots and custom references for exact territory parity checks.',
 );
 
 assert.match(
