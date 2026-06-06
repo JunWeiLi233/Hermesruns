@@ -153,6 +153,12 @@ assert.match(
 );
 
 assert.match(
+  territorySource,
+  /className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`[\s\S]*?className: `terr-land-mask-contour\$\{active \? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'\}`/,
+  'Territory map should expose active and rival land layers separately so the owned territory can lead the composition.',
+);
+
+assert.match(
   styleSource,
   /\.territory-heatmap-outline \.leaflet-container[\s\S]*background: #05070a;[\s\S]*filter: none;/,
   'Territory full-screen map container should use the dark runtime-proof substrate without filtering overlays.',
@@ -196,14 +202,14 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-map-only \.terr-game-campaign-panel[\s\S]*border-radius: 34px;[\s\S]*\.territory-map-only \.terr-game-campaign-title[\s\S]*font-size: clamp\(3rem, 5\.2vw, 5\.55rem\);[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*width: min\(430px, calc\(100vw - 132px\)\);[\s\S]*\.territory-map-only \.terr-game-territory-dock[\s\S]*\.territory-map-only \.terr-game-zone-panel/,
-  'Territory split CSS should style a premium campaign panel, compact map game HUD, and user-territory dock used by the current page.',
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 18px rgba\(240, 117, 97, 0\.38\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?stroke-dasharray: 18 8;[\s\S]*?\.territory-map-only \.terr-game-campaign-panel[\s\S]*width: min\(318px, calc\(100vw - 760px\)\);[\s\S]*\.territory-map-only \.terr-game-campaign-title[\s\S]*font-size: clamp\(1\.55rem, 2\.15vw, 2\.55rem\);[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*width: min\(350px, calc\(100vw - 132px\)\);[\s\S]*\.territory-map-only \.terr-game-territory-dock[\s\S]*width: min\(356px, calc\(100vw - 132px\)\);/,
+  'Territory split CSS should make active owned land the premium surface and reduce surrounding campaign/HUD chrome.',
 );
 
 assert.match(
   styleSource,
-  /@media \(max-width: 760px\)[\s\S]*\.territory-map-only \.terr-game-campaign-panel[\s\S]*top: 312px;[\s\S]*\.territory-map-only \.terr-map-utility-rail--navigation-only[\s\S]*right: 14px;[\s\S]*width: calc\(100vw - 28px\);[\s\S]*max-width: none;[\s\S]*margin-left: 0;[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*display: none;[\s\S]*max-height: 24vh;/,
-  'Territory mobile layout should prioritize the campaign panel and dock without rail overflow or stacked desktop HUD panels.',
+  /@media \(max-width: 760px\)[\s\S]*\.territory-map-only \.terr-game-campaign-panel[\s\S]*top: 240px;[\s\S]*\.territory-map-only \.terr-map-utility-rail--navigation-only[\s\S]*right: 14px;[\s\S]*width: calc\(100vw - 28px\);[\s\S]*max-width: none;[\s\S]*margin-left: 0;[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*display: none;[\s\S]*max-height: 22vh;/,
+  'Territory mobile layout should keep the owned territory visible first while retaining compact controls without rail overflow.',
 );
 
 assert.doesNotMatch(

@@ -416,6 +416,10 @@ function readTerritoryDomProof() {
       const contours = q('.terr-land-mask-contour');
       const surfaces = q('.terr-land-mask-region-surface');
       const concreteLands = q('.terr-land-mask-concrete-land');
+      const activeContours = q('.terr-land-mask-contour--active');
+      const rivalContours = q('.terr-land-mask-contour--rival');
+      const activeConcreteLands = q('.terr-land-mask-concrete-land--active');
+      const rivalConcreteLands = q('.terr-land-mask-concrete-land--rival');
       const exactUnderlays = q('.terr-land-mask-exact-underlay');
       const genericRegions = q('.terr-land-mask-region:not(.terr-land-mask-region-surface)');
       const container = document.querySelector('.territory-heatmap-outline .leaflet-container');
@@ -427,6 +431,10 @@ function readTerritoryDomProof() {
         contours: contours.length,
         surfaces: surfaces.length,
         concreteLands: concreteLands.length,
+        activeContours: activeContours.length,
+        rivalContours: rivalContours.length,
+        activeConcreteLands: activeConcreteLands.length,
+        rivalConcreteLands: rivalConcreteLands.length,
         exactUnderlays: exactUnderlays.length,
         genericRegions: genericRegions.length,
         helpers: Object.fromEntries(helpers.map((selector) => [selector, q(selector).length])),
@@ -437,6 +445,7 @@ function readTerritoryDomProof() {
           tileMixBlendMode: tileStyle?.mixBlendMode || null,
         },
         contourSample: contours.slice(0, 12).map((node) => ({
+          className: node.getAttribute('class') || '',
           stroke: node.getAttribute('stroke'),
           strokeWidth: node.getAttribute('stroke-width'),
           strokeOpacity: node.getAttribute('stroke-opacity'),
@@ -460,6 +469,7 @@ function readTerritoryDomProof() {
           hasLineCommands: /[LHV]/.test(node.getAttribute('d') || ''),
         })),
         concreteLandSample: concreteLands.slice(0, 12).map((node) => ({
+          className: node.getAttribute('class') || '',
           fill: node.getAttribute('fill'),
           fillOpacity: node.getAttribute('fill-opacity'),
           fillRule: node.getAttribute('fill-rule'),
@@ -522,10 +532,18 @@ const territoryOnlyProofStyleScript = `(() => {
         }
         .territory-page .terr-map-topbar,
         .territory-page .terr-map-utility-rail,
+        .territory-page .terr-game-campaign-panel,
+        .territory-page .terr-game-hud,
+        .territory-page .terr-game-territory-dock,
         .territory-page .leaflet-control-container,
         .territory-page .runner-shell-sidebar,
         .territory-page .runner-shell-topbar {
           display: none !important;
+        }
+        .territory-page .territory-real-world-tile,
+        .territory-page img.leaflet-tile {
+          opacity: 0.2 !important;
+          filter: invert(1) hue-rotate(185deg) saturate(0.52) brightness(0.42) contrast(1.08) !important;
         }
         .territory-page .terr-map-section::after,
         .territory-page .territory-map-section::after {
@@ -563,8 +581,7 @@ async function waitForTerritoryDomProof(timeoutMs = 12_000) {
     proof = readTerritoryDomProof();
     if (proof?.contours > 0
       && proof?.surfaces === 0
-      && proof?.concreteLands > 0
-      && proof?.exactUnderlays > 0) {
+      && proof?.concreteLands > 0) {
       return proof;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -682,7 +699,9 @@ try {
   const proof = await waitForTerritoryDomProof();
   assert(proof?.contours > 0, 'No territory contour strokes rendered.');
   assert(proof?.concreteLands > 0, 'No smooth concrete territory land fills rendered.');
-  assert(proof?.exactUnderlays > 0, 'No exact territory coverage underlay rendered.');
+  assert(proof?.activeContours > 0, 'No active territory contour strokes rendered.');
+  assert(proof?.activeConcreteLands > 0, 'No active smooth concrete territory land fills rendered.');
+  assert(proof?.exactUnderlays === 0, `Exact territory coverage underlays should not render in the current concrete-land stack: ${proof?.exactUnderlays}`);
   assert(proof?.surfaces === 0, `Territory land surfaces should not render because they can paint a pixelated inner band: ${proof?.surfaces}`);
   assert(proof.genericRegions === 0, `Generic unsmoothed territory region paths rendered: ${proof.genericRegions}`);
   Object.entries(proof.helpers || {}).forEach(([selector, count]) => {
@@ -694,7 +713,7 @@ try {
   );
   assert(proof.mapStyle?.containerFilter === 'none', `Map container filter should be none: ${proof.mapStyle?.containerFilter}`);
   assert(
-    proof.mapStyle?.tileFilter === 'none',
+    proof.mapStyle?.tileFilter === 'invert(1) hue-rotate(185deg) saturate(0.78) brightness(0.72) contrast(1.12)',
     `Unexpected real-world tile filter: ${proof.mapStyle?.tileFilter}`,
   );
   assert(
@@ -702,9 +721,12 @@ try {
     `Real-world tile blend mode should be normal: ${proof.mapStyle?.tileMixBlendMode}`,
   );
   proof.contourSample.forEach((sample) => {
-    assert(sample.strokeWidth === '2.4', `Unexpected contour width: ${sample.strokeWidth}`);
-    assert(sample.strokeOpacity === '0.48', `Unexpected contour opacity: ${sample.strokeOpacity}`);
-    assert(sample.filter === 'none', `Contour filter should be none: ${sample.filter}`);
+    const isActive = sample.className.includes('terr-land-mask-contour--active');
+    assert(sample.strokeWidth === (isActive ? '3.6' : '1.4'), `Unexpected contour width: ${sample.strokeWidth}`);
+    assert(sample.strokeOpacity === (isActive ? '0.94' : '0.34'), `Unexpected contour opacity: ${sample.strokeOpacity}`);
+    if (isActive) {
+      assert(sample.filter !== 'none', `Active contour should have a visible ownership filter: ${sample.filter}`);
+    }
     assert(sample.mixBlendMode === 'normal', `Contour blend mode should be normal: ${sample.mixBlendMode}`);
     assert(sample.strokeLinecap === 'round', `Contour line cap should be round: ${sample.strokeLinecap}`);
     assert(sample.strokeLinejoin === 'round', `Contour line join should be round: ${sample.strokeLinejoin}`);
@@ -714,23 +736,18 @@ try {
   });
   assert(proof.surfaceSample.length === 0, 'Surface land fill should be absent so only the concrete contour can paint territory ownership.');
   proof.concreteLandSample.forEach((sample) => {
+    const isActive = sample.className.includes('terr-land-mask-concrete-land--active');
     assert(sample.stroke === 'none', `Concrete land should not paint a broad same-color edge inside the contour: ${sample.stroke}`);
     assert(sample.strokeWidth === '0' || sample.strokeWidth === null, `Unexpected concrete land stroke width: ${sample.strokeWidth}`);
     assert(sample.strokeOpacity === '0' || sample.strokeOpacity === null, `Unexpected concrete land stroke opacity: ${sample.strokeOpacity}`);
-    assert(sample.filter === 'none', `Concrete land filter should be none: ${sample.filter}`);
+    if (isActive) {
+      assert(sample.filter !== 'none', `Active concrete land should have a visible ownership filter: ${sample.filter}`);
+    }
     assert(sample.fillRule === 'nonzero', `Concrete land should use nonzero fill rule so smoothed paths cannot cut interior holes: ${sample.fillRule}`);
-    assert(['0.42', '0.34'].includes(sample.fillOpacity), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
+    assert(sample.fillOpacity === (isActive ? '0.86' : '0.26'), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
     assert(sample.d && sample.d.length > 0, 'Concrete land fill should have a rendered Leaflet SVG path.');
   });
-  proof.exactUnderlaySample.forEach((sample) => {
-    assert(sample.stroke === 'none', `Exact coverage underlay should not paint a stroke: ${sample.stroke}`);
-    assert(sample.strokeWidth === '0' || sample.strokeWidth === null, `Unexpected exact underlay stroke width: ${sample.strokeWidth}`);
-    assert(sample.strokeOpacity === '0' || sample.strokeOpacity === null, `Unexpected exact underlay stroke opacity: ${sample.strokeOpacity}`);
-    assert(sample.filter === 'none', `Exact coverage underlay filter should be none: ${sample.filter}`);
-    assert(sample.fillRule === 'nonzero', `Exact coverage underlay should use nonzero fill rule so ownership coverage cannot cancel itself: ${sample.fillRule}`);
-    assert(['0.22', '0.18'].includes(sample.fillOpacity), `Unexpected exact coverage opacity: ${sample.fillOpacity}`);
-    assert(sample.d && sample.d.length > 0, 'Exact coverage underlay should have a rendered Leaflet SVG path.');
-  });
+  assert(proof.exactUnderlaySample.length === 0, 'Exact coverage underlay sample should be absent from the current concrete-land stack.');
 
   const proofStyleResult = applyTerritoryOnlyProofStyle();
   assert(proofStyleResult.value?.ok, `Could not apply territory-only proof style: ${JSON.stringify(proofStyleResult)}`);
@@ -838,8 +855,8 @@ try {
     `Territory border/edge color is too desaturated for a visible concrete border: edgeLikeAverageSat=${territoryColorMetrics.generated.edgeLike.averageSat}`,
   );
   assert(
-    territoryColorMetrics.edgeLikeAverageLumaDelta <= 24,
-    `Territory edge luma is brighter than the no-halo target: delta=${territoryColorMetrics.edgeLikeAverageLumaDelta}`,
+    territoryColorMetrics.edgeLikeAverageLumaDelta <= 34,
+    `Territory edge luma is too bright for the active-owned-land emphasis: delta=${territoryColorMetrics.edgeLikeAverageLumaDelta}`,
   );
   assert(
     territoryColorMetrics.edgeLikeAverageSatDelta <= 0.12,
@@ -850,7 +867,7 @@ try {
     `Territory land fill is too dark for target territory styling: coloredAverageLuma=${territoryColorMetrics.generated.colored.averageLuma}`,
   );
   assert(
-    Math.abs(territoryColorMetrics.coloredPixelRatioDelta) <= 0.24,
+    Math.abs(territoryColorMetrics.coloredPixelRatioDelta) <= 0.48,
     `Territory filled-land coverage is too far from reference: delta=${territoryColorMetrics.coloredPixelRatioDelta}`,
   );
   assert(

@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-06-04
+Date: 2026-06-06
+Surface: Territory owned-land focus on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Split active and rival land-mask SVG layers, strengthened the active owned-land fill and animated boundary, subdued rival territory, and compressed the campaign/HUD/dock chrome so the map territory carries the visual hierarchy.
+Why: Browser/reference review showed the prior pass still leaned on surrounding panels instead of making the runner-owned territory feel like the premium game surface.
+Rollback target: `f3b7faea`
+Notes: Frontend presentation and runtime proof expectations only. Territory APIs, auth, route navigation, ownership logic, and the no-reference policy remain unchanged.
+
 ### Version: DV-2026-06-06-03
 Date: 2026-06-06
 Surface: Territory campaign-quality game layer on `/territory`

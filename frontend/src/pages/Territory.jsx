@@ -275,9 +275,9 @@ const LAND_MASK_CONTOUR_PRUNE_PASSES = 2;
 const LAND_MASK_CONTOUR_PRUNE_MIN_NEIGHBORS = 3;
 const LAND_MASK_CONTOUR_CORE_MIN_NEIGHBORS = 4;
 const LAND_MASK_LARGE_COMPONENT_MIN_TILES = 40;
-const LAND_MASK_CONTOUR_WEIGHT = 2.4;
-const LAND_MASK_CONTOUR_OPACITY = 0.48;
-const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.74, rival: 0.44 };
+const LAND_MASK_CONTOUR_WEIGHT = { active: 3.6, rival: 1.4 };
+const LAND_MASK_CONTOUR_OPACITY = { active: 0.94, rival: 0.34 };
+const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.86, rival: 0.26 };
 const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;
 const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = { active: 0, rival: 0 };
 const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 8;
@@ -1525,28 +1525,29 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
             stroke: false,
             fillColor: color,
             fillOpacity: active ? LAND_MASK_CONCRETE_LAND_OPACITY.active : LAND_MASK_CONCRETE_LAND_OPACITY.rival,
+            fillRule: 'nonzero',
             interactive: false,
             lineCap: 'round',
             lineJoin: 'round',
             smoothFactor: 0.35,
-            className: 'terr-land-mask-concrete-land',
+            className: `terr-land-mask-concrete-land${active ? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'}`,
           }).addTo(layer);
           attachSmoothTerritoryPath(map, concreteLand, region);
         });
       });
 
-      contourRenderEntries.forEach(({ borderColor, contourRegions }) => {
+      contourRenderEntries.forEach(({ active, borderColor, contourRegions }) => {
         contourRegions.forEach((region) => {
           const contourLine = L.polyline(region, {
             color: borderColor,
             renderer: visualRenderer,
-            weight: LAND_MASK_CONTOUR_WEIGHT,
-            opacity: LAND_MASK_CONTOUR_OPACITY,
+            weight: active ? LAND_MASK_CONTOUR_WEIGHT.active : LAND_MASK_CONTOUR_WEIGHT.rival,
+            opacity: active ? LAND_MASK_CONTOUR_OPACITY.active : LAND_MASK_CONTOUR_OPACITY.rival,
             interactive: false,
             lineCap: 'round',
             lineJoin: 'round',
             smoothFactor: 0.35,
-            className: 'terr-land-mask-contour',
+            className: `terr-land-mask-contour${active ? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'}`,
           }).addTo(layer);
           attachSmoothTerritoryPath(map, contourLine, region);
         });

@@ -457,8 +457,8 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONTOUR_WEIGHT = 2\.4;[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = 0\.48;/,
-  'Territory should use one plain concrete owner border without turning it into a separate highlight or halo stroke.',
+  /const LAND_MASK_CONTOUR_WEIGHT = \{ active: 3\.6, rival: 1\.4 \};[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = \{ active: 0\.94, rival: 0\.34 \};/,
+  'Territory should make the active runner contour visibly stronger than rival territory without adding helper geometry.',
 );
 
 assert.doesNotMatch(
@@ -499,8 +499,8 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.74, rival: 0\.44 \};[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = \{ active: 0, rival: 0 \};[\s\S]*?contourRenderEntries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,[\s\S]*?stroke: false,[\s\S]*?lineCap: 'round',[\s\S]*?lineJoin: 'round',[\s\S]*?className: 'terr-land-mask-concrete-land'[\s\S]*?contourRenderEntries\.forEach\(\(\{ borderColor, contourRegions \}\) => \{[\s\S]*?const contourLine = L\.polyline\(region,[\s\S]*?color: borderColor,[\s\S]*?className: 'terr-land-mask-contour'/,
-  'Territory backend render should paint smooth concrete land fill without a broad same-color stroke, then the qualified contour above it.',
+  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.86, rival: 0\.26 \};[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = \{ active: 0, rival: 0 \};[\s\S]*?contourRenderEntries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,[\s\S]*?stroke: false,[\s\S]*?lineCap: 'round',[\s\S]*?lineJoin: 'round',[\s\S]*?className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`[\s\S]*?contourRenderEntries\.forEach\(\(\{ active, borderColor, contourRegions \}\) => \{[\s\S]*?const contourLine = L\.polyline\(region,[\s\S]*?color: borderColor,[\s\S]*?className: `terr-land-mask-contour\$\{active \? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'\}`/,
+  'Territory backend render should paint active concrete land as the primary surface while keeping rival land subdued and separately targetable in CSS.',
 );
 
 assert.match(
@@ -517,8 +517,8 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /weight: LAND_MASK_CONTOUR_WEIGHT,[\s\S]*?opacity: LAND_MASK_CONTOUR_OPACITY,[\s\S]*?className: 'terr-land-mask-contour'/,
-  'Territory final contour branch should provide the reference-style smooth border without glow.',
+  /weight: active \? LAND_MASK_CONTOUR_WEIGHT\.active : LAND_MASK_CONTOUR_WEIGHT\.rival,[\s\S]*?opacity: active \? LAND_MASK_CONTOUR_OPACITY\.active : LAND_MASK_CONTOUR_OPACITY\.rival,[\s\S]*?className: `terr-land-mask-contour\$\{active \? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'\}`/,
+  'Territory final contour branch should prioritize the active runner border and reduce rival border emphasis.',
 );
 
 assert.match(
@@ -553,7 +553,7 @@ assert.match(
 
 assert.match(
   source,
-  /const contourLine = L\.polyline\(region,[\s\S]*?className: 'terr-land-mask-contour'[\s\S]*?\}\)\.addTo\(layer\);[\s\S]*?attachSmoothTerritoryPath\(map, contourLine, region\);/,
+  /const contourLine = L\.polyline\(region,[\s\S]*?className: `terr-land-mask-contour\$\{active \? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'\}`[\s\S]*?\}\)\.addTo\(layer\);[\s\S]*?attachSmoothTerritoryPath\(map, contourLine, region\);/,
   'Territory should curve the existing contour line on the same land geometry instead of drawing a separate halo or highlight path.',
 );
 
@@ -565,7 +565,7 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /smoothFactor: 0\.35,[\s\S]*?className: 'terr-land-mask-contour'/,
+  /smoothFactor: 0\.35,[\s\S]*?className: `terr-land-mask-contour\$\{active \? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'\}`/,
   'Territory should keep Leaflet simplification low enough that rounded concrete land contours do not render as pixelated stair steps.',
 );
 
@@ -589,8 +589,8 @@ assert.match(
 
 assert.match(
   territoryCss,
-  /\.territory-page \.terr-land-mask-contour \{[\s\S]*?filter: none;/,
-  'Territory top contour should not add drop-shadow when concrete land is the focus.',
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 18px rgba\(240, 117, 97, 0\.38\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?stroke-dasharray: 18 8;[\s\S]*?animation: terr-owned-boundary-flow 5\.8s linear infinite;/,
+  'Territory CSS should make the active owned land surface and boundary visually dominant.',
 );
 
 assert.match(
@@ -649,8 +649,8 @@ assert.match(
 
 assert.match(
   runtimeVerifierSource,
-  /sample\.strokeWidth === '2\.4'[\s\S]*?sample\.strokeOpacity === '0\.48'/,
-  'Runtime proof should reject the old thick highlight border and require the plain single contour border.',
+  /activeContours = q\('\.terr-land-mask-contour--active'\)[\s\S]*?activeConcreteLands = q\('\.terr-land-mask-concrete-land--active'\)[\s\S]*?assert\(proof\?\.activeContours > 0[\s\S]*?sample\.strokeWidth === \(isActive \? '3\.6' : '1\.4'\)[\s\S]*?sample\.strokeOpacity === \(isActive \? '0\.94' : '0\.34'\)/,
+  'Runtime proof should require active territory classes and a stronger active contour than rival territory.',
 );
 
 assert.match(
@@ -668,12 +668,12 @@ assert.match(
 assert.match(
   runtimeVerifierSource,
   /edgeLikePixelRatioDelta:[\s\S]*?Math\.abs\(territoryColorMetrics\.edgeLikePixelRatioDelta\) <= 0\.62/,
-  'Runtime proof should allow the lower no-halo edge coverage while still measuring border color coverage.',
+  'Runtime proof should keep measuring border color coverage after active territory emphasis changes.',
 );
 
 assert.match(
   runtimeVerifierSource,
-  /coloredPixelRatioDelta:[\s\S]*?Math\.abs\(territoryColorMetrics\.coloredPixelRatioDelta\) <= 0\.24/,
+  /coloredPixelRatioDelta:[\s\S]*?Math\.abs\(territoryColorMetrics\.coloredPixelRatioDelta\) <= 0\.48/,
   'Runtime proof should keep concrete filled-land coverage bounded without forcing a broad highlight wash.',
 );
 
