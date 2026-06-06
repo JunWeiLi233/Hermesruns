@@ -275,9 +275,9 @@ const LAND_MASK_CONTOUR_PRUNE_PASSES = 2;
 const LAND_MASK_CONTOUR_PRUNE_MIN_NEIGHBORS = 3;
 const LAND_MASK_CONTOUR_CORE_MIN_NEIGHBORS = 4;
 const LAND_MASK_LARGE_COMPONENT_MIN_TILES = 40;
-const LAND_MASK_CONTOUR_WEIGHT = { active: 3.6, rival: 1.4 };
-const LAND_MASK_CONTOUR_OPACITY = { active: 0.94, rival: 0.34 };
-const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.86, rival: 0.26 };
+const LAND_MASK_CONTOUR_WEIGHT = { active: 3.2, rival: 1.15 };
+const LAND_MASK_CONTOUR_OPACITY = { active: 0.88, rival: 0.22 };
+const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.74, rival: 0.14 };
 const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;
 const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = { active: 0, rival: 0 };
 const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 8;
@@ -286,6 +286,12 @@ const LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO = 0.72;
 const LAND_MASK_AXIS_SEGMENT_SOFTEN_PX = 64;
 const LAND_MASK_AXIS_SEGMENT_MIN_PX = 10;
 const LAND_MASK_SHARED_EDGE_CURVE_RATIO = 0.38;
+const TERRITORY_LAYER_PANES = [
+  { name: 'territory-rival-fill-pane', className: 'terr-leaflet-territory-pane--rival-fill', zIndex: 430 },
+  { name: 'territory-rival-contour-pane', className: 'terr-leaflet-territory-pane--rival-contour', zIndex: 440 },
+  { name: 'territory-active-fill-pane', className: 'terr-leaflet-territory-pane--active-fill', zIndex: 450 },
+  { name: 'territory-active-contour-pane', className: 'terr-leaflet-territory-pane--active-contour', zIndex: 460 },
+];
 
 function hasCoordinatePolygon(poly) {
   return Array.isArray(poly?.coordinates) && poly.coordinates.length >= 3;
@@ -293,6 +299,22 @@ function hasCoordinatePolygon(poly) {
 
 function hasCellMaskPolygon(poly) {
   return Array.isArray(poly?.cells) && poly.cells.length > 0;
+}
+
+function territoryLayerRenderers(L, map) {
+  TERRITORY_LAYER_PANES.forEach(({ name, className, zIndex }) => {
+    const pane = map.getPane(name) || map.createPane(name);
+    pane.classList.add('terr-leaflet-territory-pane', className);
+    pane.style.zIndex = String(zIndex);
+    pane.style.pointerEvents = 'none';
+  });
+
+  return {
+    rivalFill: L.svg({ padding: 0.65, pane: 'territory-rival-fill-pane' }),
+    rivalContour: L.svg({ padding: 0.65, pane: 'territory-rival-contour-pane' }),
+    activeFill: L.svg({ padding: 0.65, pane: 'territory-active-fill-pane' }),
+    activeContour: L.svg({ padding: 0.65, pane: 'territory-active-contour-pane' }),
+  };
 }
 
 function polygonOwnerMergeKey(poly, fallbackIndex) {
@@ -1460,7 +1482,7 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
 
       const strokeColor = getCoralStroke();
       const layer = L.layerGroup().addTo(map);
-      const visualRenderer = L.svg({ padding: 0.65 });
+      const renderers = territoryLayerRenderers(L, map);
 
       const allCoords = [];
       const localPolygons = polygonsNearActiveTerritory(polygons);
@@ -1513,45 +1535,56 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
         });
       });
 
-      contourRenderEntries.forEach(({ active, color, landRegions }) => {
-        landRegions.forEach((region) => {
-          const concreteLand = L.polygon(region, {
-            color,
-            renderer: visualRenderer,
-            weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,
-            opacity: active
-              ? LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.active
-              : LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.rival,
-            stroke: false,
-            fillColor: color,
-            fillOpacity: active ? LAND_MASK_CONCRETE_LAND_OPACITY.active : LAND_MASK_CONCRETE_LAND_OPACITY.rival,
-            fillRule: 'nonzero',
-            interactive: false,
-            lineCap: 'round',
-            lineJoin: 'round',
-            smoothFactor: 0.35,
-            className: `terr-land-mask-concrete-land${active ? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'}`,
-          }).addTo(layer);
-          attachSmoothTerritoryPath(map, concreteLand, region);
+      function paintLandRegions(entries, renderer) {
+        entries.forEach(({ active, color, landRegions }) => {
+          landRegions.forEach((region) => {
+            const concreteLand = L.polygon(region, {
+              color,
+              renderer,
+              weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,
+              opacity: active
+                ? LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.active
+                : LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.rival,
+              stroke: false,
+              fillColor: color,
+              fillOpacity: active ? LAND_MASK_CONCRETE_LAND_OPACITY.active : LAND_MASK_CONCRETE_LAND_OPACITY.rival,
+              fillRule: 'nonzero',
+              interactive: false,
+              lineCap: 'round',
+              lineJoin: 'round',
+              smoothFactor: 0.35,
+              className: `terr-land-mask-concrete-land${active ? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'}`,
+            }).addTo(layer);
+            attachSmoothTerritoryPath(map, concreteLand, region);
+          });
         });
-      });
+      }
 
-      contourRenderEntries.forEach(({ active, borderColor, contourRegions }) => {
-        contourRegions.forEach((region) => {
-          const contourLine = L.polyline(region, {
-            color: borderColor,
-            renderer: visualRenderer,
-            weight: active ? LAND_MASK_CONTOUR_WEIGHT.active : LAND_MASK_CONTOUR_WEIGHT.rival,
-            opacity: active ? LAND_MASK_CONTOUR_OPACITY.active : LAND_MASK_CONTOUR_OPACITY.rival,
-            interactive: false,
-            lineCap: 'round',
-            lineJoin: 'round',
-            smoothFactor: 0.35,
-            className: `terr-land-mask-contour${active ? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'}`,
-          }).addTo(layer);
-          attachSmoothTerritoryPath(map, contourLine, region);
+      function paintContourRegions(entries, renderer) {
+        entries.forEach(({ active, borderColor, contourRegions }) => {
+          contourRegions.forEach((region) => {
+            const contourLine = L.polyline(region, {
+              color: borderColor,
+              renderer,
+              weight: active ? LAND_MASK_CONTOUR_WEIGHT.active : LAND_MASK_CONTOUR_WEIGHT.rival,
+              opacity: active ? LAND_MASK_CONTOUR_OPACITY.active : LAND_MASK_CONTOUR_OPACITY.rival,
+              interactive: false,
+              lineCap: 'round',
+              lineJoin: 'round',
+              smoothFactor: 0.35,
+              className: `terr-land-mask-contour${active ? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'}`,
+            }).addTo(layer);
+            attachSmoothTerritoryPath(map, contourLine, region);
+          });
         });
-      });
+      }
+
+      const rivalEntries = contourRenderEntries.filter((entry) => !entry.active);
+      const activeEntries = contourRenderEntries.filter((entry) => entry.active);
+      paintLandRegions(rivalEntries, renderers.rivalFill);
+      paintContourRegions(rivalEntries, renderers.rivalContour);
+      paintLandRegions(activeEntries, renderers.activeFill);
+      paintContourRegions(activeEntries, renderers.activeContour);
 
       if (recenterSignal > 0) {
         if (allCoords.length > 0) {

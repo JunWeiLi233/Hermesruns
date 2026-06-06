@@ -166,8 +166,8 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*filter: invert\(1\) hue-rotate\(185deg\) saturate\(0\.78\) brightness\(0\.72\) contrast\(1\.12\);/,
-  'Territory full-screen map should use a dark labelled tile treatment behind the ownership overlays.',
+  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*opacity: 0\.84 !important;[\s\S]*filter: grayscale\(1\) invert\(1\) hue-rotate\(175deg\) saturate\(0\.48\) brightness\(0\.56\) contrast\(1\.04\);/,
+  'Territory full-screen map should use a restrained labelled tile treatment behind the ownership overlays.',
 );
 
 assert.match(
@@ -202,13 +202,13 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 18px rgba\(240, 117, 97, 0\.38\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?stroke-dasharray: 18 8;[\s\S]*?\.territory-map-only \.terr-game-campaign-panel[\s\S]*width: min\(318px, calc\(100vw - 760px\)\);[\s\S]*\.territory-map-only \.terr-game-campaign-title[\s\S]*font-size: clamp\(1\.55rem, 2\.15vw, 2\.55rem\);[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*width: min\(350px, calc\(100vw - 132px\)\);[\s\S]*\.territory-map-only \.terr-game-territory-dock[\s\S]*width: min\(356px, calc\(100vw - 132px\)\);/,
-  'Territory split CSS should make active owned land the premium surface and reduce surrounding campaign/HUD chrome.',
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.28\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 8px rgba\(240, 117, 97, 0\.42\)\);[\s\S]*?\.territory-map-only \.terr-game-campaign-panel[\s\S]*width: min\(318px, calc\(100vw - 760px\)\);[\s\S]*?\.territory-map-only \.terr-game-hud,[\s\S]*?\.territory-map-only \.terr-game-territory-dock \{[\s\S]*?display: none !important;/,
+  'Territory split CSS should make active owned land the premium surface and remove permanent HUD/dock clutter.',
 );
 
 assert.match(
   styleSource,
-  /@media \(max-width: 760px\)[\s\S]*\.territory-map-only \.terr-game-campaign-panel[\s\S]*top: 240px;[\s\S]*\.territory-map-only \.terr-map-utility-rail--navigation-only[\s\S]*right: 14px;[\s\S]*width: calc\(100vw - 28px\);[\s\S]*max-width: none;[\s\S]*margin-left: 0;[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*display: none;[\s\S]*max-height: 22vh;/,
+  /@media \(max-width: 760px\)[\s\S]*\.territory-map-only \.terr-game-campaign-panel[\s\S]*top: 304px;[\s\S]*\.territory-map-only \.terr-map-utility-rail--navigation-only[\s\S]*right: 14px;[\s\S]*width: calc\(100vw - 28px\);[\s\S]*max-width: none;[\s\S]*margin-left: 0;[\s\S]*\.territory-map-only \.terr-game-hud[\s\S]*display: none;/,
   'Territory mobile layout should keep the owned territory visible first while retaining compact controls without rail overflow.',
 );
 

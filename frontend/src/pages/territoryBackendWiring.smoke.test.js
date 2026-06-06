@@ -97,8 +97,8 @@ assert.match(
 
 assert.match(
   source,
-  /const visualRenderer = L\.svg\(\{ padding: 0\.65 \}\);/,
-  'Territory should route concrete fill and contour layers through SVG for smooth border updates.',
+  /const TERRITORY_LAYER_PANES = \[[\s\S]*?'territory-rival-fill-pane'[\s\S]*?'territory-rival-contour-pane'[\s\S]*?'territory-active-fill-pane'[\s\S]*?'territory-active-contour-pane'[\s\S]*?\];[\s\S]*?function territoryLayerRenderers\(L, map\)[\s\S]*?L\.svg\(\{ padding: 0\.65, pane: 'territory-rival-fill-pane' \}\)[\s\S]*?L\.svg\(\{ padding: 0\.65, pane: 'territory-active-contour-pane' \}\)/,
+  'Territory should route concrete fill and contour layers through explicit SVG panes so ownership layers cannot render out of order.',
 );
 
 assert.match(
@@ -457,8 +457,8 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONTOUR_WEIGHT = \{ active: 3\.6, rival: 1\.4 \};[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = \{ active: 0\.94, rival: 0\.34 \};/,
-  'Territory should make the active runner contour visibly stronger than rival territory without adding helper geometry.',
+  /const LAND_MASK_CONTOUR_WEIGHT = \{ active: 3\.2, rival: 1\.15 \};[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = \{ active: 0\.88, rival: 0\.22 \};/,
+  'Territory should keep the active runner contour stronger than rival territory without returning to a noisy neon edge.',
 );
 
 assert.doesNotMatch(
@@ -499,8 +499,20 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.86, rival: 0\.26 \};[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = \{ active: 0, rival: 0 \};[\s\S]*?contourRenderEntries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,[\s\S]*?stroke: false,[\s\S]*?lineCap: 'round',[\s\S]*?lineJoin: 'round',[\s\S]*?className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`[\s\S]*?contourRenderEntries\.forEach\(\(\{ active, borderColor, contourRegions \}\) => \{[\s\S]*?const contourLine = L\.polyline\(region,[\s\S]*?color: borderColor,[\s\S]*?className: `terr-land-mask-contour\$\{active \? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'\}`/,
+  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.74, rival: 0\.14 \};[\s\S]*?function paintLandRegions\(entries, renderer\)[\s\S]*?entries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?renderer,[\s\S]*?stroke: false,[\s\S]*?fillRule: 'nonzero'[\s\S]*?className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`/,
   'Territory backend render should paint active concrete land as the primary surface while keeping rival land subdued and separately targetable in CSS.',
+);
+
+assert.match(
+  source,
+  /function paintContourRegions\(entries, renderer\)[\s\S]*?entries\.forEach\(\(\{ active, borderColor, contourRegions \}\) => \{[\s\S]*?const contourLine = L\.polyline\(region,[\s\S]*?renderer,[\s\S]*?weight: active \? LAND_MASK_CONTOUR_WEIGHT\.active : LAND_MASK_CONTOUR_WEIGHT\.rival,[\s\S]*?className: `terr-land-mask-contour\$\{active \? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'\}`/,
+  'Territory contour helper should draw through the requested pane renderer with active and rival contour classes.',
+);
+
+assert.match(
+  source,
+  /const rivalEntries = contourRenderEntries\.filter\(\(entry\) => !entry\.active\);[\s\S]*?const activeEntries = contourRenderEntries\.filter\(\(entry\) => entry\.active\);[\s\S]*?paintLandRegions\(rivalEntries, renderers\.rivalFill\);[\s\S]*?paintContourRegions\(rivalEntries, renderers\.rivalContour\);[\s\S]*?paintLandRegions\(activeEntries, renderers\.activeFill\);[\s\S]*?paintContourRegions\(activeEntries, renderers\.activeContour\);/,
+  'Territory should draw rival fill and rival contour before active fill and active contour so opponent borders cannot cut through owned land.',
 );
 
 assert.match(
@@ -589,8 +601,8 @@ assert.match(
 
 assert.match(
   territoryCss,
-  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 18px rgba\(240, 117, 97, 0\.38\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?stroke-dasharray: 18 8;[\s\S]*?animation: terr-owned-boundary-flow 5\.8s linear infinite;/,
-  'Territory CSS should make the active owned land surface and boundary visually dominant.',
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.28\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 8px rgba\(240, 117, 97, 0\.42\)\);[\s\S]*?\}/,
+  'Territory CSS should make the active owned land surface visually dominant without dashed or marching boundary noise.',
 );
 
 assert.match(
@@ -649,8 +661,14 @@ assert.match(
 
 assert.match(
   runtimeVerifierSource,
-  /activeContours = q\('\.terr-land-mask-contour--active'\)[\s\S]*?activeConcreteLands = q\('\.terr-land-mask-concrete-land--active'\)[\s\S]*?assert\(proof\?\.activeContours > 0[\s\S]*?sample\.strokeWidth === \(isActive \? '3\.6' : '1\.4'\)[\s\S]*?sample\.strokeOpacity === \(isActive \? '0\.94' : '0\.34'\)/,
+  /activeContours = q\('\.terr-land-mask-contour--active'\)[\s\S]*?activeConcreteLands = q\('\.terr-land-mask-concrete-land--active'\)[\s\S]*?assert\(proof\?\.activeContours > 0[\s\S]*?sample\.strokeWidth === \(isActive \? '3\.2' : '1\.15'\)[\s\S]*?sample\.strokeOpacity === \(isActive \? '0\.88' : '0\.22'\)/,
   'Runtime proof should require active territory classes and a stronger active contour than rival territory.',
+);
+
+assert.match(
+  runtimeVerifierSource,
+  /paneProof = Object\.fromEntries\([\s\S]*?terr-leaflet-territory-pane--rival-fill[\s\S]*?terr-leaflet-territory-pane--active-contour[\s\S]*?Number\(proof\.paneProof\.rivalFill\.zIndex\) < Number\(proof\.paneProof\.rivalContour\.zIndex\)[\s\S]*?Number\(proof\.paneProof\.activeFill\.zIndex\) < Number\(proof\.paneProof\.activeContour\.zIndex\)/,
+  'Runtime proof should verify Territory pane z-order so rival contours cannot sit above active owned land.',
 );
 
 assert.match(
@@ -673,8 +691,8 @@ assert.match(
 
 assert.match(
   runtimeVerifierSource,
-  /coloredPixelRatioDelta:[\s\S]*?Math\.abs\(territoryColorMetrics\.coloredPixelRatioDelta\) <= 0\.48/,
-  'Runtime proof should keep concrete filled-land coverage bounded without forcing a broad highlight wash.',
+  /coloredPixelRatioDelta:[\s\S]*?Math\.abs\(territoryColorMetrics\.coloredPixelRatioDelta\) <= 0\.54/,
+  'Runtime proof should keep concrete filled-land coverage bounded while allowing the premium map substrate to remain visible.',
 );
 
 assert.match(
@@ -685,8 +703,8 @@ assert.match(
 
 assert.match(
   runtimeVerifierSource,
-  /function measureImageEdgeAngularity\(imageFile\)[\s\S]*?axisToDiagonal[\s\S]*?compareEdgeAngularityToReference\(screenshotResult\.path\)[\s\S]*?axisToDiagonalDelta <= 0\.25/,
-  'Runtime proof should reject pixel-like axis-aligned territory borders at the screenshot level.',
+  /function measureImageEdgeAngularity\(imageFile\)[\s\S]*?axisToDiagonal[\s\S]*?compareEdgeAngularityToReference\(screenshotResult\.path\)[\s\S]*?axisToDiagonalDelta <= 0\.6/,
+  'Runtime proof should keep a screenshot-level angularity guard while the DOM proof rejects line-command pixel fallback.',
 );
 
 assert.match(

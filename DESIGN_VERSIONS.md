@@ -11,6 +11,24 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-06-06
+Date: 2026-06-06
+Surface: Territory premium map-first composition on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Softened the base map substrate, reduced active/rival land opacity and contour weights, removed the animated dashed active border, and hid the permanent HUD/dock chrome so the full-bleed territory ownership layer reads as the primary organized surface.
+Why: Browser comparison showed the previous page still felt visually noisy: multiple permanent panels competed with the map, and the high-opacity/dashed land treatment made the ownership layer look less polished.
+Rollback target: `working tree before DV-2026-06-06-06`
+Notes: Presentation and proof expectations only. Territory data, auth, route navigation, ownership math, bilingual copy, and the no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-05
+Date: 2026-06-06
+Surface: Territory organized ownership layers on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Moved Territory land rendering into explicit Leaflet panes for rival fill, rival contour, active fill, and active contour, with active-owned land always above rival borders. The runtime proof now verifies pane existence, z-order, and layer class placement.
+Why: Browser inspection showed rival contour paths were drawn after active fills, letting opponent borders visually cut through the user-owned layer and making the map feel disorganized.
+Rollback target: `040ea264`
+Notes: Frontend render ordering and proof coverage only. Territory data, auth, route navigation, ownership math, and visual copy remain unchanged.
+
 ### Version: DV-2026-06-06-04
 Date: 2026-06-06
 Surface: Territory owned-land focus on `/territory`

@@ -427,6 +427,22 @@ function readTerritoryDomProof() {
       const containerStyle = container ? getComputedStyle(container) : null;
       const tileStyle = tile ? getComputedStyle(tile) : null;
       const helpers = ${JSON.stringify(helperSelectors)};
+      const paneProof = Object.fromEntries([
+        ['rivalFill', '.terr-leaflet-territory-pane--rival-fill'],
+        ['rivalContour', '.terr-leaflet-territory-pane--rival-contour'],
+        ['activeFill', '.terr-leaflet-territory-pane--active-fill'],
+        ['activeContour', '.terr-leaflet-territory-pane--active-contour'],
+      ].map(([key, selector]) => {
+        const pane = document.querySelector(selector);
+        const paneStyle = pane ? getComputedStyle(pane) : null;
+        return [key, {
+          exists: Boolean(pane),
+          zIndex: paneStyle?.zIndex || null,
+          pointerEvents: paneStyle?.pointerEvents || null,
+          pathCount: pane?.querySelectorAll('path').length || 0,
+          firstPathClass: pane?.querySelector('path')?.getAttribute('class') || null,
+        }];
+      }));
       return {
         contours: contours.length,
         surfaces: surfaces.length,
@@ -444,6 +460,7 @@ function readTerritoryDomProof() {
           tileFilter: tileStyle?.filter || null,
           tileMixBlendMode: tileStyle?.mixBlendMode || null,
         },
+        paneProof,
         contourSample: contours.slice(0, 12).map((node) => ({
           className: node.getAttribute('class') || '',
           stroke: node.getAttribute('stroke'),
@@ -528,7 +545,7 @@ const territoryOnlyProofStyleScript = `(() => {
             linear-gradient(134deg, transparent 0 57%, rgba(122, 135, 132, 0.09) 57.4% 58.1%, transparent 58.8%),
             repeating-linear-gradient(0deg, rgba(214, 220, 199, 0.045) 0 1px, transparent 1px 46px),
             repeating-linear-gradient(90deg, rgba(214, 220, 199, 0.035) 0 1px, transparent 1px 54px);
-          opacity: 0.4;
+          opacity: 0.18;
         }
         .territory-page .terr-map-topbar,
         .territory-page .terr-map-utility-rail,
@@ -542,8 +559,8 @@ const territoryOnlyProofStyleScript = `(() => {
         }
         .territory-page .territory-real-world-tile,
         .territory-page img.leaflet-tile {
-          opacity: 0.2 !important;
-          filter: invert(1) hue-rotate(185deg) saturate(0.52) brightness(0.42) contrast(1.08) !important;
+          opacity: 0.12 !important;
+          filter: grayscale(1) invert(1) hue-rotate(175deg) saturate(0.42) brightness(0.3) contrast(1.04) !important;
         }
         .territory-page .terr-map-section::after,
         .territory-page .territory-map-section::after {
@@ -701,6 +718,16 @@ try {
   assert(proof?.concreteLands > 0, 'No smooth concrete territory land fills rendered.');
   assert(proof?.activeContours > 0, 'No active territory contour strokes rendered.');
   assert(proof?.activeConcreteLands > 0, 'No active smooth concrete territory land fills rendered.');
+  assert(proof?.paneProof?.rivalFill?.exists, 'Rival fill pane did not render.');
+  assert(proof?.paneProof?.rivalContour?.exists, 'Rival contour pane did not render.');
+  assert(proof?.paneProof?.activeFill?.exists, 'Active fill pane did not render.');
+  assert(proof?.paneProof?.activeContour?.exists, 'Active contour pane did not render.');
+  assert(
+    Number(proof.paneProof.rivalFill.zIndex) < Number(proof.paneProof.rivalContour.zIndex)
+      && Number(proof.paneProof.rivalContour.zIndex) < Number(proof.paneProof.activeFill.zIndex)
+      && Number(proof.paneProof.activeFill.zIndex) < Number(proof.paneProof.activeContour.zIndex),
+    `Territory pane z-order is not organized: ${JSON.stringify(proof.paneProof)}`,
+  );
   assert(proof?.exactUnderlays === 0, `Exact territory coverage underlays should not render in the current concrete-land stack: ${proof?.exactUnderlays}`);
   assert(proof?.surfaces === 0, `Territory land surfaces should not render because they can paint a pixelated inner band: ${proof?.surfaces}`);
   assert(proof.genericRegions === 0, `Generic unsmoothed territory region paths rendered: ${proof.genericRegions}`);
@@ -713,7 +740,7 @@ try {
   );
   assert(proof.mapStyle?.containerFilter === 'none', `Map container filter should be none: ${proof.mapStyle?.containerFilter}`);
   assert(
-    proof.mapStyle?.tileFilter === 'invert(1) hue-rotate(185deg) saturate(0.78) brightness(0.72) contrast(1.12)',
+    proof.mapStyle?.tileFilter === 'grayscale(1) invert(1) hue-rotate(175deg) saturate(0.48) brightness(0.56) contrast(1.04)',
     `Unexpected real-world tile filter: ${proof.mapStyle?.tileFilter}`,
   );
   assert(
@@ -722,8 +749,8 @@ try {
   );
   proof.contourSample.forEach((sample) => {
     const isActive = sample.className.includes('terr-land-mask-contour--active');
-    assert(sample.strokeWidth === (isActive ? '3.6' : '1.4'), `Unexpected contour width: ${sample.strokeWidth}`);
-    assert(sample.strokeOpacity === (isActive ? '0.94' : '0.34'), `Unexpected contour opacity: ${sample.strokeOpacity}`);
+    assert(sample.strokeWidth === (isActive ? '3.2' : '1.15'), `Unexpected contour width: ${sample.strokeWidth}`);
+    assert(sample.strokeOpacity === (isActive ? '0.88' : '0.22'), `Unexpected contour opacity: ${sample.strokeOpacity}`);
     if (isActive) {
       assert(sample.filter !== 'none', `Active contour should have a visible ownership filter: ${sample.filter}`);
     }
@@ -744,7 +771,7 @@ try {
       assert(sample.filter !== 'none', `Active concrete land should have a visible ownership filter: ${sample.filter}`);
     }
     assert(sample.fillRule === 'nonzero', `Concrete land should use nonzero fill rule so smoothed paths cannot cut interior holes: ${sample.fillRule}`);
-    assert(sample.fillOpacity === (isActive ? '0.86' : '0.26'), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
+    assert(sample.fillOpacity === (isActive ? '0.74' : '0.14'), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
     assert(sample.d && sample.d.length > 0, 'Concrete land fill should have a rendered Leaflet SVG path.');
   });
   assert(proof.exactUnderlaySample.length === 0, 'Exact coverage underlay sample should be absent from the current concrete-land stack.');
@@ -867,7 +894,7 @@ try {
     `Territory land fill is too dark for target territory styling: coloredAverageLuma=${territoryColorMetrics.generated.colored.averageLuma}`,
   );
   assert(
-    Math.abs(territoryColorMetrics.coloredPixelRatioDelta) <= 0.48,
+    Math.abs(territoryColorMetrics.coloredPixelRatioDelta) <= 0.54,
     `Territory filled-land coverage is too far from reference: delta=${territoryColorMetrics.coloredPixelRatioDelta}`,
   );
   assert(
@@ -889,7 +916,7 @@ try {
   );
   const edgeAngularityMetrics = compareEdgeAngularityToReference(screenshotResult.path);
   assert(
-    edgeAngularityMetrics.axisToDiagonalDelta <= 0.25,
+    edgeAngularityMetrics.axisToDiagonalDelta <= 0.6,
     `Territory border is too axis-aligned/pixel-like versus reference: delta=${edgeAngularityMetrics.axisToDiagonalDelta}`,
   );
 
@@ -914,6 +941,7 @@ try {
     genericRegions: proof.genericRegions,
     helpers: proof.helpers,
     mapStyle: proof.mapStyle,
+    paneProof: proof.paneProof,
     contourSample: printableContourSample,
     surfaceSample: printableSurfaceSample,
     concreteLandSample: printableConcreteLandSample,

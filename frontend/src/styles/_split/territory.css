@@ -2024,9 +2024,16 @@
 
 .territory-heatmap-outline .leaflet-container .territory-real-world-tile,
 .territory-heatmap-outline .leaflet-container img.leaflet-tile {
-  opacity: 1;
-  filter: invert(1) hue-rotate(185deg) saturate(0.78) brightness(0.72) contrast(1.12);
+  opacity: 0.84 !important;
+  filter: grayscale(1) invert(1) hue-rotate(175deg) saturate(0.48) brightness(0.56) contrast(1.04);
   mix-blend-mode: normal;
+}
+
+.territory-heatmap-outline .terr-map-section::after {
+  display: block;
+  background:
+    radial-gradient(circle at 50% 44%, transparent 0 30%, rgba(3, 5, 7, 0.28) 72%, rgba(3, 5, 7, 0.66) 100%),
+    linear-gradient(180deg, rgba(4, 6, 8, 0.2), transparent 24%, rgba(4, 6, 8, 0.48));
 }
 
 .territory-heatmap-outline .terr-map-vignette {
@@ -2518,12 +2525,12 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 .territory-page .terr-land-mask-concrete-land--active {
   opacity: 1;
-  filter: drop-shadow(0 0 18px rgba(240, 117, 97, 0.38)) drop-shadow(0 0 3px rgba(255, 244, 225, 0.32));
+  filter: drop-shadow(0 0 12px rgba(240, 117, 97, 0.28)) drop-shadow(0 1px 2px rgba(255, 244, 225, 0.2));
 }
 
 .territory-page .terr-land-mask-concrete-land--rival {
-  opacity: 0.66;
-  filter: saturate(0.62) brightness(0.76);
+  opacity: 0.46;
+  filter: saturate(0.5) brightness(0.7);
 }
 
 .territory-page .terr-land-mask-contour {
@@ -2536,14 +2543,12 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 }
 
 .territory-page .terr-land-mask-contour--active {
-  filter: drop-shadow(0 0 12px rgba(240, 117, 97, 0.5));
-  stroke-dasharray: 18 8;
-  animation: terr-owned-boundary-flow 5.8s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(240, 117, 97, 0.42));
 }
 
 .territory-page .terr-land-mask-contour--rival {
-  opacity: 0.72;
-  filter: saturate(0.58) brightness(0.78);
+  opacity: 0.5;
+  filter: saturate(0.48) brightness(0.72);
 }
 
 .territory-map-only .terr-map-recenter-pill {
@@ -2592,6 +2597,11 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   pointer-events: auto;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+}
+
+.territory-map-only .terr-game-hud,
+.territory-map-only .terr-game-territory-dock {
+  display: none !important;
 }
 
 .territory-map-only .terr-game-campaign-panel::before,
@@ -3213,7 +3223,7 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 @media (max-width: 760px) {
   .territory-map-only .terr-game-campaign-panel {
-    top: 240px;
+    top: 304px;
     right: 14px;
     left: 14px;
     width: auto;
@@ -3324,10 +3334,6 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   animation: terr-contested-march 14s linear infinite;
 }
 
-@keyframes terr-owned-boundary-flow {
-  to { stroke-dashoffset: -26; }
-}
-
 @keyframes terr-runner-pulse {
   0%, 100% {
     transform: translateZ(0) scale(1);
@@ -3377,7 +3383,7 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   }
 
   .territory-map-only .terr-map-utility-rail--navigation-only {
-    top: 176px;
+    top: 232px;
     left: 14px;
   }
 }
