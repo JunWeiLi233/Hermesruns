@@ -117,25 +117,25 @@ assert.doesNotMatch(
 
 assert.match(
   territorySource,
-  /const activePolygons = polygons\.filter\(\(poly\) => poly\?\.active === true\);[\s\S]*const ownerPolygons = mergeCellMaskPolygonsByOwner\(activePolygons\);/,
-  'Territory map should draw the real authenticated user territory from backend polygon masks only.',
+  /const localPolygons = polygonsNearActiveTerritory\(polygons\);[\s\S]*const ownerPolygons = mergeCellMaskPolygonsByOwner\(localPolygons\);/,
+  'Territory map should draw authenticated territory plus local-overlapping rival backend polygon masks only.',
 );
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.leaflet-container[\s\S]*background: #252b2d;[\s\S]*filter: none;/,
-  'Territory full-screen map container should not filter territory overlays while the basemap is styled separately.',
+  /\.territory-heatmap-outline \.leaflet-container[\s\S]*background: #05070a;[\s\S]*filter: none;/,
+  'Territory full-screen map container should use the dark runtime-proof substrate without filtering overlays.',
 );
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.territory-real-world-tile,[\s\S]*filter: saturate\(0\.56\) contrast\(1\.22\) brightness\(0\.46\);/,
-  'Territory full-screen map should gray the real-world tiles under unclaimed land instead of creating black border gaps or washing out territory overlays.',
+  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*filter: none;/,
+  'Territory full-screen map should leave real-world tiles unfiltered so ownership overlays are verified directly.',
 );
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.territory-real-world-tile,[\s\S]*mix-blend-mode: normal;/,
+  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*mix-blend-mode: normal;/,
   'Territory real-world tiles should remain visible rather than being washed out by blend effects.',
 );
 

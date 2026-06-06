@@ -72,6 +72,11 @@ function isValidMapCenter(center) {
   return Number.isFinite(Number(center?.latitude)) && Number.isFinite(Number(center?.longitude));
 }
 
+function territoryInitialZoom(center) {
+  const zoom = Number(center?.zoom);
+  return Math.max(Number.isFinite(zoom) ? zoom : 14, 14);
+}
+
 /** Read the coral stroke color from CSS custom properties at runtime */
 function getCoralStroke() {
   return getComputedStyle(document.documentElement).getPropertyValue('--accent-coral-strong').trim() || '#f07561';
@@ -1212,15 +1217,18 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
       if (cancelled || !mapRef.current) return;
 
       const center = territoryCenter;
+      const latitude = Number(center.latitude);
+      const longitude = Number(center.longitude);
       const mapContainer = mapRef.current;
       mountedMapContainer = mapContainer;
       const map = L.map(mapContainer, {
-        center: [center.latitude, center.longitude],
-        zoom: center.zoom || 14,
+        center: [latitude, longitude],
+        zoom: territoryInitialZoom(center),
         zoomControl: false,
         attributionControl: false,
         preferCanvas: true,
       });
+      map.setView([latitude, longitude], territoryInitialZoom(center), { animate: false });
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
@@ -1252,13 +1260,16 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
         mapInstanceRef.current = null;
       }
     };
-  }, [territoryCenter?.latitude, territoryCenter?.longitude, territoryCenter?.zoom]);
+  }, [territoryCenter?.latitude, territoryCenter?.longitude, territoryCenter?.zoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!mapReady || !map || !territoryCenter || showPolygons || polygons.length > 0) return;
-    map.setView([territoryCenter.latitude, territoryCenter.longitude], territoryCenter.zoom || map.getZoom() || 14);
-  }, [mapReady, polygons.length, showPolygons, territoryCenter?.latitude, territoryCenter?.longitude, territoryCenter?.zoom]);
+    const center = territoryCenter;
+    const latitude = Number(center.latitude);
+    const longitude = Number(center.longitude);
+    map.setView([latitude, longitude], territoryInitialZoom(center), { animate: false });
+  }, [mapReady, polygons.length, showPolygons, territoryCenter]);
 
   // Paint closed-loop polygons from /api/territory/polygons
   useEffect(() => {
@@ -1371,10 +1382,12 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
         });
       });
 
-      if (allCoords.length > 0) {
-        const bounds = L.latLngBounds(allCoords);
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [34, 34], maxZoom: 14 });
+      if (recenterSignal > 0) {
+        if (allCoords.length > 0) {
+          const bounds = L.latLngBounds(allCoords);
+          if (bounds.isValid()) {
+            map.flyToBounds(bounds, { padding: [34, 34], maxZoom: 14, duration: 0.8 });
+          }
         }
       }
 

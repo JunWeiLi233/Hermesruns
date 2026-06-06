@@ -77,7 +77,7 @@ Use this skill when:
 
 ```text
 AI SLOP CLEANUP REPORT
-======================
+----------------------
 
 Scope: [files or feature area]
 Behavior Lock: [targeted regression tests added/run]

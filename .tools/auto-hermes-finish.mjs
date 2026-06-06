@@ -206,6 +206,9 @@ function runGit(args, runner = null) {
   if (typeof runner === "function") {
     return String(runner(args) ?? "").trim();
   }
+  if (process.platform !== "win32") {
+    return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
+  }
   const command = `& git ${args.map((arg) => shellQuote(arg)).join(" ")}`;
   return execFileSync(
     "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",

@@ -109,7 +109,7 @@ If ToolSearch finds no MCP tools, fall back to the `code-reviewer` agent.
 
 ```
 CODE REVIEW REPORT
-==================
+------------------
 
 Files Reviewed: 8
 Total Issues: 15
