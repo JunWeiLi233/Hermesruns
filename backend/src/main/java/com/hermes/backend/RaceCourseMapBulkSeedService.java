@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,6 +23,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Bulk-seeds {@link RaceCourseMapAsset} live data for every race in the
@@ -56,13 +59,16 @@ public class RaceCourseMapBulkSeedService {
     private static final double MAX_LOOP_RADIUS_KM = 18.0;
     private static final int STREET_LOOP_WAYPOINT_COUNT = 7;
     private static final String OSRM_BASE_URL = "https://router.project-osrm.org";
-    /** FOSSGIS public pedestrian OSRM endpoint — same API shape as the
+    /** FOSSGIS public pedestrian OSRM endpoint 鈥?same API shape as the
      *  driving instance but routes through pedestrian-accessible streets
      *  (parks, sidewalks, footpaths, bridges with foot lanes). Used for
      *  official courses where the runtime polyline must stay walkable
-     *  — driving routes pick up freeways and ramps that are illegal /
+     *  鈥?driving routes pick up freeways and ramps that are illegal /
      *  impossible for marathon runners. */
     private static final String OSRM_FOOT_BASE_URL = "https://routing.openstreetmap.de/routed-foot";
+    private static final Pattern GPX_ROUTE_POINT_PATTERN = Pattern.compile(
+            "<(?:[a-z0-9_]+:)?(?:trkpt|rtept)\\b[^>]*\\blat=[\"']([^\"']+)[\"'][^>]*\\blon=[\"']([^\"']+)[\"']",
+            Pattern.CASE_INSENSITIVE);
     private static final String SYNTHETIC_SUMMARY = "Hermes generated an OSRM-routed approximation of this course "
             + "(waypoints around the race location snapped to real streets via Open Source Routing Machine, then "
             + "elevation sampled from open-meteo / open-elevation DEM along that polyline) because no official "
@@ -190,7 +196,7 @@ public class RaceCourseMapBulkSeedService {
         // Use the same ratio window the runtime applies in
         // `RaceCourseMapService::strictDistanceMismatchReason`. The band
         // tightens as point count grows, so the seed must match that exact
-        // logic — otherwise it leaves "real" routes that the runtime then
+        // logic 鈥?otherwise it leaves "real" routes that the runtime then
         // rejects, and the runner sees a blank race-detail map.
         RaceCourseMapService.AlignmentRatioWindow window =
                 geometryService.expectedDistanceRatioWindow(distanceKm, routePoints.size());
@@ -240,6 +246,7 @@ public class RaceCourseMapBulkSeedService {
             // slot empty so a real admin upload can still resolve naturally.
             return SeedOutcome.FAILED;
         }
+        boolean existingHadPlausibleRoute = false;
         Optional<RaceCourseMapAsset> existing = assetRepository.findByRaceId(race.id());
         if (existing.isPresent()) {
             RaceCourseMapAsset asset = existing.get();
@@ -254,18 +261,24 @@ public class RaceCourseMapBulkSeedService {
             // distance-correct synthetic loop on top instead of leaving the
             // race detail page blank.
             boolean routeIsPlausible = hasRealRoute && existingRouteMatchesRaceDistance(asset, effectiveDistance(race));
+            existingHadPlausibleRoute = routeIsPlausible;
             boolean isSyntheticSource = SYNTHETIC_SOURCE.equals(existingSource)
                     || LEGACY_GEOGRAPHIC_LOOP_SOURCE.equals(existingSource)
-                    // Official-course rows are seed-generated too — they
+                    // Official-course rows are seed-generated too 鈥?they
                     // count as "synthetic-like" so an overwriteSynthetic
                     // pass can refresh them after the official waypoints
                     // or per-leg routing logic is updated.
                     || NycMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
                     || TokyoMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
                     || LosAngelesMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
-                    || OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource);
-            if (hasRealRoute && routeIsPlausible && !isSyntheticSource) {
-                // Real admin-uploaded route with a plausible distance — never
+                    || OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
+                    || AthensMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
+                    || BostonMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
+                    || WuxiMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
+                    || ChicagoMarathonKnownCourse.OFFICIAL_SOURCE.equals(existingSource);
+            boolean allowKnownOfficialCourseRefresh = overwriteSynthetic && isKnownOfficialCourseRace(race.id());
+            if (hasRealRoute && routeIsPlausible && !isSyntheticSource && !allowKnownOfficialCourseRefresh) {
+                // Real admin-uploaded route with a plausible distance 鈥?never
                 // overwrite even with overwriteSynthetic=true.
                 return SeedOutcome.SKIPPED_HAS_REAL_MAP;
             }
@@ -283,8 +296,8 @@ public class RaceCourseMapBulkSeedService {
         }
 
         double effectiveDistanceKm = race.distanceKm() == null || race.distanceKm() <= 0 ? 42.195 : race.distanceKm();
-        // Hardcoded official courses (currently NYC) come first — for races
-        // where we have real turn-by-turn landmark waypoints, OSRM-route
+        // Hardcoded official courses come first. For races where we have real
+        // turn-by-turn landmark waypoints, OSRM-route
         // through them so the polyline traces the actual race course
         // through real city streets, not a generic city-loop approximation.
         List<RoutePoint> officialCourse = generateOfficialCoursePolyline(race.id());
@@ -315,8 +328,14 @@ public class RaceCourseMapBulkSeedService {
         List<RoutePoint> elevationProbe = labeled.size() > LOOP_POINT_COUNT
                 ? geometryService.resampleRoute(labeled, LOOP_POINT_COUNT)
                 : labeled;
-        List<Integer> elevationSamples = fetchTerrainElevation(elevationProbe);
-        Integer totalClimb = elevationSamples.isEmpty() ? null : computeTotalClimbMeters(elevationSamples);
+        List<Integer> elevationSamples = officialElevationSamplesFor(race.id());
+        Integer totalClimb = officialTotalClimbMetersFor(race.id());
+        if (elevationSamples.isEmpty()) {
+            elevationSamples = fetchTerrainElevation(elevationProbe);
+            totalClimb = elevationSamples.isEmpty() ? null : computeTotalClimbMeters(elevationSamples);
+        } else if (totalClimb == null) {
+            totalClimb = computeTotalClimbMeters(elevationSamples);
+        }
 
         RaceCourseMapAsset asset = existing.orElseGet(RaceCourseMapAsset::new);
         if (asset.getRaceId() == null) {
@@ -325,7 +344,7 @@ public class RaceCourseMapBulkSeedService {
         asset.setRaceName(race.name());
         asset.setCity(race.city());
         asset.setCountry(race.country());
-        asset.setOfficialWebsite(race.officialWebsite());
+        asset.setOfficialWebsite(officialWebsiteForSeed(race));
         asset.setLatitude(race.latitude());
         asset.setLongitude(race.longitude());
         asset.setDistanceKm(effectiveDistanceKm);
@@ -353,6 +372,14 @@ public class RaceCourseMapBulkSeedService {
                 officialSource = LosAngelesMarathonOfficialCourse.OFFICIAL_SOURCE;
             } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(race.id())) {
                 officialSource = OsakaMarathonOfficialCourse.OFFICIAL_SOURCE;
+            } else if (AthensMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                officialSource = AthensMarathonOfficialCourse.OFFICIAL_SOURCE;
+            } else if (BostonMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                officialSource = BostonMarathonOfficialCourse.OFFICIAL_SOURCE;
+            } else if (WuxiMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                officialSource = WuxiMarathonOfficialCourse.OFFICIAL_SOURCE;
+            } else if (ChicagoMarathonKnownCourse.RACE_ID.equals(race.id())) {
+                officialSource = ChicagoMarathonKnownCourse.OFFICIAL_SOURCE;
             } else {
                 officialSource = NycMarathonOfficialCourse.OFFICIAL_SOURCE;
             }
@@ -365,30 +392,55 @@ public class RaceCourseMapBulkSeedService {
         String baseSummary;
         if (usedOfficialCourse) {
             if (TokyoMarathonOfficialCourse.RACE_ID.equals(race.id())) {
-                baseSummary = "Hermes rendered this course from the official Tokyo Marathon turn-by-turn landmarks "
-                        + "(Metropolitan Government Building start in Shinjuku → Ichigaya → Kudanshita → Kanda → "
-                        + "Akihabara → Asakusa → Kiyosumi-Shirakawa → Tatsumi → Shinonome → Tsukishima → "
-                        + "Ginza → Marunouchi finish at Tokyo Station). OSRM filled in the street geometry "
-                        + "between landmarks; elevation comes from DEM along the route.";
+                baseSummary = "Hermes rendered this course from the official Tokyo Marathon 2026 passing-time landmarks "
+                        + "(Tokyo Metropolitan Government Building start in Shinjuku, Uenohirokoji north turn, "
+                        + "Kuramae and Ryogoku, Tomioka Hachimangu east turn, Nihombashi, Ginza, "
+                        + "Tamachi Station south turn, Yusen Building at 42 km, and the official course-map finish "
+                        + "at Tokyo Station / Gyoko-dori Ave.). "
+                        + "OSRM filled in the street geometry between landmarks; elevation comes from DEM along the route.";
             } else if (LosAngelesMarathonOfficialCourse.RACE_ID.equals(race.id())) {
-                baseSummary = "Hermes rendered this course from the official LA Marathon \"Stadium to the Sea\" "
-                        + "turn-by-turn landmarks (Dodger Stadium start → Chinatown → Echo Park → Silver Lake → "
-                        + "Sunset Blvd through Hollywood → Sunset Strip → Beverly Hills → Wilshire Blvd through "
-                        + "Westwood / Brentwood → San Vicente Blvd → Ocean Ave / Santa Monica Pier finish). "
+                baseSummary = "Hermes rendered this course from the official LA Marathon \"Stadium to the Stars\" "
+                        + "turn-by-turn landmarks (Dodger Stadium start, Downtown LA, Chinatown, Little Tokyo, "
+                        + "Echo Park, Hollywood, Sunset Strip, Beverly Hills, West LA / Brentwood, Bundy turnaround, "
+                        + "and Century City finish at Santa Monica Blvd & Avenue of the Stars). "
                         + "OSRM filled in the street geometry between landmarks; elevation comes from DEM along the route.";
             } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(race.id())) {
                 baseSummary = "Hermes rendered this course from the official Osaka Marathon turn-by-turn landmarks "
-                        + "(Osaka Prefectural Government start → Okawa River → Nakanoshima → Midosuji Blvd through "
-                        + "Shinsaibashi / Dotonbori / Namba → Kyocera Dome Osaka → Naniwasuji → Shinsekai / Tennoji / "
-                        + "Shitenno-ji up the Uemachi plateau → Tsuruhashi → Imazato → Morinomiya → finish inside Osaka "
+                        + "(Osaka Prefectural Government start 鈫?Okawa River 鈫?Nakanoshima 鈫?Midosuji Blvd through "
+                        + "Shinsaibashi / Dotonbori / Namba 鈫?Kyocera Dome Osaka 鈫?Naniwasuji 鈫?Shinsekai / Tennoji / "
+                        + "Shitenno-ji up the Uemachi plateau 鈫?Tsuruhashi 鈫?Imazato 鈫?Morinomiya 鈫?finish inside Osaka "
                         + "Castle Park). OSRM filled in the street geometry between landmarks; elevation comes from DEM "
                         + "along the route.";
+            } else if (AthensMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                baseSummary = "Hermes rendered this course from the official Athens Marathon GPX route "
+                        + "(Marathonas start to the Panathenaic Stadium finish). The route coordinates come directly "
+                        + "from the official GPX download; elevation comes from DEM along the route.";
+            } else if (BostonMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                baseSummary = "Hermes rendered this course from the official B.A.A. Boston Marathon route "
+                        + "(Main Street Hopkinton start, Route 135 through Ashland, Framingham, Natick, and Wellesley, "
+                        + "Route 16 into Newton, the Newton Fire Station turn onto Commonwealth Avenue, Heartbreak Hill, "
+                        + "Cleveland Circle, Beacon Street through Brookline, Kenmore Square, Hereford Street, "
+                        + "Boylston Street, and the Boylston/Copley finish). OSRM filled in the street geometry "
+                        + "between landmarks; elevation comes from DEM along the route.";
+            } else if (WuxiMarathonOfficialCourse.RACE_ID.equals(race.id())) {
+                baseSummary = "Hermes rendered this course from the official 2026 Wuxi Marathon route "
+                        + "(Taihu Avenue / Yinxiu Road start, the opening city loop via Hongqiao Road and Zhongnan West Road, "
+                        + "Lihu lakeside, Jiangnan University south and east gates, the Wudu Road U-turn near Lide Road, "
+                        + "Finance Second Street, Gonghu Bay Wetland Park, and the Wuxi Taihu International Expo Center finish). "
+                        + "OSRM filled in the street geometry between landmarks; elevation comes from DEM along the route.";
+            } else if (ChicagoMarathonKnownCourse.RACE_ID.equals(race.id())) {
+                baseSummary = "Hermes rendered this course from the official Chicago Marathon course map "
+                        + "(Grant Park start, north through River North, Lincoln Park and Lakeview, west toward "
+                        + "Greektown, south through Pilsen and Bridgeport, then back to the Grant Park finish). "
+                        + "Elevation uses a flat city profile pinned to the official map route so downtown DEM "
+                        + "sampling spikes do not distort the runner-facing chart.";
             } else {
                 baseSummary = "Hermes rendered this course from the official TCS New York City Marathon turn-by-turn landmarks "
                         + "(Staten Island start, Verrazzano-Narrows Bridge, Brooklyn 4th Ave, Pulaski Bridge, Queens, "
                         + "Queensboro Bridge, Manhattan 1st Ave, Bronx loop via Willis Ave Bridge, Madison Ave Bridge, "
-                        + "5th Ave, Central Park finish). OSRM filled in the street geometry between landmarks; "
-                        + "elevation comes from DEM along the route.";
+                        + "5th Ave, East Drive, Central Park South, Columbus Circle, West Drive finish). OSRM filled "
+                        + "in the street geometry between landmarks; elevation comes from the official NYRR elevation "
+                        + "profile because DEM services flatten bridge decks to water or ground level.";
             }
         } else {
             baseSummary = usedStreetRouting ? SYNTHETIC_SUMMARY : FALLBACK_ELLIPSE_SUMMARY;
@@ -398,10 +450,18 @@ public class RaceCourseMapBulkSeedService {
         // admins can tell why a synthetic route was layered on.
         if (previousSource != null
                 && !SYNTHETIC_SOURCE.equals(previousSource)
-                && !LEGACY_GEOGRAPHIC_LOOP_SOURCE.equals(previousSource)) {
+                && !LEGACY_GEOGRAPHIC_LOOP_SOURCE.equals(previousSource)
+                && !previousSource.equals(asset.getLiveSource())) {
+            String replacementReason = usedOfficialCourse
+                    ? " the official course route now replaces that prior extraction so the map + elevation chart render from the authoritative source."
+                    : " the synthetic loop is layered on top to render the map + elevation chart while the admin sources a real course-map upload.";
+            String previousDataReason = existingHadPlausibleRoute
+                    ? "` and is superseded by the known official course seed;"
+                    : "` but had no extractable plausible route polyline;";
             asset.setLiveSummary(baseSummary
                     + " The previously stored data came from `" + previousSource
-                    + "` but had no extractable plausible route polyline; the synthetic loop is layered on top to render the map + elevation chart while the admin sources a real course-map upload.");
+                    + previousDataReason
+                    + replacementReason);
         } else {
             asset.setLiveSummary(baseSummary);
         }
@@ -417,11 +477,63 @@ public class RaceCourseMapBulkSeedService {
         return SeedOutcome.SEEDED;
     }
 
+    private List<Integer> officialElevationSamplesFor(String raceId) {
+        if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return NycMarathonOfficialCourse.elevationProfileMeters();
+        }
+        if (ChicagoMarathonKnownCourse.RACE_ID.equals(raceId)) {
+            return ChicagoMarathonKnownCourse.elevationProfileMeters();
+        }
+        return List.of();
+    }
+
+    private Integer officialTotalClimbMetersFor(String raceId) {
+        if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return NycMarathonOfficialCourse.OFFICIAL_TOTAL_CLIMB_METERS;
+        }
+        if (ChicagoMarathonKnownCourse.RACE_ID.equals(raceId)) {
+            return ChicagoMarathonKnownCourse.OFFICIAL_TOTAL_CLIMB_METERS;
+        }
+        return null;
+    }
+
+    private String officialWebsiteForSeed(CatalogRace race) {
+        if (race == null) {
+            return null;
+        }
+        String raceId = race.id();
+        if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return NycMarathonOfficialCourse.OFFICIAL_COURSE_URL;
+        }
+        if (TokyoMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return TokyoMarathonOfficialCourse.OFFICIAL_COURSE_URL;
+        }
+        if (LosAngelesMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return LosAngelesMarathonOfficialCourse.OFFICIAL_COURSE_URL;
+        }
+        if (OsakaMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return OsakaMarathonOfficialCourse.OFFICIAL_COURSE_URL;
+        }
+        if (AthensMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return AthensMarathonOfficialCourse.OFFICIAL_COURSE_URL;
+        }
+        if (BostonMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return BostonMarathonOfficialCourse.OFFICIAL_COURSE_URL;
+        }
+        if (WuxiMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return WuxiMarathonOfficialCourse.OFFICIAL_COURSE_URL;
+        }
+        if (ChicagoMarathonKnownCourse.RACE_ID.equals(raceId)) {
+            return ChicagoMarathonKnownCourse.OFFICIAL_COURSE_URL;
+        }
+        return race.officialWebsite();
+    }
+
     /**
      * Build a closed ellipse-shaped loop of {@value #LOOP_POINT_COUNT} points
      * centred on {@code (lat, lng)} whose perimeter is roughly
      * {@code distanceKm}. We aim for the perimeter of a circle of radius
-     * {@code distanceKm / (2π)}, scaled into lat/lng degrees with the standard
+     * {@code distanceKm / (2蟺)}, scaled into lat/lng degrees with the standard
      * mid-latitude longitude correction so loops near the poles do not get
      * squashed into thin lines on the map.
      */
@@ -442,8 +554,8 @@ public class RaceCourseMapBulkSeedService {
         // non-circular.
         double phase1 = rng.nextDouble() * 2.0 * Math.PI;
         double phase2 = rng.nextDouble() * 2.0 * Math.PI;
-        double amp1 = 0.18 + rng.nextDouble() * 0.10;   // ±18-28%
-        double amp2 = 0.06 + rng.nextDouble() * 0.06;   // ±6-12%
+        double amp1 = 0.18 + rng.nextDouble() * 0.10;   // 卤18-28%
+        double amp2 = 0.06 + rng.nextDouble() * 0.06;   // 卤6-12%
         // Squash one axis slightly so the underlying shape isn't an even
         // circle even before the harmonic perturbation.
         double squashFactor = 0.75 + rng.nextDouble() * 0.18; // 0.75-0.93
@@ -494,6 +606,16 @@ public class RaceCourseMapBulkSeedService {
 
     List<RoutePoint> generateOfficialCoursePolyline(String raceId) {
         if (raceId == null) return List.of();
+        if (ChicagoMarathonKnownCourse.RACE_ID.equals(raceId)) {
+            return ChicagoMarathonKnownCourse.routePoints();
+        }
+        if (AthensMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return generateOfficialGpxPolyline(
+                    AthensMarathonOfficialCourse.RACE_ID,
+                    AthensMarathonOfficialCourse.OFFICIAL_GPX_URL,
+                    35.0,
+                    50.0);
+        }
         List<double[]> waypoints;
         int waypointCount;
         if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
@@ -508,6 +630,12 @@ public class RaceCourseMapBulkSeedService {
         } else if (OsakaMarathonOfficialCourse.RACE_ID.equals(raceId)) {
             waypoints = OsakaMarathonOfficialCourse.waypoints();
             waypointCount = OsakaMarathonOfficialCourse.waypointCount();
+        } else if (BostonMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            waypoints = BostonMarathonOfficialCourse.waypoints();
+            waypointCount = BostonMarathonOfficialCourse.waypointCount();
+        } else if (WuxiMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            waypoints = WuxiMarathonOfficialCourse.waypoints();
+            waypointCount = WuxiMarathonOfficialCourse.waypointCount();
         } else {
             return List.of();
         }
@@ -530,8 +658,8 @@ public class RaceCourseMapBulkSeedService {
             // marathon-day-only; the Queensboro Bridge lower roadway has
             // no permanent foot lane; Willis Ave Bridge has limited foot
             // access in OSM data). When that happens the foot leg comes
-            // back ~3-7× longer than the direct path. Retry with the
-            // driving profile to get the actual bridge crossing — the
+            // back ~3-7脳 longer than the direct path. Retry with the
+            // driving profile to get the actual bridge crossing 鈥?the
             // race route DOES go straight across these bridges on race
             // day, so the driving geometry is faithful to the course.
             double legKm = legGeometry.isEmpty() ? 0.0 : geometryService.polylineDistanceKm(legGeometry);
@@ -553,8 +681,7 @@ public class RaceCourseMapBulkSeedService {
                     if (footDetoured && !legGeometry.isEmpty()) {
                         // Both routers detour but foot returned a real route.
                         // For official marathon courses (e.g. Tokyo waterfront
-                        // legs near Tatsumi), the foot detour IS the race path —
-                        // restricted waterfront access forces the course through
+                        // legs near Tatsumi), the foot detour IS the race path 鈥?                        // restricted waterfront access forces the course through
                         // the same longer arc that OSRM found. Keep the foot
                         // geometry; straight-lining would shorten the total route
                         // below the plausibility floor and abort the whole seed.
@@ -562,7 +689,7 @@ public class RaceCourseMapBulkSeedService {
                                 i, i + 1, String.format("%.1f", legKm / directKm),
                                 String.format("%.2f", legKm), String.format("%.2f", directKm));
                     } else {
-                        // Foot returned empty and driving also detoured — no real
+                        // Foot returned empty and driving also detoured 鈥?no real
                         // route available; synthesize straight-line as last resort.
                         logger.info("Both foot (empty) and driving ({}x) detoured leg {}->{}; falling back to straight-line",
                                 String.format("%.1f", drivingKm / directKm), i, i + 1);
@@ -579,7 +706,7 @@ public class RaceCourseMapBulkSeedService {
                 }
                 if (legGeometry.isEmpty()) {
                     // OSRM is unavailable for this leg even after a retry (e.g. the
-                    // routing host is down or rate-limiting — exactly what produced
+                    // routing host is down or rate-limiting 鈥?exactly what produced
                     // the generic-cycle fallback for Osaka/LA/NYC when those courses
                     // were seeded during an OSRM outage). Trace the leg as a straight
                     // line between the two real official waypoints so the course still
@@ -601,7 +728,7 @@ public class RaceCourseMapBulkSeedService {
             return straightLineThroughWaypoints(waypoints, waypointCount, raceId);
         }
         // For official courses, keep the dense pedestrian-routed geometry
-        // rather than resampling to LOOP_POINT_COUNT — the resample throws
+        // rather than resampling to LOOP_POINT_COUNT 鈥?the resample throws
         // away the per-block street detail and creates 400-1000 m chord
         // segments that visually cut across buildings, parks, and water.
         // Only resample down when the stitched polyline is absurdly large
@@ -616,7 +743,7 @@ public class RaceCourseMapBulkSeedService {
         // each waypoint so the runner-facing card surfaces real place names.
         List<RoutePoint> labeled = stampOfficialCourseLabels(resampled, waypoints, waypointCount, raceId);
         // Skip the runtime self-intersection plausibility check for the
-        // official-course path — bridge approach ramps register as
+        // official-course path 鈥?bridge approach ramps register as
         // self-intersections even though the underlying race course is
         // valid. The runtime sanitizeStoredLiveResult already exempts the
         // OFFICIAL_SOURCE source from these checks for the same reason.
@@ -633,7 +760,7 @@ public class RaceCourseMapBulkSeedService {
                     raceId, routeKm);
             // An OSRM disaster (massive detours that survived the per-leg checks)
             // can still produce an implausible total. Prefer a straight-line trace
-            // of the real waypoints over aborting to a generic cycle — only abort
+            // of the real waypoints over aborting to a generic cycle 鈥?only abort
             // if even the straight-line corridor is implausible.
             List<RoutePoint> straight = straightLineThroughWaypoints(waypoints, waypointCount, raceId);
             double straightKm = straight.isEmpty() ? 0.0 : geometryService.polylineDistanceKm(straight);
@@ -650,12 +777,76 @@ public class RaceCourseMapBulkSeedService {
         return labeled;
     }
 
+    private boolean isKnownOfficialCourseRace(String raceId) {
+        return NycMarathonOfficialCourse.RACE_ID.equals(raceId)
+                || TokyoMarathonOfficialCourse.RACE_ID.equals(raceId)
+                || LosAngelesMarathonOfficialCourse.RACE_ID.equals(raceId)
+                || OsakaMarathonOfficialCourse.RACE_ID.equals(raceId)
+                || AthensMarathonOfficialCourse.RACE_ID.equals(raceId)
+                || BostonMarathonOfficialCourse.RACE_ID.equals(raceId)
+                || WuxiMarathonOfficialCourse.RACE_ID.equals(raceId)
+                || ChicagoMarathonKnownCourse.RACE_ID.equals(raceId);
+    }
+
+    private List<RoutePoint> generateOfficialGpxPolyline(String raceId, String gpxUrl, double minKm, double maxKm) {
+        List<RoutePoint> rawRoute = fetchOfficialGpxRoute(raceId, gpxUrl);
+        if (rawRoute.size() < 8) {
+            logger.warn("Official GPX route for raceId={} had too few points ({})", raceId, rawRoute.size());
+            return List.of();
+        }
+        List<RoutePoint> labeled = AthensMarathonOfficialCourse.RACE_ID.equals(raceId)
+                ? AthensMarathonOfficialCourse.labelRoute(rawRoute)
+                : rawRoute;
+        double routeKm = geometryService.polylineDistanceKm(labeled);
+        if (routeKm < minKm || routeKm > maxKm) {
+            logger.warn("Official GPX route for raceId={} had implausible distance {} km", raceId, routeKm);
+            return List.of();
+        }
+        return labeled;
+    }
+
+    private List<RoutePoint> fetchOfficialGpxRoute(String raceId, String gpxUrl) {
+        if (gpxUrl == null || gpxUrl.isBlank()) {
+            return List.of();
+        }
+        try {
+            RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, URI.create(gpxUrl));
+            ResponseEntity<byte[]> response = restTemplate.exchange(request, byte[].class);
+            byte[] body = response.getBody();
+            if (body == null || body.length == 0) {
+                return List.of();
+            }
+            return parseGpxRoutePoints(new String(body, StandardCharsets.UTF_8));
+        } catch (Exception ex) {
+            logger.warn("official-gpx-fetch raceId={} failed: {}", raceId, ex.getMessage());
+            return List.of();
+        }
+    }
+
+    List<RoutePoint> parseGpxRoutePoints(String gpxXml) {
+        if (gpxXml == null || gpxXml.isBlank()) {
+            return List.of();
+        }
+        Matcher matcher = GPX_ROUTE_POINT_PATTERN.matcher(gpxXml);
+        List<RoutePoint> routePoints = new ArrayList<>();
+        while (matcher.find()) {
+            try {
+                double lat = Double.parseDouble(matcher.group(1));
+                double lng = Double.parseDouble(matcher.group(2));
+                routePoints.add(new RoutePoint(lat, lng, null));
+            } catch (NumberFormatException ignored) {
+                // Ignore malformed points and keep parsing the rest of the GPX.
+            }
+        }
+        return geometryService.sanitizeRoutePoints(routePoints);
+    }
+
     /**
      * Last-resort fallback for the official-course path: trace the course as a
      * straight-line polyline through every official waypoint. When OSRM routing
      * is unavailable (host down / rate-limited) an official course used to abort
      * to an empty result, which the runtime then rendered as a generic geographic
-     * loop ("cycle") centred on the race location — the exact Osaka/LA/NYC bug.
+     * loop ("cycle") centred on the race location 鈥?the exact Osaka/LA/NYC bug.
      * Tracing straight lines between the real turning-point landmarks keeps the
      * rendered course faithful to the actual corridor (start -> ... -> finish)
      * instead of a meaningless circle, and carries the same landmark labels.
@@ -723,6 +914,12 @@ public class RaceCourseMapBulkSeedService {
         }
         if (OsakaMarathonOfficialCourse.RACE_ID.equals(raceId)) {
             return OsakaMarathonOfficialCourse.labelAt(index);
+        }
+        if (BostonMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return BostonMarathonOfficialCourse.labelAt(index);
+        }
+        if (WuxiMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return WuxiMarathonOfficialCourse.labelAt(index);
         }
         return null;
     }
@@ -890,7 +1087,7 @@ public class RaceCourseMapBulkSeedService {
         }
         // open-meteo has tight hourly burst quotas that exhaust quickly when
         // seeding 82 races. Fall back to open-elevation.com (no rate limit,
-        // identical DEM source — SRTM) so the seed always populates elevation
+        // identical DEM source 鈥?SRTM) so the seed always populates elevation
         // even after the primary quota is spent.
         return fetchOpenElevationDotComElevation(routePoints);
     }
@@ -942,7 +1139,7 @@ public class RaceCourseMapBulkSeedService {
                 // Open-meteo returns 429 with a "Daily" message when the
                 // hard 10k/day quota is spent. Skip the rest of the retry
                 // ladder AND mark the whole seed run to skip open-meteo
-                // going forward — otherwise every subsequent race burns
+                // going forward 鈥?otherwise every subsequent race burns
                 // 11 s of pointless backoff.
                 if (msg.contains("Daily API request limit exceeded")
                         || msg.contains("Minutely API request limit exceeded")
@@ -952,7 +1149,7 @@ public class RaceCourseMapBulkSeedService {
                     // circuit the rest of the seed run to the open-elevation
                     // fallback so 82 races don't take 15+ minutes.
                     openMeteoDailyQuotaExhausted = true;
-                    logger.warn("open-meteo quota exhausted ({}) — switching to open-elevation.com fallback for the rest of this run", msg);
+                    logger.warn("open-meteo quota exhausted ({}) 鈥?switching to open-elevation.com fallback for the rest of this run", msg);
                     return List.of();
                 }
                 logger.debug("bulk-seed elevation attempt {} failed for {} points: {}",
@@ -1088,13 +1285,12 @@ public class RaceCourseMapBulkSeedService {
 
     /** Which OSRM profile (and endpoint) to route through. */
     private enum OsrmProfile {
-        /** Default driving profile via router.project-osrm.org — fast, but
+        /** Default driving profile via router.project-osrm.org 鈥?fast, but
          * picks freeways and ramps that aren't walkable. Used for the
          * generic city-loop synthetic seed where the route is a
          * decorative approximation. */
         DRIVING,
-        /** Pedestrian profile via routing.openstreetmap.de/routed-foot —
-         * routes through sidewalks, footpaths, and bridges with foot
+        /** Pedestrian profile via routing.openstreetmap.de/routed-foot 鈥?         * routes through sidewalks, footpaths, and bridges with foot
          * lanes. Used for hand-curated official courses (NYC) where the
          * runtime polyline must stay walkable. */
         FOOT

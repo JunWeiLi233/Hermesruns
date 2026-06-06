@@ -24,6 +24,10 @@ public class MarathonRouteGeoreferencingService {
         return googleGeocodingClient.isConfigured() || googleGeocodingClient.hasLocalAnchorCatalog();
     }
 
+    public boolean hasLocalRouteBoundsAnchors(String raceName, String city, String country) {
+        return !googleGeocodingClient.localRouteBoundsAnchors(raceName, city, country).isEmpty();
+    }
+
     public MarathonRouteGeoreferencingResult georeferenceRoute(
             String imageFilePath,
             String raceName,

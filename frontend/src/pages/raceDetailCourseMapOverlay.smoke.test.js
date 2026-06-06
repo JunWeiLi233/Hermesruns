@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const racesDetailSource = readFileSync(path.join(here, 'RacesDetail.jsx'), 'utf8');
 const racesDetailStyles = readFileSync(path.join(here, '..', 'styles', 'style.css'), 'utf8');
+const enPages = readFileSync(path.join(here, '..', 'i18n', 'locales', 'en', 'pages.js'), 'utf8');
+const zhPages = readFileSync(path.join(here, '..', 'i18n', 'locales', 'zh-CN', 'pages.js'), 'utf8');
 
 assert.match(
   racesDetailSource,
@@ -41,6 +43,42 @@ assert.match(
   racesDetailSource,
   /hasCityLevelCourseMap[\s\S]*detail_map_detected_badge[\s\S]*detail_map_detected_source/,
   'RacesDetail should label city-level course-map matches as detected images instead of presenting them as cleanly aligned routes.',
+);
+
+assert.match(
+  racesDetailSource,
+  /OFFICIAL_COURSE_MAP_SOURCES[\s\S]*nyc-official-course[\s\S]*boston-official-course[\s\S]*chicago-official-course[\s\S]*hasOfficialCourseMap[\s\S]*detail_map_official_badge[\s\S]*detail_map_official_source/,
+  'RacesDetail should present hand-curated official course seeds as official routes instead of AI-aligned course-map detections.',
+);
+
+assert.match(
+  racesDetailSource,
+  /hasOfficialCourseMap\s*\?\s*'races\.detail_course_route_official_source'\s*:\s*'races\.detail_course_route_source'/,
+  'RacesDetail should use official elevation source copy for official seeded course maps.',
+);
+
+assert.match(
+  enPages,
+  /detail_map_official_badge": "Official course route"/,
+  'English race-detail copy should label official seeded courses without GPX-only wording.',
+);
+
+assert.match(
+  enPages,
+  /detail_course_route_official_source": "Elevation comes from the official course profile or official route data\./,
+  'English race-detail copy should describe official seeded courses without GPX-only wording.',
+);
+
+assert.match(
+  zhPages,
+  /detail_map_official_badge": "官方赛道路线"/,
+  'Chinese race-detail copy should label official seeded courses without GPX-only wording.',
+);
+
+assert.match(
+  zhPages,
+  /detail_course_route_official_source": "海拔来自官方赛道海拔图或官方路线数据。/,
+  'Chinese race-detail copy should describe official seeded courses without GPX-only wording.',
 );
 
 assert.doesNotMatch(

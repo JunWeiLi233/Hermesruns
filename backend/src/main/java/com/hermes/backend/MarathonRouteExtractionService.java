@@ -223,20 +223,145 @@ public class MarathonRouteExtractionService {
 
         if (text.contains("chicago")) {
             return new RouteExtractionPlan(
-                    new RouteParametersDTO("#253858", List.of("Grant Park", "Magnificent Mile", "River North", "Lincoln Park")),
-                    false, true
+                    new RouteParametersDTO("#002068", List.of("Grant Park", "Magnificent Mile", "River North", "Lincoln Park")),
+                    false,
+                    true,
+                    List.of("0.0,0.0,0.36,1.0", "0.78,0.0,1.0,0.18"),
+                    true
             );
         }
         if (text.contains("new york")) {
             return new RouteExtractionPlan(
-                    new RouteParametersDTO("#0000FF", List.of("Start", "Brooklyn", "Queensboro Bridge", "Finish")),
-                    false, true
+                    new RouteParametersDTO("#071B42", List.of("Start", "Brooklyn", "Queensboro Bridge", "Finish")),
+                    true, true
             );
         }
         if (text.contains("osaka")) {
             return new RouteExtractionPlan(
-                    new RouteParametersDTO("#D00000", List.of("Osaka Castle Park", "Osaka City Hall", "Kyocera Dome Osaka", "Nakanoshima Park")),
+                    new RouteParametersDTO("#2096D5", List.of("Osaka Castle Park", "Osaka City Hall", "Kyocera Dome Osaka", "Nakanoshima Park")),
                     true, true
+            );
+        }
+        if (text.contains("tokyo")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#E50058", List.of("Start", "Asakusa", "Ginza", "Finish")),
+                    true, true
+            );
+        }
+        if (text.contains("athens")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#FC5200", List.of("Marathon", "Nea Makri", "Pikermi", "Finish")),
+                    true, true
+            );
+        }
+        if (text.contains("los angeles")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#E8545C", List.of("Dodger Stadium", "Hollywood", "Beverly Hills", "Finish")),
+                    true, true
+            );
+        }
+        if (text.contains("auckland")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#D61058", List.of("Devonport", "Takapuna", "St Heliers", "Finish")),
+                    true, true
+            );
+        }
+        if (text.contains("bangkok")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#C0D828", List.of("MBK Center", "Victory Monument", "Rama VIII Bridge", "Finish")),
+                    true, true
+            );
+        }
+        if (text.contains("buenos aires")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#C84A4A", List.of("Largada", "Ciudad Universitaria", "Obelisco", "Boca Juniors")),
+                    true, true
+            );
+        }
+        if (text.contains("cape town")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#FFD400", List.of("Beach Rd Start", "Salt River", "Rondebosch Common", "Sea Point")),
+                    true, true
+            );
+        }
+        if (text.contains("chengdu")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#B83840", List.of("Jinsha Site Museum", "Tianfu Square", "Sichuan University Museum", "Century City Finish")),
+                    true,
+                    true,
+                    List.of("#B83840", "#185890"),
+                    List.of(
+                            "0.0,0.0,1.0,0.08",
+                            "0.0,0.90,1.0,1.0",
+                            "0.0,0.62,0.25,0.92",
+                            "0.96,0.0,1.0,1.0",
+                            "0.0,0.0,0.03,1.0"
+                    )
+            );
+        }
+        if (text.contains("dalian")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#FF0000", List.of("Start", "Xinghai Bay", "Zhongshan Road", "Finish")),
+                    false,
+                    true,
+                    List.of(
+                            "0.0,0.0,1.0,0.13",
+                            "0.0,0.735,1.0,1.0",
+                            "0.0,0.13,0.045,0.735",
+                            "0.80,0.13,1.0,0.53",
+                            "0.69,0.52,0.95,0.73",
+                            "0.36,0.67,0.95,0.735"
+                    ),
+                    true
+            );
+        }
+        if (text.contains("ho chi minh")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#212121", List.of("Le Duan Nguyen Binh Khiem", "Vo Van Kiet", "Tran Bach Dang", "Road No. 103 TML", "Empire City")),
+                    true,
+                    true,
+                    List.of("#212121", "#000000"),
+                    List.of(
+                            "0.0,0.0,1.0,0.14",
+                            "0.0,0.76,1.0,1.0"
+                    )
+            );
+        }
+        if (text.contains("hong kong")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#E0008A", List.of("Nathan Road Tsim Sha Tsui", "Tsing Ma Bridge", "Lai King", "Western Harbour Crossing", "Victoria Park Causeway Bay")),
+                    true,
+                    true,
+                    List.of("#E0008A", "#D0007F", "#EC008C"),
+                    List.of("0.64,0.0,1.0,0.18")
+            );
+        }
+        if (text.contains("doha")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#FF0000", List.of("Hotel Park", "Al Bidda Park", "Doha Port", "Sheraton Grand Doha Resort")),
+                    true,
+                    true,
+                    List.of(
+                            "0.0,0.0,1.0,0.06",
+                            "0.0,0.39,1.0,1.0",
+                            "0.0,0.0,0.05,1.0",
+                            "0.36,0.0,1.0,1.0"
+                    ),
+                    true
+            );
+        }
+        if (text.contains("beijing")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#FF0000", List.of("Start", "CCTV Tower", "National Speed Skating Oval", "Finish")),
+                    true, true
+            );
+        }
+        if (text.contains("brussels")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#FF0000", List.of("Start", "Atomium", "Cinquantenaire Park", "Finish")),
+                    false,
+                    true,
+                    List.of("0.70,0.02,1.0,0.25", "0.0,0.69,1.0,1.0")
             );
         }
         if (text.contains("boston")) {
@@ -257,6 +382,12 @@ public class MarathonRouteExtractionService {
                     true, true
             );
         }
+        if (text.contains("marine corps")) {
+            return new RouteExtractionPlan(
+                    new RouteParametersDTO("#FF0000", List.of("MCM START", "Georgetown", "National Mall", "MCM FINISH")),
+                    true, true
+            );
+        }
         return null;
     }
 
@@ -267,8 +398,17 @@ public class MarathonRouteExtractionService {
         command.add("--image");
         command.add(imageFilePath);
         if (extractionPlan.includeRouteHexColor()) {
-            command.add("--route-hex-color");
-            command.add(extractionPlan.routeParameters().routeHexColor());
+            for (String routeHexColor : extractionPlan.effectiveRouteHexColors()) {
+                command.add("--route-hex-color");
+                command.add(routeHexColor);
+            }
+        }
+        for (String exclusionRegion : extractionPlan.exclusionRegions()) {
+            command.add("--exclude-region");
+            command.add(exclusionRegion);
+        }
+        if (extractionPlan.appendProminentBranch()) {
+            command.add("--append-prominent-branch");
         }
         return command;
     }
@@ -404,6 +544,56 @@ public class MarathonRouteExtractionService {
         return value.toUpperCase(Locale.ROOT);
     }
 
-    private record RouteExtractionPlan(RouteParametersDTO routeParameters, boolean includeRouteHexColor, boolean isDeterministic) {
+    private record RouteExtractionPlan(
+            RouteParametersDTO routeParameters,
+            boolean includeRouteHexColor,
+            boolean isDeterministic,
+            List<String> routeHexColors,
+            List<String> exclusionRegions,
+            boolean appendProminentBranch
+    ) {
+        private RouteExtractionPlan {
+            routeHexColors = routeHexColors == null ? List.of() : List.copyOf(routeHexColors);
+            exclusionRegions = exclusionRegions == null ? List.of() : List.copyOf(exclusionRegions);
+        }
+
+        private RouteExtractionPlan(RouteParametersDTO routeParameters, boolean includeRouteHexColor, boolean isDeterministic) {
+            this(routeParameters, includeRouteHexColor, isDeterministic, List.of(), List.of(), false);
+        }
+
+        private RouteExtractionPlan(RouteParametersDTO routeParameters, boolean includeRouteHexColor, boolean isDeterministic, List<String> exclusionRegions) {
+            this(routeParameters, includeRouteHexColor, isDeterministic, List.of(), exclusionRegions, false);
+        }
+
+        private RouteExtractionPlan(
+                RouteParametersDTO routeParameters,
+                boolean includeRouteHexColor,
+                boolean isDeterministic,
+                List<String> exclusionRegions,
+                boolean appendProminentBranch
+        ) {
+            this(routeParameters, includeRouteHexColor, isDeterministic, List.of(), exclusionRegions, appendProminentBranch);
+        }
+
+        private RouteExtractionPlan(
+                RouteParametersDTO routeParameters,
+                boolean includeRouteHexColor,
+                boolean isDeterministic,
+                List<String> routeHexColors,
+                List<String> exclusionRegions
+        ) {
+            this(routeParameters, includeRouteHexColor, isDeterministic, routeHexColors, exclusionRegions, false);
+        }
+
+        private List<String> effectiveRouteHexColors() {
+            if (!includeRouteHexColor) {
+                return List.of();
+            }
+            if (!routeHexColors.isEmpty()) {
+                return routeHexColors;
+            }
+            String routeHexColor = routeParameters == null ? null : routeParameters.routeHexColor();
+            return routeHexColor == null || routeHexColor.isBlank() ? List.of() : List.of(routeHexColor);
+        }
     }
 }
