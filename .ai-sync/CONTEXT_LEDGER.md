@@ -73,10 +73,10 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Rollback Target: working tree before this round
 
 ### /races/details/:raceId
-- Goal:
-- Changed:
-- Preserve:
-- Next Risk:
+- Goal: Keep Race Detail course maps grounded in the current official event route instead of stale admin-upload geometry or under-detailed fallback paths.
+- Changed: Added a dedicated `WuxiMarathonOfficialCourse` startup seed, wired Wuxi into the official-course source/trust path, and verified the live `/races/details/wuxi-marathon` page now serves `wuxi-official-course` with a 600-point official route and updated elevation profile after backend restart/reseed.
+- Preserve: Keep the existing Race Detail dossier layout, countdown/prediction behavior, official-route trust messaging, Leaflet route stage, and the startup seeding safeguards already used for Boston/Tokyo/Chicago/NYC/Osaka/Athens.
+- Next Risk: Future Wuxi or race-detail course-map work could leave a stale `admin-*`/city-level asset in the DB, skip the startup official-source promotion list, or forget to add new official-course source ids to the frontend trust set, which would regress the page back to non-authoritative geometry.
 - Rollback Target: working tree before this round
 
 ### /today-run

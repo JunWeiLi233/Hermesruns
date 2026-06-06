@@ -792,12 +792,13 @@ class RaceCourseMapManualAssetTests {
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
         MarathonRouteExtractionService extractionService = mock(MarathonRouteExtractionService.class);
         MarathonRouteGeoreferencingService georeferencingService = mock(MarathonRouteGeoreferencingService.class);
+        OsrmMapMatchingClient osrmMapMatchingClient = mock(OsrmMapMatchingClient.class);
         when(systemConfigService.isAiConfigured()).thenReturn(true);
         when(repository.findByRaceId("chicago-official-pdf-test")).thenReturn(Optional.empty());
         when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         when(restTemplate.exchange(
-                eq("https://example.com/chicago-official-course-map.png"),
+                eq(java.net.URI.create("https://example.com/chicago-official-course-map.png")),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(byte[].class)
@@ -858,10 +859,19 @@ class RaceCourseMapManualAssetTests {
                                 new RawBreadcrumbPointDTO(41.8789, -87.6190)
                         )
                 );
-        when(georeferencingService.georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195)))
+        when(georeferencingService.georeferenceRouteWithLocalBoundsFallback(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195)))
                 .thenReturn(boundsFallback);
+        when(osrmMapMatchingClient.matchOrderedBreadcrumbs(any()))
+                .thenReturn(List.of(
+                        new MatchedBreadcrumbPointDTO(40.0000, -89.0000),
+                        new MatchedBreadcrumbPointDTO(40.0100, -89.0100),
+                        new MatchedBreadcrumbPointDTO(40.0200, -89.0200),
+                        new MatchedBreadcrumbPointDTO(40.0300, -89.0300),
+                        new MatchedBreadcrumbPointDTO(40.0400, -89.0400),
+                        new MatchedBreadcrumbPointDTO(40.0500, -89.0500)
+                ));
 
-        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService);
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService, osrmMapMatchingClient);
 
         RaceCourseMapResult result = service.uploadPendingCourseMap(
                 "chicago-official-pdf-test",
@@ -880,6 +890,8 @@ class RaceCourseMapManualAssetTests {
         assertThat(result.routePoints()).isNotEmpty();
         assertThat(result.summary()).contains("pipeline fallback");
         verify(georeferencingService).georeferenceRoute(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
+        verify(georeferencingService).georeferenceRouteWithLocalBoundsFallback(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(extractionResult), eq(41.8781), eq(-87.6298), eq(42.195));
+        verify(osrmMapMatchingClient, never()).matchOrderedBreadcrumbs(any());
     }
 
     private RaceCourseMapService createService(RestTemplate restTemplate, SystemConfigService systemConfigService, RaceCourseMapAssetRepository repository) {
@@ -893,6 +905,17 @@ class RaceCourseMapManualAssetTests {
             MarathonRouteExtractionService extractionService,
             MarathonRouteGeoreferencingService georeferencingService
     ) {
+        return createService(restTemplate, systemConfigService, repository, extractionService, georeferencingService, null);
+    }
+
+    private RaceCourseMapService createService(
+            RestTemplate restTemplate,
+            SystemConfigService systemConfigService,
+            RaceCourseMapAssetRepository repository,
+            MarathonRouteExtractionService extractionService,
+            MarathonRouteGeoreferencingService georeferencingService,
+            OsrmMapMatchingClient osrmMapMatchingClient
+    ) {
         ObjectMapper objectMapper = new ObjectMapper();
         RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
         RaceCourseMapSearchService searchService = new RaceCourseMapSearchService(restTemplate);
@@ -903,7 +926,7 @@ class RaceCourseMapManualAssetTests {
                 geometryService,
                 buildTestQwenAlignmentClient(restTemplate)
         );
-        return new RaceCourseMapService(restTemplate, objectMapper, systemConfigService, repository, null, geometryService, searchService, imageService, aiService, extractionService, georeferencingService);
+        return new RaceCourseMapService(restTemplate, objectMapper, systemConfigService, repository, osrmMapMatchingClient, geometryService, searchService, imageService, aiService, extractionService, georeferencingService);
     }
 
     @SuppressWarnings("unchecked")

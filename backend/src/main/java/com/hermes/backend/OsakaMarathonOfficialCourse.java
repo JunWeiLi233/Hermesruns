@@ -28,7 +28,7 @@ import java.util.List;
 final class OsakaMarathonOfficialCourse {
 
     static final String RACE_ID = "osaka-marathon";
-    static final String OFFICIAL_COURSE_URL = "https://www.osaka-marathon.com/2026/en/";
+    static final String OFFICIAL_COURSE_URL = "https://www.osaka-marathon.com/2026/en/info/course/";
     static final String OFFICIAL_SOURCE = "osaka-official-course";
 
     private static final double[][] WAYPOINTS = new double[][]{

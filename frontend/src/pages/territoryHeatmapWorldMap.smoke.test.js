@@ -15,14 +15,20 @@ assert.match(
 
 assert.match(
   territorySource,
-  /basemaps\.cartocdn\.com\/dark_all/,
-  'Territory should use the same CARTO dark_all base map as the Heatmap page.',
+  /className:\s*'territory-real-world-tile'/,
+  'Territory Leaflet tiles should be explicitly marked as real-world map tiles.',
 );
 
 assert.match(
   territorySource,
-  /className:\s*'territory-real-world-tile'/,
-  'Territory Leaflet tiles should be explicitly marked as real-world map tiles.',
+  /basemaps\.cartocdn\.com\/rastertiles\/voyager_nolabels/,
+  'Territory should use a grayable street-map basemap so unclaimed land remains visible instead of becoming dark map voids.',
+);
+
+assert.doesNotMatch(
+  territorySource,
+  /basemaps\.cartocdn\.com\/dark_all/,
+  'Territory should not use CARTO dark_all because it creates black areas that read as broken territory borders.',
 );
 
 assert.match(
@@ -34,13 +40,13 @@ assert.match(
 assert.match(
   territorySource,
   /className="terr-map-utility-rail terr-map-utility-rail--navigation-only"/,
-  'Territory keeps the navigation rail in markup so routing remains available if the cinematic map chrome is re-enabled.',
+  'Territory map-only view should keep only the compact navigation rail over the land map.',
 );
 
 assert.match(
   territorySource,
   /className="terr-map-topbar terr-map-titlebar"/,
-  'Territory keeps the title strip in markup while map-only styling can hide it for a reference-style game board.',
+  'Territory should keep the Heatmap-style title strip over the land map.',
 );
 
 assert.match(
@@ -73,16 +79,64 @@ assert.doesNotMatch(
   'Territory should not render the obsolete terr-brief overlay on the full-screen world map.',
 );
 
+assert.doesNotMatch(
+  territorySource,
+  /DEMO_TERRITORY|Oakland Hills|Kai Chen|Mia Torres|Bay Farm Island|mode:\s*'demo'/,
+  'Territory should not ship the old demo/test territory fixture at the beginning of the page.',
+);
+
 assert.match(
-  styleSource,
-  /\.territory-heatmap-outline \.leaflet-container[\s\S]*background: #05070a;[\s\S]*filter: none;/,
-  'Territory full-screen map container should match the Heatmap dark-map base without extra container filtering.',
+  territorySource,
+  /const EMPTY_TERRITORY = \{[\s\S]*center: null,[\s\S]*leaderboard: \[\],[\s\S]*territories: \[\],[\s\S]*zones: \[\],/,
+  'Territory should fall back to an empty shell without a placeholder test location when backend territory data is unavailable.',
+);
+
+assert.match(
+  territorySource,
+  /const territoryCenter = isValidMapCenter\(territory\?\.center\) \? territory\.center : null;[\s\S]*if \(!territoryCenter\) return;[\s\S]*const center = territoryCenter;/,
+  'Territory map should mount directly from the authenticated backend territory center instead of a first-location test fallback.',
+);
+
+assert.match(
+  territorySource,
+  /\{center \? formatCenterLabel\(center\) : tc\('loadingTerritory'\)\}/,
+  'Territory header should not format a fake coordinate while the authenticated territory center is still loading.',
+);
+
+assert.doesNotMatch(
+  territorySource,
+  /runnerMarkerPositions|L\.marker\(|terr-marker|L\.divIcon\(/,
+  'Territory map should not render runner point markers over the concrete territory land layer.',
+);
+
+assert.doesNotMatch(
+  territorySource,
+  /fallbackZoneMaskPolygons|visibleCells|zoneCellCenter|zoneCellMeters/,
+  'Territory map should not render broad fallback territory blobs from coarse zone cells.',
+);
+
+assert.match(
+  territorySource,
+  /const activePolygons = polygons\.filter\(\(poly\) => poly\?\.active === true\);[\s\S]*const ownerPolygons = mergeCellMaskPolygonsByOwner\(activePolygons\);/,
+  'Territory map should draw the real authenticated user territory from backend polygon masks only.',
 );
 
 assert.match(
   styleSource,
-  /\.territory-heatmap-outline \.leaflet-container \.territory-real-world-tile,[\s\S]*filter: none;[\s\S]*mix-blend-mode: normal;/,
-  'Territory dark_all map tiles should not receive an extra Territory-specific darkening filter.',
+  /\.territory-heatmap-outline \.leaflet-container[\s\S]*background: #252b2d;[\s\S]*filter: none;/,
+  'Territory full-screen map container should not filter territory overlays while the basemap is styled separately.',
+);
+
+assert.match(
+  styleSource,
+  /\.territory-heatmap-outline \.territory-real-world-tile,[\s\S]*filter: saturate\(0\.56\) contrast\(1\.22\) brightness\(0\.46\);/,
+  'Territory full-screen map should gray the real-world tiles under unclaimed land instead of creating black border gaps or washing out territory overlays.',
+);
+
+assert.match(
+  styleSource,
+  /\.territory-heatmap-outline \.territory-real-world-tile,[\s\S]*mix-blend-mode: normal;/,
+  'Territory real-world tiles should remain visible rather than being washed out by blend effects.',
 );
 
 assert.match(
@@ -93,20 +147,20 @@ assert.match(
 
 assert.match(
   styleSource,
+  /\.territory-map-only \.leaflet-control-container[\s\S]*display: none !important;/,
+  'Territory map-only view should suppress Leaflet chrome so only the land map remains.',
+);
+
+assert.match(
+  styleSource,
   /\.territory-map-only \.terr-map-utility-rail--navigation-only[\s\S]*display: grid !important;/,
-  'Territory map-only view should keep the full vertical navigation rail available like the Heatmap page.',
+  'Territory map-only view should explicitly preserve the necessary navigation rail.',
 );
 
 assert.match(
   styleSource,
   /\.territory-map-only \.terr-map-titlebar[\s\S]*display: grid !important;/,
-  'Territory map-only view should keep the title/action strip available for recenter, runs, settings, and profile navigation.',
-);
-
-assert.doesNotMatch(
-  styleSource,
-  /\.territory-map-only \.runner-shell-sidebar,[\s\S]*\.territory-map-only \.runner-shell-topbar,[\s\S]*display: none !important;/,
-  'Territory map-only view must not hide the shared top/sidebar navigation because that strands the user on the map.',
+  'Territory map-only view should explicitly preserve the title/action strip.',
 );
 
 console.log('[PASS] Territory Heatmap world-map styling guard passed.');

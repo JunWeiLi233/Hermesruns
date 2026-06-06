@@ -114,6 +114,28 @@ class MarathonRouteGeoreferencingServiceTests {
     }
 
     @Test
+    void hasLocalRouteBoundsAnchorsReturnsTrueWhenCatalogHasBounds() {
+        QwenAnchorPixelClient qwenAnchorPixelClient = mock(QwenAnchorPixelClient.class);
+        AffineTransformEstimator affineTransformEstimator = mock(AffineTransformEstimator.class);
+        GoogleGeocodingClient googleGeocodingClient = mock(GoogleGeocodingClient.class);
+        when(googleGeocodingClient.localRouteBoundsAnchors("Osaka Marathon", "Osaka", "Japan"))
+                .thenReturn(List.of(
+                        new GeocodedAnchorPointDTO("northwest", 34.7010, 135.4720, "Osaka bounds"),
+                        new GeocodedAnchorPointDTO("northeast", 34.7010, 135.5430, "Osaka bounds"),
+                        new GeocodedAnchorPointDTO("southeast", 34.6450, 135.5430, "Osaka bounds"),
+                        new GeocodedAnchorPointDTO("southwest", 34.6450, 135.4720, "Osaka bounds")
+                ));
+
+        MarathonRouteGeoreferencingService service = new MarathonRouteGeoreferencingService(
+                qwenAnchorPixelClient,
+                affineTransformEstimator,
+                googleGeocodingClient
+        );
+
+        assertThat(service.hasLocalRouteBoundsAnchors("Osaka Marathon", "Osaka", "Japan")).isTrue();
+    }
+
+    @Test
     void georeferenceRouteFailsFastWhenGoogleGeocodingIsNotConfigured() {
         QwenAnchorPixelClient qwenAnchorPixelClient = mock(QwenAnchorPixelClient.class);
         AffineTransformEstimator affineTransformEstimator = mock(AffineTransformEstimator.class);

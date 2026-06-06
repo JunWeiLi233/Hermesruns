@@ -1,32 +1,13 @@
 #!/usr/bin/env node
-// Auditor for every persisted marathon course-map. For each row in
-// race_course_map_asset, reads liveRoutePointsJson + city lat/lng from the
-// world race catalog, and runs cheap geographic plausibility checks:
-//
-//   1. Every waypoint must sit within ~30 km of the race's catalog (city)
-//      anchor — otherwise the route is in the wrong city entirely (the
-//      most common breakage from earlier AI-acquire rounds).
-//   2. The route's length (great-circle, point-to-point) must be inside
-//      the expected race-distance band: 0.6× to 2.4× of distanceKm. A
-//      "marathon" with 8 km of accumulated polyline distance is broken;
-//      a "marathon" with 130 km is also broken (usually a synthetic-loop
-//      bug or a marker landed on a different continent).
-//   3. For non-loop marathons, the start and finish must be within
-//      catalog-distance×0.7 of each other (loops will have them close,
-//      point-to-points will have them apart). This is informational —
-//      we don't fail on it, just report it.
-//   4. The route must have at least 8 waypoints. Fewer than 8 reads as
-//      "broken sparse polyline that doesn't represent a real course".
-//
-// Output: a JSON report on stdout listing every marathon and any flags,
-// suitable for piping into a fix-prioritization step.
+// Audits the race-page marathon course-map inventory against either the admin
+// API used by the portal or the local H2 course-map table. This is
+// intentionally stricter than a smoke test: a generic synthetic route,
+// hand-corrected sidecar, missing source image, or runtime-rejected distance
+// ratio is not "clean" for the official admin reupload workflow.
 //
 // Run from repo root:
-//   node .tools/audit-marathon-coursemaps.mjs > /tmp/marathon-audit.json
-//
-// The auditor reads from the live DB directly via the h2 Shell tool, so
-// the running backend's data is what's checked — not the on-disk JSON
-// sidecars (which can drift, as the boston-marathon round demonstrated).
+//   node .tools/audit-marathon-coursemaps.mjs
+//   HERMES_ADMIN_TOKEN=... node .tools/audit-marathon-coursemaps.mjs --source api
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -35,102 +16,232 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
+const CATALOG_PATH = path.join(REPO_ROOT, "frontend", "src", "data", "worldRaceCatalog.json");
+const FULL_MARATHON_DISTANCE_KM = 42.195;
+const ARGS = parseArgs(process.argv.slice(2));
+const AUDIT_SOURCE = (ARGS.source || process.env.HERMES_COURSE_MAP_AUDIT_SOURCE || (process.env.HERMES_ADMIN_TOKEN ? "api" : "h2")).toLowerCase();
+const API_BASE_URL = (ARGS["api-base"] || process.env.HERMES_API_BASE_URL || "http://localhost:8080").replace(/\/+$/, "");
+const API_TOKEN = ARGS.token || process.env.HERMES_ADMIN_TOKEN || "";
 
-const H2_JAR_PATH = path.join(
-  process.env.USERPROFILE || process.env.HOME || "",
-  ".m2",
-  "repository",
-  "com",
-  "h2database",
-  "h2",
-  "2.4.240",
-  "h2-2.4.240.jar",
+const H2_JAR_PATH = firstExistingPath(
+  path.join(REPO_ROOT, ".m2repo", "com", "h2database", "h2", "2.4.240", "h2-2.4.240.jar"),
+  path.join(
+    process.env.USERPROFILE || process.env.HOME || "",
+    ".m2",
+    "repository",
+    "com",
+    "h2database",
+    "h2",
+    "2.4.240",
+    "h2-2.4.240.jar",
+  ),
 );
 const DB_URL = "jdbc:h2:file:./backend/hermes_db_v2;AUTO_SERVER=TRUE";
 
+const TRUSTED_OFFICIAL_WAYPOINT_SOURCES = new Set([
+  "nyc-official-course",
+  "tokyo-official-course",
+  "la-official-course",
+  "osaka-official-course",
+  "athens-official-course",
+]);
+
+function parseArgs(argv) {
+  const parsed = {};
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (!arg.startsWith("--")) continue;
+    const withoutPrefix = arg.slice(2);
+    const equalsIndex = withoutPrefix.indexOf("=");
+    if (equalsIndex >= 0) {
+      parsed[withoutPrefix.slice(0, equalsIndex)] = withoutPrefix.slice(equalsIndex + 1);
+    } else {
+      const next = argv[i + 1];
+      if (next && !next.startsWith("--")) {
+        parsed[withoutPrefix] = next;
+        i += 1;
+      } else {
+        parsed[withoutPrefix] = "true";
+      }
+    }
+  }
+  return parsed;
+}
+
+function firstExistingPath(...candidates) {
+  return candidates.find((candidate) => candidate && fs.existsSync(candidate)) || candidates[0];
+}
+
 function runSql(sql) {
-  const out = execFileSync(
+  return execFileSync(
     "java",
     ["-cp", H2_JAR_PATH, "org.h2.tools.Shell", "-url", DB_URL, "-user", "sa", "-password", ""],
     { input: sql, encoding: "utf8", cwd: REPO_ROOT, maxBuffer: 256 * 1024 * 1024 },
   );
-  return out;
 }
 
-function loadAllRoutes() {
-  // First get the race IDs (cheap, narrow columns). Then per-race fetch the
-  // single live_route_points_json field with maxwidth turned up high so the
-  // H2 Shell doesn't wrap the JSON across console lines (the wrapped output
-  // breaks pipe-based parsing).
-  const idsRaw = runSql(
-    "SELECT race_id FROM race_course_map_asset WHERE live_route_points_json IS NOT NULL AND live_route_points_json <> '[]' ORDER BY race_id;",
-  );
-  const raceIds = [];
-  for (const rawLine of idsRaw.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    // Skip header, banner, prompt, separator, and empty lines.
-    if (!line || /^(RACE_ID|sql>|Welcome|Exit|Commands|help|list|maxwidth|autocommit|history|quit|Type|\[|\(|-+\s*$|Aborted|Connection)/i.test(line)) continue;
-    const m = line.match(/^([a-z0-9][a-z0-9_-]+)$/);
-    if (m) raceIds.push(m[1]);
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      ...(options.headers || {}),
+    },
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`HTTP ${response.status} from ${url}: ${body.slice(0, 300)}`);
   }
+  return response.json();
+}
 
+function loadCatalogMarathons() {
+  const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
+  return catalog
+    .filter((race) => Math.abs(Number(race?.distanceKm || 0) - FULL_MARATHON_DISTANCE_KM) < 0.5)
+    .map((race) => ({
+      id: race.id,
+      raceName: race.name,
+      city: race.city,
+      country: race.country,
+      officialWebsite: race.officialWebsite || "",
+      latitude: race.lat,
+      longitude: race.lng,
+      distanceKm: Number(race.distanceKm),
+    }));
+}
+
+function parseRaceIds(raw) {
+  const raceIds = [];
+  for (const rawLine of raw.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || /^(RACE_ID|sql>|Welcome|Exit|Commands|help|list|maxwidth|autocommit|history|quit|Type|\[|\(|-+\s*$|Aborted|Connection)/i.test(line)) {
+      continue;
+    }
+    const match = line.match(/^([a-z0-9][a-z0-9_-]+)$/);
+    if (match) raceIds.push(match[1]);
+  }
+  return raceIds;
+}
+
+async function loadAllAssetRows() {
+  if (AUDIT_SOURCE === "api") return loadAllAssetRowsFromApi();
+  if (AUDIT_SOURCE !== "h2") {
+    throw new Error(`Unsupported audit source "${AUDIT_SOURCE}". Use "api" or "h2".`);
+  }
+  return loadAllAssetRowsFromH2();
+}
+
+async function loadAllAssetRowsFromApi() {
+  if (!API_TOKEN) {
+    throw new Error("HERMES_ADMIN_TOKEN or --token is required when --source api is used.");
+  }
+  const rows = await fetchJson(`${API_BASE_URL}/api/admin/race-course-maps`, {
+    headers: {
+      Authorization: `Bearer ${API_TOKEN}`,
+    },
+  });
+  if (!Array.isArray(rows)) {
+    throw new Error("Admin course-map API returned a non-array response.");
+  }
+  return rows.map(rowFromAdminApi);
+}
+
+function rowFromAdminApi(item) {
+  const live = item?.live || null;
+  return {
+    race_id: item?.raceId,
+    race_name: item?.raceName,
+    city: item?.city,
+    country: item?.country,
+    official_website: "",
+    latitude: null,
+    longitude: null,
+    distance_km: null,
+    live_image_url: live?.imageUrl || "",
+    live_overlay_bounds_json: live?.overlayBounds ? JSON.stringify(live.overlayBounds) : "",
+    live_confidence: live?.confidence ?? null,
+    live_source: live?.source || "",
+    live_updated_at: live?.updatedAt || null,
+    updated_at: item?.updatedAt || null,
+    live_route_points_json: JSON.stringify(Array.isArray(live?.routePoints) ? live.routePoints : []),
+  };
+}
+
+function loadAllAssetRowsFromH2() {
+  const idsRaw = runSql("SELECT race_id FROM race_course_map_asset ORDER BY race_id;");
+  const raceIds = parseRaceIds(idsRaw);
   const rows = [];
+
   for (const raceId of raceIds) {
     const safe = raceId.replace(/'/g, "''");
     const sql =
       "maxwidth 2000000;\n" +
-      `SELECT race_id, race_name, latitude, longitude, distance_km, live_route_points_json, live_overlay_bounds_json, live_confidence, live_source FROM race_course_map_asset WHERE race_id = '${safe}';`;
+      `SELECT race_id, race_name, city, country, official_website, latitude, longitude, distance_km, live_image_url, live_overlay_bounds_json, live_confidence, live_source, live_updated_at, updated_at, live_route_points_json FROM race_course_map_asset WHERE race_id = '${safe}';`;
     const raw = runSql(sql);
-
-    // Pull the single data row out of the shell output. Header lives on the
-    // line above the data; the data row has the most pipes.
-    const lines = raw.split(/\r?\n/).filter((l) => l.includes("|"));
-    let header = null;
-    let data = null;
-    for (let i = 0; i < lines.length; i++) {
-      // The H2 Shell prefixes the header line with "sql> " (the prompt echo).
-      // Strip that before splitting, otherwise the first column reads as
-      // "sql> RACE_ID" instead of "RACE_ID" and the header regex never matches.
-      const cleaned = lines[i].replace(/^\s*sql>\s*/, "");
-      const cols = cleaned.split("|").map((s) => s.trim());
-      if (!header && cols.some((c) => /^RACE_ID$/i.test(c))) {
-        header = cols;
-        continue;
-      }
-      if (header && cols.length >= header.length) {
-        data = cols;
-        break;
-      }
-    }
-    if (!header || !data) continue;
-    // Tail-merge in case label text contained a `|` inside live_route_points_json.
-    while (data.length > header.length) {
-      data[header.length - 1] = data.slice(header.length - 1).join("|");
-      data.length = header.length;
-    }
-    const obj = {};
-    for (let i = 0; i < header.length; i++) obj[header[i].toLowerCase()] = data[i];
-    rows.push(obj);
+    const row = parseSingleH2Row(raw);
+    if (row) rows.push(row);
   }
+
   return rows;
 }
 
-function safeNumber(v) {
-  if (v == null || v === "null" || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+function parseSingleH2Row(raw) {
+  const lines = raw.split(/\r?\n/).filter((line) => line.includes("|"));
+  let header = null;
+  let data = null;
+  for (const line of lines) {
+    const cleaned = line.replace(/^\s*sql>\s*/, "");
+    const cols = cleaned.split("|").map((part) => part.trim());
+    if (!header && cols.some((col) => /^RACE_ID$/i.test(col))) {
+      header = cols;
+      continue;
+    }
+    if (header && cols.length >= header.length) {
+      data = cols;
+      break;
+    }
+  }
+  if (!header || !data) return null;
+
+  // live_route_points_json is deliberately the last selected column. If H2
+  // output splitting sees a pipe inside JSON label text, merge it back there.
+  while (data.length > header.length) {
+    data[header.length - 1] = data.slice(header.length - 1).join("|");
+    data.length = header.length;
+  }
+
+  const row = {};
+  for (let i = 0; i < header.length; i++) {
+    row[header[i].toLowerCase()] = data[i];
+  }
+  return row;
 }
 
-function parseJsonField(v) {
-  if (v == null || v === "null" || v === "") return null;
+function safeNumber(value) {
+  if (value == null || value === "null" || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function nonBlank(value) {
+  return value != null && value !== "null" && String(value).trim() !== "";
+}
+
+function cleanString(value) {
+  return nonBlank(value) ? String(value).trim() : "";
+}
+
+function parseJsonField(value) {
+  if (!nonBlank(value)) return null;
   try {
-    return JSON.parse(v);
+    return JSON.parse(value);
   } catch {
     return null;
   }
 }
 
-const R_EARTH_KM = 6371.0;
+const EARTH_RADIUS_KM = 6371.0;
 
 function haversineKm(lat1, lng1, lat2, lng2) {
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -140,142 +251,222 @@ function haversineKm(lat1, lng1, lat2, lng2) {
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) ** 2;
-  return R_EARTH_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function polylineKm(points) {
-  let sum = 0;
+  let total = 0;
   for (let i = 1; i < points.length; i++) {
-    sum += haversineKm(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+    total += haversineKm(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
   }
-  return sum;
+  return total;
 }
 
 function maxDistanceFromAnchor(points, anchorLat, anchorLng) {
   let max = 0;
-  for (const p of points) {
-    const d = haversineKm(p.lat, p.lng, anchorLat, anchorLng);
-    if (d > max) max = d;
+  for (const point of points) {
+    max = Math.max(max, haversineKm(point.lat, point.lng, anchorLat, anchorLng));
   }
   return max;
 }
 
-function audit(row) {
-  const points = parseJsonField(row.live_route_points_json) || [];
-  const flags = [];
+function expectedDistanceRatioWindow(distanceKm, routePointCount) {
+  if (distanceKm != null && distanceKm >= 40.0) {
+    if (routePointCount >= 18) return { minRatio: 0.78, maxRatio: 1.22 };
+    if (routePointCount >= 14) return { minRatio: 0.65, maxRatio: 1.35 };
+    return { minRatio: 0.55, maxRatio: 1.45 };
+  }
+  if (routePointCount >= 16) return { minRatio: 0.6, maxRatio: 1.4 };
+  return { minRatio: 0.45, maxRatio: 1.7 };
+}
 
-  // Sanity-check waypoint shape.
+function minimumRoutePointCountForSource(source) {
+  return source != null && (source.startsWith("admin-") || source.startsWith("published-live")) ? 5 : 12;
+}
+
+function normalizePoints(rawPoints, flags) {
+  const points = Array.isArray(rawPoints) ? rawPoints : [];
   const normalized = points
-    .map((p) => ({ lat: safeNumber(p?.lat), lng: safeNumber(p?.lng), label: p?.label ?? null }))
-    .filter((p) => p.lat != null && p.lng != null);
-  if (normalized.length !== points.length) {
-    flags.push("non-numeric-waypoints");
-  }
-  if (normalized.length < 8) {
-    flags.push(`sparse-${normalized.length}-waypoints`);
+    .map((point) => ({ lat: safeNumber(point?.lat), lng: safeNumber(point?.lng), label: point?.label ?? null }))
+    .filter((point) => point.lat != null && point.lng != null);
+  if (normalized.length !== points.length) flags.push("non-numeric-waypoints");
+  return normalized;
+}
+
+function auditCatalogRace(catalogRace, row) {
+  const flags = [];
+  const source = cleanString(row?.live_source).toLowerCase();
+  const liveImageUrl = cleanString(row?.live_image_url);
+  const rawPoints = parseJsonField(row?.live_route_points_json);
+  const points = normalizePoints(rawPoints, flags);
+  const routePointMinimum = minimumRoutePointCountForSource(source);
+  const latitude = safeNumber(row?.latitude) ?? safeNumber(catalogRace.latitude);
+  const longitude = safeNumber(row?.longitude) ?? safeNumber(catalogRace.longitude);
+  const distanceKm = safeNumber(row?.distance_km) ?? safeNumber(catalogRace.distanceKm);
+
+  if (!row) flags.push("missing-backend-record");
+  if (!source) flags.push("missing-live-source");
+  if (!nonBlank(liveImageUrl)) flags.push("missing-live-source-map-image");
+  if (points.length === 0) flags.push("missing-live-route");
+  if (points.length > 0 && points.length < routePointMinimum) {
+    flags.push(`sparse-${points.length}-waypoints-need-${routePointMinimum}`);
   }
 
-  const cityLat = safeNumber(row.latitude);
-  const cityLng = safeNumber(row.longitude);
-  const distanceKm = safeNumber(row.distance_km);
+  if (source.includes("synthetic")) flags.push("synthetic-route");
+  if (source.includes("hand-corrected")) flags.push("hand-corrected-route-needs-official-upload");
+  if (source.includes("auto-acquire")) flags.push("auto-acquired-route-needs-visual-review");
+  if (TRUSTED_OFFICIAL_WAYPOINT_SOURCES.has(source) && !nonBlank(liveImageUrl)) {
+    flags.push("official-waypoints-without-uploaded-map");
+  }
 
-  // 1. Geographic-anchor check — every waypoint should be within ~30 km of
-  //    the city/race anchor lat/lng. Marathons that fit in a city footprint
-  //    rarely stretch beyond ~30 km from the city center; point-to-point
-  //    courses like Boston still stay within ~30 km of their finish anchor.
-  if (cityLat != null && cityLng != null && normalized.length > 0) {
-    const farthest = maxDistanceFromAnchor(normalized, cityLat, cityLng);
-    if (farthest > 60) {
-      flags.push(`anchor-far-${Math.round(farthest)}km`);
-    }
-  } else {
+  if (latitude != null && longitude != null && points.length > 0) {
+    const farthest = maxDistanceFromAnchor(points, latitude, longitude);
+    if (farthest > 60) flags.push(`anchor-far-${Math.round(farthest)}km`);
+  } else if (points.length > 0) {
     flags.push("missing-city-anchor");
   }
 
-  // 2. Polyline-distance plausibility. Bounds are deliberately wide because
-  //    waypoints are coarse — a 15–20 point hand-built polyline connecting
-  //    landmark turns with straight-line segments can easily undercount the
-  //    real winding road distance by 50%. The auditor only complains when
-  //    the great-circle sum is so far off the declared distance that the
-  //    polyline can't be reasonably tracing the same course (under 0.3× =
-  //    fake/sparse, over 2.4× = scrambled order or stray decorations).
-  let polyKm = null;
-  if (normalized.length >= 2) {
-    polyKm = polylineKm(normalized);
+  let routeKm = null;
+  let ratio = null;
+  let expectedWindow = null;
+  if (points.length >= 2) {
+    routeKm = polylineKm(points);
     if (distanceKm != null && distanceKm > 0) {
-      const ratio = polyKm / distanceKm;
-      if (ratio < 0.3) flags.push(`polyline-short-${ratio.toFixed(2)}x`);
-      if (ratio > 2.4) flags.push(`polyline-long-${ratio.toFixed(2)}x`);
+      ratio = routeKm / distanceKm;
+      expectedWindow = expectedDistanceRatioWindow(distanceKm, points.length);
+      if (ratio < expectedWindow.minRatio || ratio > expectedWindow.maxRatio) {
+        flags.push(`polyline-outside-runtime-window-${ratio.toFixed(2)}x`);
+      }
     }
   }
 
-  // 3. Loop vs point-to-point informational signal.
   let startFinishKm = null;
-  if (normalized.length >= 2) {
-    startFinishKm = haversineKm(
-      normalized[0].lat,
-      normalized[0].lng,
-      normalized[normalized.length - 1].lat,
-      normalized[normalized.length - 1].lng,
-    );
+  if (points.length >= 2) {
+    startFinishKm = haversineKm(points[0].lat, points[0].lng, points[points.length - 1].lat, points[points.length - 1].lng);
   }
 
-  // Map the live_source field to a priority hint. Known-bad sources rank
-  // higher for the fix queue.
-  const source = (row.live_source || "").toLowerCase();
-  const sourcePriority = source.includes("synthetic")
-    ? 90
-    : source.includes("auto-acquire")
-      ? 40
-      : 5;
-
   return {
-    raceId: row.race_id,
-    raceName: row.race_name,
-    cityAnchor: cityLat != null && cityLng != null ? { lat: cityLat, lng: cityLng } : null,
+    raceId: catalogRace.id,
+    raceName: cleanString(row?.race_name) || catalogRace.raceName,
+    city: cleanString(row?.city) || catalogRace.city,
+    country: cleanString(row?.country) || catalogRace.country,
+    officialWebsite: cleanString(row?.official_website) || catalogRace.officialWebsite,
+    catalogOfficialWebsite: catalogRace.officialWebsite,
+    liveImageUrl: liveImageUrl || null,
+    source: source || null,
+    liveUpdatedAt: cleanString(row?.live_updated_at) || null,
+    updatedAt: cleanString(row?.updated_at) || null,
     distanceKmDeclared: distanceKm,
-    polylineKm: polyKm == null ? null : Math.round(polyKm * 10) / 10,
-    polylineRatio: polyKm != null && distanceKm ? Math.round((polyKm / distanceKm) * 100) / 100 : null,
-    startFinishKm: startFinishKm == null ? null : Math.round(startFinishKm * 10) / 10,
-    waypointCount: normalized.length,
-    confidence: safeNumber(row.live_confidence),
-    source,
-    flags,
-    severity: flags.length === 0 ? 0 : flags.length + (sourcePriority >= 90 ? 2 : sourcePriority >= 40 ? 1 : 0),
+    expectedDistanceRatioWindow: expectedWindow,
+    polylineKm: routeKm == null ? null : round1(routeKm),
+    polylineRatio: ratio == null ? null : round2(ratio),
+    startFinishKm: startFinishKm == null ? null : round1(startFinishKm),
+    waypointCount: points.length,
+    confidence: safeNumber(row?.live_confidence),
+    flags: [...new Set(flags)],
+    severity: severityForFlags(flags),
   };
 }
 
-function main() {
-  if (!fs.existsSync(H2_JAR_PATH)) {
+function auditBackendOnlyRow(row) {
+  const catalogRace = {
+    id: row.race_id,
+    raceName: row.race_name,
+    city: row.city,
+    country: row.country,
+    officialWebsite: cleanString(row.official_website),
+    latitude: safeNumber(row.latitude),
+    longitude: safeNumber(row.longitude),
+    distanceKm: safeNumber(row.distance_km),
+  };
+  const audit = auditCatalogRace(catalogRace, row);
+  return { ...audit, backendOnly: true };
+}
+
+function severityForFlags(flags) {
+  let score = 0;
+  for (const flag of flags) {
+    if (flag.startsWith("missing-backend") || flag.startsWith("missing-live-route")) score = Math.max(score, 100);
+    else if (flag.startsWith("missing-live-source-map-image")) score = Math.max(score, 90);
+    else if (flag.includes("synthetic")) score = Math.max(score, 85);
+    else if (flag.includes("hand-corrected")) score = Math.max(score, 80);
+    else if (flag.startsWith("polyline-outside-runtime-window")) score = Math.max(score, 75);
+    else if (flag.startsWith("sparse")) score = Math.max(score, 70);
+    else if (flag.includes("auto-acquired")) score = Math.max(score, 50);
+    else score = Math.max(score, 25);
+  }
+  return score + Math.min(flags.length, 10);
+}
+
+function round1(number) {
+  return Math.round(number * 10) / 10;
+}
+
+function round2(number) {
+  return Math.round(number * 100) / 100;
+}
+
+function histogramFlags(items) {
+  const histogram = {};
+  for (const item of items) {
+    for (const flag of item.flags) {
+      const family = flag
+        .replace(/-[0-9.]+(km|x)?$/, "")
+        .replace(/-waypoints-need-[0-9]+$/, "-waypoints");
+      histogram[family] = (histogram[family] || 0) + 1;
+    }
+  }
+  return histogram;
+}
+
+function histogramSources(items) {
+  const histogram = {};
+  for (const item of items) {
+    const source = item.source || "(missing)";
+    histogram[source] = (histogram[source] || 0) + 1;
+  }
+  return histogram;
+}
+
+async function main() {
+  if (AUDIT_SOURCE === "h2" && !fs.existsSync(H2_JAR_PATH)) {
     process.stderr.write(`H2 jar not found at ${H2_JAR_PATH}. Aborting.\n`);
     process.exit(2);
   }
-  const rows = loadAllRoutes();
-  const audited = rows.map(audit).sort((a, b) => b.severity - a.severity);
-  const broken = audited.filter((a) => a.flags.length > 0);
-  const clean = audited.filter((a) => a.flags.length === 0);
+  const catalogMarathons = loadCatalogMarathons();
+  const rows = await loadAllAssetRows();
+  const rowsById = new Map(rows.map((row) => [row.race_id, row]));
+  const catalogIds = new Set(catalogMarathons.map((race) => race.id));
+
+  const audited = catalogMarathons
+    .map((race) => auditCatalogRace(race, rowsById.get(race.id)))
+    .sort((a, b) => b.severity - a.severity || a.raceId.localeCompare(b.raceId));
+  const backendOnly = rows
+    .filter((row) => !catalogIds.has(row.race_id))
+    .map(auditBackendOnlyRow)
+    .sort((a, b) => b.severity - a.severity || a.raceId.localeCompare(b.raceId));
+  const needsWork = audited.filter((item) => item.flags.length > 0);
+  const clean = audited.filter((item) => item.flags.length === 0);
 
   const summary = {
-    totalRoutes: audited.length,
-    routesWithFlags: broken.length,
-    routesClean: clean.length,
-    topFlagged: broken.slice(0, 15),
-    cleanIds: clean.map((c) => c.raceId),
-    flagHistogram: histogramFlags(broken),
+    catalogMarathons: catalogMarathons.length,
+    dataSource: AUDIT_SOURCE,
+    apiBaseUrl: AUDIT_SOURCE === "api" ? API_BASE_URL : null,
+    persistedAssetRows: rows.length,
+    auditedCatalogMarathons: audited.length,
+    marathonsNeedingWork: needsWork.length,
+    marathonsClean: clean.length,
+    backendOnlyRoutes: backendOnly.length,
+    topPriority: needsWork.slice(0, 25),
+    flagHistogram: histogramFlags(needsWork),
+    sourceHistogram: histogramSources(audited),
+    cleanIds: clean.map((item) => item.raceId),
   };
-  process.stdout.write(JSON.stringify({ summary, all: audited }, null, 2) + "\n");
+
+  process.stdout.write(JSON.stringify({ summary, all: audited, backendOnly }, null, 2) + "\n");
 }
 
-function histogramFlags(broken) {
-  const hist = {};
-  for (const r of broken) {
-    for (const f of r.flags) {
-      // Strip the numeric tail so "anchor-far-83km" + "anchor-far-120km" share a bucket.
-      const family = f.replace(/-[0-9.]+(km|x|-waypoints)?$/, "");
-      hist[family] = (hist[family] || 0) + 1;
-    }
-  }
-  return hist;
-}
-
-main();
+main().catch((error) => {
+  process.stderr.write(`${error?.stack || error?.message || error}\n`);
+  process.exit(1);
+});
