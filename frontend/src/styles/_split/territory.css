@@ -2525,7 +2525,7 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 .territory-page .terr-land-mask-concrete-land--active {
   opacity: 1;
-  filter: drop-shadow(0 0 12px rgba(240, 117, 97, 0.28)) drop-shadow(0 1px 2px rgba(255, 244, 225, 0.2));
+  filter: drop-shadow(0 0 12px rgba(240, 117, 97, 0.24)) drop-shadow(0 1px 2px rgba(255, 244, 225, 0.16));
 }
 
 .territory-page .terr-land-mask-concrete-land--rival {
@@ -2537,13 +2537,15 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   filter: none;
   mix-blend-mode: normal;
   shape-rendering: geometricPrecision;
+  stroke-dasharray: none;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-miterlimit: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .territory-page .terr-land-mask-contour--active {
-  filter: drop-shadow(0 0 8px rgba(240, 117, 97, 0.42));
+  filter: drop-shadow(0 0 10px rgba(240, 117, 97, 0.52)) drop-shadow(0 1px 0 rgba(255, 244, 225, 0.28));
 }
 
 .territory-page .terr-land-mask-contour--rival {

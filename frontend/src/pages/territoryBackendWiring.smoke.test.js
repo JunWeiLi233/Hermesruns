@@ -457,8 +457,8 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONTOUR_WEIGHT = \{ active: 3\.2, rival: 1\.15 \};[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = \{ active: 0\.88, rival: 0\.22 \};/,
-  'Territory should keep the active runner contour stronger than rival territory without returning to a noisy neon edge.',
+  /const LAND_MASK_CONTOUR_WEIGHT = \{ active: 4\.4, rival: 1\.25 \};[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = \{ active: 0\.98, rival: 0\.26 \};/,
+  'Territory should keep a crisp active runner contour that reads as the territory edge while keeping rival territory secondary.',
 );
 
 assert.doesNotMatch(
@@ -499,7 +499,7 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.74, rival: 0\.14 \};[\s\S]*?function paintLandRegions\(entries, renderer\)[\s\S]*?entries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?renderer,[\s\S]*?stroke: false,[\s\S]*?fillRule: 'nonzero'[\s\S]*?className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`/,
+  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.68, rival: 0\.12 \};[\s\S]*?function paintLandRegions\(entries, renderer\)[\s\S]*?entries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?renderer,[\s\S]*?stroke: false,[\s\S]*?fillRule: 'nonzero'[\s\S]*?className: `terr-land-mask-concrete-land\$\{active \? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'\}`/,
   'Territory backend render should paint active concrete land as the primary surface while keeping rival land subdued and separately targetable in CSS.',
 );
 
@@ -601,8 +601,8 @@ assert.match(
 
 assert.match(
   territoryCss,
-  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.28\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 8px rgba\(240, 117, 97, 0\.42\)\);[\s\S]*?\}/,
-  'Territory CSS should make the active owned land surface visually dominant without dashed or marching boundary noise.',
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.24\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 10px rgba\(240, 117, 97, 0\.52\)\) drop-shadow\(0 1px 0 rgba\(255, 244, 225, 0\.28\)\);[\s\S]*?\}/,
+  'Territory CSS should separate the active border from the fill so the territory edge reads crisply without dashed or marching boundary noise.',
 );
 
 assert.match(
@@ -661,8 +661,14 @@ assert.match(
 
 assert.match(
   runtimeVerifierSource,
-  /activeContours = q\('\.terr-land-mask-contour--active'\)[\s\S]*?activeConcreteLands = q\('\.terr-land-mask-concrete-land--active'\)[\s\S]*?assert\(proof\?\.activeContours > 0[\s\S]*?sample\.strokeWidth === \(isActive \? '3\.2' : '1\.15'\)[\s\S]*?sample\.strokeOpacity === \(isActive \? '0\.88' : '0\.22'\)/,
-  'Runtime proof should require active territory classes and a stronger active contour than rival territory.',
+  /activeContours = q\('\.terr-land-mask-contour--active'\)[\s\S]*?activeConcreteLands = q\('\.terr-land-mask-concrete-land--active'\)[\s\S]*?assert\(proof\?\.activeContours > 0[\s\S]*?sample\.strokeWidth === \(isActive \? '4\.4' : '1\.25'\)[\s\S]*?sample\.strokeOpacity === \(isActive \? '0\.98' : '0\.26'\)/,
+  'Runtime proof should require active territory classes and a crisp active contour that remains stronger than rival territory.',
+);
+
+assert.match(
+  runtimeVerifierSource,
+  /const activeContourSample = proof\.contourSample\.find\(\(sample\) => sample\.className\.includes\('terr-land-mask-contour--active'\)\);[\s\S]*?assert\(activeContourSample,[\s\S]*?assert\(activeContourSample\.strokeWidth === '4\.4'[\s\S]*?assert\(activeContourSample\.strokeOpacity === '0\.98'/,
+  'Runtime proof should explicitly sample the active contour stroke, not only count active paths.',
 );
 
 assert.match(

@@ -202,8 +202,8 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.28\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 8px rgba\(240, 117, 97, 0\.42\)\);[\s\S]*?\.territory-map-only \.terr-game-campaign-panel[\s\S]*width: min\(318px, calc\(100vw - 760px\)\);[\s\S]*?\.territory-map-only \.terr-game-hud,[\s\S]*?\.territory-map-only \.terr-game-territory-dock \{[\s\S]*?display: none !important;/,
-  'Territory split CSS should make active owned land the premium surface and remove permanent HUD/dock clutter.',
+  /\.territory-page \.terr-land-mask-concrete-land--active \{[\s\S]*?filter: drop-shadow\(0 0 12px rgba\(240, 117, 97, 0\.24\)\)[\s\S]*?\.territory-page \.terr-land-mask-contour--active \{[\s\S]*?filter: drop-shadow\(0 0 10px rgba\(240, 117, 97, 0\.52\)\) drop-shadow\(0 1px 0 rgba\(255, 244, 225, 0\.28\)\);[\s\S]*?\.territory-map-only \.terr-game-campaign-panel[\s\S]*width: min\(318px, calc\(100vw - 760px\)\);[\s\S]*?\.territory-map-only \.terr-game-hud,[\s\S]*?\.territory-map-only \.terr-game-territory-dock \{[\s\S]*?display: none !important;/,
+  'Territory split CSS should make the active border read crisply above the owned land and remove permanent HUD/dock clutter.',
 );
 
 assert.match(

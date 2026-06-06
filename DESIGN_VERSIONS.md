@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-06-07
+Date: 2026-06-06
+Surface: Territory map border clarity on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Strengthened the active territory contour, slightly lowered active/rival land fill opacity, and sharpened the existing contour glow so the ownership boundary reads as a crisp single border above the land surface.
+Why: The previous map pass reduced visual noise but left the active territory edge too close to the fill, making the border look weak against the map substrate.
+Rollback target: `0a7d6d13`
+Notes: Presentation and proof expectations only. Territory data, auth, route navigation, ownership math, bilingual copy, and the no-reference policy remain unchanged.
+
 ### Version: DV-2026-06-06-06
 Date: 2026-06-06
 Surface: Territory premium map-first composition on `/territory`

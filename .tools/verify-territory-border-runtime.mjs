@@ -420,6 +420,8 @@ function readTerritoryDomProof() {
       const rivalContours = q('.terr-land-mask-contour--rival');
       const activeConcreteLands = q('.terr-land-mask-concrete-land--active');
       const rivalConcreteLands = q('.terr-land-mask-concrete-land--rival');
+      const contourSampleNodes = [...activeContours, ...rivalContours].slice(0, 12);
+      const concreteLandSampleNodes = [...activeConcreteLands, ...rivalConcreteLands].slice(0, 12);
       const exactUnderlays = q('.terr-land-mask-exact-underlay');
       const genericRegions = q('.terr-land-mask-region:not(.terr-land-mask-region-surface)');
       const container = document.querySelector('.territory-heatmap-outline .leaflet-container');
@@ -461,7 +463,7 @@ function readTerritoryDomProof() {
           tileMixBlendMode: tileStyle?.mixBlendMode || null,
         },
         paneProof,
-        contourSample: contours.slice(0, 12).map((node) => ({
+        contourSample: contourSampleNodes.map((node) => ({
           className: node.getAttribute('class') || '',
           stroke: node.getAttribute('stroke'),
           strokeWidth: node.getAttribute('stroke-width'),
@@ -485,7 +487,7 @@ function readTerritoryDomProof() {
           hasC: /C/.test(node.getAttribute('d') || ''),
           hasLineCommands: /[LHV]/.test(node.getAttribute('d') || ''),
         })),
-        concreteLandSample: concreteLands.slice(0, 12).map((node) => ({
+        concreteLandSample: concreteLandSampleNodes.map((node) => ({
           className: node.getAttribute('class') || '',
           fill: node.getAttribute('fill'),
           fillOpacity: node.getAttribute('fill-opacity'),
@@ -749,8 +751,8 @@ try {
   );
   proof.contourSample.forEach((sample) => {
     const isActive = sample.className.includes('terr-land-mask-contour--active');
-    assert(sample.strokeWidth === (isActive ? '3.2' : '1.15'), `Unexpected contour width: ${sample.strokeWidth}`);
-    assert(sample.strokeOpacity === (isActive ? '0.88' : '0.22'), `Unexpected contour opacity: ${sample.strokeOpacity}`);
+    assert(sample.strokeWidth === (isActive ? '4.4' : '1.25'), `Unexpected contour width: ${sample.strokeWidth}`);
+    assert(sample.strokeOpacity === (isActive ? '0.98' : '0.26'), `Unexpected contour opacity: ${sample.strokeOpacity}`);
     if (isActive) {
       assert(sample.filter !== 'none', `Active contour should have a visible ownership filter: ${sample.filter}`);
     }
@@ -761,6 +763,10 @@ try {
     assert(sample.hasC === true, `Contour should render with cubic smoothing commands: ${sample.d}`);
     assert(sample.hasLineCommands === false, `Contour should not render line-command fallback: ${sample.d}`);
   });
+  const activeContourSample = proof.contourSample.find((sample) => sample.className.includes('terr-land-mask-contour--active'));
+  assert(activeContourSample, 'Active territory contour must be included in the sampled path proof.');
+  assert(activeContourSample.strokeWidth === '4.4', `Active contour should render as a crisp 4.4px border: ${activeContourSample.strokeWidth}`);
+  assert(activeContourSample.strokeOpacity === '0.98', `Active contour should render nearly solid above the fill: ${activeContourSample.strokeOpacity}`);
   assert(proof.surfaceSample.length === 0, 'Surface land fill should be absent so only the concrete contour can paint territory ownership.');
   proof.concreteLandSample.forEach((sample) => {
     const isActive = sample.className.includes('terr-land-mask-concrete-land--active');
@@ -771,7 +777,7 @@ try {
       assert(sample.filter !== 'none', `Active concrete land should have a visible ownership filter: ${sample.filter}`);
     }
     assert(sample.fillRule === 'nonzero', `Concrete land should use nonzero fill rule so smoothed paths cannot cut interior holes: ${sample.fillRule}`);
-    assert(sample.fillOpacity === (isActive ? '0.74' : '0.14'), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
+    assert(sample.fillOpacity === (isActive ? '0.68' : '0.12'), `Unexpected concrete land opacity: ${sample.fillOpacity}`);
     assert(sample.d && sample.d.length > 0, 'Concrete land fill should have a rendered Leaflet SVG path.');
   });
   assert(proof.exactUnderlaySample.length === 0, 'Exact coverage underlay sample should be absent from the current concrete-land stack.');
