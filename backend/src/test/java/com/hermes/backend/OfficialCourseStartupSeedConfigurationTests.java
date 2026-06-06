@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.boot.ApplicationRunner;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -209,13 +210,7 @@ class OfficialCourseStartupSeedConfigurationTests {
         currentNewYork.setLiveSummary("Route follows the official NYRR elevation profile.");
         currentNewYork.setLiveTotalClimbMeters(NycMarathonOfficialCourse.OFFICIAL_TOTAL_CLIMB_METERS);
         currentNewYork.setLiveElevationSamplesJson("[29,36,48,61,73,79,75,61,46,32,21,15,13,12,14,17]");
-        currentNewYork.setLiveRoutePointsJson(
-                "[{\"lat\":40.6055,\"lng\":-74.0563,\"label\":\"Start - Fort Wadsworth\"},"
-                        + "{\"lat\":40.6076,\"lng\":-74.0412,\"label\":\"Verrazzano-Narrows Bridge\"},"
-                        + "{\"lat\":40.7644,\"lng\":-73.9738,\"label\":\"Central Park South\"},"
-                        + "{\"lat\":40.7681,\"lng\":-73.9819,\"label\":\"Columbus Circle\"},"
-                        + "{\"lat\":40.7724,\"lng\":-73.9789,\"label\":\"Finish - West Drive at Tavern on the Green\"}]"
-        );
+        currentNewYork.setLiveRoutePointsJson(currentDetailedNewYorkRouteJson());
         when(assetRepository.findByRaceId(anyString())).thenAnswer(invocation -> {
             String raceId = invocation.getArgument(0, String.class);
             if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
@@ -252,6 +247,83 @@ class OfficialCourseStartupSeedConfigurationTests {
                         + "{\"lat\":40.7681,\"lng\":-73.9819,\"label\":\"Columbus Circle\"},"
                         + "{\"lat\":40.7724,\"lng\":-73.9789,\"label\":\"Finish - West Drive at Tavern on the Green\"}]"
         );
+        when(assetRepository.findByRaceId(anyString())).thenAnswer(invocation -> {
+            String raceId = invocation.getArgument(0, String.class);
+            if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+                return Optional.of(staleNewYork);
+            }
+            return Optional.of(verifiedAdminAsset(raceId));
+        });
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), eq("startup-seeder"), eq(true)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
+                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+
+        runner.run(null);
+
+        ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
+                ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
+        verify(bulkSeedService).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
+        assertThat(raceCaptor.getValue().id()).isEqualTo(NycMarathonOfficialCourse.RACE_ID);
+    }
+
+    @Test
+    void startupSeederRefreshesCurrentTaggedNewYorkCourseMapWithSparseShortRoute() throws Exception {
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset staleNewYork = new RaceCourseMapAsset();
+        staleNewYork.setRaceId(NycMarathonOfficialCourse.RACE_ID);
+        staleNewYork.setOfficialWebsite(NycMarathonOfficialCourse.OFFICIAL_COURSE_URL);
+        staleNewYork.setLiveSource(NycMarathonOfficialCourse.OFFICIAL_SOURCE);
+        staleNewYork.setLiveSummary("Route follows the official NYRR elevation profile.");
+        staleNewYork.setLiveTotalClimbMeters(NycMarathonOfficialCourse.OFFICIAL_TOTAL_CLIMB_METERS);
+        staleNewYork.setLiveElevationSamplesJson("[29,36,48,61,73,79,75,61,46,32,21,15,13,12,14,17]");
+        staleNewYork.setLiveRoutePointsJson(
+                "[{\"lat\":40.6055,\"lng\":-74.0563,\"label\":\"Start - Fort Wadsworth\"},"
+                        + "{\"lat\":40.6076,\"lng\":-74.0412,\"label\":\"Verrazzano-Narrows Bridge\"},"
+                        + "{\"lat\":40.7600,\"lng\":-73.9628,\"label\":\"Queensboro Bridge\"},"
+                        + "{\"lat\":40.8118,\"lng\":-73.9293,\"label\":\"Bronx - Willis Ave Bridge\"},"
+                        + "{\"lat\":40.8120,\"lng\":-73.9380,\"label\":\"Madison Ave Bridge\"},"
+                        + "{\"lat\":40.7655,\"lng\":-73.9729,\"label\":\"Central Park South\"},"
+                        + "{\"lat\":40.7681,\"lng\":-73.9819,\"label\":\"Columbus Circle\"},"
+                        + "{\"lat\":40.7740,\"lng\":-73.9766,\"label\":\"Finish - West Drive at Tavern on the Green\"}]"
+        );
+        when(assetRepository.findByRaceId(anyString())).thenAnswer(invocation -> {
+            String raceId = invocation.getArgument(0, String.class);
+            if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+                return Optional.of(staleNewYork);
+            }
+            return Optional.of(verifiedAdminAsset(raceId));
+        });
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), eq("startup-seeder"), eq(true)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
+                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+
+        runner.run(null);
+
+        ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
+                ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
+        verify(bulkSeedService).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
+        assertThat(raceCaptor.getValue().id()).isEqualTo(NycMarathonOfficialCourse.RACE_ID);
+    }
+
+    @Test
+    void startupSeederRefreshesCurrentTaggedNewYorkCourseMapWithDuplicateStartLabel() throws Exception {
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset staleNewYork = new RaceCourseMapAsset();
+        staleNewYork.setRaceId(NycMarathonOfficialCourse.RACE_ID);
+        staleNewYork.setOfficialWebsite(NycMarathonOfficialCourse.OFFICIAL_COURSE_URL);
+        staleNewYork.setLiveSource(NycMarathonOfficialCourse.OFFICIAL_SOURCE);
+        staleNewYork.setLiveSummary("Route follows the official NYRR elevation profile.");
+        staleNewYork.setLiveTotalClimbMeters(NycMarathonOfficialCourse.OFFICIAL_TOTAL_CLIMB_METERS);
+        staleNewYork.setLiveElevationSamplesJson("[29,36,48,61,73,79,75,61,46,32,21,15,13,12,14,17]");
+        staleNewYork.setLiveRoutePointsJson(currentDetailedNewYorkRouteJson()
+                .replace("{\"lat\":40.602068,\"lng\":-74.058683}",
+                        "{\"lat\":40.602068,\"lng\":-74.058683,\"label\":\"Start - Fort Wadsworth\"}"));
         when(assetRepository.findByRaceId(anyString())).thenAnswer(invocation -> {
             String raceId = invocation.getArgument(0, String.class);
             if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
@@ -397,5 +469,38 @@ class OfficialCourseStartupSeedConfigurationTests {
                 + "{\"lat\":31.48387,\"lng\":120.31938,\"label\":\"Finance Second Street / Fangmiao Road\"},"
                 + "{\"lat\":31.47836,\"lng\":120.32303,\"label\":\"Finish - Wuxi Taihu International Expo Center\"}]");
         return asset;
+    }
+
+    private String currentDetailedNewYorkRouteJson() {
+        List<double[]> route = NycMarathonOfficialCourse.detailedRoute();
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < route.size(); i++) {
+            if (i > 0) {
+                json.append(',');
+            }
+            double[] point = route.get(i);
+            json.append("{\"lat\":").append(point[0])
+                    .append(",\"lng\":").append(point[1]);
+            String label = newYorkLabelForDetailedRouteIndex(i, route.size());
+            if (label != null) {
+                json.append(",\"label\":\"").append(label).append("\"");
+            }
+            json.append('}');
+        }
+        json.append(']');
+        return json.toString();
+    }
+
+    private String newYorkLabelForDetailedRouteIndex(int index, int routeSize) {
+        return switch (index) {
+            case 0 -> "Start - Fort Wadsworth";
+            case 20 -> "Verrazzano-Narrows Bridge";
+            case 220 -> "Queensboro Bridge";
+            case 282 -> "Bronx - Willis Ave Bridge";
+            case 299 -> "Madison Ave Bridge";
+            case 424 -> "Central Park South";
+            case 432 -> "Columbus Circle";
+            default -> index == routeSize - 1 ? "Finish - West Drive at Tavern on the Green" : null;
+        };
     }
 }

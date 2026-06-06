@@ -609,6 +609,9 @@ public class RaceCourseMapBulkSeedService {
         if (ChicagoMarathonKnownCourse.RACE_ID.equals(raceId)) {
             return ChicagoMarathonKnownCourse.routePoints();
         }
+        if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return generateNewYorkDetailedCoursePolyline();
+        }
         if (AthensMarathonOfficialCourse.RACE_ID.equals(raceId)) {
             return generateOfficialGpxPolyline(
                     AthensMarathonOfficialCourse.RACE_ID,
@@ -778,6 +781,44 @@ public class RaceCourseMapBulkSeedService {
             return List.of();
         }
         return labeled;
+    }
+
+    private List<RoutePoint> generateNewYorkDetailedCoursePolyline() {
+        List<RoutePoint> rawRoute = NycMarathonOfficialCourse.detailedRoute().stream()
+                .map(point -> new RoutePoint(point[0], point[1], null))
+                .toList();
+        List<RoutePoint> resampled = geometryService.resampleRoute(rawRoute, 600);
+        List<RoutePoint> labeled = stampOfficialCourseLabels(
+                resampled,
+                NycMarathonOfficialCourse.waypoints(),
+                NycMarathonOfficialCourse.waypointCount(),
+                NycMarathonOfficialCourse.RACE_ID
+        );
+        if (labeled.isEmpty()) {
+            return List.of();
+        }
+        List<RoutePoint> result = new ArrayList<>(labeled);
+        clearInteriorLabel(result, "Start - Fort Wadsworth");
+        clearInteriorLabel(result, "Finish - West Drive at Tavern on the Green");
+        RoutePoint start = result.get(0);
+        RoutePoint finish = result.get(result.size() - 1);
+        result.set(0, new RoutePoint(start.lat(), start.lng(), "Start - Fort Wadsworth"));
+        result.set(result.size() - 1, new RoutePoint(finish.lat(), finish.lng(), "Finish - West Drive at Tavern on the Green"));
+        double routeKm = geometryService.polylineDistanceKm(result);
+        if (routeKm < 42.0 || routeKm > 43.2) {
+            logger.warn("NYC detailed official course had implausible distance {} km", routeKm);
+            return List.of();
+        }
+        return result;
+    }
+
+    private void clearInteriorLabel(List<RoutePoint> route, String label) {
+        for (int i = 1; i < route.size() - 1; i++) {
+            RoutePoint point = route.get(i);
+            if (label.equals(point.label())) {
+                route.set(i, new RoutePoint(point.lat(), point.lng(), null));
+            }
+        }
     }
 
     private boolean shouldUseOfficialStraightLineLeg(String raceId, int legIndex) {

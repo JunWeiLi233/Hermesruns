@@ -29,6 +29,8 @@ public class OfficialCourseStartupSeedConfiguration {
             LoggerFactory.getLogger(OfficialCourseStartupSeedConfiguration.class);
     private static final Pattern JSON_LNG_PATTERN =
             Pattern.compile("\"lng\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
+    private static final Pattern JSON_ROUTE_POINT_PATTERN =
+            Pattern.compile("\"lat\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)\\s*,\\s*\"lng\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
     private static final double NYC_WESTWARD_DETOUR_LNG = -74.0600;
 
     @Bean
@@ -193,12 +195,21 @@ public class OfficialCourseStartupSeedConfiguration {
             return false;
         }
         String routePoints = lower(asset.getLiveRoutePointsJson());
-        return routePoints.contains("start - fort wadsworth")
+        return hasSingleOccurrence(routePoints, "start - fort wadsworth")
                 && routePoints.contains("verrazzano-narrows bridge")
                 && routePoints.contains("central park south")
                 && routePoints.contains("columbus circle")
-                && routePoints.contains("tavern on the green")
-                && hasNoNewYorkWestwardBridgeDetour(asset.getLiveRoutePointsJson());
+                && hasSingleOccurrence(routePoints, "finish - west drive at tavern on the green")
+                && hasNoNewYorkWestwardBridgeDetour(asset.getLiveRoutePointsJson())
+                && hasCurrentNewYorkDetailedRouteDistance(asset.getLiveRoutePointsJson());
+    }
+
+    private boolean hasSingleOccurrence(String value, String needle) {
+        if (value == null || value.isBlank() || needle == null || needle.isBlank()) {
+            return false;
+        }
+        int first = value.indexOf(needle);
+        return first >= 0 && value.indexOf(needle, first + needle.length()) < 0;
     }
 
     private boolean hasNoNewYorkWestwardBridgeDetour(String routePointsJson) {
@@ -215,6 +226,43 @@ public class OfficialCourseStartupSeedConfiguration {
             }
         }
         return foundLongitude;
+    }
+
+    private boolean hasCurrentNewYorkDetailedRouteDistance(String routePointsJson) {
+        Matcher matcher = JSON_ROUTE_POINT_PATTERN.matcher(normalize(routePointsJson));
+        double previousLat = 0.0;
+        double previousLng = 0.0;
+        double distanceKm = 0.0;
+        int count = 0;
+        while (matcher.find()) {
+            double lat;
+            double lng;
+            try {
+                lat = Double.parseDouble(matcher.group(1));
+                lng = Double.parseDouble(matcher.group(2));
+            } catch (NumberFormatException ex) {
+                return false;
+            }
+            if (count > 0) {
+                distanceKm += haversineKm(previousLat, previousLng, lat, lng);
+            }
+            previousLat = lat;
+            previousLng = lng;
+            count++;
+        }
+        return count >= 400 && distanceKm >= 42.0 && distanceKm <= 43.2;
+    }
+
+    private double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        double radiusKm = 6371.0088;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double rLat1 = Math.toRadians(lat1);
+        double rLat2 = Math.toRadians(lat2);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(rLat1) * Math.cos(rLat2)
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return 2 * radiusKm * Math.asin(Math.min(1.0, Math.sqrt(a)));
     }
 
     private boolean hasCurrentChicagoOfficialSeed(RaceCourseMapAsset asset) {

@@ -619,6 +619,28 @@ class RaceCourseMapBulkSeedServiceTests {
     }
 
     @Test
+    void newYorkOfficialCourseUsesDeterministicDetailedTrackInsteadOfOsrm() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RaceCourseMapBulkSeedService service = newService(
+                restTemplate,
+                mock(RaceCourseMapAssetRepository.class));
+
+        List<RoutePoint> route = service.generateOfficialCoursePolyline(NycMarathonOfficialCourse.RACE_ID);
+
+        assertThat(route).hasSize(600);
+        assertThat(polylineKm(route)).isBetween(42.0, 43.2);
+        assertThat(route.stream().mapToDouble(RoutePoint::lng).min().orElseThrow()).isGreaterThan(-74.0600);
+        List<String> labels = route.stream().map(RoutePoint::label).filter(java.util.Objects::nonNull).toList();
+        assertThat(labels)
+                .contains("Start - Fort Wadsworth", "Verrazzano-Narrows Bridge", "Queensboro Bridge",
+                        "Bronx - Willis Ave Bridge", "Madison Ave Bridge", "Central Park South",
+                        "Finish - West Drive at Tavern on the Green");
+        assertThat(labels.stream().filter("Start - Fort Wadsworth"::equals).count()).isEqualTo(1);
+        assertThat(labels.stream().filter("Finish - West Drive at Tavern on the Green"::equals).count()).isEqualTo(1);
+        verify(restTemplate, never()).exchange(any(RequestEntity.class), any(ParameterizedTypeReference.class));
+    }
+
+    @Test
     void seedRacePersistsNyrrOfficialNewYorkElevationProfileInsteadOfDemBridgeSampling() throws Exception {
         RestTemplate restTemplate = mockElevationRestTemplate();
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
