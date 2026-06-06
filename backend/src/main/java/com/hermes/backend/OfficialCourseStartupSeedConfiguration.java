@@ -3,6 +3,7 @@ package com.hermes.backend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -27,6 +28,7 @@ public class OfficialCourseStartupSeedConfiguration {
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
+    @ConditionalOnProperty(name = "app.official-course.startup-seed.enabled", havingValue = "true", matchIfMissing = true)
     ApplicationRunner officialCourseStartupSeeder(
             RaceCourseMapBulkSeedService bulkSeedService,
             RaceCourseMapAssetRepository assetRepository

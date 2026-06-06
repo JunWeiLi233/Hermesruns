@@ -28,10 +28,22 @@ public class SystemConfigService {
     // Strava OAuth
     @Value("${strava.client.id:}")
     private String stravaClientId;
+    @Value("${STRAVA_CLIENT_ID:}")
+    private String stravaClientIdEnv;
+    @Value("${APP_STRAVA_CLIENT_ID:}")
+    private String appStravaClientId;
     @Value("${strava.client.secret:}")
     private String stravaClientSecret;
+    @Value("${STRAVA_CLIENT_SECRET:}")
+    private String stravaClientSecretEnv;
+    @Value("${APP_STRAVA_CLIENT_SECRET:}")
+    private String appStravaClientSecret;
     @Value("${app.strava.redirect-uri:http://localhost:8080/api/auth/strava/callback}")
     private String stravaRedirectUri;
+    @Value("${STRAVA_REDIRECT_URI:}")
+    private String stravaRedirectUriEnv;
+    @Value("${APP_STRAVA_REDIRECT_URI:}")
+    private String appStravaRedirectUri;
 
     // AI / Shoe scanning
     @Value("${app.ai.api-key:}")
@@ -69,17 +81,27 @@ public class SystemConfigService {
         return v != null && !v.trim().isBlank();
     }
 
+    private static String firstPresent(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (isPresent(value)) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
     public boolean isGoogleConfigured() {
         return isPresent(googleClientId) && isPresent(googleClientSecret);
     }
 
     public boolean isStravaConfigured() {
-        return isPresent(stravaClientId) && isPresent(stravaClientSecret) && secretEncryptionService.isConfigured();
+        return isPresent(effectiveStravaClientId()) && isPresent(effectiveStravaClientSecret()) && secretEncryptionService.isConfigured();
     }
 
     public Map<String, Object> getStravaStatus() {
-        boolean clientIdPresent = isPresent(stravaClientId);
-        boolean clientSecretPresent = isPresent(stravaClientSecret);
+        boolean clientIdPresent = isPresent(effectiveStravaClientId());
+        boolean clientSecretPresent = isPresent(effectiveStravaClientSecret());
         boolean encryptionKeyConfigured = secretEncryptionService.isConfigured();
         boolean configured = isStravaConfigured();
         String mode = configured ? "configured" : "config-missing";
@@ -99,9 +121,43 @@ public class SystemConfigService {
         response.put("clientIdPresent", clientIdPresent);
         response.put("clientSecretPresent", clientSecretPresent);
         response.put("encryptionKeyConfigured", encryptionKeyConfigured);
-        response.put("redirectUri", stravaRedirectUri);
+        response.put("redirectUri", effectiveStravaRedirectUri());
         response.put("reason", reason);
         return response;
+    }
+
+    private String effectiveStravaClientId() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_ID"),
+                System.getProperty("APP_STRAVA_CLIENT_ID"),
+                stravaClientId,
+                stravaClientIdEnv,
+                appStravaClientId,
+                System.getenv("STRAVA_CLIENT_ID"),
+                System.getenv("APP_STRAVA_CLIENT_ID"));
+    }
+
+    private String effectiveStravaClientSecret() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_SECRET"),
+                System.getProperty("APP_STRAVA_CLIENT_SECRET"),
+                stravaClientSecret,
+                stravaClientSecretEnv,
+                appStravaClientSecret,
+                System.getenv("STRAVA_CLIENT_SECRET"),
+                System.getenv("APP_STRAVA_CLIENT_SECRET"));
+    }
+
+    private String effectiveStravaRedirectUri() {
+        return firstPresent(
+                System.getProperty("app.strava.redirect-uri"),
+                System.getProperty("STRAVA_REDIRECT_URI"),
+                System.getProperty("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUriEnv,
+                appStravaRedirectUri,
+                System.getenv("STRAVA_REDIRECT_URI"),
+                System.getenv("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUri);
     }
 
     public boolean isAiConfigured() {

@@ -11,6 +11,8 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -21,30 +23,53 @@ class StravaAliasConfigTests {
 
     @Test
     void appStravaAliasesEnableConfigStatusAndOAuthStartFlow() {
-        try (var context = new SpringApplicationBuilder(TestConfig.class)
-                .properties(
-                        "spring.main.web-application-type=none",
-                        "APP_STRAVA_CLIENT_ID=alias-client-id",
-                        "APP_STRAVA_CLIENT_SECRET=alias-client-secret",
-                        "APP_STRAVA_REDIRECT_URI=https://example.com/api/auth/strava/callback",
-                        "APP_DATA_ENCRYPTION_KEY=test-encryption-key"
-                )
-                .run()) {
-            SystemConfigService systemConfigService = context.getBean(SystemConfigService.class);
-            OAuthController controller = context.getBean(OAuthController.class);
+        Map<String, String> previous = setSystemProperties(Map.of(
+                "APP_STRAVA_CLIENT_ID", "alias-client-id",
+                "APP_STRAVA_CLIENT_SECRET", "alias-client-secret",
+                "APP_STRAVA_REDIRECT_URI", "https://example.com/api/auth/strava/callback",
+                "APP_DATA_ENCRYPTION_KEY", "test-encryption-key"
+        ));
+        try {
+            try (var context = new SpringApplicationBuilder(TestConfig.class)
+                    .properties("spring.main.web-application-type=none")
+                    .run()) {
+                SystemConfigService systemConfigService = context.getBean(SystemConfigService.class);
+                OAuthController controller = context.getBean(OAuthController.class);
 
-            assertTrue(systemConfigService.isStravaConfigured());
-            assertEquals("configured", systemConfigService.getStravaStatus().get("mode"));
-            assertEquals(Boolean.TRUE, systemConfigService.getStravaStatus().get("clientIdPresent"));
-            assertEquals(Boolean.TRUE, systemConfigService.getStravaStatus().get("clientSecretPresent"));
+                assertTrue(systemConfigService.isStravaConfigured());
+                assertEquals("configured", systemConfigService.getStravaStatus().get("mode"));
+                assertEquals(Boolean.TRUE, systemConfigService.getStravaStatus().get("clientIdPresent"));
+                assertEquals(Boolean.TRUE, systemConfigService.getStravaStatus().get("clientSecretPresent"));
 
-            RedirectView redirectView = controller.startStravaAuth("login");
-            String decodedUrl = URLDecoder.decode(redirectView.getUrl(), StandardCharsets.UTF_8);
+                RedirectView redirectView = controller.startStravaAuth("login");
+                String decodedUrl = URLDecoder.decode(redirectView.getUrl(), StandardCharsets.UTF_8);
 
-            assertNotNull(redirectView.getUrl());
-            assertTrue(redirectView.getUrl().contains("client_id=alias-client-id"));
-            assertTrue(decodedUrl.contains("redirect_uri=https://example.com/api/auth/strava/callback"));
+                assertNotNull(redirectView.getUrl());
+                assertTrue(redirectView.getUrl().contains("client_id=alias-client-id"));
+                assertTrue(decodedUrl.contains("redirect_uri=https://example.com/api/auth/strava/callback"));
+            }
+        } finally {
+            restoreSystemProperties(previous);
         }
+    }
+
+    private static Map<String, String> setSystemProperties(Map<String, String> values) {
+        Map<String, String> previous = new LinkedHashMap<>();
+        values.forEach((key, value) -> {
+            previous.put(key, System.getProperty(key));
+            System.setProperty(key, value);
+        });
+        return previous;
+    }
+
+    private static void restoreSystemProperties(Map<String, String> previous) {
+        previous.forEach((key, value) -> {
+            if (value == null) {
+                System.clearProperty(key);
+            } else {
+                System.setProperty(key, value);
+            }
+        });
     }
 
     @Configuration

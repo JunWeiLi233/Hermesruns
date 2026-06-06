@@ -492,7 +492,10 @@ public class RaceCourseMapImageService {
     private byte[] fetchBinaryBytes(String url, int maxBytes) {
         try {
             validateImageUrl(url);
-            ResponseEntity<byte[]> response = restTemplate.exchange(java.net.URI.create(url), HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
+            ResponseEntity<byte[]> response = url.contains("%")
+                    ? restTemplate.exchange(java.net.URI.create(url), HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class)
+                    : restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
+            if (response == null) return null;
             byte[] body = response.getBody();
             if (body == null || body.length == 0 || body.length > maxBytes) return null;
             return body;

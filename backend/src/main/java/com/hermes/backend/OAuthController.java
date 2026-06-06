@@ -98,11 +98,29 @@ public class OAuthController {
     @Value("${strava.client.id:}")
     private String stravaClientId;
 
+    @Value("${STRAVA_CLIENT_ID:}")
+    private String stravaClientIdEnv;
+
+    @Value("${APP_STRAVA_CLIENT_ID:}")
+    private String appStravaClientId;
+
     @Value("${strava.client.secret:}")
     private String stravaClientSecret;
 
+    @Value("${STRAVA_CLIENT_SECRET:}")
+    private String stravaClientSecretEnv;
+
+    @Value("${APP_STRAVA_CLIENT_SECRET:}")
+    private String appStravaClientSecret;
+
     @Value("${app.strava.redirect-uri:http://localhost:8080/api/auth/strava/callback}")
     private String stravaRedirectUri;
+
+    @Value("${STRAVA_REDIRECT_URI:}")
+    private String stravaRedirectUriEnv;
+
+    @Value("${APP_STRAVA_REDIRECT_URI:}")
+    private String appStravaRedirectUri;
 
     @Value("${recaptcha.site-key:}")
     private String recaptchaSiteKey;
@@ -143,6 +161,50 @@ public class OAuthController {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private String effectiveStravaClientId() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_ID"),
+                System.getProperty("APP_STRAVA_CLIENT_ID"),
+                stravaClientId,
+                stravaClientIdEnv,
+                appStravaClientId,
+                System.getenv("STRAVA_CLIENT_ID"),
+                System.getenv("APP_STRAVA_CLIENT_ID"));
+    }
+
+    private String effectiveStravaClientSecret() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_SECRET"),
+                System.getProperty("APP_STRAVA_CLIENT_SECRET"),
+                stravaClientSecret,
+                stravaClientSecretEnv,
+                appStravaClientSecret,
+                System.getenv("STRAVA_CLIENT_SECRET"),
+                System.getenv("APP_STRAVA_CLIENT_SECRET"));
+    }
+
+    private String effectiveStravaRedirectUri() {
+        return firstPresent(
+                System.getProperty("app.strava.redirect-uri"),
+                System.getProperty("STRAVA_REDIRECT_URI"),
+                System.getProperty("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUriEnv,
+                appStravaRedirectUri,
+                System.getenv("STRAVA_REDIRECT_URI"),
+                System.getenv("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUri);
+    }
+
+    private static String firstPresent(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (value != null && !value.trim().isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     @GetMapping("/auth/strava/status")
@@ -365,10 +427,10 @@ public class OAuthController {
             tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             MultiValueMap<String, String> tokenParams = new LinkedMultiValueMap<>();
-            tokenParams.add("client_id", stravaClientId);
-            tokenParams.add("client_secret", stravaClientSecret);
+            tokenParams.add("client_id", effectiveStravaClientId());
+            tokenParams.add("client_secret", effectiveStravaClientSecret());
             tokenParams.add("code", code);
-            tokenParams.add("redirect_uri", stravaRedirectUri);
+            tokenParams.add("redirect_uri", effectiveStravaRedirectUri());
             tokenParams.add("grant_type", "authorization_code");
 
             ResponseEntity<Map<String, Object>> tokenResponse = restTemplate.exchange(

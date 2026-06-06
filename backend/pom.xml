@@ -124,6 +124,21 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<spring.datasource.url>jdbc:h2:mem:hermes-backend-tests;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE</spring.datasource.url>
+						<spring.datasource.driver-class-name>org.h2.Driver</spring.datasource.driver-class-name>
+						<spring.datasource.username>sa</spring.datasource.username>
+						<spring.datasource.password></spring.datasource.password>
+						<app.official-course.startup-seed.enabled>false</app.official-course.startup-seed.enabled>
+						<garmin.wellness.sync.enabled>false</garmin.wellness.sync.enabled>
+						<app.coach.nightly.enabled>false</app.coach.nightly.enabled>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

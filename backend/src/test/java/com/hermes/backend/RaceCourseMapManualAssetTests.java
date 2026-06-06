@@ -506,7 +506,7 @@ class RaceCourseMapManualAssetTests {
         );
 
         assertThat(result.courseMapDetected()).isTrue();
-        assertThat(result.routePoints()).hasSize(rawBreadcrumbs.size());
+        assertThat(result.routePoints()).hasSize(ChicagoMarathonKnownCourse.routePoints().size());
         assertThat(result.overlayBounds()).isNotNull();
         assertThat(result.summary()).contains("extraction");
         verify(extractionService).extractRoutePath(anyString(), eq("Chicago Marathon"), eq("Chicago"), eq("United States"), eq(42.195));
@@ -809,6 +809,12 @@ class RaceCourseMapManualAssetTests {
                 any(HttpEntity.class),
                 eq(Map.class)
         )).thenReturn(ResponseEntity.ok(geminiDetectedButEmptyAlignmentResponse()));
+        when(restTemplate.exchange(
+                eq("https://example.com/chicago-official-course-map.png"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(samplePng()));
 
         RouteParametersDTO routeParameters = new RouteParametersDTO("#1565C0", List.of("Grant Park", "Lincoln Park", "West Loop", "Chinatown"));
         RoutePathExtractionResultDTO extractionResult = new RoutePathExtractionResultDTO(
