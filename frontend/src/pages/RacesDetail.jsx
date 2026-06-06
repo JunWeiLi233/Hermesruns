@@ -17,7 +17,7 @@ import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profi
 import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../utils/vdot';
 import { resolveRaceIntel } from '../utils/raceIntel';
 import worldRaceCatalog from '../data/worldRaceCatalog';
-import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache } from '../utils/raceImage';
+import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache, rememberLoadedRaceImage } from '../utils/raceImage';
 import { deriveRaceMapTrust } from '../utils/raceDetailMapTrust';
 import { shouldFetchRaceElevationProfile } from '../utils/raceDetailRequestPolicy';
 
@@ -1139,7 +1139,23 @@ export default function RacesDetail() {
         <div className="runner-shell-canvas">
           <div className="race-detail-layout">
             <section className="race-detail-hero">
-              <img className="race-detail-hero-image" src={heroImage} alt={race?.name || t('races.detail_nav')} onError={(e) => { e.target.onerror = null; const fallback = race?.heroImage || race?.image || DEFAULT_HERO_IMAGE; if (e.target.src !== fallback) { e.target.src = fallback; } setResolvedHeroImage(''); invalidateRaceImageCache(race); }} />
+              <img
+                className="race-detail-hero-image"
+                src={heroImage}
+                alt={race?.name || t('races.detail_nav')}
+                onLoad={(event) => {
+                  rememberLoadedRaceImage(race, event.currentTarget?.currentSrc || event.currentTarget?.src || '');
+                }}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  const fallback = race?.heroImage || race?.image || DEFAULT_HERO_IMAGE;
+                  if (e.target.src !== fallback) {
+                    e.target.src = fallback;
+                  }
+                  setResolvedHeroImage('');
+                  invalidateRaceImageCache(race);
+                }}
+              />
               <div className="race-detail-hero-overlay" />
               <div className="race-detail-hero-body">
                 <div className="race-detail-hero-main">
