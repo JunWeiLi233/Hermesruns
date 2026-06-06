@@ -652,7 +652,10 @@ public class RaceCourseMapBulkSeedService {
             double directKm = geometryService.haversineKm(
                     waypoints.get(i)[0], waypoints.get(i)[1],
                     waypoints.get(i + 1)[0], waypoints.get(i + 1)[1]);
-            List<RoutePoint> legGeometry = osrmRouteWaypoints(legPair, OsrmProfile.FOOT);
+            boolean forcedOfficialLeg = shouldUseOfficialStraightLineLeg(raceId, i);
+            List<RoutePoint> legGeometry = forcedOfficialLeg
+                    ? interpolateStraightLine(waypoints.get(i), waypoints.get(i + 1), 16)
+                    : osrmRouteWaypoints(legPair, OsrmProfile.FOOT);
             // Foot routing sometimes detours wildly around bridges with
             // restricted pedestrian access (e.g. Verrazzano-Narrows is
             // marathon-day-only; the Queensboro Bridge lower roadway has
@@ -663,7 +666,7 @@ public class RaceCourseMapBulkSeedService {
             // race route DOES go straight across these bridges on race
             // day, so the driving geometry is faithful to the course.
             double legKm = legGeometry.isEmpty() ? 0.0 : geometryService.polylineDistanceKm(legGeometry);
-            boolean footDetoured = legGeometry.size() >= 2 && directKm > 0.4
+            boolean footDetoured = !forcedOfficialLeg && legGeometry.size() >= 2 && directKm > 0.4
                     && (legKm / directKm) > 2.0;
             if (legGeometry.isEmpty() || footDetoured) {
                 if (footDetoured) {
@@ -775,6 +778,19 @@ public class RaceCourseMapBulkSeedService {
             return List.of();
         }
         return labeled;
+    }
+
+    private boolean shouldUseOfficialStraightLineLeg(String raceId, int legIndex) {
+        if (!NycMarathonOfficialCourse.RACE_ID.equals(raceId)) return false;
+        // NYRR's race-day course uses bridge roadway corridors that public
+        // pedestrian/driving routers often cannot traverse or route in the
+        // wrong direction. Keep these legs pinned to the official waypoints so
+        // the rendered course map does not detour into Staten Island ramps,
+        // Queensboro approaches, or Harlem River access loops.
+        return (legIndex >= 0 && legIndex <= 2)   // Verrazzano-Narrows Bridge
+                || (legIndex >= 23 && legIndex <= 25) // Queensboro Bridge
+                || (legIndex >= 33 && legIndex <= 35) // Willis Avenue Bridge
+                || (legIndex >= 39 && legIndex <= 41); // Madison Avenue Bridge
     }
 
     private boolean isKnownOfficialCourseRace(String raceId) {

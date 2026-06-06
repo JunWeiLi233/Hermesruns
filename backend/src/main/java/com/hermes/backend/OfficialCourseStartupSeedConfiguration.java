@@ -10,6 +10,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Ensures every race with hardcoded official waypoints has a seeded,
@@ -25,6 +27,9 @@ public class OfficialCourseStartupSeedConfiguration {
 
     private static final Logger logger =
             LoggerFactory.getLogger(OfficialCourseStartupSeedConfiguration.class);
+    private static final Pattern JSON_LNG_PATTERN =
+            Pattern.compile("\"lng\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
+    private static final double NYC_WESTWARD_DETOUR_LNG = -74.0600;
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
@@ -188,9 +193,28 @@ public class OfficialCourseStartupSeedConfiguration {
             return false;
         }
         String routePoints = lower(asset.getLiveRoutePointsJson());
-        return routePoints.contains("central park south")
+        return routePoints.contains("start - fort wadsworth")
+                && routePoints.contains("verrazzano-narrows bridge")
+                && routePoints.contains("central park south")
                 && routePoints.contains("columbus circle")
-                && routePoints.contains("tavern on the green");
+                && routePoints.contains("tavern on the green")
+                && hasNoNewYorkWestwardBridgeDetour(asset.getLiveRoutePointsJson());
+    }
+
+    private boolean hasNoNewYorkWestwardBridgeDetour(String routePointsJson) {
+        Matcher matcher = JSON_LNG_PATTERN.matcher(normalize(routePointsJson));
+        boolean foundLongitude = false;
+        while (matcher.find()) {
+            foundLongitude = true;
+            try {
+                if (Double.parseDouble(matcher.group(1)) < NYC_WESTWARD_DETOUR_LNG) {
+                    return false;
+                }
+            } catch (NumberFormatException ex) {
+                return false;
+            }
+        }
+        return foundLongitude;
     }
 
     private boolean hasCurrentChicagoOfficialSeed(RaceCourseMapAsset asset) {

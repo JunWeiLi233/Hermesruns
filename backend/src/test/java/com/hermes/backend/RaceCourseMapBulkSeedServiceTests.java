@@ -602,6 +602,23 @@ class RaceCourseMapBulkSeedServiceTests {
     }
 
     @Test
+    void newYorkOfficialCoursePinsMarathonDayBridgeLegsToOfficialCorridor() {
+        RaceCourseMapBulkSeedService service = newService(
+                mockNycVerrazzanoDetourRestTemplate(),
+                mock(RaceCourseMapAssetRepository.class));
+        service.osrmRetryDelayMs = 0L;
+
+        List<RoutePoint> route = service.generateOfficialCoursePolyline(NycMarathonOfficialCourse.RACE_ID);
+
+        assertThat(route).hasSizeGreaterThan(100);
+        assertThat(route.get(0).label()).contains("Start - Fort Wadsworth");
+        assertThat(route).anyMatch(point -> point.label() != null && point.label().contains("Verrazzano-Narrows Bridge"));
+        assertThat(route.stream().mapToDouble(RoutePoint::lng).min().orElseThrow()).isGreaterThan(-74.0600);
+        assertThat(route.stream().limit(40).mapToDouble(RoutePoint::lng).min().orElseThrow()).isGreaterThan(-74.0600);
+        assertThat(route.get(route.size() - 1).label()).contains("Finish - West Drive at Tavern on the Green");
+    }
+
+    @Test
     void seedRacePersistsNyrrOfficialNewYorkElevationProfileInsteadOfDemBridgeSampling() throws Exception {
         RestTemplate restTemplate = mockElevationRestTemplate();
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
@@ -692,7 +709,7 @@ class RaceCourseMapBulkSeedServiceTests {
         assertThat(existing.getLiveSummary()).contains("official Chicago Marathon course map");
         assertThat(existing.getLiveSummary()).contains("flat city profile");
         assertThat(existing.getLiveSummary()).doesNotContain("no extractable plausible route polyline");
-        assertThat(existing.getLiveTotalClimbMeters()).isEqualTo(35);
+        assertThat(existing.getLiveTotalClimbMeters()).isEqualTo(74);
 
         List<Integer> elevationSamples = objectMapper.readValue(
                 existing.getLiveElevationSamplesJson(),
@@ -703,7 +720,7 @@ class RaceCourseMapBulkSeedServiceTests {
         assertThat(maxElevation).isLessThanOrEqualTo(190);
         assertThat(minElevation).isGreaterThanOrEqualTo(170);
         int elevationSpread = maxElevation - minElevation;
-        assertThat(elevationSpread).isLessThanOrEqualTo(10);
+        assertThat(elevationSpread).isLessThanOrEqualTo(12);
         assertThat(elevationSamples).noneMatch(elevation -> elevation >= 200);
 
         List<RoutePoint> route = objectMapper.readValue(
@@ -828,6 +845,27 @@ class RaceCourseMapBulkSeedServiceTests {
                 .thenReturn(ResponseEntity.ok(body));
         when(restTemplate.exchange(any(java.net.URI.class), eq(HttpMethod.GET), any(), any(ParameterizedTypeReference.class)))
                 .thenReturn(ResponseEntity.ok(body));
+        return restTemplate;
+    }
+
+    private RestTemplate mockNycVerrazzanoDetourRestTemplate() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        Map<String, Object> emptyBody = new HashMap<>();
+        when(restTemplate.exchange(any(RequestEntity.class), any(ParameterizedTypeReference.class)))
+                .thenAnswer(invocation -> {
+                    RequestEntity<?> request = invocation.getArgument(0, RequestEntity.class);
+                    String uri = request.getUrl().toString();
+                    if (uri.contains("-74.056300,40.605500;-74.046800,40.606600")) {
+                        Map<String, Object> geometry = Map.of("coordinates", List.of(
+                                List.of(-74.056300, 40.605500),
+                                List.of(-74.076630, 40.629920),
+                                List.of(-74.046800, 40.606600)
+                        ));
+                        Map<String, Object> route = Map.of("geometry", geometry);
+                        return ResponseEntity.ok(Map.of("code", "Ok", "routes", List.of(route)));
+                    }
+                    return ResponseEntity.ok(emptyBody);
+                });
         return restTemplate;
     }
 

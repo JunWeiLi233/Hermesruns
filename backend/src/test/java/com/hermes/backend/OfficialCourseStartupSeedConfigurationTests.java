@@ -210,7 +210,9 @@ class OfficialCourseStartupSeedConfigurationTests {
         currentNewYork.setLiveTotalClimbMeters(NycMarathonOfficialCourse.OFFICIAL_TOTAL_CLIMB_METERS);
         currentNewYork.setLiveElevationSamplesJson("[29,36,48,61,73,79,75,61,46,32,21,15,13,12,14,17]");
         currentNewYork.setLiveRoutePointsJson(
-                "[{\"lat\":40.7644,\"lng\":-73.9738,\"label\":\"Central Park South\"},"
+                "[{\"lat\":40.6055,\"lng\":-74.0563,\"label\":\"Start - Fort Wadsworth\"},"
+                        + "{\"lat\":40.6076,\"lng\":-74.0412,\"label\":\"Verrazzano-Narrows Bridge\"},"
+                        + "{\"lat\":40.7644,\"lng\":-73.9738,\"label\":\"Central Park South\"},"
                         + "{\"lat\":40.7681,\"lng\":-73.9819,\"label\":\"Columbus Circle\"},"
                         + "{\"lat\":40.7724,\"lng\":-73.9789,\"label\":\"Finish - West Drive at Tavern on the Green\"}]"
         );
@@ -229,6 +231,46 @@ class OfficialCourseStartupSeedConfigurationTests {
 
         verify(bulkSeedService, never())
                 .seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), anyString(), eq(true));
+    }
+
+    @Test
+    void startupSeederRefreshesCurrentTaggedNewYorkCourseMapWithBridgeDetour() throws Exception {
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset staleNewYork = new RaceCourseMapAsset();
+        staleNewYork.setRaceId(NycMarathonOfficialCourse.RACE_ID);
+        staleNewYork.setOfficialWebsite(NycMarathonOfficialCourse.OFFICIAL_COURSE_URL);
+        staleNewYork.setLiveSource(NycMarathonOfficialCourse.OFFICIAL_SOURCE);
+        staleNewYork.setLiveSummary("Route follows the official NYRR elevation profile.");
+        staleNewYork.setLiveTotalClimbMeters(NycMarathonOfficialCourse.OFFICIAL_TOTAL_CLIMB_METERS);
+        staleNewYork.setLiveElevationSamplesJson("[29,36,48,61,73,79,75,61,46,32,21,15,13,12,14,17]");
+        staleNewYork.setLiveRoutePointsJson(
+                "[{\"lat\":40.6055,\"lng\":-74.0563,\"label\":\"Start - Fort Wadsworth\"},"
+                        + "{\"lat\":40.62992,\"lng\":-74.07663,\"label\":\"Stale Staten Island routing detour\"},"
+                        + "{\"lat\":40.6076,\"lng\":-74.0412,\"label\":\"Verrazzano-Narrows Bridge\"},"
+                        + "{\"lat\":40.7644,\"lng\":-73.9738,\"label\":\"Central Park South\"},"
+                        + "{\"lat\":40.7681,\"lng\":-73.9819,\"label\":\"Columbus Circle\"},"
+                        + "{\"lat\":40.7724,\"lng\":-73.9789,\"label\":\"Finish - West Drive at Tavern on the Green\"}]"
+        );
+        when(assetRepository.findByRaceId(anyString())).thenAnswer(invocation -> {
+            String raceId = invocation.getArgument(0, String.class);
+            if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+                return Optional.of(staleNewYork);
+            }
+            return Optional.of(verifiedAdminAsset(raceId));
+        });
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), eq("startup-seeder"), eq(true)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
+                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+
+        runner.run(null);
+
+        ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
+                ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
+        verify(bulkSeedService).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
+        assertThat(raceCaptor.getValue().id()).isEqualTo(NycMarathonOfficialCourse.RACE_ID);
     }
 
     @Test
