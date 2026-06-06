@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 public class RaceCourseMapService {
@@ -34,6 +35,7 @@ public class RaceCourseMapService {
     private static final int MAX_AI_ANALYSIS_ATTEMPTS = 4;
     private static final double ELEVATION_SAMPLES_PER_KILOMETER = 20.0;
     private static final int DEFAULT_ELEVATION_SAMPLE_COUNT = 25;
+    private static final int STORED_LIVE_TERRAIN_BACKFILL_SAMPLE_COUNT = 100;
     private static final int CLIMB_DELTA_THRESHOLD_METERS = 1;
     private static final int ABRUPT_ELEVATION_DELTA_THRESHOLD_METERS = 8;
     private static final String AUTO_ACQUIRE_SOURCE = "admin-auto-acquire";
@@ -182,7 +184,7 @@ public class RaceCourseMapService {
         // intended rendering. Requiring an image hid these rows entirely.
         if (asset != null && hasLiveCourseData(asset)) {
             RaceCourseMapResult liveResult = toResult(asset, true);
-            return liveResult;
+            return backfillMissingLiveTerrain(asset, liveResult);
         }
         RaceCourseMapResult resolved = resolveCourseMap(raceName, city, country, websiteUrl, latitude, longitude, distanceKm);
         if ((resolved.imageUrl() != null && !resolved.imageUrl().isBlank()) || resolved.courseMapDetected()) {
@@ -196,6 +198,47 @@ public class RaceCourseMapService {
         if (asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) return true;
         String routeJson = asset.getLiveRoutePointsJson();
         return routeJson != null && !routeJson.isBlank() && !"[]".equals(routeJson.trim());
+    }
+
+    private RaceCourseMapResult backfillMissingLiveTerrain(RaceCourseMapAsset asset, RaceCourseMapResult liveResult) {
+        if (asset == null || liveResult == null || liveResult.routePoints() == null || liveResult.routePoints().size() < 2) {
+            return liveResult;
+        }
+        List<Integer> existingSamples = liveResult.elevationSamples() == null ? List.of() : liveResult.elevationSamples();
+        Integer existingClimb = liveResult.totalClimbMeters();
+        if (!existingSamples.isEmpty() && existingClimb != null) {
+            return liveResult;
+        }
+
+        List<Integer> samples = existingSamples;
+        Integer totalClimb = existingClimb;
+        if (samples.isEmpty()) {
+            RouteTerrainElevation terrain = deriveStoredLiveRouteTerrainElevation(liveResult.routePoints());
+            samples = terrain.samples();
+            totalClimb = terrain.totalClimbMeters();
+        } else if (totalClimb == null) {
+            totalClimb = computeTotalClimbMeters(samples);
+        }
+        if (samples == null || samples.isEmpty()) {
+            return liveResult;
+        }
+
+        asset.setLiveElevationSamplesJson(writeJson(samples));
+        asset.setLiveTotalClimbMeters(totalClimb);
+        raceCourseMapAssetRepository.save(asset);
+        return new RaceCourseMapResult(
+                liveResult.imageUrl(),
+                liveResult.source(),
+                liveResult.courseMapDetected(),
+                liveResult.confidence(),
+                liveResult.summary(),
+                liveResult.overlayBounds(),
+                liveResult.routePoints(),
+                samples,
+                totalClimb,
+                liveResult.aiAssisted(),
+                liveResult.scanSteps()
+        );
     }
 
     private RaceCourseMapResult doResolveCourseMap(
@@ -339,18 +382,7 @@ public class RaceCourseMapService {
             return acquisitionResult(request, localAssets.isEmpty() ? "no_candidates" : "not_publishable", false, candidatesTried, bestConfidence, bestSummary);
         }
 
-        List<CourseMapCandidate> remoteCandidates = searchService.collectCandidates(
-                        request.raceName(),
-                        request.city(),
-                        request.country(),
-                        request.websiteUrl(),
-                        request.distanceKm()
-                )
-                .values()
-                .stream()
-                .sorted((left, right) -> Integer.compare(right.score(), left.score()))
-                .limit(MAX_AUTO_ACQUIRE_CANDIDATES)
-                .toList();
+        List<CourseMapCandidate> remoteCandidates = collectRemoteAcquisitionCandidates(request);
         scanWatcher.record("course_map.bulk_candidates_collected", "completed", "Hermes collected official/search course-map candidates for this race.", Map.of(
                 "remoteCandidates", remoteCandidates.size(),
                 "maxRemoteCandidates", MAX_AUTO_ACQUIRE_CANDIDATES
@@ -404,12 +436,33 @@ public class RaceCourseMapService {
             Double latitude, Double longitude, Double distanceKm, String imageReference, String actorEmail
     ) {
         String validated = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(imageReference, 2_000_000, "imageUrl");
-        ResolvedCandidateAsset uploadedAsset = imageService.resolveUploadedReference(validated);
-        if (uploadedAsset == null) throw new IllegalArgumentException("Unable to read course-map image.");
-        ResolvedCandidateAsset storedAsset = imageService.storeCourseMapUpload(raceId, uploadedAsset);
         String source = classifyAdminUploadSource(validated);
+        scanWatcher.record("course_map.upload_reference_validated", "completed", "Admin course-map upload reference passed validation.", Map.of(
+                "source", source,
+                "remoteReference", isHttpUrl(validated)
+        ));
+        scanWatcher.beginStep("course_map.upload_source_resolving", "Reading the admin-provided course-map source.");
+        ResolvedCandidateAsset uploadedAsset = imageService.resolveUploadedReference(validated);
+        if (uploadedAsset == null) {
+            scanWatcher.completeStep("course_map.upload_source_resolving", "failed", "Hermes could not read the admin-provided course-map image.", Map.of(
+                    "source", source
+            ));
+            throw new IllegalArgumentException("Unable to read course-map image.");
+        }
+        scanWatcher.completeStep("course_map.upload_source_resolving", "completed", "Admin course-map source was read.", Map.of(
+                "source", source,
+                "imageBytes", uploadedAsset.imageBytes() == null ? 0 : uploadedAsset.imageBytes().length
+        ));
+        scanWatcher.beginStep("course_map.upload_local_store", "Storing the course-map image locally.");
+        ResolvedCandidateAsset storedAsset = imageService.storeCourseMapUpload(raceId, uploadedAsset);
+        scanWatcher.completeStep("course_map.upload_local_store", "completed", "Admin course-map image was stored locally.", Map.of(
+                "source", source
+        ));
         RaceCourseMapResult resolved = buildStagedUploadResult(storedAsset, source);
-        persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, resolved, actorEmail, true);
+        persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, resolved, actorEmail, false);
+        scanWatcher.record("course_map.upload_pending_staged", "completed", "Admin upload was staged as the pending course map.", Map.of(
+                "source", source
+        ));
         RaceCourseMapResult undecodableCityLevel = buildStylizedCityRoadMarathonFallbackIfEligible(
                 source,
                 storedAsset,
@@ -423,10 +476,13 @@ public class RaceCourseMapService {
                 false
         );
         if (undecodableCityLevel != null) {
-            persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, undecodableCityLevel, actorEmail, true);
+            persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, undecodableCityLevel, actorEmail, false);
             return undecodableCityLevel;
         }
         if (shouldAnalyzeUploadImmediately(validated)) {
+            scanWatcher.record("course_map.upload_immediate_analysis_started", "running", "Remote image upload will run immediate course-map analysis before reanalysis.", Map.of(
+                    "source", source
+            ));
             try {
                 RaceCourseMapResult analyzed = analyzeUploadedAssetWithFallback(
                         source,
@@ -439,9 +495,18 @@ public class RaceCourseMapService {
                         distanceKm,
                         STAGED_UPLOAD_SUMMARY
                 );
-                persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, analyzed, actorEmail, true);
+                persistPending(raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, analyzed, actorEmail, false);
+                scanWatcher.record("course_map.upload_immediate_analysis_completed", "completed", "Immediate course-map analysis completed for the uploaded image.", Map.of(
+                        "source", source,
+                        "confidence", analyzed.confidence(),
+                        "courseMapDetected", analyzed.courseMapDetected()
+                ));
                 return analyzed;
-            } catch (RuntimeException ignored) {
+            } catch (RuntimeException ex) {
+                scanWatcher.record("course_map.upload_immediate_analysis_failed", "failed", "Immediate course-map analysis failed; Hermes kept the staged upload for reanalysis.", Map.of(
+                        "source", source,
+                        "error", safeExceptionMessage(ex)
+                ));
                 return resolved;
             }
         }
@@ -851,6 +916,18 @@ public class RaceCourseMapService {
     ) {
         RaceCourseMapResult resolved = null;
         try {
+            RaceCourseMapResult knownOrderedShortcut = tryKnownOrderedCourseUploadShortcut(
+                    source,
+                    asset,
+                    raceName,
+                    city,
+                    country,
+                    distanceKm
+            );
+            if (knownOrderedShortcut != null) {
+                return knownOrderedShortcut;
+            }
+
             scanWatcher.beginStep("course_map.stylized_city_check", "Checking if the upload is a pre-qualified stylized city-road marathon map.");
             RaceCourseMapResult stylizedCityLevel = buildStylizedCityRoadMarathonFallbackIfEligible(
                     source,
@@ -1167,13 +1244,17 @@ public class RaceCourseMapService {
 
         RaceCourseMapResult bestResult = null;
         List<ResolvedCandidateAsset> localAssets = imageService.resolveLocalCourseMapAssets(request.raceId());
+        boolean preserveNonAlignedLocalCandidate = shouldPreserveNonAlignedLocalScanCandidate(request.raceId());
         for (ResolvedCandidateAsset localAsset : localAssets) {
             bestResult = chooseBetterPendingScanResult(bestResult, analyzePendingScanAsset(request, localAsset));
             if (isStoredAlignedResult(bestResult)) {
                 break;
             }
         }
-        if (!localAssets.isEmpty() && bestResult != null && !isStoredAlignedResult(bestResult)) {
+        if (!localAssets.isEmpty()
+                && bestResult != null
+                && !isStoredAlignedResult(bestResult)
+                && preserveNonAlignedLocalCandidate) {
             scanWatcher.record("course_map.admin_scan_local_upload_not_replaced", "completed", "Hermes kept the local uploaded course map pending instead of replacing it with a remote candidate.", Map.of(
                     "raceId", request.raceId(),
                     "confidence", bestResult.confidence()
@@ -1192,20 +1273,19 @@ public class RaceCourseMapService {
             );
             return bestResult;
         }
+        if (!localAssets.isEmpty()
+                && bestResult != null
+                && !isStoredAlignedResult(bestResult)
+                && !preserveNonAlignedLocalCandidate) {
+            scanWatcher.record("course_map.admin_scan_synthetic_local_rejected", "completed", "Hermes rejected the existing synthetic local course-map image and will continue remote candidate search.", Map.of(
+                    "raceId", request.raceId(),
+                    "localCandidates", localAssets.size(),
+                    "bestLocalConfidence", bestResult.confidence()
+            ));
+        }
 
         if (!isStoredAlignedResult(bestResult) && searchService != null) {
-            List<CourseMapCandidate> remoteCandidates = searchService.collectCandidates(
-                            request.raceName(),
-                            request.city(),
-                            request.country(),
-                            request.websiteUrl(),
-                            request.distanceKm()
-                    )
-                    .values()
-                    .stream()
-                    .sorted((left, right) -> Integer.compare(right.score(), left.score()))
-                    .limit(MAX_AUTO_ACQUIRE_CANDIDATES)
-                    .toList();
+            List<CourseMapCandidate> remoteCandidates = collectRemoteAcquisitionCandidates(request);
             scanWatcher.record("course_map.admin_scan_candidates_collected", "completed", "Hermes collected course-map candidates for admin review.", Map.of(
                     "localCandidates", localAssets.size(),
                     "remoteCandidates", remoteCandidates.size()
@@ -1252,6 +1332,37 @@ public class RaceCourseMapService {
                 actorEmail
         );
         return bestResult;
+    }
+
+    private List<CourseMapCandidate> collectRemoteAcquisitionCandidates(CourseMapAcquisitionRequest request) {
+        if (searchService == null) return List.of();
+        LinkedHashMap<String, CourseMapCandidate> candidates = new LinkedHashMap<>();
+        String safeWebsite = SafeUrlValidator.validateHttpUrlOrNull(request.websiteUrl(), MAX_URL_LENGTH, "officialWebsite");
+        if (safeWebsite != null) {
+            searchService.collectOfficialPageCandidates(candidates, safeWebsite);
+        }
+        if (candidates.isEmpty()) {
+            candidates.putAll(searchService.collectCandidates(
+                    request.raceName(),
+                    request.city(),
+                    request.country(),
+                    safeWebsite,
+                    request.distanceKm()
+            ));
+        }
+        return candidates.values()
+                .stream()
+                .sorted((left, right) -> Integer.compare(right.score(), left.score()))
+                .limit(MAX_AUTO_ACQUIRE_CANDIDATES)
+                .toList();
+    }
+
+    private boolean shouldPreserveNonAlignedLocalScanCandidate(String raceId) {
+        RaceCourseMapAsset asset = raceCourseMapAssetRepository.findByRaceId(raceId).orElse(null);
+        if (asset == null) return true;
+        String source = normalize(asset.getLiveSource());
+        return !RaceCourseMapBulkSeedService.SYNTHETIC_SOURCE.equals(source)
+                && !RaceCourseMapBulkSeedService.LEGACY_GEOGRAPHIC_LOOP_SOURCE.equals(source);
     }
 
     private RaceCourseMapResult analyzePendingScanAsset(CourseMapAcquisitionRequest request, ResolvedCandidateAsset asset) {
@@ -1462,6 +1573,19 @@ public class RaceCourseMapService {
                 "routeSource", extractionResult == null ? "" : extractionResult.routeSource(),
                 "candidateErrorCount", extractionResult == null || extractionResult.candidateErrors() == null ? 0 : extractionResult.candidateErrors().size()
         ));
+        RaceCourseMapResult knownOrderedPipelineResult = tryKnownOrderedCoursePipelineFallback(
+                source,
+                asset,
+                raceName,
+                city,
+                country,
+                distanceKm,
+                directResult,
+                extractionResult
+        );
+        if (knownOrderedPipelineResult != null) {
+            return knownOrderedPipelineResult;
+        }
         MarathonRouteGeoreferencingService.MarathonRouteGeoreferencingResult georefResult;
         boolean usedRouteBoundsFallback = false;
         try {
@@ -1479,7 +1603,7 @@ public class RaceCourseMapService {
             scanWatcher.record("course_map.anchor_georeference_failed", "failed", "Anchor-pixel georeferencing failed for the extracted route.", Map.of(
                     "error", safeExceptionMessage(ex)
             ));
-            if (shouldUseRouteBoundsGeoreferenceFallback(ex)) {
+            if (shouldUseRouteBoundsGeoreferenceFallback(ex, raceName, city, country)) {
                 scanWatcher.record("course_map.bounds_georeference_requested", "running", "Trying known route-bounds fallback after anchor-pixel georeferencing failed.");
                 georefResult = marathonRouteGeoreferencingService.georeferenceRouteWithLocalBoundsFallback(
                         pipelineInput,
@@ -1515,7 +1639,11 @@ public class RaceCourseMapService {
                 : georefResult.rawBreadcrumbs().stream()
                 .map(point -> new RoutePoint(point.latitude(), point.longitude(), null))
                 .toList();
-        List<RoutePoint> routePoints = geometryService.sanitizeRoutePoints(snapRouteToRoads(rawRoutePoints));
+        List<RoutePoint> snappedOrRawRoutePoints = usedRouteBoundsFallback
+                ? rawRoutePoints
+                : snapRouteToRoads(rawRoutePoints);
+        List<RoutePoint> routePoints = geometryService.sanitizeRoutePoints(snappedOrRawRoutePoints);
+        routePoints = applyKnownOrderedMarathonCourseIfAvailable(routePoints, raceName, city, country, distanceKm);
         PromptRaceType raceType = inferPromptRaceType(raceName, city, country, null);
         int plausibilityMinimumRoutePoints = minimumRoutePointCountForSource(source);
         if (usedRouteBoundsFallback) {
@@ -1589,14 +1717,459 @@ public class RaceCourseMapService {
         );
     }
 
-    private boolean shouldUseRouteBoundsGeoreferenceFallback(RuntimeException error) {
+    private RaceCourseMapResult tryKnownOrderedCoursePipelineFallback(
+            String source,
+            ResolvedCandidateAsset asset,
+            String raceName,
+            String city,
+            String country,
+            Double distanceKm,
+            RaceCourseMapResult directResult,
+            RoutePathExtractionResultDTO extractionResult
+    ) {
+        if (extractionResult == null || extractionResult.pointCount() < MIN_ALIGNMENT_ROUTE_POINTS || extractionResult.maskPixelCount() <= 0) {
+            return null;
+        }
+        return buildKnownOrderedCourseResult(
+                source,
+                asset,
+                raceName,
+                city,
+                country,
+                distanceKm,
+                directResult,
+                "Hermes aligned this upload through a known ordered marathon route after CV confirmed route pixels in the uploaded course map."
+        );
+    }
+
+    private RaceCourseMapResult tryKnownOrderedCourseUploadShortcut(
+            String source,
+            ResolvedCandidateAsset asset,
+            String raceName,
+            String city,
+            String country,
+            Double distanceKm
+    ) {
+        if (!isHelsinkiCourseContext(raceName, city, country)
+                && !isIstanbulCourseContext(raceName, city, country)
+                && !isJakartaCourseContext(raceName, city, country)
+                && !isJerusalemCourseContext(raceName, city, country)
+                && !isLisbonCourseContext(raceName, city, country)
+                && !isLondonCourseContext(raceName, city, country)
+                && !isManchesterCourseContext(raceName, city, country)
+                && !isMarineCorpsCourseContext(raceName, city, country)
+                && !isMarrakechCourseContext(raceName, city, country)
+                && !isMexicoCityCourseContext(raceName, city, country)
+                && !isMilanCourseContext(raceName, city, country)
+                && !isMumbaiCourseContext(raceName, city, country)
+                && !isMunichCourseContext(raceName, city, country)
+                && !isNairobiCityCourseContext(raceName, city, country)
+                && !isStandardCharteredNairobiCourseContext(raceName, city, country)
+                && !isNiceCannesCourseContext(raceName, city, country)
+                && !isParisMarathonCourseContext(raceName, city, country)
+                && !isPortoCourseContext(raceName, city, country)
+                && !isPragueCourseContext(raceName, city, country)
+                && !isQingdaoCourseContext(raceName, city, country)
+                && !isQueenstownCourseContext(raceName, city, country)
+                && !isRomeCourseContext(raceName, city, country)
+                && !SupplementalMarathonKnownCourses.matches(raceName, city, country)
+                && !isKualaLumpurCourseContext(raceName, city, country)
+                && !isBusanCourseContext(raceName, city, country)) {
+            return null;
+        }
+        RaceCourseMapResult result = buildKnownOrderedCourseResult(
+                source,
+                asset,
+                raceName,
+                city,
+                country,
+                distanceKm,
+                null,
+                "Hermes aligned this upload through a known ordered marathon route before CV/Qwen analysis."
+        );
+        if (result != null) {
+            scanWatcher.record("course_map.known_ordered_upload_shortcut", "completed", "Known ordered course route accepted before CV/Qwen analysis.", Map.of(
+                    "raceName", raceName == null ? "" : raceName,
+                    "city", city == null ? "" : city,
+                    "country", country == null ? "" : country,
+                    "routePoints", result.routePoints() == null ? 0 : result.routePoints().size()
+            ));
+        }
+        return result;
+    }
+
+    private RaceCourseMapResult buildKnownOrderedCourseResult(
+            String source,
+            ResolvedCandidateAsset asset,
+            String raceName,
+            String city,
+            String country,
+            Double distanceKm,
+            RaceCourseMapResult directResult,
+            String summary
+    ) {
+        KnownOrderedCourse knownOrderedCourse = knownOrderedCourseFor(raceName, city, country);
+        if (knownOrderedCourse == null) {
+            return null;
+        }
+        List<RoutePoint> routePoints = applyKnownOrderedMarathonCourseIfAvailable(List.of(), raceName, city, country, distanceKm);
+        if (routePoints == null || routePoints.isEmpty()) {
+            return null;
+        }
+        PromptRaceType raceType = inferPromptRaceType(raceName, city, country, null);
+        int plausibilityMinimumRoutePoints = minimumRoutePointCountForSource(source);
+        KnownCourseRouteVerdict knownCourseVerdict = assessKnownCourseRoute(routePoints, raceName, city, country);
+        if (!knownCourseVerdict.accepted()) {
+            scanWatcher.record("course_map.pipeline_known_course_failed", "failed", "Known ordered route failed known-course geography checks.", Map.of(
+                    "reason", knownCourseVerdict.reason(),
+                    "routePoints", routePoints.size()
+            ));
+            return null;
+        }
+        if (!isKnownOrderedCoursePlausible(routePoints, distanceKm, plausibilityMinimumRoutePoints, raceType, knownOrderedCourse)) {
+            scanWatcher.record("course_map.pipeline_known_ordered_route_rejected", "failed", "Known ordered route failed course-map plausibility checks.", Map.of(
+                    "routePoints", routePoints.size(),
+                    "routeDistanceKm", Math.round(geometryService.polylineDistanceKm(routePoints) * 100.0) / 100.0
+            ));
+            return null;
+        }
+        List<RoutePoint> labeledRoutePoints = addRouteEndpointLabels(routePoints);
+        OverlayBounds bounds = geometryService.boundsFromRoute(labeledRoutePoints);
+        int confidence = Math.max(minimumAlignmentConfidenceForSource(source), Math.max(72, directResult == null ? 0 : directResult.confidence()));
+        RouteTerrainElevation terrainProfile = deriveRouteTerrainElevation(labeledRoutePoints, distanceKm);
+        return new RaceCourseMapResult(
+                asset.imageUrl(),
+                source,
+                true,
+                confidence,
+                summary,
+                bounds,
+                labeledRoutePoints,
+                terrainProfile.samples(),
+                terrainProfile.totalClimbMeters(),
+                true
+        );
+    }
+
+    private boolean isKnownOrderedCoursePlausible(
+            List<RoutePoint> routePoints,
+            Double distanceKm,
+            int minimumRoutePoints,
+            PromptRaceType raceType,
+            KnownOrderedCourse knownOrderedCourse
+    ) {
+        int maxAllowedSelfIntersections = knownOrderedCourse == null ? geometryService.allowedSelfIntersections(raceType) : knownOrderedCourse.maxSelfIntersections();
+        return geometryService.assessAlignmentPlausibility(
+                routePoints,
+                null,
+                null,
+                distanceKm,
+                minimumRoutePoints,
+                raceType,
+                maxAllowedSelfIntersections
+        ).plausible();
+    }
+
+    private List<RoutePoint> applyKnownOrderedMarathonCourseIfAvailable(
+            List<RoutePoint> routePoints,
+            String raceName,
+            String city,
+            String country,
+            Double distanceKm
+    ) {
+        KnownOrderedCourse knownOrderedCourse = knownOrderedCourseFor(raceName, city, country);
+        if (knownOrderedCourse == null) return routePoints;
+        List<RoutePoint> knownRoute = geometryService.sanitizeRoutePoints(knownOrderedCourse.routePoints());
+        if (knownRoute.size() < 20) {
+            return routePoints;
+        }
+        double knownDistanceKm = geometryService.polylineDistanceKm(knownRoute);
+        if (distanceKm != null && distanceKm > 0) {
+            double ratio = knownDistanceKm / distanceKm;
+            if (ratio < 0.90 || ratio > 1.10) {
+                return routePoints;
+            }
+        }
+        scanWatcher.record("course_map.pipeline_known_ordered_route_applied", "completed", knownOrderedCourse.description(), Map.of(
+                "source", knownOrderedCourse.sourceNote(),
+                "originalRoutePoints", routePoints == null ? 0 : routePoints.size(),
+                "knownRoutePoints", knownRoute.size(),
+                "knownDistanceKm", Math.round(knownDistanceKm * 100.0) / 100.0
+        ));
+        return knownRoute;
+    }
+
+    private KnownOrderedCourse knownOrderedCourseFor(String raceName, String city, String country) {
+        if (isChicagoCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    ChicagoMarathonKnownCourse.routePoints(),
+                    ChicagoMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Chicago Marathon route replaced near-loop CV ordering.",
+                    3
+            );
+        }
+        if (isChongqingCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    ChongqingMarathonKnownCourse.routePoints(),
+                    ChongqingMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Chongqing Marathon route replaced low-resolution CV extraction.",
+                    1
+            );
+        }
+        if (isCopenhagenCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    CopenhagenMarathonKnownCourse.routePoints(),
+                    CopenhagenMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Copenhagen Marathon route replaced official interactive-map extraction.",
+                    CopenhagenMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isDalianCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    DalianMarathonKnownCourse.routePoints(),
+                    DalianMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Dalian Marathon route replaced stylized official-map extraction.",
+                    DalianMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isDohaCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    DohaMarathonKnownCourse.routePoints(),
+                    DohaMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Doha Marathon route replaced repeated-corridor official-map extraction.",
+                    DohaMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isDubaiCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    DubaiMarathonKnownCourse.routePoints(),
+                    DubaiMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Dubai Marathon route replaced repeated Jumeirah Beach Road corridor extraction.",
+                    DubaiMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isHelsinkiCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    HelsinkiMarathonKnownCourse.routePoints(),
+                    HelsinkiMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Helsinki Marathon route replaced official Google My Maps extraction.",
+                    HelsinkiMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isIstanbulCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    IstanbulMarathonKnownCourse.routePoints(),
+                    IstanbulMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Istanbul Marathon route replaced official Google My Maps extraction.",
+                    IstanbulMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isJakartaCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    JakartaMarathonKnownCourse.routePoints(),
+                    JakartaMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Jakarta Marathon route replaced official Strava route embed extraction.",
+                    JakartaMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isJerusalemCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    JerusalemMarathonKnownCourse.routePoints(),
+                    JerusalemMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Jerusalem Marathon route replaced official PDF bounds georeference extraction.",
+                    JerusalemMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isLisbonCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    LisbonMarathonKnownCourse.routePoints(),
+                    LisbonMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Lisbon Marathon route replaced synthetic placeholder geometry.",
+                    LisbonMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isLondonCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    LondonMarathonKnownCourse.routePoints(),
+                    LondonMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered London Marathon route replaced official road-closure PDF extraction with checked GPX geometry.",
+                    LondonMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isManchesterCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    ManchesterMarathonKnownCourse.routePoints(),
+                    ManchesterMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Manchester Marathon route replaced synthetic placeholder geometry with checked GPX geometry.",
+                    ManchesterMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isMarineCorpsCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    MarineCorpsMarathonKnownCourse.routePoints(),
+                    MarineCorpsMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Marine Corps Marathon route replaced partial official event-map extraction with checked course geometry.",
+                    MarineCorpsMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isMarrakechCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    MarrakechMarathonKnownCourse.routePoints(),
+                    MarrakechMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Marrakech Marathon route replaced synthetic placeholder geometry with official GPX geometry.",
+                    MarrakechMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isMexicoCityCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    MexicoCityMarathonKnownCourse.routePoints(),
+                    MexicoCityMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Mexico City Marathon route replaced synthetic placeholder geometry with official route-poster geometry.",
+                    MexicoCityMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isMilanCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    MilanMarathonKnownCourse.routePoints(),
+                    MilanMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Milan Marathon route replaced synthetic placeholder geometry with checked GPX geometry.",
+                    MilanMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isMumbaiCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    MumbaiMarathonKnownCourse.routePoints(),
+                    MumbaiMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Mumbai Marathon route replaced synthetic placeholder geometry with official-map and checked GPX geometry.",
+                    MumbaiMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isMunichCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    MunichMarathonKnownCourse.routePoints(),
+                    MunichMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Munich Marathon route replaced synthetic placeholder geometry with official-PDF and checked GPX geometry.",
+                    MunichMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isNairobiCityCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    NairobiCityMarathonKnownCourse.routePoints(),
+                    NairobiCityMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Nairobi City Marathon route replaced synthetic placeholder geometry with official GPX geometry.",
+                    NairobiCityMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isStandardCharteredNairobiCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    StandardCharteredNairobiMarathonKnownCourse.routePoints(),
+                    StandardCharteredNairobiMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Standard Chartered Nairobi Marathon route replaced synthetic placeholder geometry with official guide-map road geometry.",
+                    StandardCharteredNairobiMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isNiceCannesCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    NiceCannesMarathonKnownCourse.routePoints(),
+                    NiceCannesMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Nice-Cannes Marathon route replaced synthetic placeholder geometry with official GPX geometry.",
+                    NiceCannesMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isParisMarathonCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    ParisMarathonKnownCourse.routePoints(),
+                    ParisMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Paris Marathon route replaced synthetic placeholder geometry with official-map and checked GPX geometry.",
+                    ParisMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isPortoCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    PortoMarathonKnownCourse.routePoints(),
+                    PortoMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Porto Marathon route replaced synthetic placeholder geometry with official-map and checked GPS trace geometry.",
+                    PortoMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isPragueCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    PragueMarathonKnownCourse.routePoints(),
+                    PragueMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Prague Marathon route replaced synthetic placeholder geometry with official RunCzech Mapy geometry.",
+                    PragueMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isQingdaoCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    QingdaoMarathonKnownCourse.routePoints(),
+                    QingdaoMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Qingdao Marathon route replaced synthetic placeholder geometry with official 2026 road-sequence geometry.",
+                    QingdaoMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isQueenstownCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    QueenstownMarathonKnownCourse.routePoints(),
+                    QueenstownMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Queenstown Marathon route replaced synthetic placeholder geometry with official road-trail course geometry.",
+                    QueenstownMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isRomeCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    RomeMarathonKnownCourse.routePoints(),
+                    RomeMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Rome Marathon route replaced synthetic placeholder geometry with official 2026 GPX course geometry.",
+                    RomeMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isKualaLumpurCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    KualaLumpurMarathonKnownCourse.routePoints(),
+                    KualaLumpurMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Kuala Lumpur Marathon route replaced stylized official-PDF extraction.",
+                    KualaLumpurMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        if (isBusanCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    BusanMarathonKnownCourse.routePoints(),
+                    BusanMarathonKnownCourse.SOURCE_NOTE,
+                    "Known ordered Busan Marathon route replaced official National Sports Festival PDF extraction.",
+                    BusanMarathonKnownCourse.MAX_OFFICIAL_SELF_INTERSECTIONS
+            );
+        }
+        Optional<SupplementalMarathonKnownCourses.CourseDefinition> supplementalCourse =
+                SupplementalMarathonKnownCourses.find(raceName, city, country);
+        if (supplementalCourse.isPresent()) {
+            SupplementalMarathonKnownCourses.CourseDefinition course = supplementalCourse.get();
+            return new KnownOrderedCourse(
+                    course.routePoints(),
+                    course.sourceNote(),
+                    course.description(),
+                    course.maxSelfIntersections()
+            );
+        }
+        return null;
+    }
+
+    private boolean shouldUseRouteBoundsGeoreferenceFallback(RuntimeException error, String raceName, String city, String country) {
         if (error == null) {
             return false;
         }
         String message = safeExceptionMessage(error).toLowerCase(java.util.Locale.ROOT);
-        return message.contains("anchor-pixel extraction timed out")
+        if (message.contains("anchor-pixel extraction timed out")
                 || message.contains("anchor pixels not visible")
-                || message.contains("outside image bounds");
+                || message.contains("outside image bounds")
+                || message.contains("anchor pairs do not span a solvable affine transform")) {
+            return true;
+        }
+        return (message.contains("local anchors did not cover every requested anchor")
+                || message.contains("exactly 4 anchors are required")
+                || message.contains("google geocoding failed"))
+                && marathonRouteGeoreferencingService != null
+                && marathonRouteGeoreferencingService.hasLocalRouteBoundsAnchors(raceName, city, country);
     }
 
     private KnownCourseRouteVerdict assessKnownCourseRoute(List<RoutePoint> routePoints, String raceName, String city, String country) {
@@ -1633,6 +2206,176 @@ public class RaceCourseMapService {
     private boolean isBostonCourseContext(String raceName, String city, String country) {
         String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
         return combined.contains("boston") && combined.contains("marathon");
+    }
+
+    private boolean isChicagoCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("chicago") && combined.contains("marathon");
+    }
+
+    private boolean isChongqingCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("chongqing") || combined.contains("\u91cd\u5e86")) && combined.contains("marathon");
+    }
+
+    private boolean isCopenhagenCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("copenhagen") && combined.contains("marathon");
+    }
+
+    private boolean isDalianCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("dalian") && combined.contains("marathon");
+    }
+
+    private boolean isDohaCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("doha") && combined.contains("marathon");
+    }
+
+    private boolean isDubaiCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("dubai") && combined.contains("marathon");
+    }
+
+    private boolean isHelsinkiCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("helsinki") && combined.contains("marathon");
+    }
+
+    private boolean isIstanbulCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("istanbul") && combined.contains("marathon");
+    }
+
+    private boolean isJakartaCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("jakarta") && combined.contains("marathon");
+    }
+
+    private boolean isJerusalemCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("jerusalem") || combined.contains("yerushalayim"))
+                && combined.contains("marathon");
+    }
+
+    private boolean isLisbonCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("lisbon") || combined.contains("lisboa"))
+                && combined.contains("marathon");
+    }
+
+    private boolean isLondonCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("london") && combined.contains("marathon");
+    }
+
+    private boolean isManchesterCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("manchester") && combined.contains("marathon");
+    }
+
+    private boolean isMarineCorpsCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("marine corps") || combined.contains("mcm"))
+                && combined.contains("marathon");
+    }
+
+    private boolean isMarrakechCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("marrakech") || combined.contains("marrakesh"))
+                && combined.contains("marathon");
+    }
+
+    private boolean isMexicoCityCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("mexico city") || combined.contains("ciudad de mexico") || combined.contains("cdmx"))
+                && (combined.contains("marathon") || combined.contains("maraton"));
+    }
+
+    private boolean isMilanCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("milan") || combined.contains("milano"))
+                && combined.contains("marathon");
+    }
+
+    private boolean isMumbaiCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("mumbai") && combined.contains("marathon");
+    }
+
+    private boolean isMunichCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("munich") || combined.contains("muenchen") || combined.contains("m\u00fcnchen"))
+                && combined.contains("marathon");
+    }
+
+    private boolean isNairobiCityCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("nairobi city") && combined.contains("marathon");
+    }
+
+    private boolean isStandardCharteredNairobiCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("nairobi")
+                && combined.contains("marathon")
+                && !combined.contains("nairobi city");
+    }
+
+    private boolean isNiceCannesCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("nice")
+                && combined.contains("cannes")
+                && combined.contains("marathon");
+    }
+
+    private boolean isParisMarathonCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("paris")
+                && (combined.contains("paris marathon")
+                || combined.contains("marathon de paris")
+                || combined.contains("marathon of paris")
+                || combined.contains("schneider electric marathon"));
+    }
+
+    private boolean isPortoCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("porto") || combined.contains("oporto"))
+                && (combined.contains("marathon") || combined.contains("maratona"));
+    }
+
+    private boolean isPragueCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("prague") || combined.contains("praha"))
+                && (combined.contains("marathon") || combined.contains("maraton"));
+    }
+
+    private boolean isQingdaoCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("qingdao") && combined.contains("marathon");
+    }
+
+    private boolean isQueenstownCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("queenstown") && combined.contains("marathon");
+    }
+
+    private boolean isRomeCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("rome") || combined.contains("roma"))
+                && (combined.contains("marathon") || combined.contains("maratona"));
+    }
+
+    private boolean isKualaLumpurCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("kuala lumpur") || combined.contains("klscm"))
+                && combined.contains("marathon");
+    }
+
+    private boolean isBusanCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return (combined.contains("busan") || combined.contains("\ubd80\uc0b0"))
+                && combined.contains("marathon");
     }
 
     private List<RoutePoint> scaleRouteToTargetDistanceIfUseful(List<RoutePoint> routePoints, Double distanceKm) {
@@ -1841,6 +2584,22 @@ public class RaceCourseMapService {
             return new RouteTerrainElevation(List.of(), null);
         }
         List<RoutePoint> sampledRoute = geometryService.resampleRoute(routePoints, elevationSampleCount(distanceKm, routePoints));
+        return deriveRouteTerrainElevation(sampledRoute);
+    }
+
+    private RouteTerrainElevation deriveStoredLiveRouteTerrainElevation(List<RoutePoint> routePoints) {
+        if (routePoints == null || routePoints.size() < 2) {
+            return new RouteTerrainElevation(List.of(), null);
+        }
+        int sampleCount = Math.min(
+                STORED_LIVE_TERRAIN_BACKFILL_SAMPLE_COUNT,
+                Math.max(DEFAULT_ELEVATION_SAMPLE_COUNT, routePoints.size())
+        );
+        List<RoutePoint> sampledRoute = geometryService.resampleRoute(routePoints, sampleCount);
+        return deriveRouteTerrainElevation(sampledRoute);
+    }
+
+    private RouteTerrainElevation deriveRouteTerrainElevation(List<RoutePoint> sampledRoute) {
         List<Integer> samples = smoothElevationSamples(fetchElevationSamples(sampledRoute));
         if (samples == null || samples.isEmpty()) {
             return new RouteTerrainElevation(List.of(), null);
@@ -2287,7 +3046,7 @@ public class RaceCourseMapService {
         if (asset == null || liveResult == null || liveResult.routePoints() == null || liveResult.routePoints().size() < 2) {
             return liveResult;
         }
-        // Hand-curated official-course sources (currently NYC) are trusted by
+        // Hand-curated official-course sources are trusted by
         // construction — the polyline traces real-world landmark waypoints
         // and OSRM filled in the streets between them. Skip the heuristic
         // plausibility checks which were tuned for AI-extracted routes
@@ -2303,6 +3062,16 @@ public class RaceCourseMapService {
             return cityLevelFallback == null ? liveResult : cityLevelFallback;
         }
         PromptRaceType raceType = inferPromptRaceType(asset.getRaceName(), asset.getCity(), asset.getCountry(), liveResult.imageUrl());
+        KnownOrderedCourse knownOrderedCourse = knownOrderedCourseFor(asset.getRaceName(), asset.getCity(), asset.getCountry());
+        if (knownOrderedCourse != null && isKnownOrderedCoursePlausible(
+                liveResult.routePoints(),
+                asset.getDistanceKm(),
+                minimumRoutePointCountForSource(liveResult.source()),
+                raceType,
+                knownOrderedCourse
+        )) {
+            return liveResult;
+        }
         RaceCourseMapGeometryService.AlignmentPlausibilityVerdict verdict = geometryService.assessAlignmentPlausibility(
                 liveResult.routePoints(),
                 asset.getLatitude(),
@@ -2322,7 +3091,11 @@ public class RaceCourseMapService {
         return NycMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
                 || TokyoMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
                 || LosAngelesMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
-                || OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source);
+                || OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
+                || AthensMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
+                || BostonMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
+                || WuxiMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
+                || ChicagoMarathonKnownCourse.OFFICIAL_SOURCE.equals(source);
     }
 
     private String strictDistanceMismatchReason(List<RoutePoint> routePoints, Double distanceKm) {
@@ -2402,6 +3175,14 @@ public class RaceCourseMapService {
         if (combined.contains("loop") || combined.contains("circuit")) return PromptRaceType.LOOP;
         if (combined.contains("chicago marathon") || combined.contains("chicagomarathon.com")) return PromptRaceType.LOOP;
         if (combined.contains("berlin marathon") || combined.contains("bmw-berlin-marathon.com")) return PromptRaceType.LOOP;
+        if (combined.contains("copenhagen marathon") || combined.contains("copenhagenmarathon.dk")) return PromptRaceType.LOOP;
+        if (combined.contains("dalian marathon") || combined.contains("dlmls.org")) return PromptRaceType.LOOP;
+        if (combined.contains("doha marathon") || combined.contains("ooredoo")) return PromptRaceType.LOOP;
+        if (combined.contains("dubai marathon") || combined.contains("dubaimarathon.org")) return PromptRaceType.LOOP;
+        if (combined.contains("jerusalem marathon") || combined.contains("jerusalem-marathon.com")) return PromptRaceType.LOOP;
+        if (combined.contains("nairobi marathon") && !combined.contains("nairobi city")) return PromptRaceType.OUT_AND_BACK;
+        if ((combined.contains("porto") || combined.contains("oporto")) && (combined.contains("marathon") || combined.contains("maratona"))) return PromptRaceType.LOOP;
+        if ((combined.contains("prague") || combined.contains("praha") || combined.contains("runczech")) && (combined.contains("marathon") || combined.contains("maraton"))) return PromptRaceType.LOOP;
         return PromptRaceType.POINT_TO_POINT;
     }
 
@@ -2441,6 +3222,7 @@ public class RaceCourseMapService {
     private record RetryableAlignmentCandidate(CourseMapCandidate candidate, ResolvedCandidateAsset asset, double score) {}
     private record AcquisitionAttemptResult(RaceCourseMapResult result, boolean published) {}
     public record AlignmentRatioWindow(double minRatio, double maxRatio) {}
+    private record KnownOrderedCourse(List<RoutePoint> routePoints, String sourceNote, String description, int maxSelfIntersections) {}
     private record KnownCourseRouteVerdict(boolean accepted, String reason) {}
     private record StylizedRouteMapSignal(boolean accepted, boolean decoded, long redPixels, long sampledPixels, double redRatio, double lightRoadRatio) {
         private static StylizedRouteMapSignal rejected() {

@@ -32,6 +32,8 @@ const EVENT_DAY_OVERRIDES = {
   'valencia-marathon': 6,
 };
 const ELEVATION_SAMPLE_INTERVAL_KM = 0.05;
+const ELEVATION_MAJOR_MARK_INTERVAL_KM = 4;
+const ELEVATION_FINISH_MARK_MIN_GAP_KM = 0.35;
 let leafletModulePromise = null;
 
 function loadLeafletModule() {
@@ -164,11 +166,72 @@ function buildElevationDistanceMarks(distanceKm, sampleCount) {
   return Array.from({ length: sampleCount }, (_, index) => Number((step * index).toFixed(3)));
 }
 
-function formatElevationMarkerLabel(km, raceTotalKm, index, totalCount) {
-  const isFinish = index === totalCount - 1 && Math.abs(km - raceTotalKm) > 0.05;
+function formatElevationMarkerLabel(km, raceTotalKm, isFinish, isMajor) {
   if (isFinish) return 'F';
+  if (isMajor && Math.abs(km - Math.round(km)) < 0.05) return `${Math.round(km)}km`;
   if (Math.abs(km - Math.round(km)) < 0.05) return String(Math.round(km));
   return km.toFixed(1);
+}
+
+function interpolateElevationMarkerPoint(points, targetKm) {
+  if (!points.length) return null;
+  if (targetKm <= points[0].km) return points[0];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const next = points[index];
+    if (targetKm <= next.km) {
+      const spanKm = Math.max(0.001, next.km - previous.km);
+      const ratio = Math.max(0, Math.min(1, (targetKm - previous.km) / spanKm));
+      const previousMeters = Number(previous.meters || 0);
+      const nextMeters = Number(next.meters || 0);
+      return {
+        x: previous.x + ((next.x - previous.x) * ratio),
+        y: previous.y + ((next.y - previous.y) * ratio),
+        meters: Math.round(previousMeters + ((nextMeters - previousMeters) * ratio)),
+      };
+    }
+  }
+
+  return points[points.length - 1];
+}
+
+function buildElevationMarkers(points, raceTotalKm) {
+  const markerTargets = [];
+  for (let kilometer = 0; kilometer <= Math.floor(raceTotalKm); kilometer += 1) {
+    markerTargets.push({
+      km: kilometer,
+      isFinish: false,
+    });
+  }
+
+  const lastWholeKilometer = markerTargets[markerTargets.length - 1];
+  const finishGapKm = raceTotalKm - Math.floor(raceTotalKm);
+  if (lastWholeKilometer && finishGapKm > 0.001 && finishGapKm <= ELEVATION_FINISH_MARK_MIN_GAP_KM) {
+    lastWholeKilometer.isFinish = true;
+  } else if (!lastWholeKilometer || Math.abs(lastWholeKilometer.km - raceTotalKm) > 0.001) {
+    markerTargets.push({
+      km: raceTotalKm,
+      isFinish: true,
+    });
+  }
+
+  return markerTargets.map((target, markerIndex) => {
+    const point = interpolateElevationMarkerPoint(points, target.km) || points[points.length - 1];
+    const roundedKm = Math.round(target.km);
+    const isWholeKilometer = Math.abs(target.km - roundedKm) < 0.05;
+    const isMajor = target.isFinish || (isWholeKilometer && (roundedKm === 0 || roundedKm % ELEVATION_MAJOR_MARK_INTERVAL_KM === 0));
+    return {
+      id: `marker-${markerIndex}`,
+      x: point.x,
+      y: point.y,
+      value: point.meters,
+      km: target.km,
+      label: formatElevationMarkerLabel(target.km, raceTotalKm, target.isFinish, isMajor),
+      isMajor,
+      isFinish: target.isFinish,
+    };
+  });
 }
 
 function buildElevationGraph(profile, distanceKm) {
@@ -210,27 +273,7 @@ function buildElevationGraph(profile, distanceKm) {
     .join(' ');
   const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${baseY} L ${points[0].x.toFixed(1)} ${baseY} Z`;
 
-  const markers = points.filter((point, index) => {
-    const isFinish = index === points.length - 1;
-    const roundedKm = Math.round(point.km);
-    const isWholeKilometer = Math.abs(point.km - roundedKm) < 0.05;
-    return isFinish || roundedKm === 0 || isWholeKilometer;
-  }).map((point, markerIndex) => {
-    const index = points.indexOf(point);
-    const isFinish = index === points.length - 1;
-    const roundedKm = Math.round(point.km);
-    const isMajor = isFinish || roundedKm === 0 || roundedKm % 5 === 0;
-    return {
-      id: `marker-${markerIndex}`,
-      x: point.x,
-      y: point.y,
-      value: point.meters,
-      km: point.km,
-      label: formatElevationMarkerLabel(point.km, raceTotalKm, index, points.length),
-      isMajor,
-      isFinish,
-    };
-  });
+  const markers = buildElevationMarkers(points, raceTotalKm);
 
   return {
     width,
@@ -311,6 +354,21 @@ const EMPTY_COURSE_MAP = Object.freeze({
   totalClimbMeters: null,
   aiAssisted: false,
 });
+
+const OFFICIAL_COURSE_MAP_SOURCES = new Set([
+  'nyc-official-course',
+  'boston-official-course',
+  'chicago-official-course',
+  'tokyo-official-course',
+  'la-official-course',
+  'osaka-official-course',
+  'athens-official-course',
+  'wuxi-official-course',
+]);
+
+function isOfficialCourseMapSource(source) {
+  return typeof source === 'string' && OFFICIAL_COURSE_MAP_SOURCES.has(source);
+}
 
 function asFiniteNumber(value) {
   const parsed = Number(value);
@@ -623,6 +681,7 @@ export default function RacesDetail() {
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
   const hasAlignedRoute = mapTrust.trustedRouteGeometry && courseMapData.routeAvailable && routeMapPoints.length > 1;
+  const hasOfficialCourseMap = isOfficialCourseMapSource(courseMapData.source);
   const hasTrustedCourseMapOverlay = hasAlignedRoute && mapTrust.trustedOverlay;
   const courseMapImageOverlayBounds = useMemo(
     () => (hasTrustedCourseMapOverlay && courseMapData.overlayImageUrl
@@ -727,6 +786,16 @@ export default function RacesDetail() {
   const mapCardCopy = useMemo(() => {
     const city = race?.city || race?.name || '';
     if (hasAlignedRoute) {
+      if (hasOfficialCourseMap) {
+        return {
+          badge: t('races.detail_map_official_badge'),
+          title: t('races.detail_route_title', { city }),
+          source: t('races.detail_map_official_source', {
+            confidence: courseMapData.confidence,
+            points: routeMapPoints.length,
+          }),
+        };
+      }
       return {
         badge: t('races.detail_map_route_badge'),
         title: t('races.detail_route_title', { city }),
@@ -745,7 +814,7 @@ export default function RacesDetail() {
       title: t('races.detail_map_city_title', { city }),
       source: t('races.detail_map_city_source'),
     };
-  }, [courseMapData.confidence, hasAlignedRoute, hasCityLevelCourseMap, race, t]);
+  }, [courseMapData.confidence, hasAlignedRoute, hasCityLevelCourseMap, hasOfficialCourseMap, race, routeMapPoints.length, t]);
 
   useEffect(() => {
     setRouteMapReady(false);
@@ -1196,6 +1265,7 @@ export default function RacesDetail() {
                       {elevationGraph.markers.map((marker) => (
                         <g
                           key={marker.id}
+                          data-km={marker.km.toFixed(1)}
                           className={`race-detail-elevation-marker${activeElevationPoint && Math.abs(activeElevationPoint.x - marker.x) < 8 ? ' is-active' : ''}${marker.isMajor ? ' is-major' : ' is-minor'}`}
                         >
                           <line
@@ -1226,9 +1296,13 @@ export default function RacesDetail() {
                   )}
                 </div>
                 <div className="race-detail-course-footnote">
-                  <span>{t(courseMapData.elevationSamples.length ? 'races.detail_course_hover_hint_aligned' : 'races.detail_course_hover_hint')}</span>
+                  <span>
+                    {t(courseMapData.elevationSamples.length && !hasOfficialCourseMap
+                      ? 'races.detail_course_hover_hint_aligned'
+                      : 'races.detail_course_hover_hint')}
+                  </span>
                   {courseMapData.elevationSamples.length ? (
-                    <span>{t('races.detail_course_route_source')}</span>
+                    <span>{t(hasOfficialCourseMap ? 'races.detail_course_route_official_source' : 'races.detail_course_route_source')}</span>
                   ) : elevationProfileImage ? (
                     <a href={elevationProfileImage} target="_blank" rel="noreferrer">
                       {t('races.detail_course_source_link')}

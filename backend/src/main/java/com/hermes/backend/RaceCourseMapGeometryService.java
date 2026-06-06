@@ -20,6 +20,18 @@ public class RaceCourseMapGeometryService {
             int minimumRoutePoints,
             RaceCourseMapService.PromptRaceType raceType
     ) {
+        return assessAlignmentPlausibility(routePoints, latitude, longitude, distanceKm, minimumRoutePoints, raceType, null);
+    }
+
+    public AlignmentPlausibilityVerdict assessAlignmentPlausibility(
+            List<RoutePoint> routePoints,
+            Double latitude,
+            Double longitude,
+            Double distanceKm,
+            int minimumRoutePoints,
+            RaceCourseMapService.PromptRaceType raceType,
+            Integer maxAllowedSelfIntersections
+    ) {
         if (routePoints.size() < minimumRoutePoints) {
             return invalid("route has only %d route points; need at least %d".formatted(routePoints.size(), minimumRoutePoints));
         }
@@ -49,10 +61,13 @@ public class RaceCourseMapGeometryService {
             }
         }
         RaceCourseMapService.RouteGeometryDiagnosis diagnosis = diagnoseRouteGeometry(routePoints, raceType, distanceKm);
-        if (diagnosis.selfIntersectionCount() > diagnosis.allowedSelfIntersections()) {
+        int allowedSelfIntersections = maxAllowedSelfIntersections == null
+                ? diagnosis.allowedSelfIntersections()
+                : Math.max(diagnosis.allowedSelfIntersections(), maxAllowedSelfIntersections);
+        if (diagnosis.selfIntersectionCount() > allowedSelfIntersections) {
             return invalid("route crosses itself %d times, exceeding the %d allowed for %s".formatted(
                     diagnosis.selfIntersectionCount(),
-                    diagnosis.allowedSelfIntersections(),
+                    allowedSelfIntersections,
                     raceType.promptValue()
             ));
         }

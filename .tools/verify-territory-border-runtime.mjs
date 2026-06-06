@@ -702,13 +702,15 @@ try {
     `Real-world tile blend mode should be normal: ${proof.mapStyle?.tileMixBlendMode}`,
   );
   proof.contourSample.forEach((sample) => {
-    assert(sample.strokeWidth === '3', `Unexpected contour width: ${sample.strokeWidth}`);
-    assert(sample.strokeOpacity === '1', `Unexpected contour opacity: ${sample.strokeOpacity}`);
+    assert(sample.strokeWidth === '2.4', `Unexpected contour width: ${sample.strokeWidth}`);
+    assert(sample.strokeOpacity === '0.48', `Unexpected contour opacity: ${sample.strokeOpacity}`);
     assert(sample.filter === 'none', `Contour filter should be none: ${sample.filter}`);
     assert(sample.mixBlendMode === 'normal', `Contour blend mode should be normal: ${sample.mixBlendMode}`);
     assert(sample.strokeLinecap === 'round', `Contour line cap should be round: ${sample.strokeLinecap}`);
     assert(sample.strokeLinejoin === 'round', `Contour line join should be round: ${sample.strokeLinejoin}`);
     assert(sample.d && sample.d.length > 0, 'Every sampled contour should have a rendered Leaflet SVG path.');
+    assert(sample.hasC === true, `Contour should render with cubic smoothing commands: ${sample.d}`);
+    assert(sample.hasLineCommands === false, `Contour should not render line-command fallback: ${sample.d}`);
   });
   assert(proof.surfaceSample.length === 0, 'Surface land fill should be absent so only the concrete contour can paint territory ownership.');
   proof.concreteLandSample.forEach((sample) => {
@@ -848,7 +850,7 @@ try {
     `Territory land fill is too dark for INTVL reference styling: coloredAverageLuma=${territoryColorMetrics.generated.colored.averageLuma}`,
   );
   assert(
-    Math.abs(territoryColorMetrics.coloredPixelRatioDelta) <= 0.42,
+    Math.abs(territoryColorMetrics.coloredPixelRatioDelta) <= 0.24,
     `Territory filled-land coverage is too far from reference: delta=${territoryColorMetrics.coloredPixelRatioDelta}`,
   );
   assert(

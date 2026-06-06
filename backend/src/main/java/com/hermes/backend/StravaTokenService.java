@@ -36,11 +36,29 @@ public class StravaTokenService {
     @Value("${strava.client.id:}")
     private String stravaClientId;
 
+    @Value("${STRAVA_CLIENT_ID:}")
+    private String stravaClientIdEnv;
+
+    @Value("${APP_STRAVA_CLIENT_ID:}")
+    private String appStravaClientId;
+
     @Value("${strava.client.secret:}")
     private String stravaClientSecret;
 
+    @Value("${STRAVA_CLIENT_SECRET:}")
+    private String stravaClientSecretEnv;
+
+    @Value("${APP_STRAVA_CLIENT_SECRET:}")
+    private String appStravaClientSecret;
+
     @Value("${app.strava.redirect-uri:http://localhost:8080/api/auth/strava/callback}")
     private String stravaRedirectUri;
+
+    @Value("${STRAVA_REDIRECT_URI:}")
+    private String stravaRedirectUriEnv;
+
+    @Value("${APP_STRAVA_REDIRECT_URI:}")
+    private String appStravaRedirectUri;
 
     public StravaTokenService(RunnerRepository runnerRepository,
                               SecretEncryptionService secretEncryptionService,
@@ -64,8 +82,8 @@ public class StravaTokenService {
 
     public String buildStravaAuthUrl(String state) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString("https://www.strava.com/oauth/authorize")
-                .queryParam("client_id", stravaClientId)
-                .queryParam("redirect_uri", stravaRedirectUri)
+                .queryParam("client_id", effectiveStravaClientId())
+                .queryParam("redirect_uri", effectiveStravaRedirectUri())
                 .queryParam("response_type", "code")
                 .queryParam("approval_prompt", "auto")
                 .queryParam("scope", "read,activity:read_all");
@@ -108,8 +126,8 @@ public class StravaTokenService {
         try {
             RestTemplate rest = this.restTemplate;
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-            form.add("client_id", stravaClientId);
-            form.add("client_secret", stravaClientSecret);
+            form.add("client_id", effectiveStravaClientId());
+            form.add("client_secret", effectiveStravaClientSecret());
             form.add("grant_type", "refresh_token");
             form.add("refresh_token", refreshToken);
 
@@ -155,7 +173,7 @@ public class StravaTokenService {
     private String signProfileLinkPayload(String payload) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] signature = digest.digest((payload + ":" + stravaClientSecret).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            byte[] signature = digest.digest((payload + ":" + effectiveStravaClientSecret()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(signature);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available.", exception);
@@ -231,6 +249,50 @@ public class StravaTokenService {
 
     private static String blankToEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private String effectiveStravaClientId() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_ID"),
+                System.getProperty("APP_STRAVA_CLIENT_ID"),
+                stravaClientId,
+                stravaClientIdEnv,
+                appStravaClientId,
+                System.getenv("STRAVA_CLIENT_ID"),
+                System.getenv("APP_STRAVA_CLIENT_ID"));
+    }
+
+    private String effectiveStravaClientSecret() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_SECRET"),
+                System.getProperty("APP_STRAVA_CLIENT_SECRET"),
+                stravaClientSecret,
+                stravaClientSecretEnv,
+                appStravaClientSecret,
+                System.getenv("STRAVA_CLIENT_SECRET"),
+                System.getenv("APP_STRAVA_CLIENT_SECRET"));
+    }
+
+    private String effectiveStravaRedirectUri() {
+        return firstPresent(
+                System.getProperty("app.strava.redirect-uri"),
+                System.getProperty("STRAVA_REDIRECT_URI"),
+                System.getProperty("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUriEnv,
+                appStravaRedirectUri,
+                System.getenv("STRAVA_REDIRECT_URI"),
+                System.getenv("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUri);
+    }
+
+    private static String firstPresent(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (value != null && !value.trim().isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     public record PendingStravaLinkRequest(Long runnerId, long expiresAtMs, String sessionFingerprint) {}

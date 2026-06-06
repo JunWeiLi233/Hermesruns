@@ -101,8 +101,8 @@ assert.match(
 
 assert.match(
   source,
-  /}\s*, \[\]\);/,
-  'TerritoryMap should mount Leaflet once instead of remounting during backend data hydration.',
+  /const territoryCenter = isValidMapCenter\(territory\?\.center\) \? territory\.center : null;[\s\S]*?if \(!mapRef\.current \|\| mapInstanceRef\.current\) return;[\s\S]*?if \(!territoryCenter\) return;[\s\S]*?}\s*, \[territoryCenter\?\.latitude, territoryCenter\?\.longitude, territoryCenter\?\.zoom\]\);/,
+  'TerritoryMap should wait for a real backend territory center and still avoid remounting once the Leaflet map exists.',
 );
 
 assert.match(
@@ -131,8 +131,20 @@ assert.match(
 
 assert.match(
   source,
-  /const ownerPolygons = mergeCellMaskPolygonsByOwner\(polygons\);[\s\S]*?const renderGrid = territoryMaskRenderGrid\(ownerPolygons\);[\s\S]*?const renderEntries = resolveMaskTileOwnership\(ownerPolygons, renderGrid\)\.slice\(\)\.reverse\(\);/,
-  'Territory should keep backend latest-first ordering, then render older owner masks first so the newest claim becomes the top layer.',
+  /const localPolygons = polygonsNearActiveTerritory\(polygons\);[\s\S]*?const ownerPolygons = mergeCellMaskPolygonsByOwner\(localPolygons\);[\s\S]*?const renderGrid = territoryMaskRenderGrid\(ownerPolygons\);[\s\S]*?const renderEntries = resolveMaskTileOwnership\(ownerPolygons, renderGrid\)\.slice\(\)\.reverse\(\);/,
+  'Territory should render active plus local-overlapping rival masks so mock competitors appear without pulling distant global territories into the current viewport.',
+);
+
+assert.doesNotMatch(
+  source,
+  /const activePolygons = polygons\.filter\(\(poly\) => poly\?\.active === true\);/,
+  'Territory should not drop rival backend masks before the owner merge/render pipeline.',
+);
+
+assert.match(
+  source,
+  /function polygonsNearActiveTerritory\(polygons\)[\s\S]*?poly\?\.active === true \|\| boundsOverlap\(polygonRenderBounds\(poly\), activeBounds\)/,
+  'Territory should keep local rival masks that overlap the active territory while filtering distant mock territories.',
 );
 
 assert.doesNotMatch(
@@ -186,13 +198,13 @@ assert.match(
 assert.match(
   source,
   /function resolveMaskTileOwnership\(polygons, renderGrid\)/,
-  'Territory should resolve per-owner render tiles without deleting overlapping ownership from older layers.',
+  'Territory should remove render-tile conflicts from older owners before Leaflet polygons are traced.',
 );
 
 assert.match(
   source,
   /aggregateMaskCells\(poly\.cells, poly\.cellMeters, renderGrid\)/,
-  'Territory should aggregate every owner onto the same frontend grid so overlapping land can stack without coordinate drift.',
+  'Territory should aggregate every owner onto the same frontend grid so latest-owner boundaries do not blend with older land.',
 );
 
 assert.doesNotMatch(
@@ -209,14 +221,14 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const concreteTiles = aggregateMaskCells\(poly\.cells, poly\.cellMeters, renderGrid\);[\s\S]*?concreteTiles\.forEach\(\(tile\) => \{[\s\S]*?tilesByKey\.set\(maskTileClaimKey\(tile\), tile\);[\s\S]*?return \{ poly, tiles: Array\.from\(tilesByKey\.values\(\)\) \};/,
-  'Territory visible land should come directly from backend concrete mask cells and preserve every owner layer even when render tiles overlap.',
+  /const concreteTiles = aggregateMaskCells\(poly\.cells, poly\.cellMeters, renderGrid\);[\s\S]*?concreteTiles\.forEach[\s\S]*?claimedTiles\.has\(key\)/,
+  'Territory visible land should come directly from backend concrete mask cells, then participate in latest-wins tile ownership resolution.',
 );
 
-assert.doesNotMatch(
+assert.match(
   source,
-  /claimedTiles|claimedCells/,
-  'Territory should not keep global tile/cell claim sets because overlaps now remain owned and are resolved by paint order.',
+  /claimedTiles\.has\(key\)[\s\S]*?claimedTiles\.add\(key\)/,
+  'Territory should let the first/latest owner claim a shared render tile and block older owners from drawing it.',
 );
 
 assert.match(
@@ -245,8 +257,8 @@ assert.match(
 
 assert.match(
   source,
-  /const LAND_MASK_CONTOUR_SIMPLIFY_RATIO = 4;/,
-  'Territory should simplify fine sub-cell stair noise without shrinking away claimed land coverage.',
+  /const LAND_MASK_CONTOUR_SIMPLIFY_RATIO = 12;/,
+  'Territory should simplify beyond fine sub-cell stair noise before rounding so concrete borders avoid pixelated edges.',
 );
 
 assert.match(
@@ -263,13 +275,13 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_SMOOTHING_PASSES = 4;/,
-  'Territory should use bounded boundary smoothing so borders stay continuous without collapsing narrow claims.',
+  /const LAND_MASK_SMOOTHING_PASSES = 8;/,
+  'Territory should use enough boundary smoothing passes for reference-style continuous territory borders.',
 );
 
 assert.match(
   source,
-  /const LAND_MASK_CURVE_PASSES = 2;[\s\S]*?function curveClosedMaskLoop\(points, passes\)[\s\S]*?interpolateMaskPoint\(current, following, 0\.25\)[\s\S]*?interpolateMaskPoint\(current, following, 0\.75\)[\s\S]*?curveClosedMaskLoop\(smoothed, curvePasses\)/,
+  /const LAND_MASK_CURVE_PASSES = 3;[\s\S]*?function curveClosedMaskLoop\(points, passes\)[\s\S]*?interpolateMaskPoint\(current, following, 0\.25\)[\s\S]*?interpolateMaskPoint\(current, following, 0\.75\)[\s\S]*?curveClosedMaskLoop\(smoothed, curvePasses\)/,
   'Territory final contours should run through limited straight subdivision after corner rounding; cardinal splines are banned because they distorted ownership geometry in visual proof.',
 );
 
@@ -305,8 +317,8 @@ assert.match(
 
 assert.match(
   source,
-  /const LAND_MASK_CORNER_RADIUS_RATIO = 4;/,
-  'Territory rounded-corner contours should soften cell stair-steps without cutting large holes out of claimed land.',
+  /const LAND_MASK_CORNER_RADIUS_RATIO = 18;/,
+  'Territory rounded-corner contours should soften cell stair-steps into broader reference-like territory edges without adding halo or synthetic bridge geometry.',
 );
 
 assert.doesNotMatch(
@@ -371,8 +383,8 @@ assert.match(
 
 assert.match(
   source,
-  /function visualMaskRegions\(tiles, options = \{\}\)[\s\S]*?maskTileConnectedComponents\(tiles\)\.flatMap\(\(component\) => \{[\s\S]*?const componentRegions = maskBoundaryLoops\(component, options\)[\s\S]*?visibleMaskContourRegions\(componentRegions, options\)/,
-  'Territory should preserve complete per-owner connected components for visual coverage instead of pruning away owned land.',
+  /function visualMaskRegions\(tiles, options = \{\}\)[\s\S]*?maskTileConnectedComponents\(tiles\)\.flatMap[\s\S]*?const contourComponent = component\.length >= LAND_MASK_LARGE_COMPONENT_MIN_TILES[\s\S]*?\? component[\s\S]*?: pruneMaskContourTiles\(component\);[\s\S]*?const componentRegions = maskBoundaryLoops\(contourComponent, options\)[\s\S]*?visibleMaskContourRegions\(componentRegions, options\)/,
+  'Territory should preserve complete visual coverage for large latest-wins connected components, using pruning only as a small-component fallback to avoid black seam voids.',
 );
 
 assert.doesNotMatch(
@@ -407,8 +419,8 @@ assert.match(
 
 assert.match(
   source,
-  /function pairedVisibleMaskRegions\(tiles, options = \{\}\)[\s\S]*?maskTileConnectedComponents\(tiles\)\.flatMap\(\(component\) => \{[\s\S]*?const exactRegions = maskBoundaryLoops\(component, options\)[\s\S]*?return exactRegions\.map\(\(exactRegion\) => \{[\s\S]*?visibleMaskContourRegions\(\[exactRegion\], options\)[\s\S]*?const visibleRegion = smoothedRegions\[0\] \|\| exactRegion[\s\S]*?coverageRegion: exactRegion,[\s\S]*?landRegion: visibleRegion,[\s\S]*?contourRegion: visibleRegion,/,
-  'Territory should preserve exact ownership coverage underneath each smoothed visible land/contour pair.',
+  /const exactRegions = maskTileConnectedComponents\(tiles\)\.flatMap\(\(component\) => maskBoundaryLoops\(component, \{ globalOccupied \}\)\)[\s\S]*?const sourceCellMeters = Number\(renderGrid\.sourceCellMeters\);[\s\S]*?const concreteRegions = visualMaskRegions\(tiles, \{[\s\S]*?tileMeters,[\s\S]*?sourceCellMeters,[\s\S]*?cosLat,[\s\S]*?globalOccupied,[\s\S]*?\}\);[\s\S]*?const visibleConcreteRegions = visibleMaskStrokeRegions\(concreteRegions, \{ cosLat \}\);[\s\S]*?exactRegions\.forEach\(\(region\) => \{[\s\S]*?region\.forEach\(\(coord\) => allCoords\.push\(coord\)\);[\s\S]*?contourRenderEntries\.push\([\s\S]*?landRegions: visibleConcreteRegions,[\s\S]*?contourRegions: visibleConcreteRegions,/,
+  'Territory should derive smooth concrete land from resolved latest-wins ownership and only show area-qualified regions.',
 );
 
 assert.doesNotMatch(
@@ -443,8 +455,8 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /const LAND_MASK_CONTOUR_WEIGHT = 3;[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = 1;[\s\S]*?const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.42, rival: 0\.34 \};[\s\S]*?const LAND_MASK_COVERAGE_LAND_OPACITY = \{ active: 0\.22, rival: 0\.18 \};/,
-  'Territory should use a map-readable smoothed tint plus a visible exact coverage underlay and one neon owner border.',
+  /const LAND_MASK_CONTOUR_WEIGHT = 2\.4;[\s\S]*?const LAND_MASK_CONTOUR_OPACITY = 0\.48;/,
+  'Territory should use one plain concrete owner border without turning it into a separate highlight or halo stroke.',
 );
 
 assert.doesNotMatch(
@@ -455,14 +467,14 @@ assert.doesNotMatch(
 
 assert.doesNotMatch(
   source,
-  /LAND_MASK_CONCRETE_BORDER|LAND_MASK_FLOOR|LAND_MASK_EXACT|LAND_MASK_RESOLVED_UNDERLAY|LAND_MASK_COVERAGE_(WASH|BAND)|LAND_MASK_CONFLICT_SEAM|LAND_MASK_SHARED_BOUNDARY|LAND_MASK_GROUND_SHADOW|LAND_MASK_HIGHLIGHT/,
+  /LAND_MASK_CONCRETE_BORDER|LAND_MASK_FLOOR|LAND_MASK_EXACT|LAND_MASK_RESOLVED_UNDERLAY|LAND_MASK_COVERAGE_(WASH|BAND)|LAND_MASK_CONFLICT_SEAM|LAND_MASK_SHARED_BOUNDARY/,
   'Territory should not keep hidden helper-layer constants after narrowing the visual stack to concrete fill plus one border.',
 );
 
 assert.match(
   source,
-  /const renderEntries = resolveMaskTileOwnership\(ownerPolygons, renderGrid\)\.slice\(\)\.reverse\(\);[\s\S]*?const globalOccupied = new Set\(renderEntries\.flatMap[\s\S]*?const exactRegions = maskTileConnectedComponents\(tiles\)\.flatMap[\s\S]*?const pairedRegions = pairedVisibleMaskRegions\(tiles, \{[\s\S]*?tileMeters,[\s\S]*?sourceCellMeters,[\s\S]*?cosLat,[\s\S]*?globalOccupied,[\s\S]*?\}\);[\s\S]*?coverageRegions: pairedRegions\.map\(\(region\) => region\.coverageRegion\),[\s\S]*?landRegions: pairedRegions\.map\(\(region\) => region\.landRegion\),[\s\S]*?contourRegions: pairedRegions\.map\(\(region\) => region\.contourRegion\),/,
-  'Territory visible land should render exact per-loop coverage beneath every paired smoothed ownership region.',
+  /const renderEntries = resolveMaskTileOwnership\(ownerPolygons, renderGrid\)\.slice\(\)\.reverse\(\);[\s\S]*?const globalOccupied = new Set\(renderEntries\.flatMap[\s\S]*?const exactRegions = maskTileConnectedComponents\(tiles\)\.flatMap[\s\S]*?const concreteRegions = visualMaskRegions\(tiles, \{[\s\S]*?tileMeters,[\s\S]*?sourceCellMeters,[\s\S]*?cosLat,[\s\S]*?globalOccupied,[\s\S]*?\}\);[\s\S]*?const visibleConcreteRegions = visibleMaskStrokeRegions\(concreteRegions, \{ cosLat \}\);[\s\S]*?landRegions: visibleConcreteRegions,[\s\S]*?contourRegions: visibleConcreteRegions,/,
+  'Territory visible land should use smoothed resolved concrete ownership, with tiny fragments suppressed at this map scale.',
 );
 
 assert.doesNotMatch(
@@ -473,50 +485,62 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /function paintTerritoryLandRegion\(L, map, layer, region, options = \{\}\)[\s\S]*?const coverageRegion = Array\.isArray\(options\.coverageRegion\)[\s\S]*?L\.polygon\(coverageRegion,[\s\S]*?fillColor: color,[\s\S]*?fillRule: 'nonzero',[\s\S]*?fillOpacity: active \? LAND_MASK_COVERAGE_LAND_OPACITY\.active : LAND_MASK_COVERAGE_LAND_OPACITY\.rival,[\s\S]*?className: `terr-land-mask-exact-underlay\$\{className\}`[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?stroke: false,[\s\S]*?fillColor: color,[\s\S]*?fillRule: 'nonzero',[\s\S]*?fillOpacity: active \? LAND_MASK_CONCRETE_LAND_OPACITY\.active : LAND_MASK_CONCRETE_LAND_OPACITY\.rival,[\s\S]*?className: `terr-land-mask-concrete-land\$\{className\}`[\s\S]*?const contourLine = L\.polyline\(contourRegion,[\s\S]*?weight: LAND_MASK_CONTOUR_WEIGHT,[\s\S]*?opacity: LAND_MASK_CONTOUR_OPACITY,[\s\S]*?className: `terr-land-mask-contour\$\{className\}`/,
-  'Territory backend render should use nonzero-filled exact coverage, map-readable smoothed land, and one neon owner contour.',
+  /const LAND_MASK_CONCRETE_LAND_OPACITY = \{ active: 0\.74, rival: 0\.44 \};[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;[\s\S]*?const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = \{ active: 0, rival: 0 \};[\s\S]*?contourRenderEntries\.forEach\(\(\{ active, color, landRegions \}\) => \{[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,[\s\S]*?stroke: false,[\s\S]*?lineCap: 'round',[\s\S]*?lineJoin: 'round',[\s\S]*?className: 'terr-land-mask-concrete-land'[\s\S]*?contourRenderEntries\.forEach\(\(\{ borderColor, contourRegions \}\) => \{[\s\S]*?const contourLine = L\.polyline\(region,[\s\S]*?color: borderColor,[\s\S]*?className: 'terr-land-mask-contour'/,
+  'Territory backend render should paint smooth concrete land fill without a broad same-color stroke, then the qualified contour above it.',
 );
 
 assert.match(
   source,
-  /contourRenderEntries\.forEach\(\(\{ active, color, coverageRegions, landRegions, contourRegions \}\) => \{[\s\S]*?landRegions\.forEach\(\(region, index\) => \{[\s\S]*?paintTerritoryLandRegion\(L, map, layer, region, \{[\s\S]*?active,[\s\S]*?color,[\s\S]*?renderer: visualRenderer,[\s\S]*?coverageRegion: coverageRegions\?\.\[index\],[\s\S]*?contourRegion: contourRegions\[index\] \|\| region,/,
-  'Territory should render smoothed backend land through the shared painter while supplying exact coverage and a separate smoothed contour region.',
+  /borderColor: color,[\s\S]*?color: borderColor,/,
+  'Territory should curve the existing contour line on the same land geometry instead of drawing a separate halo or highlight path.',
 );
 
 assert.doesNotMatch(
   source,
   /function maskSharedBoundaryBands|function maskTileEdgeSegment|owner\.entryIndex >= neighbor\.entryIndex \? owner : neighbor/,
-  'Territory should not create separate conflict underpaint geometry because overlapping ownership is resolved by layer order.',
+  'Territory should not create separate conflict underpaint geometry once latest-wins ownership is resolved before the visual surface.',
 );
 
 assert.match(
   source,
-  /weight: LAND_MASK_CONTOUR_WEIGHT,[\s\S]*?opacity: LAND_MASK_CONTOUR_OPACITY,[\s\S]*?className: `terr-land-mask-contour\$\{className\}`/,
+  /weight: LAND_MASK_CONTOUR_WEIGHT,[\s\S]*?opacity: LAND_MASK_CONTOUR_OPACITY,[\s\S]*?className: 'terr-land-mask-contour'/,
   'Territory final contour branch should provide the reference-style smooth border without glow.',
 );
 
-assert.doesNotMatch(
+assert.match(
   source,
-  /LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX|smoothContourSvgPath|attachSmoothTerritoryPath|map\.latLngToLayerPoint\(point\)|pathElement\.setAttribute\('d', path\)|map\.on\('zoomend viewreset moveend'/,
-  'Territory should not rewrite SVG paths in screen coordinates because that makes borders change across zoom levels.',
-);
-
-assert.doesNotMatch(
-  source,
-  /LAND_MASK_AXIS_SEGMENT_SOFTEN_PX|softenAxisAlignedLayerSegments|LAND_MASK_SHARED_EDGE_CURVE_RATIO|maskSharedEdgeMidpoint/,
-  'Territory should not inject screen-space or shared-edge wiggles because they create wretched self-intersecting border lines.',
+  /const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 8;[\s\S]*?const LAND_MASK_CONTOUR_CUBIC_TENSION = 0\.42;[\s\S]*?const LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO = 0\.72;[\s\S]*?function dedupeLayerPoints\(points, tolerancePixels = 0\.75\)[\s\S]*?function simplifyClosedLayerPoints\(points, tolerancePixels = LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX\)[\s\S]*?function clampLayerControlPoint\(control, start, end\)[\s\S]*?segmentLength \* LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO[\s\S]*?function cubicContourControls\(previous, current, next, following\)[\s\S]*?function smoothContourSvgPath\(map, region\)[\s\S]*?simplifyClosedLayerPoints\(dedupeLayerPoints\(closedMaskLoopOpenPoints\(region\)[\s\S]*?map\.latLngToLayerPoint\(point\)[\s\S]*?path \+= `C\$\{first\.x\} \$\{first\.y\} \$\{second\.x\} \$\{second\.y\} \$\{next\.x\} \$\{next\.y\}`[\s\S]*?return `\$\{path\}Z`;/,
+  'Territory should rewrite fill and contour paths with cubic SVG curves and enough screen simplification to suppress tiny pixel-grid steps.',
 );
 
 assert.match(
   source,
-  /const globalOccupied = new Set\(renderEntries\.flatMap[\s\S]*?maskTileClaimKey\(tile\)[\s\S]*?maskBoundaryLoops\(component, \{ globalOccupied \}\)[\s\S]*?pairedVisibleMaskRegions\(tiles, \{[\s\S]*?globalOccupied,/,
-  'Territory should keep a global occupied-tile view for contour diagnostics while preserving every owner layer.',
+  /const LAND_MASK_AXIS_SEGMENT_SOFTEN_PX = 64;[\s\S]*?const LAND_MASK_AXIS_SEGMENT_MIN_PX = 10;[\s\S]*?function softenAxisAlignedLayerSegments\(points\)[\s\S]*?axisSkew > 0\.12[\s\S]*?segmentLength \* 0\.24[\s\S]*?const points = softenAxisAlignedLayerSegments\(basePoints\)/,
+  'Territory should soften long tile-derived axis segments on both outer and shared paths so inner territory borders do not read as pixel-grid edges.',
 );
 
 assert.match(
   source,
-  /const contourRegion = Array\.isArray\(options\.contourRegion\)[\s\S]*?const concreteLand = L\.polygon\(region,[\s\S]*?const contourLine = L\.polyline\(contourRegion,/,
-  'Territory should fill exact resolved land while drawing a separate precomputed contour region without zoom-time path mutation.',
+  /const LAND_MASK_SHARED_EDGE_CURVE_RATIO = 0\.38;[\s\S]*?function maskSharedEdgeMidpoint\(from, to\)[\s\S]*?segmentLength \* LAND_MASK_SHARED_EDGE_CURVE_RATIO[\s\S]*?loop\.push\(maskVertexToLatLng\(maskSharedEdgeMidpoint\(edge\.from, endpoint\), tileMeters, cosLat\)\)/,
+  'Territory should curve shared owner boundaries with deterministic geometry points that both neighboring fills can share without dark gaps.',
+);
+
+assert.match(
+  source,
+  /const globalOccupied = new Set\(renderEntries\.flatMap[\s\S]*?maskTileClaimKey\(tile\)[\s\S]*?maskBoundaryLoops\(component, \{ globalOccupied \}\)[\s\S]*?visualMaskRegions\(tiles, \{[\s\S]*?globalOccupied,/,
+  'Territory should know global latest-wins occupied tiles so shared owner boundaries stay concrete and cannot be softened into dark seams.',
+);
+
+assert.match(
+  source,
+  /function attachSmoothTerritoryPath\(map, territoryPath, region\)[\s\S]*?pathElement\.setAttribute\('d', path\)[\s\S]*?map\.off\('zoomend viewreset moveend', updatePath\)[\s\S]*?map\.on\('zoomend viewreset moveend', updatePath\)/,
+  'Territory should keep the curved border path synchronized with Leaflet zoom and movement without adding a second helper layer.',
+);
+
+assert.match(
+  source,
+  /const contourLine = L\.polyline\(region,[\s\S]*?className: 'terr-land-mask-contour'[\s\S]*?\}\)\.addTo\(layer\);[\s\S]*?attachSmoothTerritoryPath\(map, contourLine, region\);/,
+  'Territory should curve the existing contour line on the same land geometry instead of drawing a separate halo or highlight path.',
 );
 
 assert.doesNotMatch(
@@ -527,13 +551,13 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /smoothFactor: 0\.35,[\s\S]*?className: `terr-land-mask-contour\$\{className\}`/,
+  /smoothFactor: 0\.35,[\s\S]*?className: 'terr-land-mask-contour'/,
   'Territory should keep Leaflet simplification low enough that rounded concrete land contours do not render as pixelated stair steps.',
 );
 
 assert.doesNotMatch(
   source,
-  /terr-land-mask-contour-glow|terr-land-mask-contour-falloff|terr-land-mask-region-floor|terr-land-mask-region-exact|terr-land-mask-resolved-underlay|terr-land-mask-coverage|terr-land-mask-conflict-seam|terr-land-mask-shared-boundary|terr-land-mask-ground-shadow|terr-land-mask-highlight/,
+  /terr-land-mask-contour-glow|terr-land-mask-contour-falloff|terr-land-mask-region-floor|terr-land-mask-region-exact|terr-land-mask-resolved-underlay|terr-land-mask-coverage|terr-land-mask-conflict-seam|terr-land-mask-shared-boundary/,
   'Territory should not render hidden helper layer classes after the concrete-land fix.',
 );
 
@@ -588,13 +612,13 @@ assert.match(
 assert.match(
   runtimeVerifierSource,
   /hasC: \/C\/\.test\(node\.getAttribute\('d'\) \|\| ''\),[\s\S]*?hasLineCommands: \/\[LHV\]\/\.test\(node\.getAttribute\('d'\) \|\| ''\)/,
-  'Runtime proof should inspect SVG path commands for diagnostics while Leaflet owns zoom-stable path projection.',
+  'Runtime proof should inspect SVG path commands so the visible border cannot regress to pixel-like line segments.',
 );
 
 assert.match(
   runtimeVerifierSource,
-  /assert\(sample\.d && sample\.d\.length > 0,[\s\S]*?Every sampled contour should have a rendered Leaflet SVG path/,
-  'Runtime proof should require rendered Leaflet paths without forcing zoom-dependent cubic path rewrites.',
+  /assert\(sample\.hasC === true,[\s\S]*?assert\(sample\.hasLineCommands === false,/,
+  'Runtime proof should require every sampled contour to use cubic-smoothed paths and reject line-command fallback.',
 );
 
 assert.match(
@@ -611,8 +635,8 @@ assert.match(
 
 assert.match(
   runtimeVerifierSource,
-  /sample\.strokeWidth === '3'[\s\S]*?sample\.strokeOpacity === '1'/,
-  'Runtime proof should require the reference-style neon contour border.',
+  /sample\.strokeWidth === '2\.4'[\s\S]*?sample\.strokeOpacity === '0\.48'/,
+  'Runtime proof should reject the old thick highlight border and require the plain single contour border.',
 );
 
 assert.match(
@@ -635,8 +659,8 @@ assert.match(
 
 assert.match(
   runtimeVerifierSource,
-  /coloredPixelRatioDelta:[\s\S]*?Math\.abs\(territoryColorMetrics\.coloredPixelRatioDelta\) <= 0\.42/,
-  'Runtime proof should allow the lighter reference-style land coverage without forcing a broad highlight wash.',
+  /coloredPixelRatioDelta:[\s\S]*?Math\.abs\(territoryColorMetrics\.coloredPixelRatioDelta\) <= 0\.24/,
+  'Runtime proof should keep concrete filled-land coverage bounded without forcing a broad highlight wash.',
 );
 
 assert.match(
@@ -707,8 +731,20 @@ assert.doesNotMatch(
 
 assert.match(
   source,
-  /function fallbackZoneMaskPolygons\(cells\)[\s\S]*?const fallbackPolygons = fallbackZoneMaskPolygons\(visibleCells\);[\s\S]*?const fallbackRenderGrid = territoryMaskRenderGrid\(fallbackPolygons\);[\s\S]*?const fallbackRenderEntries = resolveMaskTileOwnership\(fallbackPolygons, fallbackRenderGrid\)\.slice\(\)\.reverse\(\);[\s\S]*?const fallbackGlobalOccupied = new Set[\s\S]*?pairedVisibleMaskRegions\(tiles, \{[\s\S]*?globalOccupied: fallbackGlobalOccupied,[\s\S]*?coverageRegions: pairedRegions\.map\(\(region\) => region\.coverageRegion\),[\s\S]*?paintTerritoryLandRegion\(L, map, layer, region, \{[\s\S]*?className,[\s\S]*?coverageRegion: coverageRegions\?\.\[index\],/,
-  'Territory zone fallback should owner-merge coarse sector cells and render the same smooth concrete land/contour stack as backend masks.',
+  /function territoryCellFallbackPolygons\(territory\)[\s\S]*?territory\.territories[\s\S]*?\.filter\(ownsTerritoryCell\)[\s\S]*?active: true,[\s\S]*?coordinates: cell\.polygon/,
+  'Territory should keep a real authenticated-user /api/territory fallback so the map does not go blank while concrete polygon masks are warming.',
+);
+
+assert.match(
+  source,
+  /const hasActiveBackendPolygon = backendPolygons\.some\(\(poly\) => poly\?\.active === true\);[\s\S]*?hasActiveBackendPolygon \? backendPolygons : territoryCellFallbackPolygons\(territory\)/,
+  'Territory should prefer concrete backend masks and only fall back to authenticated-user territory cells when no active mask is available.',
+);
+
+assert.doesNotMatch(
+  source,
+  /fallbackZoneMaskPolygons|visibleCells|zoneCellCenter|zoneCellMeters/,
+  'Territory should not restore the old broad zone fallback helpers because they created oversized fake territory blobs.',
 );
 
 assert.doesNotMatch(
@@ -720,7 +756,7 @@ assert.doesNotMatch(
 assert.match(
   source,
   /polygons=\{polygons\}[\s\S]*?showPolygons=\{polygons\.length > 0\}/,
-  'Territory should use the smooth owner-merged fallback until backend polygon masks are actually present.',
+  'Territory should paint only when backend polygon masks are present instead of falling back to broad territory cells.',
 );
 
 assert.doesNotMatch(
@@ -867,16 +903,16 @@ assert.doesNotMatch(
   'Territory concrete land should no longer render as dotted circle markers.',
 );
 
-assert.match(
+assert.doesNotMatch(
   source,
   /\[territory, filter, leaderboard, mapReady, showPolygons\]/,
-  'Zone layer effect should repaint after mapReady flips true and clear itself when concrete land masks are shown.',
+  'Territory should not keep the coarse zone-layer effect that paints oversized fallback blobs.',
 );
 
 assert.match(
   source,
-  /\[polygons, showPolygons, mapReady, recenterSignal, territory\?\.center\]/,
-  'Polygon layer effect should repaint after mapReady flips true, when the title-strip recenter action fires, and when the live territory center changes.',
+  /\[polygons, showPolygons, mapReady, recenterSignal\]/,
+  'Polygon layer effect should repaint after mapReady flips true and when the title-strip recenter action fires.',
 );
 
 console.log('[PASS] Territory backend wiring guard passed.');

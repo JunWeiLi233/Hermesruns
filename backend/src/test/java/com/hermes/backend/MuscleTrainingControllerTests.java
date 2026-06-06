@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
@@ -25,6 +26,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:muscle-training-controller-tests;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "app.official-course.startup-seed.enabled=false",
+        "strava.sync.enabled=false",
+        "garmin.wellness.sync.enabled=false",
+        "app.coach.nightly.enabled=false",
+        "app.local-shared-runner.enabled=false",
+        "app.local-territory-flushing.enabled=false",
+        "app.local-territory-flushing-inner.enabled=false",
+        "app.local-territory-berlin.enabled=false"
+})
 @Transactional
 class MuscleTrainingControllerTests {
 

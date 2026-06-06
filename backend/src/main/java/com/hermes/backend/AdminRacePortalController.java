@@ -165,20 +165,9 @@ public class AdminRacePortalController {
             Runner admin = adminOptional.get();
             adminBackgroundJobService.runCourseMapScanAsync(job, 1, () -> {
                 AtomicReference<List<CourseMapScanStep>> scanSteps = new AtomicReference<>(List.of());
+                AtomicReference<Boolean> uploadStored = new AtomicReference<>(false);
+                AtomicReference<Integer> uploadConfidence = new AtomicReference<>();
                 try {
-                    RaceCourseMapResult uploadResult = adminService.getRaceCourseMapService().uploadPendingCourseMap(
-                            raceId, raceName, city, country, website, lat, lng, distanceKm, imageUrl, admin.getEmail());
-                    safeAuditLog(admin, "race_course_map.pending_uploaded", "race_course_map", raceId, "Uploaded pending race course map");
-                    adminBackgroundJobService.updateDetails(
-                            job,
-                            courseMapJobDetails(
-                                    raceId,
-                                    "upload_scan",
-                                    List.of(),
-                                    "uploadStored", true,
-                                    "uploadConfidence", uploadResult.confidence()
-                            )
-                    );
                     RaceCourseMapResult result;
                     try (CourseMapScanWatcher.ScanScope ignored = courseMapScanWatcher.watch(
                             raceId,
@@ -189,10 +178,27 @@ public class AdminRacePortalController {
                                         raceId,
                                         "upload_scan",
                                         steps,
-                                        "uploadStored", true
+                                        "uploadStored", uploadStored.get(),
+                                        "uploadConfidence", uploadConfidence.get()
                                 ));
                             }
                     )) {
+                        RaceCourseMapResult uploadResult = adminService.getRaceCourseMapService().uploadPendingCourseMap(
+                                raceId, raceName, city, country, website, lat, lng, distanceKm, imageUrl, admin.getEmail());
+                        uploadStored.set(true);
+                        uploadConfidence.set(uploadResult.confidence());
+                        scanSteps.set(courseMapScanWatcher.currentSteps());
+                        safeAuditLog(admin, "race_course_map.pending_uploaded", "race_course_map", raceId, "Uploaded pending race course map");
+                        adminBackgroundJobService.updateDetails(
+                                job,
+                                courseMapJobDetails(
+                                        raceId,
+                                        "upload_scan",
+                                        scanSteps.get(),
+                                        "uploadStored", true,
+                                        "uploadConfidence", uploadResult.confidence()
+                                )
+                        );
                         result = adminService.getRaceCourseMapService().reanalyzePendingCourseMap(
                                 raceId, raceName, city, country, website, lat, lng, distanceKm, admin.getEmail());
                         scanSteps.set(courseMapScanWatcher.currentSteps());

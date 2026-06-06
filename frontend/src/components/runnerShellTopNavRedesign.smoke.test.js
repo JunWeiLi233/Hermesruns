@@ -79,7 +79,6 @@ const runnerPages = [
   'Schedule.jsx',
   'Settings.jsx',
   'Shoes.jsx',
-  'Territory.jsx',
   'TodayRun.jsx',
   'WeatherEngine.jsx',
   'WorkflowBuilder.jsx',
@@ -100,5 +99,17 @@ runnerPages.forEach((fileName) => {
     `${fileName} still renders the old local runner-shell-topnav markup.`,
   );
 });
+
+const territorySource = readFileSync(path.join(pageRoot, 'Territory.jsx'), 'utf8');
+assert(
+  territorySource.includes('terr-map-topbar terr-map-titlebar')
+    && territorySource.includes('terr-map-utility-rail terr-map-utility-rail--navigation-only'),
+  'Territory.jsx should keep its map-first topbar and utility rail exception instead of the shared shell topnav.',
+);
+assert(
+  !territorySource.includes("import RunnerShellTopNav from '../components/RunnerShellTopNav';")
+    && !/<RunnerShellTopNav[\s>]/.test(territorySource),
+  'Territory.jsx should not render RunnerShellTopNav because the live map overlay owns the viewport.',
+);
 
 console.log('[PASS] Runner shell topnav redesign guardrails passed.');

@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +30,9 @@ public class StravaAutoSyncScheduler {
     private final StravaSyncService stravaSyncService;
     private final AdminBackgroundJobService adminBackgroundJobService;
 
+    @Value("${strava.sync.enabled:true}")
+    private boolean syncEnabled;
+
     public StravaAutoSyncScheduler(
             RunnerRepository runnerRepository,
             StravaTokenService stravaTokenService,
@@ -48,6 +52,10 @@ public class StravaAutoSyncScheduler {
      */
     @Scheduled(fixedDelayString = "${strava.sync.interval-ms:600000}", initialDelay = 120_000)
     public void syncAllStravaRunners() {
+        if (!syncEnabled) {
+            log.debug("Strava auto-sync: scheduled sync disabled");
+            return;
+        }
         runSyncJob(null, "scheduler");
     }
 
@@ -56,6 +64,18 @@ public class StravaAutoSyncScheduler {
     }
 
     private AdminBackgroundJob runSyncJob(Runner actor, String triggerSource) {
+        if (!syncEnabled) {
+            AdminBackgroundJob job = adminBackgroundJobService.createJob(
+                    "STRAVA_GLOBAL_SYNC",
+                    triggerSource,
+                    actor,
+                    "Strava sync is disabled.",
+                    Map.of("enabled", false)
+            );
+            adminBackgroundJobService.markCompleted(job, 0, 0, "Strava sync is disabled.", Map.of("enabled", false));
+            return job;
+        }
+
         if (!stravaTokenService.isStravaConfigured()) {
             AdminBackgroundJob job = adminBackgroundJobService.createJob(
                     "STRAVA_GLOBAL_SYNC",

@@ -3,6 +3,11 @@ package com.hermes.backend;
 import org.junit.jupiter.api.Test;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.springframework.core.ParameterizedTypeReference;
@@ -14,6 +19,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 import javax.imageio.ImageIO;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -493,6 +502,27 @@ class RaceCourseMapServiceTests {
     }
 
     @Test
+    void resolveUploadedReferenceAcceptsOfficialPdfLargerThanLegacyCap() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        byte[] officialGuideBytes = new byte[13 * 1024 * 1024];
+        when(restTemplate.exchange(
+                eq("https://example.com/official-race-guide.pdf"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(officialGuideBytes));
+        RaceCourseMapImageService imageService = new RaceCourseMapImageService(restTemplate);
+
+        RaceCourseMapService.ResolvedCandidateAsset result = imageService.resolveUploadedReference(
+                "https://example.com/official-race-guide.pdf"
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.imageUrl()).isEqualTo("https://example.com/official-race-guide.pdf");
+        assertThat(result.imageBytes()).hasSize(officialGuideBytes.length);
+    }
+
+    @Test
     void reanalyzePendingCourseMapSupportsLocalPdfDataUrlsWithAdminPreviewThreshold() throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
@@ -602,6 +632,181 @@ class RaceCourseMapServiceTests {
         verify(qwenClient, atLeastOnce()).analyzeCandidate(imageCaptor.capture(), eq("image/png"), anyString());
         assertThat(imageCaptor.getAllValues()).allSatisfy(bytes -> assertThat(bytes).isNotEmpty());
         verify(restTemplate, never()).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class));
+    }
+
+    @Test
+    void scanPendingCourseMapContinuesRemoteSearchWhenSyntheticLocalImageDoesNotAlign(@TempDir Path courseMapUploadDirectory) throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+
+        Files.write(courseMapUploadDirectory.resolve("dublin-marathon-local.png"), samplePng());
+        RaceCourseMapAsset asset = new RaceCourseMapAsset();
+        asset.setRaceId("dublin-marathon");
+        asset.setRaceName("Dublin Marathon");
+        asset.setCity("Dublin");
+        asset.setCountry("Ireland");
+        asset.setOfficialWebsite("https://irishlifedublinmarathon.ie/");
+        asset.setLatitude(53.3498);
+        asset.setLongitude(-6.2603);
+        asset.setDistanceKm(42.195);
+        asset.setLiveImageUrl("local-course-map:dublin-marathon-local.png");
+        asset.setLiveSource("synthetic-geographic-loop");
+        asset.setLiveConfidence(35);
+        asset.setLiveRoutePointsJson(dublinLoopRouteJson());
+        asset.setLiveElevationSamplesJson("[]");
+        when(repository.findByRaceId("dublin-marathon")).thenReturn(Optional.of(asset));
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(restTemplate.exchange(
+                startsWith("https://www.bing.com/images/search"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(ResponseEntity.ok("""
+                <html><script>
+                var data = {"murl&quot;:&quot;https%3A%2F%2Fcdn.example.com%2Fdublin-course-map.png&quot;"};
+                </script></html>
+                """));
+        when(restTemplate.exchange(
+                eq("https://cdn.example.com/dublin-course-map.png"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(samplePng()));
+        when(restTemplate.exchange(
+                any(RequestEntity.class),
+                org.mockito.ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenReturn(ResponseEntity.ok(Map.of("elevation", sampleElevations(845))));
+        when(qwenClient.analyzeCandidate(any(byte[].class), anyString(), anyString()))
+                .thenReturn("""
+                        {
+                          "isCourseMap": false,
+                          "confidence": 0,
+                          "summary": "The existing synthetic preview is not a usable official route map.",
+                          "routePoints": []
+                        }
+                        """)
+                .thenReturn("""
+                        {
+                          "isCourseMap": true,
+                          "confidence": 84,
+                          "summary": "Aligned the official Dublin Marathon course map.",
+                          "overlayBounds": {
+                            "north": 53.40,
+                            "south": 53.27,
+                            "east": -6.10,
+                            "west": -6.32
+                          },
+                          "routePoints": %s
+                        }
+                        """.formatted(dublinLoopRouteJson()));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, null, qwenClient, courseMapUploadDirectory);
+
+        RaceCourseMapResult result = service.scanPendingCourseMap(
+                "dublin-marathon",
+                "Dublin Marathon",
+                "Dublin",
+                "Ireland",
+                "https://irishlifedublinmarathon.ie/",
+                53.3498,
+                -6.2603,
+                42.195,
+                "admin@hermes.test"
+        );
+
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.source()).isEqualTo("admin-auto-acquire");
+        assertThat(result.confidence()).isEqualTo(84);
+        assertThat(result.routePoints()).hasSizeGreaterThan(10);
+        assertThat(asset.getPendingSource()).isEqualTo("admin-auto-acquire");
+        assertThat(asset.getPendingRoutePointsJson()).contains("\"lat\"");
+        verify(restTemplate).exchange(
+                eq("https://cdn.example.com/dublin-course-map.png"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        );
+    }
+
+    @Test
+    void scanPendingCourseMapCollectsOfficialPageCandidatesForAdminReview(@TempDir Path courseMapUploadDirectory) throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        QwenCourseMapAlignmentClient qwenClient = mock(QwenCourseMapAlignmentClient.class);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(repository.findByRaceId("dublin-marathon")).thenReturn(Optional.empty());
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(restTemplate.exchange(
+                eq("https://irishlifedublinmarathon.ie/"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(ResponseEntity.ok("""
+                <html>
+                  <body>
+                    <img src="/assets/dublin-course-map.png" alt="Dublin Marathon course map" />
+                  </body>
+                </html>
+                """));
+        when(restTemplate.exchange(
+                startsWith("https://www.bing.com/images/search"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class)
+        )).thenReturn(ResponseEntity.ok("<html></html>"));
+        when(restTemplate.exchange(
+                eq("https://irishlifedublinmarathon.ie/assets/dublin-course-map.png"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok(samplePng()));
+        when(restTemplate.exchange(
+                any(RequestEntity.class),
+                org.mockito.ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenReturn(ResponseEntity.ok(Map.of("elevation", sampleElevations(845))));
+        when(qwenClient.analyzeCandidate(any(byte[].class), anyString(), anyString())).thenReturn("""
+                {
+                  "isCourseMap": true,
+                  "confidence": 84,
+                  "summary": "Aligned the official Dublin Marathon course map.",
+                  "overlayBounds": {
+                    "north": 53.40,
+                    "south": 53.27,
+                    "east": -6.10,
+                    "west": -6.32
+                  },
+                  "routePoints": %s
+                }
+                """.formatted(dublinLoopRouteJson()));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository, null, qwenClient, courseMapUploadDirectory);
+
+        RaceCourseMapResult result = service.scanPendingCourseMap(
+                "dublin-marathon",
+                "Dublin Marathon",
+                "Dublin",
+                "Ireland",
+                "https://irishlifedublinmarathon.ie/",
+                53.3498,
+                -6.2603,
+                42.195,
+                "admin@hermes.test"
+        );
+
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(10);
+        verify(restTemplate).exchange(
+                eq("https://irishlifedublinmarathon.ie/assets/dublin-course-map.png"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        );
     }
 
     @Test
@@ -850,7 +1055,7 @@ class RaceCourseMapServiceTests {
     }
 
     @Test
-    void uploadPendingCourseMapClearsPreviousSuccessfulLocalRouteBeforeReplacementScan(@TempDir Path courseMapUploadDirectory) throws Exception {
+    void uploadPendingCourseMapPreservesLiveRouteUntilReplacementIsPublished(@TempDir Path courseMapUploadDirectory) throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
@@ -898,11 +1103,11 @@ class RaceCourseMapServiceTests {
         );
 
         assertThat(result.imageUrl()).startsWith("local-course-map:");
-        assertThat(Files.exists(previousRoute)).isFalse();
-        assertThat(asset.getLocalRouteArtifactRef()).isNull();
-        assertThat(asset.getLiveImageUrl()).isNull();
-        assertThat(asset.getLiveRoutePointsJson()).isNull();
-        assertThat(asset.getLiveOverlayBoundsJson()).isNull();
+        assertThat(Files.exists(previousRoute)).isTrue();
+        assertThat(asset.getLocalRouteArtifactRef()).isEqualTo("local-course-map-route:tokyo-marathon-successful-route.json");
+        assertThat(asset.getLiveImageUrl()).isEqualTo("local-course-map:tokyo-marathon-old.png");
+        assertThat(asset.getLiveRoutePointsJson()).contains("35.0");
+        assertThat(asset.getLiveOverlayBoundsJson()).contains("35.73");
         assertThat(asset.getPendingImageUrl()).startsWith("local-course-map:");
         assertThat(asset.getPendingRoutePointsJson()).isEqualTo("[]");
         verify(qwenClient, never()).analyzeCandidate(any(), any(), any());
@@ -1014,6 +1219,80 @@ class RaceCourseMapServiceTests {
         assertThat(result.courseMapDetected()).isFalse();
         assertThat(result.summary()).contains("could not align");
         assertThat(result.summary()).doesNotContain("city-level course-map match");
+    }
+
+    @Test
+    void routeBoundsFallbackAllowedForKnownRaceWhenLocalAnchorCoverageFails() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        MarathonRouteGeoreferencingService georeferencingService = mock(MarathonRouteGeoreferencingService.class);
+        when(georeferencingService.hasLocalRouteBoundsAnchors("Osaka Marathon", "Osaka", "Japan")).thenReturn(true);
+        when(georeferencingService.hasLocalRouteBoundsAnchors("Auckland Marathon", "Auckland", "New Zealand")).thenReturn(true);
+        when(georeferencingService.hasLocalRouteBoundsAnchors("Unknown Marathon", "Unknown", "Japan")).thenReturn(false);
+
+        com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        RaceCourseMapService service = new RaceCourseMapService(
+                restTemplate,
+                objectMapper,
+                systemConfigService,
+                repository,
+                null,
+                geometryService,
+                new RaceCourseMapSearchService(restTemplate),
+                new RaceCourseMapImageService(restTemplate),
+                new RaceCourseMapAiService(restTemplate, objectMapper, geometryService, mock(QwenCourseMapAlignmentClient.class)),
+                null,
+                georeferencingService
+        );
+        IllegalStateException localAnchorMiss = new IllegalStateException(
+                "Google geocoding API key is not configured and local anchors did not cover every requested anchor."
+        );
+        IllegalStateException unsolvableAnchorPairs = new IllegalStateException(
+                "Anchor pairs do not span a solvable affine transform"
+        );
+        IllegalArgumentException exactlyFourAnchors = new IllegalArgumentException(
+                "Exactly 4 anchors are required."
+        );
+
+        Boolean osakaAllowed = ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldUseRouteBoundsGeoreferenceFallback",
+                localAnchorMiss,
+                "Osaka Marathon",
+                "Osaka",
+                "Japan"
+        );
+        Boolean unknownAllowed = ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldUseRouteBoundsGeoreferenceFallback",
+                localAnchorMiss,
+                "Unknown Marathon",
+                "Unknown",
+                "Japan"
+        );
+        Boolean unsolvableAllowed = ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldUseRouteBoundsGeoreferenceFallback",
+                unsolvableAnchorPairs,
+                "Osaka Marathon",
+                "Osaka",
+                "Japan"
+        );
+        Boolean exactlyFourAllowed = ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldUseRouteBoundsGeoreferenceFallback",
+                exactlyFourAnchors,
+                "Auckland Marathon",
+                "Auckland",
+                "New Zealand"
+        );
+
+        assertThat(osakaAllowed).isTrue();
+        assertThat(unknownAllowed).isFalse();
+        assertThat(unsolvableAllowed).isTrue();
+        assertThat(exactlyFourAllowed).isTrue();
     }
 
     @Test
@@ -1144,6 +1423,731 @@ class RaceCourseMapServiceTests {
         );
 
         assertThat(raceType).isEqualTo(enumValue("LOOP"));
+    }
+
+    @Test
+    void inferPromptRaceTypeTreatsDalianMarathonAsLoop() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        Object raceType = ReflectionTestUtils.invokeMethod(
+                service,
+                "inferPromptRaceType",
+                "Dalian Marathon",
+                "Dalian",
+                "China",
+                "https://www.dlmls.org/site/#/home"
+        );
+
+        assertThat(raceType).isEqualTo(enumValue("LOOP"));
+    }
+
+    @Test
+    void routeBoundsFallbackAcceptsDalianGoogleZeroResultsWhenLocalBoundsExist() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        RaceCourseMapSearchService searchService = new RaceCourseMapSearchService(restTemplate);
+        RaceCourseMapImageService imageService = new RaceCourseMapImageService(restTemplate);
+        RaceCourseMapAiService aiService = new RaceCourseMapAiService(
+                restTemplate,
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                geometryService,
+                mock(QwenCourseMapAlignmentClient.class)
+        );
+        MarathonRouteGeoreferencingService georeferencingService = mock(MarathonRouteGeoreferencingService.class);
+        when(georeferencingService.hasLocalRouteBoundsAnchors("Dalian Marathon", "Dalian", "China")).thenReturn(true);
+        RaceCourseMapService service = new RaceCourseMapService(
+                restTemplate,
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                systemConfigService,
+                repository,
+                null,
+                geometryService,
+                searchService,
+                imageService,
+                aiService,
+                null,
+                georeferencingService
+        );
+
+        Boolean shouldFallback = ReflectionTestUtils.invokeMethod(
+                service,
+                "shouldUseRouteBoundsGeoreferenceFallback",
+                new IllegalStateException("Google geocoding failed for anchor 'Start' with status ZERO_RESULTS. Query: Start, Dalian Marathon, Dalian, China"),
+                "Dalian Marathon",
+                "Dalian",
+                "China"
+        );
+
+        assertThat(shouldFallback).isTrue();
+    }
+
+    @Test
+    void knownOrderedFallbackAcceptsOfficialCopenhagenRouteAfterCvConfirmsRoutePixels() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+        RoutePathExtractionResultDTO extractionResult = new RoutePathExtractionResultDTO(
+                new RouteParametersDTO("#0074D9", List.of("Start", "Finish")),
+                List.of(
+                        new RoutePixelPointDTO(10, 10),
+                        new RoutePixelPointDTO(20, 20),
+                        new RoutePixelPointDTO(30, 30),
+                        new RoutePixelPointDTO(40, 40)
+                ),
+                1_200,
+                8_500,
+                1_700,
+                "target",
+                List.of()
+        );
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCoursePipelineFallback",
+                "admin-upload",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:copenhagen-marathon.png", samplePng()),
+                "Copenhagen Marathon",
+                "Copenhagen",
+                "Denmark",
+                42.195,
+                null,
+                extractionResult
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(150);
+        assertThat(result.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).isEqualTo("Finish");
+        assertThat(result.summary()).contains("known ordered marathon route");
+    }
+
+    @Test
+    void knownOrderedFallbackAcceptsOfficialDalianRouteAfterCvConfirmsRoutePixels() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+        RoutePathExtractionResultDTO extractionResult = new RoutePathExtractionResultDTO(
+                new RouteParametersDTO("#0066FF", List.of("Start", "Xinghai Bay", "Zhongshan Road", "Finish")),
+                List.of(
+                        new RoutePixelPointDTO(10, 10),
+                        new RoutePixelPointDTO(20, 20),
+                        new RoutePixelPointDTO(30, 30),
+                        new RoutePixelPointDTO(40, 40)
+                ),
+                1_200,
+                6_500,
+                1_700,
+                "target",
+                List.of()
+        );
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCoursePipelineFallback",
+                "admin-upload",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:dalian-marathon.jpg", samplePng()),
+                "Dalian Marathon",
+                "Dalian",
+                "China",
+                42.195,
+                null,
+                extractionResult
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(120);
+        assertThat(result.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).isEqualTo("Finish");
+        assertThat(result.summary()).contains("known ordered marathon route");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialHelsinkiRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-upload",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:helsinki-marathon.jpg", samplePng()),
+                "Helsinki Marathon",
+                "Helsinki",
+                "Finland",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(300);
+        assertThat(result.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).isEqualTo("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialIstanbulRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-upload",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:istanbul-marathon.jpg", samplePng()),
+                "Istanbul Marathon",
+                "Istanbul",
+                "Turkey",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(700);
+        assertThat(result.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).isEqualTo("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialJakartaRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-upload",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:jakarta-marathon.jpg", samplePng()),
+                "Jakarta Marathon",
+                "Jakarta",
+                "Indonesia",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(2100);
+        assertThat(result.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).isEqualTo("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialJerusalemRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-document-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:jerusalem-marathon.png", samplePng()),
+                "Jerusalem Marathon",
+                "Jerusalem",
+                "Israel",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(1700);
+        assertThat(result.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).isEqualTo("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialLisbonRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:lisbon-marathon.png", samplePng()),
+                "EDP Lisbon Marathon",
+                "Lisbon",
+                "Portugal",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(1000);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsCheckedLondonRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:london-marathon.png", samplePng()),
+                "TCS London Marathon",
+                "London",
+                "United Kingdom",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(990);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsCheckedManchesterRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:manchester-marathon.jpg", samplePng()),
+                "Manchester Marathon",
+                "Manchester",
+                "United Kingdom",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(934);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsCheckedMarineCorpsRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:marine-corps-marathon.png", samplePng()),
+                "Marine Corps Marathon",
+                "Washington, D.C.",
+                "United States",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(114);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialMarrakechRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:marrakech-marathon.png", samplePng()),
+                "Marrakech Marathon",
+                "Marrakech",
+                "Morocco",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1157);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialMexicoCityRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-upload",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:mexico-city-marathon.jpg", samplePng()),
+                "Mexico City Marathon",
+                "Mexico City",
+                "Mexico",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1385);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialMilanRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:milan-marathon.jpg", samplePng()),
+                "Wizz Air Milano Marathon",
+                "Milan",
+                "Italy",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1470);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialMumbaiRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:mumbai-marathon.jpg", samplePng()),
+                "Tata Mumbai Marathon",
+                "Mumbai",
+                "India",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(3405);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialMunichRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-document-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:munich-marathon.pdf", samplePng()),
+                "MARATHON MUNCHEN by Brooks",
+                "Munich",
+                "Germany",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1697);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialNairobiCityRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:nairobi-city-marathon.jpg", samplePng()),
+                "Nairobi City Marathon",
+                "Nairobi",
+                "Kenya",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(578);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialStandardCharteredNairobiRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-document-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:nairobi-marathon.pdf", samplePng()),
+                "Nairobi Marathon",
+                "Nairobi",
+                "Kenya",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(830);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialNiceCannesRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:nice-cannes-marathon.gpx", samplePng()),
+                "Marathon des Alpes-Maritimes Nice-Cannes",
+                "Nice-Cannes",
+                "France",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1297);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsCheckedParisRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:paris-marathon.jpg", samplePng()),
+                "Schneider Electric Marathon de Paris",
+                "Paris",
+                "France",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(209);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsCheckedPortoRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:porto-marathon.jpg", samplePng()),
+                "Porto Marathon",
+                "Porto",
+                "Portugal",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(804);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialPragueRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:prague-marathon.jpg", samplePng()),
+                "Vodafone Prague Marathon",
+                "Prague",
+                "Czech Republic",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1017);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialQingdaoRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:qingdao-marathon.jpg", samplePng()),
+                "Qingdao Marathon",
+                "Qingdao",
+                "China",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(974);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialQueenstownRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-image-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:queenstown-marathon.jpg", samplePng()),
+                "Queenstown Marathon",
+                "Queenstown",
+                "New Zealand",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1913);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialRomeRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-document-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:rome-marathon.pdf", samplePng()),
+                "Run Rome The Marathon",
+                "Rome",
+                "Italy",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSize(1152);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialKualaLumpurRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-upload",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:kuala-lumpur-marathon.jpg", samplePng()),
+                "Kuala Lumpur Standard Chartered Marathon",
+                "Kuala Lumpur",
+                "Malaysia",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(500);
+        assertThat(result.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).isEqualTo("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsOfficialBusanRouteBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                service,
+                "tryKnownOrderedCourseUploadShortcut",
+                "admin-document-url",
+                new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:busan-marathon.png", samplePng()),
+                "Busan Marathon",
+                "Busan",
+                "South Korea",
+                42.195
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(result.routePoints()).hasSizeGreaterThan(1000);
+        assertThat(result.routePoints().get(0).label()).contains("Start");
+        assertThat(result.routePoints().get(result.routePoints().size() - 1).label()).contains("Finish");
+        assertThat(result.summary()).contains("before CV/Qwen analysis");
+    }
+
+    @Test
+    void knownOrderedShortcutAcceptsSupplementalRoutesBeforeCvOrQwen() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        for (SupplementalMarathonKnownCourses.CourseDefinition definition : SupplementalMarathonKnownCourses.definitions()) {
+            RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(
+                    service,
+                    "tryKnownOrderedCourseUploadShortcut",
+                    "admin-upload",
+                    new RaceCourseMapService.ResolvedCandidateAsset("local-course-map:" + definition.raceId() + ".png", samplePng()),
+                    definition.raceName(),
+                    definition.city(),
+                    definition.country(),
+                    42.195
+            );
+
+            assertThat(result)
+                    .as(definition.raceId())
+                    .isNotNull();
+            assertThat(result.courseMapDetected())
+                    .as(definition.raceId())
+                    .isTrue();
+            assertThat(result.routePoints())
+                    .as(definition.raceId())
+                    .hasSize(definition.routePoints().size());
+            assertThat(result.routePoints().get(0).label())
+                    .as(definition.raceId())
+                    .contains("Start");
+            assertThat(result.routePoints().get(result.routePoints().size() - 1).label())
+                    .as(definition.raceId())
+                    .contains("Finish");
+            assertThat(result.summary())
+                    .as(definition.raceId())
+                    .contains("before CV/Qwen analysis");
+        }
     }
 
     @Test
@@ -1408,6 +2412,43 @@ class RaceCourseMapServiceTests {
     }
 
     @Test
+    void getAdminDetailKeepsKnownOrderedCopenhagenLiveRouteWithOfficialSelfIntersections() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        List<RoutePoint> routePoints = CopenhagenMarathonKnownCourse.routePoints();
+
+        RaceCourseMapAsset asset = new RaceCourseMapAsset();
+        asset.setRaceId("copenhagen-marathon");
+        asset.setRaceName("Copenhagen Marathon");
+        asset.setCity("Copenhagen");
+        asset.setCountry("Denmark");
+        asset.setLatitude(55.6761);
+        asset.setLongitude(12.5683);
+        asset.setDistanceKm(42.195);
+        asset.setLiveImageUrl("local-course-map:copenhagen-marathon.png");
+        asset.setLiveSource("admin-upload");
+        asset.setLiveSummary("Hermes aligned this upload through a known ordered marathon route after CV confirmed route pixels in the uploaded course map.");
+        asset.setLiveConfidence(72);
+        asset.setLiveOverlayBoundsJson(objectMapper.writeValueAsString(geometryService.boundsFromRoute(routePoints)));
+        asset.setLiveRoutePointsJson(objectMapper.writeValueAsString(routePoints));
+        asset.setLiveElevationSamplesJson("[]");
+        asset.setLiveAiAssisted(true);
+        when(repository.findByRaceId("copenhagen-marathon")).thenReturn(Optional.of(asset));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        RaceCourseMapAdminDetail detail = service.getAdminDetail("copenhagen-marathon");
+
+        assertThat(detail.live()).isNotNull();
+        assertThat(detail.live().summary()).doesNotContain("city-level course-map match");
+        assertThat(detail.live().routePoints()).hasSizeGreaterThan(150);
+        assertThat(detail.live().routePoints().get(0).label()).isNull();
+    }
+
+    @Test
     void getAdminDetailSanitizesStoredCityLevelSummaryFromOldQwenTimeout() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
@@ -1584,6 +2625,90 @@ class RaceCourseMapServiceTests {
                 eq(byte[].class)
         );
         verify(repository, never()).save(any(RaceCourseMapAsset.class));
+    }
+
+    @Test
+    void resolveCourseMapWithStorageBackfillsMissingLiveElevationFromStoredRoute() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        List<RoutePoint> storedRoute = new ArrayList<>();
+        for (int index = 0; index < 180; index++) {
+            double progress = index / 179.0;
+            storedRoute.add(new RoutePoint(
+                    40.6055 + progress * (40.7762 - 40.6055),
+                    -74.0563 + progress * (-73.9755 + 74.0563),
+                    index == 0 ? "Start" : index == 179 ? "Finish" : null
+            ));
+        }
+        final List<Integer> requestedPointCounts = new ArrayList<>();
+
+        RaceCourseMapAsset asset = new RaceCourseMapAsset();
+        asset.setRaceId("new-york-city-marathon");
+        asset.setRaceName("New York City Marathon");
+        asset.setCity("New York");
+        asset.setCountry("United States");
+        asset.setOfficialWebsite("https://www.nyrr.org/tcsnycmarathon");
+        asset.setLatitude(40.7128);
+        asset.setLongitude(-74.0060);
+        asset.setDistanceKm(42.195);
+        asset.setLiveImageUrl("");
+        asset.setLiveSource(NycMarathonOfficialCourse.OFFICIAL_SOURCE);
+        asset.setLiveSummary("Official NYC Marathon route geometry.");
+        asset.setLiveConfidence(96);
+        asset.setLiveRoutePointsJson(objectMapper.writeValueAsString(storedRoute));
+        asset.setLiveElevationSamplesJson(null);
+        asset.setLiveTotalClimbMeters(null);
+        asset.setLiveAiAssisted(false);
+
+        when(repository.findByRaceId("new-york-city-marathon")).thenReturn(Optional.of(asset));
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            RequestEntity<?> request = invocation.getArgument(0);
+            String query = request.getUrl().getQuery();
+            String latitudes = "";
+            if (query != null) {
+                for (String part : query.split("&")) {
+                    if (part.startsWith("latitude=")) {
+                        latitudes = part.substring("latitude=".length());
+                        break;
+                    }
+                }
+            }
+            requestedPointCounts.add(latitudes.isBlank() ? 0 : latitudes.split(",").length);
+            return ResponseEntity.ok(Map.of("elevation", sampleElevations(100)));
+        }).when(restTemplate).exchange(
+                any(RequestEntity.class),
+                org.mockito.ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        );
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        RaceCourseMapResult result = service.resolveCourseMapWithStorage(
+                "new-york-city-marathon",
+                "New York City Marathon",
+                "New York",
+                "United States",
+                "https://www.nyrr.org/tcsnycmarathon",
+                40.7128,
+                -74.0060,
+                42.195
+        );
+
+        assertThat(result.routePoints()).hasSize(storedRoute.size());
+        assertThat(requestedPointCounts).containsExactly(100);
+        assertThat(result.elevationSamples()).hasSize(100);
+        assertThat(result.totalClimbMeters()).isNotNull();
+        assertThat(asset.getLiveElevationSamplesJson()).isNotBlank();
+        assertThat(asset.getLiveTotalClimbMeters()).isEqualTo(result.totalClimbMeters());
+        verify(repository).save(asset);
+        verify(restTemplate, never()).exchange(
+                anyString(),
+                any(HttpMethod.class),
+                any(HttpEntity.class),
+                eq(byte[].class)
+        );
     }
 
     @Test
@@ -2502,16 +3627,145 @@ class RaceCourseMapServiceTests {
     }
 
     @Test
-    void renderPdfCandidatePagesReturnsFirstTwoRenderedPages() throws Exception {
+    void renderPdfCandidatePagesReturnsDefaultRenderedPageWindow() throws Exception {
         RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
 
         List<?> pages = (List<?>) ReflectionTestUtils.invokeMethod(
                 ReflectionTestUtils.getField(service, "imageService"),
                 "renderPdfCandidatePages",
-                samplePdf(4)
+                samplePdf(28)
         );
 
-        assertThat(pages).hasSize(2);
+        assertThat(pages).hasSize(24);
+    }
+
+    @Test
+    void renderPdfCandidatePrefersCourseMapPageOverStartVenuePage() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapService.ResolvedCandidateAsset selected = ReflectionTestUtils.invokeMethod(
+                ReflectionTestUtils.getField(service, "imageService"),
+                "renderPdfCandidate",
+                sampleStartVenueThenCoursePdf()
+        );
+
+        BufferedImage rendered = ImageIO.read(new ByteArrayInputStream(selected.imageBytes()));
+        assertThat(countDominantBluePixels(rendered)).isGreaterThan(countDominantRedPixels(rendered));
+    }
+
+    @Test
+    void renderPdfCandidatePrefersRouteMapPageOverBrandedCoverPage() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapService.ResolvedCandidateAsset selected = ReflectionTestUtils.invokeMethod(
+                ReflectionTestUtils.getField(service, "imageService"),
+                "renderPdfCandidate",
+                sampleBrandCoverThenRouteMapPdf()
+        );
+
+        BufferedImage rendered = ImageIO.read(new ByteArrayInputStream(selected.imageBytes()));
+        assertThat(countDominantBluePixels(rendered)).isGreaterThan(100);
+    }
+
+    @Test
+    void renderPdfCandidatePrefersLateFullMarathonCourseMapOverStartProcedurePages() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapService.ResolvedCandidateAsset selected = ReflectionTestUtils.invokeMethod(
+                ReflectionTestUtils.getField(service, "imageService"),
+                "renderPdfCandidate",
+                sampleLateBrusselsCourseGuidePdf()
+        );
+
+        BufferedImage rendered = ImageIO.read(new ByteArrayInputStream(selected.imageBytes()));
+        assertThat(countDominantBluePixels(rendered)).isGreaterThan(100);
+    }
+
+    @Test
+    void renderPdfCandidatePrefersEmbeddedMapImageOverRenderedGuidePage() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapService.ResolvedCandidateAsset selected = ReflectionTestUtils.invokeMethod(
+                ReflectionTestUtils.getField(service, "imageService"),
+                "renderPdfCandidate",
+                sampleGuidePdfWithEmbeddedRouteMapImage()
+        );
+
+        BufferedImage rendered = ImageIO.read(new ByteArrayInputStream(selected.imageBytes()));
+        assertThat(rendered.getWidth()).isGreaterThan(rendered.getHeight());
+        assertThat(countDominantRedPixels(rendered)).isGreaterThan(100);
+    }
+
+    @Test
+    void embeddedPdfPhotoOnRoutePageDoesNotOutscoreRenderedRouteMapPage() {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+        Object imageService = ReflectionTestUtils.getField(service, "imageService");
+        String routePageText = "RACE ROUTE MAPS 42 KM LEGEND OOREDOO MARATHON ROUTE DISTANCE MEDICAL CENTRES WATER STATION ELITE DRINK STATION KM FINISH";
+
+        Double renderedRoutePageScore = ReflectionTestUtils.invokeMethod(
+                imageService,
+                "scoreRenderedPdfPage",
+                routeMapLikeImage(),
+                routePageText
+        );
+        Double embeddedRouteMapScore = ReflectionTestUtils.invokeMethod(
+                imageService,
+                "scoreEmbeddedPdfImageCandidate",
+                routeMapLikeImage(),
+                routePageText
+        );
+        Double embeddedPhotoScore = ReflectionTestUtils.invokeMethod(
+                imageService,
+                "scoreEmbeddedPdfImageCandidate",
+                wideRunnerPhotoLikeImage(),
+                routePageText
+        );
+
+        assertThat(renderedRoutePageScore).isGreaterThan(embeddedPhotoScore);
+        assertThat(embeddedRouteMapScore).isGreaterThan(embeddedPhotoScore);
+    }
+
+    @Test
+    void scorePdfPageTextPenalizesBrandedDateCoverWithoutRouteTerms() {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+
+        Double score = ReflectionTestUtils.invokeMethod(
+                ReflectionTestUtils.getField(service, "imageService"),
+                "scorePdfPageText",
+                "BRUSSELS AIRPORT THE HEART OF EUROPE BRUSSELS MARATHON 02.11.2025 www.brusselsairportmarathon.be"
+        );
+
+        assertThat(score).isLessThan(0.0);
+    }
+
+    @Test
+    void scorePdfPageTextPrefersFullMarathonSuppliesMapOverStartProcedure() {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+        Object imageService = ReflectionTestUtils.getField(service, "imageService");
+
+        Double startProcedureScore = ReflectionTestUtils.invokeMethod(
+                imageService,
+                "scorePdfPageText",
+                "Start Procedure Marathon STARTBOX opening time closing time entrance startboxes on the left Place De Brouckere"
+        );
+        Double courseGuideScore = ReflectionTestUtils.invokeMethod(
+                imageService,
+                "scorePdfPageText",
+                "Marathon - Supplies 5 km 10 km 15 km 20 km 25 km 30 km 32 km 35 km 40 km Finish Check out the detailed course"
+        );
+
+        assertThat(courseGuideScore).isGreaterThan(startProcedureScore);
+    }
+
+    @Test
+    void scoreRouteLikePixelsPrefersRouteMapLineOverSmoothBrandLogo() {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), mock(RaceCourseMapAssetRepository.class));
+        Object imageService = ReflectionTestUtils.getField(service, "imageService");
+
+        Double coverScore = ReflectionTestUtils.invokeMethod(imageService, "scoreRouteLikePixels", brandedCoverLikeImage());
+        Double routeScore = ReflectionTestUtils.invokeMethod(imageService, "scoreRouteLikePixels", routeMapLikeImage());
+
+        assertThat(routeScore).isGreaterThan(coverScore);
     }
 
     @Test
@@ -2855,6 +4109,340 @@ class RaceCourseMapServiceTests {
         }
     }
 
+    private byte[] sampleStartVenueThenCoursePdf() throws Exception {
+        try (PDDocument document = new PDDocument()) {
+            PDPage startVenuePage = new PDPage();
+            document.addPage(startVenuePage);
+            writeCourseMapSelectionPage(
+                    document,
+                    startVenuePage,
+                    "START AREA BAGGAGE GEAR CHECK ASSEMBLY MAP",
+                    new Color(210, 30, 40)
+            );
+
+            PDPage courseMapPage = new PDPage();
+            document.addPage(courseMapPage);
+            writeCourseMapSelectionPage(
+                    document,
+                    courseMapPage,
+                    "COURSE MAP ELEVATION PROFILE AID STATIONS 5KM 10KM FINISH",
+                    new Color(32, 150, 213)
+            );
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            document.save(output);
+            return output.toByteArray();
+        }
+    }
+
+    private byte[] sampleBrandCoverThenRouteMapPdf() throws Exception {
+        try (PDDocument document = new PDDocument()) {
+            PDPage coverPage = new PDPage();
+            document.addPage(coverPage);
+            writeBrandedCoverSelectionPage(document, coverPage);
+
+            PDPage routeMapPage = new PDPage();
+            document.addPage(routeMapPage);
+            writeRouteMapSelectionPage(document, routeMapPage);
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            document.save(output);
+            return output.toByteArray();
+        }
+    }
+
+    private byte[] sampleLateBrusselsCourseGuidePdf() throws Exception {
+        try (PDDocument document = new PDDocument()) {
+            for (int index = 0; index < 19; index++) {
+                PDPage guidePage = new PDPage();
+                document.addPage(guidePage);
+                if (index == 0) {
+                    writeBrandedCoverSelectionPage(document, guidePage);
+                }
+            }
+
+            PDPage startProcedurePage = new PDPage();
+            document.addPage(startProcedurePage);
+            writeStartProcedureSelectionPage(document, startProcedurePage);
+
+            PDPage pacerPage = new PDPage();
+            document.addPage(pacerPage);
+            writeCourseMapSelectionPage(
+                    document,
+                    pacerPage,
+                    "Pacer Team pace groups flags photos",
+                    new Color(205, 0, 24)
+            );
+
+            PDPage fullCoursePage = new PDPage();
+            document.addPage(fullCoursePage);
+            writeFullMarathonSuppliesCourseSelectionPage(document, fullCoursePage);
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            document.save(output);
+            return output.toByteArray();
+        }
+    }
+
+    private byte[] sampleGuidePdfWithEmbeddedRouteMapImage() throws Exception {
+        try (PDDocument document = new PDDocument()) {
+            PDPage guidePage = new PDPage();
+            document.addPage(guidePage);
+            PDImageXObject embeddedMap = LosslessFactory.createFromImage(document, routeMapLikeImage());
+            try (PDPageContentStream content = new PDPageContentStream(document, guidePage)) {
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 22);
+                content.newLineAtOffset(54, 720);
+                content.showText("Marathon - Supplies 5 km 10 km 15 km 20 km 25 km 30 km 32 km 35 km 40 km Finish");
+                content.endText();
+
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+                content.newLineAtOffset(54, 680);
+                content.showText("Check out the detailed course");
+                content.endText();
+
+                content.drawImage(embeddedMap, 54, 260, 500, 224);
+            }
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            document.save(output);
+            return output.toByteArray();
+        }
+    }
+
+    private void writeCourseMapSelectionPage(PDDocument document, PDPage page, String title, Color routeColor) throws Exception {
+        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+            content.beginText();
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 24);
+            content.newLineAtOffset(54, 720);
+            content.showText(title);
+            content.endText();
+
+            content.setStrokingColor(routeColor);
+            content.setLineWidth(16);
+            content.moveTo(80, 560);
+            content.curveTo(170, 690, 300, 440, 380, 570);
+            content.curveTo(470, 710, 540, 360, 470, 220);
+            content.curveTo(380, 80, 170, 180, 120, 300);
+            content.stroke();
+        }
+    }
+
+    private void writeStartProcedureSelectionPage(PDDocument document, PDPage page) throws Exception {
+        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+            content.beginText();
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 24);
+            content.newLineAtOffset(54, 720);
+            content.showText("Start Procedure Marathon STARTBOX opening time closing time entrance startboxes on the left");
+            content.endText();
+
+            content.setStrokingColor(new Color(188, 188, 188));
+            content.setLineWidth(4);
+            for (int index = 0; index < 8; index++) {
+                content.moveTo(55, 180 + index * 42);
+                content.lineTo(555, 230 + index * 28);
+                content.stroke();
+            }
+
+            content.setStrokingColor(new Color(205, 0, 24));
+            content.setLineWidth(16);
+            content.moveTo(365, 620);
+            content.lineTo(395, 560);
+            content.lineTo(350, 500);
+            content.lineTo(390, 430);
+            content.lineTo(335, 350);
+            content.stroke();
+        }
+    }
+
+    private void writeFullMarathonSuppliesCourseSelectionPage(PDDocument document, PDPage page) throws Exception {
+        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+            content.beginText();
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 22);
+            content.newLineAtOffset(54, 720);
+            content.showText("Marathon - Supplies 5 km 10 km 15 km 20 km 25 km 30 km 32 km 35 km 40 km Finish");
+            content.endText();
+
+            content.beginText();
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+            content.newLineAtOffset(54, 680);
+            content.showText("Check out the detailed course");
+            content.endText();
+
+            content.setStrokingColor(new Color(188, 188, 188));
+            content.setLineWidth(4);
+            for (int index = 0; index < 12; index++) {
+                content.moveTo(55, 150 + index * 42);
+                content.lineTo(560, 220 + index * 28);
+                content.stroke();
+            }
+
+            content.setStrokingColor(new Color(208, 2, 27));
+            content.setLineWidth(13);
+            content.moveTo(90, 600);
+            content.curveTo(190, 645, 285, 535, 360, 585);
+            content.curveTo(480, 660, 545, 445, 465, 340);
+            content.curveTo(365, 205, 185, 235, 125, 340);
+            content.stroke();
+
+            content.setNonStrokingColor(new Color(32, 150, 213));
+            content.addRect(520, 675, 22, 22);
+            content.fill();
+        }
+    }
+
+    private void writeBrandedCoverSelectionPage(PDDocument document, PDPage page) throws Exception {
+        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+            content.beginText();
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 30);
+            content.newLineAtOffset(72, 700);
+            content.showText("BRUSSELS AIRPORT MARATHON 02.11.2025");
+            content.endText();
+
+            content.beginText();
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 22);
+            content.newLineAtOffset(96, 92);
+            content.showText("www.brusselsairportmarathon.be");
+            content.endText();
+
+            content.setStrokingColor(new Color(205, 0, 24));
+            content.setLineWidth(34);
+            content.moveTo(115, 455);
+            content.curveTo(185, 615, 305, 610, 250, 470);
+            content.curveTo(360, 530, 410, 405, 270, 350);
+            content.curveTo(210, 320, 145, 315, 95, 295);
+            content.stroke();
+        }
+    }
+
+    private void writeRouteMapSelectionPage(PDDocument document, PDPage page) throws Exception {
+        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+            content.beginText();
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+            content.newLineAtOffset(54, 720);
+            content.showText("LEGEND Marathon Half Marathon Finish First aid");
+            content.endText();
+
+            content.setStrokingColor(new Color(188, 188, 188));
+            content.setLineWidth(4);
+            for (int offset = 0; offset < 8; offset++) {
+                content.moveTo(55, 160 + offset * 46);
+                content.lineTo(550, 250 + offset * 30);
+                content.stroke();
+            }
+
+            content.setStrokingColor(new Color(208, 2, 27));
+            content.setLineWidth(12);
+            content.moveTo(90, 600);
+            content.curveTo(190, 645, 285, 535, 360, 585);
+            content.curveTo(480, 660, 545, 445, 465, 340);
+            content.curveTo(365, 205, 185, 235, 125, 340);
+            content.stroke();
+
+            content.setNonStrokingColor(new Color(32, 150, 213));
+            content.addRect(520, 675, 22, 22);
+            content.fill();
+        }
+    }
+
+    private BufferedImage brandedCoverLikeImage() {
+        BufferedImage image = new BufferedImage(1800, 1013, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics.setColor(Color.WHITE);
+        graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+        graphics.setColor(new Color(205, 0, 24));
+        graphics.setStroke(new BasicStroke(72, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        graphics.drawArc(260, 210, 620, 360, 195, -260);
+        graphics.drawArc(470, 365, 390, 255, 185, -250);
+        graphics.drawArc(330, 420, 690, 255, 175, -210);
+        graphics.dispose();
+        return image;
+    }
+
+    private BufferedImage routeMapLikeImage() {
+        BufferedImage image = new BufferedImage(1190, 534, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics.setColor(new Color(247, 241, 211));
+        graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+        graphics.setColor(new Color(190, 190, 190));
+        graphics.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        for (int index = 0; index < 12; index++) {
+            graphics.drawLine(40, 45 + index * 40, 1130, 20 + index * 35);
+            graphics.drawLine(90 + index * 85, 20, 50 + index * 70, 512);
+        }
+        graphics.setColor(new Color(208, 2, 27));
+        graphics.setStroke(new BasicStroke(14, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        int[] xs = {90, 190, 310, 455, 610, 760, 905, 1040, 1110, 965, 820, 680, 540, 390, 230, 120};
+        int[] ys = {130, 95, 140, 120, 190, 180, 145, 160, 250, 325, 300, 385, 365, 430, 390, 455};
+        for (int index = 1; index < xs.length; index++) {
+            graphics.drawLine(xs[index - 1], ys[index - 1], xs[index], ys[index]);
+        }
+        graphics.dispose();
+        return image;
+    }
+
+    private BufferedImage wideRunnerPhotoLikeImage() {
+        BufferedImage image = new BufferedImage(2489, 1025, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics.setColor(new Color(214, 210, 203));
+        graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+        graphics.setColor(new Color(168, 158, 148));
+        graphics.fillRect(0, 0, 880, 500);
+        graphics.setColor(new Color(235, 237, 236));
+        graphics.fillRect(900, 0, 1589, 320);
+        graphics.setColor(new Color(92, 88, 82));
+        graphics.fillRect(0, 520, image.getWidth(), 505);
+        graphics.setColor(new Color(224, 169, 28));
+        graphics.setStroke(new BasicStroke(28, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        graphics.drawLine(0, 870, 760, 680);
+        graphics.drawLine(170, 770, 990, 720);
+        graphics.drawLine(120, 910, 520, 1010);
+        graphics.setColor(new Color(194, 30, 45));
+        graphics.fillOval(980, 320, 210, 360);
+        graphics.setColor(new Color(178, 234, 204));
+        graphics.fillOval(1320, 220, 330, 520);
+        graphics.setColor(new Color(34, 38, 42));
+        graphics.fillOval(1990, 260, 260, 470);
+        graphics.dispose();
+        return image;
+    }
+
+    private long countDominantBluePixels(BufferedImage image) {
+        long count = 0;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int rgb = image.getRGB(x, y);
+                int red = (rgb >> 16) & 0xFF;
+                int green = (rgb >> 8) & 0xFF;
+                int blue = rgb & 0xFF;
+                if (blue >= 130 && green >= 80 && red <= 95 && blue > red * 1.6) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private long countDominantRedPixels(BufferedImage image) {
+        long count = 0;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int rgb = image.getRGB(x, y);
+                int red = (rgb >> 16) & 0xFF;
+                int green = (rgb >> 8) & 0xFF;
+                int blue = rgb & 0xFF;
+                if (red >= 140 && green <= 120 && blue <= 130 && red > green * 1.2 && red > blue * 1.2) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     private String sampleWebpDataUrl() {
         byte[] bytes = new byte[2048];
         bytes[0] = 'R';
@@ -3011,6 +4599,20 @@ class RaceCourseMapServiceTests {
                   { "lat": 41.8756, "lng": -87.6244, "label": "Finish" }
                 ]
                 """;
+    }
+
+    private String dublinLoopRouteJson() {
+        return interpolatedRouteJson(
+                new double[][]{
+                        {53.3498, -6.2603},
+                        {53.3900, -6.1300},
+                        {53.2750, -6.1100},
+                        {53.2840, -6.3100},
+                        {53.3498, -6.2603}
+                },
+                "Start",
+                "Finish"
+        );
     }
 
     private String shortChicagoCityRouteJson() {

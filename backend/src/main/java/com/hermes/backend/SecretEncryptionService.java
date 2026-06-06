@@ -30,7 +30,7 @@ public class SecretEncryptionService {
     }
 
     public boolean isConfigured() {
-        return !configuredKey.isBlank();
+        return !effectiveConfiguredKey().isBlank();
     }
 
     public boolean isEncrypted(String value) {
@@ -107,7 +107,7 @@ public class SecretEncryptionService {
 
     /** PBKDF2-derived key — used for all new encryptions. */
     private SecretKeySpec deriveKey() throws NoSuchAlgorithmException, InvalidKeySpecException {
-        char[] chars = configuredKey.toCharArray();
+        char[] chars = effectiveConfiguredKey().toCharArray();
         byte[] salt = "hermes-strava-token-salt-v1".getBytes(StandardCharsets.UTF_8);
         PBEKeySpec spec = new PBEKeySpec(chars, salt, 310_000, 256);
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -119,7 +119,24 @@ public class SecretEncryptionService {
     /** Legacy SHA-256-derived key — kept only for decrypting pre-upgrade tokens. */
     private SecretKeySpec deriveLegacyKey() throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] keyBytes = digest.digest(configuredKey.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = digest.digest(effectiveConfiguredKey().getBytes(StandardCharsets.UTF_8));
         return new SecretKeySpec(keyBytes, "AES");
+    }
+
+    private String effectiveConfiguredKey() {
+        return firstPresent(
+                configuredKey,
+                System.getProperty("APP_DATA_ENCRYPTION_KEY"),
+                System.getenv("APP_DATA_ENCRYPTION_KEY"));
+    }
+
+    private static String firstPresent(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (value != null && !value.trim().isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 }

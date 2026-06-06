@@ -3,9 +3,16 @@ package com.hermes.backend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -49,9 +56,9 @@ import java.util.Set;
 public class RaceCourseMapImageService {
     private static final Logger log = LoggerFactory.getLogger(RaceCourseMapImageService.class);
     private static final int MAX_IMAGE_BYTES = 6 * 1024 * 1024;
-    private static final int MAX_DOCUMENT_BYTES = 12 * 1024 * 1024;
+    private static final int MAX_DOCUMENT_BYTES = 32 * 1024 * 1024;
     private static final int MIN_IMAGE_DIMENSION_PX = 200;
-    private static final int DEFAULT_PDF_RENDER_PAGE_LIMIT = 2;
+    private static final int DEFAULT_PDF_RENDER_PAGE_LIMIT = 24;
     private static final int PDF_RENDER_DPI = 200;
     private static final int MAX_INLINE_UPLOAD_PREVIEW_DIMENSION_PX = 1800;
     private static final float JPEG_ENCODING_QUALITY = 0.92f;
@@ -485,7 +492,10 @@ public class RaceCourseMapImageService {
     private byte[] fetchBinaryBytes(String url, int maxBytes) {
         try {
             validateImageUrl(url);
-            ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
+            ResponseEntity<byte[]> response = url.contains("%")
+                    ? restTemplate.exchange(java.net.URI.create(url), HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class)
+                    : restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
+            if (response == null) return null;
             byte[] body = response.getBody();
             if (body == null || body.length == 0 || body.length > maxBytes) return null;
             return body;
@@ -523,27 +533,305 @@ public class RaceCourseMapImageService {
     }
 
     private RaceCourseMapService.ResolvedCandidateAsset renderPdfCandidate(byte[] pdfBytes) {
-        List<RaceCourseMapService.ResolvedCandidateAsset> renderedPages = renderPdfCandidatePages(pdfBytes);
-        return renderedPages.isEmpty() ? null : renderedPages.get(0);
+        return renderPdfCandidatePageOptions(pdfBytes).stream()
+                .max(Comparator.comparingDouble(RenderedPdfPageCandidate::score)
+                        .thenComparingInt(candidate -> -candidate.pageIndex()))
+                .map(RenderedPdfPageCandidate::asset)
+                .orElse(null);
     }
 
     private List<RaceCourseMapService.ResolvedCandidateAsset> renderPdfCandidatePages(byte[] pdfBytes) {
+        return renderPdfCandidatePageOptions(pdfBytes).stream()
+                .sorted(Comparator.comparingDouble(RenderedPdfPageCandidate::score).reversed()
+                        .thenComparingInt(RenderedPdfPageCandidate::pageIndex))
+                .map(RenderedPdfPageCandidate::asset)
+                .toList();
+    }
+
+    private List<RenderedPdfPageCandidate> renderPdfCandidatePageOptions(byte[] pdfBytes) {
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             if (document.getNumberOfPages() == 0) return List.of();
             PDFRenderer renderer = new PDFRenderer(document);
-            List<RaceCourseMapService.ResolvedCandidateAsset> renderedPages = new ArrayList<>();
+            PDFTextStripper textStripper = new PDFTextStripper();
+            List<RenderedPdfPageCandidate> renderedPages = new ArrayList<>();
             int pageLimit = Math.max(1, pdfRenderPageLimit);
             for (int pageIndex = 0; pageIndex < Math.min(document.getNumberOfPages(), pageLimit); pageIndex++) {
+                PDPage page = document.getPage(pageIndex);
                 BufferedImage image = renderer.renderImageWithDPI(pageIndex, PDF_RENDER_DPI, ImageType.RGB);
                 if (image == null) continue;
                 RaceCourseMapService.ResolvedCandidateAsset normalized = normalizeDecodedUploadPreview(image, true);
                 if (normalized == null || normalized.imageBytes().length == 0) continue;
-                renderedPages.add(normalized);
+                String pageText = extractPdfPageText(document, textStripper, pageIndex);
+                renderedPages.add(new RenderedPdfPageCandidate(
+                        normalized,
+                        scoreRenderedPdfPage(image, pageText),
+                        pageIndex
+                ));
+                addEmbeddedPdfImageCandidates(renderedPages, page.getResources(), pageText, pageIndex, 0);
             }
             return renderedPages;
         } catch (Exception ignored) {
             return List.of();
         }
+    }
+
+    private void addEmbeddedPdfImageCandidates(
+            List<RenderedPdfPageCandidate> candidates,
+            PDResources resources,
+            String pageText,
+            int pageIndex,
+            int depth
+    ) {
+        if (resources == null || depth > 4) return;
+        try {
+            for (COSName name : resources.getXObjectNames()) {
+                PDXObject xObject = resources.getXObject(name);
+                if (xObject instanceof PDImageXObject imageObject) {
+                    BufferedImage embeddedImage = imageObject.getImage();
+                    if (!isPdfEmbeddedImageCandidate(embeddedImage)) continue;
+                    RaceCourseMapService.ResolvedCandidateAsset normalized = normalizeDecodedUploadPreview(embeddedImage, true);
+                    if (normalized == null || normalized.imageBytes().length == 0) continue;
+                    candidates.add(new RenderedPdfPageCandidate(
+                            normalized,
+                            scoreEmbeddedPdfImageCandidate(embeddedImage, pageText),
+                            pageIndex
+                    ));
+                } else if (xObject instanceof PDFormXObject formObject) {
+                    addEmbeddedPdfImageCandidates(candidates, formObject.getResources(), pageText, pageIndex, depth + 1);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean isPdfEmbeddedImageCandidate(BufferedImage image) {
+        if (image == null) return false;
+        int width = image.getWidth();
+        int height = image.getHeight();
+        if (width < MIN_IMAGE_DIMENSION_PX || height < MIN_IMAGE_DIMENSION_PX) return false;
+        return width * (long) height >= 80_000;
+    }
+
+    private double scoreEmbeddedPdfImageCandidate(BufferedImage image, String pageText) {
+        if (image == null) return 0.0;
+        double routeScore = scoreRouteLikePixels(image);
+        double textScore = scorePdfPageText(pageText);
+        double score = routeScore;
+        score += routeScore >= 80.0
+                ? Math.min(85.0, textScore * 0.30)
+                : Math.min(15.0, textScore * 0.05);
+
+        double aspectRatio = image.getWidth() / (double) Math.max(1, image.getHeight());
+        if (looksLikeStandaloneRouteMapImage(image, routeScore)) {
+            score += 290.0;
+        } else if (routeScore >= 120.0 && aspectRatio >= 0.55 && aspectRatio <= 2.35) {
+            score += 45.0;
+        }
+        if (aspectRatio > 2.35 && routeScore < 180.0) {
+            score -= 120.0;
+        }
+        return score;
+    }
+
+    private boolean looksLikeStandaloneRouteMapImage(BufferedImage image, double routeScore) {
+        if (image == null || routeScore < 55.0) return false;
+        int width = image.getWidth();
+        int height = image.getHeight();
+        if (width <= 0 || height <= 0) return false;
+        double aspectRatio = width / (double) Math.max(1, height);
+        if (aspectRatio < 0.45 || aspectRatio > 2.35) return false;
+
+        int stride = Math.max(1, Math.max(width, height) / 500);
+        int sampled = 0;
+        int lightNeutral = 0;
+        for (int y = 0; y < height; y += stride) {
+            for (int x = 0; x < width; x += stride) {
+                sampled++;
+                int rgb = image.getRGB(x, y);
+                int red = (rgb >> 16) & 0xFF;
+                int green = (rgb >> 8) & 0xFF;
+                int blue = rgb & 0xFF;
+                int max = Math.max(red, Math.max(green, blue));
+                int min = Math.min(red, Math.min(green, blue));
+                if (min >= 185 && max - min <= 45) {
+                    lightNeutral++;
+                }
+            }
+        }
+        if (sampled == 0) return false;
+        return lightNeutral / (double) sampled >= 0.42;
+    }
+
+    private String extractPdfPageText(PDDocument document, PDFTextStripper textStripper, int pageIndex) {
+        if (document == null || textStripper == null) return "";
+        try {
+            textStripper.setStartPage(pageIndex + 1);
+            textStripper.setEndPage(pageIndex + 1);
+            return textStripper.getText(document);
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private double scoreRenderedPdfPage(BufferedImage image, String pageText) {
+        return scorePdfPageText(pageText) + scoreRouteLikePixels(image);
+    }
+
+    private double scorePdfPageText(String pageText) {
+        if (pageText == null || pageText.isBlank()) return 0.0;
+        String compact = pageText.toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "")
+                .replace('ー', '-');
+
+        double score = 0.0;
+        score += keywordScore(compact, 160, "coursemap", "routemap", "courseroute", "raceroutemaps", "marathonroute", "コースmap", "コースマップ");
+        score += keywordScore(compact, 120, "courseelevation", "elevationprofile", "コース高低図");
+        score += keywordScore(compact, 70, "legend");
+        score += keywordScore(compact, 45, "marathonhalfmarathon", "marathon&halfmarathon");
+        score += fullMarathonCourseGuideScore(compact);
+        score += keywordScore(compact, 55, "aidstation", "waterstation", "hydration", "給水", "給食");
+        score += keywordScore(compact, 45, "medicalstation", "firstaid", "救護所");
+        score += keywordScore(compact, 40, "cutoff", "checkpoint", "関門");
+        score += keywordScore(compact, 35, "mile", "kilometer", "kilometre", "km", "㎞");
+        score += keywordScore(compact, 25, "finish", "フィニッシュ");
+
+        score -= keywordScore(compact, 190, "startarea", "startvenue", "startvillage", "スタート会場");
+        score -= keywordScore(compact, 150, "assemblyarea", "meetingarea", "集合会場");
+        score -= keywordScore(compact, 75, "gearcheck", "baggage", "bagdrop", "手荷物");
+        score -= keywordScore(compact, 60, "startblock", "スタートブロック");
+        score -= keywordScore(compact, 45, "startflow", "race-dayflow", "当日の流れ", "スタートまでの流れ");
+        score -= keywordScore(compact, 130, "startprocedure", "startbox", "startboxes", "openingtime", "closingtime", "entrancestartboxes");
+        score -= keywordScore(compact, 70, "pacerteam", "pacegroups", "shakeoutrun", "dearrunner");
+        if (looksLikeBrandedCoverWithoutRouteContext(pageText, compact)) {
+            score -= 110;
+        }
+        return score;
+    }
+
+    private double fullMarathonCourseGuideScore(String compact) {
+        if (compact == null || compact.isBlank()) return 0.0;
+        boolean halfMarathonSupplies = compact.contains("halfmarathon-supplies")
+                || compact.contains("halfmarathonsupplies");
+        boolean marathonSupplies = (compact.contains("marathon-supplies")
+                || compact.contains("marathonsupplies"))
+                && !halfMarathonSupplies;
+        double score = 0.0;
+        if (marathonSupplies) {
+            score += 140;
+        }
+        if (compact.contains("detailedcourse") && (marathonSupplies || compact.contains("40km") || compact.contains("42km"))) {
+            score += 95;
+        }
+        if (compact.contains("40km") && compact.contains("finish")) {
+            score += 45;
+        }
+        if (halfMarathonSupplies) {
+            score -= 60;
+        }
+        return score;
+    }
+
+    private boolean looksLikeBrandedCoverWithoutRouteContext(String pageText, String compact) {
+        if (compact == null || compact.isBlank()) return false;
+        boolean hasRouteContext = containsAnyKeyword(
+                compact,
+                "coursemap", "routemap", "courseroute", "legend", "finish", "aidstation", "waterstation",
+                "hydration", "medicalstation", "firstaid", "cutoff", "checkpoint", "kilometer", "kilometre", "km"
+        );
+        if (hasRouteContext) return false;
+        String plain = pageText == null ? "" : pageText.toLowerCase(Locale.ROOT);
+        boolean hasEventDate = java.util.regex.Pattern.compile("\\b\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}\\b")
+                .matcher(plain)
+                .find();
+        boolean hasWebsiteOrSlogan = plain.contains("www.")
+                || plain.contains("the heart of")
+                || plain.contains("marathon.be")
+                || compact.contains("homepage");
+        return hasEventDate || hasWebsiteOrSlogan;
+    }
+
+    private boolean containsAnyKeyword(String text, String... keywords) {
+        if (text == null || text.isBlank() || keywords == null) return false;
+        for (String keyword : keywords) {
+            if (keyword != null && !keyword.isBlank() && text.contains(keyword.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double keywordScore(String text, double value, String... keywords) {
+        if (text == null || text.isBlank() || keywords == null) return 0.0;
+        double score = 0.0;
+        for (String keyword : keywords) {
+            if (keyword != null && !keyword.isBlank() && text.contains(keyword.toLowerCase(Locale.ROOT))) {
+                score += value;
+            }
+        }
+        return score;
+    }
+
+    private double scoreRouteLikePixels(BufferedImage image) {
+        if (image == null) return 0.0;
+        int width = image.getWidth();
+        int height = image.getHeight();
+        if (width <= 0 || height <= 0) return 0.0;
+
+        int stride = Math.max(1, Math.max(width, height) / 800);
+        int routePixels = 0;
+        int sampledPixels = 0;
+        int adjacentRoutePixels = 0;
+        int minX = width;
+        int maxX = -1;
+        int minY = height;
+        int maxY = -1;
+        for (int y = 0; y < height; y += stride) {
+            for (int x = 0; x < width; x += stride) {
+                sampledPixels++;
+                if (!isRouteLikePdfPixel(image.getRGB(x, y))) continue;
+                routePixels++;
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+                if (x + stride < width && isRouteLikePdfPixel(image.getRGB(x + stride, y))) {
+                    adjacentRoutePixels++;
+                }
+                if (y + stride < height && isRouteLikePdfPixel(image.getRGB(x, y + stride))) {
+                    adjacentRoutePixels++;
+                }
+            }
+        }
+
+        if (routePixels == 0 || sampledPixels == 0) return 0.0;
+        double spanX = (maxX - minX + stride) / (double) width;
+        double spanY = (maxY - minY + stride) / (double) height;
+        double continuity = adjacentRoutePixels / (double) routePixels;
+        double routeRatio = routePixels / (double) sampledPixels;
+        double clutterPenalty = routeRatio > 0.18 ? -35.0 : 0.0;
+        double smoothLogoPenalty = continuity > 1.60 && spanY < 0.78 ? -60.0 : 0.0;
+        return Math.min(90.0, Math.log1p(routePixels) * 7.0)
+                + (spanX * 25.0)
+                + (spanY * 25.0)
+                + Math.min(35.0, continuity * 18.0)
+                + clutterPenalty
+                + smoothLogoPenalty;
+    }
+
+    private boolean isRouteLikePdfPixel(int rgb) {
+        int red = (rgb >> 16) & 0xFF;
+        int green = (rgb >> 8) & 0xFF;
+        int blue = rgb & 0xFF;
+        int max = Math.max(red, Math.max(green, blue));
+        int min = Math.min(red, Math.min(green, blue));
+        int chroma = max - min;
+        if (max < 120 || chroma < 55) return false;
+        boolean blueRoute = blue >= 135 && green >= 70 && red <= 95 && blue > red * 1.7;
+        boolean redRoute = red >= 140 && green <= 135 && blue <= 145 && red > green * 1.2 && red > blue * 1.15;
+        boolean orangeRoute = red >= 170 && green >= 85 && green <= 180 && blue <= 95;
+        boolean magentaRoute = red >= 165 && blue >= 120 && green <= 105;
+        boolean greenRoute = green >= 135 && red <= 105 && blue <= 135;
+        return blueRoute || redRoute || orangeRoute || magentaRoute || greenRoute;
     }
 
     private byte[] decodeBase64DataUrlPayload(String dataUrl) {
@@ -730,4 +1018,10 @@ public class RaceCourseMapImageService {
     }
 
     public record DisplayableCourseMapImage(String mediaType, byte[] imageBytes) {}
+
+    private record RenderedPdfPageCandidate(
+            RaceCourseMapService.ResolvedCandidateAsset asset,
+            double score,
+            int pageIndex
+    ) {}
 }

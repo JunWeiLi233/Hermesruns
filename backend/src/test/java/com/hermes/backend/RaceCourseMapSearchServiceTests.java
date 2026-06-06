@@ -94,4 +94,70 @@ class RaceCourseMapSearchServiceTests {
 
         assertThat(candidates).containsOnlyKeys("https://cdn.example.com/manchester-marathon-course-map.jpg");
     }
+
+    @Test
+    void collectOfficialPageCandidatesFindsOsakaInfoCourseMapBeforeOpenGraphImage() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        doAnswer(invocation -> {
+            String url = invocation.getArgument(0, String.class);
+            if ("https://www.osaka-marathon.com/2026/en/".equals(url)) {
+                return ResponseEntity.ok("""
+                        <html>
+                          <head>
+                            <meta property="og:image" content="/2026/common/img/og.png" />
+                          </head>
+                          <body>Osaka Marathon 2026</body>
+                        </html>
+                        """);
+            }
+            if ("https://www.osaka-marathon.com/2026/en/info/course/".equals(url)) {
+                return ResponseEntity.ok("""
+                        <html>
+                          <body>
+                            <img src="img/img_map_en.jpg" alt="Course" />
+                            <img src="img/img_map_02_en.jpg" alt="Course elevation map" />
+                          </body>
+                        </html>
+                        """);
+            }
+            return ResponseEntity.ok("<html><body>No course map here.</body></html>");
+        }).when(restTemplate).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class));
+
+        RaceCourseMapSearchService service = new RaceCourseMapSearchService(restTemplate);
+        var candidates = new java.util.LinkedHashMap<String, RaceCourseMapService.CourseMapCandidate>();
+
+        service.collectOfficialPageCandidates(candidates, "https://www.osaka-marathon.com/2026/en/");
+
+        assertThat(candidates).containsKey("https://www.osaka-marathon.com/2026/en/info/course/img/img_map_en.jpg");
+        assertThat(candidates.get("https://www.osaka-marathon.com/2026/en/info/course/img/img_map_en.jpg").score())
+                .isGreaterThan(candidates.get("https://www.osaka-marathon.com/2026/common/img/og.png").score());
+    }
+
+    @Test
+    void collectOfficialPageCandidatesChecksDublinCourseStartFinishPage() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        List<String> requestedUrls = new ArrayList<>();
+        doAnswer(invocation -> {
+            String url = invocation.getArgument(0, String.class);
+            requestedUrls.add(url);
+            if ("https://irishlifedublinmarathon.ie/course-and-start-finish/".equals(url)) {
+                return ResponseEntity.ok("""
+                        <html>
+                          <body>
+                            <a href="/wp-content/uploads/2026/05/IL_DM26_ROUTE_MAP.pdf">Download 2026 Course Map</a>
+                          </body>
+                        </html>
+                        """);
+            }
+            return ResponseEntity.ok("<html><body>No course map here.</body></html>");
+        }).when(restTemplate).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class));
+
+        RaceCourseMapSearchService service = new RaceCourseMapSearchService(restTemplate);
+        var candidates = new java.util.LinkedHashMap<String, RaceCourseMapService.CourseMapCandidate>();
+
+        service.collectOfficialPageCandidates(candidates, "https://irishlifedublinmarathon.ie/");
+
+        assertThat(requestedUrls).contains("https://irishlifedublinmarathon.ie/course-and-start-finish/");
+        assertThat(candidates).containsKey("https://irishlifedublinmarathon.ie/wp-content/uploads/2026/05/IL_DM26_ROUTE_MAP.pdf");
+    }
 }

@@ -74,9 +74,12 @@ public class RaceCourseMapSearchService {
         pages.add(websiteUrl);
         List<String> relativePages = List.of(
                 "course", "course/", "course-map", "course-map/", "route", "route/", "route-map", "route-map/",
-                "map", "map/", "the-course", "race-info", "race-info/course", "course-details", "race-details",
+                "map", "map/", "the-course", "course-and-start-finish", "course-and-start-finish/",
+                "race-info", "race-info/course", "course-details", "race-details",
                 "en/course", "en/course/", "en/race/course", "en/map", "about/course", "about/course/",
-                "about/course-map", "about/course-map/", "about/route", "about/route-map", "?page=course",
+                "about/course-map", "about/course-map/", "about/route", "about/route-map",
+                "info/course", "info/course/", "race-information/course", "race-information/course/",
+                "?page=course",
                 "?tab=map", "?section=route", "course.pdf", "race-map.pdf", "course-map.pdf"
         );
         for (String relativePage : relativePages) {
@@ -88,12 +91,14 @@ public class RaceCourseMapSearchService {
         pages.add(appendPath(websiteUrl, "/route-map"));
         pages.add(appendPath(websiteUrl, "/map"));
         pages.add(appendPath(websiteUrl, "/the-course"));
+        pages.add(appendPath(websiteUrl, "/course-and-start-finish"));
         pages.add(appendPath(websiteUrl, "/race-info"));
         pages.add(appendPath(websiteUrl, "/race-info/course"));
         pages.add(appendPath(websiteUrl, "/course-details"));
         pages.add(appendPath(websiteUrl, "/race-details"));
         pages.add(appendPath(websiteUrl, "/en/course"));
         pages.add(appendPath(websiteUrl, "/en/race/course"));
+        pages.add(appendPath(websiteUrl, "/en/info/course"));
         pages.add(appendPath(websiteUrl, "/en/course-map"));
         pages.add(appendPath(websiteUrl, "/en/map"));
         pages.add(appendPath(websiteUrl, "/en/route"));
