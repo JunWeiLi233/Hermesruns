@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-06-02
+Date: 2026-06-06
+Surface: Territory personal layout on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Replaced the oversized leaderboard drawer with a compact personal territory dock that foregrounds controlled area, coverage, rank, owned sectors, capture feed, next target, and a smaller local rival stack. The top game HUD is narrower so the concrete land map remains the dominant surface.
+Why: Browser measurement showed the previous overlay stack covered too much of the viewport and made the user-owned territory feel secondary to the chrome.
+Rollback target: `804d09af`
+Notes: Frontend presentation and verifier wording only. Territory ownership, backend APIs, route navigation, auth, and land-mask rendering remain unchanged.
+
 ### Version: DV-2026-06-06-01
 Date: 2026-06-06
 Surface: Territory game-map HUD on `/territory`

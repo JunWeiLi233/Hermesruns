@@ -9,6 +9,7 @@ const territoryCss = readFileSync(path.join(here, '..', 'styles', '_split', 'ter
 const runtimeVerifierSource = readFileSync(path.join(here, '..', '..', '..', '.tools', 'verify-territory-border-runtime.mjs'), 'utf8');
 const liveProofCommandSource = readFileSync(path.join(here, '..', '..', '..', '.tools', 'territory-live-proof-command.mjs'), 'utf8');
 const externalReferenceNamePattern = new RegExp(`function ${['in', 'tv', 'l'].join('')}BorderColor|hexColorToRgb|rgbToHsl|hslToHexColor`);
+const externalReferenceLiteralPattern = new RegExp(['in', 'tv', 'l'].join(''), 'i');
 
 assert.match(
   source,
@@ -464,6 +465,18 @@ assert.doesNotMatch(
   source,
   externalReferenceNamePattern,
   'Territory should not transform owner colors into a highlighted border; the single contour should use the real owner color.',
+);
+
+assert.doesNotMatch(
+  runtimeVerifierSource,
+  externalReferenceLiteralPattern,
+  'Territory runtime verifier script should not reference the external product name.',
+);
+
+assert.doesNotMatch(
+  liveProofCommandSource,
+  externalReferenceLiteralPattern,
+  'Territory live proof script should not reference the external product name.',
 );
 
 assert.doesNotMatch(

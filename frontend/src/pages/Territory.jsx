@@ -41,6 +41,15 @@ const MAP_CHROME_COPY = {
     overall: 'Overall',
     totalArea: 'Total area',
     zonesControlled: 'Zones',
+    playerTerritory: 'My territory',
+    controlledLand: 'Controlled land',
+    coverage: 'Coverage',
+    rank: 'Rank',
+    ownedSectors: 'Owned sectors',
+    captureFeed: 'Capture feed',
+    nextTarget: 'Next target',
+    samplesToContest: 'Samples to contest',
+    samples: 'samples',
   },
   'zh-CN': {
     pageTitle: '\u9886\u5730',
@@ -65,6 +74,15 @@ const MAP_CHROME_COPY = {
     overall: '\u603b\u699c',
     totalArea: '\u603b\u9762\u79ef',
     zonesControlled: '\u63a7\u5236\u533a',
+    playerTerritory: '\u6211\u7684\u9886\u5730',
+    controlledLand: '\u5df2\u63a7\u5236\u571f\u5730',
+    coverage: '\u8986\u76d6\u7387',
+    rank: '\u6392\u540d',
+    ownedSectors: '\u5df2\u5360\u533a\u5757',
+    captureFeed: '\u5360\u9886\u52a8\u6001',
+    nextTarget: '\u4e0b\u4e00\u76ee\u6807',
+    samplesToContest: '\u4e89\u593a\u6240\u9700\u91c7\u6837',
+    samples: '\u91c7\u6837',
   },
 };
 
@@ -107,6 +125,25 @@ function formatTerritoryArea(value, fallback = '0KM\u00b2') {
   if (!Number.isFinite(numeric)) return fallback;
   const fixed = numeric >= 100 ? numeric.toFixed(0) : numeric >= 10 ? numeric.toFixed(1) : numeric.toFixed(2);
   return `${fixed.replace(/\.0+$/, '').replace(/(\.\d)0$/, '$1')}KM\u00b2`;
+}
+
+function formatTerritoryPercent(value, fallback = '--') {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return `${Math.round(Math.max(0, Math.min(100, numeric)))}%`;
+}
+
+function formatTerritoryRank(summary) {
+  const rank = Number(summary?.rank);
+  const total = Number(summary?.totalRunners);
+  if (!Number.isFinite(rank) || rank <= 0) return '--';
+  return Number.isFinite(total) && total > 0 ? `#${rank} / ${total}` : `#${rank}`;
+}
+
+function formatSampleCount(value, fallback = '0') {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.max(0, numeric));
 }
 
 function runnerDisplayName(runner, profile, fallback = 'You') {
@@ -162,6 +199,29 @@ function territoryBattleShares(territory, activeRunner, rivalRunner) {
     active: (activeShare / total) * 100,
     rival: (rivalShare / total) * 100,
   };
+}
+
+function normalizeOwnerName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function ownedTerritoryZones(territory, activeName) {
+  const activeOwnerName = normalizeOwnerName(activeName);
+  return (Array.isArray(territory?.zones) ? territory.zones : [])
+    .filter((zone) => {
+      const ownerName = normalizeOwnerName(zone?.ownerName);
+      return ownerName === 'you' || (!!activeOwnerName && ownerName === activeOwnerName);
+    })
+    .sort((a, b) => {
+      const controlDelta = Number(b?.controlPct || 0) - Number(a?.controlPct || 0);
+      if (controlDelta !== 0) return controlDelta;
+      return Number(b?.sampleCount || 0) - Number(a?.sampleCount || 0);
+    })
+    .slice(0, 4);
+}
+
+function recentCaptureRows(territory) {
+  return (Array.isArray(territory?.recentCaptures) ? territory.recentCaptures : []).slice(0, 2);
 }
 
 function isValidMapCenter(center) {
@@ -1597,6 +1657,9 @@ export default function Territory() {
   const activeColor = safeColor(activeLeader?.color);
   const rivalColor = safeColor(rivalLeader?.color, '#82ffd8');
   const summary = territory?.summary || EMPTY_TERRITORY.summary;
+  const ownedZones = ownedTerritoryZones(territory, activeName);
+  const recentCaptures = recentCaptureRows(territory);
+  const nextTarget = territory?.nextTarget || null;
 
   return (
     <div className="runner-shell-page territory-page territory-heatmap-outline territory-map-only runner-dashboard-page">
@@ -1703,48 +1766,112 @@ export default function Territory() {
               </div>
             </div>
 
-            <aside className="terr-game-leaderboard-drawer" aria-label={tc('leaderboard')}>
-              <span className="terr-game-drawer-handle" aria-hidden="true" />
-              <div className="terr-game-drawer-tabs" role="tablist" aria-label={tc('leaderboard')}>
-                <span role="tab" aria-selected="true">{tc('leaderboard')}</span>
-                <span role="tab" aria-selected="false">{tc('events')}</span>
-                <span role="tab" aria-selected="false">{tc('territoriesTab')}</span>
-                <span role="tab" aria-selected="false">{tc('history')}</span>
-              </div>
-              <div className="terr-game-stat-pills" aria-label={tc('overall')}>
-                <span>
-                  <AppIcon name="territory" />
-                  {tc('overall')}
-                </span>
-                <span>
-                  <AppIcon name="map" />
-                  {formatTerritoryArea(summary.areaKm2)}
-                </span>
-                <span>
-                  <AppIcon name="workspace_premium" />
-                  {summary.cellCount || 0} {tc('zonesControlled')}
-                </span>
-              </div>
-              <div className="terr-game-leaderboard-list">
-                {leaderboardRows.map((runner, index) => {
-                  const rowName = runnerDisplayName(runner, profile, tc('opponent'));
-                  return (
+            <aside
+              className="terr-game-territory-dock"
+              aria-label={tc('playerTerritory')}
+              style={{
+                '--terr-active-color': activeColor,
+                '--terr-rival-color': rivalColor,
+                '--terr-active-share': `${battleShares.active}%`,
+              }}
+            >
+              <section className="terr-game-dock-primary" aria-label={tc('controlledLand')}>
+                <div className="terr-game-dock-heading">
+                  <span>{tc('playerTerritory')}</span>
+                  <strong>{formatTerritoryArea(summary.areaKm2)}</strong>
+                </div>
+                <div className="terr-game-dock-meter" aria-hidden="true">
+                  <span />
+                </div>
+                <div className="terr-game-dock-metrics">
+                  <span>
+                    <small>{tc('coverage')}</small>
+                    <strong>{formatTerritoryPercent(summary.coveragePct)}</strong>
+                  </span>
+                  <span>
+                    <small>{tc('rank')}</small>
+                    <strong>{formatTerritoryRank(summary)}</strong>
+                  </span>
+                  <span>
+                    <small>{tc('zonesControlled')}</small>
+                    <strong>{summary.cellCount || 0}</strong>
+                  </span>
+                </div>
+              </section>
+
+              <section className="terr-game-zone-panel" aria-label={tc('ownedSectors')}>
+                <div className="terr-game-panel-title">
+                  <strong>{tc('ownedSectors')}</strong>
+                  <span>{ownedZones.length || summary.cellCount || 0}</span>
+                </div>
+                <div className="terr-game-zone-list">
+                  {(ownedZones.length ? ownedZones : [{ name: tc('loadingTerritory'), controlPct: summary.coveragePct, areaKm2: summary.areaKm2 }]).map((zone, index) => (
                     <div
-                      key={runner.id || `${rowName}-${index}`}
-                      className={`terr-game-leaderboard-row${runner.active ? ' is-active' : ''}`}
-                      style={{ '--terr-row-color': safeColor(runner.color, index % 2 === 0 ? '#5b9cf5' : '#86efac') }}
+                      key={zone.id || zone.name || index}
+                      className="terr-game-zone-row"
                     >
-                      <strong className="terr-game-row-rank">{runner.rank || index + 1}</strong>
-                      <span className="terr-game-row-avatar">{runnerInitials(rowName)}</span>
-                      <span className="terr-game-row-name">
-                        <strong>{rowName}</strong>
-                        <small>{runner.active ? tc('you') : tc('opponent')}</small>
+                      <span>
+                        <strong>{zone.name || tc('territoriesTab')}</strong>
+                        <small>{formatTerritoryArea(zone.areaKm2)}</small>
                       </span>
-                      <strong className="terr-game-row-area">{formatTerritoryArea(runner.areaKm2)}</strong>
+                      <em>{formatTerritoryPercent(zone.controlPct)}</em>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="terr-game-intel-panel" aria-label={tc('nextTarget')}>
+                <div className="terr-game-target-card">
+                  <span>{tc('nextTarget')}</span>
+                  <strong>{nextTarget?.name || rivalName}</strong>
+                  <small>
+                    {tc('samplesToContest')}: {formatSampleCount(nextTarget?.samplesToContest)} {tc('samples')}
+                  </small>
+                </div>
+
+                <div className="terr-game-capture-feed" aria-label={tc('captureFeed')}>
+                  <div className="terr-game-panel-title">
+                    <strong>{tc('captureFeed')}</strong>
+                    <span>{recentCaptures.length}</span>
+                  </div>
+                  {(recentCaptures.length ? recentCaptures : [{ name: tc('loadingTerritory'), dateLabel: '--', sampleCount: 0 }]).map((capture, index) => (
+                    <div key={`${capture.name || 'capture'}-${index}`} className="terr-game-capture-row">
+                      <span>
+                        <strong>{capture.name || tc('territoriesTab')}</strong>
+                        <small>{capture.dateLabel || '--'}</small>
+                      </span>
+                      <em>{formatSampleCount(capture.sampleCount)}</em>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="terr-game-rival-stack" aria-label={tc('leaderboard')}>
+                <div className="terr-game-panel-title">
+                  <strong>{tc('leaderboard')}</strong>
+                  <span>{tc('localBattle')}</span>
+                </div>
+                <div className="terr-game-leaderboard-list">
+                  {leaderboardRows.slice(0, 3).map((runner, index) => {
+                    const rowName = runnerDisplayName(runner, profile, tc('opponent'));
+                    return (
+                      <div
+                        key={runner.id || `${rowName}-${index}`}
+                        className={`terr-game-leaderboard-row${runner.active ? ' is-active' : ''}`}
+                        style={{ '--terr-row-color': safeColor(runner.color, index % 2 === 0 ? '#5b9cf5' : '#86efac') }}
+                      >
+                        <strong className="terr-game-row-rank">{runner.rank || index + 1}</strong>
+                        <span className="terr-game-row-avatar">{runnerInitials(rowName)}</span>
+                        <span className="terr-game-row-name">
+                          <strong>{rowName}</strong>
+                          <small>{runner.active ? tc('you') : tc('opponent')}</small>
+                        </span>
+                        <strong className="terr-game-row-area">{formatTerritoryArea(runner.areaKm2)}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             </aside>
 
             <TerritoryMap

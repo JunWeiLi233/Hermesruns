@@ -814,7 +814,7 @@ try {
   const substrateMetrics = compareSubstrateToReference(screenshotResult.path);
   assert(
     substrateMetrics.generated.neutralAverageLuma <= 60,
-    `Map substrate is too light for INTVL reference styling: neutralAverageLuma=${substrateMetrics.generated.neutralAverageLuma}`,
+    `Map substrate is too light for target territory styling: neutralAverageLuma=${substrateMetrics.generated.neutralAverageLuma}`,
   );
   assert(
     substrateMetrics.neutralAverageLumaDelta <= 30,
@@ -847,7 +847,7 @@ try {
   );
   assert(
     territoryColorMetrics.generated.colored.averageLuma >= 62,
-    `Territory land fill is too dark for INTVL reference styling: coloredAverageLuma=${territoryColorMetrics.generated.colored.averageLuma}`,
+    `Territory land fill is too dark for target territory styling: coloredAverageLuma=${territoryColorMetrics.generated.colored.averageLuma}`,
   );
   assert(
     Math.abs(territoryColorMetrics.coloredPixelRatioDelta) <= 0.24,
@@ -855,7 +855,7 @@ try {
   );
   assert(
     territoryColorMetrics.generated.colored.averageSat >= 0.32,
-    `Territory land fill is too desaturated for INTVL reference styling: coloredAverageSat=${territoryColorMetrics.generated.colored.averageSat}`,
+    `Territory land fill is too desaturated for target territory styling: coloredAverageSat=${territoryColorMetrics.generated.colored.averageSat}`,
   );
   assert(
     Math.abs(territoryColorMetrics.coloredAverageLumaDelta) <= 38,

@@ -2554,8 +2554,8 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   right: 22px;
   z-index: 640;
   display: grid;
-  width: min(640px, calc(100vw - 132px));
-  gap: 10px;
+  width: min(430px, calc(100vw - 132px));
+  gap: 8px;
   color: #f7f2ea;
   pointer-events: auto;
 }
@@ -2563,7 +2563,7 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 .territory-map-only .terr-game-mode-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  min-height: 50px;
+  min-height: 44px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(12, 12, 12, 0.92);
@@ -2578,9 +2578,9 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
+  padding: 0 10px;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: -0.02em;
 }
@@ -2592,10 +2592,10 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 .territory-map-only .terr-game-player-card {
   display: grid;
-  grid-template-columns: 44px 48px minmax(0, 1fr) auto;
+  grid-template-columns: 40px 44px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  min-height: 72px;
+  gap: 10px;
+  min-height: 64px;
   border-radius: 999px;
   padding: 10px 18px 10px 12px;
   background: rgba(16, 16, 16, 0.9);
@@ -2609,8 +2609,8 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 .territory-map-only .terr-game-alert,
 .territory-map-only .terr-game-player-avatar {
   display: inline-flex;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
@@ -2676,9 +2676,9 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 .territory-map-only .terr-game-battle-card {
   display: grid;
-  gap: 7px;
-  border-radius: 22px;
-  padding: 14px;
+  gap: 6px;
+  border-radius: 20px;
+  padding: 12px;
   background: rgba(16, 16, 16, 0.84);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.08),
@@ -2712,7 +2712,7 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 .territory-map-only .terr-game-battle-meter {
   position: relative;
-  height: 34px;
+  height: 26px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.11);
@@ -2736,17 +2736,18 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   background: color-mix(in srgb, var(--terr-rival-color, #82ffd8) 86%, transparent);
 }
 
-.territory-map-only .terr-game-leaderboard-drawer {
+.territory-map-only .terr-game-territory-dock {
   position: absolute;
   right: 22px;
   bottom: 22px;
   z-index: 640;
   display: grid;
-  width: min(740px, calc(100vw - 132px));
-  max-height: min(330px, calc(100vh - 390px));
-  overflow: hidden;
-  border-radius: 30px;
-  padding: 16px 20px 20px;
+  width: min(430px, calc(100vw - 132px));
+  max-height: min(350px, calc(100vh - 360px));
+  gap: 10px;
+  overflow: auto;
+  border-radius: 28px;
+  padding: 14px;
   color: #f7f2ea;
   background: rgba(18, 18, 18, 0.92);
   box-shadow:
@@ -2754,69 +2755,166 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
     0 28px 82px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
+  scrollbar-width: none;
 }
 
-.territory-map-only .terr-game-drawer-handle {
-  justify-self: center;
-  width: 54px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.24);
+.territory-map-only .terr-game-territory-dock::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
-.territory-map-only .terr-game-drawer-tabs {
+.territory-map-only .terr-game-dock-primary,
+.territory-map-only .terr-game-zone-panel,
+.territory-map-only .terr-game-intel-panel,
+.territory-map-only .terr-game-rival-stack {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.territory-map-only .terr-game-drawer-tabs span {
-  display: inline-flex;
-  min-height: 38px;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.9rem;
-  font-weight: 950;
-}
-
-.territory-map-only .terr-game-drawer-tabs span[aria-selected="true"] {
-  color: #fffaf4;
-  box-shadow: inset 0 -3px 0 var(--terr-active-color, #f07561);
-}
-
-.territory-map-only .terr-game-stat-pills {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
-.territory-map-only .terr-game-stat-pills span {
-  display: inline-flex;
-  min-height: 44px;
+.territory-map-only .terr-game-dock-primary {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--terr-active-color, #f07561) 30%, transparent), transparent 58%),
+    rgba(255, 255, 255, 0.08);
+}
+
+.territory-map-only .terr-game-dock-heading,
+.territory-map-only .terr-game-panel-title {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 12px;
-  color: rgba(255, 255, 255, 0.76);
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 0.75rem;
-  font-weight: 900;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.territory-map-only .terr-game-dock-heading span,
+.territory-map-only .terr-game-panel-title span,
+.territory-map-only .terr-game-target-card span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.territory-map-only .terr-game-stat-pills svg {
-  width: 17px;
-  height: 17px;
+.territory-map-only .terr-game-dock-heading strong {
+  color: #fffaf4;
+  font-size: 1.42rem;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+}
+
+.territory-map-only .terr-game-dock-meter {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.territory-map-only .terr-game-dock-meter span {
+  display: block;
+  width: var(--terr-active-share, 50%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--terr-active-color, #f07561);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--terr-active-color, #f07561) 62%, transparent);
+}
+
+.territory-map-only .terr-game-dock-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.territory-map-only .terr-game-dock-metrics span,
+.territory-map-only .terr-game-zone-row,
+.territory-map-only .terr-game-capture-row {
+  display: grid;
+  gap: 3px;
+  border-radius: 12px;
+  padding: 9px 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.territory-map-only .terr-game-dock-metrics small,
+.territory-map-only .terr-game-zone-row small,
+.territory-map-only .terr-game-capture-row small {
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.territory-map-only .terr-game-dock-metrics strong,
+.territory-map-only .terr-game-panel-title strong,
+.territory-map-only .terr-game-target-card strong,
+.territory-map-only .terr-game-zone-row strong,
+.territory-map-only .terr-game-capture-row strong {
+  overflow: hidden;
+  color: #fffaf4;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.territory-map-only .terr-game-zone-list,
+.territory-map-only .terr-game-capture-feed {
+  display: grid;
+  gap: 6px;
+}
+
+.territory-map-only .terr-game-zone-row,
+.territory-map-only .terr-game-capture-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.territory-map-only .terr-game-zone-row span,
+.territory-map-only .terr-game-capture-row span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.territory-map-only .terr-game-zone-row em,
+.territory-map-only .terr-game-capture-row em {
+  color: var(--terr-active-color, #f07561);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.territory-map-only .terr-game-intel-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.territory-map-only .terr-game-target-card {
+  display: grid;
+  gap: 4px;
+  border-radius: 14px;
+  padding: 11px 12px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--terr-rival-color, #82ffd8) 22%, transparent), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.2);
+}
+
+.territory-map-only .terr-game-target-card small {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .territory-map-only .terr-game-leaderboard-list {
   display: grid;
   gap: 4px;
-  margin-top: 14px;
+  margin-top: 0;
   overflow: auto;
   scrollbar-width: none;
 }
@@ -2828,12 +2926,12 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 .territory-map-only .terr-game-leaderboard-row {
   display: grid;
-  grid-template-columns: 42px 42px minmax(0, 1fr) auto;
-  min-height: 50px;
+  grid-template-columns: 30px 34px minmax(0, 1fr) auto;
+  min-height: 44px;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   border-radius: 10px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--terr-row-color, #5b9cf5) 46%, rgba(22, 22, 22, 0.94)), rgba(22, 22, 22, 0.9)),
     rgba(22, 22, 22, 0.92);
@@ -2848,14 +2946,14 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 .territory-map-only .terr-game-row-rank,
 .territory-map-only .terr-game-row-area {
   color: #fffaf4;
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   font-weight: 950;
 }
 
 .territory-map-only .terr-game-row-avatar {
   display: inline-flex;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
@@ -2890,18 +2988,17 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
 
 @media (max-width: 980px) {
   .territory-map-only .terr-game-hud,
-  .territory-map-only .terr-game-leaderboard-drawer {
+  .territory-map-only .terr-game-territory-dock {
     right: 14px;
-    left: 88px;
-    width: auto;
+    width: min(430px, calc(100vw - 108px));
   }
 
   .territory-map-only .terr-game-hud {
     top: 104px;
   }
 
-  .territory-map-only .terr-game-leaderboard-drawer {
-    max-height: min(300px, 38vh);
+  .territory-map-only .terr-game-territory-dock {
+    max-height: min(350px, calc(100vh - 360px));
   }
 }
 
@@ -2909,6 +3006,8 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
   .territory-map-only .terr-game-hud {
     top: 312px;
     left: 14px;
+    right: 14px;
+    width: auto;
   }
 
   .territory-map-only .terr-game-mode-tabs {
@@ -2929,18 +3028,18 @@ html body .territory-page.territory-heatmap-outline.runner-shell-page .leaflet-c
     display: none;
   }
 
-  .territory-map-only .terr-game-leaderboard-drawer {
+  .territory-map-only .terr-game-territory-dock {
+    position: fixed;
     right: 14px;
     bottom: 14px;
     left: 14px;
-    max-height: 36vh;
+    width: auto;
+    max-height: 30vh;
     border-radius: 24px;
-    padding: 14px;
   }
 
-  .territory-map-only .terr-game-drawer-tabs,
-  .territory-map-only .terr-game-stat-pills {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .territory-map-only .terr-game-dock-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

@@ -58,14 +58,26 @@ assert.match(
 
 assert.match(
   territorySource,
-  /MAP_CHROME_COPY[\s\S]*gameHud:[\s\S]*localBattle:[\s\S]*leaderboard:[\s\S]*zonesControlled:/,
-  'Territory game HUD should use bilingual local copy instead of hardcoded text.',
+  /MAP_CHROME_COPY[\s\S]*gameHud:[\s\S]*localBattle:[\s\S]*playerTerritory:[\s\S]*ownedSectors:[\s\S]*nextTarget:/,
+  'Territory game HUD and personal territory dock should use bilingual local copy instead of hardcoded text.',
 );
 
 assert.match(
   territorySource,
-  /className="terr-game-hud"[\s\S]*className="terr-game-mode-tabs"[\s\S]*className="terr-game-leaderboard-drawer"/,
-  'Territory should render a neutral game HUD, mode selector, and leaderboard drawer over the map.',
+  /className="terr-game-hud"[\s\S]*className="terr-game-mode-tabs"[\s\S]*className="terr-game-territory-dock"[\s\S]*className="terr-game-zone-panel"[\s\S]*className="terr-game-rival-stack"/,
+  'Territory should render a neutral game HUD plus a user-territory dock over the map.',
+);
+
+assert.match(
+  territorySource,
+  /function ownedTerritoryZones\(territory, activeName\)[\s\S]*ownerName === 'you'[\s\S]*controlPct[\s\S]*sampleCount/,
+  'Territory should derive the personal sector list from live owned-zone data.',
+);
+
+assert.doesNotMatch(
+  territorySource,
+  /terr-game-leaderboard-drawer|terr-game-drawer-tabs|terr-game-stat-pills/,
+  'Territory should not keep the oversized leaderboard drawer after switching to the personal territory dock.',
 );
 
 assert.doesNotMatch(
@@ -184,8 +196,14 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.territory-map-only \.terr-game-hud[\s\S]*\.territory-map-only \.terr-game-leaderboard-drawer/,
-  'Territory split CSS should style the map game HUD and leaderboard drawer used by the current page.',
+  /\.territory-map-only \.terr-game-hud[\s\S]*width: min\(430px, calc\(100vw - 132px\)\);[\s\S]*\.territory-map-only \.terr-game-territory-dock[\s\S]*\.territory-map-only \.terr-game-zone-panel/,
+  'Territory split CSS should style a compact map game HUD and user-territory dock used by the current page.',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  /terr-game-leaderboard-drawer|terr-game-drawer-tabs|terr-game-stat-pills/,
+  'Territory split CSS should not keep stale oversized drawer selectors after the dock redesign.',
 );
 
 assert.doesNotMatch(
