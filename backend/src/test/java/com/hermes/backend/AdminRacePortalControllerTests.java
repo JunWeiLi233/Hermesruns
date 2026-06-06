@@ -23,6 +23,7 @@ class AdminRacePortalControllerTests {
     private RaceCourseMapService raceCourseMapService;
     private AdminAuditService adminAuditService;
     private AdminBackgroundJobService adminBackgroundJobService;
+    private CourseMapScanWatcher courseMapScanWatcher;
     private AdminRacePortalController controller;
 
     @BeforeEach
@@ -31,7 +32,8 @@ class AdminRacePortalControllerTests {
         raceCourseMapService = Mockito.mock(RaceCourseMapService.class);
         adminAuditService = Mockito.mock(AdminAuditService.class);
         adminBackgroundJobService = Mockito.mock(AdminBackgroundJobService.class);
-        controller = new AdminRacePortalController(adminPortalService, adminBackgroundJobService);
+        courseMapScanWatcher = new CourseMapScanWatcher();
+        controller = new AdminRacePortalController(adminPortalService, adminBackgroundJobService, courseMapScanWatcher, null);
 
         when(adminPortalService.getRaceCourseMapService()).thenReturn(raceCourseMapService);
         when(adminPortalService.getAdminAuditService()).thenReturn(adminAuditService);
@@ -160,7 +162,11 @@ class AdminRacePortalControllerTests {
         when(raceCourseMapService.uploadPendingCourseMap(
                 anyString(), anyString(), anyString(), anyString(), anyString(),
                 any(), any(), any(), anyString(), anyString()
-        )).thenReturn(uploadResult);
+        )).thenAnswer(invocation -> {
+            assertThat(courseMapScanWatcher.currentSteps().stream().map(CourseMapScanStep::stage).toList())
+                    .contains("watcher.started");
+            return uploadResult;
+        });
         when(raceCourseMapService.reanalyzePendingCourseMap(
                 anyString(), anyString(), anyString(), anyString(), anyString(),
                 any(), any(), any(), anyString()

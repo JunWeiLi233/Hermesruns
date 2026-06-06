@@ -37,7 +37,7 @@ public class TerritoryService {
     private static final double APPROX_CELL_AREA_KM2 = 0.52;
     private static final String ACTIVE_COLOR = "#f07561";
     private static final String[] RIVAL_COLORS = {
-            "#5b9cf5", "#86efac", "#fbbf24", "#c084fc", "#38bdf8", "#fb7185"
+            "#5b9cf5", "#fbbf24", "#86efac", "#c084fc", "#38bdf8", "#fb7185"
     };
     private static final double ACTIVITY_PASS_BONUS = 2.5;
     private static final double FRESH_ROUTE_BONUS = 2.0;
@@ -47,22 +47,18 @@ public class TerritoryService {
     private static final double SECURE_RATIO = 1.22;
     private static final double MIN_CONTEST_SCORE = 4.0;
     private static final String POLYGON_CACHE_NAMESPACE = "territory-polygons";
-    private static final String POLYGON_CACHE_VERSION = "land-mask-layered-v15-local-cluster";
+    private static final String POLYGON_CACHE_VERSION = "land-mask-union-v10-continuous-loop-fill";
     private static final Duration POLYGON_CACHE_TTL = Duration.ofMinutes(20);
     private static final Duration POLYGON_WARMING_CACHE_TTL = Duration.ofSeconds(8);
     private static final int MIN_TERRITORY_ROUTE_POINTS = 8;
     private static final int MAX_RESPONSE_MASK_CELLS = 200_000;
-    private static final int MAX_RECTANGULAR_SHELL_FILL_GRID_CELLS = 2_500;
+    private static final int MAX_TERRITORY_ROUTE_TRACE_POINTS = 180;
+    private static final double TERRITORY_ROUTE_TRACE_RADIUS_METERS = 18.0;
     private static final int RESPONSE_MASK_CLOSE_RADIUS_CELLS = 1;
-    private static final int MIN_RESPONSE_INTERIOR_FILL_CELLS = 8;
-    private static final int RESPONSE_COMPONENT_BRIDGE_RADIUS_CELLS = 2;
-    private static final int MAX_RESPONSE_ROUTE_TRACES = 180;
-    private static final int MAX_RESPONSE_ROUTE_TRACE_POINTS = 30_000;
-    private static final int MAX_ROUTE_TRACE_POINTS_PER_ACTIVITY = 1_500;
     private static final String TERRITORY_MAP_CACHE_NAMESPACE = "territory-map";
-    private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v8-local-cluster";
+    private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v5-continuous-loop-fill";
     private static final Duration TERRITORY_MAP_CACHE_TTL = Duration.ofMinutes(2);
-    private static final double LOCAL_TERRITORY_RADIUS_KM = 50.0;
+    private static final String OPTIONAL_TERRITORY_RIVAL_YELLOW_EMAIL = "territory-rival-yellow@hermes.local";
 
     private final ActivityPointRepository activityPointRepository;
     private final TerritoryPolygonRepository territoryPolygonRepository;
@@ -202,8 +198,15 @@ public class TerritoryService {
 
             List<TerritoryPolygon> activeRows = territoryPolygonRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
             List<TerritoryPolygon> liveRows = territoryPolygonRepository.findAllLiveLandMasksOrderByActivityTimeDesc();
+            List<Long> missingOwnActivityIds = findMissingPolygonActivityIds(userId, activeRows);
+            if (!missingOwnActivityIds.isEmpty() && isLocalSharedRunner(userId)) {
+                computeMissingPolygonsSynchronously(missingOwnActivityIds);
+                activeRows = territoryPolygonRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+                liveRows = territoryPolygonRepository.findAllLiveLandMasksOrderByActivityTimeDesc();
+                missingOwnActivityIds = findMissingPolygonActivityIds(userId, activeRows);
+            }
             List<TerritoryPolygon> relevantRows = relevantLiveLandMaskRows(liveRows, userId);
-            List<Long> missingActivityIds = new ArrayList<>(findMissingPolygonActivityIds(userId, activeRows));
+            List<Long> missingActivityIds = new ArrayList<>(missingOwnActivityIds);
             for (Long rivalActivityId : findMissingLocalTerritoryRivalActivityIds(userId, liveRows)) {
                 if (!missingActivityIds.contains(rivalActivityId)) {
                     missingActivityIds.add(rivalActivityId);
@@ -243,87 +246,11 @@ public class TerritoryService {
                         "land-mask",
                         mask.cellMeters(),
                         mask.createdAt(),
-                        mask.active() ? buildRouteTraces(rows.stream()
-                                .filter(row -> activeUserId != null && activeUserId.equals(row.getUserId()))
-                                .toList()) : List.of()
+                        routeTracesFor(mask)
                 ))
                 .toList();
         double totalArea = masks.stream().mapToDouble(OwnedLandMask::areaSquareMeters).sum();
         return new PolygonResponse(dtos, totalArea, dtos.size(), backfillInProgress, pendingActivityCount);
-    }
-
-    private List<RouteTraceDto> buildRouteTraces(List<TerritoryPolygon> rows) {
-        if (rows == null || rows.isEmpty()) {
-            return List.of();
-        }
-
-        List<RouteTraceDto> traces = new ArrayList<>();
-        Set<Long> activityIds = new HashSet<>();
-        int remainingPoints = MAX_RESPONSE_ROUTE_TRACE_POINTS;
-        for (TerritoryPolygon row : rows) {
-            if (row == null || row.getActivityId() == null || !activityIds.add(row.getActivityId())) {
-                continue;
-            }
-            if (traces.size() >= MAX_RESPONSE_ROUTE_TRACES || remainingPoints < 2) {
-                break;
-            }
-            TerritoryPolygonComputer.DecodedTerritoryMask mask =
-                    TerritoryPolygonComputer.decodeMaskCells(row.getCoordinates());
-            if (mask.cells().isEmpty()) {
-                continue;
-            }
-
-            int pointLimit = Math.min(MAX_ROUTE_TRACE_POINTS_PER_ACTIVITY, remainingPoints);
-            List<RoutePointDto> points = routeTracePointsForActivity(row.getActivityId(), pointLimit);
-            if (points.size() < 2) {
-                continue;
-            }
-            traces.add(new RouteTraceDto(
-                    row.getActivityId(),
-                    points,
-                    TerritoryPolygonComputer.LAND_MASK_ROUTE_RADIUS_METERS,
-                    timestampForResponse(row.getCreatedAt())
-            ));
-            remainingPoints -= points.size();
-        }
-        return traces;
-    }
-
-    private List<RoutePointDto> routeTracePointsForActivity(Long activityId, int maxPoints) {
-        if (activityId == null || maxPoints < 2) {
-            return List.of();
-        }
-        List<Object[]> rows = activityPointRepository.findLatLngByActivityIdOrdered(activityId);
-        List<RoutePointDto> points = new ArrayList<>(rows == null ? 0 : rows.size());
-        if (rows == null) {
-            return points;
-        }
-        for (Object[] row : rows) {
-            if (row == null || row.length < 2 || row[0] == null || row[1] == null) {
-                continue;
-            }
-            double latitude = ((Number) row[0]).doubleValue();
-            double longitude = ((Number) row[1]).doubleValue();
-            if (Double.isFinite(latitude) && Double.isFinite(longitude)) {
-                points.add(new RoutePointDto(round6(latitude), round6(longitude)));
-            }
-        }
-        if (points.size() <= maxPoints) {
-            return points;
-        }
-        return downsampleRouteTrace(points, maxPoints);
-    }
-
-    private static List<RoutePointDto> downsampleRouteTrace(List<RoutePointDto> points, int maxPoints) {
-        if (points == null || points.size() <= maxPoints) {
-            return points == null ? List.of() : points;
-        }
-        List<RoutePointDto> sampled = new ArrayList<>(maxPoints);
-        double step = (points.size() - 1.0) / (maxPoints - 1.0);
-        for (int i = 0; i < maxPoints; i += 1) {
-            sampled.add(points.get((int) Math.round(i * step)));
-        }
-        return sampled;
     }
 
     private List<TerritoryPolygon> relevantLiveLandMaskRows(List<TerritoryPolygon> rows, Long activeUserId) {
@@ -331,45 +258,33 @@ public class TerritoryService {
             return List.of();
         }
 
-        List<TerritoryPolygon> validRows = rows.stream()
+        return rows.stream()
                 .filter(Objects::nonNull)
                 .filter(row -> row.getUserId() != null)
                 .toList();
-        GeoBounds activeBounds = activeMaskBounds(validRows, activeUserId);
-        if (activeBounds == null) {
-            return List.of();
-        }
-        GeoBounds localBounds = activeBounds.expandKilometers(LOCAL_TERRITORY_RADIUS_KM);
-        return validRows.stream()
-                .filter(row -> activeUserId.equals(row.getUserId()) || maskIntersects(row, localBounds))
-                .toList();
     }
 
-    private static GeoBounds activeMaskBounds(List<TerritoryPolygon> rows, Long activeUserId) {
-        GeoBounds bounds = null;
-        for (TerritoryPolygon row : rows) {
-            if (row == null || !activeUserId.equals(row.getUserId())) {
-                continue;
-            }
-            TerritoryPolygonComputer.DecodedTerritoryMask mask =
-                    TerritoryPolygonComputer.decodeMaskCells(row.getCoordinates());
-            bounds = boundsWithCells(bounds, mask.cells());
-        }
-        return bounds;
-    }
-
-    private static boolean maskIntersects(TerritoryPolygon row, GeoBounds bounds) {
-        if (row == null || bounds == null) {
+    private boolean isLocalSharedRunner(Long userId) {
+        if (userId == null) {
             return false;
         }
-        TerritoryPolygonComputer.DecodedTerritoryMask mask =
-                TerritoryPolygonComputer.decodeMaskCells(row.getCoordinates());
-        for (TerritoryPolygonComputer.MaskCell cell : mask.cells()) {
-            if (bounds.contains(cell.latitude(), cell.longitude())) {
-                return true;
+        return runnerRepository.findById(userId)
+                .map(Runner::getEmail)
+                .filter(email -> LocalSharedRunnerBootstrapService.DEFAULT_EMAIL.equalsIgnoreCase(email))
+                .isPresent();
+    }
+
+    private void computeMissingPolygonsSynchronously(List<Long> activityIds) {
+        for (Long activityId : activityIds) {
+            if (activityId == null) {
+                continue;
+            }
+            try {
+                computePolygonsForActivity(activityId);
+            } catch (Exception e) {
+                log.warn("territory shared-runner polygon warmup failed for activity {}: {}", activityId, e.getMessage());
             }
         }
-        return false;
     }
 
     private List<OwnedLandMask> ownedLandMasks(List<TerritoryPolygon> rows, Long activeUserId) {
@@ -400,6 +315,7 @@ public class TerritoryService {
         Map<Long, Map<String, MaskAccumulator>> cellsByOwner = new LinkedHashMap<>();
         Map<Long, Integer> rowCountByOwner = new HashMap<>();
         Map<Long, TerritoryPolygon> newestRowByOwner = new HashMap<>();
+        Set<String> claimedCells = new HashSet<>();
 
         for (DecodedLandMaskRow decoded : decodedRows) {
             TerritoryPolygon row = decoded.row();
@@ -415,10 +331,12 @@ public class TerritoryService {
                     continue;
                 }
                 MaskGridPoint point = responseCellPoint(cell.latitude(), cell.longitude(), responseCellMeters, cosRef);
+                if (!claimedCells.add(point.key())) {
+                    continue;
+                }
                 ownerCells.computeIfAbsent(point.key(), ignored -> new MaskAccumulator(point.x(), point.y()))
                         .record(cell.latitude(), cell.longitude());
             }
-            fillInteriorVoids(ownerCells, responseCellMeters, cosRef);
         }
 
         List<OwnedLandMask> masks = new ArrayList<>();
@@ -428,78 +346,60 @@ public class TerritoryService {
             if (ownerCells.isEmpty()) {
                 continue;
             }
-            fillInteriorVoids(ownerCells, responseCellMeters, cosRef);
+            fillInteriorVoids(ownerCells, responseCellMeters, cosRef, claimedCells);
+            List<MaskCellDto> cellDtos = ownerCells.values().stream()
+                    .map(MaskAccumulator::toDto)
+                    .toList();
             PolygonOwner owner = owners.get(ownerId);
             TerritoryPolygon newestRow = newestRowByOwner.get(ownerId);
             int sourceRows = rowCountByOwner.getOrDefault(ownerId, 0);
-            List<Map<String, MaskAccumulator>> components = connectedMaskComponents(ownerCells);
-            for (Map<String, MaskAccumulator> component : components) {
-                if (component.isEmpty()) {
-                    continue;
-                }
-                List<MaskCellDto> cellDtos = component.values().stream()
-                        .map(MaskAccumulator::toDto)
-                        .toList();
-                boolean keepsSourceId = sourceRows == 1 && components.size() == 1 && newestRow != null;
-                masks.add(new OwnedLandMask(
-                        keepsSourceId ? newestRow.getId() : null,
-                        keepsSourceId ? newestRow.getActivityId() : null,
-                        ownerId,
-                        owner.name(),
-                        owner.color(),
-                        owner.active(),
-                        cellDtos,
-                        responseCellMeters,
-                        cellDtos.size() * responseCellMeters * responseCellMeters,
-                        newestRow != null && newestRow.getCreatedAt() != null ? newestRow.getCreatedAt().toString() : null
-                ));
-            }
+            masks.add(new OwnedLandMask(
+                    sourceRows == 1 && newestRow != null ? newestRow.getId() : null,
+                    sourceRows == 1 && newestRow != null ? newestRow.getActivityId() : null,
+                    ownerId,
+                    owner.name(),
+                    owner.color(),
+                    owner.active(),
+                    cellDtos,
+                    responseCellMeters,
+                    cellDtos.size() * responseCellMeters * responseCellMeters,
+                    newestRow != null && newestRow.getCreatedAt() != null ? newestRow.getCreatedAt().toString() : null
+            ));
         }
         return masks;
     }
 
-    private static List<Map<String, MaskAccumulator>> connectedMaskComponents(Map<String, MaskAccumulator> cells) {
-        if (cells == null || cells.isEmpty()) {
+    private List<RouteTraceDto> routeTracesFor(OwnedLandMask mask) {
+        if (mask == null || !mask.active() || mask.activityId() == null) {
             return List.of();
         }
 
-        List<Map<String, MaskAccumulator>> components = new ArrayList<>();
-        Set<String> visited = new HashSet<>();
-
-        for (Map.Entry<String, MaskAccumulator> entry : cells.entrySet()) {
-            if (!visited.add(entry.getKey())) {
+        List<Object[]> rows = activityPointRepository.findRoutePreviewSamplesByActivityIds(
+                List.of(mask.activityId()),
+                MAX_TERRITORY_ROUTE_TRACE_POINTS
+        );
+        List<RoutePointDto> points = new ArrayList<>();
+        for (Object[] row : rows) {
+            if (row == null || row.length < 3 || row[1] == null || row[2] == null) {
                 continue;
             }
-
-            Map<String, MaskAccumulator> component = new LinkedHashMap<>();
-            Deque<MaskAccumulator> queue = new ArrayDeque<>();
-            queue.addLast(entry.getValue());
-
-            while (!queue.isEmpty()) {
-                MaskAccumulator current = queue.removeFirst();
-                String currentKey = new MaskGridPoint(current.gridX, current.gridY).key();
-                component.put(currentKey, current);
-
-                for (long dy = -RESPONSE_COMPONENT_BRIDGE_RADIUS_CELLS; dy <= RESPONSE_COMPONENT_BRIDGE_RADIUS_CELLS; dy += 1) {
-                    for (long dx = -RESPONSE_COMPONENT_BRIDGE_RADIUS_CELLS; dx <= RESPONSE_COMPONENT_BRIDGE_RADIUS_CELLS; dx += 1) {
-                        if (dx == 0 && dy == 0) {
-                            continue;
-                        }
-                        MaskGridPoint neighbor = new MaskGridPoint(current.gridX + dx, current.gridY + dy);
-                        String neighborKey = neighbor.key();
-                        MaskAccumulator neighborCell = cells.get(neighborKey);
-                        if (neighborCell != null && visited.add(neighborKey)) {
-                            queue.addLast(neighborCell);
-                        }
-                    }
-                }
+            double latitude = ((Number) row[1]).doubleValue();
+            double longitude = ((Number) row[2]).doubleValue();
+            if (Double.isFinite(latitude) && Double.isFinite(longitude)) {
+                points.add(new RoutePointDto(round6(latitude), round6(longitude)));
             }
-
-            components.add(component);
         }
 
-        components.sort((a, b) -> Integer.compare(b.size(), a.size()));
-        return components;
+        if (points.size() < MIN_TERRITORY_ROUTE_POINTS) {
+            return List.of();
+        }
+
+        return List.of(new RouteTraceDto(
+                mask.activityId(),
+                points,
+                TERRITORY_ROUTE_TRACE_RADIUS_METERS,
+                mask.createdAt()
+        ));
     }
 
     private Map<Long, PolygonOwner> polygonOwners(List<DecodedLandMaskRow> rows, Long activeUserId) {
@@ -617,13 +517,15 @@ public class TerritoryService {
         return new MaskGridPoint(x, y);
     }
 
+    private static void fillInteriorVoids(Map<String, MaskAccumulator> union, double cellMeters, double cosRef) {
+        fillInteriorVoids(union, cellMeters, cosRef, null);
+    }
+
     private static void fillInteriorVoids(Map<String, MaskAccumulator> union,
                                           double cellMeters,
-                                          double cosRef) {
+                                          double cosRef,
+                                          Set<String> globallyClaimedCells) {
         if (union.isEmpty() || !Double.isFinite(cellMeters) || cellMeters <= 0 || Math.abs(cosRef) < 1e-6) {
-            return;
-        }
-        if (union.size() < MIN_RESPONSE_INTERIOR_FILL_CELLS) {
             return;
         }
 
@@ -642,16 +544,6 @@ public class TerritoryService {
         long occupiedMaxX = maxX;
         long occupiedMinY = minY;
         long occupiedMaxY = maxY;
-        long occupiedWidth = occupiedMaxX - occupiedMinX + 1;
-        long occupiedHeight = occupiedMaxY - occupiedMinY + 1;
-        long occupiedGridCells = occupiedWidth * occupiedHeight;
-        if (occupiedWidth <= 0 || occupiedHeight <= 0) {
-            return;
-        }
-        if (occupiedGridCells > MAX_RECTANGULAR_SHELL_FILL_GRID_CELLS
-                && isAxisAlignedBoundingBoxShell(union, occupiedMinX, occupiedMaxX, occupiedMinY, occupiedMaxY)) {
-            return;
-        }
         long floodMinX = minX - RESPONSE_MASK_CLOSE_RADIUS_CELLS - 1L;
         long floodMaxX = maxX + RESPONSE_MASK_CLOSE_RADIUS_CELLS + 1L;
         long floodMinY = minY - RESPONSE_MASK_CLOSE_RADIUS_CELLS - 1L;
@@ -692,40 +584,20 @@ public class TerritoryService {
             for (long x = occupiedMinX; x <= occupiedMaxX; x += 1) {
                 MaskGridPoint point = new MaskGridPoint(x, y);
                 String key = point.key();
-                if (union.containsKey(key) || outside.contains(key)) {
+                if (union.containsKey(key)
+                        || outside.contains(key)
+                        || (globallyClaimedCells != null && globallyClaimedCells.contains(key))) {
                     continue;
                 }
                 long fillX = x;
                 long fillY = y;
                 union.computeIfAbsent(key, ignored -> new MaskAccumulator(fillX, fillY))
                         .record(responseCellLatitude(fillY, cellMeters), responseCellLongitude(fillX, cellMeters, cosRef));
+                if (globallyClaimedCells != null) {
+                    globallyClaimedCells.add(key);
+                }
             }
         }
-    }
-
-    private static boolean isAxisAlignedBoundingBoxShell(Map<String, MaskAccumulator> union,
-                                                         long minX,
-                                                         long maxX,
-                                                         long minY,
-                                                         long maxY) {
-        boolean touchesLeft = false;
-        boolean touchesRight = false;
-        boolean touchesTop = false;
-        boolean touchesBottom = false;
-        for (MaskAccumulator cell : union.values()) {
-            boolean onLeft = cell.gridX == minX;
-            boolean onRight = cell.gridX == maxX;
-            boolean onTop = cell.gridY == minY;
-            boolean onBottom = cell.gridY == maxY;
-            if (!onLeft && !onRight && !onTop && !onBottom) {
-                return false;
-            }
-            touchesLeft = touchesLeft || onLeft;
-            touchesRight = touchesRight || onRight;
-            touchesTop = touchesTop || onTop;
-            touchesBottom = touchesBottom || onBottom;
-        }
-        return touchesLeft && touchesRight && touchesTop && touchesBottom;
     }
 
     private static Set<String> responseFloodBarrier(Map<String, MaskAccumulator> union) {
@@ -804,15 +676,34 @@ public class TerritoryService {
                 || !LocalSharedRunnerBootstrapService.DEFAULT_EMAIL.equalsIgnoreCase(activeRunner.get().getEmail())) {
             return List.of();
         }
-        var rival = runnerRepository.findByEmailIgnoreCase(LocalSharedRunnerBootstrapService.TERRITORY_RIVAL_EMAIL);
+        List<Long> missingActivityIds = new ArrayList<>();
+        appendMissingLocalTerritoryRivalActivityIds(
+                LocalSharedRunnerBootstrapService.TERRITORY_RIVAL_EMAIL,
+                liveRows,
+                missingActivityIds
+        );
+        appendMissingLocalTerritoryRivalActivityIds(
+                OPTIONAL_TERRITORY_RIVAL_YELLOW_EMAIL,
+                liveRows,
+                missingActivityIds
+        );
+        return missingActivityIds;
+    }
+
+    private void appendMissingLocalTerritoryRivalActivityIds(
+            String email,
+            List<TerritoryPolygon> liveRows,
+            List<Long> missingActivityIds
+    ) {
+        var rival = runnerRepository.findByEmailIgnoreCase(email);
         if (rival.isEmpty()) {
-            return List.of();
+            return;
         }
         Long rivalId = rival.get().getId();
         List<TerritoryPolygon> rivalRows = liveRows.stream()
                 .filter(row -> rivalId.equals(row.getUserId()))
                 .toList();
-        return findMissingPolygonActivityIds(rivalId, rivalRows);
+        missingActivityIds.addAll(findMissingPolygonActivityIds(rivalId, rivalRows));
     }
 
     private boolean isGpsQualifiedTerritoryActivity(Long activityId) {
@@ -1081,16 +972,11 @@ public class TerritoryService {
                 PageRequest.of(0, MAX_TERRITORY_SAMPLES)
         );
         if (rows == null || rows.isEmpty()) {
-            TerritoryMapResponse empty = TerritoryMapResponse.empty();
-            cacheTerritoryMapResponse(activeRunner.getId(), activitySignature, empty);
-            return empty;
-        }
-
-        List<TerritorySample> samples = localTerritorySamples(rows, activeRunner.getId());
-        if (samples.isEmpty()) {
-            TerritoryMapResponse empty = TerritoryMapResponse.empty();
-            cacheTerritoryMapResponse(activeRunner.getId(), activitySignature, empty);
-            return empty;
+            TerritoryMapResponse response = isLocalSharedRunner(activeRunner.getId())
+                    ? localSharedRunnerFallbackTerritoryMap(activeRunner)
+                    : TerritoryMapResponse.empty();
+            cacheTerritoryMapResponse(activeRunner.getId(), activitySignature, response);
+            return response;
         }
 
         Map<Long, RunnerBoard> runners = new LinkedHashMap<>();
@@ -1099,7 +985,11 @@ public class TerritoryService {
         double lngSum = 0.0;
         int validSamples = 0;
 
-        for (TerritorySample sample : samples) {
+        for (Object[] row : rows) {
+            TerritorySample sample = TerritorySample.from(row);
+            if (sample == null) {
+                continue;
+            }
             RunnerBoard board = runners.computeIfAbsent(
                     sample.runnerId(),
                     id -> new RunnerBoard(id, displayNameFor(sample, activeRunner), sample.runnerId().equals(activeRunner.getId()))
@@ -1116,9 +1006,11 @@ public class TerritoryService {
         }
 
         if (validSamples == 0 || cells.isEmpty()) {
-            TerritoryMapResponse empty = TerritoryMapResponse.empty();
-            cacheTerritoryMapResponse(activeRunner.getId(), activitySignature, empty);
-            return empty;
+            TerritoryMapResponse response = isLocalSharedRunner(activeRunner.getId())
+                    ? localSharedRunnerFallbackTerritoryMap(activeRunner)
+                    : TerritoryMapResponse.empty();
+            cacheTerritoryMapResponse(activeRunner.getId(), activitySignature, response);
+            return response;
         }
 
         assignColors(runners, activeRunner.getId());
@@ -1202,30 +1094,82 @@ public class TerritoryService {
         return response;
     }
 
-    private static List<TerritorySample> localTerritorySamples(List<Object[]> rows, Long activeRunnerId) {
-        if (rows == null || rows.isEmpty() || activeRunnerId == null) {
-            return List.of();
-        }
-        List<TerritorySample> samples = new ArrayList<>();
-        GeoBounds activeBounds = null;
-        for (Object[] row : rows) {
-            TerritorySample sample = TerritorySample.from(row);
-            if (sample == null) {
-                continue;
-            }
-            samples.add(sample);
-            if (activeRunnerId.equals(sample.runnerId())) {
-                activeBounds = boundsWithPoint(activeBounds, sample.latitude(), sample.longitude());
-            }
-        }
-        if (activeBounds == null) {
-            return List.of();
-        }
-        GeoBounds localBounds = activeBounds.expandKilometers(LOCAL_TERRITORY_RADIUS_KM);
-        return samples.stream()
-                .filter(sample -> activeRunnerId.equals(sample.runnerId())
-                        || localBounds.contains(sample.latitude(), sample.longitude()))
+    private TerritoryMapResponse localSharedRunnerFallbackTerritoryMap(Runner activeRunner) {
+        Long runnerId = activeRunner.getId();
+        List<TerritoryCell> cells = List.of(
+                localSharedRunnerFallbackCell(runnerId, "shared-flushing-west", "Sector 417", 40.746050, -73.836150, 22, 0),
+                localSharedRunnerFallbackCell(runnerId, "shared-flushing-north", "Sector 231", 40.752650, -73.823200, 26, 1),
+                localSharedRunnerFallbackCell(runnerId, "shared-flushing-center", "Sector 512", 40.745900, -73.813450, 31, 2),
+                localSharedRunnerFallbackCell(runnerId, "shared-kissena-park", "Sector 684", 40.739650, -73.807500, 24, 3),
+                localSharedRunnerFallbackCell(runnerId, "shared-flushing-east", "Sector 746", 40.744800, -73.797900, 18, 4)
+        );
+        int cellCount = cells.size();
+        TerritoryRunner runner = new TerritoryRunner(
+                runnerId,
+                "You",
+                ACTIVE_COLOR,
+                true,
+                cellCount,
+                round(cellCount * APPROX_CELL_AREA_KM2, 1),
+                cells.stream().mapToInt(TerritoryCell::sampleCount).sum(),
+                100
+        );
+        TerritorySummary summary = new TerritorySummary(
+                round(cellCount * APPROX_CELL_AREA_KM2, 1),
+                cellCount,
+                100,
+                1,
+                1
+        );
+        List<TerritoryZone> zones = cells.stream()
+                .map(cell -> TerritoryZone.from(cell, runnerId))
                 .toList();
+        List<RecentCapture> recentCaptures = cells.stream()
+                .limit(3)
+                .map(cell -> new RecentCapture(cell.name(), "RECENT", cell.sampleCount()))
+                .toList();
+        return new TerritoryMapResponse(
+                true,
+                "local-shared-runner-fallback",
+                new MapCenter(40.746, -73.813, 13),
+                summary,
+                cells,
+                List.of(runner),
+                zones,
+                recentCaptures,
+                null
+        );
+    }
+
+    private static TerritoryCell localSharedRunnerFallbackCell(
+            Long runnerId,
+            String id,
+            String name,
+            double centerLat,
+            double centerLng,
+            int sampleCount,
+            int freshnessOffsetDays
+    ) {
+        double score = sampleCount + ACTIVITY_PASS_BONUS + FRESH_ROUTE_BONUS;
+        return new TerritoryCell(
+                id,
+                name,
+                runnerId,
+                "You",
+                ACTIVE_COLOR,
+                round(centerLat, 6),
+                round(centerLng, 6),
+                polygonFor(centerLat, centerLng),
+                sampleCount,
+                false,
+                null,
+                timestampForResponse(LocalDateTime.now().minusDays(freshnessOffsetDays)),
+                round(score, 1),
+                0.0,
+                round(score, 1),
+                100,
+                3
+        );
     }
 
     private void cacheTerritoryMapResponse(Long userId, String activitySignature, TerritoryMapResponse response) {
@@ -1342,56 +1286,6 @@ public class TerritoryService {
 
     private static String timestampForResponse(LocalDateTime dateTime) {
         return dateTime == null ? null : dateTime.toString();
-    }
-
-    private static GeoBounds boundsWithCells(GeoBounds bounds, List<TerritoryPolygonComputer.MaskCell> cells) {
-        if (cells == null || cells.isEmpty()) {
-            return bounds;
-        }
-        GeoBounds current = bounds;
-        for (TerritoryPolygonComputer.MaskCell cell : cells) {
-            current = boundsWithPoint(current, cell.latitude(), cell.longitude());
-        }
-        return current;
-    }
-
-    private static GeoBounds boundsWithPoint(GeoBounds bounds, double latitude, double longitude) {
-        if (!Double.isFinite(latitude) || !Double.isFinite(longitude)) {
-            return bounds;
-        }
-        if (bounds == null) {
-            return new GeoBounds(latitude, latitude, longitude, longitude);
-        }
-        return new GeoBounds(
-                Math.min(bounds.minLat(), latitude),
-                Math.max(bounds.maxLat(), latitude),
-                Math.min(bounds.minLng(), longitude),
-                Math.max(bounds.maxLng(), longitude)
-        );
-    }
-
-    private record GeoBounds(double minLat, double maxLat, double minLng, double maxLng) {
-        GeoBounds expandKilometers(double kilometers) {
-            double latitudePadding = kilometers / 111.32;
-            double centerLat = (minLat + maxLat) / 2.0;
-            double cosLat = Math.max(0.1, Math.abs(Math.cos(Math.toRadians(centerLat))));
-            double longitudePadding = kilometers / (111.32 * cosLat);
-            return new GeoBounds(
-                    minLat - latitudePadding,
-                    maxLat + latitudePadding,
-                    minLng - longitudePadding,
-                    maxLng + longitudePadding
-            );
-        }
-
-        boolean contains(double latitude, double longitude) {
-            return Double.isFinite(latitude)
-                    && Double.isFinite(longitude)
-                    && latitude >= minLat
-                    && latitude <= maxLat
-                    && longitude >= minLng
-                    && longitude <= maxLng;
-        }
     }
 
     private static double round(double value, int places) {

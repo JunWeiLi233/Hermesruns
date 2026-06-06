@@ -3,93 +3,87 @@ package com.hermes.backend;
 import java.util.List;
 
 /**
- * Real waypoints along the Los Angeles Marathon "Stadium to the Sea"
- * course — point-to-point from Dodger Stadium (Chavez Ravine) through
- * Chinatown, Echo Park, Silver Lake, down Sunset Boulevard through
- * Hollywood and the Sunset Strip, west across Beverly Hills via Rodeo
- * Drive, west along Wilshire Boulevard through Westwood and Brentwood,
- * through the West LA / Veterans Affairs / Sawtelle area, and finishing
- * at Santa Monica Pier on Ocean Avenue.
+ * Real waypoints along the ASICS Los Angeles Marathon "Stadium to the Stars"
+ * course used on the official 2026 map: Dodger Stadium start, Downtown LA,
+ * Chinatown, Little Tokyo, Echo Park, Hollywood, Sunset Strip, Beverly Hills,
+ * West LA / Brentwood turnaround at Bundy, then the Century City finish at
+ * Santa Monica Blvd & Avenue of the Stars.
  *
- * <p>Waypoints are turning-point landmarks rather than dense GPS samples:
- * the bulk-seed flow feeds them to the pedestrian OSRM (FOSSGIS
- * routed-foot) as a multi-leg routing request so the resulting polyline
- * follows real streets between landmarks. The full course is roughly
- * 42.195 km from start at Dodger Stadium to finish at Ocean Ave & Colorado
- * Ave in Santa Monica.</p>
+ * <p>Waypoints are turning-point landmarks rather than dense GPS samples: the
+ * bulk-seed flow feeds them to the pedestrian OSRM (FOSSGIS routed-foot) as a
+ * multi-leg routing request so the resulting polyline follows real streets
+ * between landmarks. The full course is 26.2 miles from Dodger Stadium to
+ * Century City.</p>
  *
- * <p>Coordinates verified against the LA Marathon's official course map
- * (`The McCourt Foundation`) and OpenStreetMap landmarks; updated
- * 2026-05-27.</p>
+ * <p>Coordinates verified against The McCourt Foundation's official 2026
+ * course map and OpenStreetMap landmarks; updated 2026-06-04.</p>
  */
 final class LosAngelesMarathonOfficialCourse {
 
     static final String RACE_ID = "los-angeles-marathon";
-    static final String OFFICIAL_COURSE_URL = "https://www.lamarathon.com/race-day/course";
+    static final String OFFICIAL_COURSE_URL = "https://www.mccourtfoundation.org/wp-content/uploads/2026/02/LA-Marathon-2026-Course-Map_Final.pdf";
     static final String OFFICIAL_SOURCE = "la-official-course";
 
     private static final double[][] WAYPOINTS = new double[][]{
             // ===== Start: Dodger Stadium / Chavez Ravine =====
-            { 34.0739, -118.2400 }, // Start - Dodger Stadium (parking lot 1)
-            { 34.0760, -118.2425 }, // Stadium Way exit
-            { 34.0795, -118.2435 }, // Sunset Blvd / Stadium Way junction
-            // ===== Chinatown + Civic Center =====
-            { 34.0658, -118.2398 }, // Chinatown - N Broadway
-            { 34.0588, -118.2386 }, // Olvera Street / Civic Center
-            // ===== Echo Park =====
-            { 34.0727, -118.2516 }, // Sunset Blvd / Echo Park Ave (Echo Park)
-            { 34.0780, -118.2604 }, // Sunset Blvd / Alvarado St
-            // ===== Silver Lake =====
-            { 34.0850, -118.2691 }, // Sunset Blvd / Reservoir St
-            { 34.0905, -118.2766 }, // Sunset Junction (Sunset & Hollywood/Hyperion)
-            // ===== Hollywood =====
-            { 34.0926, -118.2900 }, // Sunset Blvd / Vermont Ave
-            { 34.0954, -118.3056 }, // Sunset Blvd / Western Ave (Thai Town)
-            { 34.0975, -118.3200 }, // Sunset Blvd / Wilton Pl
-            { 34.0982, -118.3287 }, // Sunset & Vine (Hollywood)
-            { 34.0982, -118.3389 }, // Sunset Blvd / Highland Ave (Hollywood Bowl area)
-            { 34.0989, -118.3501 }, // Sunset Blvd / La Brea Ave
-            // ===== Sunset Strip (West Hollywood) =====
-            { 34.0962, -118.3641 }, // Sunset Blvd / Fairfax Ave (WeHo border)
-            { 34.0931, -118.3754 }, // Sunset Blvd / Crescent Heights (Sunset Strip start)
-            { 34.0914, -118.3863 }, // Sunset Blvd / Sunset Plaza Dr
-            { 34.0890, -118.3946 }, // Sunset Blvd / N Doheny Dr (WeHo/BH border)
-            // ===== Beverly Hills =====
-            { 34.0794, -118.4001 }, // Beverly Hills - N Beverly Dr / Sunset Blvd
-            { 34.0735, -118.4035 }, // Beverly Hills - Santa Monica Blvd / Beverly Dr
-            { 34.0697, -118.4018 }, // Beverly Hills - Wilshire Blvd / Rodeo Dr
-            { 34.0626, -118.4170 }, // Wilshire Blvd / Santa Monica Blvd merge
-            // ===== Westwood / UCLA area =====
-            { 34.0606, -118.4290 }, // Wilshire Blvd / Beverly Glen Blvd
-            { 34.0586, -118.4395 }, // Wilshire Blvd / Westwood Blvd (Westwood Village south)
-            { 34.0556, -118.4500 }, // Wilshire Blvd / Veteran Ave (Federal Building / VA)
-            // ===== Brentwood / West LA =====
-            { 34.0521, -118.4683 }, // Wilshire Blvd / Bundy Dr / Brentwood
-            { 34.0464, -118.4825 }, // San Vicente Blvd / Bundy Dr (Brentwood)
-            // ===== Sawtelle / 26th St =====
-            { 34.0394, -118.4900 }, // San Vicente Blvd / 26th St
-            { 34.0299, -118.4928 }, // San Vicente Blvd / 7th St (Santa Monica border)
-            // ===== Santa Monica finish =====
-            { 34.0220, -118.4920 }, // San Vicente Blvd / Ocean Ave
-            { 34.0146, -118.4940 }, // Ocean Ave / California Ave (Palisades Park north)
-            { 34.0091, -118.4973 }  // Finish - Ocean Ave / Colorado Ave (near Santa Monica Pier)
+            { 34.0739, -118.2400 }, // Start - Dodger Stadium
+            { 34.0711, -118.2421 }, // Stadium Way / Sunset Blvd
+            // ===== Chinatown + Downtown loop =====
+            { 34.0636, -118.2387 }, // Chinatown Dragon Gate
+            { 34.0575, -118.2371 }, // Olvera Street
+            { 34.0537, -118.2431 }, // Los Angeles City Hall
+            { 34.0497, -118.2390 }, // Little Tokyo
+            { 34.0484, -118.2460 }, // 3rd St / Main St
+            { 34.0577, -118.2467 }, // Cathedral / Dorothy Chandler area
+            // ===== Echo Park + Hollywood =====
+            { 34.0745, -118.2606 }, // Echo Park Lake
+            { 34.0842, -118.2696 }, // Sunset Blvd / Silver Lake Blvd
+            { 34.1015, -118.2917 }, // Barnsdall Park / Vermont Ave
+            { 34.1016, -118.3092 }, // Hollywood Blvd / Western Ave
+            { 34.1017, -118.3267 }, // Hollywood & Vine / Pantages
+            { 34.1016, -118.3387 }, // Hollywood Blvd / Highland Ave
+            { 34.1016, -118.3444 }, // Grauman's Chinese Theater / La Brea approach
+            // ===== Sunset Strip =====
+            { 34.0971, -118.3620 }, // Sunset Blvd / Fairfax Ave
+            { 34.0984, -118.3685 }, // Chateau Marmont
+            { 34.0893, -118.3893 }, // Sunset Strip / Doheny Dr
+            // ===== Beverly Hills + Century City pass =====
+            { 34.0838, -118.3894 }, // Doheny Dr / Santa Monica Blvd
+            { 34.0739, -118.4000 }, // Beverly Hills City Hall
+            { 34.0675, -118.4010 }, // Rodeo Dr / Wilshire Blvd
+            { 34.0696, -118.4140 }, // Burton Way / Century Park East
+            { 34.0594, -118.4179 }, // Santa Monica Blvd / Avenue of the Stars pass
+            // ===== West LA / Brentwood turnaround =====
+            { 34.0570, -118.4255 }, // Santa Monica Blvd / Beverly Glen Blvd
+            { 34.0490, -118.4385 }, // Santa Monica Blvd / Westwood Blvd
+            { 34.0437, -118.4448 }, // Santa Monica Blvd / Sepulveda Blvd
+            { 34.0392, -118.4630 }, // Santa Monica Blvd / Bundy Dr
+            { 34.0466, -118.4658 }, // San Vicente Blvd / Bundy Dr turnaround
+            { 34.0491, -118.4597 }, // San Vicente Blvd / Barrington Ave
+            { 34.0437, -118.4448 }, // Santa Monica Blvd / Sepulveda Blvd return
+            { 34.0562, -118.4256 }, // Santa Monica Blvd / Beverly Glen Blvd return
+            { 34.0597, -118.4177 }  // Finish - Santa Monica Blvd / Avenue of the Stars
     };
 
     private static final String[] LABELS;
     static {
         LABELS = new String[WAYPOINTS.length];
         LABELS[0] = "Start - Dodger Stadium";
-        LABELS[3] = "Chinatown";
-        LABELS[5] = "Echo Park - Sunset Blvd";
-        LABELS[8] = "Silver Lake - Sunset Junction";
-        LABELS[12] = "Hollywood - Sunset & Vine";
-        LABELS[16] = "West Hollywood - Sunset Strip";
-        LABELS[20] = "Beverly Hills - Santa Monica Blvd";
-        LABELS[21] = "Beverly Hills - Rodeo Dr / Wilshire";
-        LABELS[24] = "Westwood - Wilshire Blvd";
-        LABELS[26] = "Brentwood - Bundy Dr";
-        LABELS[28] = "Sawtelle - San Vicente / 26th St";
-        LABELS[WAYPOINTS.length - 1] = "Finish - Santa Monica Pier";
+        LABELS[2] = "Chinatown Dragon Gate";
+        LABELS[3] = "Olvera Street";
+        LABELS[4] = "Los Angeles City Hall";
+        LABELS[5] = "Little Tokyo";
+        LABELS[8] = "Echo Park Lake";
+        LABELS[10] = "Barnsdall Park";
+        LABELS[12] = "Hollywood & Vine";
+        LABELS[13] = "Hollywood Walk of Fame";
+        LABELS[14] = "Grauman's Chinese Theater";
+        LABELS[16] = "Chateau Marmont";
+        LABELS[17] = "Sunset Strip";
+        LABELS[19] = "Beverly Hills City Hall";
+        LABELS[20] = "Rodeo Drive";
+        LABELS[27] = "Bundy turnaround";
+        LABELS[WAYPOINTS.length - 1] = "Finish - Century City";
     }
 
     private LosAngelesMarathonOfficialCourse() {

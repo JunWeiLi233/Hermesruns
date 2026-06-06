@@ -15,6 +15,12 @@ assert.match(
 
 assert.match(
   racesDetailSource,
+  /function buildElevationMarkers\(/,
+  'Race detail should derive visible kilometer markers independently from sparse elevation samples.',
+);
+
+assert.match(
+  racesDetailSource,
   /ELEVATION_SAMPLE_INTERVAL_KM\s*=\s*0\.05/,
   'Race detail should model the elevation curve at 0.05 km spacing.',
 );
@@ -27,8 +33,44 @@ assert.doesNotMatch(
 
 assert.match(
   racesDetailSource,
-  /points\.filter\(/,
-  'Race detail should keep the visible marker set sparser than the full elevation sample set.',
+  /for\s*\(\s*let kilometer\s*=\s*0;\s*kilometer\s*<=\s*Math\.floor\(raceTotalKm\);\s*kilometer\s*\+=\s*1\s*\)/,
+  'Race detail should create a visible marker for every whole kilometer across the full course distance.',
+);
+
+assert.match(
+  racesDetailSource,
+  /ELEVATION_MAJOR_MARK_INTERVAL_KM\s*=\s*4/,
+  'Race detail should define a 4 km major marker cadence for elevation markers.',
+);
+
+assert.match(
+  racesDetailSource,
+  /roundedKm\s*%\s*ELEVATION_MAJOR_MARK_INTERVAL_KM\s*===\s*0/,
+  'Race detail should mark every 4 km elevation marker with is-major.',
+);
+
+assert.match(
+  racesDetailSource,
+  /function formatElevationMarkerLabel\(km, raceTotalKm, isFinish, isMajor\)/,
+  'Race detail should let marker formatting distinguish major 4 km labels from compact minor ticks.',
+);
+
+assert.match(
+  racesDetailSource,
+  /isMajor\s*&&\s*Math\.abs\(km\s*-\s*Math\.round\(km\)\)\s*<\s*0\.05\)\s*return\s+`\$\{Math\.round\(km\)\}km`/,
+  'Race detail should label major whole-kilometer elevation markers with an explicit km suffix.',
+);
+
+assert.match(
+  racesDetailSource,
+  /formatElevationMarkerLabel\(target\.km,\s*raceTotalKm,\s*target\.isFinish,\s*isMajor\)/,
+  'Race detail should pass the computed 4 km major-marker state into the label formatter.',
+);
+
+assert.doesNotMatch(
+  racesDetailSource,
+  /roundedKm\s*%\s*5\s*===\s*0/,
+  'Race detail should not keep the old every-5-km major marker cadence.',
 );
 
 assert.match(

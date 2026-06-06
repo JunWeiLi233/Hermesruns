@@ -28,7 +28,12 @@ MASK_CLOSE_KERNEL_PX = 7
 COMPONENT_SIGNIFICANCE_RATIO = 0.1
 MIN_SIGNIFICANT_COMPONENT_PIXELS = 4
 MAX_COMPONENT_ENDPOINT_GAP_PX = 48.0
+EXPLICIT_TARGET_COMPONENT_ENDPOINT_GAP_PX = 65.0
 MIN_USABLE_ROUTE_POINTS = 12
+EXPLICIT_TARGET_MIN_COMPONENT_PIXELS = 20
+PROMINENT_BRANCH_MIN_DISTANCE_PX = 30.0
+PROMINENT_BRANCH_MIN_POINTS = 20
+PROMINENT_BRANCH_MAX_MAIN_PATH_FRACTION = 0.35
 SPUR_MAX_LENGTH_PX = 6
 MORPH_BRIDGE_MAX_GAP_PX = 16
 MULTI_COLOR_MAX_COMBINE = 3
@@ -73,8 +78,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--image", required=True, help="Path to the input route image.")
     parser.add_argument(
         "--route-hex-color",
-        default="",
-        help="Optional target route color in #RRGGBB form. When omitted, the extractor scans common course-map stroke colors.",
+        action="append",
+        default=[],
+        help=(
+            "Optional target route color in #RRGGBB form. "
+            "May be passed more than once for multi-color routes. "
+            "When omitted, the extractor scans common course-map stroke colors."
+        ),
+    )
+    parser.add_argument(
+        "--exclude-region",
+        action="append",
+        default=[],
+        help=(
+            "Optional normalized rectangle x1,y1,x2,y2 to remove from every route mask. "
+            "May be passed more than once."
+        ),
+    )
+    parser.add_argument(
+        "--append-prominent-branch",
+        action="store_true",
+        help=(
+            "After finding the main route diameter, append one substantial side branch. "
+            "Use only for near-loop course maps where the real marathon return leg is "
+            "otherwise treated as a branch."
+        ),
     )
     return parser.parse_args(argv)
 
@@ -90,6 +118,26 @@ def parse_hex_color(value: str) -> np.ndarray:
         )
     except ValueError as exc:
         raise ValueError("route color must be in #RRGGBB format") from exc
+
+
+def normalize_route_hex_colors(route_hex_colors: str | list[str] | None) -> list[str]:
+    if route_hex_colors is None:
+        return []
+    values = [route_hex_colors] if isinstance(route_hex_colors, str) else route_hex_colors
+    return [value.strip() for value in values if value and value.strip()]
+
+
+def parse_exclusion_region(value: str) -> tuple[float, float, float, float]:
+    parts = [part.strip() for part in value.split(",")]
+    if len(parts) != 4:
+        raise ValueError("exclude region must use x1,y1,x2,y2 normalized coordinates")
+    try:
+        x1, y1, x2, y2 = (float(part) for part in parts)
+    except ValueError as exc:
+        raise ValueError("exclude region coordinates must be numbers") from exc
+    if not (0.0 <= x1 < x2 <= 1.0 and 0.0 <= y1 < y2 <= 1.0):
+        raise ValueError("exclude region coordinates must satisfy 0 <= x1 < x2 <= 1 and 0 <= y1 < y2 <= 1")
+    return (x1, y1, x2, y2)
 
 
 def load_image(path: Path) -> np.ndarray:
@@ -398,12 +446,27 @@ def build_saturated_line_mask(image: np.ndarray) -> np.ndarray:
     return colorful & ~ocean_like
 
 
-def build_candidate_masks(image: np.ndarray, route_rgb: np.ndarray | None) -> list[tuple[str, np.ndarray]]:
+def build_candidate_masks(image: np.ndarray, route_hex_colors: list[str]) -> list[tuple[str, np.ndarray]]:
     masks: list[tuple[str, np.ndarray]] = []
     seen_colors: set[tuple[int, int, int]] = set()
-    if route_rgb is not None:
-        masks.append(("target", prepare_route_mask(build_color_mask(image, route_rgb))))
+    target_masks: list[tuple[str, np.ndarray]] = []
+    for route_hex_color in route_hex_colors:
+        route_rgb = parse_hex_color(route_hex_color)
+        mask = prepare_route_mask(build_color_mask(image, route_rgb))
+        target_masks.append((route_hex_color, mask))
         seen_colors.add(tuple(int(value) for value in route_rgb.tolist()))
+    if len(target_masks) == 1:
+        masks.append(("target", target_masks[0][1]))
+    elif len(target_masks) > 1:
+        combined = np.zeros(image.shape[:2], dtype=bool)
+        for _, mask in target_masks:
+            combined = combined | mask
+        if cv2 is not None:
+            close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            combined = cv2.morphologyEx(combined.astype(np.uint8), cv2.MORPH_CLOSE, close_kernel) > 0
+        masks.append(("target", combined))
+        for route_hex_color, mask in target_masks:
+            masks.append((f"target:{route_hex_color}", mask))
     for color in COMMON_ROUTE_COLORS:
         rgb = parse_hex_color(color)
         key = tuple(int(value) for value in rgb.tolist())
@@ -415,7 +478,40 @@ def build_candidate_masks(image: np.ndarray, route_rgb: np.ndarray | None) -> li
     return masks
 
 
-def result_from_mask(mask: np.ndarray) -> dict[str, object]:
+def apply_exclusion_regions(
+    mask: np.ndarray,
+    exclusion_regions: list[tuple[float, float, float, float]] | None,
+) -> np.ndarray:
+    if not exclusion_regions:
+        return mask
+    result = mask.copy()
+    height, width = result.shape[:2]
+    for x1, y1, x2, y2 in exclusion_regions:
+        left = max(0, min(width, int(round(x1 * width))))
+        top = max(0, min(height, int(round(y1 * height))))
+        right = max(left, min(width, int(round(x2 * width))))
+        bottom = max(top, min(height, int(round(y2 * height))))
+        result[top:bottom, left:right] = False
+    return result
+
+
+def apply_exclusion_regions_to_masks(
+    masks: list[tuple[str, np.ndarray]],
+    exclusion_regions: list[tuple[float, float, float, float]] | None,
+) -> list[tuple[str, np.ndarray]]:
+    if not exclusion_regions:
+        return masks
+    return [(source, apply_exclusion_regions(mask, exclusion_regions)) for source, mask in masks]
+
+
+def result_from_mask(
+    mask: np.ndarray,
+    include_all_edges: bool = False,
+    append_prominent_branch: bool = False,
+    min_component_pixels: int = MIN_SIGNIFICANT_COMPONENT_PIXELS,
+    component_significance_ratio: float = COMPONENT_SIGNIFICANCE_RATIO,
+    max_endpoint_gap_px: float = MAX_COMPONENT_ENDPOINT_GAP_PX,
+) -> dict[str, object]:
     mask_pixel_count = int(mask.sum())
     if mask_pixel_count == 0:
         return {
@@ -432,7 +528,14 @@ def result_from_mask(mask: np.ndarray) -> dict[str, object]:
 
     skeleton = skeletonize(mask)
     skeleton = remove_spurs(skeleton)
-    ordered_points = extract_ordered_path(skeleton)
+    ordered_points = extract_ordered_path(
+        skeleton,
+        include_all_edges=include_all_edges,
+        append_prominent_branch=append_prominent_branch,
+        min_component_pixels=min_component_pixels,
+        component_significance_ratio=component_significance_ratio,
+        max_endpoint_gap_px=max_endpoint_gap_px,
+    )
 
     return {
         "points": ordered_points,
@@ -454,13 +557,35 @@ def route_result_score(result: dict[str, object], source: str = "") -> tuple[int
     return (usable_bonus, broad_cool_penalty, skeleton_count, point_count, min(skeleton_count, mask_count))
 
 
-def extract_ordered_path(skeleton_mask: np.ndarray) -> list[list[int]]:
+def extract_ordered_path(
+    skeleton_mask: np.ndarray,
+    include_all_edges: bool = False,
+    append_prominent_branch: bool = False,
+    min_component_pixels: int = MIN_SIGNIFICANT_COMPONENT_PIXELS,
+    component_significance_ratio: float = COMPONENT_SIGNIFICANCE_RATIO,
+    max_endpoint_gap_px: float = MAX_COMPONENT_ENDPOINT_GAP_PX,
+) -> list[list[int]]:
     coordinates = {(int(y), int(x)) for y, x in np.argwhere(skeleton_mask)}
     if not coordinates:
         return []
 
-    route_component = select_route_component(coordinates)
+    route_component = select_route_component(
+        coordinates,
+        min_component_pixels=min_component_pixels,
+        component_significance_ratio=component_significance_ratio,
+        max_endpoint_gap_px=max_endpoint_gap_px,
+    )
     adjacency = build_adjacency(route_component)
+    if include_all_edges:
+        ordered = walk_all_edges(adjacency)
+        return [[x, y] for y, x in ordered]
+    if append_prominent_branch:
+        ordered = append_prominent_side_branch(adjacency, diameter_path(adjacency))
+        return [[x, y] for y, x in ordered]
+    if has_annotation_branches(adjacency):
+        ordered = diameter_path(adjacency)
+        return [[x, y] for y, x in ordered]
+
     ordered = walk_simple_path(adjacency)
     if len(ordered) != len(route_component):
         ordered = walk_all_edges(adjacency)
@@ -469,7 +594,18 @@ def extract_ordered_path(skeleton_mask: np.ndarray) -> list[list[int]]:
     return [[x, y] for y, x in ordered]
 
 
-def select_route_component(coordinates: set[tuple[int, int]]) -> set[tuple[int, int]]:
+def has_annotation_branches(adjacency: dict[tuple[int, int], list[tuple[int, int]]]) -> bool:
+    endpoint_count = sum(1 for neighbors in adjacency.values() if len(neighbors) == 1)
+    branch_count = sum(1 for neighbors in adjacency.values() if len(neighbors) >= 3)
+    return endpoint_count >= 3 and branch_count > 0
+
+
+def select_route_component(
+    coordinates: set[tuple[int, int]],
+    min_component_pixels: int = MIN_SIGNIFICANT_COMPONENT_PIXELS,
+    component_significance_ratio: float = COMPONENT_SIGNIFICANCE_RATIO,
+    max_endpoint_gap_px: float = MAX_COMPONENT_ENDPOINT_GAP_PX,
+) -> set[tuple[int, int]]:
     components = sorted(iter_components(coordinates), key=len, reverse=True)
     if not components:
         return set()
@@ -480,7 +616,7 @@ def select_route_component(coordinates: set[tuple[int, int]]) -> set[tuple[int, 
     significant_components = [
         component
         for component in components
-        if len(component) >= max(MIN_SIGNIFICANT_COMPONENT_PIXELS, int(largest_size * COMPONENT_SIGNIFICANCE_RATIO))
+        if len(component) >= max(min_component_pixels, int(largest_size * component_significance_ratio))
     ]
     if len(significant_components) <= 1:
         return set(components[0])
@@ -493,7 +629,7 @@ def select_route_component(coordinates: set[tuple[int, int]]) -> set[tuple[int, 
                 component_endpoints[left_index],
                 component_endpoints[right_index],
             )
-            if distance <= MAX_COMPONENT_ENDPOINT_GAP_PX:
+            if distance <= max_endpoint_gap_px:
                 bridge_candidates.append((distance, left_index, right_index, left_point, right_point))
 
     if not bridge_candidates:
@@ -726,6 +862,94 @@ def walk_all_edges(adjacency: dict[tuple[int, int], list[tuple[int, int]]]) -> l
     return ordered
 
 
+def append_prominent_side_branch(
+    adjacency: dict[tuple[int, int], list[tuple[int, int]]],
+    main_path: list[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    if len(main_path) < MIN_USABLE_ROUTE_POINTS:
+        return main_path
+
+    main_path = orient_upper_left_first(main_path)
+    main_path_set = set(main_path)
+    endpoints = [node for node, neighbors in adjacency.items() if len(neighbors) == 1 and node not in main_path_set]
+    if not endpoints:
+        return main_path
+
+    max_branch_points = max(PROMINENT_BRANCH_MIN_POINTS, int(len(main_path) * PROMINENT_BRANCH_MAX_MAIN_PATH_FRACTION))
+    candidates: list[tuple[float, int, int, int, list[tuple[int, int]]]] = []
+    for endpoint in endpoints:
+        nearest_index, distance_squared = nearest_path_index_and_distance(main_path, endpoint)
+        if distance_squared < PROMINENT_BRANCH_MIN_DISTANCE_PX * PROMINENT_BRANCH_MIN_DISTANCE_PX:
+            continue
+        branch_path = shortest_path(adjacency, main_path[nearest_index], endpoint)
+        branch_length = len(branch_path)
+        if branch_length < PROMINENT_BRANCH_MIN_POINTS or branch_length > max_branch_points:
+            continue
+        candidates.append((distance_squared, branch_length, endpoint[0], endpoint[1], nearest_index, branch_path))
+
+    if not candidates:
+        return main_path
+
+    _, _, _, _, nearest_index, branch_path = max(candidates)
+    return main_path + list(reversed(main_path[nearest_index:-1])) + branch_path[1:]
+
+
+def orient_upper_left_first(path: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    if not path:
+        return path
+    first_y, first_x = path[0]
+    last_y, last_x = path[-1]
+    if last_y + last_x < first_y + first_x:
+        return list(reversed(path))
+    return path
+
+
+def nearest_path_index_and_distance(
+    path: list[tuple[int, int]],
+    point: tuple[int, int],
+) -> tuple[int, float]:
+    best_index = 0
+    best_distance = float("inf")
+    point_y, point_x = point
+    for index, (path_y, path_x) in enumerate(path):
+        distance = float((path_y - point_y) ** 2 + (path_x - point_x) ** 2)
+        if distance < best_distance:
+            best_distance = distance
+            best_index = index
+    return best_index, best_distance
+
+
+def shortest_path(
+    adjacency: dict[tuple[int, int], list[tuple[int, int]]],
+    start: tuple[int, int],
+    end: tuple[int, int],
+) -> list[tuple[int, int]]:
+    queue = deque([start])
+    parents: dict[tuple[int, int], tuple[int, int] | None] = {start: None}
+    while queue:
+        current = queue.popleft()
+        if current == end:
+            break
+        for neighbor in adjacency[current]:
+            if neighbor not in parents:
+                parents[neighbor] = current
+                queue.append(neighbor)
+
+    if end not in parents:
+        return []
+
+    path = [end]
+    current = end
+    while current != start:
+        parent = parents[current]
+        if parent is None:
+            break
+        current = parent
+        path.append(current)
+    path.reverse()
+    return path
+
+
 def diameter_path(adjacency: dict[tuple[int, int], list[tuple[int, int]]]) -> list[tuple[int, int]]:
     start = min(adjacency)
     far_a, _, _ = bfs_farthest(adjacency, start)
@@ -767,10 +991,16 @@ def bfs_farthest(
     return farthest, parents, distance
 
 
-def extract_route(image_path: Path, route_hex_color: str) -> dict[str, object]:
+def extract_route(
+    image_path: Path,
+    route_hex_color: str | list[str],
+    exclusion_regions: list[tuple[float, float, float, float]] | None = None,
+    append_prominent_branch: bool = False,
+) -> dict[str, object]:
     image = load_image(image_path)
-    route_rgb = parse_hex_color(route_hex_color) if route_hex_color.strip() else None
-    masks = build_candidate_masks(image, route_rgb)
+    route_hex_colors = normalize_route_hex_colors(route_hex_color)
+    primary_route_hex_color = route_hex_colors[0] if route_hex_colors else ""
+    masks = apply_exclusion_regions_to_masks(build_candidate_masks(image, route_hex_colors), exclusion_regions)
     best_precise_result: dict[str, object] | None = None
     best_precise_source = ""
     saturated_result: dict[str, object] | None = None
@@ -779,7 +1009,14 @@ def extract_route(image_path: Path, route_hex_color: str) -> dict[str, object]:
 
     for source, mask in masks:
         try:
-            candidate = result_from_mask(mask)
+            is_explicit_multi_target = source == "target" and len(route_hex_colors) > 1
+            candidate = result_from_mask(
+                mask,
+                append_prominent_branch=append_prominent_branch or is_explicit_multi_target,
+                min_component_pixels=EXPLICIT_TARGET_MIN_COMPONENT_PIXELS if is_explicit_multi_target else MIN_SIGNIFICANT_COMPONENT_PIXELS,
+                component_significance_ratio=0.0 if is_explicit_multi_target else COMPONENT_SIGNIFICANCE_RATIO,
+                max_endpoint_gap_px=EXPLICIT_TARGET_COMPONENT_ENDPOINT_GAP_PX if is_explicit_multi_target else MAX_COMPONENT_ENDPOINT_GAP_PX,
+            )
         except Exception as exc:
             candidate_errors.append(f"{source}: {exc}")
             continue
@@ -789,7 +1026,7 @@ def extract_route(image_path: Path, route_hex_color: str) -> dict[str, object]:
             saturated_source = source
             continue
         if source == "target" and int(candidate.get("pointCount") or 0) >= MIN_USABLE_ROUTE_POINTS:
-            return with_route_diagnostics(candidate, route_hex_color, source, candidate_errors)
+            return with_route_diagnostics(candidate, primary_route_hex_color, source, candidate_errors)
         if best_precise_result is None or should_replace_precise_candidate(candidate, best_precise_result):
             best_precise_result = candidate
             best_precise_source = source
@@ -806,7 +1043,7 @@ def extract_route(image_path: Path, route_hex_color: str) -> dict[str, object]:
                 if combined_point_count >= MIN_USABLE_ROUTE_POINTS and combined_point_count > int(best_precise_result.get("pointCount") or 0):
                     return with_route_diagnostics(
                         combined_result,
-                        selected_route_hex_color(route_hex_color, best_precise_source),
+                        selected_route_hex_color(primary_route_hex_color, best_precise_source),
                         combined_source,
                         candidate_errors,
                     )
@@ -815,11 +1052,11 @@ def extract_route(image_path: Path, route_hex_color: str) -> dict[str, object]:
 
     # Edge-sampled color fallback: when palette scanning also fails,
     # try colors auto-detected from saturated edge pixels.
-    if route_rgb is None and (
+    if not route_hex_colors and (
         best_precise_result is None
         or int(best_precise_result.get("pointCount") or 0) < MIN_USABLE_ROUTE_POINTS
     ):
-        edge_masks = sample_edge_colors(image)
+        edge_masks = apply_exclusion_regions_to_masks(sample_edge_colors(image), exclusion_regions)
         for edge_source, edge_mask in edge_masks:
             try:
                 edge_result = result_from_mask(edge_mask)
@@ -835,12 +1072,12 @@ def extract_route(image_path: Path, route_hex_color: str) -> dict[str, object]:
 
     if best_precise_result is None:
         fallback = saturated_result or result_from_mask(np.zeros(image.shape[:2], dtype=bool))
-        return with_route_diagnostics(fallback, selected_route_hex_color(route_hex_color, saturated_source), saturated_source, candidate_errors)
-    if int(best_precise_result["pointCount"]) >= MIN_USABLE_ROUTE_POINTS:
-        return with_route_diagnostics(best_precise_result, selected_route_hex_color(route_hex_color, best_precise_source), best_precise_source, candidate_errors)
+        return with_route_diagnostics(fallback, selected_route_hex_color(primary_route_hex_color, saturated_source), saturated_source, candidate_errors)
     if saturated_result is not None and route_result_score(saturated_result, saturated_source) > route_result_score(best_precise_result, best_precise_source):
-        return with_route_diagnostics(saturated_result, selected_route_hex_color(route_hex_color, saturated_source), saturated_source, candidate_errors)
-    return with_route_diagnostics(best_precise_result, selected_route_hex_color(route_hex_color, best_precise_source), best_precise_source, candidate_errors)
+        return with_route_diagnostics(saturated_result, selected_route_hex_color(primary_route_hex_color, saturated_source), saturated_source, candidate_errors)
+    if int(best_precise_result["pointCount"]) >= MIN_USABLE_ROUTE_POINTS:
+        return with_route_diagnostics(best_precise_result, selected_route_hex_color(primary_route_hex_color, best_precise_source), best_precise_source, candidate_errors)
+    return with_route_diagnostics(best_precise_result, selected_route_hex_color(primary_route_hex_color, best_precise_source), best_precise_source, candidate_errors)
 
 
 def should_replace_precise_candidate(candidate: dict[str, object], best: dict[str, object]) -> bool:
@@ -866,6 +1103,8 @@ def should_replace_precise_candidate(candidate: dict[str, object], best: dict[st
 def selected_route_hex_color(route_hex_color: str, source: str) -> str:
     if source == "target":
         return route_hex_color.strip()
+    if source.startswith("target:"):
+        return source.split(":", 1)[1]
     if source.startswith("palette:"):
         return source.split(":", 1)[1]
     return route_hex_color.strip()
@@ -886,7 +1125,8 @@ def with_route_diagnostics(
 def main(argv: list[str] | None = None) -> int:
     try:
         args = parse_args(argv)
-        result = extract_route(Path(args.image), args.route_hex_color)
+        exclusion_regions = [parse_exclusion_region(region) for region in args.exclude_region]
+        result = extract_route(Path(args.image), args.route_hex_color, exclusion_regions, args.append_prominent_branch)
     except Exception as exc:
         print(str(exc), file=sys.stderr)
         return 1

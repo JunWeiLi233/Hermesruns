@@ -1,0 +1,95 @@
+name: Continuous Integration Extra
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extra-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-hygiene:
+    name: repository-hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Validate required lockfiles
+        run: |
+          test -f package-lock.json
+          test -f frontend/package-lock.json
+      - name: Reject merge conflict markers
+        run: |
+          if git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- . ':!package-lock.json' ':!frontend/package-lock.json'; then
+            echo "::error::Merge conflict marker found in tracked source."
+            exit 1
+          fi
+      - name: Install root tooling dependencies
+        run: npm ci
+      - name: Check translation parity and missing usage
+        run: node .tools/check-translations.mjs --full
+
+  frontend-build:
+    name: frontend-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  tooling-tests:
+    name: tooling-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Run repository tooling tests
+        run: |
+          for test_file in \
+            .tools/auto-hermes-architecture-diagrams.test.mjs \
+            .tools/auto-hermes-console-aware-flow.test.mjs \
+            .tools/auto-hermes-console-gate.test.mjs \
+            .tools/auto-hermes-finish.test.mjs \
+            .tools/auto-hermes-prompt-compact.test.mjs \
+            .tools/auto-hermes-push-main.test.mjs \
+            .tools/auto-hermes-security.test.mjs
+          do
+            echo "Running ${test_file}"
+            node "${test_file}" || exit 1
+          done
+
+  backend-compile:
+    name: backend-compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+      - name: Compile backend without tests
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw -q -DskipTests compile

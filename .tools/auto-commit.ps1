@@ -197,6 +197,7 @@ function Get-PathPolicy {
         '^frontend/(src|public|package\.json|package-lock\.json|vite\.config.*|eslint\.config.*|scripts/)',
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',
         '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.(mjs|test\.mjs)|auto-hermes-push-main\.(mjs|test\.mjs)|auto-hermes-tech-debt\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$',
+        '^\.tools/audit-marathon-coursemaps\.mjs$',
         '^\.tools/(auto-hermes-browser|auto-hermes-playwright|auto-hermes-tools\.test|auto-hermes-finish|auto-hermes-finish\.test|territory-live-proof-command|territory-visual-proof-server|verify-territory-border-runtime)\.mjs$',
         '^docs/repo-rules/',
         '^docs/superpowers/plans/',
