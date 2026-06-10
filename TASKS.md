@@ -490,6 +490,7 @@ Use this file as the working queue for AI agents.
   3. Run the focused backend test and then a compile check so the new coverage proves the production path still holds.
   Done when: backend/src/main/java/com/hermes/backend/CoachRouteService.java has a focused test class that covers its critical behavior and the backend compile check still passes.
   Verify: `cd backend && ./mvnw test -Dtest=CoachRouteServiceTests && ./mvnw -q -DskipTests compile`
+  Blocker: Added `CoachRouteServiceTests` and fixed the null-distance cluster comparator crash, but the focused Maven test command is still blocked by pre-existing test-compile failures in `BackendStressTests.java`, `BillingControllerTests.java`, and `GarminConnectControllerTests.java`.
 - [ ] Externalize hardcoded values in PasswordResetService.java
   Files: `backend/src/main/java/com/hermes/backend/PasswordResetService.java`
   Context: backend/src/main/java/com/hermes/backend/PasswordResetService.java has configuration code smells: 3 hardcoded localhost reference(s) that break in production.

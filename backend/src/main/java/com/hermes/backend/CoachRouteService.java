@@ -146,7 +146,7 @@ public class CoachRouteService {
         return scheduleRows == null ? null : scheduleRows.stream()
                 .filter(workout -> workout != null && workout.getScheduledDate() != null && workout.getScheduledDate().isAfter(today))
                 .map(this::positiveDistanceKm)
-                .filter(this::hasPositiveDistance)
+                .filter(CoachRouteService::hasPositiveDistance)
                 .findFirst()
                 .orElse(null);
     }
@@ -158,7 +158,7 @@ public class CoachRouteService {
         return workout.getPlannedDistanceKm();
     }
 
-    private boolean hasPositiveDistance(Double distanceKm) {
+    private static boolean hasPositiveDistance(Double distanceKm) {
         return distanceKm != null && distanceKm > 0;
     }
 
@@ -202,7 +202,7 @@ public class CoachRouteService {
                 .thenComparing(Comparator.comparingInt(RouteCluster::activityCount).reversed());
     }
 
-    private double distanceGapKm(Double targetDistanceKm, Double representativeDistanceKm) {
+    private static double distanceGapKm(Double targetDistanceKm, Double representativeDistanceKm) {
         if (!hasPositiveDistance(targetDistanceKm) || !hasPositiveDistance(representativeDistanceKm)) {
             return Double.POSITIVE_INFINITY;
         }
@@ -404,7 +404,7 @@ public class CoachRouteService {
             Comparator<RouteActivityCandidate> comparator;
             if (targetDistanceKm != null && targetDistanceKm > 0) {
                 comparator = Comparator
-                        .comparingDouble((RouteActivityCandidate candidate) -> Math.abs(candidate.distanceKm() - targetDistanceKm))
+                        .comparingDouble((RouteActivityCandidate candidate) -> distanceGapKm(targetDistanceKm, candidate.distanceKm()))
                         .thenComparingInt(RouteActivityCandidate::recentRank);
             } else {
                 comparator = Comparator.comparingInt(RouteActivityCandidate::recentRank);
