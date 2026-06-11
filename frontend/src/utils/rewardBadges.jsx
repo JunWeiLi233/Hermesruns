@@ -1,3 +1,5 @@
+import { buildCatalogRewardEntries } from './rewardCatalog.js';
+
 function startOfWeek(date) {
   const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   copy.setDate(copy.getDate() - copy.getDay());
@@ -98,6 +100,90 @@ export function RewardGlyph({ icon }) {
       </svg>
     );
   }
+  if (icon === 'route') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 4 c2.8 0 4.2 2 6.2 2 s3.2-2 5.8-2 c2.1 0 3.5 1.4 3.5 3.4 0 4.5-6.4 4.1-6.4 7.7 0 1.5 1.1 2.5 2.9 2.5 h2.5 v2 H17 c-3.2 0-5.2-1.8-5.2-4.5 0-4.6 6.4-4.2 6.4-7.6 0-.9-.6-1.5-1.5-1.5-1.8 0-3 2-5.6 2S7.4 6 5 6H3.5V4H5Z" />
+      </svg>
+    );
+  }
+  if (icon === 'mountain') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 20 9.5 7 l3 5 2.4-3.4L21 20H3Zm7-7.8L7.4 17h5.8L10 12.2Zm5 1L12.8 17h4.6L15 13.2Z" />
+      </svg>
+    );
+  }
+  if (icon === 'sun') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M11 2h2v4h-2V2Zm0 16h2v4h-2v-4ZM2 11h4v2H2v-2Zm16 0h4v2h-4v-2ZM4.2 5.6l1.4-1.4L8.4 7 7 8.4 4.2 5.6Zm11.4 11.4 1.4-1.4 2.8 2.8-1.4 1.4-2.8-2.8Zm2.8-12.8 1.4 1.4L17 8.4 15.6 7l2.8-2.8ZM7 15.6 8.4 17l-2.8 2.8-1.4-1.4L7 15.6ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" />
+      </svg>
+    );
+  }
+  if (icon === 'moon') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15.6 2.7A8.7 8.7 0 1 0 21.3 14 7 7 0 0 1 10 5.7a7 7 0 0 1 5.6-3Z" />
+      </svg>
+    );
+  }
+  if (icon === 'rain') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7.5 17h10A4.5 4.5 0 0 0 18 8.1 6.1 6.1 0 0 0 6.3 9.4 3.9 3.9 0 0 0 7.5 17Zm.5 2h2l-1.6 3H6.4L8 19Zm4.2 0h2l-1.6 3h-2l1.6-3Zm4.2 0h2l-1.6 3h-2l1.6-3Z" />
+      </svg>
+    );
+  }
+  if (icon === 'track') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 4h8a8 8 0 0 1 0 16H8A8 8 0 0 1 8 4Zm0 3a5 5 0 0 0 0 10h8a5 5 0 0 0 0-10H8Zm0 3h8a2 2 0 1 1 0 4H8a2 2 0 1 1 0-4Z" />
+      </svg>
+    );
+  }
+  if (icon === 'bolt') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M13 2 4 13h6l-1 9 11-13h-6l-1-7Z" />
+      </svg>
+    );
+  }
+  if (icon === 'flag') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 3h2v18H5V3Zm3 1h11l-2.4 4L19 12H8V4Z" />
+      </svg>
+    );
+  }
+  if (icon === 'wave') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 15c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2v3c-2.5 0-2.5-2-5-2s-2.5 2-5 2-2.5-2-5-2-2.5 2-5 2v-3Zm0-6c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2v3c-2.5 0-2.5-2-5-2s-2.5 2-5 2-2.5-2-5-2-2.5 2-5 2V9Z" />
+      </svg>
+    );
+  }
+  if (icon === 'leaf') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 4C11 4 5 8.8 5 15.2c0 2.7 1.9 4.8 4.7 4.8C16.4 20 20 13 20 4Zm-4.2 5.3C13.2 12.6 11 15 7 18c2.4-4.7 5.1-7.1 8.8-8.7Z" />
+      </svg>
+    );
+  }
+  if (icon === 'recovery') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 21C6.8 17.4 4 14.2 4 10.4A4.4 4.4 0 0 1 8.4 6c1.5 0 2.8.7 3.6 1.8A4.4 4.4 0 0 1 20 10.4c0 3.8-2.8 7-8 10.6Zm-1-11v3H8v2h3v3h2v-3h3v-2h-3v-3h-2Z" />
+      </svg>
+    );
+  }
+  if (icon === 'shoe') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 13.5c2.8 1.3 4.5.9 6.1-.2 1.2-.8 1.9-2 3-2.7 1.3-.8 2.8-.5 4 .6 1.3 1.2 2.1 2.8 3.9 3.6V18H4v-4.5Zm2 2.1V16h12.5c-1.1-.7-1.9-1.7-2.8-2.5-.5-.4-1-.5-1.4-.3-.6.3-1.1 1.2-2.1 1.9-1.7 1.1-3.7 1.4-6.2.5Z" />
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 2 15 9 h7 l-5.5 4.2 2.1 7.1 L12 16.7 5.4 20.3 l2.1-7.1 L2 9 h7 Z" />
@@ -186,6 +272,7 @@ export function buildRewardShowcase(runs, lang) {
       progress: Math.min(1, runs.length / 100),
       earned: runs.length >= 100,
     },
+    ...buildCatalogRewardEntries(runs, lang),
   ];
 
   const earnedRewards = allRewards.filter((item) => item.earned);

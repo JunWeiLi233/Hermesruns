@@ -31371,6 +31371,11 @@ body.theme-light .prediction-detail-empty.is-record-empty p {
   padding: 20px 24px 24px;
 }
 
+.rewards-progress-card-grid--catalog {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .rewards-progress-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -31383,6 +31388,22 @@ body.theme-light .prediction-detail-empty.is-record-empty p {
 
 .rewards-progress-card--upcoming {
   background: rgba(255, 255, 255, 0.02);
+}
+
+.rewards-progress-card--catalog {
+  min-height: 160px;
+  align-content: start;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rewards-progress-card--locked {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.rewards-progress-card--locked .rewards-progress-card-icon {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(232, 226, 220, 0.5);
 }
 
 .rewards-progress-card-icon {
@@ -31414,6 +31435,17 @@ body.theme-light .prediction-detail-empty.is-record-empty p {
   margin-bottom: 0;
 }
 
+.rewards-progress-card--catalog .rewards-progress-card-copy h3 {
+  font-size: 0.92rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.rewards-progress-card--catalog .rewards-progress-card-copy p {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .rewards-progress-pill {
   grid-column: 2;
   justify-self: start;
@@ -31427,6 +31459,28 @@ body.theme-light .prediction-detail-empty.is-record-empty p {
   display: inline-block;
   margin-top: 12px;
   color: #f4b860;
+}
+
+.rewards-progress-catalog-card .rewards-progress-section-head p {
+  margin: 8px 0 0;
+  color: rgba(232, 226, 220, 0.62);
+  line-height: 1.55;
+}
+
+@media (max-width: 1180px) {
+  .rewards-progress-card-grid--catalog {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .rewards-progress-card-grid--catalog {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rewards-progress-card--catalog {
+    min-height: auto;
+  }
 }
 
 .runner-shell-loading {

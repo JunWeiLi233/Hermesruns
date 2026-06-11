@@ -46,6 +46,7 @@ export default function Rewards() {
   const { earnedRewards, upcomingRewards, allRewards } = rewardShowcase;
   const totalCount = allRewards.length;
   const earnedCount = earnedRewards.length;
+  const lockedCount = Math.max(0, totalCount - earnedCount);
   const heroProgress = totalCount > 0 ? earnedCount / totalCount : 0;
   const nextReward = upcomingRewards[0] || null;
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
@@ -149,7 +150,7 @@ export default function Rewards() {
                     </div>
                     <div className="rewards-progress-progress-kpi">
                       <span>{t('rewards.upcoming_title')}</span>
-                      <strong>{upcomingRewards.length}</strong>
+                      <strong>{lockedCount}</strong>
                     </div>
                   </div>
                 </div>
@@ -191,7 +192,7 @@ export default function Rewards() {
             </article>
             <article className="analysis-overview-card analysis-overview-card--metric">
               <span className="analysis-overview-card-kicker">{t('rewards.upcoming_title')}</span>
-              <strong>{upcomingRewards.length}</strong>
+              <strong>{lockedCount}</strong>
               <p>{t('rewards.upcoming_subtitle')}</p>
             </article>
             <article className="analysis-overview-card analysis-overview-card--metric">
@@ -266,6 +267,45 @@ export default function Rewards() {
                 <button type="button" className="rewards-empty-cta" onClick={() => navigate('/runs')}>{t('rewards.next_cta')}</button>
               </div>
             )}
+          </section>
+
+          <section className="analysis-overview-card rewards-progress-section-card rewards-progress-catalog-card">
+            <div className="analysis-overview-table-head rewards-progress-section-head">
+              <div>
+                <span className="analysis-overview-card-kicker">{t('rewards.hero_kicker')}</span>
+                <h2>{t('rewards.heading')}</h2>
+                <p>{t('rewards.catalog_copy')}</p>
+              </div>
+              <span className="analysis-overview-confidence-pill">{earnedCount}/{totalCount || 0}</span>
+            </div>
+            <div className="rewards-progress-card-grid rewards-progress-card-grid--catalog">
+              {allRewards.map((reward) => (
+                <article
+                  key={reward.id}
+                  className={cx(
+                    'rewards-progress-card rewards-progress-card--catalog',
+                    reward.earned ? 'rewards-progress-card--earned' : 'rewards-progress-card--locked',
+                  )}
+                >
+                  <div className="rewards-progress-card-icon">
+                    <RewardGlyph icon={reward.icon} />
+                  </div>
+                  <div className="rewards-progress-card-copy">
+                    <h3>{reward.title}</h3>
+                    <p>{reward.earned ? reward.subtitle : reward.hint}</p>
+                    {!reward.earned && (
+                      <>
+                        <div className="rewards-progress-progress-bar rewards-progress-progress-bar--compact" role="progressbar" aria-valuenow={Math.round(reward.progress * 100)} aria-valuemax={100}>
+                          <span style={{ width: `${Math.round(reward.progress * 100)}%` }} />
+                        </div>
+                        <span className="rewards-progress-progress-note">{Math.round(reward.progress * 100)}%</span>
+                      </>
+                    )}
+                  </div>
+                  <span className="rewards-progress-pill">{t(reward.earned ? 'profile.rewards_earned' : 'profile.rewards_locked')}</span>
+                </article>
+              ))}
+            </div>
           </section>
 
           <footer className="runner-shell-footer runner-dashboard-footer">

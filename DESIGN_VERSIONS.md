@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-11-01
+Date: 2026-06-11
+Surface: Rewards / `/rewards`
+Files: `frontend/src/pages/Rewards.jsx`, `frontend/src/utils/rewardBadges.jsx`, `frontend/src/utils/rewardCatalog.js`, `frontend/src/utils/rewardCatalog.test.js`, `frontend/src/utils/rewardCatalogIntegration.smoke.test.js`, `frontend/src/styles/style.css`, `frontend/package.json`, `DESIGN_VERSIONS.md`
+What changed: Expanded the Rewards page from a small badge set into a full 108-badge wall by adding 100 additional reward definitions across single-run distance, lifetime distance, run count, day streaks, weekly consistency, elevation, and themed run patterns. The page now keeps the earned and closest-upcoming sections, while also rendering the full catalog in a compact scan-friendly grid with locked and earned states.
+Why: The user asked for 100 more rewards on the Rewards page. This pass makes those rewards real, evaluable, and visible instead of only increasing a hidden count.
+Rollback target: working tree before this change
+Notes: Verification passed with `node frontend/src/utils/rewardCatalog.test.js`, `node frontend/src/utils/rewardCatalogIntegration.smoke.test.js`, `cd frontend && npm run lint` (3 unrelated warnings), and `cd frontend && npm run build`. Runtime sync verifier is unavailable in this worktree.
+
 ### Version: DV-2026-04-20-06
 Date: 2026-04-20
 Surface: Admin portal / `/dashboard`, `/dashboard/users`, `/dashboard/course-maps`, `/dashboard/shoes`, `/dashboard/jobs`, `/dashboard/audit`, `/dashboard/settings`
