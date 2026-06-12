@@ -21,8 +21,8 @@ assert.match(
 );
 assert.match(
   territorySource,
-  /function territoryInitialZoom\(center\)[\s\S]*?Math\.max\(Number\.isFinite\(zoom\) \? zoom : 14, 14\)/,
-  'Territory should use non-animated setView with a minimum zoom so disconnected territory components do not force a sparse map.',
+  /function territoryInitialZoom\(center\)[\s\S]*?Math\.min\(Math\.max\(Number\.isFinite\(zoom\) \? zoom : 13, 12\), 14\)/,
+  'Territory should use non-animated setView with a bounded game-map zoom so territory and place labels both remain visible.',
 );
 
 // ── 2. Marker-free concrete land layer ──────────────────────────────────────

@@ -32,6 +32,18 @@ assert.match(
 
 assert.match(
   loginSource,
+  /apiFetch\('\/api\/auth\/strava\/status'\)[\s\S]*?if \(!response\.ok\) \{[\s\S]*?return null;/,
+  'Login should load optional Strava status without apiJson, because apiJson redirects on 401 and can trap users on /login.',
+);
+
+assert.doesNotMatch(
+  loginSource,
+  /apiJson\('\/api\/auth\/strava\/status'\)/,
+  'Login must not use apiJson for optional Strava status because unauthenticated 401 responses should not reload /login.',
+);
+
+assert.match(
+  loginSource,
   /auth-flow-slide/,
   'Login brand intro should render individual slide panels instead of one static copy block.',
 );

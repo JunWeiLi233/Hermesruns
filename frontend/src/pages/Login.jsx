@@ -34,7 +34,13 @@ export default function Login() {
 
   useEffect(() => {
     let cancelled = false;
-    apiJson('/api/auth/strava/status')
+    apiFetch('/api/auth/strava/status')
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+        return response.json().catch(() => null);
+      })
       .then((res) => {
         if (!cancelled) setStravaStatus(res || null);
       })

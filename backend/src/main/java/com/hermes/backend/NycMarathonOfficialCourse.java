@@ -1,5 +1,10 @@
 package com.hermes.backend;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +29,8 @@ final class NycMarathonOfficialCourse {
     static final String OFFICIAL_ELEVATION_PROFILE_URL = "https://webassets.nyrr.org/nyrrwebsiteassets/TCSNYCM25_Media%20Guide_DIGITAL_M2_2.pdf";
     static final String OFFICIAL_SOURCE = "nyc-official-course";
     static final int OFFICIAL_TOTAL_CLIMB_METERS = 247;
+    private static final String DETAILED_ROUTE_RESOURCE = "/official-courses/nyc-marathon-detailed-route.txt";
+    private static final List<double[]> DETAILED_ROUTE = loadDetailedRoute();
 
     /*
      * NYRR media guide page "Course Map and Elevation Profile" lists elevation
@@ -150,6 +157,15 @@ final class NycMarathonOfficialCourse {
         return List.of(copy);
     }
 
+    static List<double[]> detailedRoute() {
+        double[][] copy = new double[DETAILED_ROUTE.size()][2];
+        for (int i = 0; i < DETAILED_ROUTE.size(); i++) {
+            copy[i][0] = DETAILED_ROUTE.get(i)[0];
+            copy[i][1] = DETAILED_ROUTE.get(i)[1];
+        }
+        return List.of(copy);
+    }
+
     static String labelAt(int index) {
         if (index < 0 || index >= LABELS.length) return null;
         return LABELS[index];
@@ -165,5 +181,35 @@ final class NycMarathonOfficialCourse {
             meters.add(Math.round(feet * 0.3048f));
         }
         return List.copyOf(meters);
+    }
+
+    private static List<double[]> loadDetailedRoute() {
+        InputStream inputStream = NycMarathonOfficialCourse.class.getResourceAsStream(DETAILED_ROUTE_RESOURCE);
+        if (inputStream == null) {
+            throw new IllegalStateException("Missing NYC marathon detailed route resource: " + DETAILED_ROUTE_RESOURCE);
+        }
+        List<double[]> points = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            String line;
+            int lineNumber = 0;
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                String trimmed = line.trim();
+                if (trimmed.isBlank() || trimmed.startsWith("#")) {
+                    continue;
+                }
+                String[] parts = trimmed.split(",");
+                if (parts.length != 2) {
+                    throw new IllegalStateException("Invalid NYC route coordinate at line " + lineNumber);
+                }
+                points.add(new double[]{Double.parseDouble(parts[0]), Double.parseDouble(parts[1])});
+            }
+        } catch (IOException | NumberFormatException ex) {
+            throw new IllegalStateException("Unable to load NYC marathon detailed route", ex);
+        }
+        if (points.size() < 100) {
+            throw new IllegalStateException("NYC marathon detailed route is too sparse: " + points.size());
+        }
+        return List.copyOf(points);
     }
 }

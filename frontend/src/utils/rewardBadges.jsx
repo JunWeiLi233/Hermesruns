@@ -1,4 +1,5 @@
 import { calculateStreaks } from './streakUtils';
+import { buildCatalogRewardEntries } from './rewardCatalog.js';
 
 function startOfWeek(date) {
   const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -772,6 +773,7 @@ export function buildRewardShowcase(runs, lang) {
       progress: Math.min(1, runs.length / 100),
       earned: runs.length >= 100,
     },
+    ...buildCatalogRewardEntries(runs, lang),
   ];
 
   const earnedRewards = allRewards.filter((item) => item.earned);

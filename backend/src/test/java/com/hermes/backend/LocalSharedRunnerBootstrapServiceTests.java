@@ -3,6 +3,7 @@ package com.hermes.backend;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -74,6 +75,11 @@ class LocalSharedRunnerBootstrapServiceTests {
         when(runnerRepository.findByEmailIgnoreCase("strava+140971747@hermes.local")).thenReturn(Optional.of(existing));
         when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(activityRepository.countByRunner(existing)).thenReturn(4L);
+        when(activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                existing,
+                ImportProvider.STRAVA,
+                "local-shared-runner-loop-v3-1"
+        )).thenReturn(true);
 
         LocalSharedRunnerBootstrapService service = newService();
 
@@ -368,6 +374,73 @@ class LocalSharedRunnerBootstrapServiceTests {
     }
 
     @Test
+    void bootstrapCreatesFlushingConquerorAccountCoveringTheFullFlushingBoard() {
+        when(authService.normalizeEmail("territory-flushing-conqueror@hermes.local")).thenReturn("territory-flushing-conqueror@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("territory-flushing-conqueror@hermes.local")).thenReturn(Optional.empty());
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> {
+            Runner runner = invocation.getArgument(0);
+            if (runner.getId() == null) runner.setId(140971758L);
+            return runner;
+        });
+        when(activityRepository.countByRunner(any(Runner.class))).thenReturn(0L);
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(any(Runner.class))).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(50_000L + Math.abs(activity.getName().hashCode() % 1_000L));
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.flushingConquerorDefault("local-flushing-conqueror-test-password")
+        );
+
+        assertThat(result.email()).isEqualTo("territory-flushing-conqueror@hermes.local");
+        assertThat(result.seededActivities()).isEqualTo(3);
+        assertThat(result.seededShoes()).isEqualTo(3);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(3)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .allSatisfy(activity -> {
+                    assertThat(activity.getName()).contains("Flushing conqueror");
+                    assertThat(activity.getStartTime()).isBefore(LocalDateTime.of(2026, 6, 8, 15, 2, 19));
+                    assertThat(activity.getStartTime()).isAfter(LocalDateTime.of(2026, 6, 7, 6, 0));
+                    assertThat(activity.getPoints()).hasSizeGreaterThanOrEqualTo(370);
+                    assertThat(diagonalSegmentCount(activity)).isGreaterThan(80);
+                });
+
+        ArgumentCaptor<TerritoryPolygon> polygonCaptor = ArgumentCaptor.forClass(TerritoryPolygon.class);
+        verify(territoryPolygonRepository, times(3)).save(polygonCaptor.capture());
+        List<TerritoryPolygonComputer.MaskCell> allCells = polygonCaptor.getAllValues().stream()
+                .flatMap(polygon -> TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()).cells().stream())
+                .toList();
+
+        assertThat(polygonCaptor.getAllValues())
+                .allSatisfy(polygon -> {
+                    assertThat(polygon.getUserId()).isEqualTo(140971758L);
+                    assertThat(polygon.getAreaSquareMeters()).isGreaterThan(1_000_000.0);
+                    assertThat(TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()).cells())
+                            .hasSizeGreaterThan(1_000);
+                });
+        assertThat(allCells).isNotEmpty();
+        assertThat(allCells.stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).min().orElseThrow())
+                .isLessThan(40.730);
+        assertThat(allCells.stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).max().orElseThrow())
+                .isGreaterThan(40.775);
+        assertThat(allCells.stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).min().orElseThrow())
+                .isLessThan(-73.855);
+        assertThat(allCells.stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).max().orElseThrow())
+                .isGreaterThan(-73.780);
+
+        verify(runnerRepository).save(org.mockito.ArgumentMatchers.argThat(runner ->
+                "territory-flushing-conqueror@hermes.local".equals(runner.getEmail())
+                        && "Hermes Flushing Conqueror".equals(runner.getDisplayName())
+                        && "hermes-flushing-conqueror".equals(runner.getStravaUsername())
+                        && Long.valueOf(140971758L).equals(runner.getStravaAthleteId())
+        ));
+    }
+
+    @Test
     void bootstrapCreatesBerlinTerritoryAccountWithConquerableLandMasks() {
         when(authService.normalizeEmail("territory-berlin@hermes.local")).thenReturn("territory-berlin@hermes.local");
         when(runnerRepository.findByEmailIgnoreCase("territory-berlin@hermes.local")).thenReturn(Optional.empty());
@@ -546,6 +619,156 @@ class LocalSharedRunnerBootstrapServiceTests {
     }
 
     @Test
+    void worldTerritoryDefaultsCreateOneHundredMockAccountsForEveryCountry() {
+        List<LocalSharedRunnerBootstrapService.BootstrapConfig> configs =
+                LocalSharedRunnerBootstrapService.BootstrapConfig.worldTerritoryDefaults("local-world-territory-password");
+
+        assertThat(LocalSharedRunnerBootstrapService.WORLD_TERRITORY_COUNTRIES).isNotEmpty();
+        assertThat(configs).hasSize(LocalSharedRunnerBootstrapService.WORLD_TERRITORY_COUNTRIES.size() * 100);
+        assertThat(configs)
+                .extracting(LocalSharedRunnerBootstrapService.BootstrapConfig::email)
+                .contains(
+                        "territory-world-us-001@hermes.local",
+                        "territory-world-us-100@hermes.local",
+                        "territory-world-cn-001@hermes.local",
+                        "territory-world-jp-001@hermes.local",
+                        "territory-world-gb-001@hermes.local"
+                );
+        assertThat(configs)
+                .extracting(LocalSharedRunnerBootstrapService.BootstrapConfig::displayName)
+                .contains(
+                        "Alice United States Territory 001",
+                        "Bob United States Territory 002",
+                        "Alice China Territory 001"
+                );
+        assertThat(configs)
+                .extracting(LocalSharedRunnerBootstrapService.BootstrapConfig::stravaAthleteId)
+                .doesNotHaveDuplicates();
+
+        for (LocalSharedRunnerBootstrapService.WorldTerritoryCountry country : LocalSharedRunnerBootstrapService.WORLD_TERRITORY_COUNTRIES) {
+            assertThat(configs)
+                    .filteredOn(config -> config.worldCountry().equals(country))
+                    .hasSize(100)
+                    .allSatisfy(config -> {
+                        assertThat(config.seedProfile()).isEqualTo(LocalSharedRunnerBootstrapService.SeedProfile.WORLD_TERRITORY);
+                        assertThat(config.seedMockData()).isTrue();
+                        assertThat(config.displayName()).contains(country.countryName());
+                        assertThat(config.displayName()).matches("^[A-Z][a-z]+ .+ Territory \\d{3}$");
+                    });
+        }
+    }
+
+    @Test
+    void worldTerritoryFallbackAnchorsStayFarEnoughApartForVisibleCountryOwners() {
+        List<LocalSharedRunnerBootstrapService.WorldTerritoryCountry> countries =
+                LocalSharedRunnerBootstrapService.WORLD_TERRITORY_COUNTRIES;
+
+        assertThat(countries).hasSizeGreaterThan(200);
+        for (int leftIndex = 0; leftIndex < countries.size(); leftIndex += 1) {
+            LocalSharedRunnerBootstrapService.WorldTerritoryCountry left = countries.get(leftIndex);
+            for (int rightIndex = leftIndex + 1; rightIndex < countries.size(); rightIndex += 1) {
+                LocalSharedRunnerBootstrapService.WorldTerritoryCountry right = countries.get(rightIndex);
+                double meters = approxDistanceMeters(
+                        left.anchorLatitude(),
+                        left.anchorLongitude(),
+                        right.anchorLatitude(),
+                        right.anchorLongitude()
+                );
+                assertThat(meters)
+                        .as("%s and %s anchors should not overlap enough to erase all owners",
+                                left.isoCode(),
+                                right.isoCode())
+                        .isGreaterThan(20_000.0);
+            }
+        }
+    }
+
+    @Test
+    void bootstrapCreatesWorldTerritoryNeighborsWithOverlappingConquestMasks() {
+        when(authService.normalizeEmail(any(String.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(runnerRepository.findByEmailIgnoreCase(any(String.class))).thenReturn(Optional.empty());
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> {
+            Runner runner = invocation.getArgument(0);
+            if (runner.getId() == null) runner.setId(runner.getStravaAthleteId());
+            return runner;
+        });
+        when(activityRepository.countByRunner(any(Runner.class))).thenReturn(0L);
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(any(Runner.class))).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(60_000L + Math.abs(activity.getName().hashCode() % 10_000L));
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService service = newService();
+        LocalSharedRunnerBootstrapService.BootstrapResult first = service.bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.worldTerritoryDefault(
+                        "local-world-territory-password",
+                        worldCountry("US"),
+                        1,
+                        0,
+                        true
+                )
+        );
+        LocalSharedRunnerBootstrapService.BootstrapResult second = service.bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.worldTerritoryDefault(
+                        "local-world-territory-password",
+                        worldCountry("US"),
+                        2,
+                        1,
+                        true
+                )
+        );
+
+        assertThat(first.seededActivities()).isEqualTo(1);
+        assertThat(second.seededActivities()).isEqualTo(1);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(2)).save(activityCaptor.capture());
+        List<Activity> activities = activityCaptor.getAllValues();
+        assertThat(activities)
+                .extracting(Activity::getSourceChecksum)
+                .containsExactly(
+                        "local-world-territory-loop-v3-country-grid-us-001-1",
+                        "local-world-territory-loop-v3-country-grid-us-002-1"
+                );
+        assertThat(activities.get(1).getStartTime()).isAfter(activities.get(0).getStartTime());
+        assertThat(activities)
+                .allSatisfy(activity -> {
+                    assertThat(activity.getName()).contains("United States territory conquest");
+                    assertThat(activity.getPoints()).hasSizeGreaterThanOrEqualTo(48);
+                });
+
+        ArgumentCaptor<TerritoryPolygon> polygonCaptor = ArgumentCaptor.forClass(TerritoryPolygon.class);
+        verify(territoryPolygonRepository, times(2)).save(polygonCaptor.capture());
+        List<TerritoryPolygonComputer.DecodedTerritoryMask> masks = polygonCaptor.getAllValues().stream()
+                .map(polygon -> TerritoryPolygonComputer.decodeMaskCells(polygon.getCoordinates()))
+                .toList();
+        assertThat(masks).hasSize(2);
+        assertThat(masks)
+                .allSatisfy(mask -> assertThat(mask.cells()).hasSizeGreaterThan(28));
+        assertThat(masks)
+                .allSatisfy(mask -> {
+                    assertThat(maskLatitudeSpanMeters(mask)).isGreaterThan(900.0);
+                    assertThat(maskLongitudeSpanMeters(mask)).isGreaterThan(900.0);
+                });
+        assertThat(maskBoundsOverlap(masks.get(0), masks.get(1))).isTrue();
+
+        verify(runnerRepository).save(org.mockito.ArgumentMatchers.argThat(runner ->
+                "territory-world-us-001@hermes.local".equals(runner.getEmail())
+                        && "Alice United States Territory 001".equals(runner.getDisplayName())
+                        && "hermes-world-us-001".equals(runner.getStravaUsername())
+                        && Long.valueOf(140972000L).equals(runner.getStravaAthleteId())
+        ));
+        verify(runnerRepository).save(org.mockito.ArgumentMatchers.argThat(runner ->
+                "territory-world-us-002@hermes.local".equals(runner.getEmail())
+                        && "Bob United States Territory 002".equals(runner.getDisplayName())
+                        && "hermes-world-us-002".equals(runner.getStravaUsername())
+                        && Long.valueOf(140972001L).equals(runner.getStravaAthleteId())
+        ));
+    }
+
+    @Test
     void bootstrapRepairsOldRectangularFlushingSeedBeforeReseeding() {
         Runner existing = new Runner();
         existing.setId(140971749L);
@@ -597,6 +820,61 @@ class LocalSharedRunnerBootstrapServiceTests {
                 );
     }
 
+    @Test
+    void bootstrapRepairsNowBasedFlushingConquerorSeedBeforeReseeding() {
+        Runner existing = new Runner();
+        existing.setId(140971758L);
+        existing.setEmail("territory-flushing-conqueror@hermes.local");
+        Activity oldNowBasedSeed = new Activity();
+        oldNowBasedSeed.setId(510L);
+        oldNowBasedSeed.setRunner(existing);
+        oldNowBasedSeed.setSourceFileName("local-flushing-conqueror-territory-bootstrap");
+        oldNowBasedSeed.setSourceChecksum("local-flushing-conqueror-loop-v1-1");
+        Activity unrelatedRun = new Activity();
+        unrelatedRun.setId(511L);
+        unrelatedRun.setRunner(existing);
+        unrelatedRun.setSourceChecksum("manual-user-run");
+
+        when(authService.normalizeEmail("territory-flushing-conqueror@hermes.local")).thenReturn("territory-flushing-conqueror@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("territory-flushing-conqueror@hermes.local")).thenReturn(Optional.of(existing));
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(activityRepository.countByRunner(existing)).thenReturn(2L, 1L);
+        when(activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                existing,
+                ImportProvider.STRAVA,
+                "local-flushing-conqueror-loop-v2-1"
+        )).thenReturn(false);
+        when(activityRepository.findByRunnerOrderByIdDesc(existing)).thenReturn(List.of(oldNowBasedSeed, unrelatedRun));
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(existing)).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity activity = invocation.getArgument(0);
+            if (activity.getId() == null) activity.setId(20_000L + Math.abs(activity.getName().hashCode() % 1_000L));
+            return activity;
+        });
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.flushingConquerorDefault("local-flushing-conqueror-test-password")
+        );
+
+        assertThat(result.seededActivities()).isEqualTo(3);
+        verify(territoryPolygonRepository).deleteByActivityId(510L);
+        verify(activityRepository).delete(oldNowBasedSeed);
+        verify(activityRepository, never()).delete(unrelatedRun);
+
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(3)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .extracting(Activity::getSourceChecksum)
+                .containsExactly(
+                        "local-flushing-conqueror-loop-v2-1",
+                        "local-flushing-conqueror-loop-v2-2",
+                        "local-flushing-conqueror-loop-v2-3"
+                );
+        assertThat(activityCaptor.getAllValues())
+                .allSatisfy(activity -> assertThat(activity.getStartTime())
+                        .isBefore(LocalDateTime.of(2026, 6, 8, 15, 2, 19)));
+    }
+
     private static long diagonalSegmentCount(Activity activity) {
         List<ActivityPoint> points = activity.getPoints();
         long diagonals = 0;
@@ -624,17 +902,95 @@ class LocalSharedRunnerBootstrapServiceTests {
     }
 
     private static double sharedRouteLatitude(int activityIndex, int sample, int sampleCount) {
-        double progress = sample / (double) (sampleCount - 1);
-        double routePhase = activityIndex * 0.37;
-        double baseLatitude = 42.3520 + (activityIndex % 4) * 0.003;
-        return baseLatitude + Math.sin(progress * Math.PI * 2.0 + routePhase) * 0.008 + progress * 0.011;
+        return sharedRouteCoordinate(activityIndex, sample, sampleCount)[0];
     }
 
     private static double sharedRouteLongitude(int activityIndex, int sample, int sampleCount) {
+        return sharedRouteCoordinate(activityIndex, sample, sampleCount)[1];
+    }
+
+    private static double[] sharedRouteCoordinate(int activityIndex, int sample, int sampleCount) {
         double progress = sample / (double) (sampleCount - 1);
-        double routePhase = activityIndex * 0.37;
-        double baseLongitude = -71.0720 + (activityIndex % 5) * 0.004;
-        return baseLongitude + Math.cos(progress * Math.PI * 2.0 + routePhase) * 0.010 + progress * 0.006;
+        double[][] vertices = sharedRouteVertices(activityIndex, 6.2);
+        double normalized = progress - Math.floor(progress);
+        if (progress >= 1.0) {
+            normalized = 0.0;
+        }
+        double scaled = normalized * vertices.length;
+        int startIndex = (int) Math.floor(scaled) % vertices.length;
+        int endIndex = (startIndex + 1) % vertices.length;
+        double segmentProgress = scaled - Math.floor(scaled);
+        double startLat = vertices[startIndex][0];
+        double startLng = vertices[startIndex][1];
+        double endLat = vertices[endIndex][0];
+        double endLng = vertices[endIndex][1];
+        return new double[]{
+                startLat + (endLat - startLat) * segmentProgress,
+                startLng + (endLng - startLng) * segmentProgress
+        };
+    }
+
+    private static double[][] sharedRouteVertices(int activityIndex, double distanceKm) {
+        double baseLatitude = 40.7345 + (activityIndex / 6) * 0.0062 + (activityIndex % 3) * 0.0009;
+        double baseLongitude = -73.8285 + (activityIndex % 6) * 0.0046;
+        double widthMeters = 260.0 + distanceKm * 22.0 + (activityIndex % 4) * 28.0;
+        double heightMeters = 180.0 + distanceKm * 16.0 + (activityIndex % 3) * 24.0;
+        double notchMeters = Math.max(30.0, Math.min(widthMeters * 0.22, 110.0));
+        double tailMeters = (activityIndex % 3 == 0) ? 0.0 : Math.min(36.0, distanceKm * 1.8);
+        double cosLat = Math.cos(Math.toRadians(baseLatitude));
+        double widthLng = widthMeters / (TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosLat);
+        double heightLat = heightMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double notchLng = notchMeters / (TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosLat);
+        double tailLat = tailMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+
+        return switch (activityIndex % 6) {
+            case 0 -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude},
+            };
+            case 1 -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude - tailLat, baseLongitude},
+                    {baseLatitude, baseLongitude + widthLng * 0.86},
+                    {baseLatitude + heightLat * 0.34, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.76},
+                    {baseLatitude + heightLat * 0.92, baseLongitude + notchLng},
+                    {baseLatitude + heightLat * 0.42, baseLongitude},
+            };
+            case 2 -> new double[][]{
+                    {baseLatitude, baseLongitude + widthLng * 0.14},
+                    {baseLatitude + heightLat * 0.18, baseLongitude + widthLng},
+                    {baseLatitude + heightLat * 0.82, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.18},
+                    {baseLatitude + heightLat * 0.52, baseLongitude},
+            };
+            case 3 -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude - tailLat, baseLongitude + notchLng * 0.25},
+                    {baseLatitude, baseLongitude + widthLng},
+                    {baseLatitude + heightLat * 0.55, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.62},
+                    {baseLatitude + heightLat * 0.92, baseLongitude},
+            };
+            case 4 -> new double[][]{
+                    {baseLatitude, baseLongitude + widthLng * 0.22},
+                    {baseLatitude + heightLat * 0.12, baseLongitude + widthLng},
+                    {baseLatitude + heightLat * 0.48, baseLongitude + widthLng * 0.84},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.58},
+                    {baseLatitude + heightLat * 0.88, baseLongitude},
+                    {baseLatitude + heightLat * 0.32, baseLongitude},
+            };
+            default -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude, baseLongitude + widthLng * 0.52},
+                    {baseLatitude + heightLat * 0.28, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.78},
+                    {baseLatitude + heightLat * 0.88, baseLongitude},
+                    {baseLatitude + heightLat * 0.36, baseLongitude},
+            };
+        };
     }
 
     private static String territoryCellKey(double latitude, double longitude) {
@@ -646,6 +1002,54 @@ class LocalSharedRunnerBootstrapServiceTests {
         return mask.cells().stream()
                 .mapToDouble(TerritoryPolygonComputer.MaskCell::longitude)
                 .average()
+                .orElseThrow();
+    }
+
+    private static double maskLatitudeSpanMeters(TerritoryPolygonComputer.DecodedTerritoryMask mask) {
+        double minLat = mask.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).min().orElseThrow();
+        double maxLat = mask.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).max().orElseThrow();
+        return (maxLat - minLat) * TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+    }
+
+    private static double maskLongitudeSpanMeters(TerritoryPolygonComputer.DecodedTerritoryMask mask) {
+        double centerLat = mask.cells().stream()
+                .mapToDouble(TerritoryPolygonComputer.MaskCell::latitude)
+                .average()
+                .orElseThrow();
+        double minLng = mask.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).min().orElseThrow();
+        double maxLng = mask.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).max().orElseThrow();
+        return (maxLng - minLng) * TerritoryPolygonComputer.METERS_PER_DEG_LAT * Math.cos(Math.toRadians(centerLat));
+    }
+
+    private static boolean maskBoundsOverlap(
+            TerritoryPolygonComputer.DecodedTerritoryMask first,
+            TerritoryPolygonComputer.DecodedTerritoryMask second
+    ) {
+        double firstMinLat = first.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).min().orElseThrow();
+        double firstMaxLat = first.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).max().orElseThrow();
+        double firstMinLng = first.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).min().orElseThrow();
+        double firstMaxLng = first.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).max().orElseThrow();
+        double secondMinLat = second.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).min().orElseThrow();
+        double secondMaxLat = second.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::latitude).max().orElseThrow();
+        double secondMinLng = second.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).min().orElseThrow();
+        double secondMaxLng = second.cells().stream().mapToDouble(TerritoryPolygonComputer.MaskCell::longitude).max().orElseThrow();
+        return firstMinLat <= secondMaxLat
+                && firstMaxLat >= secondMinLat
+                && firstMinLng <= secondMaxLng
+                && firstMaxLng >= secondMinLng;
+    }
+
+    private static double approxDistanceMeters(double firstLat, double firstLng, double secondLat, double secondLng) {
+        double meanLat = Math.toRadians((firstLat + secondLat) / 2.0);
+        double dy = (secondLat - firstLat) * TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double dx = (secondLng - firstLng) * TerritoryPolygonComputer.METERS_PER_DEG_LAT * Math.cos(meanLat);
+        return Math.hypot(dx, dy);
+    }
+
+    private static LocalSharedRunnerBootstrapService.WorldTerritoryCountry worldCountry(String isoCode) {
+        return LocalSharedRunnerBootstrapService.WORLD_TERRITORY_COUNTRIES.stream()
+                .filter(country -> country.isoCode().equalsIgnoreCase(isoCode))
+                .findFirst()
                 .orElseThrow();
     }
 

@@ -1332,7 +1332,6 @@ export default function AnalysisInsightDetail() {
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
     { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
-    { key: 'workflows', label: t('profile.dashboard_nav_workflows'), route: '/workflows', icon: 'account_tree' },
   ];
   const topnavTitle = detail.title;
 
