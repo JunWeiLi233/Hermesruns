@@ -1,14 +1,21 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -16,26 +23,66 @@ import java.util.*;
 
 @Service
 public class AcclimatizationService {
+    private static final Logger log = LoggerFactory.getLogger(AcclimatizationService.class);
+
     private static final double DEFAULT_BASELINE_DEW_POINT_C = 15.0;
     private static final double SHOCK_DELTA_THRESHOLD_C = 4.0;
-    private static final double PENALTY_TRIGGER_DEW_POINT_C = 15.0;
-    private static final int BASE_PENALTY_SEC_PER_KM_PER_DEGREE = 12;
+
+    /*
+     * Pace-penalty coefficients calibrated against published heat-and-running research:
+     *  - Maughan / Galloway dew-point pace-impact tables and the Runner's World
+     *    adjusted-pace calculator: measurable impact begins ~13°C dew point.
+     *  - Cheuvront et al. (2010) endurance decrement: ~2 % per 5 °C above the
+     *    runner's acclimatization baseline.
+     *  - Roecker et al. (2013) marathon-finish-time analysis: ~0.3 % per °C
+     *    above 10 °C ambient.
+     *
+     * For a typical 5:00 /km (300 s/km) easy pace, 2 s/km per °C ≈ 0.66 %/°C —
+     * inside the published 0.3–1.0 %/°C band. The previous 12 s/km/°C value
+     * implied a ~4 %/°C decrement, which is roughly 4× the highest published
+     * estimate and produced 2:00+/km penalties at 25 °C dew point.
+     */
+    private static final double PENALTY_TRIGGER_DEW_POINT_C = 13.0;
+    private static final double BASE_PENALTY_SEC_PER_KM_PER_DEGREE = 2.0;
+    private static final int MAX_PENALTY_SEC_PER_KM = 30;
+    private static final double SAFETY_WARNING_DEW_POINT_C = 26.0;
+
+    private static final Duration DEW_POINT_CACHE_TTL = Duration.ofHours(24);
+    private static final String OPEN_METEO_ENDPOINT = "archive";
 
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
     private final RestTemplate restTemplate;
+    private final TtlCacheStore cacheStore;
+    private final OpenMeteoRateLimiter rateLimiter;
+
+    @Autowired
+    public AcclimatizationService(ActivityRepository activityRepository,
+                                  ActivityPointRepository activityPointRepository,
+                                  RestTemplate restTemplate,
+                                  TtlCacheStore cacheStore,
+                                  OpenMeteoRateLimiter rateLimiter) {
+        this.activityRepository = activityRepository;
+        this.activityPointRepository = activityPointRepository;
+        this.restTemplate = restTemplate;
+        this.cacheStore = cacheStore;
+        this.rateLimiter = rateLimiter;
+    }
 
     public AcclimatizationService(ActivityRepository activityRepository,
                                   ActivityPointRepository activityPointRepository,
                                   RestTemplate restTemplate) {
-        this.activityRepository = activityRepository;
-        this.activityPointRepository = activityPointRepository;
-        this.restTemplate = restTemplate;
+        this(activityRepository, activityPointRepository, restTemplate,
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()),
+                new OpenMeteoRateLimiter());
     }
 
     public WeatherContextResponse buildContext(Runner runner) {
-        LocalDate today = LocalDate.now();
-        LocalDate lookbackStart = today.minusDays(14);
+        return buildContextForDate(runner, LocalDate.now());
+    }
+
+    public WeatherContextResponse buildContextForDate(Runner runner, LocalDate targetDate) {
+        LocalDate lookbackStart = targetDate.minusDays(14);
         LocalDateTime lookbackStartDateTime = lookbackStart.atStartOfDay();
 
         List<Object[]> latestLatLng = activityPointRepository.findLatestLatLngByRunnerAndType(runner.getId(), ActivityType.RUN.name());
@@ -47,24 +94,24 @@ public class AcclimatizationService {
         double lon = ((Number) latestLatLng.get(0)[1]).doubleValue();
 
         List<Activity> recentRuns = activityRepository.findRunsBetween(
-                runner, ActivityType.RUN, lookbackStartDateTime, today.plusDays(1).atStartOfDay()
+                runner, ActivityType.RUN, lookbackStartDateTime, targetDate.plusDays(1).atStartOfDay()
         );
 
         Set<LocalDate> runDates = new HashSet<>();
         for (Activity activity : recentRuns) {
             LocalDate d = resolveActivityDate(activity);
-            if (d != null && !d.isBefore(lookbackStart) && !d.isAfter(today)) {
+            if (d != null && !d.isBefore(lookbackStart) && !d.isAfter(targetDate)) {
                 runDates.add(d);
             }
         }
 
-        DewPointSeries series = fetchDewPointSeries(lat, lon, lookbackStart, today);
+        DewPointSeries series = fetchDewPointSeries(lat, lon, lookbackStart, targetDate);
         if (series == null || series.dailyDewPointC().isEmpty()) {
             return WeatherContextResponse.unavailable("Weather provider returned no dew point data.");
         }
 
         double baselineDewPoint = computeBaseline(series.dailyDewPointC(), runDates);
-        double currentDewPoint = series.dailyDewPointC().getOrDefault(today, baselineDewPoint);
+        double currentDewPoint = series.dailyDewPointC().getOrDefault(targetDate, baselineDewPoint);
 
         double shockDelta = currentDewPoint - baselineDewPoint;
         boolean shockEvent = shockDelta >= SHOCK_DELTA_THRESHOLD_C;
@@ -73,15 +120,22 @@ public class AcclimatizationService {
                 0,
                 Math.round((currentDewPoint - PENALTY_TRIGGER_DEW_POINT_C) * BASE_PENALTY_SEC_PER_KM_PER_DEGREE)
         );
+        fullPenalty = Math.min(fullPenalty, MAX_PENALTY_SEC_PER_KM);
 
-        AcclimatizationProgress progress = computeProgress(series.dailyDewPointC(), today);
+        AcclimatizationProgress progress = computeProgress(series.dailyDewPointC(), targetDate);
         int adjustedPenalty = (int) Math.round(fullPenalty * progress.penaltyFactor());
 
         String message = null;
         if (adjustedPenalty > 0) {
-            message = "Extreme Heat Detected. We've adjusted your target pace by +" + adjustedPenalty
-                    + " sec/km today to account for humidity. This should help keep you in the right zone."
-                    + " The adjustment will fade as acclimatization improves.";
+            if (currentDewPoint >= SAFETY_WARNING_DEW_POINT_C) {
+                message = "Dew point " + round2(currentDewPoint) + "°C — extreme heat stress."
+                        + " Easy pace +" + adjustedPenalty + "s/km today."
+                        + " Consider moving the workout earlier or doing intervals indoors.";
+            } else {
+                message = "Dew point " + round2(currentDewPoint) + "°C (above your "
+                        + round2(baselineDewPoint) + "°C baseline). Easy pace +" + adjustedPenalty
+                        + "s/km today. The adjustment fades over 7-10 days as you acclimatize.";
+            }
         }
 
         return new WeatherContextResponse(
@@ -101,7 +155,28 @@ public class AcclimatizationService {
         );
     }
 
+    public Integer calculatePenaltyForActivity(Activity activity) {
+        if (activity.getRunner() == null) return 0;
+        LocalDate runDate = resolveActivityDate(activity);
+        if (runDate == null) return 0;
+
+        // Use buildContextForDate to get the penalty
+        WeatherContextResponse context = buildContextForDate(activity.getRunner(), runDate);
+        return context.available() ? context.pacePenaltySecPerKm() : 0;
+    }
+
     private DewPointSeries fetchDewPointSeries(double lat, double lon, LocalDate start, LocalDate end) {
+        String cacheKey = dewPointCacheKey(lat, lon, start, end);
+        DewPointSeriesCache cached = cacheStore.get("open-meteo-dew-point", cacheKey, DewPointSeriesCache.class).orElse(null);
+        if (cached != null) {
+            return cached.toSeries();
+        }
+
+        if (rateLimiter.shouldThrottle(OPEN_METEO_ENDPOINT)) {
+            log.debug("Open-Meteo archive API is currently throttled; skipping dew-point fetch for ({}, {})", lat, lon);
+            return null;
+        }
+
         URI uri = UriComponentsBuilder
                 .fromUriString("https://archive-api.open-meteo.com/v1/archive")
                 .queryParam("latitude", lat)
@@ -113,32 +188,55 @@ public class AcclimatizationService {
                 .build()
                 .toUri();
 
-        RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, uri);
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                request,
-                new ParameterizedTypeReference<>() {}
-        );
+        try {
+            RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, uri);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    request,
+                    new ParameterizedTypeReference<>() {}
+            );
 
-        Map<String, Object> body = response.getBody();
-        if (body == null || !(body.get("daily") instanceof Map<?, ?> daily)) {
+            rateLimiter.recordSuccess(OPEN_METEO_ENDPOINT);
+
+            Map<String, Object> body = response.getBody();
+            if (body == null || !(body.get("daily") instanceof Map<?, ?> daily)) {
+                return null;
+            }
+
+            Object timesObj = daily.get("time");
+            Object dewObj = daily.get("dew_point_2m_mean");
+            if (!(timesObj instanceof List<?> times) || !(dewObj instanceof List<?> dews) || times.isEmpty()) {
+                return null;
+            }
+
+            Map<LocalDate, Double> out = new HashMap<>();
+            int n = Math.min(times.size(), dews.size());
+            for (int i = 0; i < n; i++) {
+                Object t = times.get(i);
+                Object d = dews.get(i);
+                if (!(t instanceof String ts) || !(d instanceof Number dew)) continue;
+                out.put(LocalDate.parse(ts), dew.doubleValue());
+            }
+            DewPointSeries series = new DewPointSeries(out);
+            cacheStore.put("open-meteo-dew-point", cacheKey, DewPointSeriesCache.from(series), DEW_POINT_CACHE_TTL);
+            return series;
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 429) {
+                rateLimiter.recordRateLimited(OPEN_METEO_ENDPOINT);
+                log.warn("Open-Meteo archive API returned 429 Too Many Requests; subsequent calls in this window are throttled.");
+            } else {
+                log.warn("Open-Meteo archive API returned HTTP {}: {}", e.getStatusCode().value(), e.getMessage());
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("Open-Meteo archive API call failed: {}", e.getMessage());
             return null;
         }
+    }
 
-        Object timesObj = daily.get("time");
-        Object dewObj = daily.get("dew_point_2m_mean");
-        if (!(timesObj instanceof List<?> times) || !(dewObj instanceof List<?> dews) || times.isEmpty()) {
-            return null;
-        }
-
-        Map<LocalDate, Double> out = new HashMap<>();
-        int n = Math.min(times.size(), dews.size());
-        for (int i = 0; i < n; i++) {
-            Object t = times.get(i);
-            Object d = dews.get(i);
-            if (!(t instanceof String ts) || !(d instanceof Number dew)) continue;
-            out.put(LocalDate.parse(ts), dew.doubleValue());
-        }
-        return new DewPointSeries(out);
+    private String dewPointCacheKey(double lat, double lon, LocalDate start, LocalDate end) {
+        // Round to 2 decimal places (~1.1 km) so normal GPS jitter between runs
+        // doesn't bust the 24-hour cache and trigger a fresh archive API call.
+        return String.format(Locale.ROOT, "%.2f|%.2f|%s|%s", lat, lon, start, end);
     }
 
     private double computeBaseline(Map<LocalDate, Double> series, Set<LocalDate> runDates) {
@@ -205,6 +303,27 @@ public class AcclimatizationService {
     }
 
     private record DewPointSeries(Map<LocalDate, Double> dailyDewPointC) {}
+
+    private record DewPointSeriesCache(Map<String, Double> dailyDewPointC) {
+        private static DewPointSeriesCache from(DewPointSeries series) {
+            Map<String, Double> values = new LinkedHashMap<>();
+            for (Map.Entry<LocalDate, Double> entry : series.dailyDewPointC().entrySet()) {
+                values.put(entry.getKey().toString(), entry.getValue());
+            }
+            return new DewPointSeriesCache(values);
+        }
+
+        private DewPointSeries toSeries() {
+            Map<LocalDate, Double> values = new HashMap<>();
+            if (dailyDewPointC != null) {
+                for (Map.Entry<String, Double> entry : dailyDewPointC.entrySet()) {
+                    values.put(LocalDate.parse(entry.getKey()), entry.getValue());
+                }
+            }
+            return new DewPointSeries(values);
+        }
+    }
+
     private record AcclimatizationProgress(int dayIndex, double penaltyFactor, String status) {}
 
     public record WeatherContextResponse(

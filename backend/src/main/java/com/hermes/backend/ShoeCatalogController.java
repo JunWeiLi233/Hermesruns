@@ -1,10 +1,15 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
 
 @RestController
@@ -14,12 +19,32 @@ public class ShoeCatalogController {
     private static final Set<String> BRAND_FIELDS = Set.of("brand");
     private static final Set<String> MODEL_FIELDS = Set.of("brand", "model", "modelZh", "modelEn", "type");
     private static final Set<String> IMPORT_FIELDS = Set.of("url", "brand", "modelZh", "modelEn", "type");
+    private static final Duration CATALOG_CACHE_TTL = Duration.ofMinutes(30);
+    private static final String CATALOG_CACHE_NAMESPACE = "shoe-catalog";
+    private static final String CATALOG_CACHE_KEY = "all";
 
     private final AuthService authService;
     private final ShoeCatalogBrandRepository brandRepository;
     private final ShoeCatalogModelRepository modelRepository;
     private final OfficialShoeCatalogImportService officialShoeCatalogImportService;
     private final AdminAuditService adminAuditService;
+    private final TtlCacheStore cacheStore;
+
+    @Autowired
+    public ShoeCatalogController(
+            AuthService authService,
+            ShoeCatalogBrandRepository brandRepository,
+            ShoeCatalogModelRepository modelRepository,
+            OfficialShoeCatalogImportService officialShoeCatalogImportService,
+            AdminAuditService adminAuditService,
+            TtlCacheStore cacheStore) {
+        this.authService = authService;
+        this.brandRepository = brandRepository;
+        this.modelRepository = modelRepository;
+        this.officialShoeCatalogImportService = officialShoeCatalogImportService;
+        this.adminAuditService = adminAuditService;
+        this.cacheStore = cacheStore;
+    }
 
     public ShoeCatalogController(
             AuthService authService,
@@ -27,15 +52,21 @@ public class ShoeCatalogController {
             ShoeCatalogModelRepository modelRepository,
             OfficialShoeCatalogImportService officialShoeCatalogImportService,
             AdminAuditService adminAuditService) {
-        this.authService = authService;
-        this.brandRepository = brandRepository;
-        this.modelRepository = modelRepository;
-        this.officialShoeCatalogImportService = officialShoeCatalogImportService;
-        this.adminAuditService = adminAuditService;
+        this(authService, brandRepository, modelRepository, officialShoeCatalogImportService, adminAuditService,
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     @GetMapping
     public ResponseEntity<?> listCatalog() {
+        Optional<Map<String, Object>> cached = cacheStore.get(
+                CATALOG_CACHE_NAMESPACE,
+                CATALOG_CACHE_KEY,
+                new TypeReference<>() {}
+        );
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
+
         List<ShoeCatalogBrand> brands = brandRepository.findAllByOrderByNameAsc();
         List<Map<String, Object>> out = new ArrayList<>();
         for (ShoeCatalogBrand b : brands) {
@@ -57,7 +88,9 @@ public class ShoeCatalogController {
             row.put("models", modelRows);
             out.add(row);
         }
-        return ResponseEntity.ok(Map.of("brands", out));
+        Map<String, Object> response = Map.of("brands", out);
+        cacheStore.put(CATALOG_CACHE_NAMESPACE, CATALOG_CACHE_KEY, response, CATALOG_CACHE_TTL);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/admin/brands")
@@ -81,6 +114,7 @@ public class ShoeCatalogController {
             ShoeCatalogBrand b = new ShoeCatalogBrand();
             b.setName(brand);
             ShoeCatalogBrand saved = brandRepository.save(b);
+            invalidateCatalogCache();
             adminAuditService.log(admin, "catalog.brand.created", "catalog_brand", String.valueOf(saved.getId()),
                     "Created shoe catalog brand", Map.of("brand", saved.getName()));
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", saved.getId(), "brand", saved.getName(), "created", true));
@@ -120,6 +154,7 @@ public class ShoeCatalogController {
         }
 
         CatalogUpsertResult result = upsertModel(brandName, modelName, modelZh, modelEn, type);
+        invalidateCatalogCache();
         adminAuditService.log(admin,
                 result.created() ? "catalog.model.created" : "catalog.model.updated_via_create",
                 "catalog_model",
@@ -153,6 +188,7 @@ public class ShoeCatalogController {
         long removedModels = modelRepository.countByBrandId(id);
         modelRepository.deleteByBrandId(id);
         brandRepository.delete(brand);
+        invalidateCatalogCache();
         adminAuditService.log(admin, "catalog.brand.deleted", "catalog_brand", String.valueOf(id),
                 "Deleted shoe catalog brand", Map.of("brand", brand.getName(), "removedModels", removedModels));
         return ResponseEntity.ok(Map.of(
@@ -197,6 +233,7 @@ public class ShoeCatalogController {
         try {
             OfficialShoeCatalogImportService.ImportResult imported = officialShoeCatalogImportService.importPage(url, brandName, modelZh, modelEn);
             CatalogUpsertResult result = upsertModel(imported.brand(), imported.model(), imported.modelZh(), imported.modelEn(), type);
+            invalidateCatalogCache();
             adminAuditService.log(admin,
                     result.created() ? "catalog.import.created" : "catalog.import.updated",
                     "catalog_model",
@@ -265,6 +302,7 @@ public class ShoeCatalogController {
         existing.setNameEn(modelEn);
         existing.setType(type);
         ShoeCatalogModel saved = modelRepository.save(existing);
+        invalidateCatalogCache();
         adminAuditService.log(admin, "catalog.model.updated", "catalog_model", String.valueOf(saved.getId()),
                 "Updated shoe catalog model", Map.of(
                         "brand", saved.getBrand().getName(),
@@ -302,6 +340,7 @@ public class ShoeCatalogController {
         String brandName = model.getBrand().getName();
         String modelName = model.getName();
         modelRepository.delete(model);
+        invalidateCatalogCache();
         adminAuditService.log(admin, "catalog.model.deleted", "catalog_model", String.valueOf(id),
                 "Deleted shoe catalog model", Map.of("brand", brandName, "model", modelName));
         return ResponseEntity.ok(Map.of(
@@ -349,6 +388,11 @@ public class ShoeCatalogController {
                 "type", model.getType(),
                 "created", created
         );
+    }
+
+    private void invalidateCatalogCache() {
+        cacheStore.evict(CATALOG_CACHE_NAMESPACE, CATALOG_CACHE_KEY);
+        cacheStore.evict("shoe-catalog-types", "all");
     }
 
     private record CatalogUpsertResult(boolean created, Long id, String brand, String model, String type, Map<String, Object> payload) {}

@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -100,6 +101,14 @@ public class RaceController {
             return error(HttpStatus.BAD_REQUEST, validation.message());
         }
 
+        if (request.completedActivityId() != null) {
+            Optional<Activity> ownedActivity = activityRepository.findByIdAndRunner(request.completedActivityId(), runnerOptional.get());
+            if (ownedActivity.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Activity does not belong to you"));
+            }
+        }
+
         RaceEvent raceEvent = new RaceEvent();
         applyRequest(raceEvent, request);
         raceEvent.setRunner(runnerOptional.get());
@@ -127,6 +136,14 @@ public class RaceController {
         Optional<RaceEvent> raceOptional = raceEventRepository.findByIdAndRunner(id, runnerOptional.get());
         if (raceOptional.isEmpty()) {
             return error(HttpStatus.NOT_FOUND, "Race not found.");
+        }
+
+        if (request.completedActivityId() != null) {
+            Optional<Activity> ownedActivity = activityRepository.findByIdAndRunner(request.completedActivityId(), runnerOptional.get());
+            if (ownedActivity.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Activity does not belong to you"));
+            }
         }
 
         RaceEvent raceEvent = raceOptional.get();
@@ -249,6 +266,29 @@ public class RaceController {
         }
     }
 
+    @GetMapping("/course-map-image")
+    public ResponseEntity<?> courseMapImage(@RequestParam("ref") String imageReference) {
+        if (imageReference != null && (imageReference.contains("..") || imageReference.startsWith("/") || imageReference.contains("\\"))) {
+            return ResponseEntity.badRequest().body("Invalid ref parameter");
+        }
+        try {
+            RaceCourseMapImageService.DisplayableCourseMapImage image =
+                    raceCourseMapService.resolveDisplayableLocalImage(imageReference);
+            if (image == null || image.imageBytes() == null || image.imageBytes().length == 0) {
+                return ResponseEntity.notFound().build();
+            }
+            String mediaType = image.mediaType() == null || image.mediaType().isBlank()
+                    ? "image/jpeg"
+                    : image.mediaType();
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(mediaType))
+                    .header("Cache-Control", "public, max-age=604800, immutable")
+                    .body(image.imageBytes());
+        } catch (Exception error) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     private void applyRequest(RaceEvent raceEvent, RaceEventRequest request) {
         raceEvent.setName(request.name().trim());
         raceEvent.setOrganization(InputSanitizer.trimToNull(request.organization()));
@@ -264,19 +304,19 @@ public class RaceController {
 
     private ValidationResult validateRequest(RaceEventRequest request) {
         if (request == null) {
-            return new ValidationResult(false, "Race payload is required.");
+            return invalid("Race payload is required.");
         }
         if (request.name() == null || request.name().trim().isBlank()) {
-            return new ValidationResult(false, "Race name is required.");
+            return invalid("Race name is required.");
         }
         if (request.eventDate() == null) {
-            return new ValidationResult(false, "Race date is required.");
+            return invalid("Race date is required.");
         }
         if (request.distanceKm() != null && request.distanceKm() <= 0) {
-            return new ValidationResult(false, "Race distance must be positive.");
+            return invalid("Race distance must be positive.");
         }
         if (request.goalTimeSeconds() != null && request.goalTimeSeconds() <= 0) {
-            return new ValidationResult(false, "Goal time must be positive.");
+            return invalid("Goal time must be positive.");
         }
 
         // Basic anti-XSS / injection hardening: reject control chars + HTML delimiters.
@@ -285,14 +325,14 @@ public class RaceController {
             InputSanitizer.rejectControlAndHtmlChars(request.organization(), "organization");
             InputSanitizer.rejectControlAndHtmlChars(request.location(), "location");
             InputSanitizer.rejectControlAndHtmlChars(request.notes(), "notes");
-            if (request.name() != null && request.name().length() > 120) return new ValidationResult(false, "Race name too long.");
-            if (request.organization() != null && request.organization().length() > 80) return new ValidationResult(false, "Organization too long.");
-            if (request.location() != null && request.location().length() > 120) return new ValidationResult(false, "Location too long.");
-            if (request.notes() != null && request.notes().length() > 2000) return new ValidationResult(false, "Notes too long.");
+            if (request.name() != null && request.name().length() > 120) return invalid("Race name too long.");
+            if (request.organization() != null && request.organization().length() > 80) return invalid("Organization too long.");
+            if (request.location() != null && request.location().length() > 120) return invalid("Location too long.");
+            if (request.notes() != null && request.notes().length() > 2000) return invalid("Notes too long.");
         } catch (IllegalArgumentException ex) {
-            return new ValidationResult(false, ex.getMessage());
+            return invalid(ex.getMessage());
         }
-        return new ValidationResult(true, null);
+        return valid();
     }
 
     private RaceEventResponse toResponse(RaceEvent raceEvent, List<Activity> runActivities) {
@@ -431,36 +471,48 @@ public class RaceController {
         Map<String, Object> payload = new HashMap<>();
         payload.put("imageUrl", "");
         payload.put("previewImageUrl", "");
+        payload.put("overlayImageUrl", "");
         payload.put("source", "");
         payload.put("routeAvailable", false);
         payload.put("confidence", 0);
         payload.put("summary", "");
         payload.put("viewportBounds", null);
         payload.put("routePoints", List.of());
+        payload.put("routePointCount", 0);
         payload.put("elevationSamples", List.of());
         payload.put("totalClimbMeters", null);
         payload.put("aiAssisted", false);
+        payload.put("officialRouteVerified", false);
         return payload;
     }
 
     private Map<String, Object> toRunnerCourseMapPayload(RaceCourseMapResult result) {
         Map<String, Object> payload = new HashMap<>();
         boolean routeAvailable = hasVerifiedRoute(result);
+        boolean cityLevelReference = hasCityLevelReference(result);
+        boolean courseMapAvailable = routeAvailable || cityLevelReference;
         String imageUrl = result == null || result.imageUrl() == null ? "" : result.imageUrl();
         String previewImageUrl = imageUrl.isBlank()
                 ? ""
                 : raceCourseMapService.materializePreviewImageUrl(imageUrl);
+        String overlayImageUrl = routeAvailable && result != null && result.overlayBounds() != null && !imageUrl.isBlank()
+                ? raceCourseMapService.materializeTransparentOverlayImageUrl(imageUrl)
+                : "";
         payload.put("imageUrl", imageUrl);
         payload.put("previewImageUrl", previewImageUrl == null || previewImageUrl.isBlank() ? imageUrl : previewImageUrl);
+        payload.put("overlayImageUrl", overlayImageUrl == null ? "" : overlayImageUrl);
         payload.put("source", result == null || result.source() == null ? "" : result.source());
-        payload.put("routeAvailable", routeAvailable);
-        payload.put("confidence", routeAvailable && result != null ? result.confidence() : 0);
+        payload.put("routeAvailable", courseMapAvailable);
+        payload.put("cityLevelReference", cityLevelReference);
+        payload.put("confidence", courseMapAvailable && result != null ? result.confidence() : 0);
         payload.put("summary", result == null || result.summary() == null ? "" : result.summary());
-        payload.put("viewportBounds", routeAvailable && result != null ? result.overlayBounds() : null);
+        payload.put("viewportBounds", courseMapAvailable && result != null ? result.overlayBounds() : null);
         payload.put("routePoints", routeAvailable && result != null && result.routePoints() != null ? result.routePoints() : List.of());
+        payload.put("routePointCount", routeAvailable && result != null && result.routePoints() != null ? result.routePoints().size() : 0);
         payload.put("elevationSamples", routeAvailable && result != null && result.elevationSamples() != null ? result.elevationSamples() : List.of());
         payload.put("totalClimbMeters", routeAvailable && result != null ? result.totalClimbMeters() : null);
-        payload.put("aiAssisted", routeAvailable && result != null && result.aiAssisted());
+        payload.put("aiAssisted", courseMapAvailable && result != null && result.aiAssisted());
+        payload.put("officialRouteVerified", routeAvailable && isOfficialGpsRoute(result));
         return payload;
     }
 
@@ -469,6 +521,33 @@ public class RaceController {
                 && result.courseMapDetected()
                 && result.routePoints() != null
                 && !result.routePoints().isEmpty();
+    }
+
+    private boolean isOfficialGpsRoute(RaceCourseMapResult result) {
+        if (!hasVerifiedRoute(result)) return false;
+        String summary = result.summary() == null ? "" : result.summary().toLowerCase(java.util.Locale.ROOT);
+        return summary.contains("official gpx")
+                || summary.contains("official gps")
+                || summary.contains("gpx-grounded")
+                || summary.contains("official-route gpx");
+    }
+
+    private boolean hasCityLevelReference(RaceCourseMapResult result) {
+        if (result == null || !result.courseMapDetected() || result.overlayBounds() == null) return false;
+        if (result.routePoints() != null && !result.routePoints().isEmpty()) return false;
+        String summary = result.summary() == null ? "" : result.summary().toLowerCase(java.util.Locale.ROOT);
+        return result.confidence() >= 58
+                && result.aiAssisted()
+                && summary.contains("city-level course-map match")
+                && summary.contains("not a distance-accurate route overlay");
+    }
+
+    private static ValidationResult invalid(String message) {
+        return new ValidationResult(false, message);
+    }
+
+    private static ValidationResult valid() {
+        return new ValidationResult(true, null);
     }
 
     private record ValidationResult(boolean valid, String message) {

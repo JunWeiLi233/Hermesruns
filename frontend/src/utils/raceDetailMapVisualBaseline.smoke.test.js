@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const racesDetailSource = readFileSync(path.join(here, '../pages/RacesDetail.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const mapCanvasRule = styleSource.match(/\.race-detail-map-canvas\s*\{[\s\S]*?\n\}/)?.[0] || '';
 
 assert.match(
   racesDetailSource,
@@ -38,21 +39,21 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  styleSource,
-  /\.race-detail-map-canvas\s*\{[\s\S]*background:\s*linear-gradient\(180deg,\s*rgba\(12,\s*14,\s*17,\s*0\.0[0-9]+\),\s*rgba\(12,\s*14,\s*17,\s*0\.1[0-9]+\)\);/,
+  mapCanvasRule,
+  /background:\s*#ece7df;/,
   'Race detail map canvas should keep only a very light atmospheric wash so the OpenStreetMap layer reads as the true bottom layer.',
 );
 
 assert.doesNotMatch(
-  styleSource,
-  /\.race-detail-map-canvas\s*\{[\s\S]*radial-gradient\(circle at 16% 18%/,
+  mapCanvasRule,
+  /radial-gradient\(circle at 16% 18%/,
   'Race detail map canvas should not keep the stronger decorative radial tints once OpenStreetMap is meant to be the clear bottom layer.',
 );
 
 assert.match(
   racesDetailSource,
-  /const routeShadowPane = map\.createPane\('race-detail-route-shadow'\);[\s\S]*const routePane = map\.createPane\('race-detail-route'\);[\s\S]*const routeMarkerPane = map\.createPane\('race-detail-route-marker'\);/,
-  'RacesDetail should create dedicated Leaflet panes so the AI-scanned route is explicitly rendered above the basemap.',
+  /const courseImagePane = map\.createPane\('race-detail-course-image'\);[\s\S]*const routeShadowPane = map\.createPane\('race-detail-route-shadow'\);[\s\S]*const routePane = map\.createPane\('race-detail-route'\);[\s\S]*const routeMarkerPane = map\.createPane\('race-detail-route-marker'\);/,
+  'RacesDetail should create dedicated Leaflet panes so the transparent course-map image sits above the basemap and below the AI-scanned route.',
 );
 
 assert.match(

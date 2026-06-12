@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { WeatherGlyph } from '../components/WeatherGlyph';
 import { apiJson } from '../api';
@@ -46,6 +47,7 @@ const WEATHER_PAGE_COPY = {
     engine_status_day_4_9: '第 4-9 天：正在建立适应',
     engine_status_day_10_14: '第 10-14 天：趋于稳定',
     engine_message: '引擎提示',
+    engine_message_heat: '检测到极端热应激。Hermes 已把今天的目标配速放慢 +{penalty} sec/km，用来抵消湿度带来的额外成本。这样既能守住强度区间，也能让身体把适应做完。等热适应跟上，惩罚会逐步淡出。',
     no_penalty: '无需修正',
     no_day: '未开始',
     no_message: '当前没有额外热风险提醒。',
@@ -103,6 +105,7 @@ const WEATHER_PAGE_COPY = {
     engine_status_day_4_9: 'Days 4-9: adapting',
     engine_status_day_10_14: 'Days 10-14: stabilized',
     engine_message: 'Engine note',
+    engine_message_heat: "Extreme heat detected. We've adjusted your target pace by +{penalty} sec/km today to account for humidity. This keeps the session inside the right intensity zone. The adjustment will fade as your acclimatization improves.",
     no_penalty: 'No penalty',
     no_day: 'Not started',
     no_message: 'No extra heat warning is active right now.',
@@ -128,10 +131,12 @@ const WEATHER_PAGE_COPY = {
 };
 
 const ADAPTATION_BAR_LEVELS = [46, 62, 74, 54, 68, 100, 78, 56, 38, 28];
+const WEATHER_PAGE_REQUEST_TIMEOUT_MS = 6000;
+const WEATHER_FORECAST_REQUEST_TIMEOUT_MS = 6500;
 
 function pageText(lang, key) {
   const copy = WEATHER_PAGE_COPY[lang] || WEATHER_PAGE_COPY.en;
-  return copy[key] || key;
+  return copy[key] || WEATHER_PAGE_COPY.en[key] || key;
 }
 
 function formatTemperature(value) {
@@ -160,13 +165,27 @@ function formatWind(value) {
   return Number.isFinite(Number(value)) ? `${Math.round(Number(value))} km/h` : '--';
 }
 
-function formatCardinalDirection(degrees, lang, wt) {
-  if (!Number.isFinite(Number(degrees))) return wt('north_flow');
-  const labels = lang === 'zh-CN'
-    ? ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
-    : ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+function toFiniteNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function formatCardinalDirection(degrees, t) {
+  if (!Number.isFinite(Number(degrees))) return t('weather_engine.northFlow');
+  const dirKeys = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   const index = Math.round(Number(degrees) / 45) % 8;
-  return labels[index];
+  return t(`weather_engine.cardinalDirection.${dirKeys[index]}`);
+}
+
+// Server-side `weatherContext.message` is English-only. Re-compose from the
+// structured `pacePenaltySecPerKm` so zh-CN runners see the same advice in
+// Chinese without round-tripping a translation through the backend.
+function localizeEngineMessage(weatherContext, wt) {
+  const penalty = Number(weatherContext?.pacePenaltySecPerKm);
+  if (Number.isFinite(penalty) && penalty > 0) {
+    return wt('engine_message_heat').replace('{penalty}', String(Math.round(penalty)));
+  }
+  return weatherContext?.message || wt('no_message');
 }
 
 function statusLabel(status, wt) {
@@ -180,45 +199,68 @@ function statusLabel(status, wt) {
 }
 
 function getDisplayName(profile, fallback) {
-  const raw = profile?.displayName?.trim()
-    || profile?.email?.split('@')[0]
-    || fallback;
+  const displayName = typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
+  const emailName = typeof profile?.email === 'string' ? profile.email.split('@')[0] : '';
+  const raw = displayName || emailName || String(fallback || '');
   return raw.replace(/^./, (char) => char.toUpperCase());
 }
 
-function describeWeatherCode(code, lang) {
+function describeWeatherCode(code, t) {
   const value = Number(code);
-  if (!Number.isFinite(value)) return lang === 'zh-CN' ? '环境待确认' : 'Conditions pending';
-  if (value === 0) return lang === 'zh-CN' ? '晴朗窗口' : 'Clear window';
-  if ([1, 2].includes(value)) return lang === 'zh-CN' ? '云量较轻' : 'Light cloud';
-  if (value === 3) return lang === 'zh-CN' ? '阴天冷空气' : 'Overcast cold air';
-  if ([45, 48].includes(value)) return lang === 'zh-CN' ? '低能见度雾气' : 'Fog and low visibility';
-  if ((value >= 51 && value <= 67) || (value >= 80 && value <= 82)) return lang === 'zh-CN' ? '潮湿或有降雨' : 'Wet or rainy';
-  if (value >= 71 && value <= 77) return lang === 'zh-CN' ? '寒冷降雪' : 'Cold snow';
-  if (value >= 95) return lang === 'zh-CN' ? '强对流风险' : 'Storm risk';
-  return lang === 'zh-CN' ? '环境波动' : 'Variable conditions';
+  if (!Number.isFinite(value)) return t('weather_engine.weatherCode.pending');
+  if (value === 0) return t('weather_engine.weatherCode.clear');
+  if ([1, 2].includes(value)) return t('weather_engine.weatherCode.lightCloud');
+  if (value === 3) return t('weather_engine.weatherCode.overcast');
+  if ([45, 48].includes(value)) return t('weather_engine.weatherCode.fog');
+  if ((value >= 51 && value <= 67) || (value >= 80 && value <= 82)) return t('weather_engine.weatherCode.rain');
+  if (value >= 71 && value <= 77) return t('weather_engine.weatherCode.snow');
+  if (value >= 95) return t('weather_engine.weatherCode.storm');
+  return t('weather_engine.weatherCode.variable');
 }
 
-function buildHourlyForecast(response, lang) {
+function buildHourlyForecast(response, lang, t) {
   const hourly = response?.hourly;
   if (!hourly) return [];
   const times = Array.isArray(hourly.time) ? hourly.time : [];
   const temps = Array.isArray(hourly.temperature_2m) ? hourly.temperature_2m : [];
   const codes = Array.isArray(hourly.weather_code) ? hourly.weather_code : [];
+  const current = response?.current || null;
 
-  return times.slice(0, 12).map((time, index) => {
+  // Open-Meteo returns hourly slots from 00:00 of forecast_days; slice from the
+  // current hour so the "现在 / Now" slot is genuinely upcoming, not midnight.
+  const nowMs = Date.now();
+  let startIndex = times.findIndex((value) => {
+    const ms = new Date(value).getTime();
+    return Number.isFinite(ms) && ms + 60 * 60 * 1000 > nowMs;
+  });
+  if (startIndex < 0) startIndex = 0;
+
+  const windowTimes = times.slice(startIndex, startIndex + 12);
+
+  return windowTimes.map((time, offset) => {
+    const index = startIndex + offset;
     const date = new Date(time);
     const label = Number.isNaN(date.getTime())
       ? '--'
-      : index === 0
+      : offset === 0
         ? pageText(lang, 'pipeline_now')
         : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Bind the first ("现在") slot to the live observation so the timeline value
+    // matches the hero "实时环境状态" reading; later slots stay on the hourly
+    // forecast series.
+    const liveCurrent = offset === 0 && current ? current : null;
+    const temperature = liveCurrent && Number.isFinite(Number(liveCurrent.temperature_2m))
+      ? Number(liveCurrent.temperature_2m)
+      : temps[index];
+    const weatherCode = liveCurrent && Number.isFinite(Number(liveCurrent.weather_code))
+      ? Number(liveCurrent.weather_code)
+      : codes[index];
     return {
-      key: `${time}-${index}`,
+      key: `${time}-${offset}`,
       label,
-      temperature: temps[index],
-      weatherCode: codes[index],
-      summary: describeWeatherCode(codes[index], lang),
+      temperature,
+      weatherCode,
+      summary: describeWeatherCode(weatherCode, t),
     };
   });
 }
@@ -274,20 +316,70 @@ export default function WeatherEngine() {
     }
 
     let cancelled = false;
+    const contextController = new AbortController();
+    const forecastController = new AbortController();
+    const contextTimeout = window.setTimeout(
+      () => contextController.abort(),
+      WEATHER_PAGE_REQUEST_TIMEOUT_MS,
+    );
 
     async function loadPage() {
       setLoadState('loading');
+      setForecastState('loading');
       try {
         const [profileData, weatherData] = await Promise.all([
-          apiJson('/api/profile/me').catch(() => null),
-          apiJson('/api/v1/weather/context').catch(() => null),
+          apiJson('/api/profile/me', { signal: contextController.signal }).catch(() => null),
+          apiJson('/api/v1/weather/context', { signal: contextController.signal }).catch(() => null),
         ]);
 
         if (cancelled) return;
+        window.clearTimeout(contextTimeout);
         setProfile(profileData && typeof profileData === 'object' ? profileData : null);
-        setWeatherContext(weatherData && typeof weatherData === 'object' ? weatherData : null);
+        const ctx = weatherData && typeof weatherData === 'object' ? weatherData : null;
+        setWeatherContext(ctx);
         setLoadState('ready');
+
+        // Start forecast fetch immediately — no re-render hop needed.
+        const latitude = toFiniteNumber(ctx?.latitude);
+        const longitude = toFiniteNumber(ctx?.longitude);
+        if (!ctx?.available || latitude === null || longitude === null) {
+          setLiveWeather(null);
+          setForecast([]);
+          setForecastState('empty');
+          return;
+        }
+
+        const forecastTimeout = window.setTimeout(
+          () => forecastController.abort(),
+          WEATHER_FORECAST_REQUEST_TIMEOUT_MS,
+        );
+        const url = new URL('https://api.open-meteo.com/v1/forecast');
+        url.searchParams.set('latitude', latitude);
+        url.searchParams.set('longitude', longitude);
+        url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code');
+        url.searchParams.set('hourly', 'temperature_2m,weather_code');
+        url.searchParams.set('forecast_days', '2');
+        url.searchParams.set('timezone', 'auto');
+
+        try {
+          const res = await fetch(url, { signal: forecastController.signal });
+          window.clearTimeout(forecastTimeout);
+          if (!res.ok) throw new Error('weather-fetch-failed');
+          const payload = await res.json();
+          if (cancelled) return;
+          setLiveWeather(payload?.current || null);
+          setForecast(buildHourlyForecast(payload, lang, t));
+          setForecastState('ready');
+        } catch {
+          window.clearTimeout(forecastTimeout);
+          if (!cancelled) {
+            setLiveWeather(null);
+            setForecast([]);
+            setForecastState('error');
+          }
+        }
       } catch {
+        window.clearTimeout(contextTimeout);
         if (!cancelled) setLoadState('error');
       }
     }
@@ -295,45 +387,11 @@ export default function WeatherEngine() {
     loadPage();
     return () => {
       cancelled = true;
+      window.clearTimeout(contextTimeout);
+      contextController.abort();
+      forecastController.abort();
     };
-  }, [isAuthenticated, navigate]);
-
-  useEffect(() => {
-    if (!weatherContext?.available || !Number.isFinite(weatherContext.latitude) || !Number.isFinite(weatherContext.longitude)) {
-      setLiveWeather(null);
-      setForecast([]);
-      setForecastState('empty');
-      return undefined;
-    }
-
-    const controller = new AbortController();
-    setForecastState('loading');
-    const url = new URL('https://api.open-meteo.com/v1/forecast');
-    url.searchParams.set('latitude', weatherContext.latitude);
-    url.searchParams.set('longitude', weatherContext.longitude);
-    url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code');
-    url.searchParams.set('hourly', 'temperature_2m,weather_code');
-    url.searchParams.set('forecast_days', '1');
-    url.searchParams.set('timezone', 'auto');
-
-    fetch(url, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error('weather-fetch-failed'))))
-      .then((payload) => {
-        if (controller.signal.aborted) return;
-        setLiveWeather(payload?.current || null);
-        setForecast(buildHourlyForecast(payload, lang));
-        setForecastState('ready');
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setLiveWeather(null);
-          setForecast([]);
-          setForecastState('error');
-        }
-      });
-
-    return () => controller.abort();
-  }, [lang, weatherContext]);
+  }, [isAuthenticated, lang, navigate, t]);
 
   const initials = getDisplayName(profile, t('profile.default_name')).slice(0, 1).toUpperCase();
   const navItems = useMemo(
@@ -375,7 +433,7 @@ export default function WeatherEngine() {
           key: 'wind',
           label: wt('wind_label'),
           value: formatWind(liveWeather.wind_speed_10m),
-          accent: formatCardinalDirection(liveWeather.wind_direction_10m, lang, wt),
+          accent: formatCardinalDirection(liveWeather.wind_direction_10m, t),
           note: wt('north_flow'),
           icon: 'air',
         },
@@ -385,7 +443,7 @@ export default function WeatherEngine() {
 
   const heroStatus = weatherContext?.available ? wt('hero_status_ready') : wt('hero_status_fallback');
   const heroTemperature = formatTemperature(liveWeather?.temperature_2m);
-  const heroCondition = describeWeatherCode(liveWeather?.weather_code, lang);
+  const heroCondition = describeWeatherCode(liveWeather?.weather_code, t);
 
   if (loadState === 'loading') {
     return (
@@ -447,9 +505,11 @@ export default function WeatherEngine() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{wt('page_name')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={wt('page_name')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
@@ -633,7 +693,7 @@ export default function WeatherEngine() {
                 </div>
                 <div className="weather-engine-judgment-meta">
                   <span>{wt('engine_message')}</span>
-                  <p>{weatherContext?.message || wt('no_message')}</p>
+                  <p>{localizeEngineMessage(weatherContext, wt)}</p>
                 </div>
               </div>
 

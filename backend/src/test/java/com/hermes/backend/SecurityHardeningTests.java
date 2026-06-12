@@ -34,6 +34,12 @@ class SecurityHardeningTests {
     private RunnerRepository runnerRepository;
 
     @Autowired
+    private ActivityRepository activityRepository;
+
+    @Autowired
+    private ShoeRepository shoeRepository;
+
+    @Autowired
     private CoachScheduledWorkoutRepository coachScheduledWorkoutRepository;
 
     @Autowired
@@ -50,6 +56,8 @@ class SecurityHardeningTests {
         coachScheduledWorkoutRepository.deleteAll();
         coachTrainingBlockRepository.deleteAll();
         coachRunnerStateRepository.deleteAll();
+        activityRepository.deleteAll();
+        shoeRepository.deleteAll();
         runnerRepository.deleteAll();
     }
 
@@ -93,6 +101,15 @@ class SecurityHardeningTests {
                 .andExpect(header().string("Retry-After", "60"))
                 .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
                 .andExpect(jsonPath("$.retryAfterSeconds").value(60));
+    }
+
+    @Test
+    void loginPageStravaStatusIsPublicBeforeSessionExists() throws Exception {
+        mockMvc.perform(get("/api/auth/strava/status")
+                        .header("X-Forwarded-For", "198.51.100.20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.linked").value(false))
+                .andExpect(jsonPath("$.autoUpdateMode").value("webhook_retry_burst_then_on_open_catch_up"));
     }
 
     @Test

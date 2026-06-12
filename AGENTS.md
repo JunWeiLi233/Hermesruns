@@ -2,23 +2,15 @@
 
 Use this file as the short entrypoint for work in this repository.
 
-This file is a map, not an encyclopedia. Durable detail belongs in `docs/` and the owning workflow/helper files.
-
 ## Read Order
 
 1. `AGENTS.md`
-   Top-level policy, trust rules, session start, and owner map.
 2. `docs/auto-hermes/index.md`
-   `/auto-hermes` record-system map.
 3. `docs/repo-rules/index.md`
-   Repo rule map for design, runtime, git, memory, stack, and commands.
 4. `.ai-codex/optimized-codex.md`
-   Session-scale compressed queue and repo brief.
 5. `.ai-sync/CONTEXT_LEDGER.md`
-   Durable surface intent and preservation rules.
 6. `.ai-sync/AGENT_SYNC.md`
-   Live claims, recently completed work, and reclaim safety.
-7. Read deeper owners only when the current task needs them.
+7. Read deeper owners only when needed.
 
 ## Core Policy
 
@@ -55,8 +47,6 @@ When facts conflict, prefer:
 
 If still uncertain, say `unverified` or `not confirmed here`.
 
-Detailed truth and memory rules live in `docs/repo-rules/truth-and-memory.md`.
-
 ## Session Start
 
 Before broad work or implementation, run:
@@ -86,8 +76,6 @@ Use RTK-wrapped shell reads/searches/status commands when RTK is available, but 
 - If blocked, leave the task unchecked and add a short `Blocker:` line directly below it.
 - Prefer small, verifiable changes and focused checks.
 
-Detailed queue, loop, checkpoint, and agent-sync rules live in `docs/repo-rules/runtime-and-workflow.md`.
-
 ## Runtime Proof
 
 For website-facing frontend changes:
@@ -105,8 +93,6 @@ If source changed but sync did not run, report:
 
 - `source changed, live website not synced yet`
 
-Detailed runtime rules live in `docs/repo-rules/runtime-and-workflow.md`.
-
 ## Design Authority
 
 - `design.md` is the default visual source of truth for meaningful Hermes UI work.
@@ -115,15 +101,11 @@ Detailed runtime rules live in `docs/repo-rules/runtime-and-workflow.md`.
 - Any changed user-facing copy must be updated in both locales.
 - For meaningful UI/design changes, append a new entry to `DESIGN_VERSIONS.md`.
 
-Detailed design, mimic, translation, and review rules live in `docs/repo-rules/design-and-ui.md`.
-
 ## Memory
 
 - Prefer MemPalace for prior decisions, old regressions, and unfinished historical work when available.
 - Use `memory.md` only as a tiny fallback for stable preferences or workflow invariants.
 - Use `.ai-codex/CODEX_CHECKPOINT.md` as the active resume file for long-running work.
-
-Detailed memory rules live in `docs/repo-rules/truth-and-memory.md` and `docs/repo-rules/runtime-and-workflow.md`.
 
 ## Git And Publish
 
@@ -131,8 +113,6 @@ Detailed memory rules live in `docs/repo-rules/truth-and-memory.md` and `docs/re
 - Do not push by default.
 - Before any commit or push, run the privacy/repo-hygiene pass and the required frontend/backend checks.
 - Treat workflow files, screenshots, local exports, and machine-specific artifacts as local-only by default unless the user explicitly asks to publish them.
-
-Detailed commit/push/safety rules live in `docs/repo-rules/git-and-publish.md`.
 
 ## Stack And Commands
 

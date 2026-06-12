@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { List } from 'react-window';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -10,6 +11,7 @@ import Modal from '../components/Modal';
 import HermesLogo from '../components/HermesLogo';
 import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
@@ -134,7 +136,7 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   if (!processed) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={processed} alt={alt} onError={onError} />;
+  return <img className={className} src={processed} alt={alt} onError={onError} loading="lazy" decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
@@ -178,6 +180,23 @@ const CATALOG_CATEGORY_META = {
 /** Maximum number of images processed per scan request. */
 const SHOE_SCAN_MAX_FILES = 5;
 
+function normalizeQuotaNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function getShoeScanQuotaLimit(quota) {
+  if (!quota) return 0;
+  if (quota.quotaType === 'new_user' || quota.experiencePhase) return 1;
+  if (quota.tier === 'PRO' || quota.unlimited) return normalizeQuotaNumber(quota.monthlyLimit, 50);
+  return normalizeQuotaNumber(quota.monthlyLimit, normalizeQuotaNumber(quota.userFreeTotal, 3));
+}
+
+function getShoeScanQuotaRemaining(quota) {
+  if (!quota) return 0;
+  return Math.min(getShoeScanQuotaLimit(quota), normalizeQuotaNumber(quota.scansRemaining, 0));
+}
+
 function formatPaceForDisplay(paceSecPerKm, unit, t) {
   if (!paceSecPerKm || paceSecPerKm <= 0) return '--';
   const converted = unit === 'mile' ? paceSecPerKm * 1.60934 : paceSecPerKm;
@@ -186,8 +205,8 @@ function formatPaceForDisplay(paceSecPerKm, unit, t) {
   return `${mins}:${secs}/${unit === 'mile' ? t('analysis.unit_distance_mile') : t('analysis.unit_distance_km')}`;
 }
 
-function formatRotationDateValue(timestamp, lang) {
-  if (!timestamp) return lang === 'zh-CN' ? '还没有已标记记录' : 'no tagged run yet';
+function formatRotationDateValue(timestamp, lang, t) {
+  if (!timestamp) return t('shoes.rotation_no_tagged_record');
 
   const now = new Date();
   const date = new Date(timestamp);
@@ -197,27 +216,21 @@ function formatRotationDateValue(timestamp, lang) {
     : { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
 }
 
-function formatRotationUsageValue(count, total, lang) {
+function formatRotationUsageValue(count, total, t) {
   if (!total) {
-    return lang === 'zh-CN'
-      ? `最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天还没有已标记跑步`
-      : `no shoe-tagged runs in the last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days`;
+    return t('shoes.rotation_no_tagged_runs_window', { days: RECENT_SHOE_SIGNAL_WINDOW_DAYS });
   }
 
-  return lang === 'zh-CN'
-    ? `最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天 ${count}/${total} 次已标记跑步`
-    : `${count} of ${total} shoe-tagged runs in the last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days`;
+  return t('shoes.rotation_tagged_runs_window', { days: RECENT_SHOE_SIGNAL_WINDOW_DAYS, count, total });
 }
 
-function formatMileageLeftValue(currentKm, maxKm, unit, distanceUnitLabel, lang) {
-  if (!maxKm || maxKm <= 0) return lang === 'zh-CN' ? '未设置寿命上限' : 'lifecycle cap not set';
+function formatMileageLeftValue(currentKm, maxKm, unit, distanceUnitLabel, t) {
+  if (!maxKm || maxKm <= 0) return t('shoes.mileage_cap_not_set');
 
   const remainingKm = Math.max(0, Number(maxKm || 0) - Number(currentKm || 0));
-  if (remainingKm <= 0) return lang === 'zh-CN' ? '已到寿命上限' : 'lifecycle cap reached';
+  if (remainingKm <= 0) return t('shoes.mileage_cap_reached');
 
-  return lang === 'zh-CN'
-    ? `约 ${formatDistanceValue(remainingKm, unit, 0)} ${distanceUnitLabel}`
-    : `about ${formatDistanceValue(remainingKm, unit, 0)} ${distanceUnitLabel}`;
+  return t('shoes.mileage_approx_left', { distance: formatDistanceValue(remainingKm, unit, 0), unit: distanceUnitLabel });
 }
 
 function matchesInventoryCategory(shoe, category) {
@@ -229,8 +242,17 @@ function matchesInventoryCategory(shoe, category) {
 }
 
 
-export default function Shoes() {
-  const { isAuthenticated, email } = useAuth();
+const SHOE_CARD_ESTIMATED_HEIGHT = 280;
+
+function ShoeCardRow({ index, style, data }) {
+  const { shoes, renderCard } = data;
+  const shoe = shoes[index];
+  if (!shoe) return null;
+  return <div style={style}>{renderCard(shoe)}</div>;
+}
+
+const Shoes = memo(function Shoes() {
+  const { isAuthenticated, email, logout } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -241,6 +263,8 @@ export default function Shoes() {
   const [loadState, setLoadState] = useState('loading');
   const [duplicateClusters, setDuplicateClusters] = useState([]);
   const [mergeBusy, setMergeBusy] = useState(false);
+  const [shoeActionBusyId, setShoeActionBusyId] = useState(null);
+  const [shoeActionStatus, setShoeActionStatus] = useState('');
   const [inventoryTab, setInventoryTab] = useState('active');
   const [inventorySort, setInventorySort] = useState('recent');
   const [lockerBrandFilter, setLockerBrandFilter] = useState('all');
@@ -285,6 +309,18 @@ export default function Shoes() {
   const [imgPendingUploadName, setImgPendingUploadName] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
+        setAvatarMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Scan modal
   const [scanOpen, setScanOpen] = useState(false);
@@ -298,6 +334,8 @@ export default function Shoes() {
   const [isInventoryCollapsed, setIsInventoryCollapsed] = useState(false);
   const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
+  const aiQuotaLimit = getShoeScanQuotaLimit(aiQuota);
+  const aiQuotaRemaining = getShoeScanQuotaRemaining(aiQuota);
 
   function applyPendingUploadState(nextState) {
     setImgPendingUploadUrl(nextState.imgPendingUploadUrl);
@@ -434,6 +472,14 @@ export default function Shoes() {
   const retiredShoes = shoes.filter(s => s.retired);
   const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
   const rotationHealth = useMemo(() => calculateRotationHealth(shoes, runs), [shoes, runs]);
+  const retireSoonCount = activeShoes.filter((shoe) => {
+    const current = Number(shoe.currentDistanceKm || 0);
+    const max = Number(shoe.maxDistanceKm || 650);
+    const retirement = predictRetirement(shoe, runs);
+    return current >= max * 0.7
+      || retirement?.remainingKm <= 100
+      || (retirement?.daysLeft != null && retirement.daysLeft <= 30);
+  }).length;
   const recentRunsWindow = shoeSignal.recentRuns;
   const performanceFallback = shoeSignal.recommendation?.type === 'recommend' ? null : shoeSignal.recommendation;
   const shoePerformanceInsights = useMemo(() => {
@@ -493,19 +539,11 @@ export default function Shoes() {
     return usage;
   }, [runs]);
 
-  const recentWindowLabel = lang === 'zh-CN'
-    ? `最近 ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} 天`
-    : `Last ${RECENT_SHOE_SIGNAL_WINDOW_DAYS} days`;
-  const recentSignalCopy = lang === 'zh-CN'
-    ? '今天的选鞋先看同配速下的效率信号；如果信心不够，再退回到上次穿着、最近使用频次和剩余寿命。'
-    : 'Today’s pick leans on matched-pace efficiency first, then falls back to last worn, recent tagged usage, and mileage left when the rotation read is thin.';
-  const recentRotationEmpty = lang === 'zh-CN'
-    ? (activeShoes.length > 0
-      ? 'Hermes 还不能高置信地区分今天该穿哪双鞋。先把最近几次跑步标记到鞋子上，这里才会给出可信的轮换证据。'
-      : '先添加一双正在穿的鞋，再把最近跑步标记到鞋子上，Hermes 才能解释今天该穿哪双。')
-    : (activeShoes.length > 0
-      ? 'Hermes cannot separate today’s shoe clearly yet. Tag a few recent runs to your pairs and this strip will start explaining the pick with real rotation evidence.'
-      : 'Add an active pair, then tag a few recent runs to shoes so Hermes can explain today’s pick instead of guessing.');
+  const recentWindowLabel = t('shoes.rotation_recent_window', { days: RECENT_SHOE_SIGNAL_WINDOW_DAYS });
+  const recentSignalCopy = t('shoes.rotation_signal_copy');
+  const recentRotationEmpty = activeShoes.length > 0
+    ? t('shoes.rotation_empty_no_data')
+    : t('shoes.rotation_empty_no_shoes');
 
   const rotationSignalShoe = performanceFallback?.shoe || null;
   const rotationSignalFeatureTitle = rotationSignalShoe
@@ -523,35 +561,23 @@ export default function Shoes() {
     ? (recentUsageByShoe.get(rotationSignalShoe.id) || { count: 0, latest: 0 })
     : { count: 0, latest: 0 };
   const rotationSignalLastWornItem = rotationSignalShoe
-    ? (lang === 'zh-CN'
-      ? `上次穿着：${formatRotationDateValue(rotationSignalUsage.latest, lang)}`
-      : `Last worn: ${formatRotationDateValue(rotationSignalUsage.latest, lang)}`)
+    ? t('shoes.rotation_last_worn', { date: formatRotationDateValue(rotationSignalUsage.latest, lang, t) })
     : null;
   const rotationSignalRecentUsageItem = rotationSignalShoe
-    ? (lang === 'zh-CN'
-      ? `最近使用：${formatRotationUsageValue(rotationSignalRecentUsage.count, recentTaggedRuns.length, lang)}`
-      : `Recent usage: ${formatRotationUsageValue(rotationSignalRecentUsage.count, recentTaggedRuns.length, lang)}`)
+    ? t('shoes.rotation_recent_usage', { detail: formatRotationUsageValue(rotationSignalRecentUsage.count, recentTaggedRuns.length, t) })
     : null;
   const rotationSignalMileageLeftItem = rotationSignalShoe
-    ? (lang === 'zh-CN'
-      ? `里程余量：${formatMileageLeftValue(rotationSignalShoe.currentDistanceKm, rotationSignalShoe.maxDistanceKm, unit, distanceUnitLabel, lang)}`
-      : `Mileage left: ${formatMileageLeftValue(rotationSignalShoe.currentDistanceKm, rotationSignalShoe.maxDistanceKm, unit, distanceUnitLabel, lang)}`)
+    ? t('shoes.rotation_mileage_left', { detail: formatMileageLeftValue(rotationSignalShoe.currentDistanceKm, rotationSignalShoe.maxDistanceKm, unit, distanceUnitLabel, t) })
     : null;
   const rotationSignalEvidenceSentence = rotationSignalShoe
-    ? (lang === 'zh-CN'
-      ? `${rotationSignalLastWornItem}；${rotationSignalRecentUsageItem}；${rotationSignalMileageLeftItem}。`
-      : `${rotationSignalLastWornItem}. ${rotationSignalRecentUsageItem}. ${rotationSignalMileageLeftItem}.`)
+    ? t('shoes.rotation_evidence_sentence_format', { last: rotationSignalLastWornItem, recent: rotationSignalRecentUsageItem, mileage: rotationSignalMileageLeftItem })
     : '';
   const rotationSignalFeatureSummary = performanceFallback?.type === 'insight'
     ? `${shoePerformanceInsights.topInsight.summary} ${rotationSignalEvidenceSentence}`.trim()
     : performanceFallback?.type === 'rotation'
-      ? (lang === 'zh-CN'
-        ? `Hermes 还没有看到绝对更省力的那双，所以今天先沿用这双最稳妥。${rotationSignalEvidenceSentence}`
-        : `Hermes is not seeing a clean efficiency winner today, so this pair gets the nod from your current rotation. ${rotationSignalEvidenceSentence}`)
+      ? t('shoes.rotation_fallback_rotation', { evidence: rotationSignalEvidenceSentence })
       : performanceFallback?.type === 'primary'
-        ? (lang === 'zh-CN'
-          ? `Hermes 还不能高置信地区分今天该穿哪双鞋，所以先回退到你的主力鞋。${rotationSignalEvidenceSentence}继续标记最近跑步，下一次建议会更可靠。`
-          : `Hermes cannot split today’s rotation clearly yet, so it falls back to your primary pair for now. ${rotationSignalEvidenceSentence}Keep tagging recent runs and the next pick will get sharper.`)
+        ? t('shoes.rotation_fallback_primary', { evidence: rotationSignalEvidenceSentence })
         : recentRotationEmpty;
   const rotationSignalMetaItems = performanceFallback
     ? [
@@ -573,40 +599,34 @@ export default function Shoes() {
     ].filter(Boolean)
     : [];
   const rotationSignalSideTitle = performanceFallback?.type === 'insight'
-    ? (lang === 'zh-CN' ? '明确建议' : 'Clear pick')
+    ? t('shoes.rotation_status_insight')
     : performanceFallback?.type === 'rotation'
-      ? (lang === 'zh-CN' ? '轮换证据' : 'Rotation evidence')
+      ? t('shoes.rotation_status_rotation')
       : performanceFallback?.type === 'primary'
-        ? (lang === 'zh-CN' ? '保守回退' : 'Fallback mode')
+        ? t('shoes.rotation_status_fallback')
         : recentWindowLabel;
   const rotationSignalSideCopy = performanceFallback?.type === 'insight'
-    ? (lang === 'zh-CN'
-      ? '同配速下的心率优势和当前轮换证据同时指向这双。'
-      : 'Matched-pace heart-rate gains and current rotation evidence both point to this pair.')
+    ? t('shoes.rotation_side_insight')
     : performanceFallback?.type === 'rotation'
-      ? (lang === 'zh-CN'
-        ? '今天先按最近轮换证据和剩余寿命保守选择。'
-        : 'Today’s pick leans on recent rotation usage and remaining life rather than a stronger performance edge.')
+      ? t('shoes.rotation_side_rotation')
       : performanceFallback?.type === 'primary'
-        ? (lang === 'zh-CN'
-          ? '现在先用主力鞋兜底，等最近跑步标记更完整后再升级成真实推荐。'
-          : 'Hermes is staying conservative with your primary pair until the recent tagged data is strong enough for a real recommendation.')
+        ? t('shoes.rotation_side_primary')
         : recentRotationEmpty;
   const rotationSignalAvgPace = shoePerformanceInsights.topInsight?.paceSecPerKm ?? performanceFallback?.avgPace ?? null;
   const rotationSignalTotalDistance = recentTaggedRuns.reduce((sum, run) => sum + kmOf(run), 0);
   const rotationSignalHighlightLabel = performanceFallback?.type === 'primary'
-    ? (lang === 'zh-CN' ? '今日保守选择' : 'Today’s safe fallback')
-    : (lang === 'zh-CN' ? '今日跑鞋建议' : 'Today’s shoe pick');
+    ? t('shoes.rotation_highlight_fallback')
+    : t('shoes.rotation_highlight_pick');
   const rotationSignalSourceLabel = performanceFallback?.type === 'primary'
-    ? (lang === 'zh-CN' ? 'Hermes 回退逻辑' : 'Hermes fallback logic')
-    : (lang === 'zh-CN' ? 'Hermes 轮换判断' : 'Hermes rotation read');
+    ? t('shoes.rotation_source_fallback')
+    : t('shoes.rotation_source_rotation');
   const rotationSignalSourceHref = null;
   const rotationSignalStatusPill = performanceFallback?.type === 'insight'
-    ? { label: lang === 'zh-CN' ? '高置信' : 'Confident pick', className: ' is-positive' }
+    ? { label: t('shoes.rotation_badge_confident'), className: ' is-positive' }
     : performanceFallback?.type === 'rotation'
-      ? { label: lang === 'zh-CN' ? '轮换证据' : 'Rotation evidence', className: ' is-watch' }
+      ? { label: t('shoes.rotation_badge_evidence'), className: ' is-watch' }
       : performanceFallback?.type === 'primary'
-        ? { label: lang === 'zh-CN' ? '保守回退' : 'Fallback', className: ' is-watch' }
+        ? { label: t('shoes.rotation_badge_fallback'), className: ' is-watch' }
         : null;
 
   const renderRotationSignal = (inside = false) => (
@@ -620,9 +640,7 @@ export default function Shoes() {
         <div className="shoe-rotation-signal-pills">
           <span className="shoe-rotation-signal-pill">{recentWindowLabel}</span>
           <span className="shoe-rotation-signal-pill is-soft">
-            {lang === 'zh-CN'
-              ? `最近 ${recentTaggedRuns.length} 次已标记跑步`
-              : `${recentTaggedRuns.length} recent tagged runs`}
+            {t('shoes.rotation_recent_tagged_count', { count: recentTaggedRuns.length })}
           </span>
           {rotationSignalStatusPill && (
             <span className={`shoe-rotation-signal-pill${rotationSignalStatusPill.className}`}>
@@ -635,9 +653,7 @@ export default function Shoes() {
             onClick={() => setIsRotationSignalCollapsed((current) => !current)}
             aria-expanded={!isRotationSignalCollapsed}
             aria-controls="shoe-rotation-signal-panel"
-            aria-label={lang === 'zh-CN'
-              ? (isRotationSignalCollapsed ? '展开跑鞋表现相关性模块' : '折叠跑鞋表现相关性模块')
-              : (isRotationSignalCollapsed ? 'Expand shoe performance correlation section' : 'Collapse shoe performance correlation section')}
+            aria-label={isRotationSignalCollapsed ? t('shoes.rotation_expand') : t('shoes.rotation_collapse')}
           >
             <AppIcon
               name={isRotationSignalCollapsed ? 'chevron_right' : 'expand_more'}
@@ -669,18 +685,18 @@ export default function Shoes() {
                 {rotationSignalAvgPace != null && (
                   <div className="shoe-rotation-signal-glass-metric">
                     <strong>{formatPaceForDisplay(rotationSignalAvgPace, unit, t)}</strong>
-                    <span>{unit === 'mile' ? (lang === 'zh-CN' ? '/英里平均配速' : '/mile avg pace') : (lang === 'zh-CN' ? '/公里平均配速' : '/km avg pace')}</span>
+                    <span>{unit === 'mile' ? t('shoes.per_mile_avg_pace') : t('shoes.per_km_avg_pace')}</span>
                   </div>
                 )}
               </div>
               <div className="shoe-rotation-signal-meta">
                 <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
-                  <small>{lang === 'zh-CN' ? '已标记总公里数' : 'Tagged distance'}</small>
+                  <small>{t('shoes.tagged_distance')}</small>
                   <strong>{formatDistanceValue(rotationSignalTotalDistance, unit)} {distanceUnitLabel}</strong>
                 </span>
                 <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
-                  <small>{lang === 'zh-CN' ? '已标记跑步' : 'Tagged runs'}</small>
-                  <strong>{lang === 'zh-CN' ? `${recentTaggedRuns.length} 次` : `${recentTaggedRuns.length} runs`}</strong>
+                  <small>{t('shoes.tagged_runs')}</small>
+                  <strong>{t('shoes.tagged_runs_count', { count: recentTaggedRuns.length })}</strong>
                 </span>
                 <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
                   <small>{t('shoes.rotation_health_label')}</small>
@@ -812,17 +828,37 @@ export default function Shoes() {
 
   async function handleRetire(shoe) {
     try {
-      await apiFetch(`/api/shoes/${shoe.id}`, { method: 'DELETE' });
-      loadShoes();
-    } catch { /* ignored */ }
+      setShoeActionStatus('');
+      await apiJson(`/api/shoes/${shoe.id}`, { method: 'DELETE' });
+      await loadShoes();
+    } catch {
+      setShoeActionStatus(t('shoes.retire_failed'));
+    }
+  }
+
+  async function handleReactivate(shoe) {
+    setShoeActionBusyId(shoe.id);
+    setShoeActionStatus('');
+    try {
+      await apiJson(`/api/shoes/${shoe.id}/reactivate`, { method: 'POST' });
+      setInventoryTab('active');
+      await loadShoes();
+    } catch {
+      setShoeActionStatus(t('shoes.reactivate_failed'));
+    } finally {
+      setShoeActionBusyId(null);
+    }
   }
 
   async function handleDelete(shoe) {
     if (!window.confirm(t('shoes.confirm_delete'))) return;
     try {
-      await apiFetch(`/api/shoes/${shoe.id}?permanent=true`, { method: 'DELETE' });
-      loadShoes();
-    } catch { /* ignored */ }
+      setShoeActionStatus('');
+      await apiJson(`/api/shoes/${shoe.id}?permanent=true`, { method: 'DELETE' });
+      await loadShoes();
+    } catch {
+      setShoeActionStatus(t('shoes.delete_failed'));
+    }
   }
   function compressImage(file, maxSize = 1024, quality = 0.8) {
     return new Promise((resolve) => {
@@ -878,6 +914,8 @@ export default function Shoes() {
                 tier: errData.tier,
                 scansRemaining: errData.scansRemaining,
                 quotaType: errData.quotaType,
+                monthlyLimit: errData.monthlyLimit,
+                monthlyUsed: errData.monthlyUsed,
                 userFreeTotal: errData.userFreeTotal,
                 experiencePhase: errData.experiencePhase,
               }));
@@ -897,6 +935,8 @@ export default function Shoes() {
               tier: data.tier,
               scansRemaining: data.scansRemaining,
               quotaType: data.quotaType,
+              monthlyLimit: data.monthlyLimit,
+              monthlyUsed: data.monthlyUsed,
               userFreeTotal: data.userFreeTotal,
               experiencePhase: data.experiencePhase,
             }));
@@ -1178,7 +1218,18 @@ export default function Shoes() {
               <>
                 <button type="button" className="shoe-inventory-card-action" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
                 <button type="button" className="shoe-inventory-card-action" onClick={() => openImagePicker(shoe)}>{t('shoes.photo_action')}</button>
-                {!shoe.retired && <button type="button" className="shoe-inventory-card-action" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>}
+                {shoe.retired ? (
+                  <button
+                    type="button"
+                    className="shoe-inventory-card-action shoe-inventory-card-action--cta"
+                    disabled={shoeActionBusyId === shoe.id}
+                    onClick={() => handleReactivate(shoe)}
+                  >
+                    {t('shoes.reactivate')}
+                  </button>
+                ) : (
+                  <button type="button" className="shoe-inventory-card-action" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
+                )}
                 <button type="button" className="shoe-inventory-card-action is-danger" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
               </>
             )}
@@ -1254,9 +1305,11 @@ export default function Shoes() {
         <main className="runner-shell-main">
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
-              <div className="runner-shell-topnav">
-                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_shoes')}</span>
-              </div>
+              <RunnerShellTopNav
+                navItems={navItems}
+                activeLabel={t('profile.dashboard_nav_shoes')}
+                navigate={navigate}
+              />
             </div>
 
             <div className="runner-shell-topbar-actions">
@@ -1265,9 +1318,21 @@ export default function Shoes() {
                 <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
-                <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
-                  {initials}
-                </button>
+                <div className="user-menu-shell" ref={avatarMenuRef}>
+                  <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label={displayName} onClick={() => setAvatarMenuOpen((prev) => !prev)}>
+                    {initials}
+                  </button>
+                  <div className={`user-menu-dropdown${avatarMenuOpen ? ' visible' : ''}`}>
+                    <button type="button" className="user-menu-item" onClick={() => { setAvatarMenuOpen(false); navigate('/profile'); }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      {t('profile.change_name')}
+                    </button>
+                    <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setAvatarMenuOpen(false); logout(); }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                      {t('profile.logout')}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </header>
@@ -1330,6 +1395,17 @@ export default function Shoes() {
                 </div>
               </div>
 
+              <div className="shoe-health-summary-row" aria-label={t('shoes.health_summary_rotation')}>
+                <span className="shoe-health-summary-pill shoe-health-summary-pill--health">
+                  <strong>{t('shoes.health_summary_active', { count: activeShoes.length })}</strong>
+                  <span className="shoe-health-summary-label">{t('shoes.health_summary_rotation')}</span>
+                </span>
+                <span className={`shoe-health-summary-pill${retireSoonCount > 0 ? ' shoe-health-summary-pill--warn' : ''}`}>
+                  <strong>{t('shoes.health_summary_retire_soon', { count: retireSoonCount })}</strong>
+                  <span className="shoe-health-summary-label">{t(`shoes.rotation_health_${rotationHealth.status}`)}</span>
+                </span>
+              </div>
+
               <div className="shoe-inventory-manage-strip">
                 <div className="shoe-inventory-manage-head">
                   <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_actions')}</span>
@@ -1337,6 +1413,17 @@ export default function Shoes() {
                     <button type="button" className="shoe-inventory-action-btn" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
                       {t('shoes.scan_image')}
                     </button>
+                    {aiQuota && !aiQuota.admin && (
+                      aiQuota.tier === 'PRO' || aiQuota.unlimited ? (
+                        <span className="shoe-inventory-pro-badge">{t('pro.badge')}</span>
+                      ) : (
+                        <span className="shoe-inventory-quota-badge">
+                          {aiQuotaRemaining > 0
+                            ? t('shoes.ai_quota_remaining_badge', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
+                            : t('shoes.ai_quota_exhausted_badge', { total: aiQuotaLimit })}
+                        </span>
+                      )
+                    )}
                     {isFiltered && <button type="button" className="shoe-inventory-action-btn is-muted" onClick={resetLocker}>{t('shoes.stitch_reset')}</button>}
                   </div>
                 </div>
@@ -1353,7 +1440,7 @@ export default function Shoes() {
 
                   <div className="shoe-inventory-manage-group">
                     <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_brand_label')}</span>
-                    <div className="shoe-inventory-brand-pills">
+                    <div className="shoe-inventory-brand-pills shoe-locker-brandbar">
                       <button type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === 'all' ? ' active' : ''}`} onClick={() => setLockerBrandFilter('all')}>{t('shoes.locker_all_brands')}</button>
                       {lockerBrands.map((brand) => (
                         <button key={brand} type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === brand ? ' active' : ''}`} onClick={() => setLockerBrandFilter(brand)}>{brand}</button>
@@ -1375,12 +1462,24 @@ export default function Shoes() {
 
               {loadState === 'loading' && <div className="shoe-inventory-status">{t('shoes.loading')}</div>}
               {loadState === 'error' && <div className="shoe-inventory-status">{t('shoes.load_error')}</div>}
-              {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_label') : t('shoes.stitch_inventory_empty')}</div>}
+              {loadState === 'ready' && shoeActionStatus && <div className="shoe-inventory-status">{shoeActionStatus}</div>}
+              {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_empty') : t('shoes.stitch_inventory_empty')}</div>}
 
               {loadState === 'ready' && inventoryShoes.length > 0 && (
-                <div className="shoe-inventory-grid">
-                  {inventoryShoes.map((shoe) => renderInventoryCard(shoe))}
-                </div>
+                inventoryShoes.length > 20 ? (
+                  <List
+                    rowComponent={ShoeCardRow}
+                    rowCount={inventoryShoes.length}
+                    rowHeight={SHOE_CARD_ESTIMATED_HEIGHT}
+                    rowProps={{ shoes: inventoryShoes, renderCard: renderInventoryCard }}
+                    style={{ height: Math.min(inventoryShoes.length * SHOE_CARD_ESTIMATED_HEIGHT, 640), width: '100%' }}
+                    className="shoe-inventory-virtual-list"
+                  />
+                ) : (
+                  <div className="shoe-inventory-grid">
+                    {inventoryShoes.map((shoe) => renderInventoryCard(shoe))}
+                  </div>
+                )
               )}
             </>
           )}
@@ -1475,6 +1574,9 @@ export default function Shoes() {
               <div className="img-picker-hero-meta">
                 <span className="img-picker-meta-pill">{localizeShoeBrand(imgPickerShoe.brand, lang) || t('shoes.brand')}</span>
                 <span className="img-picker-meta-pill">{localizeShoeModel(imgPickerShoe.model, lang) || t('shoes.model')}</span>
+                <span className={`img-picker-meta-pill img-picker-mode-pill${shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) ? ' is-manual' : ' is-auto'}`}>
+                  {shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) ? t('shoes.img_mode_manual') : t('shoes.img_mode_auto')}
+                </span>
               </div>
             </section>
 
@@ -1651,7 +1753,7 @@ export default function Shoes() {
             </div>
             <div className="shoe-scan-modal-preview">
               {scanPreviewUrl ? (
-                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" />
+                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
               ) : (
                 <div className="shoe-scan-modal-preview-empty">
                   <AppIcon name="image_search" className="runner-dashboard-side-link-icon" />
@@ -1704,14 +1806,19 @@ export default function Shoes() {
                 </div>
                 {aiQuota && !aiQuota.admin && !aiQuota.unlimited && (
                   <div className="shoe-scan-modal-note">
-                    <strong>{aiQuota.tier === 'PRO' ? 'PRO' : 'FREE'}</strong>
+                    <strong>{t('shoes.ai_quota_remaining_label')}</strong>
                     <span>
-                      {aiQuota.scansRemaining > 0
-                        ? t('shoes.ai_scans_remaining', { count: aiQuota.scansRemaining })
-                        : t('shoes.ai_scans_exhausted')}
-                      {aiQuota.quotaType === 'new_user' && ` (${t('shoes.ai_quota_new_user')})`}
-                      {aiQuota.quotaType === 'user_free' && ` (${t('shoes.ai_quota_user_free', { remaining: aiQuota.scansRemaining, total: aiQuota.userFreeTotal ?? 3 })})`}
+                      {aiQuotaRemaining > 0
+                        ? t('shoes.ai_quota_remaining_detail', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
+                        : t('shoes.ai_quota_exhausted_detail', { total: aiQuotaLimit })}
                     </span>
+                    <small>
+                      {aiQuota.quotaType === 'new_user'
+                        ? t('shoes.ai_quota_new_user')
+                        : aiQuota.quotaType === 'user_free'
+                          ? t('shoes.ai_quota_user_free', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
+                          : (aiQuota.tier === 'PRO' ? t('pro.badge') : 'FREE')}
+                    </small>
                   </div>
                 )}
                 <label className="shoe-scan-modal-upload">
@@ -1721,9 +1828,16 @@ export default function Shoes() {
                 </label>
                 {scanStatus === 'processing' && <div className="shoe-scan-modal-status">{t('shoes.scan_processing')}</div>}
                 {scanStatus === 'quota_exceeded' && (
-                  <div className="shoe-scan-modal-status is-warn">
-                    <strong>{t('shoes.ai_quota_exceeded')}</strong>
-                    {aiQuota?.tier !== 'PRO' && <span>{t('shoes.ai_upgrade_hint')}</span>}
+                  <div className="shoe-scan-modal-upgrade-card">
+                    <span className="shoe-scan-modal-upgrade-kicker">{t('pro.badge')}</span>
+                    <h4>{t('pro.quota_exhausted', { limit: aiQuota?.monthlyLimit || aiQuota?.userFreeTotal || 3 })}</h4>
+                    <button
+                      type="button"
+                      className="shoe-scan-modal-upgrade-cta"
+                      onClick={() => { setScanOpen(false); navigate('/profile'); }}
+                    >
+                      {t('pro.upgrade_cta')}
+                    </button>
                   </div>
                 )}
                 {scanStatus === 'rate_limited' && <div className="shoe-scan-modal-status is-warn">{t('shoes.scan_rate_limited')}</div>}
@@ -1733,7 +1847,7 @@ export default function Shoes() {
                   <button
                     type="submit"
                     className="shoe-scan-modal-primary"
-                    disabled={scanFiles.length === 0 || scanStatus === 'processing' || (aiQuota && !aiQuota.admin && aiQuota.scansRemaining <= 0)}
+                    disabled={scanFiles.length === 0 || scanStatus === 'processing' || (aiQuota && !aiQuota.admin && aiQuotaRemaining <= 0)}
                   >
                     {t('shoes.scan_image')}
                   </button>
@@ -1804,6 +1918,21 @@ export default function Shoes() {
                   ))}
                   {scannedShoes.length === 0 && <p className="shoe-scan-empty">{t('shoes.empty')}</p>}
                 </div>
+                {aiQuota && !aiQuota.admin && !aiQuota.unlimited && aiQuota.scansRemaining >= 0 && (
+                  <div className="shoe-scan-modal-quota-after">
+                    <span className="shoe-scan-modal-quota-after-icon" aria-hidden="true">&#9889;</span>
+                    <span>
+                      {aiQuotaRemaining > 0
+                        ? t('shoes.ai_quota_remaining_badge', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
+                        : t('shoes.ai_quota_exhausted_badge', { total: aiQuotaLimit })}
+                    </span>
+                    {aiQuotaRemaining <= 0 && (
+                      <button type="button" className="shoe-scan-modal-upgrade-cta" onClick={() => { setScanOpen(false); navigate('/profile'); }}>
+                        {t('pro.upgrade_cta')}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="shoe-scan-modal-actions">
                   <button type="button" className="shoe-scan-modal-secondary" onClick={() => { setScanStatus(''); setScannedShoes([]); }}>{t('shoes.back')}</button>
                   <button type="button" className="shoe-scan-modal-primary" onClick={handleAddScanned} disabled={scannedShoes.length === 0}>{t('shoes.confirm_add_all')}</button>
@@ -1815,4 +1944,6 @@ export default function Shoes() {
       </Modal>
     </>
   );
-}
+});
+
+export default Shoes;

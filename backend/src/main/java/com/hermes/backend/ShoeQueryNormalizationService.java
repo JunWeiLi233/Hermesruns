@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -33,6 +34,7 @@ public class ShoeQueryNormalizationService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final SystemConfigService systemConfigService;
+    private final LettaAgentClient lettaAgentClient;
 
     @Value("${app.ai.api-key:}")
     private String aiApiKey;
@@ -40,19 +42,36 @@ public class ShoeQueryNormalizationService {
     @Value("${app.ai.model:gemini-2.5-flash}")
     private String aiModel;
 
+    @Value("${app.ai.agent.provider:}")
+    private String aiAgentProvider;
+
     public ShoeQueryNormalizationService(
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             SystemConfigService systemConfigService
     ) {
+        this(restTemplate, objectMapper, systemConfigService, null);
+    }
+
+    @Autowired
+    public ShoeQueryNormalizationService(
+            RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            SystemConfigService systemConfigService,
+            LettaAgentClient lettaAgentClient
+    ) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.systemConfigService = systemConfigService;
+        this.lettaAgentClient = lettaAgentClient;
     }
 
     public ShoeMetadataDto normalize(String rawInput) {
         if (rawInput == null || rawInput.trim().isBlank()) {
             throw new IllegalArgumentException("rawInput is required.");
+        }
+        if (isLettaAgentProvider()) {
+            return normalizeWithLetta(rawInput);
         }
         if (!systemConfigService.isAiConfigured() || aiApiKey == null || aiApiKey.isBlank()) {
             throw new IllegalStateException("AI normalization is not configured.");
@@ -70,9 +89,10 @@ public class ShoeQueryNormalizationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", aiApiKey);
 
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + aiModel + ":generateContent?key=" + aiApiKey;
+                + aiModel + ":generateContent";
 
         ResponseEntity<Map> response = restTemplate.exchange(
                 url,
@@ -85,27 +105,7 @@ public class ShoeQueryNormalizationService {
         if (text == null || text.isBlank()) {
             throw new IllegalStateException("Gemini returned an empty normalization response.");
         }
-
-        String json = extractJsonObject(text);
-        if (json == null) {
-            throw new IllegalStateException("Gemini did not return a JSON object for shoe normalization.");
-        }
-
-        try {
-            JsonNode node = objectMapper.readTree(json);
-            ShoeMetadataDto metadata = new ShoeMetadataDto(
-                    textValue(node.get("brand")),
-                    textValue(node.get("model")),
-                    textValue(node.get("colorway")),
-                    textValue(node.get("searchString"))
-            );
-            if (metadata.brand() == null && metadata.model() == null && metadata.searchString() == null) {
-                throw new IllegalStateException("Gemini returned an unusable normalization payload.");
-            }
-            return metadata;
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed to parse Gemini normalization response.", ex);
-        }
+        return parseMetadataFromText(text, "Gemini");
     }
 
     private static String extractResponseText(Map<?, ?> body) {
@@ -129,12 +129,48 @@ public class ShoeQueryNormalizationService {
         return null;
     }
 
+    private ShoeMetadataDto normalizeWithLetta(String rawInput) {
+        if (lettaAgentClient == null || !lettaAgentClient.isConfigured()) {
+            throw new IllegalStateException("Letta AI agent normalization is not configured.");
+        }
+        String responseText = lettaAgentClient.sendUserMessage(NORMALIZATION_PROMPT.formatted(rawInput.trim())
+                + "\nReturn only the JSON object, with no markdown fences or commentary.");
+        return parseMetadataFromText(responseText, "Letta");
+    }
+
+    private ShoeMetadataDto parseMetadataFromText(String text, String providerName) {
+        String json = extractJsonObject(text);
+        if (json == null) {
+            throw new IllegalStateException(providerName + " did not return a JSON object for shoe normalization.");
+        }
+
+        try {
+            JsonNode node = objectMapper.readTree(json);
+            ShoeMetadataDto metadata = new ShoeMetadataDto(
+                    textValue(node.get("brand")),
+                    textValue(node.get("model")),
+                    textValue(node.get("colorway")),
+                    textValue(node.get("searchString"))
+            );
+            if (metadata.brand() == null && metadata.model() == null && metadata.searchString() == null) {
+                throw new IllegalStateException(providerName + " returned an unusable normalization payload.");
+            }
+            return metadata;
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to parse " + providerName + " normalization response.", ex);
+        }
+    }
+
     private static String extractJsonObject(String text) {
         if (text == null) return null;
         int start = text.indexOf('{');
         int end = text.lastIndexOf('}');
         if (start < 0 || end <= start) return null;
         return text.substring(start, end + 1);
+    }
+
+    private boolean isLettaAgentProvider() {
+        return aiAgentProvider != null && "letta".equalsIgnoreCase(aiAgentProvider.trim());
     }
 
     private static String textValue(JsonNode node) {

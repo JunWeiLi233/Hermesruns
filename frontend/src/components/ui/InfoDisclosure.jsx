@@ -2,10 +2,10 @@ import { useId, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
 
 export default function InfoDisclosure({ children, className = '', title }) {
-  const { lang } = useI18n();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const buttonTitle = title || (lang === 'zh-CN' ? '查看说明' : 'Show details');
+  const buttonTitle = title || t('common.show_details');
 
   return (
     <div className={`info-disclosure${open ? ' is-open' : ''}${className ? ` ${className}` : ''}`}>

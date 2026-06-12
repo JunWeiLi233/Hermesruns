@@ -3,7 +3,6 @@ package com.hermes.backend;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -27,8 +26,8 @@ public class AdminPortalService {
     private final AuthService authService;
     private final AdminAuditService adminAuditService;
     private final AiUsageService aiUsageService;
-    private final ShoeIdentityService shoeIdentityService;
-    private final ShoeImageAssetService shoeImageAssetService;
+    private final QuotaService quotaService;
+    private final ShoeAdminAggregateService shoeAdminAggregateService;
     private final StravaAutoSyncScheduler stravaAutoSyncScheduler;
     private final RaceCourseMapService raceCourseMapService;
 
@@ -43,8 +42,8 @@ public class AdminPortalService {
             AuthService authService,
             AdminAuditService adminAuditService,
             AiUsageService aiUsageService,
-            ShoeIdentityService shoeIdentityService,
-            ShoeImageAssetService shoeImageAssetService,
+            QuotaService quotaService,
+            ShoeAdminAggregateService shoeAdminAggregateService,
             StravaAutoSyncScheduler stravaAutoSyncScheduler,
             RaceCourseMapService raceCourseMapService
     ) {
@@ -58,8 +57,8 @@ public class AdminPortalService {
         this.authService = authService;
         this.adminAuditService = adminAuditService;
         this.aiUsageService = aiUsageService;
-        this.shoeIdentityService = shoeIdentityService;
-        this.shoeImageAssetService = shoeImageAssetService;
+        this.quotaService = quotaService;
+        this.shoeAdminAggregateService = shoeAdminAggregateService;
         this.stravaAutoSyncScheduler = stravaAutoSyncScheduler;
         this.raceCourseMapService = raceCourseMapService;
     }
@@ -74,8 +73,8 @@ public class AdminPortalService {
     public AuthService getAuthService() { return authService; }
     public AdminAuditService getAdminAuditService() { return adminAuditService; }
     public AiUsageService getAiUsageService() { return aiUsageService; }
-    public ShoeIdentityService getShoeIdentityService() { return shoeIdentityService; }
-    public ShoeImageAssetService getShoeImageAssetService() { return shoeImageAssetService; }
+    public QuotaService getQuotaService() { return quotaService; }
+    public ShoeAdminAggregateService getShoeAdminAggregateService() { return shoeAdminAggregateService; }
     public StravaAutoSyncScheduler getStravaAutoSyncScheduler() { return stravaAutoSyncScheduler; }
     public RaceCourseMapService getRaceCourseMapService() { return raceCourseMapService; }
 
@@ -155,6 +154,7 @@ public class AdminPortalService {
     }
 
     public UserAdminDto toUserDto(Runner runner, long noteCount) {
+        Map<String, Object> shoeQuota = shoeScanQuota(runner);
         return new UserAdminDto(
                 runner.getId(),
                 runner.getEmail(),
@@ -166,32 +166,48 @@ public class AdminPortalService {
                 runner.isEmailVerified(),
                 runner.getCreatedAt() == null ? null : runner.getCreatedAt().toString(),
                 runner.getStravaAthleteId() != null,
-                noteCount
+                noteCount,
+                intValue(shoeQuota.get("used"), 0),
+                intValue(shoeQuota.get("limit"), 0),
+                intValue(shoeQuota.get("remaining"), 0)
         );
+    }
+
+    private Map<String, Object> shoeScanQuota(Runner runner) {
+        if (runner == null || quotaService == null) {
+            return Map.of("used", 0, "limit", 0, "remaining", 0);
+        }
+        Object raw = quotaService.getQuotaStatus(runner).get("shoeScan");
+        if (raw instanceof Map<?, ?> map) {
+            Map<String, Object> typed = new LinkedHashMap<>();
+            typed.put("used", map.get("used"));
+            typed.put("limit", map.get("limit"));
+            typed.put("remaining", map.get("remaining"));
+            return typed;
+        }
+        return Map.of("used", 0, "limit", 0, "remaining", 0);
+    }
+
+    private int intValue(Object value, int fallback) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String stringValue) {
+            try {
+                return Integer.parseInt(stringValue.trim());
+            } catch (Exception ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
     }
 
     public ShoeAdminDto toShoeDto(Shoe shoe) {
-        return toShoeDto(shoe, null);
+        return shoeAdminAggregateService.toShoeDto(shoe);
     }
 
     public ShoeAdminDto toShoeDto(Shoe shoe, ShoeImageAsset asset) {
-        return new ShoeAdminDto(
-                shoe.getId(),
-                shoe.getBrand(),
-                shoe.getModel(),
-                shoe.getNickname(),
-                shoe.getIdentityKey(),
-                shoe.getPhotoUrl(),
-                shoe.isPhotoVerified(),
-                asset == null ? null : asset.getPendingImageUrl(),
-                asset == null ? null : asset.getPendingSource(),
-                asset == null ? null : asset.getLiveImageUrl(),
-                asset == null ? null : asset.getLiveSource(),
-                shoe.isRetired(),
-                shoe.getCreatedAt() == null ? null : shoe.getCreatedAt().toString(),
-                shoe.getRunner() == null ? null : shoe.getRunner().getId(),
-                shoe.getRunner() == null ? null : shoe.getRunner().getEmail()
-        );
+        return shoeAdminAggregateService.toShoeDto(shoe, asset);
     }
 
     public NoteDto toNoteDto(RunnerAdminNote note) {

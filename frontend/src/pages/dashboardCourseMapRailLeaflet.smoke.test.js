@@ -20,6 +20,12 @@ assert.match(
 );
 
 assert.match(
+  dashboardSource,
+  /const selectedCourseMapItem = useMemo\([\s\S]*const queueItem = courseMapQueueItems\.find\(item => getCourseMapRaceId\(item\) === selectedCourseMapId\) \|\| null;[\s\S]*const detail = getCourseMapRaceId\(courseMapDetail\) === selectedCourseMapId \? courseMapDetail : null;[\s\S]*buildCourseMapWorkspaceSource\(\{ queueItem, detail \}\)/,
+  'Dashboard selected course-map detail should preserve catalog lat/lng through buildCourseMapWorkspaceSource so the live/pending review grids can always render a city-level OSM fallback map.'
+);
+
+assert.match(
   previewSource,
   /forceLiveMap = false[\s\S]*fallbackCenter = null/,
   'AdminCourseMapPreview should accept explicit forceLiveMap and fallbackCenter props for compact rail-card maps.'
@@ -27,7 +33,7 @@ assert.match(
 
 assert.match(
   previewSource,
-  /const hasFallbackCenter = Boolean\(fallbackLatLng\);[\s\S]*const shouldRenderMap = !mapFailed && \(hasAlignedOverlay \|\| hasAlignedRoute \|\| \(forceLiveMap && hasFallbackCenter\)\)/,
+  /const hasRenderableAlignment = hasAlignedOverlay \|\| hasAlignedRoute;[\s\S]*const hasFallbackCenter = Boolean\(fallbackLatLng\);[\s\S]*const shouldRenderMap = !mapFailed && \(hasRenderableAlignment \|\| \(forceLiveMap && hasFallbackCenter\)\)/,
   'AdminCourseMapPreview should allow a live Leaflet map even when only fallback center data exists.'
 );
 

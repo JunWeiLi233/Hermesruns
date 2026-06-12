@@ -68,6 +68,11 @@ public class GarminConnectController {
             return error(HttpStatus.BAD_REQUEST, "Invalid credentials.");
         }
 
+        long retryAfterSeconds = garminConnectImportService.getRateLimitRetryAfterSeconds(runnerOpt.get().getId());
+        if (retryAfterSeconds > 0) {
+            return rateLimited(retryAfterSeconds);
+        }
+
         boolean started = garminConnectImportService.startImport(
                 runnerOpt.get(), garminEmail, garminPassword, limit
         );
@@ -120,6 +125,11 @@ public class GarminConnectController {
 
         if (email == null || email.isBlank()) {
             return error(HttpStatus.BAD_REQUEST, "No Garmin Connect credentials stored. Save credentials first via /api/garmin/connect/wellness/credentials.");
+        }
+
+        long retryAfterSeconds = wellnessImportService.getRateLimitRetryAfterSeconds(runner.getId());
+        if (retryAfterSeconds > 0) {
+            return rateLimited(retryAfterSeconds);
         }
 
         String decryptedPassword;
@@ -244,5 +254,15 @@ public class GarminConnectController {
         Map<String, String> response = new HashMap<>();
         response.put("error", message);
         return ResponseEntity.status(status).body(response);
+    }
+
+    private ResponseEntity<Map<String, Object>> rateLimited(long retryAfterSeconds) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", GarminRateLimitSupport.message(retryAfterSeconds));
+        response.put("retryAfterSeconds", retryAfterSeconds);
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(retryAfterSeconds))
+                .body(response);
     }
 }

@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
-import ImportDataGuide from '../components/ImportDataGuide';
-import Modal from '../components/Modal';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import SettingsAtlasLayout from '../components/SettingsAtlasLayout';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,11 +16,46 @@ import { formatStravaSyncLabel, stravaSyncTone } from '../utils/stravaAutoSync';
 const MANTRA_STORAGE_KEY = 'hermes.settings.mantra';
 const DIGEST_STORAGE_KEY = 'hermes.settings.digest';
 
+const WELLNESS_SOURCE_ROWS = [
+  { key: 'sleep', labelKey: 'settings.stitch_wellness_sleep' },
+  { key: 'hrv', labelKey: 'settings.stitch_wellness_hrv' },
+  { key: 'stress', labelKey: 'settings.stitch_wellness_stress' },
+  { key: 'body', labelKey: 'settings.stitch_wellness_body' },
+];
+
 function resolveDisplayName(profile, fallback) {
   const raw = profile?.displayName?.trim()
     || profile?.email?.split('@')[0]
     || fallback;
   return raw.replace(/^./, (char) => char.toUpperCase());
+}
+
+function resolveWellnessSource(preferences, key) {
+  if (Array.isArray(preferences)) {
+    const match = preferences.find((item) => item?.key === key || item?.metric === key);
+    return match?.source || match?.provider || '';
+  }
+  if (!preferences || typeof preferences !== 'object') return '';
+  const metric = preferences.metrics?.[key] || preferences.sources?.[key] || preferences[key];
+  if (typeof metric === 'string') return metric;
+  return metric?.source || metric?.provider || '';
+}
+
+function formatWellnessSourceLabel(source, t) {
+  switch (String(source || '').trim().toLowerCase()) {
+    case 'garmin':
+      return t('settings.stitch_wellness_source_garmin');
+    case 'apple':
+    case 'apple_health':
+      return t('settings.stitch_wellness_source_apple');
+    case 'google':
+    case 'google_health':
+      return t('settings.stitch_wellness_source_google');
+    case 'manual':
+      return t('settings.stitch_wellness_source_manual');
+    default:
+      return t('settings.stitch_wellness_source_auto');
+  }
 }
 
 export default function Settings() {
@@ -41,22 +75,7 @@ export default function Settings() {
   const [nameSaving, setNameSaving] = useState(false);
   const [nameMsg, setNameMsg] = useState('');
   const [stravaLinking, setStravaLinking] = useState(false);
-  const [activeModal, setActiveModal] = useState(null);
-  const [fitExportFiles, setFitExportFiles] = useState(null);
-  const [corosFiles, setCorosFiles] = useState(null);
-  const [huaweiFiles, setHuaweiFiles] = useState(null);
-  const [importStatus, setImportStatus] = useState('');
-  const [garminEmail, setGarminEmail] = useState('');
-  const [garminPassword, setGarminPassword] = useState('');
-  const [garminLimit, setGarminLimit] = useState(50);
-  const [garminImporting, setGarminImporting] = useState(false);
-  const [garminStatus, setGarminStatus] = useState('');
-  const [garminStatusType, setGarminStatusType] = useState('');
-  const [garminWellnessSyncEnabled, setGarminWellnessSyncEnabled] = useState(false);
-  const [garminWellnessImporting, setGarminWellnessImporting] = useState(false);
-  const [garminWellnessStatus, setGarminWellnessStatus] = useState('');
-  const [garminWellnessLastSynced, setGarminWellnessLastSynced] = useState(null);
-  const [garminCredentialsSaved, setGarminCredentialsSaved] = useState(false);
+  const [wellnessSourcePreferences, setWellnessSourcePreferences] = useState(null);
 
   useEffect(() => {
     try {
@@ -79,9 +98,10 @@ export default function Settings() {
     async function loadSettings() {
       setLoadState('loading');
       try {
-        const [profileData, stravaData] = await Promise.all([
+        const [profileData, stravaData, wellnessPreferencesData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/auth/strava/status').catch(() => null),
+          apiJson('/api/wellness/source-preferences').catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -89,6 +109,7 @@ export default function Settings() {
         setProfile(profileData);
         setDisplayName(profileData?.displayName || '');
         setStravaStatus(stravaData);
+        setWellnessSourcePreferences(wellnessPreferencesData);
         setLoadState('ready');
       } catch {
         if (!cancelled) {
@@ -116,24 +137,27 @@ export default function Settings() {
     { value: 'light', label: t('settings.stitch_theme_glitter'), icon: 'light_mode' },
   ]), [t]);
   const activeThemeLabel = themeCards.find((card) => card.value === theme)?.label || '';
-  const languageLabel = lang === 'zh-CN' ? '\u4e2d\u6587' : 'English (US)';
+  const languageLabel = t('settings.language_label');
   const stravaLabel = formatStravaSyncLabel(stravaStatus, t);
   const digestLabel = digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest');
   const resolvedLanguageLabel = languageLabel;
-  const garminTone = garminImporting ? 'active' : (garminStatus ? garminStatusType || 'info' : 'ready');
-  const garminStatusLabel = garminImporting ? t('profile.garmin_connect_importing') : (garminStatus || t('settings.stitch_garmin_ready'));
+  const garminStatusLabel = t('settings.stitch_garmin_ready');
+  const wellnessRows = useMemo(() => WELLNESS_SOURCE_ROWS.map((row) => ({
+    ...row,
+    sourceLabel: formatWellnessSourceLabel(resolveWellnessSource(wellnessSourcePreferences, row.key), t),
+  })), [t, wellnessSourcePreferences]);
   const garminLane = {
     eyebrow: t('profile.garmin_connect_status'),
     title: t('profile.garmin_connect_title'),
     summary: t('profile.garmin_connect_hint'),
     status: garminStatusLabel,
-    tone: garminTone,
+    tone: 'ready',
     limitLabel: t('profile.garmin_connect_limit_label'),
-    limitValue: garminLimit,
+    limitValue: 50,
     manualLabel: t('profile.watch_import_files'),
     manualValue: t('settings.stitch_manual_import_hint'),
     credentialsNote: t('profile.garmin_connect_credentials_note'),
-    primaryAction: garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_import'),
+    primaryAction: t('profile.garmin_connect_import'),
   };
   const completionScore = Math.round(([
     displayName.trim(),
@@ -189,205 +213,6 @@ export default function Settings() {
     } catch {
       setNameMsg(t('settings.stitch_strava_disconnect_error'));
     }
-  }
-
-  async function handleImport(event) {
-    event.preventDefault();
-    const formData = new FormData();
-    let hasFiles = false;
-
-    if (fitExportFiles) {
-      Array.from(fitExportFiles).forEach((file) => {
-        formData.append('exports', file);
-        hasFiles = true;
-      });
-    }
-    if (corosFiles) {
-      Array.from(corosFiles).forEach((file) => {
-        formData.append('coros', file);
-        hasFiles = true;
-      });
-    }
-    if (huaweiFiles) {
-      Array.from(huaweiFiles).forEach((file) => {
-        formData.append('huawei', file);
-        hasFiles = true;
-      });
-    }
-    if (!hasFiles) return;
-
-    setImportStatus('');
-    try {
-      const response = await apiFetch('/api/import/batch', { method: 'POST', body: formData });
-      if (!response.ok) throw new Error();
-      setImportStatus(t('settings.stitch_import_success'));
-      setActiveModal(null);
-    } catch {
-      setImportStatus(t('profile.import_failed'));
-    }
-  }
-
-  function openManualImportFromGarmin() {
-    if (!garminImporting) {
-      setActiveModal('manual');
-    }
-  }
-
-  async function handleGarminImport(event) {
-    event.preventDefault();
-    if (!garminEmail.trim() || !garminPassword.trim()) return;
-
-    setGarminImporting(true);
-    setGarminStatus('');
-    setGarminStatusType('');
-
-    try {
-      const response = await apiFetch('/api/garmin/connect/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          garminEmail: garminEmail.trim(),
-          garminPassword,
-          limit: garminLimit,
-        }),
-      });
-
-      if (response.status === 409) {
-        setGarminStatus(t('profile.garmin_connect_already_running'));
-        setGarminStatusType('warn');
-        setGarminImporting(false);
-        return;
-      }
-
-      handleGarminSaveCredentials();
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || t('profile.garmin_connect_failed'));
-      }
-
-      let attempts = 0;
-      const maxAttempts = 120;
-
-      const poll = async () => {
-        if (attempts >= maxAttempts) {
-          setGarminStatus(t('profile.garmin_connect_failed'));
-          setGarminStatusType('error');
-          setGarminImporting(false);
-          return;
-        }
-        attempts += 1;
-
-        try {
-          const statusData = await apiJson('/api/garmin/connect/import/status');
-          if (statusData.active) {
-            setGarminStatus(
-              statusData.importedRuns > 0
-                ? t('profile.garmin_connect_progress_count', { count: statusData.importedRuns })
-                : t('profile.garmin_connect_importing'),
-            );
-            setGarminStatusType('info');
-            setTimeout(poll, 2000);
-            return;
-          }
-
-          setGarminImporting(false);
-          if (statusData.status === 'COMPLETED') {
-            if (statusData.importedRuns > 0) {
-              setGarminStatus(
-                t('profile.garmin_connect_success')
-                  .replace('{imported}', statusData.importedRuns)
-                  .replace('{points}', statusData.importedPoints),
-              );
-              setGarminStatusType('success');
-            } else {
-              setGarminStatus(statusData.message || t('profile.garmin_connect_no_runs'));
-              setGarminStatusType('info');
-            }
-          } else if (statusData.status === 'FAILED') {
-            setGarminStatus(statusData.message || t('profile.garmin_connect_failed'));
-            setGarminStatusType('error');
-          }
-        } catch {
-          setTimeout(poll, 3000);
-        }
-      };
-
-      setTimeout(poll, 3000);
-    } catch (error) {
-      setGarminStatus(error.message || t('profile.garmin_connect_failed'));
-      setGarminStatusType('error');
-      setGarminImporting(false);
-    }
-  }
-
-  async function handleGarminWellnessToggle() {
-    try {
-      await apiJson('/api/garmin/connect/wellness/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: !garminWellnessSyncEnabled }),
-      });
-      setGarminWellnessSyncEnabled(!garminWellnessSyncEnabled);
-    } catch { /* toggle failure is non-critical */ }
-  }
-
-  async function handleGarminWellnessSync() {
-    if (garminWellnessImporting) return;
-    setGarminWellnessImporting(true);
-    setGarminWellnessStatus('');
-    try {
-      await apiFetch('/api/garmin/connect/wellness/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ daysBack: 30 }),
-      });
-      let attempts = 0;
-      const maxAttempts = 120;
-      const poll = async () => {
-        if (attempts >= maxAttempts) {
-          setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
-          setGarminWellnessImporting(false);
-          return;
-        }
-        attempts += 1;
-        try {
-          const data = await apiJson('/api/garmin/connect/wellness/status');
-          if (data.active) {
-            setGarminWellnessStatus(t('profile.garmin_wellness_syncing'));
-            setTimeout(poll, 2500);
-            return;
-          }
-          setGarminWellnessImporting(false);
-          if (data.status === 'COMPLETED') {
-            setGarminWellnessStatus(t('profile.garmin_wellness_success'));
-            if (data.lastSynced) setGarminWellnessLastSynced(data.lastSynced);
-          } else if (data.status === 'FAILED') {
-            setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
-          } else if (data.status === 'NO_DATA') {
-            setGarminWellnessStatus(t('profile.garmin_wellness_no_data'));
-          }
-        } catch {
-          setTimeout(poll, 3000);
-        }
-      };
-      setTimeout(poll, 2500);
-    } catch {
-      setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
-      setGarminWellnessImporting(false);
-    }
-  }
-
-  async function handleGarminSaveCredentials() {
-    if (!garminEmail.trim() || !garminPassword.trim()) return;
-    try {
-      await apiJson('/api/garmin/connect/wellness/credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ garminEmail: garminEmail.trim(), garminPassword }),
-      });
-      setGarminCredentialsSaved(true);
-    } catch { /* credential save failure is non-critical */ }
   }
 
   function toggleDigest() {
@@ -456,19 +281,19 @@ export default function Settings() {
       key: 'garmin',
       label: 'Garmin Connect',
       value: garminStatusLabel,
-      tone: garminTone,
+      tone: 'ready',
     },
-{
+    {
       key: 'manual',
       label: t('profile.watch_import_files'),
-      value: importStatus || t('settings.stitch_manual_import_ready'),
-      tone: importStatus ? 'active' : 'ready',
+      value: t('settings.stitch_manual_import_ready'),
+      tone: 'ready',
     },
     {
       key: 'garmin-wellness',
       label: t('profile.garmin_wellness_title'),
-      value: garminWellnessSyncEnabled ? t('profile.garmin_wellness_enabled') : t('profile.garmin_wellness_disabled'),
-      tone: garminWellnessSyncEnabled ? 'success' : 'muted',
+      value: t('profile.garmin_wellness_disabled'),
+      tone: 'muted',
     },
   ];
 
@@ -538,9 +363,11 @@ export default function Settings() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar settings-control-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('settings.heading')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('settings.heading')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions">
@@ -574,7 +401,6 @@ export default function Settings() {
           stravaLinking={stravaLinking}
           connectStrava={connectStrava}
           disconnectStrava={disconnectStrava}
-          setActiveModal={setActiveModal}
           toggleDigest={toggleDigest}
           logout={logout}
           saveProfile={saveProfile}
@@ -592,248 +418,12 @@ export default function Settings() {
           setLang={setLang}
           quickControls={quickControls}
           syncHealthItems={syncHealthItems}
+          wellnessRows={wellnessRows}
           garminLane={garminLane}
           setupChecklist={setupChecklist}
         />
 
       </main>
-
-      <Modal isOpen={activeModal === 'manual'} onClose={() => setActiveModal(null)} title={t('profile.import_modal_title')}>
-        <form onSubmit={handleImport}>
-          <ImportDataGuide />
-          <p className="modal-help">{t('profile.import_hint')}</p>
-          <div className="import-source-grid">
-            <section className="import-source-card">
-              <div className="import-source-header">
-                <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
-                </div>
-                <span className="import-source-tag">FIT/GPX</span>
-              </div>
-              <label className="modal-label">{t('profile.fit_export_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={(event) => setFitExportFiles(event.target.files)} />
-              <p className="selected-file-name">{fitExportFiles?.length ? t('profile.selected_files_count', { count: fitExportFiles.length }) : t('profile.no_file_selected')}</p>
-            </section>
-
-            <section className="import-source-card">
-              <div className="import-source-header">
-                <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.coros_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.coros_source_hint')}</span>
-                </div>
-                <span className="import-source-tag">COROS</span>
-              </div>
-              <label className="modal-label">{t('profile.coros_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={(event) => setCorosFiles(event.target.files)} />
-              <p className="selected-file-name">{corosFiles?.length ? t('profile.selected_files_count', { count: corosFiles.length }) : t('profile.no_file_selected')}</p>
-            </section>
-
-            <section className="import-source-card">
-              <div className="import-source-header">
-                <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.huawei_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.huawei_source_hint')}</span>
-                </div>
-                <span className="import-source-tag">HUAWEI</span>
-              </div>
-              <label className="modal-label">{t('profile.huawei_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={(event) => setHuaweiFiles(event.target.files)} />
-              <p className="selected-file-name">{huaweiFiles?.length ? t('profile.selected_files_count', { count: huaweiFiles.length }) : t('profile.no_file_selected')}</p>
-            </section>
-          </div>
-
-          <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
-          {importStatus ? <div className="modal-status">{importStatus}</div> : null}
-
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setActiveModal(null)}>{t('profile.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button">{t('profile.upload_file')}</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        isOpen={activeModal === 'garmin'}
-        onClose={() => { if (!garminImporting) setActiveModal(null); }}
-        title={t('profile.garmin_connect_modal_title')}
-        shellClassName="settings-modal-shell garmin-import-modal-shell"
-        cardClassName="settings-modal-card garmin-import-modal-card"
-      >
-        <form onSubmit={handleGarminImport} className="garmin-import-form">
-          <div className="garmin-import-layout">
-            <section className="garmin-import-visual">
-              <div className="garmin-import-kicker-row">
-                <span className="garmin-import-kicker-line" aria-hidden="true" />
-                <span>{garminLane.eyebrow}</span>
-              </div>
-
-              <section className="garmin-import-hero">
-                <div className="service-icon service-icon--garmin garmin-import-hero-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="8" />
-                    <path d="M12 7v7" />
-                    <path d="m9.5 11.5 2.5 2.5 2.5-2.5" />
-                    <path d="M8 18h8" />
-                  </svg>
-                </div>
-                <div className="garmin-import-hero-copy">
-                  <strong>{garminLane.title}</strong>
-                  <p>{garminLane.summary}</p>
-                </div>
-              </section>
-
-              <div className={`garmin-import-stage garmin-import-stage--${garminLane.tone}`}>
-                <span>{garminLane.eyebrow}</span>
-                <strong>{garminLane.status}</strong>
-              </div>
-
-              <div className="garmin-import-metric-grid">
-                <article className="garmin-import-metric">
-                  <span>{garminLane.limitLabel}</span>
-                  <strong>{garminLane.limitValue}</strong>
-                </article>
-                <article className="garmin-import-metric">
-                  <span>{garminLane.manualLabel}</span>
-                  <strong>{garminLane.manualValue}</strong>
-                </article>
-              </div>
-            </section>
-
-            <section className="garmin-import-panel">
-              <div className="garmin-import-panel-head">
-                <div className="garmin-import-panel-copy">
-                  <span>{t('profile.garmin_connect_import')}</span>
-                  <strong>{t('profile.garmin_connect_modal_title')}</strong>
-                  <p>{garminLane.credentialsNote}</p>
-                </div>
-                <span className={`garmin-import-pill garmin-import-pill--${garminLane.tone}`}>{garminLane.eyebrow}</span>
-              </div>
-
-              <div className="garmin-import-field-grid">
-                <div className="garmin-import-field">
-                  <label className="modal-label">{t('profile.garmin_connect_email_label')}</label>
-                  <input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={garminEmail}
-                    onChange={(event) => setGarminEmail(event.target.value)}
-                    disabled={garminImporting}
-                    required
-                    autoComplete="username"
-                  />
-                </div>
-
-                <div className="garmin-import-field">
-                  <label className="modal-label">{t('profile.garmin_connect_password_label')}</label>
-                  <input
-                    type="password"
-                    value={garminPassword}
-                    onChange={(event) => setGarminPassword(event.target.value)}
-                    disabled={garminImporting}
-                    required
-                    autoComplete="current-password"
-                  />
-                </div>
-              </div>
-
-              <div className="garmin-import-field garmin-import-field--limit">
-                <div className="garmin-import-field-head">
-                  <label className="modal-label">{t('profile.garmin_connect_limit_label')}</label>
-                  <span className="garmin-import-field-meta">10 - 200</span>
-                </div>
-                <select
-                  value={garminLimit}
-                  onChange={(event) => setGarminLimit(Number(event.target.value))}
-                  disabled={garminImporting}
-                  className="garmin-import-limit"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={200}>200</option>
-                </select>
-              </div>
-
-              <div className="garmin-import-secondary">
-                <div className="garmin-import-secondary-copy">
-                  <strong>{garminLane.manualLabel}</strong>
-                  <span>{garminLane.manualValue}</span>
-                </div>
-                <button
-                  type="button"
-                  className="btn-secondary modal-button garmin-import-secondary-button"
-                  onClick={openManualImportFromGarmin}
-                  disabled={garminImporting}
-                >
-                  {garminLane.manualLabel}
-                </button>
-              </div>
-
-              <div className="modal-actions garmin-import-actions">
-                <button
-                  type="button"
-                  className="btn-secondary modal-button"
-                  onClick={() => { if (!garminImporting) setActiveModal(null); }}
-                  disabled={garminImporting}
-                >
-                  {t('profile.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary modal-button"
-                  disabled={garminImporting || !garminEmail.trim() || !garminPassword.trim()}
-                >
-                  {garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_start')}
-                </button>
-              </div>
-            </section>
-          </div>
-</form>
-        <div className="garmin-wellness-section">
-          <div className="garmin-wellness-section-title">{t('profile.garmin_wellness_title')}</div>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #999)', marginBottom: '0.75rem' }}>{t('profile.garmin_wellness_desc')}</p>
-          <div className="garmin-wellness-row">
-            <span>{t('profile.garmin_wellness_auto_sync')}</span>
-            <button
-              type="button"
-              className={`garmin-wellness-toggle${garminWellnessSyncEnabled ? ' garmin-wellness-toggle--active' : ''}`}
-              onClick={handleGarminWellnessToggle}
-              aria-label={t('profile.garmin_wellness_auto_sync')}
-            />
-          </div>
-          <div className="garmin-wellness-row">
-            <span style={{ fontSize: '0.82rem' }}>{t('profile.garmin_wellness_auto_sync_desc')}</span>
-          </div>
-          <div className="garmin-wellness-row" style={{ marginTop: '0.5rem' }}>
-            <button
-              type="button"
-              className="garmin-wellness-sync-btn"
-              onClick={handleGarminWellnessSync}
-              disabled={garminWellnessImporting}
-            >
-              {garminWellnessImporting ? t('profile.garmin_wellness_syncing') : t('profile.garmin_wellness_sync_now')}
-            </button>
-            <button
-              type="button"
-              className="garmin-wellness-save-credentials-btn"
-              onClick={handleGarminSaveCredentials}
-              disabled={!garminEmail.trim() || !garminPassword.trim()}
-            >
-              {garminCredentialsSaved ? t('profile.garmin_wellness_credentials_saved') : t('profile.garmin_wellness_save_credentials')}
-            </button>
-          </div>
-          {garminWellnessStatus && (
-            <div className="garmin-wellness-status">{garminWellnessStatus}</div>
-          )}
-          {!garminWellnessImporting && garminWellnessLastSynced && (
-            <div className="garmin-wellness-status">
-              {t('profile.garmin_wellness_last_synced')}: {new Date(garminWellnessLastSynced).toLocaleString()}
-            </div>
-          )}
-        </div>
-      </Modal>
     </div>
   );
 }

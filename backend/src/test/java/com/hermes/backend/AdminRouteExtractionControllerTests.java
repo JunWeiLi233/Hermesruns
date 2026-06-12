@@ -62,7 +62,7 @@ class AdminRouteExtractionControllerTests {
         when(authService.findByAuthorizationHeader(any())).thenReturn(Optional.of(runner));
 
         MarathonRoutePipelineService.PipelineResult result = new MarathonRoutePipelineService.PipelineResult(null, null, null);
-        when(pipelineService.runPipeline(any(), any(), any(), any(), any(), any(), any())).thenReturn(result);
+        when(pipelineService.runPipeline(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(result);
 
         MarathonRoutePipelineRequest request = new MarathonRoutePipelineRequest(
                 "r-1", "Name", "City", "Country", "Web", 42.2, "Path");

@@ -16,6 +16,8 @@ class MarathonRouteMatchAndExportServiceTests {
         OsrmMapMatchingClient osrmMapMatchingClient = mock(OsrmMapMatchingClient.class);
         GpxExportService gpxExportService = mock(GpxExportService.class);
         GeneratedRaceGpxPersistenceService persistenceService = mock(GeneratedRaceGpxPersistenceService.class);
+        Runner runner = new Runner();
+        runner.setId(1L);
 
         List<RawBreadcrumbPointDTO> rawBreadcrumbs = List.of(
                 new RawBreadcrumbPointDTO(42.349203, -71.078423),
@@ -45,6 +47,7 @@ class MarathonRouteMatchAndExportServiceTests {
         when(osrmMapMatchingClient.matchOrderedBreadcrumbs(rawBreadcrumbs)).thenReturn(matchedBreadcrumbs);
         when(gpxExportService.exportTrack("Boston Marathon", "OSRM matched marathon route", matchedAsRaw)).thenReturn(gpxXml);
         when(persistenceService.save(
+                runner,
                 "boston-marathon",
                 "Boston Marathon",
                 "Boston",
@@ -62,6 +65,7 @@ class MarathonRouteMatchAndExportServiceTests {
         );
 
         MarathonRouteMatchAndExportService.MarathonRouteMatchAndExportResult result = service.matchExportAndPersist(
+                runner,
                 "boston-marathon",
                 "Boston Marathon",
                 "Boston",
@@ -74,6 +78,7 @@ class MarathonRouteMatchAndExportServiceTests {
         verify(osrmMapMatchingClient).matchOrderedBreadcrumbs(rawBreadcrumbs);
         verify(gpxExportService).exportTrack("Boston Marathon", "OSRM matched marathon route", matchedAsRaw);
         verify(persistenceService).save(
+                runner,
                 "boston-marathon",
                 "Boston Marathon",
                 "Boston",

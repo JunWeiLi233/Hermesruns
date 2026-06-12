@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,16 +26,22 @@ public class StravaAutoSyncScheduler {
     private static final Logger log = LoggerFactory.getLogger(StravaAutoSyncScheduler.class);
 
     private final RunnerRepository runnerRepository;
-    private final OAuthController oAuthController;
+    private final StravaTokenService stravaTokenService;
+    private final StravaSyncService stravaSyncService;
     private final AdminBackgroundJobService adminBackgroundJobService;
+
+    @Value("${strava.sync.enabled:true}")
+    private boolean syncEnabled;
 
     public StravaAutoSyncScheduler(
             RunnerRepository runnerRepository,
-            OAuthController oAuthController,
+            StravaTokenService stravaTokenService,
+            StravaSyncService stravaSyncService,
             AdminBackgroundJobService adminBackgroundJobService
     ) {
         this.runnerRepository = runnerRepository;
-        this.oAuthController = oAuthController;
+        this.stravaTokenService = stravaTokenService;
+        this.stravaSyncService = stravaSyncService;
         this.adminBackgroundJobService = adminBackgroundJobService;
     }
 
@@ -45,6 +52,10 @@ public class StravaAutoSyncScheduler {
      */
     @Scheduled(fixedDelayString = "${strava.sync.interval-ms:600000}", initialDelay = 120_000)
     public void syncAllStravaRunners() {
+        if (!syncEnabled) {
+            log.debug("Strava auto-sync: scheduled sync disabled");
+            return;
+        }
         runSyncJob(null, "scheduler");
     }
 
@@ -53,7 +64,19 @@ public class StravaAutoSyncScheduler {
     }
 
     private AdminBackgroundJob runSyncJob(Runner actor, String triggerSource) {
-        if (!oAuthController.isStravaConfigured()) {
+        if (!syncEnabled) {
+            AdminBackgroundJob job = adminBackgroundJobService.createJob(
+                    "STRAVA_GLOBAL_SYNC",
+                    triggerSource,
+                    actor,
+                    "Strava sync is disabled.",
+                    Map.of("enabled", false)
+            );
+            adminBackgroundJobService.markCompleted(job, 0, 0, "Strava sync is disabled.", Map.of("enabled", false));
+            return job;
+        }
+
+        if (!stravaTokenService.isStravaConfigured()) {
             AdminBackgroundJob job = adminBackgroundJobService.createJob(
                     "STRAVA_GLOBAL_SYNC",
                     triggerSource,
@@ -94,14 +117,14 @@ public class StravaAutoSyncScheduler {
 
         for (Runner runner : stravaRunners) {
             try {
-                String accessToken = oAuthController.resolveRunnerStravaAccessToken(runner);
+                String accessToken = stravaTokenService.resolveRunnerStravaAccessToken(runner);
                 if (accessToken == null || accessToken.isBlank()) {
                     log.debug("Strava auto-sync: skipping runner {} (no valid token)", runner.getId());
                     failed++;
                     failures.add(failureRecord(runner, "Missing access token"));
                     continue;
                 }
-                oAuthController.fetchAndSaveStravaActivities(accessToken, runner.getId(), true, "scheduled_recent_sync");
+                stravaSyncService.fetchAndSaveStravaActivities(accessToken, runner.getId(), true, "scheduled_recent_sync");
                 synced++;
             } catch (Exception e) {
                 log.warn("Strava auto-sync: failed for runner {}: {}", runner.getId(), e.getMessage());

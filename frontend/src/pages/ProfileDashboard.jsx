@@ -8,23 +8,54 @@ import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import Modal from '../components/Modal';
 import FooterNavLinks from '../components/FooterNavLinks';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDate, formatDistance, formatDuration, formatPaceSeconds } from '../utils/format';
 import {
   buildProgressionAtlas,
-  getNearestProgressionPointIndex,
   PROGRESSION_TIMEFRAMES,
 } from '../utils/progressionAtlas';
 import { getTodayRunRecommendation } from '../utils/todayRun';
-import { buildRecentShoeSignal } from '../utils/shoeRotation';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
+import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../utils/vdot';
+import { calculateStreaks, getDaysSinceLastRun } from '../utils/streakUtils';
+import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';
+import ComebackMessage from '../components/ComebackMessage';
 
 const DASHBOARD_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCduh8I3MMazSPbifhs59F6YdwIOS-ZRvW7t_n3qJKHxcqDJP3fep7cglrfaXiwrYYPwPxFtz_ExFJggZD-Cy5WZbURvgfE6h4Bvc2M_XU19LaXiqyfdCoyiRn0Aoln4WxGCgqJqtK1Kn2Mlp-KiHvYvqqeidejVqd75xj0rXOXokd_ePH6X6P2LEuMuuZNA5N5gVErlHBg3f0Qdi_d5PaePI6Fzw8BoDHmloQLsQl4agd74Hb85CXqnA1DUwAI-P6P3oPHBwKS50k8';
 const PR_SNAPSHOT_VERSION = 1;
 
 function getPrSnapshotStorageKey(email) {
   return `hermes_pr_snapshot_${String(email || '').trim().toLowerCase()}`;
+}
+
+function getDashboardCacheKey(email) {
+  const safe = String(email || '').trim().toLowerCase();
+  return safe ? `hermes_profile_dashboard_${safe}` : 'hermes_profile_dashboard_anon';
+}
+
+// Cap the runs array we write to localStorage. Most accounts have well under
+// this; power users with thousands of activities would otherwise blow past the
+// 5 MB quota. The background revalidate still hydrates the full list into
+// memory, so derived stats stay correct after the first paint.
+const DASHBOARD_CACHE_RUN_LIMIT = 500;
+
+function buildDashboardCacheSnapshot(dashboardData) {
+  if (!dashboardData || !dashboardData.profile) return null;
+  const cappedRuns = Array.isArray(dashboardData.runs)
+    ? dashboardData.runs.slice(0, DASHBOARD_CACHE_RUN_LIMIT)
+    : [];
+  return {
+    cachedAt: Date.now(),
+    profileEmail: dashboardData.profile?.email || null,
+    profile: dashboardData.profile,
+    runs: cappedRuns,
+    coachState: dashboardData.coachState ?? null,
+    coachToday: dashboardData.coachToday ?? null,
+    races: Array.isArray(dashboardData.races) ? dashboardData.races : [],
+    musclePlan: dashboardData.musclePlan ?? null,
+  };
 }
 
 function readJsonStorage(key) {
@@ -84,14 +115,14 @@ function startOfIsoWeek(date) {
   return copy;
 }
 
-function formatPaceDisplay(secondsPerKm, lang) {
+function formatPaceDisplay(secondsPerKm, t) {
   if (!Number.isFinite(secondsPerKm) || secondsPerKm <= 0) return '--';
-  return `${formatPaceSeconds(secondsPerKm)} ${lang === 'zh-CN' ? '/公里' : '/km'}`;
+  return `${formatPaceSeconds(secondsPerKm)} ${t('run_detail.unit_pace')}`;
 }
 
-function formatElevationDisplay(totalMeters, lang) {
+function formatElevationDisplay(totalMeters, t) {
   if (!Number.isFinite(totalMeters) || totalMeters <= 0) return '--';
-  return `${Math.round(totalMeters)} ${lang === 'zh-CN' ? '米' : 'm'}`;
+  return `${Math.round(totalMeters)} ${t('run_detail.unit_meter')}`;
 }
 
 function getDisplayName(profile, fallback) {
@@ -107,7 +138,7 @@ function buildWeekBars(runs, lang) {
   const dayNames = Array.from({ length: 7 }, (_, index) => {
     const day = new Date(weekStart);
     day.setDate(weekStart.getDate() + index);
-    return day.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { weekday: 'short' }).slice(0, 3).toUpperCase();
+    return day.toLocaleDateString(lang, { weekday: 'short' }).slice(0, 3).toUpperCase();
   });
 
   const actual = Array.from({ length: 7 }, () => 0);
@@ -150,7 +181,7 @@ function buildWeekBars(runs, lang) {
   const todayIndex = Math.max(0, Math.min(6, Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - weekStart) / 86400000)));
 
   return dayNames.map((label, index) => ({
-    key: `${label}-${index}`,
+    key: label,
     index,
     label,
     actual: actual[index],
@@ -262,7 +293,7 @@ function buildSessionMetric(run, lang, unit, t) {
     };
   }
 
-  const elevation = Number(run?.elevationGainMeters || run?.totalElevationGainMeters || 0);
+  const elevation = Number(run?.elevationGainMeters ?? run?.totalElevationGainMeters ?? run?.totalElevationGain ?? 0);
   if (elevation > 0) {
     return {
       value: `${Math.round(elevation)} m`,
@@ -279,7 +310,7 @@ function buildSessionMetric(run, lang, unit, t) {
 function formatRunDate(run, lang) {
   const started = new Date(run?.startTime || run?.startDate || 0);
   if (Number.isNaN(started.getTime())) return '--';
-  return started.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+  return started.toLocaleDateString(lang, {
     month: 'short',
     day: 'numeric',
   });
@@ -385,6 +416,106 @@ function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, r
   return breakthroughs;
 }
 
+function isRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function sortRunsByMostRecent(runs) {
+  const list = Array.isArray(runs) ? [...runs] : [];
+  list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+  return list;
+}
+
+function normalizeProfileDashboardPayload(payload) {
+  if (!isRecord(payload) || !isRecord(payload.profile)) return null;
+  const activities = payload.activities ?? payload.runs;
+  if (!Array.isArray(activities)) return null;
+
+  return {
+    source: 'batch',
+    profile: payload.profile,
+    runs: sortRunsByMostRecent(activities),
+    coachState: payload.coachState ?? payload.state ?? null,
+    coachToday: payload.coachToday ?? payload.today ?? null,
+    personalRecords: payload.personalRecords ?? payload.personalRecordSummary ?? null,
+    races: payload.races ?? [],
+    shoes: Array.isArray(payload.shoes) ? payload.shoes : [],
+    musclePlan: payload.musclePlan ?? payload.trainingMusclePlan ?? null,
+    quota: payload.quota ?? payload.subscriptionState ?? null,
+    deferredEnrichment: payload.deferredEnrichment === true,
+  };
+}
+
+async function loadProfileDashboardFallbackData() {
+  const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
+    apiJson('/api/profile/me'),
+    apiJson('/api/activities'),
+    apiJson('/api/shoes'),
+  ]);
+
+  if (profileResult.status !== 'fulfilled') {
+    throw profileResult.reason || new Error('profile_load_failed');
+  }
+
+  return {
+    source: 'fallback',
+    profile: profileResult.value,
+    runs: sortRunsByMostRecent(activitiesResult.status === 'fulfilled' ? activitiesResult.value : []),
+    shoes: shoesResult.status === 'fulfilled' && Array.isArray(shoesResult.value) ? shoesResult.value : [],
+  };
+}
+
+async function loadProfileDashboardFallbackEnrichmentData() {
+  const [
+    coachStateData,
+    coachTodayData,
+    personalRecordsData,
+    racesData,
+    musclePlanData,
+    quotaData,
+  ] = await Promise.all([
+    apiJson('/api/coach/state').catch(() => null),
+    apiJson('/api/coach/today').catch(() => null),
+    apiJson('/api/profile/personal-records').catch(() => null),
+    apiJson('/api/races').catch(() => null),
+    apiJson('/api/training/muscle/plan').catch(() => null),
+    apiJson('/api/profile/quota').catch(() => null),
+  ]);
+
+  return {
+    coachState: coachStateData,
+    coachToday: coachTodayData,
+    personalRecords: personalRecordsData,
+    races: racesData,
+    musclePlan: musclePlanData,
+    quota: quotaData,
+  };
+}
+
+async function loadProfileDashboardData() {
+  try {
+    const batchPayload = await apiJson('/api/profile/dashboard');
+    const normalized = normalizeProfileDashboardPayload(batchPayload);
+    if (normalized) return normalized;
+  } catch {
+    // Fall through to the individual endpoints that powered the dashboard before batching.
+  }
+
+  return loadProfileDashboardFallbackData();
+}
+
+function getUpcomingRace(racesData) {
+  if (!Array.isArray(racesData)) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const upcoming = racesData
+    .filter(r => !r.canceled)
+    .map(r => ({ ...r, date: r.date ?? r.eventDate, parsedDate: new Date(r.date ?? r.eventDate) }))
+    .filter(r => !Number.isNaN(r.parsedDate.getTime()) && r.parsedDate >= now)
+    .sort((a, b) => a.parsedDate - b.parsedDate);
+  return upcoming[0] || null;
+}
+
 function formatCelebrationValue(entry, lang, unit, t) {
   if (entry.type === 'distance') {
     return formatDuration(entry.record?.elapsedSeconds || 0);
@@ -393,10 +524,10 @@ function formatCelebrationValue(entry, lang, unit, t) {
     return formatDistance(entry.record?.primaryValue || 0, 1, lang, unit);
   }
   if (entry.type === 'pace') {
-    return `${formatPaceSeconds(entry.record?.primaryValue || 0)} ${lang === 'zh-CN' ? '/公里' : '/km'}`;
+    return `${formatPaceSeconds(entry.record?.primaryValue || 0)} ${t('run_detail.unit_pace')}`;
   }
   if (entry.type === 'elevation') {
-    return `${Math.round(Number(entry.record?.primaryValue || 0))} ${lang === 'zh-CN' ? '米爬升' : 'm gain'}`;
+    return `${Math.round(Number(entry.record?.primaryValue || 0))} ${t('run_detail.unit_elevation_gain')}`;
   }
   return t('profile.pr_modal_value_fallback');
 }
@@ -412,7 +543,7 @@ function getCelebrationLabel(entry, t) {
 }
 
 export default function ProfileDashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email: authEmail } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -420,17 +551,20 @@ export default function ProfileDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
-  const [shoes, setShoes] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
-  const [races, _setRaces] = useState([]);
+  const [_races, _setRaces] = useState([]);
   const [nextRace, setNextRace] = useState(null);
   const [loadState, setLoadState] = useState('loading');
   const [banner, setBanner] = useState(null);
   const [prCelebration, setPrCelebration] = useState(null);
+  const [dismissedComeback, setDismissedComeback] = useState(false);
   const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
-  const [activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
+  const [_activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
+  const [_musclePlan, setMusclePlan] = useState(null);
+  const [weeklyDigest, setWeeklyDigest] = useState(null);
+  const [weeklyDigestLoading, setWeeklyDigestLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -440,59 +574,57 @@ export default function ProfileDashboard() {
 
     let cancelled = false;
 
+    // Stale-while-revalidate: paint immediately from the last cached payload
+    // for this account, then fetch fresh data in the background. Only the
+    // first-ever login (no cache) shows the loading spinner.
+    const cacheKey = getDashboardCacheKey(authEmail);
+    const cachedSnapshot = readJsonStorage(cacheKey);
+    const cachedMatchesUser =
+      cachedSnapshot
+      && (!authEmail
+        || !cachedSnapshot.profileEmail
+        || String(cachedSnapshot.profileEmail).toLowerCase() === String(authEmail).toLowerCase());
+    const hasUsableCache = Boolean(cachedSnapshot && cachedMatchesUser && Array.isArray(cachedSnapshot.runs));
+
+    if (hasUsableCache) {
+      setProfile(cachedSnapshot.profile || null);
+      setRuns(cachedSnapshot.runs);
+      if (cachedSnapshot.coachState && typeof cachedSnapshot.coachState === 'object') {
+        setCoachState(cachedSnapshot.coachState);
+      }
+      if (cachedSnapshot.coachToday && typeof cachedSnapshot.coachToday === 'object') {
+        setCoachToday(cachedSnapshot.coachToday);
+      }
+      if (Array.isArray(cachedSnapshot.races)) {
+        _setRaces(cachedSnapshot.races);
+        setNextRace(getUpcomingRace(cachedSnapshot.races));
+      }
+      if (cachedSnapshot.musclePlan && typeof cachedSnapshot.musclePlan === 'object' && cachedSnapshot.musclePlan.days) {
+        setMusclePlan(cachedSnapshot.musclePlan);
+      }
+      setLoadState('ready');
+    }
+
     async function loadDashboard() {
-      setLoadState('loading');
+      if (!hasUsableCache) setLoadState('loading');
       try {
-        const [profileData, activitiesData, shoesData] = await Promise.all([
-          apiJson('/api/profile/me'),
-          apiJson('/api/activities'),
-          apiJson('/api/shoes'),
-        ]);
+        const dashboardData = await loadProfileDashboardData();
 
         if (cancelled) return;
 
-        const list = Array.isArray(activitiesData) ? activitiesData : [];
-        list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+        const profileData = dashboardData.profile;
+        const list = dashboardData.runs;
 
-        setProfile(profileData);
-        setRuns(list);
-        setShoes(Array.isArray(shoesData) ? shoesData : []);
-        setLoadState('ready');
-
-        const query = new URLSearchParams(window.location.search);
-        if (query.get('source') === 'strava') {
-          setBanner({
-            tone: 'success',
-            message: t('profile.sync_activity_count', { count: list.length }),
-          });
-          query.delete('source');
-          const nextQuery = query.toString();
-          window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
-        }
-
-        void Promise.all([
-          apiJson('/api/coach/state').catch(() => null),
-          apiJson('/api/coach/today').catch(() => null),
-          apiJson('/api/profile/personal-records').catch(() => null),
-          apiJson('/api/races').catch(() => null),
-        ]).then(([coachStateData, coachTodayData, personalRecordsData, racesData]) => {
-          if (cancelled) return;
-
-          setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
-          setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
-
-          if (Array.isArray(racesData)) {
-            _setRaces(racesData);
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            const upcoming = racesData
-              .filter(r => !r.canceled)
-              .map(r => ({ ...r, parsedDate: new Date(r.date) }))
-              .filter(r => !Number.isNaN(r.parsedDate.getTime()) && r.parsedDate >= now)
-              .sort((a, b) => a.parsedDate - b.parsedDate);
-            setNextRace(upcoming[0] || null);
+        function applyDashboardEnrichment(enrichmentData) {
+          setCoachState(enrichmentData.coachState && typeof enrichmentData.coachState === 'object' ? enrichmentData.coachState : null);
+          setCoachToday(enrichmentData.coachToday && typeof enrichmentData.coachToday === 'object' ? enrichmentData.coachToday : null);
+          setMusclePlan(enrichmentData.musclePlan && typeof enrichmentData.musclePlan === 'object' && enrichmentData.musclePlan.days ? enrichmentData.musclePlan : null);
+          if (Array.isArray(enrichmentData.races)) {
+            _setRaces(enrichmentData.races);
+            setNextRace(getUpcomingRace(enrichmentData.races));
           }
 
+          const personalRecordsData = enrichmentData.personalRecords;
           if (profileData?.email && personalRecordsData && typeof personalRecordsData === 'object') {
             const storageKey = getPrSnapshotStorageKey(profileData.email);
             const previousSnapshot = readJsonStorage(storageKey);
@@ -510,11 +642,64 @@ export default function ProfileDashboard() {
               });
             }
           }
-        }).catch(() => {
-          // Optional dashboard enrichments should not block the first render.
-        });
+
+          // Re-write cache with merged enrichment so next visit hydrates coach
+          // state, today, races, and muscle plan from the cache on first paint.
+          const enrichedSnapshot = buildDashboardCacheSnapshot({
+            ...dashboardData,
+            coachState: enrichmentData.coachState ?? dashboardData.coachState ?? null,
+            coachToday: enrichmentData.coachToday ?? dashboardData.coachToday ?? null,
+            races: Array.isArray(enrichmentData.races) ? enrichmentData.races : dashboardData.races,
+            musclePlan: enrichmentData.musclePlan ?? dashboardData.musclePlan ?? null,
+          });
+          if (enrichedSnapshot) writeJsonStorage(cacheKey, enrichedSnapshot);
+        }
+
+        setProfile(profileData);
+        setRuns(list);
+        setLoadState('ready');
+
+        // Write the primary dashboard data to cache right away so the next
+        // page load can paint instantly even if enrichment hasn't merged yet.
+        const primarySnapshot = buildDashboardCacheSnapshot(dashboardData);
+        if (primarySnapshot) writeJsonStorage(cacheKey, primarySnapshot);
+
+        const query = new URLSearchParams(window.location.search);
+        if (query.get('source') === 'strava') {
+          setBanner({
+            tone: 'success',
+            message: t('profile.sync_activity_count', { count: list.length }),
+          });
+          query.delete('source');
+          const nextQuery = query.toString();
+          window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
+        }
+
+        if (dashboardData.source === 'batch') {
+          applyDashboardEnrichment(dashboardData);
+          if (dashboardData.deferredEnrichment) {
+            // The batch already includes coachState, personalRecords, races,
+            // musclePlan, and quota. Only coachToday was intentionally omitted
+            // to avoid blocking the batch on the Open-Meteo HTTP call.
+            // Fetch just that one endpoint instead of all six enrichment calls.
+            void apiJson('/api/coach/today').then((todayData) => {
+              if (!cancelled && todayData && typeof todayData === 'object') {
+                setCoachToday(todayData);
+              }
+            }).catch(() => {});
+          }
+        } else {
+          void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
+            if (!cancelled) applyDashboardEnrichment(enrichmentData);
+          }).catch(() => {
+            // Optional dashboard enrichments should not block the first render.
+          });
+        }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !hasUsableCache) {
+          // Only show the error card when there's no cached snapshot to fall
+          // back on. With cache, we silently keep the stale dashboard visible
+          // and let the next mount retry — better than blanking the user.
           setLoadState('error');
         }
       }
@@ -524,7 +709,43 @@ export default function ProfileDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate, t]);
+  }, [isAuthenticated, navigate, t, authEmail]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const query = new URLSearchParams(window.location.search);
+    const redirectedFromStrava = query.get('source') === 'strava';
+    const pendingStravaHydration = redirectedFromStrava || consumeStravaOauthPendingFlag({});
+
+    if (!pendingStravaHydration) {
+      return;
+    }
+
+    setBanner((current) => current ?? {
+      tone: 'info',
+      message: t('profile.strava_sync_processing'),
+    });
+
+    if (redirectedFromStrava) {
+      query.delete('source');
+      const nextQuery = query.toString();
+      window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
+    }
+  }, [isAuthenticated, t]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    function handleStravaSyncFinished() {
+      window.location.reload();
+    }
+
+    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    return () => {
+      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -558,10 +779,27 @@ export default function ProfileDashboard() {
     }
   }, [isAuthenticated, t]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let cancelled = false;
+    setWeeklyDigestLoading(true);
+    apiJson('/api/weekly-digest')
+      .then((data) => {
+        if (!cancelled) setWeeklyDigest(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setWeeklyDigest(null);
+      })
+      .finally(() => {
+        if (!cancelled) setWeeklyDigestLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
+
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const currentDateLine = useMemo(() => {
     const now = new Date();
-    return now.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+    return now.toLocaleDateString(lang, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -569,17 +807,33 @@ export default function ProfileDashboard() {
   }, [lang]);
 
   const todayBundle = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
-  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
-  const shoeRecommendation = shoeSignal?.recommendation;
-
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
-  const profileVdot = useMemo(() => estimateCurrentVdot(runs).representativeVdot, [runs]);
-  const profileVdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
+  const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
+  const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
+  const streak = useMemo(() => calculateStreaks(runs), [runs]);
+  const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
+  const shouldShowComebackCard = (
+    loadState === 'ready'
+    && !dismissedComeback
+    && todayBundle.recommendation?.intent === 'comeback'
+    && runs.length > 0
+  );
+  const rewardShowcase = useMemo(() => buildRewardShowcase(runs, lang), [runs, lang]);
+  const rewardEarnedCount = rewardShowcase.earnedRewards.length;
+  const rewardTotalCount = rewardShowcase.allRewards.length;
+  const rewardCompletionPct = rewardTotalCount > 0
+    ? Math.round((rewardEarnedCount / rewardTotalCount) * 100)
+    : 0;
+  const rewardNextMilestone = rewardShowcase.upcomingRewards[0] || null;
+  const rewardNextMilestonePct = rewardNextMilestone
+    ? Math.round(rewardNextMilestone.progress * 100)
+    : 100;
 
   const racePredictions = useMemo(() => {
-    if (profileVdot <= 0) return [];
-    return buildOrderedRacePredictions(profileVdot, runs).map((d) => {
+    const vdotValue = profileVdot.representativeVdot;
+    if (vdotValue <= 0) return [];
+    return buildOrderedRacePredictions(vdotValue, runs).map((d) => {
       const timeMin = d.timeMin;
       if (!timeMin || timeMin <= 0) return null;
       const totalSec = Math.round(timeMin * 60);
@@ -591,14 +845,7 @@ export default function ProfileDashboard() {
     }).filter(Boolean);
   }, [profileVdot, runs, lang]);
 
-  const thresholdEstimate = useMemo(() => {
-    if (coachState?.profileMaxHeartRateBpm) return Math.round(coachState.profileMaxHeartRateBpm * 0.88);
-    const maxHr = runs.reduce((best, run) => Math.max(best, Number(run?.maxHeartRate || 0)), 0);
-    return maxHr > 0 ? Math.round(maxHr * 0.88) : null;
-  }, [coachState, runs]);
-
   const restingHrValue = coachState?.lastNightRestingHr ?? coachState?.profileRestingHeartRateBpm ?? null;
-  const sleepScoreValue = coachState?.lastSleepScore ?? null;
 
   const raceCountdown = useMemo(() => {
     if (!nextRace?.parsedDate) return null;
@@ -607,14 +854,6 @@ export default function ProfileDashboard() {
     const diffTime = nextRace.parsedDate - now;
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }, [nextRace]);
-
-  const racePrepPhase = useMemo(() => {
-    if (raceCountdown === null) return null;
-    if (raceCountdown <= 7) return { key: 'taper', label: t('profile.dashboard_race_phase_taper') };
-    if (raceCountdown <= 21) return { key: 'peak', label: t('profile.dashboard_race_phase_peak') };
-    if (raceCountdown <= 56) return { key: 'specific', label: t('profile.dashboard_race_phase_specific') };
-    return { key: 'base', label: t('profile.dashboard_race_phase_base') };
-  }, [raceCountdown, t]);
 
   const heroWorkout = coachToday?.today || null;
   const heroWorkoutTitle = buildWorkoutHeadline(heroWorkout, todayBundle.recommendation, t);
@@ -625,42 +864,25 @@ export default function ProfileDashboard() {
   const heroLoad = coachState?.volumeKm7d
     ? formatDistance(coachState.volumeKm7d, 1, lang, unit)
     : '--';
-  const recentSessions = runs.slice(0, 3);
   const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
   const weeklyProjectedTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.projected || 0), 0);
   const weeklyCompletion = weeklyProjectedTotal > 0
     ? Math.max(0, Math.min(100, Math.round((weeklyActualTotal / weeklyProjectedTotal) * 100)))
     : 0;
-  const featuredSession = recentSessions[0] || null;
-  const featuredSessionMetric = featuredSession ? buildSessionMetric(featuredSession, lang, unit, t) : null;
   const stamina = useMemo(
     () => coachState?.stamina || buildStaminaFallback(readiness, heroPace, restingHrValue),
     [coachState?.stamina, heroPace, readiness, restingHrValue],
   );
-  const staminaArrowIcon = stamina.direction === 'up'
-    ? 'arrow_upward'
-    : stamina.direction === 'steady'
-      ? 'trending_flat'
-      : 'arrow_downward';
   const staminaPaceLabel = stamina.targetPaceSecondsPerKm != null
     ? formatPaceSeconds(stamina.targetPaceSecondsPerKm)
     : stamina.fallbackPaceLabel || '--';
   const staminaHeartLabel = stamina.targetHeartRateBpm != null ? String(stamina.targetHeartRateBpm) : '--';
   const staminaScorePercent = Math.max(0, Math.min(100, Number(stamina.scorePercent || 0)));
   const staminaCapPercent = Math.max(0, Math.min(100, Number(stamina.recoveryCapPercent || 0)));
-  const staminaCapMarkerLeft = Math.max(4, Math.min(96, staminaCapPercent));
-  const progressionFrames = useMemo(() => PROGRESSION_TIMEFRAMES.map((key) => ({
-    key,
-    label: t(`profile.dashboard_progression_${key}`),
-  })), [t]);
   const progressionAtlas = useMemo(
     () => buildProgressionAtlas(runs, activeProgressionFrame, lang),
     [activeProgressionFrame, lang, runs],
   );
-  const activeProgressionPoint = activeProgressionPointIndex >= 0
-    ? progressionAtlas.chartPoints[activeProgressionPointIndex] || progressionAtlas.latestPoint
-    : progressionAtlas.latestPoint;
-
   useEffect(() => {
     if (progressionAtlas.chartPoints.length === 0) {
       setActiveProgressionPointIndex(-1);
@@ -669,34 +891,21 @@ export default function ProfileDashboard() {
     setActiveProgressionPointIndex(progressionAtlas.chartPoints.length - 1);
   }, [progressionAtlas.chartPoints.length, progressionAtlas.latestPoint?.key]);
 
-  function setNearestProgressionPoint(clientX, currentTarget) {
-    if (!currentTarget || progressionAtlas.chartPoints.length === 0) return;
-
-    const bounds = currentTarget.getBoundingClientRect();
-    if (!bounds.width) return;
-
-    const xPercent = ((clientX - bounds.left) / bounds.width) * 100;
-    const nextIndex = getNearestProgressionPointIndex(progressionAtlas.chartPoints, xPercent);
-    setActiveProgressionPointIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
-  }
-
-  function resetProgressionPoint() {
-    setActiveProgressionPointIndex(progressionAtlas.chartPoints.length - 1);
-  }
-
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard', active: true },
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
+    { key: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory', icon: 'territory' },
+    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
+    { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
   ];
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page profile-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <Modal
         isOpen={Boolean(prCelebration)}
         onClose={() => setPrCelebration(null)}
@@ -721,7 +930,7 @@ export default function ProfileDashboard() {
                   </div>
                   <div className="runner-pr-modal-entry-meta">
                     <span>{entry.record?.sourceRunName || t('profile.dashboard_session_fallback')}</span>
-                    <span>{formatDate(entry.record?.recordedAt, lang === 'zh-CN' ? 'zh-CN' : 'en-US')}</span>
+                    <span>{formatDate(entry.record?.recordedAt, lang)}</span>
                   </div>
                 </article>
               ))}
@@ -784,9 +993,11 @@ export default function ProfileDashboard() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_dashboard')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_dashboard')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
@@ -802,664 +1013,591 @@ export default function ProfileDashboard() {
         </header>
 
         <div className="runner-shell-canvas">
-      <div className="runner-dashboard-main">
-        <section className="runner-dashboard-hero-copy">
-          <h1>{`${t('profile.dashboard_greeting')}, ${displayName}.`}</h1>
-          <p>{currentDateLine} | {t('profile.dashboard_window_active')}</p>
-        </section>
+          <div className="hd-content">
+            {/* ── Kinetic Editorial Sections ── */}
 
-        {banner && (
-          <section className={`runner-dashboard-banner tone-${banner.tone || 'info'}`}>
-            <span>{banner.message}</span>
-            <button type="button" onClick={() => setBanner(null)} aria-label={t('profile.close')}>x</button>
-          </section>
-        )}
-
-        {loadState === 'loading' && (
-          <section className="runner-dashboard-loading-card">
-            <strong>{t('runs.loading')}</strong>
-          </section>
-        )}
-
-        {loadState === 'error' && (
-          <section className="runner-dashboard-loading-card">
-            <strong>{t('runs.load_error')}</strong>
-          </section>
-        )}
-
-        {loadState === 'ready' && (
-          <>
-            <section className="runner-dashboard-grid">
-              <article className="runner-dashboard-readiness-card">
-                <span className="runner-dashboard-card-kicker">{t('profile.dashboard_readiness_status')}</span>
-                <h2>{readiness.label}</h2>
-                <div className="runner-dashboard-readiness-meter" aria-hidden="true">
-                  <div className="runner-dashboard-readiness-meter-fill" style={{ width: `${readiness.score}%` }} />
+            {/* 1. Hero */}
+            <section className="hd-hero">
+              <div className="hd-hero-text">
+                <span className="hd-hero-date">{currentDateLine}</span>
+                <h1 className="hd-hero-greeting">
+                  {(() => {
+                    const h = new Date().getHours();
+                    if (h < 12) return t('profile.dashboard_redesign.hero_morning');
+                    if (h < 18) return t('profile.dashboard_redesign.hero_afternoon');
+                    return t('profile.dashboard_redesign.hero_evening');
+                  })()}, {displayName}.
+                </h1>
+              </div>
+              <div className="hd-hero-readiness">
+                <div className="hd-readiness-ring">
+                  <svg viewBox="0 0 80 80" className="hd-readiness-svg">
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth="6" />
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="url(#hdReadinessGrad)" strokeWidth="6"
+                      strokeDasharray={`${readiness.score * 2.136} 999`}
+                      strokeLinecap="round" transform="rotate(-90 40 40)" />
+                    <defs>
+                      <linearGradient id="hdReadinessGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#f07561" />
+                        <stop offset="100%" stopColor="#a0392a" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="hd-readiness-value"><strong>{readiness.score}</strong></div>
                 </div>
-                <div className="runner-dashboard-readiness-score">{readiness.score}%</div>
-                <div className="runner-dashboard-readiness-note">
-                  <span className="runner-dashboard-note-dot" aria-hidden="true" />
-                  <p>{readiness.copy}</p>
-                </div>
-              </article>
-
-              <article className="runner-dashboard-workout-card" style={{ backgroundImage: `url(${DASHBOARD_HERO_IMAGE})` }}>
-                <div className="runner-dashboard-workout-overlay" />
-                <div className="runner-dashboard-workout-content">
-                  <span className="runner-dashboard-workout-chip">{t('profile.dashboard_suggested_workout')}</span>
-                  <h3>{heroWorkoutTitle}</h3>
-                  <div className="runner-dashboard-workout-stats">
-                    <div>
-                      <span>{t('profile.dashboard_total_duration')}</span>
-                      <strong>{heroDuration}</strong>
-                    </div>
-                    <div>
-                      <span>{t('profile.dashboard_target_pace')}</span>
-                      <strong>{heroPace}</strong>
-                    </div>
-                    <div>
-                      <span>{t('profile.dashboard_focus_load')}</span>
-                      <strong>{heroLoad}</strong>
-                    </div>
-                  </div>
-                </div>
-              </article>
-
-              <article className="runner-dashboard-weekly-card">
-                <div className="runner-dashboard-section-head">
-                  <div>
-                    <span className="runner-dashboard-card-kicker">{t('profile.dashboard_training_load')}</span>
-                    <h4>{t('profile.dashboard_weekly_progress')}</h4>
-                  </div>
-                  <div className="runner-dashboard-legend">
-                    <span><i className="actual" /> {t('profile.dashboard_actual')}</span>
-                    <span><i className="projected" /> {t('profile.dashboard_projected')}</span>
-                  </div>
-                </div>
-                <div className="runner-dashboard-bar-chart">
-                  {activeWeeklyBar ? (
-                    <div
-                      className={`runner-dashboard-bar-tooltip${activeWeeklyBar.index <= 1 ? ' is-left' : activeWeeklyBar.index >= 5 ? ' is-right' : ''}`}
-                      role="status"
-                      aria-live="polite"
-                      style={{
-                        ...(activeWeeklyBar.index > 1 && activeWeeklyBar.index < 5
-                          ? { left: `${((activeWeeklyBar.index + 0.5) / weeklyBars.length) * 100}%` }
-                          : {}),
-                        top: `clamp(6px, calc(${activeWeeklyBar.actualAnchorTopPct}% - 86px), 112px)`,
-                      }}
-                    >
-                      <strong>{activeWeeklyBar.label}</strong>
-                      <span>{t('profile.dashboard_actual')}: {formatDistance(activeWeeklyBar.actual, 1, lang, unit)}</span>
-                      <span>{t('profile.dashboard_projected')}: {formatDistance(activeWeeklyBar.projected, 1, lang, unit)}</span>
-                    </div>
-                  ) : null}
-                  {weeklyBars.map((bar) => (
-                    <div
-                      key={bar.key}
-                      className={`runner-dashboard-bar-col${bar.isToday ? ' is-today' : ''}${activeWeeklyBar?.key === bar.key ? ' is-active' : ''}`}
-                    >
-                      <div className="runner-dashboard-bar-track">
-                        <div className="runner-dashboard-bar projected" style={{ height: `${bar.projectedPct}%` }} />
-                        <div
-                          className="runner-dashboard-bar actual"
-                          style={{ height: `${bar.actualPct}%` }}
-                          onMouseEnter={() => setActiveWeeklyBar(bar)}
-                          onMouseLeave={() => setActiveWeeklyBar(null)}
-                          onFocus={() => setActiveWeeklyBar(bar)}
-                          onBlur={() => setActiveWeeklyBar(null)}
-                          tabIndex={0}
-                        />
-                      </div>
-                      <span>{bar.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="runner-dashboard-sessions-card">
-                <div className="runner-dashboard-section-head">
-                  <div>
-                    <span className="runner-dashboard-card-kicker">{t('profile.dashboard_timeline')}</span>
-                    <h4>{t('profile.dashboard_recent_sessions')}</h4>
-                  </div>
-                </div>
-                {recentSessions.length === 0 ? (
-                  <div className="runner-dashboard-empty">{t('profile.dashboard_no_sessions')}</div>
-                ) : (
-                  <div className="runner-dashboard-session-list">
-                    {recentSessions.map((run) => {
-                      const metric = buildSessionMetric(run, lang, unit, t);
-                      return (
-                        <button
-                          key={run.id}
-                          type="button"
-                          className="runner-dashboard-session-row"
-                          onClick={() => navigate(`/run/${run.id}`)}
-                        >
-                          <div className="runner-dashboard-session-main">
-                            <span className="runner-dashboard-session-icon" aria-hidden="true">&gt;</span>
-                            <div>
-                              <strong>{run.name || t('profile.dashboard_session_fallback')}</strong>
-                              <span>{formatRunDate(run, lang)} | {formatDurationCompact(run.movingTimeSeconds || 0)}</span>
-                            </div>
-                          </div>
-                          <div className="runner-dashboard-session-metric">
-                            <strong>{metric.value}</strong>
-                            <span>{metric.label}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                <button type="button" className="runner-dashboard-history-btn" onClick={() => navigate('/runs')}>
-                  {t('profile.dashboard_view_full_history')}
-                </button>
-              </article>
-            </section>
-
-            <section className="runner-dashboard-progression-atlas" aria-label={t('profile.dashboard_progression_title')}>
-              <div className="runner-dashboard-progression-head">
-                <div className="runner-dashboard-progression-heading">
-                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_progression_kicker')}</span>
-                  <h3>{t('profile.dashboard_progression_title')}</h3>
-                  <p>{t('profile.dashboard_progression_copy')}</p>
-                </div>
-                <div
-                  className="runner-dashboard-progression-switcher"
-                  role="tablist"
-                  aria-label={t('profile.dashboard_progression_switcher')}
-                >
-                  {progressionFrames.map((frame) => (
-                    <button
-                      key={frame.key}
-                      type="button"
-                      role="tab"
-                      className={`runner-dashboard-progression-tab${activeProgressionFrame === frame.key ? ' is-active' : ''}`}
-                      aria-selected={activeProgressionFrame === frame.key}
-                      onClick={() => setActiveProgressionFrame(frame.key)}
-                    >
-                      {frame.label}
-                    </button>
-                  ))}
+                <div className="hd-readiness-meta">
+                  <span className="hd-readiness-label">{t('profile.dashboard_redesign.hero_readiness')}</span>
+                  <span className="hd-readiness-status">{readiness.label}</span>
                 </div>
               </div>
+            </section>
 
-              {progressionAtlas.hasData ? (
-                <>
-                  <div className="runner-dashboard-progression-summary">
-                    <div className="runner-dashboard-progression-summary-main">
-                      <span className="runner-dashboard-progression-label">{t('profile.dashboard_progression_distance')}</span>
-                      <strong>{formatDistance(progressionAtlas.totalDistanceKm, 1, lang, unit)}</strong>
+            {/* Banners / comeback (preserved) */}
+            {banner && (
+              <section className={`runner-dashboard-banner tone-${banner.tone || 'info'}`}>
+                <span>{banner.message}</span>
+                <button type="button" onClick={() => setBanner(null)} aria-label={t('profile.close')}>x</button>
+              </section>
+            )}
+            {shouldShowComebackCard && (
+              <ComebackMessage
+                daysOff={daysOff}
+                onDismiss={() => setDismissedComeback(true)}
+                primaryLabel={t('profile.comeback_action_primary')}
+                secondaryLabel={t('profile.comeback_action_secondary')}
+                onPrimaryAction={() => navigate('/today-run')}
+                onSecondaryAction={() => navigate('/runs')}
+              />
+            )}
+            {loadState === 'loading' && (
+              <section className="runner-dashboard-loading-card">
+                <strong>{t('runs.loading')}</strong>
+              </section>
+            )}
+            {loadState === 'error' && (
+              <section className="runner-dashboard-loading-card">
+                <strong>{t('runs.load_error')}</strong>
+              </section>
+            )}
+            {loadState === 'ready' && runs.length === 0 && (
+              <section className="runner-dashboard-empty-state">
+                <div className="runner-dashboard-empty-hero">
+                  <span className="material-symbols-outlined runner-dashboard-empty-icon" aria-hidden="true">directions_run</span>
+                  <h2>{t('profile.dashboard_empty_title')}</h2>
+                  <p>{t('profile.dashboard_empty_copy')}</p>
+                </div>
+                <div className="runner-dashboard-empty-actions">
+                  <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--primary" onClick={() => navigate('/profile?linking=strava')}>
+                    <span className="material-symbols-outlined" aria-hidden="true">sync</span>
+                    {t('profile.dashboard_empty_cta_strava')}
+                  </button>
+                  <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--secondary" onClick={() => navigate('/today-run')}>
+                    <span className="material-symbols-outlined" aria-hidden="true">today</span>
+                    {t('profile.dashboard_empty_cta_today')}
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {loadState === 'ready' && runs.length > 0 && (
+              <>
+                {/* 2. Today's Session */}
+                <section className="hd-today-card">
+                  <div className="hd-today-bg" style={{ backgroundImage: `url(${DASHBOARD_HERO_IMAGE})` }}>
+                    <div className="hd-today-bg-overlay" />
+                  </div>
+                  <div className="hd-today-content">
+                    <span className="hd-today-kicker">{t('profile.dashboard_redesign.today_kicker')}</span>
+                    <h2 className="hd-today-title">{heroWorkoutTitle}</h2>
+                    <p className="hd-today-purpose">{todayBundle.recommendation?.purpose || readiness.copy}</p>
+                    <div className="hd-today-stats">
+                      <div className="hd-today-stat">
+                        <span className="hd-today-stat-label">{t('profile.dashboard_redesign.today_duration')}</span>
+                        <strong>{heroDuration}</strong>
+                      </div>
+                      <div className="hd-today-stat">
+                        <span className="hd-today-stat-label">{t('profile.dashboard_redesign.today_pace')}</span>
+                        <strong>{heroPace}</strong>
+                      </div>
+                      <div className="hd-today-stat">
+                        <span className="hd-today-stat-label">{t('profile.dashboard_redesign.today_distance')}</span>
+                        <strong>{heroLoad}</strong>
+                      </div>
                     </div>
-                    <div className="runner-dashboard-progression-summary-meta">
-                      <span>{progressionAtlas.rangeLabel}</span>
-                      <span>{t('profile.dashboard_progression_share', { share: progressionAtlas.shareOfDistance })}</span>
+                    <div className="hd-today-actions">
+                      <button type="button" className="hd-btn-primary" onClick={() => navigate('/today-run')}>
+                        {t('profile.dashboard_redesign.today_start')}
+                      </button>
+                      <button type="button" className="hd-btn-ghost" onClick={() => navigate('/analysis')}>
+                        {t('profile.dashboard_redesign.today_details')}
+                      </button>
                     </div>
                   </div>
+                </section>
 
-                  <div className="runner-dashboard-progression-stat-row">
-                    <article className="runner-dashboard-progression-stat">
-                      <span>{t('profile.dashboard_progression_elevation')}</span>
-                      <strong>{formatElevationDisplay(progressionAtlas.totalElevationMeters, lang)}</strong>
-                    </article>
-                    <article className="runner-dashboard-progression-stat">
-                      <span>{t('profile.dashboard_progression_avg_pace')}</span>
-                      <strong>{formatPaceDisplay(progressionAtlas.averagePaceSeconds, lang)}</strong>
-                    </article>
-                    <article className="runner-dashboard-progression-stat">
-                      <span>{t('profile.dashboard_progression_duration')}</span>
-                      <strong>{formatDuration(progressionAtlas.totalMovingSeconds)}</strong>
-                    </article>
-                    <article className="runner-dashboard-progression-stat">
-                      <span>{t('profile.dashboard_progression_sessions')}</span>
-                      <strong>{progressionAtlas.sessionCount}</strong>
-                    </article>
-                  </div>
+                {/* 3. Metric Strip */}
+                <section className="hd-metric-strip">
+                  {/* VDOT card */}
+                  <article className="hd-metric-card">
+                    <div className="hd-metric-head">
+                      <span className="hd-metric-icon">
+                        <span className="material-symbols-outlined">speed</span>
+                      </span>
+                      <span className="hd-metric-kicker">{t('profile.dashboard_redesign.metrics_vdot')}</span>
+                    </div>
+                    <strong className="hd-metric-value">
+                      {profileVdot.representativeVdot > 0 ? profileVdot.representativeVdot.toFixed(1) : '--'}
+                    </strong>
+                    <div className="hd-metric-trend">
+                      {profileVdot.representativeVdot > 0 && vdotTrend.hasData ? (
+                        <span className={`hd-trend-badge ${vdotTrend.direction}`}>
+                          {vdotTrend.direction === 'improving' ? '↑' : vdotTrend.direction === 'declining' ? '↓' : '→'}
+                          {' '}{vdotTrend.delta > 0 ? `+${vdotTrend.delta.toFixed(1)}` : vdotTrend.delta.toFixed(1)}
+                        </span>
+                      ) : null}
+                      <span className="hd-metric-detail">
+                        {profileVdot.representativeVdot > 0 && vdotTrend.hasData
+                          ? t(`profile.vdot_trend_${vdotTrend.direction}`)
+                          : t('profile.dashboard_window_active')}
+                      </span>
+                    </div>
+                  </article>
+                  {/* Weekly load card */}
+                  <article className="hd-metric-card">
+                    <div className="hd-metric-head">
+                      <span className="hd-metric-icon">
+                        <span className="material-symbols-outlined">show_chart</span>
+                      </span>
+                      <span className="hd-metric-kicker">{t('profile.dashboard_redesign.metrics_weekly_load')}</span>
+                    </div>
+                    <strong className="hd-metric-value">{formatDistance(weeklyActualTotal, 1, lang, unit)}</strong>
+                    <div className="hd-metric-trend">
+                      <span className="hd-metric-completion">{weeklyCompletion}%</span>
+                      <span className="hd-metric-detail">
+                        {t('profile.dashboard_redesign.metrics_of_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
+                      </span>
+                    </div>
+                  </article>
+                  {/* Next race countdown card */}
+                  <article className="hd-metric-card">
+                    <div className="hd-metric-head">
+                      <span className="hd-metric-icon">
+                        <span className="material-symbols-outlined">flag</span>
+                      </span>
+                      <span className="hd-metric-kicker">{t('profile.dashboard_redesign.metrics_next_race')}</span>
+                    </div>
+                    <strong className="hd-metric-value">
+                      {nextRace?.name || t('profile.dashboard_redesign.metrics_no_race')}
+                    </strong>
+                    <div className="hd-metric-trend">
+                      {raceCountdown != null ? (
+                        <>
+                          <strong className="hd-race-days">{raceCountdown}</strong>
+                          <span className="hd-metric-detail">{t('profile.dashboard_redesign.metrics_days_left')}</span>
+                        </>
+                      ) : (
+                        <span className="hd-metric-detail">{t('profile.dashboard_redesign.metrics_no_race')}</span>
+                      )}
+                    </div>
+                  </article>
+                </section>
 
-                  <div className="runner-dashboard-progression-lane">
-                    <article className="runner-dashboard-progression-chart-card">
-                      <div
-                        className="runner-dashboard-progression-chart-frame"
-                        onPointerMove={(event) => setNearestProgressionPoint(event.clientX, event.currentTarget)}
-                        onPointerDown={(event) => setNearestProgressionPoint(event.clientX, event.currentTarget)}
-                        onPointerLeave={resetProgressionPoint}
-                      >
-                        <div className="runner-dashboard-progression-gridlines" aria-hidden="true">
-                          <span />
-                          <span />
-                          <span />
-                          <span />
-                        </div>
-                        <svg viewBox="0 0 100 100" className="runner-dashboard-progression-chart" aria-hidden="true" preserveAspectRatio="none">
-                          <defs>
-                            <linearGradient id="runner-dashboard-progression-line" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#ffb4a7" />
-                              <stop offset="100%" stopColor="#f07561" />
-                            </linearGradient>
-                            <linearGradient id="runner-dashboard-progression-area" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="rgba(240, 117, 97, 0.32)" />
-                              <stop offset="100%" stopColor="rgba(240, 117, 97, 0.02)" />
-                            </linearGradient>
-                          </defs>
-                          {progressionAtlas.chartArea ? (
-                            <path d={progressionAtlas.chartArea} fill="url(#runner-dashboard-progression-area)" />
-                          ) : null}
-                          {progressionAtlas.chartLine ? (
-                            <path
-                              d={progressionAtlas.chartLine}
-                              className="runner-dashboard-progression-line-glow"
-                              fill="none"
-                              stroke="url(#runner-dashboard-progression-line)"
-                              strokeWidth="4.6"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          ) : null}
-                          {progressionAtlas.chartLine ? (
-                            <path
-                              d={progressionAtlas.chartLine}
-                              fill="none"
-                              stroke="url(#runner-dashboard-progression-line)"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          ) : null}
-                          {activeProgressionPoint ? (
-                            <line
-                              className="runner-dashboard-progression-focus-rail"
-                              x1={activeProgressionPoint.x}
-                              x2={activeProgressionPoint.x}
-                              y1={activeProgressionPoint.y}
-                              y2="86"
-                            />
-                          ) : null}
-                        </svg>
-                        <div className="runner-dashboard-progression-marker-layer" aria-hidden="true">
-                          {progressionAtlas.chartPoints.map((point) => (
-                            <span
-                              key={`${point.key}-marker`}
-                              className={`runner-dashboard-progression-marker${activeProgressionPoint?.key === point.key ? ' is-active' : ''}`}
-                              style={{
-                                left: `${point.x}%`,
-                                top: `${point.y}%`,
-                              }}
-                            />
-                          ))}
-                          {activeProgressionPoint ? (
-                            <span
-                              className="runner-dashboard-progression-active-marker"
-                              style={{
-                                left: `${activeProgressionPoint.x}%`,
-                                top: `${activeProgressionPoint.y}%`,
-                              }}
-                            >
-                              <span className="runner-dashboard-progression-active-marker-halo" />
-                              <span className="runner-dashboard-progression-active-marker-core" />
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="runner-dashboard-progression-hit-lane">
-                          {progressionAtlas.chartPoints.map((point, index) => (
-                            <button
-                              key={`${point.key}-hit`}
-                              type="button"
-                              className={`runner-dashboard-progression-hitpoint${activeProgressionPoint?.key === point.key ? ' is-active' : ''}`}
-                              style={{
-                                left: `${point.x}%`,
-                                top: `${point.y}%`,
-                              }}
-                              onMouseEnter={() => setActiveProgressionPointIndex(index)}
-                              onFocus={() => setActiveProgressionPointIndex(index)}
-                              onBlur={resetProgressionPoint}
-                              aria-label={`${point.label}: ${formatDistance(point.cumulativeDistance, 1, lang, unit)}`}
-                            />
-                          ))}
-                        </div>
-                        {activeProgressionPoint ? (
+                {/* 4. Training Grid */}
+                <div className="hd-training-grid">
+                  {/* Weekly bar chart */}
+                  <article className="hd-weekly-card">
+                    <div className="hd-card-head">
+                      <div>
+                        <span className="hd-card-kicker">{t('profile.dashboard_redesign.weekly_kicker')}</span>
+                        <h3 className="hd-card-title">{t('profile.dashboard_redesign.weekly_title')}</h3>
+                      </div>
+                      <div className="hd-weekly-legend">
+                        <span><i className="hd-legend-dot actual" />{t('profile.dashboard_redesign.weekly_actual')}</span>
+                        <span><i className="hd-legend-dot projected" />{t('profile.dashboard_redesign.weekly_projected')}</span>
+                      </div>
+                    </div>
+                    <div className="hd-bar-chart">
+                      {weeklyBars.map((bar) => {
+                        const maxVal = Math.max(1, ...weeklyBars.map(b => Math.max(b.actual, b.projected)));
+                        const actualH = Math.max(6, (bar.actual / maxVal) * 100);
+                        const projH = Math.max(6, (bar.projected / maxVal) * 100);
+                        return (
                           <div
-                            className={`runner-dashboard-progression-callout${activeProgressionPoint.x >= 78 ? ' is-right' : activeProgressionPoint.x <= 22 ? ' is-left' : ''}`}
-                            role="status"
-                            aria-live="polite"
-                            style={{
-                              left: `${activeProgressionPoint.x}%`,
-                              top: `${activeProgressionPoint.y}%`,
-                            }}
+                            key={bar.key}
+                            className={`hd-bar-col${bar.isToday ? ' is-today' : ''}`}
+                            onMouseEnter={() => setActiveWeeklyBar(bar)}
+                            onMouseLeave={() => setActiveWeeklyBar(null)}
                           >
-                            <strong>{formatDistance(activeProgressionPoint.cumulativeDistance, 1, lang, unit)}</strong>
-                            <span>{activeProgressionPoint.label}</span>
-                            <small>
-                              {formatDistance(activeProgressionPoint.distanceKm, 1, lang, unit)} · {activeProgressionPoint.sessions} {t('profile.dashboard_progression_sessions')}
-                            </small>
+                            <div className="hd-bar-track">
+                              <div className="hd-bar projected" style={{ height: `${projH}%` }} />
+                              <div className="hd-bar actual" style={{ height: `${actualH}%` }} />
+                            </div>
+                            <span className="hd-bar-label">{bar.label}</span>
                           </div>
-                        ) : null}
+                        );
+                      })}
+                    </div>
+                    {activeWeeklyBar && (
+                      <div className="hd-bar-tooltip" role="status">
+                        <strong>{activeWeeklyBar.label}</strong>: {formatDistance(activeWeeklyBar.actual, 1, lang, unit)} {t('profile.dashboard_redesign.weekly_actual')} / {formatDistance(activeWeeklyBar.projected, 1, lang, unit)} {t('profile.dashboard_redesign.weekly_projected')}
                       </div>
-                      <div className="runner-dashboard-progression-axis">
-                        <span>{progressionAtlas.startLabel}</span>
-                        <span>{progressionAtlas.endLabel}</span>
+                    )}
+                  </article>
+                  {/* Recent sessions */}
+                  <article className="hd-sessions-card">
+                    <div className="hd-card-head">
+                      <div>
+                        <span className="hd-card-kicker">{t('profile.dashboard_redesign.sessions_kicker')}</span>
+                        <h3 className="hd-card-title">{t('profile.dashboard_redesign.sessions_title')}</h3>
                       </div>
-                    </article>
-
-                    <article className="runner-dashboard-progression-runlist">
-                      <div className="runner-dashboard-progression-runlist-head">
-                        <div>
-                          <span className="runner-dashboard-card-kicker">{t('profile.dashboard_progression_recent')}</span>
-                          <h4>{t('profile.dashboard_progression_recent_title')}</h4>
-                        </div>
-                        <span className="runner-dashboard-progression-runlist-window">{progressionAtlas.rangeLabel}</span>
-                      </div>
-
-                      <div className="runner-dashboard-progression-runstack">
-                        {progressionAtlas.recentRuns.map((run) => (
+                    </div>
+                    <div className="hd-session-list">
+                      {runs.slice(0, 5).map((run) => {
+                        const metric = buildSessionMetric(run, lang, unit, t);
+                        const avgPaceS = run.averagePaceSecondsPerKm || run.paceSecondsPerKm || 0;
+                        const tone = avgPaceS > 0 && avgPaceS > 330 ? 'easy' : avgPaceS > 0 && avgPaceS < 270 ? 'quality' : 'recovery';
+                        return (
                           <button
                             key={run.id}
                             type="button"
-                            className="runner-dashboard-progression-runrow"
+                            className="hd-session-row"
                             onClick={() => navigate(`/run/${run.id}`)}
                           >
-                            <div className="runner-dashboard-progression-runmain">
-                              <strong>{run.name || t('profile.dashboard_session_fallback')}</strong>
-                              <span>{run.startedAtLabel}</span>
+                            <div className="hd-session-left">
+                              <span className={`hd-session-dot tone-${tone}`} />
+                              <div className="hd-session-info">
+                                <strong>{run.name || t('profile.dashboard_session_fallback')}</strong>
+                                <span>{formatRunDate(run, lang)} · {formatDurationCompact(run.movingTimeSeconds || 0)}</span>
+                              </div>
                             </div>
-                            <div className="runner-dashboard-progression-runmeta">
-                              <strong>{formatDistance(run.distanceKm, 1, lang, unit)}</strong>
-                              <span>{formatDurationCompact(run.movingTimeSeconds)} / {formatPaceDisplay(run.paceSeconds, lang)}</span>
+                            <div className="hd-session-right">
+                              <strong>{metric.value}</strong>
+                              <span>{metric.label}</span>
                             </div>
                           </button>
-                        ))}
-                      </div>
-                    </article>
-                  </div>
-                </>
-              ) : (
-                <div className="runner-dashboard-progression-empty">
-                  <strong>{t('profile.dashboard_progression_empty_title')}</strong>
-                  <p>{t('profile.dashboard_progression_empty_copy')}</p>
-                  <button type="button" className="runner-dashboard-history-btn" onClick={() => navigate('/runs')}>
-                    {t('profile.dashboard_view_full_history')}
-                  </button>
+                        );
+                      })}
+                    </div>
+                    <button type="button" className="hd-link-btn" onClick={() => navigate('/runs')}>
+                      {t('profile.dashboard_redesign.sessions_view_all')}
+                    </button>
+                  </article>
                 </div>
-              )}
-            </section>
 
-            <section className="runner-dashboard-feature-grid" aria-label={t('profile.dashboard_nav_dashboard')}>
-              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--race">
-                <div className="runner-dashboard-feature-head">
-                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_race_countdown_title')}</span>
-                  <span className="runner-dashboard-feature-eyebrow">
-                    {nextRace ? formatDate(nextRace.date, lang === 'zh-CN' ? 'zh-CN' : 'en-US') : '--'}
-                  </span>
-                </div>
-                {nextRace ? (
-                  <>
-                    <div className="runner-dashboard-feature-copy">
-                      <h3>{nextRace.name}</h3>
-                      <div className="runner-dashboard-race-countdown">
-                        <strong>{raceCountdown}</strong>
-                        <span>{t('profile.dashboard_race_days_left', { days: '' }).trim()}</span>
+                {/* 5. Progression */}
+                <section className="hd-progression">
+                  <div className="hd-progression-head">
+                    <div>
+                      <span className="hd-card-kicker">{t('profile.dashboard_redesign.progression_kicker')}</span>
+                      <h3 className="hd-card-title">{t('profile.dashboard_redesign.progression_title')}</h3>
+                    </div>
+                    <div className="hd-progression-switcher">
+                      {[
+                        { key: 'total', label: t('profile.dashboard_redesign.progression_total') },
+                        { key: '12m', label: t('profile.dashboard_redesign.progression_12m') },
+                        { key: '6m', label: t('profile.dashboard_redesign.progression_6m') },
+                        { key: '3m', label: t('profile.dashboard_redesign.progression_3m') },
+                        { key: '1m', label: t('profile.dashboard_redesign.progression_1m') },
+                      ].map((frame) => (
+                        <button
+                          key={frame.key}
+                          type="button"
+                          className={`hd-progression-tab${activeProgressionFrame === frame.key ? ' is-active' : ''}`}
+                          onClick={() => setActiveProgressionFrame(frame.key)}
+                        >
+                          {frame.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="hd-progression-summary">
+                    <div className="hd-progression-hero-stat">
+                      <span>{t('profile.dashboard_redesign.progression_total_distance')}</span>
+                      <strong>{formatDistance(progressionAtlas.totalDistanceKm, 1, lang, unit)}</strong>
+                    </div>
+                    <div className="hd-progression-meta-row">
+                      <div className="hd-progression-stat">
+                        <span>{t('profile.dashboard_redesign.progression_elevation')}</span>
+                        <strong>{formatElevationDisplay(progressionAtlas.totalElevationMeters, t)}</strong>
+                      </div>
+                      <div className="hd-progression-stat">
+                        <span>{t('profile.dashboard_redesign.progression_avg_pace')}</span>
+                        <strong>{formatPaceDisplay(progressionAtlas.averagePaceSeconds, t)}</strong>
+                      </div>
+                      <div className="hd-progression-stat">
+                        <span>{t('profile.dashboard_redesign.progression_total_time')}</span>
+                        <strong>{formatDuration(progressionAtlas.totalMovingSeconds)}</strong>
+                      </div>
+                      <div className="hd-progression-stat">
+                        <span>{t('profile.dashboard_redesign.progression_sessions')}</span>
+                        <strong>{progressionAtlas.sessionCount}</strong>
                       </div>
                     </div>
-                    <div className="runner-dashboard-race-prep">
-                      <span className="runner-dashboard-race-phase-tag">{racePrepPhase?.label}</span>
-                      <p>
-                        <small>{t('profile.dashboard_race_prep_advice')}</small>
-                        {racePrepPhase?.key === 'taper' && (lang === 'zh-CN' ? '优先保证睡眠，适当通过短促冲刺维持神经兴奋性。' : 'Prioritize sleep and maintain neuro-muscular pop with short strides.')}
-                        {racePrepPhase?.key === 'peak' && (lang === 'zh-CN' ? '进入最高跑量周，注意核心肌群的力量补充。' : 'Peak volume weeks—ensure core strength maintenance.')}
-                        {racePrepPhase?.key === 'specific' && (lang === 'zh-CN' ? '磨炼比赛配速的体感，优化补给策略。' : 'Refine race-pace feel and practice fueling strategies.')}
-                        {racePrepPhase?.key === 'base' && (lang === 'zh-CN' ? '稳步提升有氧耐力，重点在于低心率慢跑。' : 'Build aerobic base with steady, low-HR volume.')}
-                      </p>
+                  </div>
+                  <div className="hd-progression-chart-area">
+                    <svg viewBox="0 0 400 120" className="hd-progression-svg" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="hdProgLine" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#ffb4a7" />
+                          <stop offset="100%" stopColor="#f07561" />
+                        </linearGradient>
+                        <linearGradient id="hdProgArea" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(240,117,97,0.28)" />
+                          <stop offset="100%" stopColor="rgba(240,117,97,0.02)" />
+                        </linearGradient>
+                      </defs>
+                      {progressionAtlas.chartArea ? (
+                        <path d={progressionAtlas.chartArea} fill="url(#hdProgArea)" />
+                      ) : (
+                        <path d="M0 100 C40 95 80 80 120 75 C160 70 200 55 240 48 C280 40 320 28 360 22 L400 18 L400 120 L0 120Z" fill="url(#hdProgArea)" />
+                      )}
+                      {progressionAtlas.chartLine ? (
+                        <path d={progressionAtlas.chartLine} fill="none" stroke="url(#hdProgLine)" strokeWidth="2.5" strokeLinecap="round" />
+                      ) : (
+                        <path d="M0 100 C40 95 80 80 120 75 C160 70 200 55 240 48 C280 40 320 28 360 22 L400 18" fill="none" stroke="url(#hdProgLine)" strokeWidth="2.5" strokeLinecap="round" />
+                      )}
+                    </svg>
+                    <div className="hd-progression-range">
+                      <span>{progressionAtlas.startLabel}</span>
+                      <span>{progressionAtlas.endLabel}</span>
                     </div>
-                  </>
-                ) : (
-                  <div className="runner-dashboard-feature-copy is-empty">
-                    <h3>{t('profile.dashboard_race_no_upcoming')}</h3>
-                    <button type="button" className="runner-dashboard-feature-link" onClick={() => navigate('/races')}>
-                      {t('profile.dashboard_race_view_all', { count: races.length })}
+                  </div>
+                </section>
+
+                {/* 5b. Weekly Digest */}
+                {(() => {
+                  const hasDigestData = weeklyDigest
+                    && weeklyDigest.coachFocus?.message
+                    && weeklyDigest.vdotTrend?.hasData !== false;
+                  const showEmpty = !weeklyDigestLoading && (!weeklyDigest || !hasDigestData);
+                  const vdotDir = weeklyDigest?.vdotTrend?.direction || 'stable';
+                  const vdotLabel = vdotDir === 'improving'
+                    ? t('profile.weekly_digest_vdot_up')
+                    : vdotDir === 'declining'
+                      ? t('profile.weekly_digest_vdot_down')
+                      : t('profile.weekly_digest_vdot_stable');
+                  const vdotArrow = vdotDir === 'improving' ? '↑' : vdotDir === 'declining' ? '↓' : '→';
+                  const runCount = weeklyDigest?.summary?.runCount ?? 0;
+                  const totalKm = weeklyDigest?.summary?.totalDistanceKm != null
+                    ? Number(weeklyDigest.summary.totalDistanceKm).toFixed(1)
+                    : null;
+                  return (
+                    <section className="profile-weekly-digest-card hd-card">
+                      <div className="hd-card-head profile-weekly-digest-head">
+                        <div>
+                          <span className="hd-card-kicker">{t('profile.weekly_digest_kicker')}</span>
+                          <h3 className="hd-card-title">{t('profile.weekly_digest_title')}</h3>
+                        </div>
+                      </div>
+                      {weeklyDigestLoading && (
+                        <p className="profile-weekly-digest-loading">{t('runs.loading')}</p>
+                      )}
+                      {!weeklyDigestLoading && showEmpty && (
+                        <p className="profile-weekly-digest-empty">{t('profile.weekly_digest_empty')}</p>
+                      )}
+                      {!weeklyDigestLoading && !showEmpty && (
+                        <div className="profile-weekly-digest-body">
+                          {runCount > 0 && totalKm && (
+                            <div className="profile-weekly-digest-summary">
+                              <span className="profile-weekly-digest-runs">
+                                {t('profile.weekly_digest_runs', { n: runCount, km: totalKm })}
+                              </span>
+                              {weeklyDigest?.vdotTrend?.hasData && (
+                                <span className={`profile-weekly-digest-vdot-badge profile-weekly-digest-vdot-${vdotDir}`}>
+                                  <span className="profile-weekly-digest-arrow" aria-hidden="true">{vdotArrow}</span>
+                                  {vdotLabel}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {weeklyDigest?.coachFocus?.message && (() => {
+                            const focusKey = weeklyDigest.coachFocus.key;
+                            const i18nKey = focusKey ? `profile.weekly_digest_focus_msg_${focusKey}` : null;
+                            const translated = i18nKey ? t(i18nKey) : null;
+                            const message = translated && translated !== i18nKey
+                              ? translated
+                              : weeklyDigest.coachFocus.message;
+                            return (
+                              <blockquote className="profile-weekly-digest-focus">
+                                {message}
+                              </blockquote>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })()}
+
+                {/* 6. Bottom Grid */}
+                <div className="hd-bottom-grid">
+                  {/* Race predictions */}
+                  <article className="hd-predictions-card">
+                    <div className="hd-card-head">
+                      <div>
+                        <span className="hd-card-kicker">{t('profile.dashboard_redesign.predictions_kicker')}</span>
+                        <h3 className="hd-card-title">{t('profile.dashboard_redesign.predictions_title')}</h3>
+                      </div>
+                      {profileVdot.representativeVdot > 0 && (
+                        <span className="hd-predictions-vdot">
+                          {profileVdot.representativeVdot.toFixed(1)} VO₂
+                        </span>
+                      )}
+                    </div>
+                    <div className="hd-predictions-grid">
+                      {racePredictions.slice(0, 4).map((pred, i) => (
+                        <div key={pred.key} className="hd-prediction-item">
+                          <span className="hd-prediction-index">{String(i + 1).padStart(2, '0')}</span>
+                          <div>
+                            <strong className="hd-prediction-time">{pred.time}</strong>
+                            <span className="hd-prediction-label">{pred.label}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                  {/* Stamina */}
+                  <article className="hd-stamina-card">
+                    <div className="hd-card-head">
+                      <div>
+                        <span className="hd-card-kicker">{t('profile.dashboard_redesign.stamina_kicker')}</span>
+                        <h3 className="hd-card-title">{readiness.label}</h3>
+                      </div>
+                    </div>
+                    <p className="hd-stamina-copy">{readiness.copy}</p>
+                    <div className="hd-stamina-meters">
+                      <div className="hd-stamina-meter-group">
+                        <div className="hd-stamina-meter-head">
+                          <span>{t('profile.dashboard_redesign.stamina_score')}</span>
+                          <strong>{staminaScorePercent}%</strong>
+                        </div>
+                        <div className="hd-stamina-meter">
+                          <div className="hd-stamina-fill" style={{ width: `${staminaScorePercent}%` }} />
+                        </div>
+                      </div>
+                      <div className="hd-stamina-meter-group">
+                        <div className="hd-stamina-meter-head">
+                          <span>{t('profile.dashboard_redesign.stamina_cap')}</span>
+                          <strong>{staminaCapPercent}%</strong>
+                        </div>
+                        <div className="hd-stamina-meter">
+                          <div className="hd-stamina-fill cap" style={{ width: `${staminaCapPercent}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hd-stamina-stats">
+                      <div>
+                        <span>{t('profile.dashboard_redesign.stamina_pace')}</span>
+                        <strong>{staminaPaceLabel}</strong>
+                      </div>
+                      {staminaHeartLabel !== '--' && (
+                        <div>
+                          <span>{t('profile.dashboard_redesign.stamina_hr')}</span>
+                          <strong>{staminaHeartLabel} <em>bpm</em></strong>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                  {/* Streak */}
+                  <article className="hd-streak-card">
+                    <div className="hd-card-head">
+                      <div>
+                        <span className="hd-card-kicker">{t('profile.dashboard_redesign.streak_kicker')}</span>
+                      </div>
+                    </div>
+                    <div className="hd-streak-row">
+                      <div className="hd-streak-stat">
+                        <span>{t('profile.dashboard_redesign.streak_current')}</span>
+                        <strong>{streak.current}</strong>
+                      </div>
+                      <div className="hd-streak-divider" />
+                      <div className="hd-streak-stat">
+                        <span>{t('profile.dashboard_redesign.streak_best')}</span>
+                        <strong>{streak.best}</strong>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+
+                {/* 7. Rewards */}
+                <section className="hd-rewards">
+                  <div className="hd-rewards-head">
+                    <div>
+                      <span className="hd-card-kicker">{t('profile.dashboard_redesign.rewards_kicker')}</span>
+                      <h3 className="hd-card-title">{t('profile.dashboard_redesign.rewards_title')}</h3>
+                    </div>
+                    <button type="button" className="hd-link-btn" onClick={() => navigate('/rewards')}>
+                      {t('profile.dashboard_redesign.rewards_view_all')}
                     </button>
                   </div>
-                )}
-                <div className="runner-dashboard-feature-actions">
-                  <button type="button" className="runner-dashboard-feature-secondary" onClick={() => navigate('/races')}>
-                    {t('profile.dashboard_nav_races')}
-                  </button>
-                </div>
-              </article>
-
-              {racePredictions.length > 0 && (
-                <article
-                  className="runner-dashboard-feature-card runner-dashboard-feature-card--predictions"
-                  aria-label={t('profile.dashboard_fitness_strip_label')}
-                >
-                  <div className="runner-dashboard-feature-head">
-                    <span className="runner-dashboard-card-kicker">{t('profile.dashboard_fitness_kicker')}</span>
-                    <span className="runner-dashboard-feature-eyebrow">
-                      {profileVdot > 0 ? `${profileVdot.toFixed(1)} ${t('profile.vo2_unit_short')}` : '--'}
-                    </span>
-                  </div>
-                  <div className="runner-dashboard-fitness-strip-predictions">
-                    {racePredictions.map((pred) => (
-                      <div key={pred.key} className="runner-dashboard-fitness-strip-prediction">
-                        <label>{pred.label}</label>
-                        <strong>{pred.time}</strong>
+                  {/* Ring + next milestone */}
+                  <div className="hd-rewards-hero-row">
+                    <div className="hd-rewards-progress-ring-area">
+                      <div className="hd-rewards-ring-wrap">
+                        <svg viewBox="0 0 88 88" className="hd-rewards-ring-svg">
+                          <circle cx="44" cy="44" r="38" fill="none" stroke="currentColor" strokeOpacity="0.06" strokeWidth="5" />
+                          <circle cx="44" cy="44" r="38" fill="none" stroke="url(#hdRewardRingGrad)" strokeWidth="5"
+                            strokeDasharray={`${(rewardCompletionPct / 100) * 238.76} 999`}
+                            strokeLinecap="round" transform="rotate(-90 44 44)" />
+                          <defs>
+                            <linearGradient id="hdRewardRingGrad" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#f07561" />
+                              <stop offset="100%" stopColor="#a0392a" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        <div className="hd-rewards-ring-center">
+                          <strong>{rewardEarnedCount}</strong>
+                          <span>/ {rewardTotalCount}</span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </article>
-              )}
-
-              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--readiness runner-dashboard-feature-card--stamina">
-                <div className="runner-dashboard-feature-head">
-                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_stamina_title')}</span>
-                  <span className="runner-dashboard-feature-eyebrow">{currentDateLine}</span>
-                </div>
-                <div className="runner-dashboard-feature-copy runner-dashboard-stamina-copy">
-                  <h3>{readiness.label}</h3>
-                  <p>{readiness.copy}</p>
-                </div>
-                <div className="runner-dashboard-stamina-hero">
-                  <div className="runner-dashboard-feature-scoreband runner-dashboard-stamina-scoreband">
-                    <span>{t('profile.dashboard_readiness_status')}</span>
-                    <div className="runner-dashboard-stamina-scoreline">
-                      <AppIcon name={staminaArrowIcon} className={`runner-dashboard-stamina-arrow runner-dashboard-stamina-arrow--${stamina.direction}`} />
-                      <strong>{staminaScorePercent}<em>%</em></strong>
+                      <div className="hd-rewards-progress-label">
+                        <strong>{rewardCompletionPct}%</strong>
+                        <span>{t('profile.dashboard_redesign.rewards_completion')}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="runner-dashboard-stamina-capline">
-                    <span>{t('profile.dashboard_stamina_cap')}</span>
-                    <strong>{staminaCapPercent}<em>%</em></strong>
-                    <small>{currentDateLine}</small>
-                  </div>
-                </div>
-                <div className="runner-dashboard-stamina-meter-wrap">
-                  <div className="runner-dashboard-stamina-meter-labels">
-                    <span>{t('profile.dashboard_stamina_title')}</span>
-                    <span>{t('profile.dashboard_stamina_cap')}</span>
-                  </div>
-                  <div className="runner-dashboard-feature-meter runner-dashboard-stamina-meter" aria-hidden="true">
-                    <div className="runner-dashboard-feature-meter-fill runner-dashboard-stamina-meter-fill" style={{ width: `${staminaScorePercent}%` }} />
-                    <span className="runner-dashboard-stamina-cap-marker" style={{ left: `${staminaCapMarkerLeft}%` }} />
-                  </div>
-                </div>
-                <div className="runner-dashboard-feature-stat-row runner-dashboard-stamina-stat-row">
-                  <div>
-                    <span>{t('profile.dashboard_stamina_pace')}</span>
-                    <strong>{staminaPaceLabel}</strong>
-                  </div>
-                  <div>
-                    <span>{t('analysis.intensity_dashboard_sample_heart_rate')}</span>
-                    <strong>
-                      {staminaHeartLabel}
-                      {staminaHeartLabel !== '--' && <em>bpm</em>}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>{t('profile.dashboard_stamina_cap')}</span>
-                    <strong>{staminaCapPercent}<em>%</em></strong>
-                  </div>
-                </div>
-              </article>
 
-              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--workout">
-                <div className="runner-dashboard-feature-head">
-                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_suggested_workout')}</span>
-                  <span className="runner-dashboard-feature-eyebrow">{displayName}</span>
-                </div>
-                <div className="runner-dashboard-feature-copy">
-                  <h3>{heroWorkoutTitle}</h3>
-                  <p>{todayBundle.recommendation?.purpose || readiness.copy}</p>
-                </div>
-                <div className="runner-dashboard-feature-stat-row">
-                  <div>
-                    <span>{t('profile.dashboard_total_duration')}</span>
-                    <strong>{heroDuration}</strong>
-                  </div>
-                  <div>
-                    <span>{t('profile.dashboard_target_pace')}</span>
-                    <strong>{heroPace}</strong>
-                  </div>
-                  <div>
-                    <span>{t('profile.dashboard_focus_load')}</span>
-                    <strong>{heroLoad}</strong>
-                  </div>
-                </div>
-                {shoeRecommendation && (
-                  <div className="runner-dashboard-feature-gear">
-                    <label>{t('profile.dashboard_recommended_gear')}</label>
-                    <strong>{shoeRecommendation.brand} {shoeRecommendation.model}</strong>
-                  </div>
-                )}
-                <div className="runner-dashboard-feature-actions">
-                  <button type="button" className="runner-dashboard-feature-primary" onClick={() => navigate('/today-run')}>
-                    {t('profile.dashboard_start_workout')}
-                  </button>
-                  <button type="button" className="runner-dashboard-feature-secondary" onClick={() => navigate('/analysis')}>
-                    {t('profile.dashboard_nav_analysis')}
-                  </button>
-                </div>
-              </article>
-
-              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--load">
-                <div className="runner-dashboard-feature-head">
-                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_training_load')}</span>
-                  <span className="runner-dashboard-feature-eyebrow">{t('profile.dashboard_weekly_progress')}</span>
-                </div>
-                <div className="runner-dashboard-feature-copy">
-                  <h3>{formatDistance(weeklyActualTotal, 1, lang, unit)}</h3>
-                  <p>
-                    {t('profile.dashboard_actual')} {weeklyCompletion}% · {t('profile.dashboard_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
-                  </p>
-                </div>
-                <div className="runner-dashboard-feature-mini-bars" aria-hidden="true">
-                  {weeklyBars.map((bar) => (
-                    <span key={bar.key} className={`runner-dashboard-feature-mini-bar${bar.isToday ? ' is-today' : ''}`}>
-                      <i className="projected" style={{ height: `${bar.projectedPct}%` }} />
-                      <i className="actual" style={{ height: `${bar.actualPct}%` }} />
-                    </span>
-                  ))}
-                </div>
-                <div className="runner-dashboard-feature-chip-row">
-                  <span>
-                    {t('profile.dashboard_vo2_est')}: {profileVdot > 0 ? profileVdot.toFixed(1) : '--'}
-                    {profileVdot > 0 && profileVdotTrend.hasData && (
-                      <span className={`runner-dashboard-vdot-trend runner-dashboard-vdot-trend--${profileVdotTrend.direction}`}>
-                        {profileVdotTrend.direction === 'improving' && <>&#x2191; {profileVdotTrend.delta > 0 ? `+${profileVdotTrend.delta.toFixed(1)}` : profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_improving')}</>}
-                        {profileVdotTrend.direction === 'declining' && <>&#x2193; {profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_declining')}</>}
-                        {profileVdotTrend.direction === 'maintaining' && <>{t('profile.vdot_trend_maintaining')}</>}
-                      </span>
-                    )}
-                  </span>
-                  <span>{t('profile.dashboard_lactate_threshold')}: {thresholdEstimate ?? '--'} bpm</span>
-                </div>
-              </article>
-
-              <article className="runner-dashboard-feature-card runner-dashboard-feature-card--sessions">
-                <div className="runner-dashboard-feature-head">
-                  <span className="runner-dashboard-card-kicker">{t('profile.dashboard_recent_sessions')}</span>
-                  <span className="runner-dashboard-feature-eyebrow">{featuredSession ? formatRunDate(featuredSession, lang) : '--'}</span>
-                </div>
-                <div className="runner-dashboard-feature-copy">
-                  <h3>{featuredSession?.name || t('profile.dashboard_session_fallback')}</h3>
-                  <p>
-                    {featuredSessionMetric
-                      ? `${featuredSessionMetric.label} · ${featuredSessionMetric.value}`
-                      : t('profile.dashboard_no_sessions')}
-                  </p>
-                </div>
-                {recentSessions.length === 0 ? (
-                  <div className="runner-dashboard-empty">{t('profile.dashboard_no_sessions')}</div>
-                ) : (
-                  <div className="runner-dashboard-feature-session-stack">
-                    {recentSessions.map((run) => {
-                      const metric = buildSessionMetric(run, lang, unit, t);
-                      return (
-                        <button
-                          key={run.id}
-                          type="button"
-                          className="runner-dashboard-feature-session-pill"
-                          onClick={() => navigate(`/run/${run.id}`)}
-                        >
-                          <div>
-                            <strong>{run.name || t('profile.dashboard_session_fallback')}</strong>
-                            <span>{formatRunDate(run, lang)}</span>
+                    {rewardNextMilestone && (
+                      <div className="hd-rewards-next">
+                        <span className="hd-rewards-next-tag">{t('profile.dashboard_redesign.rewards_next_up')}</span>
+                        <div className="hd-rewards-next-icon" aria-hidden="true">
+                          <RewardGlyph icon={rewardNextMilestone.icon} />
+                        </div>
+                        <strong className="hd-rewards-next-title">{rewardNextMilestone.title}</strong>
+                        <p className="hd-rewards-next-hint">{rewardNextMilestone.hint || rewardNextMilestone.subtitle}</p>
+                        <div className="hd-rewards-next-bar-wrap">
+                          <div className="hd-rewards-next-bar">
+                            <div className="hd-rewards-next-fill" style={{ width: `${rewardNextMilestonePct}%` }} />
                           </div>
-                          <em>{metric.value}</em>
-                        </button>
-                      );
-                    })}
+                          <span className="hd-rewards-next-pct">{rewardNextMilestonePct}%</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                <button type="button" className="runner-dashboard-feature-link" onClick={() => navigate('/runs')}>
-                  {t('profile.dashboard_view_full_history')}
-                </button>
-              </article>
-            </section>
 
-            <section className="runner-dashboard-metric-strip">
-              <article className="runner-dashboard-mini-metric">
-                <span>01</span>
-                <div>
-                  <label>{t('profile.dashboard_vo2_est')}</label>
-                  <strong>{profileVdot > 0 ? profileVdot.toFixed(1) : '--'} <em>{t('profile.vo2_unit_short')}</em></strong>
-                  {profileVdot > 0 && profileVdotTrend.hasData && (
-                    <span className={`runner-dashboard-vdot-trend runner-dashboard-vdot-trend--${profileVdotTrend.direction}`}>
-                      {profileVdotTrend.direction === 'improving' && <>&#x2191; {profileVdotTrend.delta > 0 ? `+${profileVdotTrend.delta.toFixed(1)}` : profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_improving')}</>}
-                      {profileVdotTrend.direction === 'declining' && <>&#x2193; {profileVdotTrend.delta.toFixed(1)} {t('profile.vdot_trend_declining')}</>}
-                      {profileVdotTrend.direction === 'maintaining' && <>{t('profile.vdot_trend_maintaining')}</>}
-                    </span>
+                  {rewardShowcase.earnedRewards.length > 0 && (
+                    <div className="hd-rewards-badges">
+                      {rewardShowcase.earnedRewards.slice(0, 8).map((badge, i) => (
+                        <div key={badge.id} className={`hd-rewards-badge${i === 0 ? ' is-latest' : ''}`}>
+                          <div className="hd-rewards-badge-icon" aria-hidden="true">
+                            <RewardGlyph icon={badge.icon} />
+                          </div>
+                          <div className="hd-rewards-badge-info">
+                            <strong>{badge.title}</strong>
+                            <span>{badge.subtitle}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </div>
-              </article>
-              <article className="runner-dashboard-mini-metric">
-                <span>02</span>
-                <div>
-                  <label>{t('profile.dashboard_lactate_threshold')}</label>
-                  <strong>{thresholdEstimate ?? '--'} <em>bpm</em></strong>
-                </div>
-              </article>
-              <article className="runner-dashboard-mini-metric">
-                <span>03</span>
-                <div>
-                  <label>{t('profile.dashboard_resting_hr')}</label>
-                  <strong>{restingHrValue ?? '--'} <em>bpm</em></strong>
-                </div>
-              </article>
-              <article className="runner-dashboard-mini-metric">
-                <span>04</span>
-                <div>
-                  <label>{t('profile.dashboard_sleep_score')}</label>
-                  <strong>{sleepScoreValue ?? '--'} <em>/ 100</em></strong>
-                </div>
-              </article>
-            </section>
-          </>
-        )}
+                </section>
+              </>
+            )}
 
-        <footer className="runner-shell-footer runner-dashboard-footer">
-          <FooterNavLinks />
-        </footer>
-      </div>
+            <footer className="runner-shell-footer runner-dashboard-footer">
+              <FooterNavLinks />
+            </footer>
+          </div>
         </div>
       </main>
     </div>

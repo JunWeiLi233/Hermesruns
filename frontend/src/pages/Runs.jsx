@@ -1,7 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+
+const RUNS_CACHE_TTL_MS = 86400000;
+
+function readRunsCache(email) {
+  try {
+    const raw = localStorage.getItem(`hermes_runs_v1_${email}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.cachedAt || Date.now() - parsed.cachedAt > RUNS_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function writeRunsCache(email, runs, profile, stravaStatus) {
+  try {
+    localStorage.setItem(`hermes_runs_v1_${email}`, JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
+  } catch { /* ignore */ }
+}
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
@@ -10,12 +27,12 @@ import { formatDate, formatDistance, formatDuration, formatPace } from '../utils
 import HermesLogo from '../components/HermesLogo';
 import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import { formatStravaSyncLabel } from '../utils/stravaAutoSync';
+import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
-const BATCH_SIZE = 10;
-const ROUTE_PREVIEW_CONCURRENCY = 2;
+const runDate = (r) => new Date(r.startTime || r.startDate || 0);
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -26,54 +43,389 @@ function localizeStravaSyncMessage(message, t) {
   return raw;
 }
 
+function computeBboxFromPoints(points) {
+  if (!Array.isArray(points) || points.length < 2) return null;
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [lat, lng] of points) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  }
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return null;
+  return { minLat, maxLat, minLng, maxLng };
+}
+
+function lngToWorldX(lng) {
+  return clampNumber((lng + 180) / 360, 0, 1);
+}
+
+function latToWorldY(lat) {
+  const latRad = (clampMercatorLat(lat) * Math.PI) / 180;
+  return clampNumber((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2, 0, 1);
+}
+
 function buildRoutePreviewModel(points) {
   if (!Array.isArray(points) || points.length < 2) return null;
-
-  let minLat = points[0][0];
-  let maxLat = points[0][0];
-  let minLng = points[0][1];
-  let maxLng = points[0][1];
-
-  points.forEach(([lat, lng]) => {
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
-    minLng = Math.min(minLng, lng);
-    maxLng = Math.max(maxLng, lng);
-  });
-
-  const latSpan = Math.max(0.0001, maxLat - minLat);
-  const lngSpan = Math.max(0.0001, maxLng - minLng);
-  const padding = 12;
-  const width = 100;
-  const height = 100;
-  const innerWidth = width - (padding * 2);
-  const innerHeight = height - (padding * 2);
-
-  const normalized = points.map(([lat, lng]) => {
-    const x = padding + (((lng - minLng) / lngSpan) * innerWidth);
-    const y = padding + (innerHeight - (((lat - minLat) / latSpan) * innerHeight));
-    return [x, y];
-  });
-
+  const bbox = computeBboxFromPoints(points);
+  if (!bbox) return null;
+  const projected = points.map(([lat, lng]) => [lngToWorldX(lng), latToWorldY(lat)]);
+  const xs = projected.map(([x]) => x);
+  const ys = projected.map(([, y]) => y);
+  const mapFrame = {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+  const xSpan = Math.max(0.0000001, mapFrame.maxX - mapFrame.minX);
+  const ySpan = Math.max(0.0000001, mapFrame.maxY - mapFrame.minY);
+  const normalized = projected.map(([x, y]) => [
+    ROUTE_PREVIEW_PADDING + ((x - mapFrame.minX) / xSpan) * ROUTE_PREVIEW_INNER_SIZE,
+    ROUTE_PREVIEW_PADDING + ((y - mapFrame.minY) / ySpan) * ROUTE_PREVIEW_INNER_SIZE,
+  ]);
   return {
-    path: normalized.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
+    path: normalized.map(([x, y], i) => `${i ? 'L' : 'M'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
+    start: normalized[0],
+    finish: normalized[normalized.length - 1],
+    bbox,
+    mapFrame,
+    mercatorPoints: projected,
+  };
+}
+
+function readBboxFromPreview(preview) {
+  if (!preview || typeof preview !== 'object') return null;
+  const direct = preview.bbox && typeof preview.bbox === 'object' ? preview.bbox : preview;
+  const minLat = Number(direct.minLat);
+  const maxLat = Number(direct.maxLat);
+  const minLng = Number(direct.minLng);
+  const maxLng = Number(direct.maxLng);
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return null;
+  if (minLat === maxLat && minLng === maxLng) return null;
+  return { minLat, maxLat, minLng, maxLng };
+}
+
+function readMapFrameFromPreview(preview) {
+  if (!preview || typeof preview !== 'object' || !preview.mapFrame || typeof preview.mapFrame !== 'object') return null;
+  const minX = Number(preview.mapFrame.minX);
+  const maxX = Number(preview.mapFrame.maxX);
+  const minY = Number(preview.mapFrame.minY);
+  const maxY = Number(preview.mapFrame.maxY);
+  if (![minX, maxX, minY, maxY].every(Number.isFinite)) return null;
+  if (minX === maxX && minY === maxY) return null;
+  return {
+    minX: clampNumber(minX, 0, 1),
+    maxX: clampNumber(maxX, 0, 1),
+    minY: clampNumber(minY, 0, 1),
+    maxY: clampNumber(maxY, 0, 1),
+  };
+}
+
+function readMercatorPointsFromPreview(preview) {
+  if (!preview || typeof preview !== 'object' || !Array.isArray(preview.mercatorPoints)) return null;
+  const points = preview.mercatorPoints
+    .map((point) => (Array.isArray(point) ? [Number(point[0]), Number(point[1])] : null))
+    .filter((point) => point && point.every(Number.isFinite));
+  return points.length >= 2 ? points : null;
+}
+
+function normalizeRoutePreview(preview) {
+  if (!preview || typeof preview !== 'object' || !preview.path) return null;
+  const startX = Array.isArray(preview.start) ? Number(preview.start[0]) : Number(preview.startX);
+  const startY = Array.isArray(preview.start) ? Number(preview.start[1]) : Number(preview.startY);
+  const finishX = Array.isArray(preview.finish) ? Number(preview.finish[0]) : Number(preview.finishX);
+  const finishY = Array.isArray(preview.finish) ? Number(preview.finish[1]) : Number(preview.finishY);
+  if (![startX, startY, finishX, finishY].every(Number.isFinite)) return null;
+  return {
+    path: preview.path,
+    start: [startX, startY],
+    finish: [finishX, finishY],
+    bbox: readBboxFromPreview(preview),
+    mapFrame: readMapFrameFromPreview(preview),
+    mercatorPoints: readMercatorPointsFromPreview(preview),
+  };
+}
+
+// Real-world dark-mode map tile helpers — renders a concrete OpenStreetMap
+// area under each thumbnail's SVG route so a runner sees where the run
+// actually happened, not just an abstract gradient.
+const ROUTE_PREVIEW_VIEW_SIZE = 100;
+const ROUTE_PREVIEW_PADDING = 24;
+const ROUTE_PREVIEW_INNER_SIZE = ROUTE_PREVIEW_VIEW_SIZE - (ROUTE_PREVIEW_PADDING * 2);
+const ROUTE_TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
+const ROUTE_TILE_MIN_ZOOM = 2;
+const ROUTE_TILE_MAX_ZOOM = 18;
+const ROUTE_TILE_MAX_LAYERS = 64;
+const ROUTE_TILE_TARGET_CSS_PX = 128;
+const ROUTE_TILE_MAX_MERCATOR_LAT = 85.05112878;
+const ROUTE_THUMB_DEFAULT_ASPECT = 132 / 240;
+const ROUTE_THUMB_DEFAULT_SIZE = { width: 132, height: 240 };
+
+function pickRouteTileZoom(latSpan, lngSpan) {
+  // Pick the smallest zoom whose single 256-tile width exceeds the route span,
+  // so the whole route fits in roughly one tile. log2(360 / span) gives the
+  // zoom at which one tile equals `span` degrees of longitude; subtract 1 so
+  // the route sits comfortably with margin.
+  const span = Math.max(latSpan * 2, lngSpan, 0.0005);
+  const rawZoom = Math.floor(Math.log2(360 / span)) - 1;
+  if (!Number.isFinite(rawZoom)) return 12;
+  return Math.max(ROUTE_TILE_MIN_ZOOM, Math.min(ROUTE_TILE_MAX_ZOOM, rawZoom));
+}
+
+  // Mirror Heatmap / Territory choice but use no-labels variant — at thumb
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function clampMercatorLat(lat) {
+  return clampNumber(lat, -ROUTE_TILE_MAX_MERCATOR_LAT, ROUTE_TILE_MAX_MERCATOR_LAT);
+}
+
+function worldXToTileX(x, zoom) {
+  const n = 2 ** zoom;
+  return clampNumber(Math.floor(clampNumber(x, 0, 1) * n), 0, n - 1);
+}
+
+function worldYToTileY(y, zoom) {
+  const n = 2 ** zoom;
+  return clampNumber(Math.floor(clampNumber(y, 0, 1) * n), 0, n - 1);
+}
+
+function buildRouteTileUrl(zoom, x, y) {
+  if (![zoom, x, y].every(Number.isFinite)) return null;
+  const n = 2 ** zoom;
+  if (zoom < ROUTE_TILE_MIN_ZOOM || zoom > ROUTE_TILE_MAX_ZOOM || x < 0 || y < 0 || x >= n || y >= n) return null;
+  const sub = ROUTE_TILE_SUBDOMAINS[(x + y) % ROUTE_TILE_SUBDOMAINS.length];
+  return `https://${sub}.basemaps.cartocdn.com/dark_nolabels/${zoom}/${x}/${y}.png`;
+}
+
+function tileRangeForPreviewBounds(viewBounds, zoom) {
+  const minX = worldXToTileX(viewBounds.minX, zoom);
+  const maxX = worldXToTileX(viewBounds.maxX, zoom);
+  const minY = worldYToTileY(viewBounds.minY, zoom);
+  const maxY = worldYToTileY(viewBounds.maxY, zoom);
+  return {
+    minX: Math.min(minX, maxX),
+    maxX: Math.max(minX, maxX),
+    minY: Math.min(minY, maxY),
+    maxY: Math.max(minY, maxY),
+  };
+}
+
+function pickRouteTileZoomForViewport(viewBounds, viewportSize = ROUTE_THUMB_DEFAULT_SIZE) {
+  const viewXSpan = Math.max(0.0000001, viewBounds.maxX - viewBounds.minX);
+  const viewYSpan = Math.max(0.0000001, viewBounds.maxY - viewBounds.minY);
+  const fallbackZoom = pickRouteTileZoom(viewYSpan * 360, viewXSpan * 360);
+  const width = Number(viewportSize?.width);
+  const height = Number(viewportSize?.height);
+  if (![width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+    return fallbackZoom;
+  }
+
+  const xZoom = Math.ceil(Math.log2(width / (ROUTE_TILE_TARGET_CSS_PX * viewXSpan)));
+  const yZoom = Math.ceil(Math.log2(height / (ROUTE_TILE_TARGET_CSS_PX * viewYSpan)));
+  const rawZoom = Math.max(fallbackZoom, xZoom, yZoom);
+  if (!Number.isFinite(rawZoom)) return fallbackZoom;
+  return Math.max(ROUTE_TILE_MIN_ZOOM, Math.min(ROUTE_TILE_MAX_ZOOM, rawZoom));
+}
+
+function mapFrameFromBbox(bbox) {
+  if (!bbox) return null;
+  const minX = lngToWorldX(bbox.minLng);
+  const maxX = lngToWorldX(bbox.maxLng);
+  const minY = latToWorldY(bbox.maxLat);
+  const maxY = latToWorldY(bbox.minLat);
+  if (![minX, maxX, minY, maxY].every(Number.isFinite)) return null;
+  return { minX, maxX, minY, maxY };
+}
+
+function shiftFrameIntoWorld(min, span) {
+  if (span >= 1) return { min: 0, max: 1 };
+  const shiftedMin = clampNumber(min, 0, 1 - span);
+  return { min: shiftedMin, max: shiftedMin + span };
+}
+
+function buildRouteViewportFrame(routeFrame, viewportAspect = ROUTE_THUMB_DEFAULT_ASPECT) {
+  if (!routeFrame) return null;
+  const xSpan = Math.max(0.0000001, routeFrame.maxX - routeFrame.minX);
+  const ySpan = Math.max(0.0000001, routeFrame.maxY - routeFrame.minY);
+  const aspect = Number.isFinite(viewportAspect) && viewportAspect > 0
+    ? viewportAspect
+    : ROUTE_THUMB_DEFAULT_ASPECT;
+  const innerRatio = ROUTE_PREVIEW_INNER_SIZE / ROUTE_PREVIEW_VIEW_SIZE;
+  const minViewXSpan = xSpan / innerRatio;
+  const minViewYSpan = ySpan / innerRatio;
+  let viewXSpan = minViewXSpan;
+  let viewYSpan = minViewYSpan;
+  if (viewXSpan / viewYSpan < aspect) {
+    viewXSpan = viewYSpan * aspect;
+  } else {
+    viewYSpan = viewXSpan / aspect;
+  }
+  viewXSpan = Math.min(1, Math.max(viewXSpan, 0.0000001));
+  viewYSpan = Math.min(1, Math.max(viewYSpan, 0.0000001));
+  const centerX = (routeFrame.minX + routeFrame.maxX) / 2;
+  const centerY = (routeFrame.minY + routeFrame.maxY) / 2;
+  const xFrame = shiftFrameIntoWorld(centerX - (viewXSpan / 2), viewXSpan);
+  const yFrame = shiftFrameIntoWorld(centerY - (viewYSpan / 2), viewYSpan);
+  return {
+    minX: xFrame.min,
+    maxX: xFrame.max,
+    minY: yFrame.min,
+    maxY: yFrame.max,
+  };
+}
+
+function buildMercatorPreviewPath(mercatorPoints, viewportFrame) {
+  if (!Array.isArray(mercatorPoints) || mercatorPoints.length < 2 || !viewportFrame) return null;
+  const viewXSpan = Math.max(0.0000001, viewportFrame.maxX - viewportFrame.minX);
+  const viewYSpan = Math.max(0.0000001, viewportFrame.maxY - viewportFrame.minY);
+  const normalized = mercatorPoints.map(([worldX, worldY]) => [
+    ((worldX - viewportFrame.minX) / viewXSpan) * ROUTE_PREVIEW_VIEW_SIZE,
+    ((worldY - viewportFrame.minY) / viewYSpan) * ROUTE_PREVIEW_VIEW_SIZE,
+  ]);
+  return {
+    path: normalized.map(([x, y], i) => `${i ? 'L' : 'M'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
     start: normalized[0],
     finish: normalized[normalized.length - 1],
   };
 }
 
-function RoutePreviewThumb({ points, provider, runName }) {
-  const preview = buildRoutePreviewModel(points);
+function buildRouteTileLayers(viewBounds, viewportSize = ROUTE_THUMB_DEFAULT_SIZE) {
+  if (!viewBounds) return [];
+  const viewXSpan = Math.max(0.0000001, viewBounds.maxX - viewBounds.minX);
+  const viewYSpan = Math.max(0.0000001, viewBounds.maxY - viewBounds.minY);
+  let zoom = pickRouteTileZoomForViewport(viewBounds, viewportSize);
+  let range = tileRangeForPreviewBounds(viewBounds, zoom);
+  while (((range.maxX - range.minX + 1) * (range.maxY - range.minY + 1)) > ROUTE_TILE_MAX_LAYERS && zoom > ROUTE_TILE_MIN_ZOOM) {
+    zoom -= 1;
+    range = tileRangeForPreviewBounds(viewBounds, zoom);
+  }
+
+  const layers = [];
+  for (let x = range.minX; x <= range.maxX; x += 1) {
+    for (let y = range.minY; y <= range.maxY; y += 1) {
+      const url = buildRouteTileUrl(zoom, x, y);
+      if (!url) continue;
+      const tileMinX = x / (2 ** zoom);
+      const tileMaxX = (x + 1) / (2 ** zoom);
+      const tileMinY = y / (2 ** zoom);
+      const tileMaxY = (y + 1) / (2 ** zoom);
+      layers.push({
+        key: `${zoom}-${x}-${y}`,
+        url,
+        style: {
+          left: `${((tileMinX - viewBounds.minX) / viewXSpan) * 100}%`,
+          top: `${((tileMinY - viewBounds.minY) / viewYSpan) * 100}%`,
+          width: `${((tileMaxX - tileMinX) / viewXSpan) * 100}%`,
+          height: `${((tileMaxY - tileMinY) / viewYSpan) * 100}%`,
+        },
+      });
+    }
+  }
+  return layers;
+}
+
+function useElementSize() {
+  const ref = useRef(null);
+  const [size, setSize] = useState(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return undefined;
+    const update = () => {
+      const rect = node.getBoundingClientRect();
+      const width = Number(rect.width.toFixed(2));
+      const height = Number(rect.height.toFixed(2));
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+      setSize((current) => (
+        current && current.width === width && current.height === height
+          ? current
+          : { width, height }
+      ));
+    };
+    update();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, size];
+}
+
+// Persist bbox per run id so subsequent loads don't re-fetch the point list
+// just to recompute the same 4 numbers. Bbox never changes for a given run.
+const ROUTE_BBOX_CACHE_PREFIX = 'hermes_run_bbox_v1_';
+const ROUTE_BBOX_CACHE_TTL_MS = 30 * 86400000; // 30 days
+
+function readBboxCache(runId) {
+  try {
+    const raw = localStorage.getItem(`${ROUTE_BBOX_CACHE_PREFIX}${runId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.cachedAt || Date.now() - parsed.cachedAt > ROUTE_BBOX_CACHE_TTL_MS) return null;
+    return readBboxFromPreview(parsed.bbox);
+  } catch { return null; }
+}
+
+function writeBboxCache(runId, bbox) {
+  if (!bbox) return;
+  try {
+    localStorage.setItem(`${ROUTE_BBOX_CACHE_PREFIX}${runId}`, JSON.stringify({ bbox, cachedAt: Date.now() }));
+  } catch { /* quota — ignore */ }
+}
+
+function RoutePreviewThumb({ preview, provider, runName, bbox }) {
+  const [thumbRef, thumbSize] = useElementSize();
+  const normalizedPreview = normalizeRoutePreview(preview);
+  const resolvedBbox = bbox || (normalizedPreview ? normalizedPreview.bbox : null);
+  const routeFrame = normalizedPreview?.mapFrame || mapFrameFromBbox(resolvedBbox);
+  const viewportAspect = thumbSize?.width && thumbSize?.height
+    ? thumbSize.width / thumbSize.height
+    : ROUTE_THUMB_DEFAULT_ASPECT;
+  const viewportFrame = routeFrame ? buildRouteViewportFrame(routeFrame, viewportAspect) : null;
+  const tileLayers = viewportFrame ? buildRouteTileLayers(viewportFrame, thumbSize) : [];
+  const mercatorPreview = normalizedPreview?.mercatorPoints
+    ? buildMercatorPreviewPath(normalizedPreview.mercatorPoints, viewportFrame)
+    : null;
+  const displayPreview = mercatorPreview || normalizedPreview;
 
   return (
-    <div className={`recent-runs-thumb${preview ? ' is-route-preview' : ''}`}>
-      {preview ? (
-        <svg className="recent-runs-thumb-route-svg" viewBox="0 0 100 100" aria-hidden="true">
-          <path className="recent-runs-thumb-route-shadow" d={preview.path} />
-          <path className="recent-runs-thumb-route-line" d={preview.path} />
-          <circle className="recent-runs-thumb-route-start" cx={preview.start[0]} cy={preview.start[1]} r="3.2" />
-          <circle className="recent-runs-thumb-route-finish" cx={preview.finish[0]} cy={preview.finish[1]} r="3.6" />
-        </svg>
+    <div ref={thumbRef} className={`recent-runs-thumb${displayPreview ? ' is-route-preview' : ''}${tileLayers.length ? ' has-route-tile' : ''}`}>
+      {tileLayers.map((layer) => (
+        <img
+          key={layer.key}
+          className="recent-runs-thumb-route-tile"
+          src={layer.url}
+          style={layer.style}
+          data-route-tile-layer={layer.key}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+        />
+      ))}
+      {displayPreview ? (
+        <>
+          <svg className="recent-runs-thumb-route-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path className="recent-runs-thumb-route-shadow" d={displayPreview.path} />
+            <path className="recent-runs-thumb-route-line" d={displayPreview.path} />
+          </svg>
+          <span
+            className="recent-runs-thumb-route-point recent-runs-thumb-route-start"
+            style={{ left: `${displayPreview.start[0]}%`, top: `${displayPreview.start[1]}%` }}
+            aria-hidden="true"
+          />
+          <span
+            className="recent-runs-thumb-route-point recent-runs-thumb-route-finish"
+            style={{ left: `${displayPreview.finish[0]}%`, top: `${displayPreview.finish[1]}%` }}
+            aria-hidden="true"
+          />
+        </>
       ) : (
         <div className="recent-runs-thumb-route-empty" aria-hidden="true">
           <AppIcon name="route" className="runner-dashboard-side-link-icon" />
@@ -85,8 +437,88 @@ function RoutePreviewThumb({ points, provider, runName }) {
   );
 }
 
-export default function Runs() {
-  const { isAuthenticated } = useAuth();
+const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;
+const RECENT_RUNS_LOAD_BATCH_SIZE = 6;
+const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = RECENT_RUNS_INITIAL_VISIBLE_COUNT + (RECENT_RUNS_LOAD_BATCH_SIZE * 2);
+const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = RECENT_RUNS_LOAD_BATCH_SIZE * 3;
+
+function normalizeRoutePreviewBatch(data) {
+  const previewUpdates = {};
+  const bboxUpdates = {};
+  if (!Array.isArray(data)) return { previewUpdates, bboxUpdates };
+
+  data.forEach((entry) => {
+    const activityId = Number(entry?.activityId);
+    if (!Number.isFinite(activityId)) return;
+    const pointCount = Number(entry?.pointCount);
+    const points = Array.isArray(entry?.points)
+      ? entry.points
+        .map((point) => [Number(point?.latitude), Number(point?.longitude)])
+        .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng))
+      : [];
+    const previewModel = buildRoutePreviewModel(points);
+    const preview = previewModel
+      ? {
+        ...previewModel,
+        pointCount: Number.isFinite(pointCount) && pointCount > 0 ? pointCount : points.length,
+      }
+      : null;
+    const bbox = readBboxFromPreview(entry?.bbox) || preview?.bbox || null;
+    if (preview) {
+      previewUpdates[activityId] = preview;
+    }
+    if (bbox) {
+      bboxUpdates[activityId] = bbox;
+      writeBboxCache(activityId, bbox);
+    }
+  });
+
+  return { previewUpdates, bboxUpdates };
+}
+
+async function fetchRoutePreviewBatch(ids) {
+  const normalizedIds = Array.isArray(ids)
+    ? ids
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0)
+    : [];
+  if (normalizedIds.length === 0) return { previewUpdates: {}, bboxUpdates: {} };
+  const params = new URLSearchParams({ ids: normalizedIds.join(',') });
+  const data = await apiJson(`/api/activities/route-previews?${params.toString()}`);
+  return normalizeRoutePreviewBatch(data);
+}
+
+function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen }) {
+  const provider = run.provider || t('runs.manual_import');
+  const runName = run.name || t('runs.default_run_name');
+  const pointPreview = routePreviewFallbacks[run.id];
+  const preview = pointPreview || run.routePreview || null;
+  // Bbox priority: explicit override (cached from a previous fallback fetch) →
+  // bbox embedded in the preview (today only happens via the fallback path).
+  const bbox = routeBboxes[run.id] || readBboxFromPreview(pointPreview) || readBboxFromPreview(run.routePreview);
+
+  return (
+    <button type="button" className="recent-runs-card" data-run-id={run.id || ''} onClick={() => onOpen(run)}>
+      <RoutePreviewThumb preview={preview} provider={provider} runName={runName} bbox={bbox} />
+      <div className="recent-runs-card-body">
+        <div className="recent-runs-card-top">
+          <div>
+            <h2>{runName}</h2>
+            <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
+          </div>
+        </div>
+        <div className="recent-runs-card-metrics">
+          <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
+          <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
+          <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+const Runs = memo(function Runs() {
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -98,7 +530,6 @@ export default function Runs() {
   const [activeMode, setActiveMode] = useState('all');
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const [runsSort, setRunsSort] = useState('date');
   const [stravaStatus, setStravaStatus] = useState(null);
   const [stravaLinking, setStravaLinking] = useState(false);
@@ -109,34 +540,130 @@ export default function Runs() {
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const [importStatus, setImportStatus] = useState('');
-  const [routePreviewPoints, setRoutePreviewPoints] = useState({});
-  const routePreviewInflightRef = useRef(new Set());
+  const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
+  // Per-run geographic bbox keyed by run id. Seeded from localStorage so a
+  // repeat page load does not need to re-fetch preview metadata for the same runs.
+  const [routeBboxes, setRouteBboxes] = useState({});
+  const [visibleRunsCount, setVisibleRunsCount] = useState(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
+  // Track which month groups the runner has explicitly collapsed. Default
+  // open: every month starts expanded so all runs render exactly the way
+  // they did before the fold-affordance shipped — runners only feel the
+  // change when they deliberately fold a month. Using a Set of keys keeps
+  // the state O(1) per toggle and short-circuits on the empty default.
+  const [collapsedMonthKeys, setCollapsedMonthKeys] = useState(() => new Set());
+  const routePreviewBatchInflightRef = useRef(new Set());
+  const loadMoreSentinelRef = useRef(null);
+
+  const toggleMonthFold = useCallback((monthKey) => {
+    setCollapsedMonthKeys((current) => {
+      const next = new Set(current);
+      if (next.has(monthKey)) next.delete(monthKey);
+      else next.add(monthKey);
+      return next;
+    });
+  }, []);
+
+  const loadRuns = useCallback(async ({ fromCache = false } = {}) => {
+    if (fromCache) {
+      const hit = readRunsCache(email);
+      if (hit) {
+        const sorted = [...hit.runs].sort((a, b) => runDate(b) - runDate(a));
+        setAllRuns(sorted);
+        setProfile(hit.profile);
+        setStravaStatus(hit.stravaStatus);
+        const preloadIds = sorted
+          .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
+          .map((run) => run?.id)
+          .filter((id) => Number.isFinite(Number(id)));
+        if (preloadIds.length > 0) {
+          try {
+            const { previewUpdates, bboxUpdates } = await fetchRoutePreviewBatch(preloadIds);
+            if (Object.keys(previewUpdates).length > 0) {
+              setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
+            }
+            if (Object.keys(bboxUpdates).length > 0) {
+              setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
+            }
+          } catch {
+            // Ignore cache-prewarm failures and let the visible-run effect retry.
+          }
+        }
+        setLoadState('ready');
+      }
+    }
+
+    // Fire the three calls in parallel but apply each result as it resolves,
+    // so the (heavy) runs payload paints as soon as it arrives instead of
+    // waiting for /api/profile/me and /api/auth/strava/status to finish too.
+    let latestRuns = null;
+    let latestProfile = null;
+    let latestStrava = null;
+    let runsFailed = false;
+
+    const runsPromise = apiJson('/api/activities')
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        list.sort((a, b) => runDate(b) - runDate(a));
+        latestRuns = list;
+        const preloadIds = list
+          .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
+          .map((run) => run?.id)
+          .filter((id) => Number.isFinite(Number(id)));
+        return (preloadIds.length > 0
+          ? fetchRoutePreviewBatch(preloadIds).catch(() => ({ previewUpdates: {}, bboxUpdates: {} }))
+          : Promise.resolve({ previewUpdates: {}, bboxUpdates: {} }))
+          .then(({ previewUpdates, bboxUpdates }) => {
+            if (Object.keys(previewUpdates).length > 0) {
+              setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
+            }
+            if (Object.keys(bboxUpdates).length > 0) {
+              setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
+            }
+            setAllRuns(list);
+            setLoadState('ready');
+          });
+      })
+      .catch((err) => {
+        runsFailed = true;
+        if (err && err.message !== 'Unauthorized') {
+          setLoadState((prev) => (prev === 'ready' ? prev : 'error'));
+        }
+      });
+
+    const profilePromise = apiJson('/api/profile/me')
+      .then((data) => { setProfile(data); latestProfile = data; })
+      .catch(() => {});
+
+    const stravaPromise = apiJson('/api/auth/strava/status')
+      .then((data) => { setStravaStatus(data); latestStrava = data; })
+      .catch(() => {});
+
+    await Promise.allSettled([runsPromise, profilePromise, stravaPromise]);
+    if (!runsFailed && latestRuns) {
+      writeRunsCache(email, latestRuns, latestProfile, latestStrava);
+    }
+  }, [email]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    loadRuns();
-  }, [isAuthenticated, navigate]);
+    loadRuns({ fromCache: true });
+  }, [isAuthenticated, navigate, loadRuns]);
 
-  async function loadRuns() {
-    try {
-      const [data, profileData, stravaData] = await Promise.all([
-        apiJson('/api/activities'),
-        apiJson('/api/profile/me').catch(() => null),
-        apiJson('/api/auth/strava/status').catch(() => null),
-      ]);
-      const list = Array.isArray(data) ? data : [];
-      list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
-      setAllRuns(list);
-      setProfile(profileData);
-      setStravaStatus(stravaData);
-      setLoadState('ready');
-    } catch (err) {
-      if (err.message !== 'Unauthorized') setLoadState('error');
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    function handleStravaSyncFinished() {
+      loadRuns();
     }
-  }
+
+    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    return () => {
+      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    };
+  }, [isAuthenticated, loadRuns]);
 
   async function handleStravaConnect() {
     setStravaLinking(true);
@@ -196,18 +723,18 @@ export default function Runs() {
 
     if (activeMode === 'year') {
       if (selectedYear != null) {
-        result = result.filter((run) => new Date(run.startTime || run.startDate || 0).getFullYear() === selectedYear);
+        result = result.filter((run) => runDate(run).getFullYear() === selectedYear);
       }
     } else if (activeMode === 'month') {
       const year = selectedYear || now.getFullYear();
       result = result.filter((run) => {
-        const date = new Date(run.startTime || run.startDate || 0);
+        const date = runDate(run);
         if (date.getFullYear() !== year) return false;
         return selectedMonth == null ? true : date.getMonth() === selectedMonth;
       });
     } else if (activeMode === 'day') {
       result = result.filter((run) => {
-        const date = new Date(run.startTime || run.startDate || 0);
+        const date = runDate(run);
         return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
       });
     }
@@ -221,20 +748,16 @@ export default function Runs() {
         return paceA - paceB;
       });
     } else {
-      result.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
+      result.sort((a, b) => runDate(b).getTime() - runDate(a).getTime());
     }
 
     return result;
   }, [activeMode, allRuns, selectedMonth, selectedYear, searchQuery, runsSort, t]);
 
-  useEffect(() => {
-    setVisibleCount(BATCH_SIZE);
-  }, [activeMode, selectedYear, selectedMonth]);
-
   const distinctYears = useMemo(() => {
     const years = new Set();
     allRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime())) years.add(date.getFullYear());
     });
     return [...years].sort((a, b) => b - a);
@@ -244,7 +767,7 @@ export default function Runs() {
     const year = selectedYear || new Date().getFullYear();
     const months = new Set();
     allRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime()) && date.getFullYear() === year) months.add(date.getMonth());
     });
     return [...months].sort((a, b) => a - b);
@@ -259,20 +782,10 @@ export default function Runs() {
     if (activeMode === 'month' && selectedMonth == null && monthsWithData.length) setSelectedMonth(monthsWithData[monthsWithData.length - 1]);
   }, [activeMode, monthsWithData, selectedMonth]);
 
-  const sortedRuns = useMemo(() => {
-    if (runsSort === 'distance') return [...filteredRuns].sort((a, b) => (b.distanceKm || 0) - (a.distanceKm || 0));
-    if (runsSort === 'pace') {
-      return [...filteredRuns].sort((a, b) => {
-        const paceA = a.distanceKm > 0 ? (a.movingTimeSeconds || 0) / a.distanceKm : Infinity;
-        const paceB = b.distanceKm > 0 ? (b.movingTimeSeconds || 0) / b.distanceKm : Infinity;
-        return paceA - paceB;
-      });
-    }
-    return filteredRuns;
-  }, [filteredRuns, runsSort]);
+  useEffect(() => {
+    setVisibleRunsCount(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
+  }, [activeMode, allRuns.length, runsSort, searchQuery, selectedMonth, selectedYear]);
 
-  const visibleRuns = sortedRuns.slice(0, visibleCount);
-  const routePreviewRuns = visibleRuns;
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
   const monthNames = t('runs.months').split(',');
@@ -292,11 +805,68 @@ export default function Runs() {
   const avgPaceText = filteredRuns.length > 0
     ? formatPace(filteredDistanceKm, filteredTimeSeconds, lang)
     : t('runs.pace_zero');
+  const latestRun = allRuns.reduce((latest, run) => {
+    const runTime = runDate(run).getTime();
+    if (Number.isNaN(runTime)) return latest;
+    if (!latest) return run;
+    const latestTime = runDate(latest).getTime();
+    return Number.isNaN(latestTime) || runTime > latestTime ? run : latest;
+  }, null);
+  const latestSource = latestRun?.provider || t('runs.no_data');
+  const visibleRuns = useMemo(
+    () => filteredRuns.slice(0, visibleRunsCount),
+    [filteredRuns, visibleRunsCount],
+  );
+  const routePreviewRuns = useMemo(
+    () => filteredRuns.slice(0, Math.min(filteredRuns.length, visibleRunsCount + ROUTE_PREVIEW_PREFETCH_LOOKAHEAD)),
+    [filteredRuns, visibleRunsCount],
+  );
+  const hasMoreRuns = visibleRunsCount < filteredRuns.length;
+
+  // Group the visible runs by YYYY-MM so the page-list renders each month as
+  // its own header + responsive run-card grid. visibleRuns is already sorted
+  // most-recent-first, so a single pass preserves the chronological group
+  // order without an extra sort. Each group also carries an aggregate run
+  // count and total distance so the header copy can summarize the month at
+  // a glance.
+  const runsByMonth = useMemo(() => {
+    const groups = [];
+    const groupByKey = new Map();
+    const monthLabelFormatter = (() => {
+      try {
+        return new Intl.DateTimeFormat(lang || 'en', { year: 'numeric', month: 'long' });
+      } catch {
+        return null;
+      }
+    })();
+    visibleRuns.forEach((run) => {
+      const started = runDate(run);
+      if (Number.isNaN(started.getTime())) return;
+      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      let group = groupByKey.get(key);
+      if (!group) {
+        group = {
+          key,
+          label: monthLabelFormatter
+            ? monthLabelFormatter.format(started)
+            : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
+          runs: [],
+          totalKm: 0,
+        };
+        groupByKey.set(key, group);
+        groups.push(group);
+      }
+      group.runs.push(run);
+      group.totalKm += Number(run.distanceKm || 0)
+        || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
+    });
+    return groups;
+  }, [visibleRuns, lang]);
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
     filteredRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime())) uniqueDays.add(date.toISOString().slice(0, 10));
     });
     return uniqueDays.size;
@@ -338,56 +908,76 @@ export default function Runs() {
   }
 
   useEffect(() => {
-    let cancelled = false;
-    const pendingRuns = routePreviewRuns.filter((run) => (
-      run?.id
-      && !(run.id in routePreviewPoints)
-      && !routePreviewInflightRef.current.has(run.id)
-    ));
-    if (pendingRuns.length === 0) return undefined;
+    if (!hasMoreRuns || loadState !== 'ready') return undefined;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined;
 
-    async function loadRoutePreviews() {
-      const workers = Array.from(
-        { length: Math.min(ROUTE_PREVIEW_CONCURRENCY, pendingRuns.length) },
-        async (_, workerIndex) => {
-          for (let index = workerIndex; index < pendingRuns.length; index += ROUTE_PREVIEW_CONCURRENCY) {
-            const run = pendingRuns[index];
-            routePreviewInflightRef.current.add(run.id);
-            try {
-              const response = await apiFetch(`/api/activities/${run.id}/points`);
-              if (!response.ok) {
-                if (!cancelled) {
-                  setRoutePreviewPoints((current) => ({ ...current, [run.id]: [] }));
-                }
-                continue;
-              }
-              const data = await response.json();
-              const points = Array.isArray(data)
-                ? data
-                  .map((point) => [Number(point.latitude), Number(point.longitude)])
-                  .filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude))
-                : [];
-              if (!cancelled) {
-                setRoutePreviewPoints((current) => ({ ...current, [run.id]: points }));
-              }
-            } catch {
-              if (!cancelled) {
-                setRoutePreviewPoints((current) => ({ ...current, [run.id]: [] }));
-              }
-            } finally {
-              routePreviewInflightRef.current.delete(run.id);
-            }
-          }
-        }
-      );
-      await Promise.all(workers);
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
+    }, {
+      root: null,
+      rootMargin: '240px 0px 360px',
+      threshold: 0.01,
+    });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filteredRuns.length, hasMoreRuns, loadState]);
+
+  useEffect(() => {
+    if (!Array.isArray(routePreviewRuns) || routePreviewRuns.length === 0) return undefined;
+    // 1. Hydrate from localStorage for any soon-visible run we haven't loaded yet.
+    const seeded = {};
+    for (const run of routePreviewRuns) {
+      if (!run?.id) continue;
+      if (run.id in routeBboxes) continue;
+      const cached = readBboxCache(run.id);
+      if (cached) seeded[run.id] = cached;
+    }
+    if (Object.keys(seeded).length > 0) {
+      setRouteBboxes((current) => ({ ...current, ...seeded }));
+      return undefined; // Re-run after the seed lands; next pass picks the still-missing runs.
     }
 
-    loadRoutePreviews();
+    // 2. Batch-fetch preview points + bbox for the visible window plus a short
+    // lookahead so runners do not watch cards visibly "upgrade" while scrolling.
+    const pendingRuns = routePreviewRuns.filter((run) => {
+      if (!run?.id || routePreviewBatchInflightRef.current.has(run.id)) return false;
+      const hasPointPreview = run.id in routePreviewFallbacks;
+      const hasBbox = run.id in routeBboxes || !!readBboxFromPreview(routePreviewFallbacks[run.id] || run.routePreview);
+      return !hasPointPreview || !hasBbox;
+    }).slice(0, 50);
+    if (pendingRuns.length === 0) return undefined;
+
+    let cancelled = false;
+    const pendingIds = pendingRuns.map((run) => run.id);
+    pendingIds.forEach((id) => routePreviewBatchInflightRef.current.add(id));
+
+    async function loadRoutePreviewBatch() {
+      try {
+        const { previewUpdates, bboxUpdates } = await fetchRoutePreviewBatch(pendingIds);
+        if (!cancelled) {
+          if (Object.keys(previewUpdates).length > 0) {
+            setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
+          }
+          if (Object.keys(bboxUpdates).length > 0) {
+            setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
+          }
+        }
+      } catch {
+        // Leave state untouched on transport/server failure so the next visible-run
+        // pass can retry instead of freezing a card into legacy preview mode.
+      } finally {
+        pendingIds.forEach((id) => routePreviewBatchInflightRef.current.delete(id));
+      }
+    }
+
+    loadRoutePreviewBatch();
     return () => {
       cancelled = true;
     };
-  }, [routePreviewPoints, routePreviewRuns]);
+  }, [routePreviewRuns, routeBboxes, routePreviewFallbacks]);
 
   function renderSecondaryFilterRow() {
     if (activeMode === 'year') {
@@ -497,9 +1087,11 @@ export default function Runs() {
         <main className="runner-shell-main">
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
-              <div className="runner-shell-topnav">
-                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
-              </div>
+              <RunnerShellTopNav
+                navItems={navItems}
+                activeLabel={t('profile.dashboard_nav_activities')}
+                navigate={navigate}
+              />
             </div>
             <div className="runner-shell-topbar-actions">
               <div className="runner-shell-topbar-profile-actions">
@@ -655,9 +1247,11 @@ export default function Runs() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_activities')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
@@ -673,21 +1267,51 @@ export default function Runs() {
         </header>
 
         <div className="runner-shell-canvas">
-          <main className="recent-runs-shell runs-dashboard-shell">
-            <section className="runner-dashboard-hero-copy runs-dashboard-hero-copy">
-              <span className="recent-runs-hero-kicker">{countText}</span>
-              <h1>{t('runs.heading')}</h1>
-              <p>{t('runs.page_copy')}</p>
-            </section>
-            <section className="recent-runs-hero recent-runs-hero--dashboard">
-              <div className="recent-runs-hero-overlay" />
-              <div className="recent-runs-hero-copy">
-                <span className="recent-runs-hero-kicker">{t('runs.stitch_pattern_title')}</span>
-                <h2>{t('profile.dashboard_recent_sessions')}</h2>
+          <main className="recent-runs-shell runs-dashboard-shell runs-profile-history">
+            <section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">
+              <div className="runs-profile-cockpit__primary">
+                <span className="recent-runs-hero-kicker">{t('runs.eyebrow')}</span>
+                <h1 id="runs-profile-title">{t('runs.heading')}</h1>
                 <p>{t('runs.page_copy')}</p>
+                <div className="runs-profile-cockpit__actions">
+                  <button
+                    type="button"
+                    className="runs-profile-primary-action"
+                    onClick={handleStravaConnect}
+                    disabled={stravaLinking}
+                  >
+                    <AppIcon name="sync" className="runner-dashboard-side-link-icon" />
+                    {awaitingPrimaryAction}
+                  </button>
+                  <button
+                    type="button"
+                    className="runs-profile-secondary-action"
+                    onClick={() => setImportModalOpen(true)}
+                  >
+                    <AppIcon name="folder_open" className="runner-dashboard-side-link-icon" />
+                    {t('runs.awaiting_import_files')}
+                  </button>
+                </div>
+              </div>
+              <div className="runs-profile-cockpit__rail" aria-label={t('runs.stitch_pattern_title')}>
+                <article className="runs-profile-signal runs-profile-signal--count">
+                  <span>{t('runs.full_history')}</span>
+                  <strong>{countText}</strong>
+                  <p>{t('runs.full_history_copy')}</p>
+                </article>
+                <article className="runs-profile-signal">
+                  <span>{t('runs.latest_source')}</span>
+                  <strong>{latestSource}</strong>
+                  <p>{t('runs.latest_source_note')}</p>
+                </article>
+                <article className={`runs-profile-signal runs-profile-signal--status${stravaLinked ? ' is-live' : ' is-muted'}`}>
+                  <span>{t(stravaLinked ? 'runs.awaiting_error_code_linked' : 'runs.awaiting_error_code_disconnected')}</span>
+                  <strong>{stravaLinked ? t('runs.awaiting_pipeline_strava') : t('runs.awaiting_pipeline_manual')}</strong>
+                  <p>{awaitingStatus}</p>
+                </article>
               </div>
             </section>
-            <section id="recent-runs-filters" className="recent-runs-chip-stack">
+            <section id="recent-runs-filters" className="recent-runs-chip-stack runs-profile-workbench">
               <div className="recent-runs-search-bar">
                 <div className="recent-runs-search-input-wrap">
                   <AppIcon name="search" className="recent-runs-search-icon" />
@@ -705,22 +1329,23 @@ export default function Runs() {
                   )}
                 </div>
               </div>
-              <div className="recent-runs-chip-row">            {timeFilterOptions.map((option) => (
-              <button key={option.key} type="button" className={`recent-runs-chip${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
-                setActiveMode(option.key);
-                setSelectedYear(null);
-                setSelectedMonth(null);
-              }}>
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <div className="recent-runs-chip-row recent-runs-chip-row--secondary">{renderSecondaryFilterRow()}</div>
+              <div className="recent-runs-chip-row">
+                {timeFilterOptions.map((option) => (
+                  <button key={option.key} type="button" className={`recent-runs-chip${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
+                    setActiveMode(option.key);
+                    setSelectedYear(null);
+                    setSelectedMonth(null);
+                  }}>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="recent-runs-chip-row recent-runs-chip-row--secondary">{renderSecondaryFilterRow()}</div>
             </section>
             <section className="recent-runs-stats-grid">
-          <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
-          <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
-          <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
+              <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
+              <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
+              <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
             </section>
             {filteredRuns.length > 0 ? (
               <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
@@ -745,39 +1370,64 @@ export default function Runs() {
           {loadState === 'loading' ? <div className="recent-runs-status">{t('runs.loading')}</div> : null}
           {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
           {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
-          {loadState === 'ready' && visibleRuns.map((run, index) => {
-            const provider = run.provider || t('runs.manual_import');
-            const runName = run.name || t('runs.default_run_name');
-            return (
-              <article key={run.id || `${runName}-${index}`} className="recent-runs-card" onClick={() => openRun(run)}>
-                <RoutePreviewThumb points={routePreviewPoints[run.id] || []} provider={provider} runName={runName} />
-                <div className="recent-runs-card-body">
-                  <div className="recent-runs-card-top">
-                    <div>
-                      <h2>{runName}</h2>
-                      <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
-                    </div>
-                    <button type="button" className="recent-runs-card-menu" onClick={(event) => event.stopPropagation()} aria-label={t('runs.stitch_more_actions')}>
-                      <AppIcon name="more_horiz" className="runner-dashboard-side-link-icon" />
-                    </button>
-                  </div>
-                  <div className="recent-runs-card-metrics">
-                    <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
-                    <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
-                    <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
-                  </div>
+          {loadState === 'ready' && filteredRuns.length > 0 ? (
+              <>
+                <div className="recent-runs-page-list">
+                  {runsByMonth.map((group) => {
+                    const collapsed = collapsedMonthKeys.has(group.key);
+                    const panelId = `recent-runs-month-${group.key}`;
+                    return (
+                      <section
+                        key={group.key}
+                        className={`recent-runs-month-group${collapsed ? ' is-collapsed' : ''}`}
+                        aria-label={group.label}
+                      >
+                        <button
+                          type="button"
+                          className="recent-runs-month-header recent-runs-month-toggle"
+                          aria-expanded={!collapsed}
+                          aria-controls={panelId}
+                          onClick={() => toggleMonthFold(group.key)}
+                        >
+                          <span className="recent-runs-month-toggle-chevron" aria-hidden="true">
+                            <AppIcon name={collapsed ? 'expand_more' : 'expand_less'} />
+                          </span>
+                          <h3 className="recent-runs-month-title">{group.label}</h3>
+                          <span className="recent-runs-month-meta">
+                            {t('runs.count_label', { count: group.runs.length })}
+                            {' · '}
+                            {formatDistance(group.totalKm, 1, lang)}
+                          </span>
+                        </button>
+                        <div
+                          id={panelId}
+                          className="recent-runs-month-grid"
+                          hidden={collapsed}
+                        >
+                          {group.runs.map((run) => (
+                            <RunCard
+                              key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
+                              run={run}
+                              t={t}
+                              lang={lang}
+                              routePreviewFallbacks={routePreviewFallbacks}
+                              routeBboxes={routeBboxes}
+                              onOpen={openRun}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
-              </article>
-            );
-          })}
-            </section>
-            {visibleCount < filteredRuns.length ? (
-              <div className="recent-runs-load-more-row">
-            <button type="button" className="recent-runs-load-more" onClick={() => setVisibleCount((value) => Math.min(filteredRuns.length, value + BATCH_SIZE))}>
-              {t('runs.load_more')}
-            </button>
-              </div>
+                {hasMoreRuns ? (
+                  <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
+                    <span>{t('runs.loading')}</span>
+                  </div>
+                ) : null}
+              </>
             ) : null}
+            </section>
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />
             </footer>
@@ -787,4 +1437,6 @@ export default function Runs() {
       {renderImportModal()}
     </div>
   );
-}
+});
+
+export default Runs;

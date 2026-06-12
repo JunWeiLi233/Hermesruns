@@ -64,6 +64,11 @@ const oversizedOverlay = deriveRaceMapTrust({
 });
 
 assert.equal(oversizedOverlay.trustedOverlay, false);
+assert.equal(
+  oversizedOverlay.trustedRouteGeometry,
+  true,
+  'A plausible live route should remain drawable on OpenStreetMap even when the source image overlay is too broad to trust.',
+);
 assert.ok(oversizedOverlay.viewportBounds);
 assert.ok(oversizedOverlay.viewportBounds.north < 43.4);
 assert.ok(oversizedOverlay.viewportBounds.south > 41.0);
@@ -104,6 +109,61 @@ const tinyRoute = deriveRaceMapTrust({
 });
 
 assert.equal(tinyRoute.trustedRoute, true);
+assert.equal(
+  tinyRoute.trustedRouteGeometry,
+  false,
+  'A city-level trace that is far too short for a marathon should not be treated as drawable route geometry.',
+);
 assert.equal(tinyRoute.trustedOverlay, false);
+assert.equal(tinyRoute.cityLevelMatch, true);
+assert.ok(tinyRoute.viewportBounds);
+
+const stylizedChicagoMap = deriveRaceMapTrust({
+  imageUrl: 'https://cdn.example.com/chicago-stylized-course-map.png',
+  overlayBounds: { north: 42.01, south: 41.67, east: -87.52, west: -87.78 },
+  routePoints: [
+    { lat: 41.902, lng: -87.646, label: 'North side' },
+    { lat: 41.895, lng: -87.640 },
+    { lat: 41.888, lng: -87.634 },
+    { lat: 41.881, lng: -87.638 },
+    { lat: 41.874, lng: -87.632 },
+    { lat: 41.867, lng: -87.626, label: 'South side' },
+  ],
+  confidence: 93,
+  distanceKm: 42.195,
+  mapCenter: [41.8781, -87.6298],
+});
+
+assert.equal(stylizedChicagoMap.trustedRoute, true);
+assert.equal(stylizedChicagoMap.trustedOverlay, false);
+assert.equal(
+  stylizedChicagoMap.cityLevelMatch,
+  true,
+  'Stylized marathon maps in the right city should be accepted only as city-level matches when distance plausibility fails.',
+);
+
+const storedCityLevelChicagoReference = deriveRaceMapTrust({
+  imageUrl: 'https://cdn.example.com/chicago-stylized-course-map.png',
+  overlayBounds: { north: 42.01, south: 41.67, east: -87.52, west: -87.78 },
+  routePoints: [],
+  confidence: 58,
+  distanceKm: 42.195,
+  mapCenter: [41.8781, -87.6298],
+});
+
+assert.equal(storedCityLevelChicagoReference.trustedRoute, false);
+assert.equal(storedCityLevelChicagoReference.trustedOverlay, false);
+assert.equal(
+  storedCityLevelChicagoReference.cityLevelMatch,
+  false,
+  'City-level-only references without live route geometry should not be treated as a city-level course-map match. Only render when actual route geometry exists.',
+);
+assert.equal(storedCityLevelChicagoReference.viewportBounds, null);
+
+assert.equal(
+  wrongCityOverlay.cityLevelMatch,
+  false,
+  'A route centered in the wrong city should not be accepted as a city-level match.',
+);
 
 console.log('[PASS] Race detail map trust guardrails passed.');

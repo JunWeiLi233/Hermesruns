@@ -21,6 +21,24 @@ assert.match(
 
 assert.match(
   dashboardSource,
+  /admin-track-hub-map-stage__compare-grid/,
+  'Dashboard should promote the course-map main stage into a side-by-side compare grid.',
+);
+
+assert.match(
+  dashboardSource,
+  /admin-track-hub-map-panel--live[\s\S]*preview=\{liveCourseMapPreview\}/,
+  'Dashboard should show the current live website map in the compare stage.',
+);
+
+assert.match(
+  dashboardSource,
+  /admin-track-hub-map-panel--pending[\s\S]*preview=\{pendingCourseMapPreview\}/,
+  'Dashboard should show the pending candidate map in the compare stage.',
+);
+
+assert.match(
+  dashboardSource,
   /admin-track-hub-workspace-stack/,
   'Dashboard should stack the publish decision, operations band, and review comparison inside one unified track-hub workspace column.',
 );
@@ -71,6 +89,18 @@ assert.match(
   styleSource,
   /\.admin-track-hub-map-stage__telemetry-grid\s*\{/,
   'Dashboard styles should define the map-stage telemetry grid for the course-map track hub.',
+);
+
+assert.match(
+  styleSource,
+  /\.admin-track-hub-map-stage__compare-grid\s*\{/,
+  'Dashboard styles should define the side-by-side compare grid for the dominant course-map stage.',
+);
+
+assert.match(
+  styleSource,
+  /\.admin-track-hub-map-panel__frame\s*\{[\s\S]*min-height:\s*320px/s,
+  'Dashboard styles should give each live/pending compare panel a dedicated map frame with a stable visible height.',
 );
 
 assert.match(
