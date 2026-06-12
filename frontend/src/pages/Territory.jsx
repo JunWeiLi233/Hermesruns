@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
-import { apiJson } from '../api';
+import { apiFetch, apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
@@ -15,6 +15,10 @@ async function loadLeaflet() {
     leafletPromise = import('leaflet').then((module) => module.default || module);
   }
   return leafletPromise;
+}
+
+if (typeof window !== 'undefined') {
+  void loadLeaflet();
 }
 
 const MAP_CHROME_COPY = {
@@ -50,13 +54,33 @@ const MAP_CHROME_COPY = {
     nextTarget: 'Next target',
     samplesToContest: 'Samples to contest',
     samples: 'samples',
-    campaignPanel: 'Territory campaign',
-    campaignKicker: 'Live conquest board',
-    campaignTitle: 'Run. Claim. Defend.',
-    campaignBody: 'Every run adds real ground to your board. Hold your strongest sectors and pressure the next target.',
+    loadingKicker: 'Live territory board',
+    loadingCopy: 'Every run adds real ground to your board. Hold your strongest sectors and pressure the next target.',
     startRun: 'Start next run',
     targetPressure: 'Target pressure',
     sectorValue: 'Every 1KM\u00b2 strengthens control',
+    colorThemes: 'Color themes',
+    allThemes: 'All users',
+    allThemesHint: 'Show every owner',
+    territoryScope: 'Territory scope',
+    ownTerritory: 'Own territory',
+    ownTerritoryHint: 'Show only your land',
+    globalTerritory: 'Global territory',
+    globalTerritoryHint: 'Show every user',
+    focusTheme: 'Focus theme',
+    activeTheme: 'Current',
+    rivalTheme: 'Rival',
+    themeRegions: 'regions',
+    themeRegion: 'region',
+    themeAreaUnknown: 'Area pending',
+    ownerInfoTitle: 'Territory owner',
+    username: 'Username',
+    status: 'Status',
+    ownedArea: 'Owned area',
+    mappedRegions: 'Mapped regions',
+    ownerId: 'Owner ID',
+    closeOwnerInfo: 'Close owner info',
+    clickTerritoryOwner: 'Click territory owned by',
   },
   'zh-CN': {
     pageTitle: '\u9886\u5730',
@@ -90,13 +114,33 @@ const MAP_CHROME_COPY = {
     nextTarget: '\u4e0b\u4e00\u76ee\u6807',
     samplesToContest: '\u4e89\u593a\u6240\u9700\u91c7\u6837',
     samples: '\u91c7\u6837',
-    campaignPanel: '\u9886\u5730\u6218\u5c40',
-    campaignKicker: '\u5b9e\u65f6\u5360\u9886\u68cb\u76d8',
-    campaignTitle: '\u5954\u8dd1\u3002\u5360\u9886\u3002\u5b88\u4f4f\u3002',
-    campaignBody: '\u6bcf\u6b21\u8dd1\u6b65\u90fd\u4f1a\u4e3a\u4f60\u7684\u68cb\u76d8\u589e\u52a0\u771f\u5b9e\u5730\u9762\u3002\u5b88\u4f4f\u6700\u5f3a\u533a\u5757\uff0c\u5411\u4e0b\u4e00\u76ee\u6807\u65bd\u538b\u3002',
+    loadingKicker: '\u5b9e\u65f6\u9886\u5730\u68cb\u76d8',
+    loadingCopy: '\u6bcf\u6b21\u8dd1\u6b65\u90fd\u4f1a\u4e3a\u4f60\u7684\u68cb\u76d8\u589e\u52a0\u771f\u5b9e\u5730\u9762\u3002\u5b88\u4f4f\u6700\u5f3a\u533a\u5757\uff0c\u5411\u4e0b\u4e00\u76ee\u6807\u65bd\u538b\u3002',
     startRun: '\u5f00\u59cb\u4e0b\u4e00\u6b21\u8dd1\u6b65',
     targetPressure: '\u76ee\u6807\u538b\u529b',
     sectorValue: '\u6bcf 1KM\u00b2 \u90fd\u4f1a\u589e\u5f3a\u63a7\u5236\u529b',
+    colorThemes: '\u9886\u5730\u914d\u8272',
+    allThemes: '\u5168\u90e8\u7528\u6237',
+    allThemesHint: '\u663e\u793a\u6240\u6709\u7528\u6237',
+    territoryScope: '\u9886\u5730\u89c6\u56fe',
+    ownTerritory: '\u6211\u7684\u9886\u5730',
+    ownTerritoryHint: '\u53ea\u770b\u4f60\u7684\u571f\u5730',
+    globalTerritory: '\u5168\u5c40\u9886\u5730',
+    globalTerritoryHint: '\u663e\u793a\u6240\u6709\u7528\u6237',
+    focusTheme: '\u805a\u7126\u914d\u8272',
+    activeTheme: '\u5f53\u524d',
+    rivalTheme: '\u5bf9\u624b',
+    themeRegions: '\u4e2a\u533a\u57df',
+    themeRegion: '\u4e2a\u533a\u57df',
+    themeAreaUnknown: '\u9762\u79ef\u8ba1\u7b97\u4e2d',
+    ownerInfoTitle: '\u9886\u5730\u6240\u6709\u8005',
+    username: '\u7528\u6237\u540d',
+    status: '\u72b6\u6001',
+    ownedArea: '\u5360\u6709\u9762\u79ef',
+    mappedRegions: '\u5730\u56fe\u533a\u57df',
+    ownerId: '\u7528\u6237 ID',
+    closeOwnerInfo: '\u5173\u95ed\u6240\u6709\u8005\u4fe1\u606f',
+    clickTerritoryOwner: '\u70b9\u51fb\u9886\u5730\u6240\u6709\u8005',
   },
 };
 
@@ -120,6 +164,80 @@ function safeColor(color, fallback = '#f07561') {
 
 function mapChromeCopy(lang, key) {
   return MAP_CHROME_COPY[lang]?.[key] || MAP_CHROME_COPY.en[key] || key;
+}
+
+function TerritoryInitialLoading({
+  label,
+  copy,
+  kicker,
+  centerLabel,
+  runsLabel,
+  settingsLabel,
+  initials,
+  onProfile,
+  onRuns,
+  onSettings,
+}) {
+  return (
+    <div className="heatmap-page territory-loading-page" aria-busy="true">
+      <div className="heatmap-page-map-shell">
+        <div className="heatmap-page-map-canvas" aria-hidden="true" />
+        <div className="heatmap-page-map-vignette" aria-hidden="true" />
+
+        <header className="heatmap-page-topbar" aria-label={label}>
+          <button
+            type="button"
+            className="heatmap-page-brand-pill"
+            onClick={onProfile}
+            aria-label={`Hermes ${kicker}`}
+          >
+            <HermesLogo dark />
+            <span>{kicker}</span>
+          </button>
+
+          <button
+            type="button"
+            className="heatmap-page-search-pill"
+            disabled
+            aria-label={centerLabel}
+          >
+            <AppIcon name="search" className="heatmap-page-pill-icon" />
+            <div className="heatmap-page-search-copy">
+              <strong>{centerLabel}</strong>
+              <span>{label}</span>
+            </div>
+          </button>
+
+          <div className="heatmap-page-action-strip">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+              <button type="button" className="heatmap-page-secondary-btn is-overlay" onClick={onRuns}>
+                {runsLabel}
+              </button>
+              <button type="button" className="heatmap-page-primary-btn is-overlay" onClick={onSettings}>
+                {settingsLabel}
+              </button>
+              <button
+                type="button"
+                className="runner-shell-avatar heatmap-page-avatar"
+                aria-label="Hermes"
+                onClick={onProfile}
+              >
+                {initials}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="heatmap-page-empty" role="status" aria-live="polite">
+          <div className="heatmap-page-empty-copy">
+            <span className="heatmap-page-card-kicker">{kicker}</span>
+            <h3>{label}</h3>
+            <p>{copy}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function formatCoordinate(value, positiveSuffix, negativeSuffix) {
@@ -247,6 +365,40 @@ function territoryInitialZoom(center) {
   return Math.min(Math.max(Number.isFinite(zoom) ? zoom : 13, 12), 14);
 }
 
+function territoryBoundsKey(bounds) {
+  const southWest = bounds.getSouthWest();
+  const northEast = bounds.getNorthEast();
+  return [
+    southWest.lat.toFixed(6),
+    southWest.lng.toFixed(6),
+    northEast.lat.toFixed(6),
+    northEast.lng.toFixed(6),
+  ].join(':');
+}
+
+function ensureActiveConcretePathsInView(map) {
+  const container = map?.getContainer?.();
+  if (!container) return;
+
+  const activePaths = Array.from(container.querySelectorAll('.terr-land-mask-concrete-land--active'));
+  if (!activePaths.length) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const hasClippedActivePath = activePaths.some((path) => {
+    const rect = path.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    return rect.left < containerRect.left
+      || rect.right > containerRect.right
+      || rect.top < containerRect.top
+      || rect.bottom > containerRect.bottom;
+  });
+
+  const currentZoom = Number(map.getZoom?.());
+  if (hasClippedActivePath && Number.isFinite(currentZoom) && currentZoom < 12) {
+    map.setZoom(12, { animate: false });
+  }
+}
+
 /** Read the coral stroke color from CSS custom properties at runtime */
 function getCoralStroke() {
   return getComputedStyle(document.documentElement).getPropertyValue('--accent-coral-strong').trim() || '#f07561';
@@ -255,43 +407,121 @@ function getCoralStroke() {
 const MAX_MASK_CELLS_TO_RENDER = 200000;
 const TERRITORY_POLYGON_REFRESH_MS = 2500;
 const TERRITORY_POLYGON_INITIAL_DELAY_MS = 120;
+const TERRITORY_CACHE_VERSION = 'global-owner-territory-cache-v97-concrete-boundary-sampling';
+const TERRITORY_SHELL_CACHE_KEY_PREFIX = 'hermes_territory_shell_';
+const TERRITORY_POLYGON_CACHE_DB = 'hermes-territory-cache';
+const TERRITORY_POLYGON_CACHE_DB_VERSION = 2;
+const TERRITORY_POLYGON_CACHE_STORE = 'territory-polygons';
+const TERRITORY_POLYGON_CACHE_KEY_PREFIX = 'polygons:';
+const TERRITORY_RENDER_CACHE_STORE = 'territory-render';
+const TERRITORY_RENDER_CACHE_KEY_PREFIX = 'render:';
+const TERRITORY_RENDER_INDEX_CACHE_KEY_PREFIX = 'hermes_territory_render_index_';
+const TERRITORY_CACHED_RENDER_PREVIEW_MAX_POINTS_PER_OWNER = 5200;
+const TERRITORY_CACHED_RENDER_PREVIEW_MAX_RIVAL_REGIONS_PER_OWNER = 12;
+const TERRITORY_CACHED_RENDER_PREVIEW_TOLERANCE_METERS = 24;
+const TERRITORY_INTERACTIVE_RENDER_MAX_ACTIVE_POINTS_PER_OWNER = Number.POSITIVE_INFINITY;
+const TERRITORY_INTERACTIVE_RENDER_MAX_RIVAL_POINTS_PER_OWNER = 5200;
+const TERRITORY_MAX_AUTO_FIT_SPAN_METERS = 8_000;
+const TERRITORY_GLOBAL_INITIAL_RENDER_MAX_OWNERS = 96;
 const METERS_PER_DEG_LAT = 111_320;
 const LAND_MASK_RENDER_SUBDIVISION = 3;
 const LAND_MASK_SUBDIVIDED_CELL_TILE_FACTOR = 9;
-const LAND_MASK_SOURCE_BRUSH_RADIUS_RATIO = 1.45;
+const LAND_MASK_SOURCE_FOOTPRINT_RADIUS_RATIO = 0.48;
+const LAND_MASK_ROUTE_CORRIDOR_RADIUS_RATIO = 0.72;
+const LAND_MASK_ROUTE_CORRIDOR_STEP_RATIO = 0.45;
+const LAND_MASK_ROUTE_INTERIOR_DISTANCE_RATIO = 4.0;
+const LAND_MASK_ROUTE_TRACE_MAX_SEGMENT_RATIO = 3.0;
+const LAND_MASK_COMPONENT_BRIDGE_MAX_METERS = 180;
+const LAND_MASK_COMPONENT_BRIDGE_RADIUS_RATIO = 0.55;
+const LAND_MASK_COMPONENT_BRIDGE_STEP_RATIO = 0.45;
+const LAND_MASK_COMPONENT_BRIDGE_MIN_TILES = 8;
+const LAND_MASK_COMPONENT_BRIDGE_MAX_EDGES = 96;
+const LAND_MASK_INTERNAL_CORRIDOR_MAX_METERS = 44;
+const LAND_MASK_INTERNAL_CORRIDOR_MIN_TILES = 24;
+const LAND_MASK_INTERNAL_CORRIDOR_MAX_ADDED_RATIO = 0.85;
+const LAND_MASK_DENSE_SEAM_MIN_TILES = 8_000;
+const LAND_MASK_DENSE_SEAM_MIN_COMPONENTS = 3;
+const LAND_MASK_DENSE_SEAM_MIN_DENSITY = 0.48;
+const LAND_MASK_DENSE_SEAM_MAX_METERS = 132;
+const LAND_MASK_DENSE_SEAM_MAX_ADDED_RATIO = 0.95;
+const LAND_MASK_DENSE_SEAM_MAX_SCAN_CELLS = 650_000;
+const LAND_MASK_TOPOLOGY_CLOSE_RADIUS_RATIO = 3.0;
+const LAND_MASK_TOPOLOGY_CLOSE_MAX_RADIUS_CELLS = 12;
+const LAND_MASK_TOPOLOGY_CLOSE_MIN_TILES = 48;
+const LAND_MASK_TOPOLOGY_CLOSE_MAX_ADDED_RATIO = 0.65;
+const LAND_MASK_TOPOLOGY_CLOSE_MAX_DILATION_OPS = 120_000;
+const LAND_MASK_TOPOLOGY_LARGE_CLOSE_MIN_AREA_SQUARE_METERS = 5_000_000;
+const LAND_MASK_TOPOLOGY_LARGE_CLOSE_MIN_TILES = 30_000;
+const LAND_MASK_SOLID_COMPONENT_MIN_DENSITY = 0.18;
+const LAND_MASK_TOPOLOGY_LARGE_CLOSE_RADIUS_RATIO = 3.0;
+const LAND_MASK_TOPOLOGY_LARGE_CLOSE_MAX_RADIUS_CELLS = 12;
+const LAND_MASK_TOPOLOGY_LARGE_CLOSE_MAX_ADDED_RATIO = 0.65;
+const LAND_MASK_TOPOLOGY_LARGE_CLOSE_MAX_DILATION_OPS = 80_000;
 const LAND_MASK_TILE_OVERLAP_RATIO = 0.18;
-const LAND_MASK_CONTOUR_SIMPLIFY_RATIO = 12;
-const LAND_MASK_SMOOTHING_PASSES = 8;
+const LAND_MASK_CONTOUR_SIMPLIFY_RATIO = 3.5;
+const LAND_MASK_SMOOTHING_PASSES = 5;
 const LAND_MASK_CURVE_PASSES = 3;
+const LAND_MASK_ROUTE_CORRIDOR_CONTOUR_SIMPLIFY_RATIO = 0.7;
+const LAND_MASK_ROUTE_CORRIDOR_CORNER_RADIUS_RATIO = 1.2;
+const LAND_MASK_ROUTE_CORRIDOR_SMOOTHING_PASSES = 1;
+const LAND_MASK_LARGE_BAY_COLLAPSE_WIDTH_RATIO = 16.0;
+const LAND_MASK_LARGE_BAY_COLLAPSE_MAX_ARC_RATIO = 80;
+const LAND_MASK_LARGE_BAY_COLLAPSE_MIN_ARC_RATIO = 4.0;
+const LAND_MASK_LARGE_BAY_COLLAPSE_MIN_ARC_TO_CHORD = 1.6;
+const LAND_MASK_LARGE_BAY_COLLAPSE_MAX_PER_LOOP = 160;
 const LAND_MASK_SMALL_LOOP_POINT_LIMIT = 44;
 const LAND_MASK_TINY_LOOP_POINT_LIMIT = 24;
-const LAND_MASK_MAX_SMOOTHED_POINTS_PER_LOOP = 3600;
-const LAND_MASK_CORNER_RADIUS_RATIO = 18;
-const LAND_MASK_MIN_VISIBLE_CONTOUR_POINTS = 10;
-const LAND_MASK_MIN_VISIBLE_COMPACTNESS = 0.032;
-const LAND_MASK_MAX_VISIBLE_ASPECT_RATIO = 8;
-const LAND_MASK_MIN_CONTOUR_AREA_SQUARE_METERS = 18_000;
-const LAND_MASK_CONTOUR_PRUNE_PASSES = 2;
-const LAND_MASK_CONTOUR_PRUNE_MIN_NEIGHBORS = 3;
-const LAND_MASK_CONTOUR_CORE_MIN_NEIGHBORS = 4;
-const LAND_MASK_LARGE_COMPONENT_MIN_TILES = 40;
-const LAND_MASK_CONTOUR_WEIGHT = { active: 4.4, rival: 1.25 };
-const LAND_MASK_CONTOUR_OPACITY = { active: 0.98, rival: 0.26 };
-const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.72, rival: 0.2 };
+const LAND_MASK_MAX_SMOOTHED_POINTS_PER_LOOP = 800;
+const LAND_MASK_CORNER_RADIUS_RATIO = 5.5;
+const LAND_MASK_MIN_VISIBLE_CONTOUR_POINTS = 4;
+const LAND_MASK_MIN_CONTOUR_AREA_SQUARE_METERS = 4_000;
+const LAND_MASK_MIN_CONTOUR_PERIMETER_METERS = 260;
+const LAND_MASK_MIN_VISIBLE_COMPONENT_TILES = 10;
+const LAND_MASK_EDGE_COMPONENT_MIN_VISIBLE_TILES = 4;
+const LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER = 32;
+const LAND_MASK_GLOBAL_ACTIVE_VISIBLE_REGIONS_PER_OWNER = Number.POSITIVE_INFINITY;
+const LAND_MASK_MAX_LOCAL_VIEW_REGIONS_PER_OWNER = 144;
+const LAND_MASK_VISIBLE_REGION_DIVERSITY_METERS = 6_000;
+const LAND_MASK_CONTOUR_WEIGHT = { active: 2.0, rival: 0.8 };
+const LAND_MASK_CONTOUR_OPACITY = { active: 0.86, rival: 0.2 };
+const LAND_MASK_CONCRETE_LAND_OPACITY = { active: 0.72, rival: 0.18 };
 const LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT = 0;
 const LAND_MASK_CONCRETE_LAND_EDGE_OPACITY = { active: 0, rival: 0 };
-const LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX = 0.25;
-const LAND_MASK_CONTOUR_REFERENCE_ZOOM = 14;
-const LAND_MASK_CONTOUR_CUBIC_TENSION = 0.62;
-const LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO = 0.72;
-const LAND_MASK_AXIS_SEGMENT_SOFTEN_PX = 64;
-const LAND_MASK_AXIS_SEGMENT_MIN_PX = 10;
 const LAND_MASK_SHARED_EDGE_CURVE_RATIO = 0.38;
+const TERRITORY_OWNER_COLOR_PALETTE = [
+  '#f07561',
+  '#5b9cf5',
+  '#c084fc',
+  '#22d3ee',
+  '#fbbf24',
+  '#34d399',
+  '#fb7185',
+  '#818cf8',
+  '#f97316',
+  '#14b8a6',
+  '#e879f9',
+  '#60a5fa',
+  '#a3e635',
+  '#facc15',
+  '#4ade80',
+  '#38bdf8',
+];
+const TERRITORY_OWNER_COLOR_NEAR_METERS = 5200;
+const TERRITORY_OWNER_COLOR_MIN_SEPARATION = 72;
 const TERRITORY_LAYER_PANES = [
   { name: 'territory-rival-fill-pane', className: 'terr-leaflet-territory-pane--rival-fill', zIndex: 430 },
   { name: 'territory-rival-contour-pane', className: 'terr-leaflet-territory-pane--rival-contour', zIndex: 440 },
   { name: 'territory-active-fill-pane', className: 'terr-leaflet-territory-pane--active-fill', zIndex: 450 },
   { name: 'territory-active-contour-pane', className: 'terr-leaflet-territory-pane--active-contour', zIndex: 460 },
+];
+const TERRITORY_OWNER_FOCUS_BASE_CLASSES = [
+  'terr-land-mask-concrete-land',
+  'terr-land-mask-contour',
+];
+const TERRITORY_OWNER_FOCUS_SUFFIXES = [
+  'theme-all',
+  'theme-selected',
+  'theme-dimmed',
 ];
 
 function hasCoordinatePolygon(poly) {
@@ -302,12 +532,20 @@ function hasCellMaskPolygon(poly) {
   return Array.isArray(poly?.cells) && poly.cells.length > 0;
 }
 
+function hasDrawableTerritoryPolygon(poly) {
+  return hasCellMaskPolygon(poly);
+}
+
+function hasDrawableTerritoryPolygonData(data) {
+  return Array.isArray(data?.polygons) && data.polygons.some(hasDrawableTerritoryPolygon);
+}
+
 function territoryLayerRenderers(L, map) {
   TERRITORY_LAYER_PANES.forEach(({ name, className, zIndex }) => {
     const pane = map.getPane(name) || map.createPane(name);
     pane.classList.add('terr-leaflet-territory-pane', className);
     pane.style.zIndex = String(zIndex);
-    pane.style.pointerEvents = 'none';
+    pane.style.pointerEvents = 'auto';
   });
 
   return {
@@ -316,6 +554,42 @@ function territoryLayerRenderers(L, map) {
     activeFill: L.svg({ padding: 0.65, pane: 'territory-active-fill-pane' }),
     activeContour: L.svg({ padding: 0.65, pane: 'territory-active-contour-pane' }),
   };
+}
+
+function territoryRenderOwnerSetKey(entries) {
+  const ownerKeys = new Set();
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    const ownerKey = String(entry?.ownerKey || '');
+    if (ownerKey) ownerKeys.add(ownerKey);
+  });
+  return Array.from(ownerKeys).sort().join('|');
+}
+
+function territoryOwnerFocusClassToken(ownerKey, selectedOwnerKeyValue, baseClassName) {
+  if (!selectedOwnerKeyValue) return `${baseClassName}--theme-all`;
+  return ownerKey === selectedOwnerKeyValue
+    ? `${baseClassName}--theme-selected`
+    : `${baseClassName}--theme-dimmed`;
+}
+
+function territoryOwnerFocusClassName(ownerKey, selectedOwnerKeyValue, baseClassName) {
+  return ` ${territoryOwnerFocusClassToken(ownerKey, selectedOwnerKeyValue, baseClassName)}`;
+}
+
+function applyTerritoryOwnerFocusClasses(layer, selectedOwnerKeyValue) {
+  if (!layer || typeof layer.eachLayer !== 'function') return;
+  layer.eachLayer((childLayer) => {
+    const element = childLayer?.getElement?.();
+    if (!element?.classList) return;
+    const ownerKey = String(element.dataset?.hermesOwnerKey || '');
+    TERRITORY_OWNER_FOCUS_BASE_CLASSES.forEach((baseClassName) => {
+      if (!element.classList.contains(baseClassName)) return;
+      TERRITORY_OWNER_FOCUS_SUFFIXES.forEach((suffix) => {
+        element.classList.remove(`${baseClassName}--${suffix}`);
+      });
+      element.classList.add(territoryOwnerFocusClassToken(ownerKey, selectedOwnerKeyValue, baseClassName));
+    });
+  });
 }
 
 function polygonOwnerMergeKey(poly, fallbackIndex) {
@@ -331,61 +605,21 @@ function polygonOwnerMergeKey(poly, fallbackIndex) {
   return `owner-color:${safeColor(poly?.color)}:${poly?.active ? 'active' : 'rival'}:${fallbackIndex}`;
 }
 
-function mergeCellMaskPolygonsByOwner(polygons) {
-  const groups = new Map();
-  const mergedPolygons = [];
-
-  (Array.isArray(polygons) ? polygons : []).forEach((poly, index) => {
-    if (!hasCellMaskPolygon(poly)) {
-      mergedPolygons.push(poly);
-      return;
-    }
-
-    const key = polygonOwnerMergeKey(poly, index);
-    let group = groups.get(key);
-    if (!group) {
-      group = {
-        ...poly,
-        id: poly.id ?? key,
-        activityId: poly.activityId ?? null,
-        cells: [],
-        routeTraces: [],
-        areaSquareMeters: 0,
-        sourcePolygonCount: 0,
-      };
-      groups.set(key, group);
-      mergedPolygons.push(group);
-    }
-
-    group.cells.push(...poly.cells);
-    if (Array.isArray(poly.routeTraces)) {
-      group.routeTraces.push(...poly.routeTraces);
-    }
-    group.areaSquareMeters += Number(poly.areaSquareMeters) || 0;
-    group.active = Boolean(group.active || poly.active);
-    group.color = group.active ? safeColor(poly.color, group.color) : safeColor(group.color || poly.color);
-    group.ownerName = group.ownerName || poly.ownerName;
-    group.ownerId = group.ownerId ?? poly.ownerId;
-    group.cellMeters = Math.min(
-      Number.isFinite(Number(group.cellMeters)) ? Number(group.cellMeters) : Number.POSITIVE_INFINITY,
-      Number.isFinite(Number(poly.cellMeters)) ? Number(poly.cellMeters) : Number.POSITIVE_INFINITY,
-    );
-    group.sourcePolygonCount += 1;
-  });
-
-  mergedPolygons.forEach((poly) => {
-    if (hasCellMaskPolygon(poly) && !Number.isFinite(Number(poly.cellMeters))) {
-      poly.cellMeters = undefined;
-    }
-  });
-
-  // Preserve backend ownership order. The backend sends latest occupation first; render code
-  // reverses that order so older land paints first and the newest owner wins visual conflicts.
-  return mergedPolygons;
+function renderCellMaskPolygonsBySource(polygons) {
+  return (Array.isArray(polygons) ? polygons : [])
+    .filter(hasCellMaskPolygon)
+    .map((poly, index) => ({
+      ...poly,
+      ownerKey: String(poly?.ownerKey || polygonOwnerMergeKey(poly, index)),
+      sourceKey: [
+        polygonOwnerMergeKey(poly, index),
+        poly?.activityId !== null && poly?.activityId !== undefined ? `activity:${poly.activityId}` : `source:${poly?.id ?? index}`,
+      ].join('|'),
+    }));
 }
 
-function polygonRenderBounds(poly) {
-  const points = hasCellMaskPolygon(poly)
+function rawTerritoryPolygonBounds(poly) {
+  const sourcePoints = hasCellMaskPolygon(poly)
     ? poly.cells.map((cell) => [cell?.latitude, cell?.longitude])
     : (hasCoordinatePolygon(poly) ? poly.coordinates : []);
   let minLat = Number.POSITIVE_INFINITY;
@@ -393,12 +627,10 @@ function polygonRenderBounds(poly) {
   let minLng = Number.POSITIVE_INFINITY;
   let maxLng = Number.NEGATIVE_INFINITY;
 
-  points.forEach((point) => {
+  sourcePoints.forEach((point) => {
     const latitude = Number(point?.[0]);
     const longitude = Number(point?.[1]);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return;
-    }
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
     minLat = Math.min(minLat, latitude);
     maxLat = Math.max(maxLat, latitude);
     minLng = Math.min(minLng, longitude);
@@ -408,44 +640,73 @@ function polygonRenderBounds(poly) {
   if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) {
     return null;
   }
-  return { minLat, maxLat, minLng, maxLng };
+
+  return {
+    minLat,
+    maxLat,
+    minLng,
+    maxLng,
+    center: {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+    },
+  };
 }
 
-function mergeBounds(boundsList) {
-  const validBounds = (Array.isArray(boundsList) ? boundsList : []).filter(Boolean);
-  if (!validBounds.length) {
-    return null;
+function rawTerritoryBoundsDistanceMeters(a, b) {
+  if (!a || !b) return Number.POSITIVE_INFINITY;
+  const latGap = a.maxLat < b.minLat ? b.minLat - a.maxLat : (b.maxLat < a.minLat ? a.minLat - b.maxLat : 0);
+  const lngGap = a.maxLng < b.minLng ? b.minLng - a.maxLng : (b.maxLng < a.minLng ? a.minLng - b.maxLng : 0);
+  const latitude = (a.center.latitude + b.center.latitude) / 2;
+  const cosLat = Math.max(1e-6, Math.abs(Math.cos((latitude * Math.PI) / 180)));
+  return Math.hypot(latGap * METERS_PER_DEG_LAT, lngGap * METERS_PER_DEG_LAT * cosLat);
+}
+
+function initialGlobalTerritoryRenderPolygons(ownerPolygons) {
+  const polygonsWithInfo = (Array.isArray(ownerPolygons) ? ownerPolygons : [])
+    .map((poly, index) => ({ poly, index, bounds: rawTerritoryPolygonBounds(poly) }))
+    .filter((entry) => hasDrawableTerritoryPolygon(entry.poly));
+  const activeEntries = polygonsWithInfo.filter((entry) => entry.poly?.active === true);
+
+  if (!activeEntries.length || polygonsWithInfo.length <= TERRITORY_GLOBAL_INITIAL_RENDER_MAX_OWNERS) {
+    return polygonsWithInfo.map((entry) => entry.poly);
   }
-  return validBounds.reduce((merged, bounds) => ({
-    minLat: Math.min(merged.minLat, bounds.minLat),
-    maxLat: Math.max(merged.maxLat, bounds.maxLat),
-    minLng: Math.min(merged.minLng, bounds.minLng),
-    maxLng: Math.max(merged.maxLng, bounds.maxLng),
-  }));
-}
 
-function boundsOverlap(a, b) {
-  if (!a || !b) {
-    return false;
-  }
-  return a.minLat <= b.maxLat
-    && a.maxLat >= b.minLat
-    && a.minLng <= b.maxLng
-    && a.maxLng >= b.minLng;
-}
+  const activeBounds = activeEntries
+    .map((entry) => entry.bounds)
+    .filter(Boolean)
+    .reduce((merged, bounds) => (merged ? ({
+      minLat: Math.min(merged.minLat, bounds.minLat),
+      maxLat: Math.max(merged.maxLat, bounds.maxLat),
+      minLng: Math.min(merged.minLng, bounds.minLng),
+      maxLng: Math.max(merged.maxLng, bounds.maxLng),
+      center: {
+        latitude: (Math.min(merged.minLat, bounds.minLat) + Math.max(merged.maxLat, bounds.maxLat)) / 2,
+        longitude: (Math.min(merged.minLng, bounds.minLng) + Math.max(merged.maxLng, bounds.maxLng)) / 2,
+      },
+    }) : bounds), null);
 
-function polygonsNearActiveTerritory(polygons) {
-  const safePolygons = Array.isArray(polygons) ? polygons : [];
-  const activeBounds = mergeBounds(safePolygons
-    .filter((poly) => poly?.active === true)
-    .map(polygonRenderBounds));
   if (!activeBounds) {
-    return safePolygons;
+    return polygonsWithInfo
+      .slice(0, TERRITORY_GLOBAL_INITIAL_RENDER_MAX_OWNERS)
+      .map((entry) => entry.poly);
   }
 
-  return safePolygons.filter((poly) => (
-    poly?.active === true || boundsOverlap(polygonRenderBounds(poly), activeBounds)
-  ));
+  const activeKeys = new Set(activeEntries.map((entry) => String(entry.poly?.ownerKey || polygonOwnerMergeKey(entry.poly, entry.index))));
+  const rivalEntries = polygonsWithInfo
+    .filter((entry) => !activeKeys.has(String(entry.poly?.ownerKey || polygonOwnerMergeKey(entry.poly, entry.index))))
+    .map((entry) => ({
+      ...entry,
+      distanceMeters: rawTerritoryBoundsDistanceMeters(activeBounds, entry.bounds),
+      areaSquareMeters: Number(entry.poly?.areaSquareMeters) || 0,
+    }))
+    .sort((a, b) => a.distanceMeters - b.distanceMeters || b.areaSquareMeters - a.areaSquareMeters || a.index - b.index);
+  const selectedRivals = rivalEntries
+    .slice(0, Math.max(0, TERRITORY_GLOBAL_INITIAL_RENDER_MAX_OWNERS - activeKeys.size));
+
+  return [...activeEntries, ...selectedRivals]
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.poly);
 }
 
 function territoryMaskRenderGrid(polygons) {
@@ -494,38 +755,339 @@ function shouldRefreshTerritoryPolygons(polygonsData) {
   return Boolean(polygonsData?.backfillInProgress || pendingActivityCount > 0);
 }
 
-function ownsTerritoryCell(cell) {
-  if (!cell || !Array.isArray(cell.polygon) || cell.polygon.length < 3) {
-    return false;
-  }
-  if (String(cell.ownerName || '').trim().toLowerCase() === 'you') {
-    return true;
-  }
-
-  const activeScore = Number(cell.activeScore);
-  const ownerScore = Number(cell.ownerScore);
-  return Number.isFinite(activeScore)
-    && Number.isFinite(ownerScore)
-    && activeScore > 0
-    && activeScore >= ownerScore;
+function emptyTerritoryPolygonPayload(polygonsData) {
+  const data = polygonsData && typeof polygonsData === 'object' ? { ...polygonsData } : {};
+  return {
+    ...data,
+    polygons: [],
+    polygonCount: 0,
+    activePolygonCount: 0,
+    totalAreaSquareMeters: 0,
+    activeAreaSquareMeters: 0,
+    backfillInProgress: Boolean(data.backfillInProgress),
+    pendingActivityCount: Number(data.pendingActivityCount || 0),
+  };
 }
 
-function territoryCellFallbackPolygons(territory) {
-  if (!Array.isArray(territory?.territories)) {
-    return [];
+function readTerritoryStoredValue(key) {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeTerritoryStoredValue(key, value) {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, value);
+    }
+  } catch {
+    // Storage may be unavailable or full. Cache misses should never break the map.
+  }
+}
+
+function removeTerritoryStoredValue(key) {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage may be unavailable. Cache cleanup should never break the map.
+  }
+}
+
+function territoryCacheAccountKey() {
+  const email = String(readTerritoryStoredValue('hermes_email') || '').trim().toLowerCase();
+  const token = String(readTerritoryStoredValue('hermes_jwt') || '').trim();
+  if (!email || !token) return null;
+  return encodeURIComponent(email);
+}
+
+function territoryPayloadSignature(data) {
+  let hash = 2166136261;
+  const serialized = JSON.stringify(data || null);
+  for (let index = 0; index < serialized.length; index += 1) {
+    hash ^= serialized.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${TERRITORY_CACHE_VERSION}:${(hash >>> 0).toString(36)}:${serialized.length}`;
+}
+
+function normalizeTerritoryServerSignature(value) {
+  let normalized = String(value || '').trim();
+  if (!normalized) return '';
+  if (normalized.startsWith('W/')) {
+    normalized = normalized.slice(2).trim();
+  }
+  if (normalized.length >= 2 && normalized.startsWith('"') && normalized.endsWith('"')) {
+    normalized = normalized.slice(1, -1);
+  }
+  return normalized;
+}
+
+function territoryPolygonRefreshHeaders(signature) {
+  const normalizedSignature = normalizeTerritoryServerSignature(signature);
+  return normalizedSignature ? { 'If-None-Match': normalizedSignature } : {};
+}
+
+function normalizeEntityTag(value) {
+  let normalized = String(value || '').trim();
+  if (normalized.startsWith('W/')) {
+    normalized = normalized.slice(2).trim();
+  }
+  if (normalized.length >= 2 && normalized.startsWith('"') && normalized.endsWith('"')) {
+    normalized = normalized.slice(1, -1);
+  }
+  return normalized;
+}
+
+function territoryPolygonResponseSignature(response) {
+  return normalizeTerritoryServerSignature(
+    response?.headers?.get?.('X-Hermes-Territory-Polygon-Signature')
+    || response?.headers?.get?.('ETag')
+    || '',
+  );
+}
+
+function territoryShellCacheKey() {
+  const accountKey = territoryCacheAccountKey();
+  return accountKey ? `${TERRITORY_SHELL_CACHE_KEY_PREFIX}${accountKey}` : null;
+}
+
+function readCachedTerritoryShell() {
+  const cacheKey = territoryShellCacheKey();
+  if (!cacheKey) return null;
+
+  try {
+    const cached = JSON.parse(readTerritoryStoredValue(cacheKey) || 'null');
+    if (cached?.version !== TERRITORY_CACHE_VERSION || !cached?.data || !cached?.signature) {
+      return null;
+    }
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedTerritoryShell(data, signature = territoryPayloadSignature(data)) {
+  const cacheKey = territoryShellCacheKey();
+  if (!cacheKey || !data || typeof data !== 'object') return;
+
+  writeTerritoryStoredValue(cacheKey, JSON.stringify({
+    version: TERRITORY_CACHE_VERSION,
+    savedAt: Date.now(),
+    signature,
+    data,
+  }));
+}
+
+function territoryPolygonCacheKey() {
+  const accountKey = territoryCacheAccountKey();
+  return accountKey ? `${TERRITORY_POLYGON_CACHE_KEY_PREFIX}${accountKey}` : null;
+}
+
+let territoryPolygonDbPromise = null;
+
+function openTerritoryPolygonCacheDb() {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.resolve(null);
   }
 
-  return territory.territories
-    .filter(ownsTerritoryCell)
-    .map((cell, index) => ({
-      id: `territory-cell:${cell.id || index}`,
-      ownerName: 'You',
-      color: safeColor(cell.color),
-      active: true,
-      coordinates: cell.polygon,
-      cells: [],
-      shapeType: 'territory-cell',
-    }));
+  if (territoryPolygonDbPromise) {
+    return territoryPolygonDbPromise.then((db) => {
+      // If the cached DB was closed (e.g. version change), reopen.
+      if (!db) return null;
+      try {
+        void db.objectStoreNames;
+        return db;
+      } catch {
+        territoryPolygonDbPromise = null;
+        return openTerritoryPolygonCacheDb();
+      }
+    });
+  }
+
+  territoryPolygonDbPromise = new Promise((resolve) => {
+    const request = indexedDB.open(TERRITORY_POLYGON_CACHE_DB, TERRITORY_POLYGON_CACHE_DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(TERRITORY_POLYGON_CACHE_STORE)) {
+        db.createObjectStore(TERRITORY_POLYGON_CACHE_STORE, { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains(TERRITORY_RENDER_CACHE_STORE)) {
+        db.createObjectStore(TERRITORY_RENDER_CACHE_STORE, { keyPath: 'key' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+    request.onblocked = () => resolve(null);
+  });
+  return territoryPolygonDbPromise;
+}
+
+function readTerritoryIndexedCache(storeName, cacheKey) {
+  if (!cacheKey) return Promise.resolve(null);
+
+  return openTerritoryPolygonCacheDb().then((db) => new Promise((resolve) => {
+    if (!db) {
+      resolve(null);
+      return;
+    }
+
+    if (!db.objectStoreNames.contains(storeName)) {
+      resolve(null);
+      return;
+    }
+
+    const transaction = db.transaction(storeName, 'readonly');
+    const request = transaction.objectStore(storeName).get(cacheKey);
+    request.onsuccess = () => {
+      const cached = request.result;
+      resolve(
+        cached?.version === TERRITORY_CACHE_VERSION && cached?.signature && cached?.data
+          ? cached
+          : null,
+      );
+    };
+    request.onerror = () => resolve(null);
+    transaction.onerror = () => resolve(null);
+  })).catch(() => null);
+}
+
+function writeTerritoryIndexedCache(storeName, cacheKey, data, signature) {
+  if (!cacheKey || !data || typeof data !== 'object') return Promise.resolve();
+
+  return openTerritoryPolygonCacheDb().then((db) => new Promise((resolve) => {
+    if (!db) {
+      resolve();
+      return;
+    }
+
+    if (!db.objectStoreNames.contains(storeName)) {
+      resolve();
+      return;
+    }
+
+    const transaction = db.transaction(storeName, 'readwrite');
+    transaction.objectStore(storeName).put({
+      key: cacheKey,
+      version: TERRITORY_CACHE_VERSION,
+      savedAt: Date.now(),
+      signature,
+      data,
+    });
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => resolve();
+  })).catch(() => {});
+}
+
+function deleteTerritoryIndexedCache(storeName, cacheKey) {
+  if (!cacheKey) return Promise.resolve();
+
+  return openTerritoryPolygonCacheDb().then((db) => new Promise((resolve) => {
+    if (!db || !db.objectStoreNames.contains(storeName)) {
+      resolve();
+      return;
+    }
+
+    const transaction = db.transaction(storeName, 'readwrite');
+    transaction.objectStore(storeName).delete(cacheKey);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => resolve();
+  })).catch(() => {});
+}
+
+function readCachedTerritoryPolygons() {
+  return readTerritoryIndexedCache(TERRITORY_POLYGON_CACHE_STORE, territoryPolygonCacheKey())
+    .then((cached) => (
+      hasDrawableTerritoryPolygonData(cached?.data) ? cached : null
+    ));
+}
+
+function writeCachedTerritoryPolygons(data, signature = territoryPayloadSignature(data)) {
+  return writeTerritoryIndexedCache(TERRITORY_POLYGON_CACHE_STORE, territoryPolygonCacheKey(), data, signature);
+}
+
+function territoryRenderCacheKey(polygonSignature) {
+  const accountKey = territoryCacheAccountKey();
+  return accountKey && polygonSignature
+    ? `${TERRITORY_RENDER_CACHE_KEY_PREFIX}${accountKey}:${polygonSignature}`
+    : null;
+}
+
+function territoryRenderIndexCacheKey() {
+  const accountKey = territoryCacheAccountKey();
+  return accountKey ? `${TERRITORY_RENDER_INDEX_CACHE_KEY_PREFIX}${accountKey}` : null;
+}
+
+function readCachedTerritoryRenderIndex() {
+  const cacheKey = territoryRenderIndexCacheKey();
+  if (!cacheKey) return null;
+
+  try {
+    const cachedIndex = JSON.parse(readTerritoryStoredValue(cacheKey) || 'null');
+    if (cachedIndex?.version !== TERRITORY_CACHE_VERSION || !cachedIndex?.signature) {
+      return null;
+    }
+    return cachedIndex;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedTerritoryRenderIndex(signature) {
+  const cacheKey = territoryRenderIndexCacheKey();
+  if (!cacheKey || !signature) return;
+
+  writeTerritoryStoredValue(cacheKey, JSON.stringify({
+    version: TERRITORY_CACHE_VERSION,
+    savedAt: Date.now(),
+    signature,
+  }));
+}
+
+function readCachedTerritoryRender(polygonSignature) {
+  return readTerritoryIndexedCache(TERRITORY_RENDER_CACHE_STORE, territoryRenderCacheKey(polygonSignature))
+    .then((cached) => (
+      hasDrawableTerritoryRenderData(cached?.data) ? cached : null
+    ));
+}
+
+function readCachedTerritoryLatestRender() {
+  const cachedIndex = readCachedTerritoryRenderIndex();
+  return cachedIndex?.signature
+    ? readCachedTerritoryRender(cachedIndex.signature)
+    : Promise.resolve(null);
+}
+
+function clearCachedTerritoryPolygons() {
+  return deleteTerritoryIndexedCache(TERRITORY_POLYGON_CACHE_STORE, territoryPolygonCacheKey());
+}
+
+function clearCachedTerritoryLatestRender(...signatures) {
+  const cachedIndex = readCachedTerritoryRenderIndex();
+  const renderSignatures = new Set([
+    cachedIndex?.signature,
+    ...signatures,
+  ].map(normalizeTerritoryServerSignature).filter(Boolean));
+  const indexKey = territoryRenderIndexCacheKey();
+  if (indexKey) {
+    removeTerritoryStoredValue(indexKey);
+  }
+
+  renderSignatures.forEach((signature) => {
+    deleteTerritoryIndexedCache(TERRITORY_RENDER_CACHE_STORE, territoryRenderCacheKey(signature));
+  });
+}
+
+function writeCachedTerritoryRender(polygonSignature, data) {
+  return writeTerritoryIndexedCache(
+    TERRITORY_RENDER_CACHE_STORE,
+    territoryRenderCacheKey(polygonSignature),
+    data,
+    polygonSignature,
+  ).then(() => writeCachedTerritoryRenderIndex(polygonSignature));
 }
 
 function sealedMaskTileBounds(latitude, longitude, tileMeters, cosLat) {
@@ -536,6 +1098,21 @@ function sealedMaskTileBounds(latitude, longitude, tileMeters, cosLat) {
     [latitude - halfLat, longitude - halfLng],
     [latitude + halfLat, longitude + halfLng],
   ];
+}
+
+function concreteMaskTileFromGrid(gridX, gridY, tileMeters, cosLat, template = {}) {
+  const latitude = (gridY * tileMeters) / METERS_PER_DEG_LAT;
+  const longitude = (gridX * tileMeters) / (METERS_PER_DEG_LAT * cosLat);
+  return {
+    ...template,
+    gridX,
+    gridY,
+    latitude,
+    longitude,
+    tileMeters,
+    cosLat,
+    bounds: sealedMaskTileBounds(latitude, longitude, tileMeters, cosLat),
+  };
 }
 
 function aggregateMaskCells(cells, cellMeters, renderGrid = {}) {
@@ -562,7 +1139,7 @@ function aggregateMaskCells(cells, cellMeters, renderGrid = {}) {
   validCells.forEach((cell) => {
     const gridY = Math.round((cell.latitude * METERS_PER_DEG_LAT) / tileMeters);
     const gridX = Math.round((cell.longitude * METERS_PER_DEG_LAT * renderCosLat) / tileMeters);
-    const sourceRadiusMeters = tileMeters < baseCellMeters ? baseCellMeters * LAND_MASK_SOURCE_BRUSH_RADIUS_RATIO : 0;
+    const sourceRadiusMeters = baseCellMeters * LAND_MASK_SOURCE_FOOTPRINT_RADIUS_RATIO;
     const radiusCells = Math.ceil(sourceRadiusMeters / tileMeters);
     for (let dy = -radiusCells; dy <= radiusCells; dy += 1) {
       for (let dx = -radiusCells; dx <= radiusCells; dx += 1) {
@@ -575,23 +1152,728 @@ function aggregateMaskCells(cells, cellMeters, renderGrid = {}) {
         const tileGridX = gridX + dx;
         const key = `${tileGridY}:${tileGridX}`;
         if (tiles.has(key)) continue;
-
-        const latitude = (tileGridY * tileMeters) / METERS_PER_DEG_LAT;
-        const longitude = (tileGridX * tileMeters) / (METERS_PER_DEG_LAT * renderCosLat);
-        tiles.set(key, {
-          gridX: tileGridX,
-          gridY: tileGridY,
-          latitude,
-          longitude,
-          tileMeters,
-          cosLat: renderCosLat,
-          bounds: sealedMaskTileBounds(latitude, longitude, tileMeters, renderCosLat),
-        });
+        tiles.set(key, concreteMaskTileFromGrid(tileGridX, tileGridY, tileMeters, renderCosLat));
       }
     }
   });
 
   return Array.from(tiles.values());
+}
+
+function routeTraceConcretePoints(trace) {
+  return (Array.isArray(trace?.points) ? trace.points : [])
+    .map((point) => ({
+      latitude: Number(point?.latitude),
+      longitude: Number(point?.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+}
+
+function gridSegmentLengthMeters(segment, tileMeters) {
+  if (!segment || !Number.isFinite(tileMeters) || tileMeters <= 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const dx = segment.end.gridX - segment.start.gridX;
+  const dy = segment.end.gridY - segment.start.gridY;
+  return Math.sqrt((dx * dx) + (dy * dy)) * tileMeters;
+}
+
+function routeTraceConcreteMaxSegmentMeters(renderGrid = {}) {
+  const sourceCellMeters = Number(renderGrid?.sourceCellMeters);
+  return Number.isFinite(sourceCellMeters) && sourceCellMeters > 0
+    ? sourceCellMeters * LAND_MASK_ROUTE_TRACE_MAX_SEGMENT_RATIO
+    : Number.POSITIVE_INFINITY;
+}
+
+function routeTraceSegments(poly, renderGrid = {}, options = {}) {
+  const tileMeters = Number(renderGrid?.tileMeters);
+  const cosLat = Number(renderGrid?.cosLat);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(cosLat) || cosLat <= 0) {
+    return [];
+  }
+  const maxSegmentMeters = Number(options?.maxSegmentMeters);
+
+  const segments = [];
+  (Array.isArray(poly?.routeTraces) ? poly.routeTraces : []).forEach((trace) => {
+    const points = routeTraceConcretePoints(trace).map((point) => ({
+      gridX: (point.longitude * METERS_PER_DEG_LAT * cosLat) / tileMeters,
+      gridY: (point.latitude * METERS_PER_DEG_LAT) / tileMeters,
+    }));
+    for (let index = 1; index < points.length; index += 1) {
+      const segment = { start: points[index - 1], end: points[index] };
+      if (Number.isFinite(maxSegmentMeters) && gridSegmentLengthMeters(segment, tileMeters) > maxSegmentMeters) {
+        continue;
+      }
+      segments.push(segment);
+    }
+  });
+  return segments;
+}
+
+function gridPointSegmentDistanceMeters(point, segment, tileMeters) {
+  const dx = segment.end.gridX - segment.start.gridX;
+  const dy = segment.end.gridY - segment.start.gridY;
+  const segmentLengthSquared = (dx * dx) + (dy * dy);
+  if (segmentLengthSquared <= 0) {
+    return Math.sqrt(((point.gridX - segment.start.gridX) ** 2) + ((point.gridY - segment.start.gridY) ** 2)) * tileMeters;
+  }
+  const projection = Math.max(
+    0,
+    Math.min(
+      1,
+      (((point.gridX - segment.start.gridX) * dx) + ((point.gridY - segment.start.gridY) * dy)) / segmentLengthSquared,
+    ),
+  );
+  const closestX = segment.start.gridX + (projection * dx);
+  const closestY = segment.start.gridY + (projection * dy);
+  return Math.sqrt(((point.gridX - closestX) ** 2) + ((point.gridY - closestY) ** 2)) * tileMeters;
+}
+
+function tileIsNearRouteSegments(tile, segments, thresholdMeters, tileMeters) {
+  if (!Array.isArray(segments) || !segments.length) return false;
+  const point = { gridX: Number(tile?.gridX), gridY: Number(tile?.gridY) };
+  if (!Number.isFinite(point.gridX) || !Number.isFinite(point.gridY)) return false;
+  return segments.some((segment) => gridPointSegmentDistanceMeters(point, segment, tileMeters) <= thresholdMeters);
+}
+
+function routeSegmentSpatialIndex(segments, thresholdMeters, tileMeters) {
+  if (!Array.isArray(segments) || !segments.length) return null;
+  const thresholdCells = Number(thresholdMeters) / Number(tileMeters);
+  if (!Number.isFinite(thresholdCells) || thresholdCells < 0) return null;
+
+  const bucketSize = Math.max(4, Math.ceil(Math.max(1, thresholdCells) * 2));
+  const buckets = new Map();
+  segments.forEach((segment) => {
+    const minX = Math.floor((Math.min(segment.start.gridX, segment.end.gridX) - thresholdCells) / bucketSize);
+    const maxX = Math.floor((Math.max(segment.start.gridX, segment.end.gridX) + thresholdCells) / bucketSize);
+    const minY = Math.floor((Math.min(segment.start.gridY, segment.end.gridY) - thresholdCells) / bucketSize);
+    const maxY = Math.floor((Math.max(segment.start.gridY, segment.end.gridY) + thresholdCells) / bucketSize);
+    for (let bucketY = minY; bucketY <= maxY; bucketY += 1) {
+      for (let bucketX = minX; bucketX <= maxX; bucketX += 1) {
+        const key = `${bucketY}:${bucketX}`;
+        const bucket = buckets.get(key);
+        if (bucket) {
+          bucket.push(segment);
+        } else {
+          buckets.set(key, [segment]);
+        }
+      }
+    }
+  });
+
+  return { bucketSize, buckets };
+}
+
+function routeSegmentCandidatesForTile(tile, segments, segmentIndex) {
+  if (!segmentIndex?.buckets || !Number.isFinite(segmentIndex.bucketSize) || segmentIndex.bucketSize <= 0) {
+    return segments;
+  }
+
+  const gridX = Number(tile?.gridX);
+  const gridY = Number(tile?.gridY);
+  if (!Number.isFinite(gridX) || !Number.isFinite(gridY)) return [];
+  const bucketX = Math.floor(gridX / segmentIndex.bucketSize);
+  const bucketY = Math.floor(gridY / segmentIndex.bucketSize);
+  return segmentIndex.buckets.get(`${bucketY}:${bucketX}`) || [];
+}
+
+function routeTraceUniformTiles(poly, renderGrid, concreteTiles, providedSegments = null) {
+  const validConcreteTiles = (Array.isArray(concreteTiles) ? concreteTiles : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
+  if (!validConcreteTiles.length) return [];
+
+  const tileMeters = Number(renderGrid?.tileMeters);
+  const cosLat = Number(renderGrid?.cosLat);
+  const baseCellMeters = Number(renderGrid?.sourceCellMeters);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(cosLat) || cosLat <= 0) return [];
+  if (!Number.isFinite(baseCellMeters) || baseCellMeters <= 0) return [];
+
+  const maxSegmentMeters = routeTraceConcreteMaxSegmentMeters(renderGrid);
+  const segments = Array.isArray(providedSegments)
+    ? providedSegments
+    : routeTraceSegments(poly, renderGrid, { maxSegmentMeters });
+  if (!segments.length) return [];
+
+  const template = validConcreteTiles[0];
+  const corridorTiles = new Map();
+  const corridorRadiusMeters = baseCellMeters * LAND_MASK_ROUTE_CORRIDOR_RADIUS_RATIO;
+  const radiusCells = Math.ceil(corridorRadiusMeters / tileMeters);
+  const stepCells = Math.max(0.25, (baseCellMeters / tileMeters) * LAND_MASK_ROUTE_CORRIDOR_STEP_RATIO);
+
+  const addTile = (gridX, gridY) => {
+    const key = `${gridY}:${gridX}`;
+    if (corridorTiles.has(key)) return;
+    corridorTiles.set(key, concreteMaskTileFromGrid(gridX, gridY, tileMeters, cosLat, template));
+  };
+
+  segments.forEach((segment) => {
+    const dx = segment.end.gridX - segment.start.gridX;
+    const dy = segment.end.gridY - segment.start.gridY;
+    const distanceCells = Math.sqrt((dx * dx) + (dy * dy));
+    const steps = Math.max(1, Math.ceil(distanceCells / stepCells));
+
+    for (let step = 0; step <= steps; step += 1) {
+      const ratio = step / steps;
+      const centerX = Math.round(segment.start.gridX + (dx * ratio));
+      const centerY = Math.round(segment.start.gridY + (dy * ratio));
+      for (let offsetY = -radiusCells; offsetY <= radiusCells; offsetY += 1) {
+        for (let offsetX = -radiusCells; offsetX <= radiusCells; offsetX += 1) {
+          const distanceMeters = Math.sqrt((offsetX * offsetX) + (offsetY * offsetY)) * tileMeters;
+          if (distanceMeters > corridorRadiusMeters) continue;
+          addTile(centerX + offsetX, centerY + offsetY);
+        }
+      }
+    }
+  });
+
+  return Array.from(corridorTiles.values());
+}
+
+function maskBridgeBoundaryTiles(component, occupiedKeys) {
+  return (Array.isArray(component) ? component : []).filter((tile) => (
+    Number.isFinite(tile?.gridX)
+    && Number.isFinite(tile?.gridY)
+    && neighborKeys(tile).some((neighborKey) => !occupiedKeys.has(neighborKey))
+  ));
+}
+
+function maskComponentBounds(component) {
+  const validTiles = (Array.isArray(component) ? component : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
+  if (!validTiles.length) return null;
+
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  validTiles.forEach((tile) => {
+    minX = Math.min(minX, tile.gridX);
+    maxX = Math.max(maxX, tile.gridX);
+    minY = Math.min(minY, tile.gridY);
+    maxY = Math.max(maxY, tile.gridY);
+  });
+
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+  };
+}
+
+function maskComponentDensity(component, bounds = maskComponentBounds(component)) {
+  const validTileCount = (Array.isArray(component) ? component : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY))
+    .length;
+  if (!validTileCount || !bounds) return 0;
+
+  const width = bounds.maxX - bounds.minX + 1;
+  const height = bounds.maxY - bounds.minY + 1;
+  const boxCells = width * height;
+  if (width <= 0 || height <= 0 || boxCells <= 0) return 0;
+
+  return validTileCount / boxCells;
+}
+
+function maskBoundsGapCells(left, right) {
+  if (!left || !right) return Number.POSITIVE_INFINITY;
+  const gapX = Math.max(0, Math.max(left.minX, right.minX) - Math.min(left.maxX, right.maxX));
+  const gapY = Math.max(0, Math.max(left.minY, right.minY) - Math.min(left.maxY, right.maxY));
+  return Math.sqrt((gapX * gapX) + (gapY * gapY));
+}
+
+function nearestMaskComponentBridge(leftTiles, rightTiles, maxDistanceCells) {
+  let best = null;
+  const maxDistanceSquared = maxDistanceCells * maxDistanceCells;
+
+  leftTiles.forEach((leftTile) => {
+    rightTiles.forEach((rightTile) => {
+      const dx = rightTile.gridX - leftTile.gridX;
+      const dy = rightTile.gridY - leftTile.gridY;
+      const distanceSquared = (dx * dx) + (dy * dy);
+      if (distanceSquared > maxDistanceSquared) return;
+      if (!best || distanceSquared < best.distanceSquared) {
+        best = {
+          from: leftTile,
+          to: rightTile,
+          distanceSquared,
+        };
+      }
+    });
+  });
+
+  return best;
+}
+
+function bridgeNearbyMaskComponents(tiles, renderGrid = {}) {
+  const validTiles = (Array.isArray(tiles) ? tiles : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
+  if (validTiles.length < LAND_MASK_COMPONENT_BRIDGE_MIN_TILES * 2) return validTiles;
+
+  const tileMeters = Number(renderGrid?.tileMeters);
+  const cosLat = Number(renderGrid?.cosLat);
+  const sourceCellMeters = Number(renderGrid?.sourceCellMeters);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(cosLat) || cosLat <= 0) return validTiles;
+  if (!Number.isFinite(sourceCellMeters) || sourceCellMeters <= 0) return validTiles;
+
+  const existingTiles = new Map(validTiles.map((tile) => [maskTileClaimKey(tile), tile]));
+  const components = maskTileConnectedComponents(validTiles)
+    .filter((component) => component.length >= LAND_MASK_COMPONENT_BRIDGE_MIN_TILES);
+  if (components.length < 2) return validTiles;
+
+  const maxDistanceCells = LAND_MASK_COMPONENT_BRIDGE_MAX_METERS / tileMeters;
+  const occupiedKeys = new Set(existingTiles.keys());
+  const records = components.map((component, index) => ({
+    index,
+    component,
+    bounds: maskComponentBounds(component),
+    boundary: maskBridgeBoundaryTiles(component, occupiedKeys),
+  })).filter((record) => record.boundary.length > 0 && record.bounds);
+
+  if (records.length < 2) return validTiles;
+
+  const edges = [];
+  for (let leftIndex = 0; leftIndex < records.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < records.length; rightIndex += 1) {
+      const left = records[leftIndex];
+      const right = records[rightIndex];
+      if (maskBoundsGapCells(left.bounds, right.bounds) > maxDistanceCells) continue;
+      const bridge = nearestMaskComponentBridge(left.boundary, right.boundary, maxDistanceCells);
+      if (!bridge) continue;
+      edges.push({
+        left: left.index,
+        right: right.index,
+        from: bridge.from,
+        to: bridge.to,
+        distanceSquared: bridge.distanceSquared,
+      });
+    }
+  }
+
+  if (!edges.length) return validTiles;
+
+  const parent = new Map(records.map((record) => [record.index, record.index]));
+  const find = (index) => {
+    const currentParent = parent.get(index);
+    if (currentParent === index) return index;
+    const root = find(currentParent);
+    parent.set(index, root);
+    return root;
+  };
+  const unite = (left, right) => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot === rightRoot) return false;
+    parent.set(rightRoot, leftRoot);
+    return true;
+  };
+
+  const bridgeRadiusMeters = sourceCellMeters * LAND_MASK_COMPONENT_BRIDGE_RADIUS_RATIO;
+  const radiusCells = Math.ceil(bridgeRadiusMeters / tileMeters);
+  const stepCells = Math.max(0.25, (sourceCellMeters / tileMeters) * LAND_MASK_COMPONENT_BRIDGE_STEP_RATIO);
+  const template = validTiles[0];
+  let addedEdges = 0;
+
+  const addBridgeTile = (gridX, gridY) => {
+    const key = `${gridY}:${gridX}`;
+    if (existingTiles.has(key)) return;
+    existingTiles.set(key, concreteMaskTileFromGrid(gridX, gridY, tileMeters, cosLat, template));
+  };
+
+  edges
+    .sort((left, right) => left.distanceSquared - right.distanceSquared)
+    .some((edge) => {
+      if (addedEdges >= LAND_MASK_COMPONENT_BRIDGE_MAX_EDGES) return true;
+      if (!unite(edge.left, edge.right)) return false;
+
+      const dx = edge.to.gridX - edge.from.gridX;
+      const dy = edge.to.gridY - edge.from.gridY;
+      const distanceCells = Math.sqrt((dx * dx) + (dy * dy));
+      const steps = Math.max(1, Math.ceil(distanceCells / stepCells));
+      for (let step = 0; step <= steps; step += 1) {
+        const ratio = step / steps;
+        const centerX = Math.round(edge.from.gridX + (dx * ratio));
+        const centerY = Math.round(edge.from.gridY + (dy * ratio));
+        for (let offsetY = -radiusCells; offsetY <= radiusCells; offsetY += 1) {
+          for (let offsetX = -radiusCells; offsetX <= radiusCells; offsetX += 1) {
+            if (Math.sqrt((offsetX * offsetX) + (offsetY * offsetY)) * tileMeters > bridgeRadiusMeters) continue;
+            addBridgeTile(centerX + offsetX, centerY + offsetY);
+          }
+        }
+      }
+      addedEdges += 1;
+      return false;
+    });
+
+  return Array.from(existingTiles.values());
+}
+
+function sealInternalMaskCorridors(tiles, renderGrid = {}) {
+  const validTiles = (Array.isArray(tiles) ? tiles : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
+  if (validTiles.length < LAND_MASK_INTERNAL_CORRIDOR_MIN_TILES) return validTiles;
+
+  const tileMeters = Number(renderGrid?.tileMeters);
+  const cosLat = Number(renderGrid?.cosLat);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(cosLat) || cosLat <= 0) {
+    return validTiles;
+  }
+
+  const maxGapCells = Math.max(1, Math.floor(LAND_MASK_INTERNAL_CORRIDOR_MAX_METERS / tileMeters));
+  const existingTiles = new Map(validTiles.map((tile) => [maskTileClaimKey(tile), tile]));
+  const rowRuns = new Map();
+  const columnRuns = new Map();
+  const candidateTiles = new Map();
+  const maxAddedTiles = Math.max(24, Math.floor(validTiles.length * LAND_MASK_INTERNAL_CORRIDOR_MAX_ADDED_RATIO));
+  const template = validTiles[0];
+
+  validTiles.forEach((tile) => {
+    const row = rowRuns.get(tile.gridY) || [];
+    row.push(tile.gridX);
+    rowRuns.set(tile.gridY, row);
+
+    const column = columnRuns.get(tile.gridX) || [];
+    column.push(tile.gridY);
+    columnRuns.set(tile.gridX, column);
+  });
+
+  const addCandidate = (gridX, gridY, gapCells) => {
+    const key = `${gridY}:${gridX}`;
+    if (existingTiles.has(key)) return;
+    const current = candidateTiles.get(key);
+    if (current && current.gapCells <= gapCells) return;
+    candidateTiles.set(key, {
+      gapCells,
+      tile: concreteMaskTileFromGrid(gridX, gridY, tileMeters, cosLat, template),
+    });
+  };
+
+  const collectLinearGaps = (runs, horizontal) => {
+    runs.forEach((values, fixedGrid) => {
+      const sorted = [...new Set(values)]
+        .filter((value) => Number.isFinite(value))
+        .sort((left, right) => left - right);
+      for (let index = 1; index < sorted.length; index += 1) {
+        const previous = sorted[index - 1];
+        const next = sorted[index];
+        const missingCells = next - previous - 1;
+        if (missingCells <= 0 || missingCells > maxGapCells) continue;
+        for (let value = previous + 1; value < next; value += 1) {
+          if (horizontal) {
+            addCandidate(value, fixedGrid, missingCells);
+          } else {
+            addCandidate(fixedGrid, value, missingCells);
+          }
+        }
+      }
+    });
+  };
+
+  collectLinearGaps(rowRuns, true);
+  collectLinearGaps(columnRuns, false);
+
+  [...candidateTiles.values()]
+    .sort((left, right) => left.gapCells - right.gapCells)
+    .slice(0, maxAddedTiles)
+    .forEach(({ tile }) => {
+      existingTiles.set(maskTileClaimKey(tile), tile);
+    });
+
+  return Array.from(existingTiles.values());
+}
+
+function sealDenseMaskVoids(tiles, renderGrid = {}) {
+  const validTiles = (Array.isArray(tiles) ? tiles : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
+  if (validTiles.length < LAND_MASK_DENSE_SEAM_MIN_TILES) return validTiles;
+
+  const tileMeters = Number(renderGrid?.tileMeters);
+  const cosLat = Number(renderGrid?.cosLat);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(cosLat) || cosLat <= 0) {
+    return validTiles;
+  }
+
+  const componentCount = maskTileConnectedComponents(validTiles).length;
+  if (componentCount < LAND_MASK_DENSE_SEAM_MIN_COMPONENTS) return validTiles;
+
+  const bounds = maskComponentBounds(validTiles);
+  if (!bounds) return validTiles;
+
+  const width = bounds.maxX - bounds.minX + 1;
+  const height = bounds.maxY - bounds.minY + 1;
+  const scanCells = width * height;
+  if (
+    width <= 0
+    || height <= 0
+    || scanCells <= 0
+    || scanCells > LAND_MASK_DENSE_SEAM_MAX_SCAN_CELLS
+  ) {
+    return validTiles;
+  }
+
+  const existingTiles = new Map(validTiles.map((tile) => [maskTileClaimKey(tile), tile]));
+  const density = existingTiles.size / scanCells;
+  if (density < LAND_MASK_DENSE_SEAM_MIN_DENSITY) return validTiles;
+
+  const minX = bounds.minX - 1;
+  const maxX = bounds.maxX + 1;
+  const minY = bounds.minY - 1;
+  const maxY = bounds.maxY + 1;
+  const maxGapCells = Math.max(1, Math.floor(LAND_MASK_DENSE_SEAM_MAX_METERS / tileMeters));
+  const maxAddedTiles = Math.max(96, Math.floor(validTiles.length * LAND_MASK_DENSE_SEAM_MAX_ADDED_RATIO));
+  const template = validTiles[0];
+  const candidateKeys = new Set();
+
+  const keyAt = (gridX, gridY) => `${gridY}:${gridX}`;
+  const inExpandedBounds = (gridX, gridY) => (
+    gridX >= minX && gridX <= maxX && gridY >= minY && gridY <= maxY
+  );
+  const inInnerBounds = (gridX, gridY) => (
+    gridX >= bounds.minX && gridX <= bounds.maxX && gridY >= bounds.minY && gridY <= bounds.maxY
+  );
+  const addCandidate = (gridX, gridY) => {
+    const key = keyAt(gridX, gridY);
+    if (existingTiles.has(key)) return;
+    candidateKeys.add(key);
+  };
+
+  const outsideKeys = new Set();
+  const queue = [];
+  const pushOutside = (gridX, gridY) => {
+    if (!inExpandedBounds(gridX, gridY)) return;
+    const key = keyAt(gridX, gridY);
+    if (existingTiles.has(key) || outsideKeys.has(key)) return;
+    outsideKeys.add(key);
+    queue.push({ gridX, gridY });
+  };
+
+  for (let gridX = minX; gridX <= maxX; gridX += 1) {
+    pushOutside(gridX, minY);
+    pushOutside(gridX, maxY);
+  }
+  for (let gridY = minY + 1; gridY < maxY; gridY += 1) {
+    pushOutside(minX, gridY);
+    pushOutside(maxX, gridY);
+  }
+
+  let queueIndex = 0;
+  while (queueIndex < queue.length) {
+    const { gridX, gridY } = queue[queueIndex];
+    queueIndex += 1;
+    pushOutside(gridX + 1, gridY);
+    pushOutside(gridX - 1, gridY);
+    pushOutside(gridX, gridY + 1);
+    pushOutside(gridX, gridY - 1);
+  }
+
+  for (let gridY = bounds.minY; gridY <= bounds.maxY; gridY += 1) {
+    for (let gridX = bounds.minX; gridX <= bounds.maxX; gridX += 1) {
+      const key = keyAt(gridX, gridY);
+      if (!existingTiles.has(key) && !outsideKeys.has(key)) {
+        addCandidate(gridX, gridY);
+      }
+    }
+  }
+
+  const boundedGap = (gridX, gridY, deltaX, deltaY) => {
+    let before = 0;
+    let beforeX = gridX - deltaX;
+    let beforeY = gridY - deltaY;
+    while (inInnerBounds(beforeX, beforeY) && !existingTiles.has(keyAt(beforeX, beforeY))) {
+      before += 1;
+      if (before > maxGapCells) return false;
+      beforeX -= deltaX;
+      beforeY -= deltaY;
+    }
+
+    let after = 0;
+    let afterX = gridX + deltaX;
+    let afterY = gridY + deltaY;
+    while (inInnerBounds(afterX, afterY) && !existingTiles.has(keyAt(afterX, afterY))) {
+      after += 1;
+      if (after > maxGapCells) return false;
+      afterX += deltaX;
+      afterY += deltaY;
+    }
+
+    const gapCells = before + 1 + after;
+    return gapCells <= maxGapCells
+      && existingTiles.has(keyAt(beforeX, beforeY))
+      && existingTiles.has(keyAt(afterX, afterY));
+  };
+
+  for (let gridY = bounds.minY; gridY <= bounds.maxY; gridY += 1) {
+    for (let gridX = bounds.minX; gridX <= bounds.maxX; gridX += 1) {
+      const key = keyAt(gridX, gridY);
+      if (existingTiles.has(key) || candidateKeys.has(key)) continue;
+      if (boundedGap(gridX, gridY, 1, 0) || boundedGap(gridX, gridY, 0, 1)) {
+        addCandidate(gridX, gridY);
+      }
+    }
+  }
+
+  Array.from(candidateKeys)
+    .slice(0, maxAddedTiles)
+    .forEach((key) => {
+      const { gridX, gridY } = parseMaskTileClaimKey(key);
+      if (!Number.isFinite(gridX) || !Number.isFinite(gridY)) return;
+      existingTiles.set(key, concreteMaskTileFromGrid(gridX, gridY, tileMeters, cosLat, template));
+    });
+
+  return Array.from(existingTiles.values());
+}
+
+function maskDiskOffsets(radiusCells) {
+  const radius = Math.max(0, Math.floor(Number(radiusCells) || 0));
+  const offsets = [];
+  for (let offsetY = -radius; offsetY <= radius; offsetY += 1) {
+    for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
+      if (Math.sqrt((offsetX * offsetX) + (offsetY * offsetY)) > radius) continue;
+      offsets.push({ offsetX, offsetY });
+    }
+  }
+  return offsets;
+}
+
+function parseMaskTileClaimKey(key) {
+  const [gridY, gridX] = String(key).split(':').map((value) => Number(value));
+  return { gridX, gridY };
+}
+
+function closeThinMaskBays(tiles, renderGrid = {}, options = {}) {
+  const validTiles = (Array.isArray(tiles) ? tiles : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
+  if (validTiles.length < LAND_MASK_TOPOLOGY_CLOSE_MIN_TILES) return validTiles;
+
+  const tileMeters = Number(renderGrid?.tileMeters);
+  const cosLat = Number(renderGrid?.cosLat);
+  const sourceCellMeters = Number(renderGrid?.sourceCellMeters);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(cosLat) || cosLat <= 0) {
+    return validTiles;
+  }
+  if (!Number.isFinite(sourceCellMeters) || sourceCellMeters <= 0) return validTiles;
+
+  const largeLandmass = Boolean(options?.largeLandmass);
+  const closeRadiusRatio = largeLandmass
+    ? LAND_MASK_TOPOLOGY_LARGE_CLOSE_RADIUS_RATIO
+    : LAND_MASK_TOPOLOGY_CLOSE_RADIUS_RATIO;
+  const maxRadiusCells = largeLandmass
+    ? LAND_MASK_TOPOLOGY_LARGE_CLOSE_MAX_RADIUS_CELLS
+    : LAND_MASK_TOPOLOGY_CLOSE_MAX_RADIUS_CELLS;
+  const maxAddedRatio = largeLandmass
+    ? LAND_MASK_TOPOLOGY_LARGE_CLOSE_MAX_ADDED_RATIO
+    : LAND_MASK_TOPOLOGY_CLOSE_MAX_ADDED_RATIO;
+  const closeRadiusMeters = sourceCellMeters * closeRadiusRatio;
+  const radiusCells = Math.min(
+    maxRadiusCells,
+    Math.max(1, Math.ceil(closeRadiusMeters / tileMeters)),
+  );
+  if (radiusCells <= 0) return validTiles;
+
+  const offsets = maskDiskOffsets(radiusCells);
+  if (!offsets.length) return validTiles;
+
+  const maxDilationOps = largeLandmass
+    ? LAND_MASK_TOPOLOGY_LARGE_CLOSE_MAX_DILATION_OPS
+    : LAND_MASK_TOPOLOGY_CLOSE_MAX_DILATION_OPS;
+  if (validTiles.length * offsets.length > maxDilationOps) {
+    return validTiles;
+  }
+
+  const existingTiles = new Map(validTiles.map((tile) => [maskTileClaimKey(tile), tile]));
+  const dilatedKeys = new Set(existingTiles.keys());
+
+  validTiles.forEach((tile) => {
+    offsets.forEach(({ offsetX, offsetY }) => {
+      dilatedKeys.add(`${tile.gridY + offsetY}:${tile.gridX + offsetX}`);
+    });
+  });
+
+  const candidateTiles = [];
+  const maxAddedTiles = Math.max(
+    24,
+    Math.floor(validTiles.length * maxAddedRatio),
+  );
+  const template = validTiles[0];
+
+  dilatedKeys.forEach((key) => {
+    if (existingTiles.has(key)) return;
+    const { gridX, gridY } = parseMaskTileClaimKey(key);
+    if (!Number.isFinite(gridX) || !Number.isFinite(gridY)) return;
+
+    let closesBay = true;
+    let originalSupport = 0;
+    for (const { offsetX, offsetY } of offsets) {
+      const neighborKey = `${gridY + offsetY}:${gridX + offsetX}`;
+      if (!dilatedKeys.has(neighborKey)) {
+        closesBay = false;
+        break;
+      }
+      if (existingTiles.has(neighborKey)) {
+        originalSupport += 1;
+      }
+    }
+    if (!closesBay) return;
+
+    candidateTiles.push({
+      originalSupport,
+      tile: concreteMaskTileFromGrid(gridX, gridY, tileMeters, cosLat, template),
+    });
+  });
+
+  candidateTiles
+    .sort((left, right) => right.originalSupport - left.originalSupport)
+    .slice(0, maxAddedTiles)
+    .forEach(({ tile }) => {
+      existingTiles.set(maskTileClaimKey(tile), tile);
+    });
+
+  return Array.from(existingTiles.values());
+}
+
+function repairConsistentMaskTiles(tiles, renderGrid = {}, options = {}) {
+  return closeThinMaskBays(
+    sealDenseMaskVoids(
+      sealInternalMaskCorridors(
+        bridgeNearbyMaskComponents(tiles, renderGrid),
+        renderGrid,
+      ),
+      renderGrid,
+    ),
+    renderGrid,
+    options,
+  );
+}
+
+function consistentMaskTiles(poly, renderGrid, concreteTiles) {
+  const areaSquareMeters = Number(poly?.areaSquareMeters);
+  const largeLandmass = (
+    (Number.isFinite(areaSquareMeters) && areaSquareMeters >= LAND_MASK_TOPOLOGY_LARGE_CLOSE_MIN_AREA_SQUARE_METERS)
+    || (Array.isArray(concreteTiles) && concreteTiles.length >= LAND_MASK_TOPOLOGY_LARGE_CLOSE_MIN_TILES)
+  );
+  const repairOptions = { largeLandmass };
+
+  const maxSegmentMeters = routeTraceConcreteMaxSegmentMeters(renderGrid);
+  const segments = routeTraceSegments(poly, renderGrid, { maxSegmentMeters });
+  const routeTiles = routeTraceUniformTiles(poly, renderGrid, concreteTiles, segments);
+  if (!routeTiles.length) return repairConsistentMaskTiles(concreteTiles, renderGrid, repairOptions);
+
+  const tileMeters = Number(renderGrid?.tileMeters);
+  const sourceCellMeters = Number(renderGrid?.sourceCellMeters);
+  if (!Number.isFinite(tileMeters) || tileMeters <= 0 || !Number.isFinite(sourceCellMeters) || sourceCellMeters <= 0) {
+    return routeTiles;
+  }
+
+  const interiorDistanceMeters = sourceCellMeters * LAND_MASK_ROUTE_INTERIOR_DISTANCE_RATIO;
+  const segmentIndex = routeSegmentSpatialIndex(segments, interiorDistanceMeters, tileMeters);
+  const tilesByKey = new Map(routeTiles.map((tile) => [maskTileClaimKey(tile), tile]));
+  (Array.isArray(concreteTiles) ? concreteTiles : []).forEach((tile) => {
+    const candidateSegments = routeSegmentCandidatesForTile(tile, segments, segmentIndex);
+    if (!poly?.active && tileIsNearRouteSegments(tile, candidateSegments, interiorDistanceMeters, tileMeters)) return;
+    tilesByKey.set(maskTileClaimKey(tile), tile);
+  });
+
+  return repairConsistentMaskTiles(Array.from(tilesByKey.values()), renderGrid, repairOptions);
 }
 
 function maskTileClaimKey(tile) {
@@ -607,88 +1889,130 @@ function neighborKeys(tile) {
   ];
 }
 
-function pruneMaskContourTiles(tiles) {
-  const validTiles = (Array.isArray(tiles) ? tiles : [])
-    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
-  if (validTiles.length < 4) return validTiles;
+function resolveMaskTileOwnership(polygons, renderGrid) {
+  const sourceEntries = (Array.isArray(polygons) ? polygons : []).map((poly) => ({
+    poly,
+    concreteTiles: hasCellMaskPolygon(poly)
+      ? aggregateMaskCells(poly.cells, poly.cellMeters, renderGrid)
+      : null,
+    ownedConcreteKeys: new Set(),
+  }));
+  const concreteOwnerByKey = new Map();
 
-  let activeKeys = new Set(validTiles.map((tile) => maskTileClaimKey(tile)));
-  const tilesByKey = new Map(validTiles.map((tile) => [maskTileClaimKey(tile), tile]));
-
-  for (let pass = 0; pass < LAND_MASK_CONTOUR_PRUNE_PASSES; pass += 1) {
-    const nextKeys = new Set();
-    activeKeys.forEach((key) => {
-      const tile = tilesByKey.get(key);
-      if (!tile) return;
-      const neighborCount = neighborKeys(tile).filter((neighborKey) => activeKeys.has(neighborKey)).length;
-      if (neighborCount >= LAND_MASK_CONTOUR_PRUNE_MIN_NEIGHBORS) {
-        nextKeys.add(key);
-      }
+  sourceEntries.forEach((entry, ownerIndex) => {
+    (Array.isArray(entry.concreteTiles) ? entry.concreteTiles : []).forEach((tile) => {
+      const key = maskTileClaimKey(tile);
+      if (concreteOwnerByKey.has(key)) return;
+      concreteOwnerByKey.set(key, ownerIndex);
+      entry.ownedConcreteKeys.add(key);
     });
-
-    if (nextKeys.size < 4 || nextKeys.size === activeKeys.size) {
-      break;
-    }
-    activeKeys = nextKeys;
-  }
-
-  const coreKeys = new Set();
-  activeKeys.forEach((key) => {
-    const tile = tilesByKey.get(key);
-    if (!tile) return;
-    const neighborCount = neighborKeys(tile).filter((neighborKey) => activeKeys.has(neighborKey)).length;
-    if (neighborCount >= LAND_MASK_CONTOUR_CORE_MIN_NEIGHBORS) {
-      coreKeys.add(key);
-    }
   });
 
-  if (coreKeys.size >= 4) {
-    const openedKeys = new Set(coreKeys);
-    coreKeys.forEach((key) => {
-      const tile = tilesByKey.get(key);
-      if (!tile) return;
-      neighborKeys(tile).forEach((neighborKey) => {
-        if (activeKeys.has(neighborKey)) {
-          openedKeys.add(neighborKey);
-        }
-      });
-    });
-    if (openedKeys.size >= 4) {
-      activeKeys = openedKeys;
-    }
-  }
-
-  return Array.from(activeKeys)
-    .map((key) => tilesByKey.get(key))
-    .filter(Boolean);
-}
-
-function resolveMaskTileOwnership(polygons, renderGrid) {
-  const claimedTiles = new Set();
-
-  return (Array.isArray(polygons) ? polygons : []).map((poly) => {
+  return sourceEntries.map((entry, ownerIndex) => {
+    const { poly, concreteTiles, ownedConcreteKeys } = entry;
     if (!hasCellMaskPolygon(poly)) {
       return { poly, tiles: null };
     }
 
-    const tilesByKey = new Map();
-    const concreteTiles = aggregateMaskCells(poly.cells, poly.cellMeters, renderGrid);
-    concreteTiles.forEach((tile) => {
-      tilesByKey.set(maskTileClaimKey(tile), tile);
+    const ownedConcreteTiles = (Array.isArray(concreteTiles) ? concreteTiles : [])
+      .filter((tile) => ownedConcreteKeys.has(maskTileClaimKey(tile)));
+    const sourceTiles = consistentMaskTiles(poly, renderGrid, ownedConcreteTiles);
+    const exactOwnershipTiles = sourceTiles.filter((tile) => {
+      const concreteOwnerIndex = concreteOwnerByKey.get(maskTileClaimKey(tile));
+      return concreteOwnerIndex === undefined || concreteOwnerIndex === ownerIndex;
     });
-
-    const tiles = Array.from(tilesByKey.values())
-      .filter((tile) => {
-        const key = maskTileClaimKey(tile);
-        if (claimedTiles.has(key)) {
-          return false;
-        }
-        claimedTiles.add(key);
-        return true;
-      });
+    // Backend ownership is already resolved by newest activity time and source-cell footprint.
+    // Do not delete small components here: a legitimate updated park loop can be smaller than
+    // an older surrounding conqueror mask and still needs to render on top.
+    const tiles = exactOwnershipTiles;
 
     return { poly, tiles };
   });
+}
+
+function repairMergedOwnerMaskTiles(tiles, renderGrid = {}) {
+  const validTiles = (Array.isArray(tiles) ? tiles : [])
+    .filter((tile) => Number.isFinite(tile?.gridX) && Number.isFinite(tile?.gridY));
+  if (validTiles.length < LAND_MASK_INTERNAL_CORRIDOR_MIN_TILES) {
+    return validTiles;
+  }
+
+  // Source masks are already computed by the backend and normalized per source before
+  // ownership resolution. After owner union, keep the exact cells: sealing gaps here
+  // can turn a dense set of open-route corridors into one fake landmass.
+  return validTiles;
+}
+
+function mergeResolvedMaskEntriesByOwner(renderEntries, renderGrid = {}) {
+  const groups = new Map();
+  const mergedEntries = [];
+
+  (Array.isArray(renderEntries) ? renderEntries : []).forEach(({ poly, tiles }, index) => {
+    if (!hasCellMaskPolygon(poly) || !Array.isArray(tiles) || tiles.length === 0) {
+      return;
+    }
+
+    const ownerKey = String(poly?.ownerKey || polygonOwnerMergeKey(poly, index));
+    let group = groups.get(ownerKey);
+    if (!group) {
+      group = {
+        poly: {
+          ...poly,
+          ownerKey,
+          activityId: poly?.activityId ?? null,
+          areaSquareMeters: 0,
+          routeTraces: [],
+          sourcePolygonCount: 0,
+        },
+        tilesByKey: new Map(),
+      };
+      groups.set(ownerKey, group);
+      mergedEntries.push(group);
+    }
+
+    tiles.forEach((tile) => {
+      const key = maskTileClaimKey(tile);
+      if (!group.tilesByKey.has(key)) {
+        group.tilesByKey.set(key, tile);
+      }
+    });
+
+    group.poly.active = Boolean(group.poly.active || poly?.active);
+    group.poly.color = group.poly.active
+      ? safeColor(poly?.color, group.poly.color)
+      : safeColor(group.poly.color || poly?.color);
+    group.poly.ownerName = group.poly.ownerName || poly?.ownerName;
+    group.poly.ownerId = group.poly.ownerId ?? poly?.ownerId;
+    group.poly.cellMeters = Math.min(
+      Number.isFinite(Number(group.poly.cellMeters)) ? Number(group.poly.cellMeters) : Number.POSITIVE_INFINITY,
+      Number.isFinite(Number(poly?.cellMeters)) ? Number(poly.cellMeters) : Number.POSITIVE_INFINITY,
+    );
+    group.poly.areaSquareMeters += Number(poly?.areaSquareMeters) || 0;
+    group.poly.sourcePolygonCount += 1;
+    if (Array.isArray(poly?.routeTraces) && poly.routeTraces.length > 0) {
+      group.poly.routeTraces.push(...poly.routeTraces);
+    }
+    if (group.poly.sourcePolygonCount > 1) {
+      group.poly.activityId = null;
+    }
+    if (poly?.createdAt && (!group.poly.createdAt || String(poly.createdAt) > String(group.poly.createdAt))) {
+      group.poly.createdAt = poly.createdAt;
+    }
+  });
+
+  return mergedEntries
+    .map((group) => {
+      const cellMeters = Number(group.poly.cellMeters);
+      const tiles = repairMergedOwnerMaskTiles(Array.from(group.tilesByKey.values()), renderGrid);
+      return {
+        poly: {
+          ...group.poly,
+          cellMeters: Number.isFinite(cellMeters) ? cellMeters : undefined,
+        },
+        tiles,
+      };
+    })
+    .filter((entry) => entry.tiles.length > 0);
 }
 
 function maskVertexKey(vertex) {
@@ -758,15 +2082,37 @@ function maskTileConnectedComponents(tiles) {
   return components;
 }
 
-function visualMaskRegions(tiles, options = {}) {
-  return maskTileConnectedComponents(tiles).flatMap((component) => {
-    const contourComponent = component.length >= LAND_MASK_LARGE_COMPONENT_MIN_TILES
-      ? component
-      : pruneMaskContourTiles(component);
-    const componentRegions = maskBoundaryLoops(contourComponent, options)
-      .filter((loop) => loop.length >= 4);
-    return visibleMaskContourRegions(componentRegions, options);
+function visibleMaskConnectedComponents(components, options = {}) {
+  const validComponents = (Array.isArray(components) ? components : [])
+    .filter((component) => Array.isArray(component) && component.length > 0);
+  if (!validComponents.length) return [];
+  if (options?.preserveAll) return validComponents;
+
+  const visibleComponents = validComponents.filter((component) => {
+    const minTiles = component.some((tile) => tile?.hasSharedBoundary)
+      ? LAND_MASK_EDGE_COMPONENT_MIN_VISIBLE_TILES
+      : LAND_MASK_MIN_VISIBLE_COMPONENT_TILES;
+    return component.length >= minTiles;
   });
+
+  if (visibleComponents.length > 0) {
+    return visibleComponents;
+  }
+
+  return validComponents
+    .slice()
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 1);
+}
+
+function visualMaskRegions(tiles, options = {}) {
+  const regions = [];
+  visibleMaskConnectedComponents(maskTileConnectedComponents(tiles)).forEach((component) => {
+    const componentRegions = maskBoundaryLoops(component, options)
+      .filter((loop) => loop.length >= 4);
+    visibleMaskLandRegions(componentRegions, options).forEach((region) => regions.push(region));
+  });
+  return regions;
 }
 
 function maskBoundaryLoops(tiles, options = {}) {
@@ -834,15 +2180,21 @@ function maskBoundaryLoops(tiles, options = {}) {
       if (edge.shared) {
         loop.hasSharedBoundary = true;
       }
-      loop.push(maskVertexToLatLng(edge.from, tileMeters, cosLat));
+      const fromPoint = maskVertexToLatLng(edge.from, tileMeters, cosLat);
+      fromPoint.hasSharedBoundary = Boolean(edge.shared);
+      loop.push(fromPoint);
       if (edge.shared) {
-        loop.push(maskVertexToLatLng(maskSharedEdgeMidpoint(edge.from, endpoint), tileMeters, cosLat));
+        const midpoint = maskVertexToLatLng(maskSharedEdgeMidpoint(edge.from, endpoint), tileMeters, cosLat);
+        midpoint.hasSharedBoundary = true;
+        loop.push(midpoint);
       }
       remaining.delete(edge.key);
 
       const endpointKey = maskVertexKey(endpoint);
       if (endpointKey === startKey) {
-        loop.push(maskVertexToLatLng(endpoint, tileMeters, cosLat));
+        const endpointPoint = maskVertexToLatLng(endpoint, tileMeters, cosLat);
+        endpointPoint.hasSharedBoundary = Boolean(edge.shared);
+        loop.push(endpointPoint);
         break;
       }
 
@@ -988,55 +2340,13 @@ function maskPointDistanceMeters(start, end, cosLat) {
   return Math.sqrt((dx * dx) + (dy * dy));
 }
 
-function maskLoopAreaMetersSquared(points, cosLat) {
-  const open = closedMaskLoopOpenPoints(points);
-  if (open.length < 3) return 0;
-
-  let area = 0;
-  for (let index = 0; index < open.length; index += 1) {
-    const current = maskPointToMeters(open[index], cosLat);
-    const next = maskPointToMeters(open[(index + 1) % open.length], cosLat);
-    area += (current.x * next.y) - (next.x * current.y);
-  }
-  return Math.abs(area) / 2;
-}
-
-function maskLoopPerimeterMeters(points, cosLat) {
-  const open = closedMaskLoopOpenPoints(points);
-  if (open.length < 3) return 0;
-
-  let perimeter = 0;
-  for (let index = 0; index < open.length; index += 1) {
-    perimeter += maskPointDistanceMeters(open[index], open[(index + 1) % open.length], cosLat);
-  }
-  return perimeter;
-}
-
-function maskLoopCompactness(points, cosLat) {
-  const area = maskLoopAreaMetersSquared(points, cosLat);
-  const perimeter = maskLoopPerimeterMeters(points, cosLat);
-  if (area <= 0 || perimeter <= 0) return 0;
-  return (4 * Math.PI * area) / (perimeter * perimeter);
-}
-
-function maskLoopAspectRatio(points, cosLat) {
-  const open = closedMaskLoopOpenPoints(points);
-  if (open.length < 3) return Infinity;
-
-  const projected = open.map((point) => maskPointToMeters(point, cosLat));
-  const xs = projected.map((point) => point.x);
-  const ys = projected.map((point) => point.y);
-  const width = Math.max(...xs) - Math.min(...xs);
-  const height = Math.max(...ys) - Math.min(...ys);
-  const shortest = Math.min(width, height);
-  const longest = Math.max(width, height);
-  if (shortest <= 0 || longest <= 0) return Infinity;
-  return longest / shortest;
-}
-
 function closedMaskLoopOpenPoints(loop) {
   const points = (Array.isArray(loop) ? loop : [])
-    .map((point) => [Number(point?.[0]), Number(point?.[1])])
+    .map((point) => {
+      const normalized = [Number(point?.[0]), Number(point?.[1])];
+      normalized.hasSharedBoundary = Boolean(point?.hasSharedBoundary);
+      return normalized;
+    })
     .filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude));
   const first = points[0];
   const last = points[points.length - 1];
@@ -1044,6 +2354,111 @@ function closedMaskLoopOpenPoints(loop) {
     points.pop();
   }
   return points;
+}
+
+function maskLoopAreaMetersSquared(loop, cosLat) {
+  return Math.abs(maskLoopSignedAreaMetersSquared(loop, cosLat));
+}
+
+function maskLoopSignedAreaMetersSquared(loop, cosLat) {
+  const points = closedMaskLoopOpenPoints(loop);
+  if (points.length < 3 || !Number.isFinite(cosLat) || cosLat <= 0) return 0;
+
+  let area = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = maskPointToMeters(points[index], cosLat);
+    const next = maskPointToMeters(points[(index + 1) % points.length], cosLat);
+    area += (current.x * next.y) - (next.x * current.y);
+  }
+  return area / 2;
+}
+
+function maskLoopPerimeterMeters(loop, cosLat) {
+  const points = closedMaskLoopOpenPoints(loop);
+  if (points.length < 3 || !Number.isFinite(cosLat) || cosLat <= 0) return 0;
+
+  let perimeter = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    perimeter += maskPointDistanceMeters(points[index], points[(index + 1) % points.length], cosLat);
+  }
+  return perimeter;
+}
+
+function maskArcAreaMetersSquared(points, cosLat) {
+  if (!Array.isArray(points) || points.length < 3 || !Number.isFinite(cosLat) || cosLat <= 0) return 0;
+  let area = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = maskPointToMeters(points[index], cosLat);
+    const next = maskPointToMeters(points[(index + 1) % points.length], cosLat);
+    area += (current.x * next.y) - (next.x * current.y);
+  }
+  return Math.abs(area) / 2;
+}
+
+function collapseLargeMaskBays(points, options = {}) {
+  const open = closedMaskLoopOpenPoints(points);
+  if (open.length < 12) return open;
+
+  const cosLat = Number(options?.cosLat);
+  const sourceCellMeters = Number(options?.sourceCellMeters);
+  if (!Number.isFinite(cosLat) || cosLat <= 0 || !Number.isFinite(sourceCellMeters) || sourceCellMeters <= 0) {
+    return open;
+  }
+
+  const maxChordMeters = sourceCellMeters * LAND_MASK_LARGE_BAY_COLLAPSE_WIDTH_RATIO;
+  const maxArcMeters = sourceCellMeters * LAND_MASK_LARGE_BAY_COLLAPSE_MAX_ARC_RATIO;
+  const minArcMeters = sourceCellMeters * LAND_MASK_LARGE_BAY_COLLAPSE_MIN_ARC_RATIO;
+  const maxCollapses = Math.max(0, LAND_MASK_LARGE_BAY_COLLAPSE_MAX_PER_LOOP);
+  if (maxChordMeters <= 0 || maxArcMeters <= 0 || minArcMeters <= 0 || maxCollapses <= 0) return open;
+
+  const result = [];
+  let collapseCount = 0;
+
+  for (let startIndex = 0; startIndex < open.length; startIndex += 1) {
+    const startPoint = open[startIndex];
+    result.push(startPoint);
+
+    if (collapseCount >= maxCollapses || startIndex >= open.length - 4) {
+      continue;
+    }
+
+    let arcMeters = 0;
+    let best = null;
+    for (let endIndex = startIndex + 3; endIndex < open.length - 1; endIndex += 1) {
+      arcMeters += maskPointDistanceMeters(open[endIndex - 1], open[endIndex], cosLat);
+      if (arcMeters > maxArcMeters) break;
+      if (arcMeters < minArcMeters) continue;
+
+      const endPoint = open[endIndex];
+      const chordMeters = maskPointDistanceMeters(startPoint, endPoint, cosLat);
+      if (chordMeters <= 0 || chordMeters > maxChordMeters) continue;
+      if (arcMeters < chordMeters * LAND_MASK_LARGE_BAY_COLLAPSE_MIN_ARC_TO_CHORD) continue;
+      if (open.slice(startIndex, endIndex + 1).some((point) => point?.hasSharedBoundary)) continue;
+
+      const bayArea = maskArcAreaMetersSquared([startPoint, ...open.slice(startIndex + 1, endIndex + 1)], cosLat);
+      const maxBayArea = Math.max(
+        sourceCellMeters * sourceCellMeters * 6,
+        chordMeters * arcMeters * 2,
+      );
+      if (bayArea > maxBayArea) continue;
+
+      const score = (arcMeters / chordMeters) + (arcMeters / Math.max(sourceCellMeters, 1));
+      if (!best || score > best.score) {
+        best = { endIndex, score };
+      }
+    }
+
+    if (best) {
+      startIndex = best.endIndex - 1;
+      collapseCount += 1;
+    }
+  }
+
+  if (collapseCount > 0 && !options?.singlePass) {
+    return collapseLargeMaskBays(result, { ...options, singlePass: true });
+  }
+
+  return result.length >= 3 ? result : open;
 }
 
 function roundClosedMaskLoopCorners(points, radiusMeters, cosLat, passes) {
@@ -1131,26 +2546,44 @@ function smoothMaskBoundaryLoop(loop, options = {}) {
   const open = points;
   const fallbackCosLat = Math.max(1e-6, Math.abs(Math.cos((open[0][0] * Math.PI) / 180)));
   const cosLat = Number.isFinite(providedCosLat) && providedCosLat > 0 ? providedCosLat : fallbackCosLat;
-  const contourSimplifyRatio = open.length <= LAND_MASK_TINY_LOOP_POINT_LIMIT
-    ? LAND_MASK_CONTOUR_SIMPLIFY_RATIO * 0.45
-    : open.length <= LAND_MASK_SMALL_LOOP_POINT_LIMIT
-      ? LAND_MASK_CONTOUR_SIMPLIFY_RATIO * 0.7
-      : LAND_MASK_CONTOUR_SIMPLIFY_RATIO;
-  const contourBaseMeters = Math.max(
-    Number.isFinite(tileMeters) && tileMeters > 0 ? tileMeters : 36,
-    Number.isFinite(sourceCellMeters) && sourceCellMeters > 0 ? sourceCellMeters : 0,
-  );
+  if (options?.preserveAll) {
+    const closed = [...open, open[0]];
+    closed.hasSharedBoundary = Boolean(loop.hasSharedBoundary);
+    return closed;
+  }
+  const routeCorridor = Boolean(options?.routeCorridor);
+  let contourSimplifyRatio = LAND_MASK_CONTOUR_SIMPLIFY_RATIO;
+  if (routeCorridor) {
+    contourSimplifyRatio = LAND_MASK_ROUTE_CORRIDOR_CONTOUR_SIMPLIFY_RATIO;
+  } else if (open.length <= LAND_MASK_TINY_LOOP_POINT_LIMIT) {
+    contourSimplifyRatio = LAND_MASK_CONTOUR_SIMPLIFY_RATIO * 0.45;
+  } else if (open.length <= LAND_MASK_SMALL_LOOP_POINT_LIMIT) {
+    contourSimplifyRatio = LAND_MASK_CONTOUR_SIMPLIFY_RATIO * 0.7;
+  }
+  const contourBaseMeters = Number.isFinite(tileMeters) && tileMeters > 0
+    ? tileMeters
+    : Number.isFinite(sourceCellMeters) && sourceCellMeters > 0
+      ? sourceCellMeters
+      : 36;
   const simplifyToleranceMeters = contourBaseMeters
     * contourSimplifyRatio;
 
-  const simplified = simplifyClosedMaskLoop(open, simplifyToleranceMeters, cosLat);
-  const smoothingPasses = maskSmoothingPassCount(simplified.length, passes);
+  const baySourceCellMeters = Number.isFinite(sourceCellMeters) && sourceCellMeters > 0
+    ? sourceCellMeters
+    : contourBaseMeters;
+  const bayCollapsed = options?.largeLandmass
+    ? collapseLargeMaskBays(open, { cosLat, sourceCellMeters: baySourceCellMeters })
+    : open;
+  const simplified = simplifyClosedMaskLoop(bayCollapsed, simplifyToleranceMeters, cosLat);
+  const smoothingPasses = routeCorridor
+    ? Math.min(LAND_MASK_ROUTE_CORRIDOR_SMOOTHING_PASSES, maskSmoothingPassCount(simplified.length, passes))
+    : maskSmoothingPassCount(simplified.length, passes);
   const cornerRadiusMeters = contourBaseMeters
-    * LAND_MASK_CORNER_RADIUS_RATIO;
+    * (routeCorridor ? LAND_MASK_ROUTE_CORRIDOR_CORNER_RADIUS_RATIO : LAND_MASK_CORNER_RADIUS_RATIO);
   const smoothed = roundClosedMaskLoopCorners(simplified, cornerRadiusMeters, cosLat, smoothingPasses);
   const curvePasses = open.length <= LAND_MASK_TINY_LOOP_POINT_LIMIT
     ? 1
-    : LAND_MASK_CURVE_PASSES;
+    : (routeCorridor ? 1 : LAND_MASK_CURVE_PASSES);
   const curved = curveClosedMaskLoop(smoothed, curvePasses);
   const closed = [...curved, curved[0]];
   closed.hasSharedBoundary = Boolean(loop.hasSharedBoundary);
@@ -1158,281 +2591,1234 @@ function smoothMaskBoundaryLoop(loop, options = {}) {
   return closed;
 }
 
-function visibleMaskContourRegions(exactRegions, options = {}) {
-  const providedCosLat = Number(options?.cosLat);
-  const fallbackLoop = Array.isArray(exactRegions) ? exactRegions.find((loop) => Array.isArray(loop) && loop.length > 0) : null;
-  const fallbackPoint = Array.isArray(fallbackLoop) ? fallbackLoop[0] : null;
-  const fallbackCosLat = Array.isArray(fallbackPoint)
-    ? Math.max(1e-6, Math.abs(Math.cos((Number(fallbackPoint[0]) * Math.PI) / 180)))
-    : 1;
-  const cosLat = Number.isFinite(providedCosLat) && providedCosLat > 0 ? providedCosLat : fallbackCosLat;
+function visibleMaskLandRegions(exactRegions, options = {}) {
   return (Array.isArray(exactRegions) ? exactRegions : [])
     .filter((loop) => loop.length >= LAND_MASK_MIN_VISIBLE_CONTOUR_POINTS)
-    .filter((loop) => maskLoopCompactness(loop, cosLat) >= LAND_MASK_MIN_VISIBLE_COMPACTNESS)
-    .filter((loop) => maskLoopAspectRatio(loop, cosLat) <= LAND_MASK_MAX_VISIBLE_ASPECT_RATIO)
     .map((loop) => smoothMaskBoundaryLoop(loop, options))
     .filter((loop) => loop.length >= 4);
 }
 
-function visibleMaskStrokeRegions(regions, options = {}) {
+function visibleMaskContourRegions(exactRegions, options = {}) {
   const providedCosLat = Number(options?.cosLat);
-  const fallbackLoop = Array.isArray(regions) ? regions.find((loop) => Array.isArray(loop) && loop.length > 0) : null;
-  const fallbackPoint = Array.isArray(fallbackLoop) ? fallbackLoop[0] : null;
-  const fallbackCosLat = Array.isArray(fallbackPoint)
-    ? Math.max(1e-6, Math.abs(Math.cos((Number(fallbackPoint[0]) * Math.PI) / 180)))
-    : 1;
-  const cosLat = Number.isFinite(providedCosLat) && providedCosLat > 0 ? providedCosLat : fallbackCosLat;
+  const fallbackLoop = (Array.isArray(exactRegions) ? exactRegions : []).find((loop) => Array.isArray(loop) && loop.length > 0);
+  const fallbackLat = Number(fallbackLoop?.[0]?.[0]);
+  const cosLat = Number.isFinite(providedCosLat) && providedCosLat > 0
+    ? providedCosLat
+    : Math.max(1e-6, Math.abs(Math.cos(((Number.isFinite(fallbackLat) ? fallbackLat : 0) * Math.PI) / 180)));
+  const preserveAll = Boolean(options?.preserveAll);
 
-  return (Array.isArray(regions) ? regions : [])
-    .filter((loop) => maskLoopAreaMetersSquared(loop, cosLat) >= LAND_MASK_MIN_CONTOUR_AREA_SQUARE_METERS);
+  return (Array.isArray(exactRegions) ? exactRegions : [])
+    .filter((loop) => loop.length >= LAND_MASK_MIN_VISIBLE_CONTOUR_POINTS)
+    .filter((loop) => preserveAll
+      || loop.hasSharedBoundary
+      || maskLoopAreaMetersSquared(loop, cosLat) >= LAND_MASK_MIN_CONTOUR_AREA_SQUARE_METERS
+      || maskLoopPerimeterMeters(loop, cosLat) >= LAND_MASK_MIN_CONTOUR_PERIMETER_METERS)
+    .map((loop) => smoothMaskBoundaryLoop(loop, { ...options, cosLat }))
+    .filter((loop) => loop.length >= 4);
 }
 
-function dedupeLayerPoints(points, tolerancePixels = 0.75) {
-  const deduped = [];
-  const toleranceSquared = tolerancePixels * tolerancePixels;
-  (Array.isArray(points) ? points : []).forEach((point) => {
-    const previous = deduped[deduped.length - 1];
-    if (previous) {
-      const dx = point.x - previous.x;
-      const dy = point.y - previous.y;
-      if ((dx * dx) + (dy * dy) <= toleranceSquared) return;
-    }
-    deduped.push(point);
+function visibleMaskLandGroupLoops(regions, options = {}) {
+  const drawableRegions = (Array.isArray(regions) ? regions : [])
+    .filter((loop) => Array.isArray(loop) && loop.length >= LAND_MASK_MIN_VISIBLE_CONTOUR_POINTS);
+  if (drawableRegions.length <= 1) return drawableRegions;
+  if (options?.preserveAll) return drawableRegions;
+
+  const providedCosLat = Number(options?.cosLat);
+  const fallbackLoop = drawableRegions.find((loop) => Array.isArray(loop) && loop.length > 0);
+  const fallbackLat = Number(fallbackLoop?.[0]?.[0]);
+  const cosLat = Number.isFinite(providedCosLat) && providedCosLat > 0
+    ? providedCosLat
+    : Math.max(1e-6, Math.abs(Math.cos(((Number.isFinite(fallbackLat) ? fallbackLat : 0) * Math.PI) / 180)));
+
+  const measuredRegions = drawableRegions.map((loop) => ({
+    loop,
+    signedArea: maskLoopSignedAreaMetersSquared(loop, cosLat),
+    area: maskLoopAreaMetersSquared(loop, cosLat),
+    perimeter: maskLoopPerimeterMeters(loop, cosLat),
+  }));
+  const dominantRegion = measuredRegions
+    .slice()
+    .sort((left, right) => right.area - left.area)[0];
+  const dominantOrientation = Math.sign(dominantRegion?.signedArea || 0);
+
+  return measuredRegions
+    .filter((entry) => {
+      const isOuter = entry.loop === dominantRegion?.loop;
+      if (isOuter || entry.loop.hasSharedBoundary) return true;
+
+      const orientation = Math.sign(entry.signedArea || 0);
+      return dominantOrientation !== 0 && orientation === dominantOrientation;
+    })
+    .map((entry) => entry.loop);
+}
+
+function territoryMaskRegionGroupLimit(maxGroups, options = {}) {
+  const numericLimit = Number(maxGroups);
+  if (options?.preserveAll || numericLimit === Number.POSITIVE_INFINITY) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Number.isFinite(numericLimit) && numericLimit > 0
+    ? Math.max(1, Math.floor(numericLimit))
+    : LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER;
+}
+
+function selectDiverseMaskRegionGroups(entries, maxGroups = LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER, options = {}) {
+  const limit = territoryMaskRegionGroupLimit(maxGroups, options);
+  const viewport = options?.viewport || null;
+  const ranked = (Array.isArray(entries) ? entries : [])
+    .filter((entry) => entry?.regions?.length > 0)
+    .sort((left, right) => right.score - left.score);
+  const selected = [];
+  const selectedIndexes = new Set();
+  const selectEntry = (entry, index) => {
+    if (selected.length >= limit || selectedIndexes.has(index)) return;
+    selected.push(entry);
+    selectedIndexes.add(index);
+  };
+
+  if (viewport?.center && Number.isFinite(Number(viewport.radiusMeters))) {
+    ranked
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => {
+        const distance = territoryCenterDistanceMeters(entry.center, viewport.center);
+        return Number.isFinite(distance)
+          && distance <= (Number(viewport.radiusMeters) + Math.max(entry.spanMeters / 2, 420));
+      })
+      .sort((left, right) => (
+        right.entry.score - left.entry.score
+        || territoryCenterDistanceMeters(left.entry.center, viewport.center)
+        - territoryCenterDistanceMeters(right.entry.center, viewport.center)
+        || left.index - right.index
+      ))
+      .forEach(({ entry, index }) => selectEntry(entry, index));
+  }
+
+  ranked.forEach((entry, index) => {
+    if (selected.length >= limit) return;
+    const isDistant = selected.every((selectedEntry) => (
+      territoryCenterDistanceMeters(entry.center, selectedEntry.center) >= LAND_MASK_VISIBLE_REGION_DIVERSITY_METERS
+    ));
+    if (!isDistant) return;
+    selectEntry(entry, index);
   });
 
-  const first = deduped[0];
-  const last = deduped[deduped.length - 1];
-  if (first && last) {
-    const dx = first.x - last.x;
-    const dy = first.y - last.y;
-    if ((dx * dx) + (dy * dy) <= toleranceSquared) {
-      deduped.pop();
-    }
-  }
-  return deduped;
+  ranked.forEach((entry, index) => {
+    selectEntry(entry, index);
+  });
+
+  return selected;
 }
 
-function layerPointDistanceToSegmentSquared(point, start, end) {
-  const segmentX = end.x - start.x;
-  const segmentY = end.y - start.y;
-  const segmentLengthSquared = (segmentX * segmentX) + (segmentY * segmentY);
-  if (segmentLengthSquared <= 0) {
-    const dx = point.x - start.x;
-    const dy = point.y - start.y;
-    return (dx * dx) + (dy * dy);
-  }
+function visibleMaskLandRegionGroups(regionGroups, options = {}) {
+  const entries = (Array.isArray(regionGroups) ? regionGroups : [])
+    .map((source) => {
+      const regions = Array.isArray(source?.regions) ? source.regions : source;
+      const groupOptions = source?.options && typeof source.options === 'object'
+        ? { ...options, ...source.options }
+        : options;
+      const drawableRegions = visibleMaskContourRegions(visibleMaskLandGroupLoops(regions, groupOptions), groupOptions);
+      if (!drawableRegions.length) return null;
 
-  const projection = Math.max(
-    0,
-    Math.min(
-      1,
-      (((point.x - start.x) * segmentX) + ((point.y - start.y) * segmentY)) / segmentLengthSquared,
-    ),
-  );
-  const closestX = start.x + (projection * segmentX);
-  const closestY = start.y + (projection * segmentY);
-  const dx = point.x - closestX;
-  const dy = point.y - closestY;
-  return (dx * dx) + (dy * dy);
+      const providedCosLat = Number(groupOptions?.cosLat);
+      const fallbackLoop = drawableRegions.find((loop) => Array.isArray(loop) && loop.length > 0);
+      const fallbackLat = Number(fallbackLoop?.[0]?.[0]);
+      const cosLat = Number.isFinite(providedCosLat) && providedCosLat > 0
+        ? providedCosLat
+        : Math.max(1e-6, Math.abs(Math.cos(((Number.isFinite(fallbackLat) ? fallbackLat : 0) * Math.PI) / 180)));
+      const score = drawableRegions.reduce((total, loop) => (
+        total + maskLoopAreaMetersSquared(loop, cosLat) + (maskLoopPerimeterMeters(loop, cosLat) * 8)
+      ), 0);
+      const bounds = territoryCoordinateBounds(drawableRegions.flat());
+      const center = territoryBoundsCenter(bounds);
+      return {
+        regions: drawableRegions,
+        score,
+        bounds,
+        center,
+        spanMeters: territoryBoundsSpanMeters(bounds),
+      };
+    })
+    .filter(Boolean);
+  const maxGroups = territoryMaskRegionGroupLimit(options?.maxGroups, options);
+  return selectDiverseMaskRegionGroups(entries, maxGroups, options)
+    .map((entry) => entry.regions);
 }
 
-function simplifyLayerPointLine(points, tolerancePixels) {
-  if (!Array.isArray(points) || points.length <= 2 || !Number.isFinite(tolerancePixels) || tolerancePixels <= 0) {
-    return Array.isArray(points) ? points : [];
-  }
+function limitMaskRegionGroupsByLoopBudget(regionGroups, maxLoops = LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER) {
+  const loopBudget = territoryMaskRegionGroupLimit(maxLoops);
+  const limitedGroups = [];
+  let usedLoops = 0;
 
-  const toleranceSquared = tolerancePixels * tolerancePixels;
-  const keep = new Array(points.length).fill(false);
-  const stack = [[0, points.length - 1]];
-  keep[0] = true;
-  keep[points.length - 1] = true;
+  (Array.isArray(regionGroups) ? regionGroups : []).some((regions) => {
+    const drawableRegions = (Array.isArray(regions) ? regions : [])
+      .filter((region) => Array.isArray(region) && region.length >= 4);
+    if (!drawableRegions.length) return false;
+    const remaining = loopBudget - usedLoops;
+    if (remaining <= 0) return true;
+    limitedGroups.push(drawableRegions.slice(0, remaining));
+    usedLoops += Math.min(drawableRegions.length, remaining);
+    return usedLoops >= loopBudget;
+  });
 
-  while (stack.length > 0) {
-    const [startIndex, endIndex] = stack.pop();
-    let farthestIndex = -1;
-    let farthestDistance = toleranceSquared;
-    for (let index = startIndex + 1; index < endIndex; index += 1) {
-      const distance = layerPointDistanceToSegmentSquared(points[index], points[startIndex], points[endIndex]);
-      if (distance > farthestDistance) {
-        farthestDistance = distance;
-        farthestIndex = index;
+  return limitedGroups;
+}
+
+function outerMaskContourRegions(regionGroups, options = {}) {
+  const providedCosLat = Number(options?.cosLat);
+  const fallbackGroup = (Array.isArray(regionGroups) ? regionGroups : [])
+    .find((group) => Array.isArray(group) && group.length > 0);
+  const fallbackLoop = fallbackGroup?.find((loop) => Array.isArray(loop) && loop.length > 0);
+  const fallbackLat = Number(fallbackLoop?.[0]?.[0]);
+  const cosLat = Number.isFinite(providedCosLat) && providedCosLat > 0
+    ? providedCosLat
+    : Math.max(1e-6, Math.abs(Math.cos(((Number.isFinite(fallbackLat) ? fallbackLat : 0) * Math.PI) / 180)));
+
+  const rankedRegionGroups = (Array.isArray(regionGroups) ? regionGroups : [])
+    .map((regions) => {
+      const drawableRegions = (Array.isArray(regions) ? regions : [])
+        .filter((loop) => loop.length >= LAND_MASK_MIN_VISIBLE_CONTOUR_POINTS);
+      if (!drawableRegions.length) return null;
+
+      const measuredRegions = drawableRegions.map((loop) => ({
+        loop,
+        signedArea: maskLoopSignedAreaMetersSquared(loop, cosLat),
+        area: maskLoopAreaMetersSquared(loop, cosLat),
+        perimeter: maskLoopPerimeterMeters(loop, cosLat),
+      }));
+      let maxArea = 0;
+      let maxPerimeter = 0;
+      measuredRegions.forEach((entry) => {
+        maxArea = Math.max(maxArea, entry.area);
+        maxPerimeter = Math.max(maxPerimeter, entry.perimeter);
+      });
+      const hasSharedBoundary = measuredRegions.some((entry) => entry.loop.hasSharedBoundary);
+      if (
+        !hasSharedBoundary
+        && maxArea < LAND_MASK_MIN_CONTOUR_AREA_SQUARE_METERS
+        && maxPerimeter < LAND_MASK_MIN_CONTOUR_PERIMETER_METERS
+      ) {
+        return null;
       }
-    }
-    if (farthestIndex > -1) {
-      keep[farthestIndex] = true;
-      stack.push([startIndex, farthestIndex], [farthestIndex, endIndex]);
-    }
-  }
 
-  return points.filter((_, index) => keep[index]);
-}
+      const dominantRegion = measuredRegions
+        .slice()
+        .sort((left, right) => right.area - left.area)[0];
+      const dominantOrientation = Math.sign(dominantRegion?.signedArea || 0);
+      const outerRegions = measuredRegions
+        .filter((entry) => {
+          const orientation = Math.sign(entry.signedArea || 0);
+          return dominantOrientation === 0
+            ? entry.area === maxArea
+            : orientation === dominantOrientation;
+        })
+        .map((entry) => entry.loop);
 
-function simplifyClosedLayerPoints(points, tolerancePixels = LAND_MASK_CONTOUR_SCREEN_SIMPLIFY_PX) {
-  if (!Array.isArray(points) || points.length < 8) return Array.isArray(points) ? points : [];
+      return {
+        hasSharedBoundary,
+        outerRegions,
+        score: maxArea + (maxPerimeter * 8),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (
+      b.score - a.score
+      || Number(b.hasSharedBoundary) - Number(a.hasSharedBoundary)
+    ))
+    .slice(0, LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER);
 
-  const anchor = points[0];
-  let splitIndex = Math.floor(points.length / 2);
-  let farthestDistance = -1;
-  for (let index = 1; index < points.length; index += 1) {
-    const dx = points[index].x - anchor.x;
-    const dy = points[index].y - anchor.y;
-    const distance = (dx * dx) + (dy * dy);
-    if (distance > farthestDistance) {
-      farthestDistance = distance;
-      splitIndex = index;
-    }
-  }
-
-  const firstArc = simplifyLayerPointLine(points.slice(0, splitIndex + 1), tolerancePixels);
-  const secondArc = simplifyLayerPointLine([...points.slice(splitIndex), points[0]], tolerancePixels);
-  const simplified = [...firstArc.slice(0, -1), ...secondArc.slice(0, -1)];
-  return simplified.length >= 3 ? simplified : points;
-}
-
-function softenAxisAlignedLayerSegments(points) {
-  if (!Array.isArray(points) || points.length < 3) return Array.isArray(points) ? points : [];
-
-  const softened = [];
-  for (let index = 0; index < points.length; index += 1) {
-    const current = points[index];
-    const next = points[(index + 1) % points.length];
-    softened.push(current);
-
-    const dx = next.x - current.x;
-    const dy = next.y - current.y;
-    const segmentLength = Math.sqrt((dx * dx) + (dy * dy));
-    if (segmentLength < LAND_MASK_AXIS_SEGMENT_MIN_PX) continue;
-
-    const axisSkew = Math.min(Math.abs(dx), Math.abs(dy)) / Math.max(Math.abs(dx), Math.abs(dy), 1);
-    if (axisSkew > 0.12) continue;
-
-    const previous = points[(index - 1 + points.length) % points.length];
-    const following = points[(index + 2) % points.length];
-    const direction = ((previous.x - next.x) * (following.y - current.y))
-      - ((previous.y - next.y) * (following.x - current.x));
-    const sign = direction >= 0 ? 1 : -1;
-    const offset = Math.min(LAND_MASK_AXIS_SEGMENT_SOFTEN_PX, segmentLength * 0.24);
-    const unitX = dx / segmentLength;
-    const unitY = dy / segmentLength;
-
-    softened.push({
-      x: current.x + (dx * 0.5) + (-unitY * offset * sign),
-      y: current.y + (dy * 0.5) + (unitX * offset * sign),
+  const contourRegions = [];
+  rankedRegionGroups.some(({ outerRegions }) => {
+    visibleMaskContourRegions(outerRegions, { ...options, cosLat }).some((region) => {
+      contourRegions.push(region);
+      return contourRegions.length >= LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER;
     });
-  }
-
-  return softened;
-}
-
-function stableContourLatLngPoints(map, region) {
-  if (!map || !Array.isArray(region) || region.length < 4) return [];
-
-  const referencePoints = dedupeLayerPoints(closedMaskLoopOpenPoints(region)
-    .map((point) => map.project(point, LAND_MASK_CONTOUR_REFERENCE_ZOOM))
-    .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y)));
-  const basePoints = simplifyClosedLayerPoints(referencePoints);
-  const stableReferencePoints = softenAxisAlignedLayerSegments(basePoints);
-  return stableReferencePoints
-    .map((point) => map.unproject(point, LAND_MASK_CONTOUR_REFERENCE_ZOOM))
-    .filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng));
-}
-
-function stableContourSignature(points) {
-  if (!Array.isArray(points) || points.length === 0) return '0:0';
-
-  let hash = 2166136261;
-  points.forEach((point) => {
-    const token = `${point.lat.toFixed(7)},${point.lng.toFixed(7)};`;
-    for (let index = 0; index < token.length; index += 1) {
-      hash ^= token.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
+    return contourRegions.length >= LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER;
   });
-  return `${points.length}:${(hash >>> 0).toString(36)}`;
+  return contourRegions;
 }
 
-function clampLayerControlPoint(control, start, end) {
-  const segmentLength = Math.sqrt(((end.x - start.x) ** 2) + ((end.y - start.y) ** 2));
-  const padding = Math.max(4, segmentLength * LAND_MASK_CONTOUR_CONTROL_PADDING_RATIO);
-  const minX = Math.min(start.x, end.x) - padding;
-  const maxX = Math.max(start.x, end.x) + padding;
-  const minY = Math.min(start.y, end.y) - padding;
-  const maxY = Math.max(start.y, end.y) + padding;
+function visibleMaskStrokeRegions(regions) {
+  return (Array.isArray(regions) ? regions : [])
+    .filter((loop) => Array.isArray(loop) && loop.length >= 4);
+}
+
+function decimateClosedRegion(region, stride, maxOpenPoints = Number.POSITIVE_INFINITY) {
+  const open = closedMaskLoopOpenPoints(region);
+  if (open.length < 3) return [];
+  const targetOpenPoints = Number.isFinite(Number(maxOpenPoints))
+    ? Math.max(3, Math.floor(Number(maxOpenPoints)))
+    : open.length;
+  const step = Math.max(1, Math.floor(Number(stride) || 1), Math.ceil(open.length / targetOpenPoints));
+  let decimated = open.filter((_, index) => index === 0 || index % step === 0).slice(0, targetOpenPoints);
+  if (decimated.length < 3) {
+    decimated = [
+      open[0],
+      open[Math.floor(open.length / 3)],
+      open[Math.floor((open.length * 2) / 3)],
+    ].filter(Boolean);
+  }
+  if (decimated.length < 3) return [];
+  return [...decimated, decimated[0]];
+}
+
+function simplifyCachedPreviewRegion(region) {
+  if (!Array.isArray(region) || region.length < 4) return [];
+  const fallbackLat = Number(region?.[0]?.[0]);
+  const cosLat = Math.max(
+    1e-6,
+    Math.abs(Math.cos(((Number.isFinite(fallbackLat) ? fallbackLat : 0) * Math.PI) / 180)),
+  );
+  const simplified = simplifyClosedMaskLoop(region, TERRITORY_CACHED_RENDER_PREVIEW_TOLERANCE_METERS, cosLat);
+  const open = closedMaskLoopOpenPoints(simplified);
+  return open.length >= 3 ? [...open, open[0]] : [];
+}
+
+function selectCachedPreviewRegions(scoredRegions, maxRegions) {
+  const cappedRegionCount = Math.max(1, Math.floor(Number(maxRegions) || 1));
+  const sortedRegions = scoredRegions.slice().sort((a, b) => b.score - a.score);
+  const selected = [];
+  const selectedRegions = new Set();
+
+  sortedRegions.forEach((entry) => {
+    if (selected.length >= cappedRegionCount) return;
+    if (selectedRegions.has(entry.region)) return;
+    selected.push(entry);
+    selectedRegions.add(entry.region);
+  });
+
+  return selected;
+}
+
+function previewRegionSet(regions, options = {}) {
+  const maxRegions = Math.max(1, Math.floor(Number(options?.maxRegions) || 1));
+  const simplifiedRegions = (Array.isArray(regions) ? regions : [])
+    .map(simplifyCachedPreviewRegion)
+    .filter((region) => region.length >= 4);
+  const rankedRegions = selectCachedPreviewRegions(simplifiedRegions
+    .map((region) => {
+      const fallbackLat = Number(region?.[0]?.[0]);
+      const cosLat = Math.max(
+        1e-6,
+        Math.abs(Math.cos(((Number.isFinite(fallbackLat) ? fallbackLat : 0) * Math.PI) / 180)),
+      );
+      return {
+        region,
+        score: maskLoopAreaMetersSquared(region, cosLat) + (maskLoopPerimeterMeters(region, cosLat) * 8),
+      };
+    }), maxRegions);
+
+  let remainingPointBudget = TERRITORY_CACHED_RENDER_PREVIEW_MAX_POINTS_PER_OWNER;
+  return rankedRegions
+    .map(({ region }, index) => {
+      const regionsLeft = Math.max(1, rankedRegions.length - index);
+      const maxClosedPointsForRegion = Math.max(4, Math.floor(remainingPointBudget / regionsLeft));
+      const decimated = decimateClosedRegion(region, 1, maxClosedPointsForRegion - 1);
+      remainingPointBudget = Math.max(0, remainingPointBudget - decimated.length);
+      return decimated;
+    })
+    .filter((region) => region.length >= 4);
+}
+
+function cachedPreviewRenderEntries(entries) {
+  return (Array.isArray(entries) ? entries : []).map((entry) => {
+    const previewLandRegions = entry.active
+      ? (Array.isArray(entry.landRegions) ? entry.landRegions : [])
+      : previewRegionSet(entry.landRegions, { maxRegions: TERRITORY_CACHED_RENDER_PREVIEW_MAX_RIVAL_REGIONS_PER_OWNER });
+    const previewContourRegions = entry.active
+      ? (Array.isArray(entry.contourRegions) ? entry.contourRegions : [])
+      : previewRegionSet(entry.contourRegions, { maxRegions: TERRITORY_CACHED_RENDER_PREVIEW_MAX_RIVAL_REGIONS_PER_OWNER });
+    return {
+      ...entry,
+      landRegions: previewLandRegions,
+      landRegionGroups: Array.isArray(entry.landRegionGroups) ? entry.landRegionGroups : [],
+      contourRegions: previewContourRegions,
+    };
+  }).filter((entry) => entry.landRegions.length > 0 || entry.contourRegions.length > 0);
+}
+
+function interactiveDisplayRegionGroups(regionGroups, maxPoints) {
+  const drawableGroups = (Array.isArray(regionGroups) ? regionGroups : [])
+    .map((regions) => (Array.isArray(regions) ? regions : [])
+      .filter((region) => Array.isArray(region) && region.length >= 4))
+    .filter((regions) => regions.length > 0);
+  const regionCount = drawableGroups.reduce((total, regions) => total + regions.length, 0);
+  if (!regionCount) return [];
+
+  let remainingRegions = regionCount;
+  let remainingPointBudget = Math.max(regionCount * 4, Math.floor(Number(maxPoints) || 0));
+  return drawableGroups
+    .map((regions) => regions
+      .map((region) => {
+        const maxClosedPointsForRegion = Math.max(4, Math.floor(remainingPointBudget / Math.max(1, remainingRegions)));
+        const decimated = decimateClosedRegion(region, 1, maxClosedPointsForRegion - 1);
+        remainingPointBudget = Math.max(0, remainingPointBudget - decimated.length);
+        remainingRegions -= 1;
+        return decimated;
+      })
+      .filter((region) => region.length >= 4))
+    .filter((regions) => regions.length > 0);
+}
+
+function interactiveDisplayRegionSet(regions, maxPoints) {
+  const drawableRegions = (Array.isArray(regions) ? regions : [])
+    .filter((region) => Array.isArray(region) && region.length >= 4);
+  if (!drawableRegions.length) return [];
+
+  let remainingRegions = drawableRegions.length;
+  let remainingPointBudget = Math.max(drawableRegions.length * 4, Math.floor(Number(maxPoints) || 0));
+  return drawableRegions
+    .map((region) => {
+      const maxClosedPointsForRegion = Math.max(4, Math.floor(remainingPointBudget / Math.max(1, remainingRegions)));
+      const decimated = decimateClosedRegion(region, 1, maxClosedPointsForRegion - 1);
+      remainingPointBudget = Math.max(0, remainingPointBudget - decimated.length);
+      remainingRegions -= 1;
+      return decimated;
+    })
+    .filter((region) => region.length >= 4);
+}
+
+function interactiveDisplayRenderEntries(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      const maxPoints = entry?.active
+        ? TERRITORY_INTERACTIVE_RENDER_MAX_ACTIVE_POINTS_PER_OWNER
+        : TERRITORY_INTERACTIVE_RENDER_MAX_RIVAL_POINTS_PER_OWNER;
+      const landRegionGroups = interactiveDisplayRegionGroups(entry?.landRegionGroups, maxPoints);
+      const landRegions = landRegionGroups.length > 0
+        ? landRegionGroups.flat()
+        : interactiveDisplayRegionSet(entry?.landRegions, maxPoints);
+      const contourRegions = landRegionGroups.length > 0
+        ? landRegions
+        : interactiveDisplayRegionSet(entry?.contourRegions, maxPoints);
+      return {
+        ...entry,
+        landRegions,
+        landRegionGroups,
+        contourRegions,
+      };
+    })
+    .filter((entry) => entry.landRegions.length > 0 || entry.contourRegions.length > 0);
+}
+
+function cachedPreviewBoundsCoords(entries) {
+  const coords = [];
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    const boundsRegions = Array.isArray(entry.landRegions) && entry.landRegions.length > 0
+      ? entry.landRegions
+      : entry.contourRegions;
+    (Array.isArray(boundsRegions) ? boundsRegions : []).forEach((region) => {
+      if (Array.isArray(region)) {
+        region.forEach((coord) => coords.push(coord));
+      }
+    });
+  });
+  return coords;
+}
+
+function territoryCoordinateBounds(coords) {
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+  let minLng = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let count = 0;
+
+  (Array.isArray(coords) ? coords : []).forEach((coord) => {
+    if (!isDrawableTerritoryCoordinate(coord)) return;
+    const lat = Number(coord[0]);
+    const lng = Number(coord[1]);
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+    minLng = Math.min(minLng, lng);
+    maxLng = Math.max(maxLng, lng);
+    count += 1;
+  });
+
+  return count > 0 ? {
+    minLat, maxLat, minLng, maxLng, count,
+  } : null;
+}
+
+function territoryBoundsSpanMeters(bounds) {
+  if (!bounds) return 0;
+  const minLat = Number(bounds.minLat);
+  const maxLat = Number(bounds.maxLat);
+  const minLng = Number(bounds.minLng);
+  const maxLng = Number(bounds.maxLng);
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return 0;
+  const midLat = (minLat + maxLat) / 2;
+  const cosLat = Math.max(0.08, Math.cos((midLat * Math.PI) / 180));
+  const latMeters = Math.abs(maxLat - minLat) * METERS_PER_DEG_LAT;
+  const lngMeters = Math.abs(maxLng - minLng) * METERS_PER_DEG_LAT * cosLat;
+  return Math.max(latMeters, lngMeters);
+}
+
+function territoryBoundsCenter(bounds) {
+  if (!bounds) return null;
   return {
-    x: Math.max(minX, Math.min(maxX, control.x)),
-    y: Math.max(minY, Math.min(maxY, control.y)),
+    latitude: (Number(bounds.minLat) + Number(bounds.maxLat)) / 2,
+    longitude: (Number(bounds.minLng) + Number(bounds.maxLng)) / 2,
   };
 }
 
-function cubicContourControls(previous, current, next, following) {
-  const first = clampLayerControlPoint({
-    x: current.x + ((next.x - previous.x) * LAND_MASK_CONTOUR_CUBIC_TENSION),
-    y: current.y + ((next.y - previous.y) * LAND_MASK_CONTOUR_CUBIC_TENSION),
-  }, current, next);
-  const second = clampLayerControlPoint({
-    x: next.x - ((following.x - current.x) * LAND_MASK_CONTOUR_CUBIC_TENSION),
-    y: next.y - ((following.y - current.y) * LAND_MASK_CONTOUR_CUBIC_TENSION),
-  }, current, next);
-  return { first, second };
+function territoryCenterDistanceMeters(a, b) {
+  if (!a || !b) return Number.POSITIVE_INFINITY;
+  const aLat = Number(a.latitude);
+  const aLng = Number(a.longitude);
+  const bLat = Number(b.latitude);
+  const bLng = Number(b.longitude);
+  if (![aLat, aLng, bLat, bLng].every(Number.isFinite)) return Number.POSITIVE_INFINITY;
+  const midLat = (aLat + bLat) / 2;
+  const cosLat = Math.max(0.08, Math.cos((midLat * Math.PI) / 180));
+  const latMeters = (aLat - bLat) * METERS_PER_DEG_LAT;
+  const lngMeters = (aLng - bLng) * METERS_PER_DEG_LAT * cosLat;
+  return Math.sqrt((latMeters * latMeters) + (lngMeters * lngMeters));
 }
 
-function smoothContourSvgPath(map, stableRegion) {
-  if (!map || !Array.isArray(stableRegion) || stableRegion.length < 3) return '';
+function territoryLeafletLatLngToCenter(latLng) {
+  const latitude = Number(latLng?.lat);
+  const longitude = Number(latLng?.lng);
+  return Number.isFinite(latitude) && Number.isFinite(longitude)
+    ? { latitude, longitude }
+    : null;
+}
 
-  const points = stableRegion
-    .map((point) => map.latLngToLayerPoint(point))
-    .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y));
-  if (points.length < 3) return '';
-
-  let path = `M${points[0].x} ${points[0].y}`;
-  for (let index = 0; index < points.length; index += 1) {
-    const previous = points[(index - 1 + points.length) % points.length];
-    const current = points[index];
-    const next = points[(index + 1) % points.length];
-    const following = points[(index + 2) % points.length];
-    const { first, second } = cubicContourControls(previous, current, next, following);
-    path += `C${first.x} ${first.y} ${second.x} ${second.y} ${next.x} ${next.y}`;
+function territoryMapViewportInfo(map) {
+  try {
+    const center = territoryLeafletLatLngToCenter(map?.getCenter?.());
+    const bounds = map?.getBounds?.();
+    if (!center || !bounds?.isValid?.()) return null;
+    const corners = [
+      territoryLeafletLatLngToCenter(bounds.getNorthEast?.()),
+      territoryLeafletLatLngToCenter(bounds.getNorthWest?.()),
+      territoryLeafletLatLngToCenter(bounds.getSouthEast?.()),
+      territoryLeafletLatLngToCenter(bounds.getSouthWest?.()),
+    ].filter(Boolean);
+    const radiusMeters = corners.reduce((largest, corner) => (
+      Math.max(largest, territoryCenterDistanceMeters(center, corner))
+    ), 0);
+    return {
+      center,
+      radiusMeters: Math.max(900, radiusMeters * 1.2),
+      zoom: Number(map?.getZoom?.()),
+    };
+  } catch {
+    return null;
   }
-  return `${path}Z`;
 }
 
-function attachSmoothTerritoryPath(map, territoryPath, region) {
-  if (!map || !territoryPath || !Array.isArray(region)) return;
-  const stableRegion = stableContourLatLngPoints(map, region);
-  const stableSignature = stableContourSignature(stableRegion);
+function territoryMapViewportKey(map) {
+  const viewport = territoryMapViewportInfo(map);
+  const zoom = Number(map?.getZoom?.());
+  if (!viewport?.center || !Number.isFinite(zoom)) return '';
+  return [
+    Math.round(zoom * 10) / 10,
+    Math.round(viewport.center.latitude * 10000) / 10000,
+    Math.round(viewport.center.longitude * 10000) / 10000,
+    Math.round(Number(viewport.radiusMeters) / 100),
+  ].join(':');
+}
 
-  const updatePath = () => {
-    const pathElement = territoryPath._path;
-    if (!pathElement) return;
-    const path = smoothContourSvgPath(map, stableRegion);
-    if (path) {
-      pathElement.setAttribute('d', path);
-      pathElement.dataset.hermesContourReferenceZoom = String(LAND_MASK_CONTOUR_REFERENCE_ZOOM);
-      pathElement.dataset.hermesStableContourPoints = String(stableRegion.length);
-      pathElement.dataset.hermesStableContourSignature = stableSignature;
+function territoryBoundsDegreesArea(bounds) {
+  if (!bounds) return 0;
+  const latSpan = Math.max(0, Math.abs(Number(bounds.maxLat) - Number(bounds.minLat)));
+  const lngSpan = Math.max(0, Math.abs(Number(bounds.maxLng) - Number(bounds.minLng)));
+  return latSpan * lngSpan;
+}
+
+function territoryFitEntryInfo(entry) {
+  const coords = cachedPreviewBoundsCoords([entry]).filter(isDrawableTerritoryCoordinate);
+  const bounds = territoryCoordinateBounds(coords);
+  const center = territoryBoundsCenter(bounds);
+  if (!bounds || !center || coords.length <= 0) {
+    return null;
+  }
+
+  const declaredArea = Number(entry?.areaSquareMeters);
+  const areaScore = Number.isFinite(declaredArea) && declaredArea > 0
+    ? Math.sqrt(declaredArea)
+    : territoryBoundsDegreesArea(bounds) * 1000000;
+  return {
+    entry,
+    coords,
+    bounds,
+    center,
+    score: Math.max(1, areaScore) + coords.length,
+  };
+}
+
+function territoryRegionInfo(region, index = 0) {
+  const coords = (Array.isArray(region) ? region : []).filter(isDrawableTerritoryCoordinate);
+  const bounds = territoryCoordinateBounds(coords);
+  const center = territoryBoundsCenter(bounds);
+  if (!bounds || !center || coords.length <= 0) {
+    return null;
+  }
+  return {
+    index,
+    coords,
+    bounds,
+    center,
+    score: territoryBoundsDegreesArea(bounds) * 1000000 + coords.length,
+  };
+}
+
+function territoryTraceCoords(trace) {
+  return routeTraceConcretePoints(trace).map((point) => [point.latitude, point.longitude]);
+}
+
+function territoryTraceRecencyScore(trace, index = 0) {
+  const createdAtScore = Date.parse(String(trace?.createdAt || ''));
+  if (Number.isFinite(createdAtScore)) {
+    return createdAtScore;
+  }
+  const activityId = Number(trace?.activityId);
+  if (Number.isFinite(activityId)) {
+    return activityId;
+  }
+  return -index;
+}
+
+function territoryTraceFocusScore(traceInfo) {
+  const spanMeters = territoryBoundsSpanMeters(traceInfo.bounds);
+  return spanMeters * Math.max(1, traceInfo.coords.length);
+}
+
+function territoryRecentOwnerFocusCoords(entry) {
+  const allCoords = cachedPreviewBoundsCoords([entry]).filter(isDrawableTerritoryCoordinate);
+  const allBounds = territoryCoordinateBounds(allCoords);
+  if (!allBounds || territoryBoundsSpanMeters(allBounds) <= TERRITORY_MAX_AUTO_FIT_SPAN_METERS) {
+    return allCoords;
+  }
+
+  const sourceRegions = Array.isArray(entry?.landRegions) && entry.landRegions.length > 0
+    ? entry.landRegions
+    : entry?.contourRegions;
+  const regionInfos = (Array.isArray(sourceRegions) ? sourceRegions : [])
+    .map(territoryRegionInfo)
+    .filter(Boolean);
+
+  const traceInfos = (Array.isArray(entry?.routeTraces) ? entry.routeTraces : [])
+    .map((trace, index) => ({
+      trace,
+      index,
+      coords: territoryTraceCoords(trace),
+      bounds: null,
+      recency: territoryTraceRecencyScore(trace, index),
+    }))
+    .filter((traceInfo) => traceInfo.coords.length > 0)
+    .map((traceInfo) => ({
+      ...traceInfo,
+      bounds: territoryCoordinateBounds(traceInfo.coords),
+    }));
+  const traceRecencies = traceInfos
+    .map((traceInfo) => traceInfo.recency)
+    .filter(Number.isFinite);
+  let minTraceRecency = Number.POSITIVE_INFINITY;
+  let maxTraceRecency = Number.NEGATIVE_INFINITY;
+  traceRecencies.forEach((recency) => {
+    minTraceRecency = Math.min(minTraceRecency, recency);
+    maxTraceRecency = Math.max(maxTraceRecency, recency);
+  });
+  const hasDistinctTraceTimes = traceRecencies.length > 1
+    && (maxTraceRecency - minTraceRecency) > 60_000;
+  const recentTrace = traceInfos
+    .sort((a, b) => (
+      hasDistinctTraceTimes
+        ? b.recency - a.recency || territoryTraceFocusScore(b) - territoryTraceFocusScore(a) || a.index - b.index
+        : territoryTraceFocusScore(b) - territoryTraceFocusScore(a) || b.recency - a.recency || a.index - b.index
+    ))[0];
+
+  if (recentTrace) {
+    const traceCenter = territoryBoundsCenter(territoryCoordinateBounds(recentTrace.coords));
+    const localRegions = traceCenter
+      ? regionInfos.filter((regionInfo) => (
+        territoryCenterDistanceMeters(regionInfo.center, traceCenter) <= TERRITORY_MAX_AUTO_FIT_SPAN_METERS
+      ))
+      : [];
+    const localCoords = [];
+    localRegions.forEach((regionInfo) => {
+      (Array.isArray(regionInfo.coords) ? regionInfo.coords : []).forEach((coord) => localCoords.push(coord));
+    });
+    return localCoords.length > 0 ? localCoords : recentTrace.coords;
+  }
+
+  const largestRegion = regionInfos.sort((a, b) => b.score - a.score || a.index - b.index)[0];
+  return largestRegion?.coords?.length > 0 ? largestRegion.coords : allCoords;
+}
+
+function territoryOwnerFocusBoundsCoords(entries) {
+  const coords = [];
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    territoryRecentOwnerFocusCoords(entry).forEach((coord) => coords.push(coord));
+  });
+  return coords.length > 0 ? coords : cachedPreviewBoundsCoords(entries);
+}
+
+function territoryDefaultBoundsCoords(entries, allCoords) {
+  const allBounds = territoryCoordinateBounds(allCoords);
+  if (!allBounds || territoryBoundsSpanMeters(allBounds) <= TERRITORY_MAX_AUTO_FIT_SPAN_METERS) {
+    return allCoords;
+  }
+
+  const entryInfos = (Array.isArray(entries) ? entries : [])
+    .map(territoryFitEntryInfo)
+    .filter(Boolean);
+  if (entryInfos.length <= 0) {
+    return allCoords;
+  }
+
+  let bestCluster = null;
+  entryInfos.forEach((candidate) => {
+    const localInfos = entryInfos.filter((entryInfo) => (
+      territoryCenterDistanceMeters(entryInfo.center, candidate.center) <= TERRITORY_MAX_AUTO_FIT_SPAN_METERS
+    ));
+    const score = localInfos.reduce((total, entryInfo) => total + entryInfo.score, 0);
+    if (!bestCluster || score > bestCluster.score) {
+      bestCluster = { score, localInfos };
     }
+  });
+
+  const bestCoords = cachedPreviewBoundsCoords((bestCluster?.localInfos || []).map((entryInfo) => entryInfo.entry));
+  return bestCoords.length > 0 ? bestCoords : allCoords;
+}
+
+function mergeTerritoryCoordinateBounds(a, b) {
+  if (!a) return b || null;
+  if (!b) return a || null;
+  return {
+    minLat: Math.min(Number(a.minLat), Number(b.minLat)),
+    maxLat: Math.max(Number(a.maxLat), Number(b.maxLat)),
+    minLng: Math.min(Number(a.minLng), Number(b.minLng)),
+    maxLng: Math.max(Number(a.maxLng), Number(b.maxLng)),
+    count: (Number(a.count) || 0) + (Number(b.count) || 0),
+  };
+}
+
+function territoryColorSourceCoords(source) {
+  const boundsRegions = Array.isArray(source?.landRegions) && source.landRegions.length > 0
+    ? source.landRegions
+    : source?.contourRegions;
+  if (Array.isArray(boundsRegions) && boundsRegions.length > 0) {
+    return cachedPreviewBoundsCoords([source]).filter(isDrawableTerritoryCoordinate);
+  }
+  if (Array.isArray(source?.coordinates)) {
+    return source.coordinates.filter(isDrawableTerritoryCoordinate);
+  }
+  if (Array.isArray(source?.cells)) {
+    return source.cells
+      .map((cell) => [Number(cell?.latitude), Number(cell?.longitude)])
+      .filter(isDrawableTerritoryCoordinate);
+  }
+  return [];
+}
+
+function territoryColorSourceBounds(source) {
+  if (source?.bounds) {
+    return source.bounds;
+  }
+  return territoryCoordinateBounds(territoryColorSourceCoords(source));
+}
+
+function territoryBoundsDistanceMeters(a, b) {
+  if (!a || !b) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const latGap = Math.max(0, Math.max(Number(a.minLat), Number(b.minLat)) - Math.min(Number(a.maxLat), Number(b.maxLat)));
+  const lngGap = Math.max(0, Math.max(Number(a.minLng), Number(b.minLng)) - Math.min(Number(a.maxLng), Number(b.maxLng)));
+  const midLat = (
+    Number(a.minLat) + Number(a.maxLat) + Number(b.minLat) + Number(b.maxLat)
+  ) / 4;
+  const cosLat = Math.max(0.08, Math.cos((midLat * Math.PI) / 180));
+  const latMeters = latGap * METERS_PER_DEG_LAT;
+  const lngMeters = lngGap * METERS_PER_DEG_LAT * cosLat;
+  return Math.sqrt((latMeters * latMeters) + (lngMeters * lngMeters));
+}
+
+function territoryOwnerBoundsAreNear(a, b) {
+  return territoryBoundsDistanceMeters(a, b) <= TERRITORY_OWNER_COLOR_NEAR_METERS;
+}
+
+function territoryStringHash(value) {
+  let hash = 2166136261;
+  const input = String(value || '');
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function territoryHexToRgb(color) {
+  const normalized = safeColor(color, '').replace('#', '');
+  if (normalized.length !== 6) return null;
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+function territoryRgbToHsl({ r, g, b }) {
+  const red = r / 255;
+  const green = g / 255;
+  const blue = b / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+  if (delta === 0) {
+    return { hue: 0, saturation: 0, lightness };
+  }
+
+  const saturation = delta / (1 - Math.abs((2 * lightness) - 1));
+  let hue = 0;
+  if (max === red) {
+    hue = 60 * (((green - blue) / delta) % 6);
+  } else if (max === green) {
+    hue = 60 * (((blue - red) / delta) + 2);
+  } else {
+    hue = 60 * (((red - green) / delta) + 4);
+  }
+  return {
+    hue: hue < 0 ? hue + 360 : hue,
+    saturation,
+    lightness,
+  };
+}
+
+function territoryColorSeparation(a, b) {
+  const rgbA = territoryHexToRgb(a);
+  const rgbB = territoryHexToRgb(b);
+  if (!rgbA || !rgbB) {
+    return 0;
+  }
+  const hslA = territoryRgbToHsl(rgbA);
+  const hslB = territoryRgbToHsl(rgbB);
+  const hueDelta = Math.abs(hslA.hue - hslB.hue);
+  const hueDistance = Math.min(hueDelta, 360 - hueDelta);
+  const saturationDistance = Math.abs(hslA.saturation - hslB.saturation) * 42;
+  const lightnessDistance = Math.abs(hslA.lightness - hslB.lightness) * 82;
+  return hueDistance + saturationDistance + lightnessDistance;
+}
+
+function territoryColorCandidateList(ownerKey, originalColor) {
+  const colors = [];
+  const seen = new Set();
+  const addColor = (color) => {
+    const safe = safeColor(color, '');
+    const key = safe.toLowerCase();
+    if (!safe || seen.has(key)) return;
+    seen.add(key);
+    colors.push(safe);
   };
 
-  territoryPath.on('add', () => {
-    window.requestAnimationFrame(updatePath);
-  });
-  territoryPath.on('remove', () => {
-    map.off('zoomend viewreset moveend', updatePath);
-  });
-  map.on('zoomend viewreset moveend', updatePath);
-  window.requestAnimationFrame(updatePath);
+  addColor(originalColor);
+  const shift = territoryStringHash(ownerKey) % TERRITORY_OWNER_COLOR_PALETTE.length;
+  for (let index = 0; index < TERRITORY_OWNER_COLOR_PALETTE.length; index += 1) {
+    addColor(TERRITORY_OWNER_COLOR_PALETTE[(index + shift) % TERRITORY_OWNER_COLOR_PALETTE.length]);
+  }
+  return colors;
 }
 
-function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
+function territoryMinColorSeparation(color, neighbors) {
+  if (!neighbors.length) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return neighbors.reduce((lowest, neighbor) => (
+    Math.min(lowest, territoryColorSeparation(color, neighbor.assignedColor))
+  ), Number.POSITIVE_INFINITY);
+}
+
+function territoryChooseLocalOwnerColor(owner, neighbors) {
+  const originalColor = safeColor(
+    owner.originalColor,
+    owner.active ? '#f07561' : TERRITORY_OWNER_COLOR_PALETTE[territoryStringHash(owner.ownerKey) % TERRITORY_OWNER_COLOR_PALETTE.length],
+  );
+  if (owner.active) {
+    return originalColor;
+  }
+
+  const originalSeparation = territoryMinColorSeparation(originalColor, neighbors);
+  if (originalSeparation >= TERRITORY_OWNER_COLOR_MIN_SEPARATION) {
+    return originalColor;
+  }
+
+  return territoryColorCandidateList(owner.ownerKey, originalColor).reduce((best, color) => {
+    const minSeparation = territoryMinColorSeparation(color, neighbors);
+    const exactNeighborPenalty = neighbors.some((neighbor) => (
+      safeColor(neighbor.assignedColor, '').toLowerCase() === safeColor(color, '').toLowerCase()
+    )) ? -1000 : 0;
+    const originalBonus = safeColor(color, '').toLowerCase() === originalColor.toLowerCase() ? 0.5 : 0;
+    const score = minSeparation + exactNeighborPenalty + originalBonus;
+    return score > best.score ? { color, score } : best;
+  }, { color: originalColor, score: originalSeparation }).color;
+}
+
+function territoryAssignLocalOwnerColors(entries) {
+  const safeEntries = Array.isArray(entries) ? entries : [];
+  const owners = new Map();
+
+  safeEntries.forEach((entry, index) => {
+    const ownerKey = String(entry?.ownerKey || polygonOwnerMergeKey(entry, index));
+    const active = Boolean(entry?.active);
+    const fallbackColor = active
+      ? '#f07561'
+      : TERRITORY_OWNER_COLOR_PALETTE[territoryStringHash(ownerKey) % TERRITORY_OWNER_COLOR_PALETTE.length];
+    const originalColor = safeColor(entry?.color || entry?.borderColor, fallbackColor);
+    let owner = owners.get(ownerKey);
+    if (!owner) {
+      owner = {
+        ownerKey,
+        active,
+        originalColor,
+        areaSquareMeters: 0,
+        firstIndex: index,
+        bounds: null,
+        assignedColor: originalColor,
+      };
+      owners.set(ownerKey, owner);
+    }
+
+    owner.active = Boolean(owner.active || active);
+    owner.originalColor = owner.active
+      ? safeColor(originalColor, owner.originalColor)
+      : safeColor(owner.originalColor || originalColor, originalColor);
+    owner.areaSquareMeters += Number(entry?.areaSquareMeters) || 0;
+    owner.bounds = mergeTerritoryCoordinateBounds(owner.bounds, territoryColorSourceBounds(entry));
+  });
+
+  const assignedOwners = [];
+  Array.from(owners.values())
+    .sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      if (b.areaSquareMeters !== a.areaSquareMeters) return b.areaSquareMeters - a.areaSquareMeters;
+      return a.firstIndex - b.firstIndex;
+    })
+    .forEach((owner) => {
+      const neighbors = assignedOwners.filter((candidate) => (
+        territoryOwnerBoundsAreNear(owner.bounds, candidate.bounds)
+      ));
+      owner.assignedColor = territoryChooseLocalOwnerColor(owner, neighbors);
+      assignedOwners.push(owner);
+    });
+
+  return safeEntries.map((entry, index) => {
+    const ownerKey = String(entry?.ownerKey || polygonOwnerMergeKey(entry, index));
+    const owner = owners.get(ownerKey);
+    const color = safeColor(owner?.assignedColor || entry?.color || entry?.borderColor);
+    return {
+      ...entry,
+      ownerKey,
+      color,
+      borderColor: color,
+    };
+  });
+}
+
+function isDrawableTerritoryCoordinate(coord) {
+  if (!Array.isArray(coord) || coord.length < 2) return false;
+  return Number.isFinite(Number(coord[0])) && Number.isFinite(Number(coord[1]));
+}
+
+function isDrawableTerritoryRegion(region) {
+  return Array.isArray(region)
+    && region.length >= 4
+    && region.every(isDrawableTerritoryCoordinate);
+}
+
+function isDrawableTerritoryRenderEntry(entry) {
+  const landRegions = Array.isArray(entry?.landRegions) ? entry.landRegions : [];
+  const contourRegions = Array.isArray(entry?.contourRegions) ? entry.contourRegions : [];
+  return landRegions.some(isDrawableTerritoryRegion) || contourRegions.some(isDrawableTerritoryRegion);
+}
+
+function hasDrawableTerritoryRenderData(data) {
+  return Boolean(
+    data
+    && Array.isArray(data.allCoords)
+    && data.allCoords.some(isDrawableTerritoryCoordinate)
+    && Array.isArray(data.contourRenderEntries)
+    && data.contourRenderEntries.some(isDrawableTerritoryRenderEntry),
+  );
+}
+
+function territoryThemeRegionCount(source) {
+  const sourceCount = Number(source?.sourcePolygonCount);
+  if (Number.isFinite(sourceCount) && sourceCount > 0) {
+    return sourceCount;
+  }
+
+  const landRegionCount = Array.isArray(source?.landRegions) ? source.landRegions.length : 0;
+  const contourRegionCount = Array.isArray(source?.contourRegions) ? source.contourRegions.length : 0;
+  const cellCount = Array.isArray(source?.cells) ? source.cells.length : 0;
+  return Math.max(1, landRegionCount, contourRegionCount, cellCount > 0 ? 1 : 0);
+}
+
+function territoryThemeSources(polygons, cachedRenderSnapshot) {
+  const polygonSources = (Array.isArray(polygons) ? polygons : [])
+    .filter(hasCellMaskPolygon);
+  if (polygonSources.length) {
+    return polygonSources;
+  }
+
+  const cachedEntries = cachedRenderSnapshot?.data?.contourRenderEntries;
+  const previewEntries = cachedRenderSnapshot?.data?.previewContourRenderEntries;
+  if (!hasDrawableTerritoryRenderData(cachedRenderSnapshot?.data)) {
+    return [];
+  }
+  return Array.isArray(cachedEntries) && cachedEntries.length > 0
+    ? cachedEntries
+    : (Array.isArray(previewEntries) ? previewEntries : []);
+}
+
+function territoryOwnerThemes(polygons, cachedRenderSnapshot, profile, lang) {
+  const themes = new Map();
+  territoryThemeSources(polygons, cachedRenderSnapshot).forEach((source, index) => {
+    const ownerKey = String(source?.ownerKey || polygonOwnerMergeKey(source, index));
+    const active = Boolean(source?.active);
+    const color = safeColor(source?.color || source?.borderColor, active ? '#f07561' : '#82ffd8');
+    const ownerName = String(source?.ownerName || '').trim();
+    let theme = themes.get(ownerKey);
+
+    if (!theme) {
+      theme = {
+        ownerKey,
+        ownerName,
+        ownerId: source?.ownerId ?? null,
+        active,
+        color,
+        areaSquareMeters: 0,
+        hasKnownArea: false,
+        regionCount: 0,
+        bounds: null,
+      };
+      themes.set(ownerKey, theme);
+    }
+
+    theme.active = Boolean(theme.active || active);
+    theme.color = theme.active ? safeColor(color, theme.color) : safeColor(theme.color || color, color);
+    theme.ownerName = theme.ownerName || ownerName;
+    theme.ownerId = theme.ownerId ?? source?.ownerId ?? null;
+    theme.regionCount += territoryThemeRegionCount(source);
+    theme.bounds = mergeTerritoryCoordinateBounds(theme.bounds, territoryColorSourceBounds(source));
+
+    const areaSquareMeters = Number(source?.areaSquareMeters);
+    if (Number.isFinite(areaSquareMeters) && areaSquareMeters > 0) {
+      theme.areaSquareMeters += areaSquareMeters;
+      theme.hasKnownArea = true;
+    }
+  });
+
+  return territoryAssignLocalOwnerColors(Array.from(themes.values()))
+    .map((theme) => {
+      const activeOwnerName = normalizeOwnerName(theme.ownerName);
+      const label = (theme.active && activeOwnerName === 'you')
+        ? mapChromeCopy(lang, 'you')
+        : (
+          theme.ownerName || (theme.active
+            ? runnerDisplayName(null, profile, mapChromeCopy(lang, 'you'))
+            : mapChromeCopy(lang, 'opponent'))
+        );
+      const regionCount = Math.max(1, Math.round(theme.regionCount));
+      return {
+        ...theme,
+        label,
+        statusLabel: theme.active ? mapChromeCopy(lang, 'activeTheme') : mapChromeCopy(lang, 'rivalTheme'),
+        ownerIdLabel: theme.ownerId !== null && theme.ownerId !== undefined ? String(theme.ownerId) : '',
+        areaLabel: theme.hasKnownArea
+          ? formatTerritoryArea(theme.areaSquareMeters / 1_000_000)
+          : mapChromeCopy(lang, 'themeAreaUnknown'),
+        regionLabel: `${formatSampleCount(regionCount)} ${mapChromeCopy(lang, regionCount === 1 ? 'themeRegion' : 'themeRegions')}`,
+      };
+    })
+    .sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      if (a.hasKnownArea !== b.hasKnownArea) return a.hasKnownArea ? -1 : 1;
+      if (b.areaSquareMeters !== a.areaSquareMeters) return b.areaSquareMeters - a.areaSquareMeters;
+      if (b.regionCount !== a.regionCount) return b.regionCount - a.regionCount;
+      return a.label.localeCompare(b.label);
+    });
+}
+
+const TERRITORY_ALL_THEME_FALLBACK_COLORS = ['#f07561', '#5b9cf5', '#a855f7', '#82ffd8'];
+
+function territorySignificantThemeColors(themes) {
+  const colors = [];
+  const seen = new Set();
+  (Array.isArray(themes) ? themes : []).forEach((theme) => {
+    const color = safeColor(theme?.color, '');
+    const key = color.toLowerCase();
+    if (!color || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    colors.push(color);
+  });
+  return colors.length > 0 ? colors.slice(0, 5) : TERRITORY_ALL_THEME_FALLBACK_COLORS;
+}
+
+function territoryAllThemeStyle(themes) {
+  const significantColors = territorySignificantThemeColors(themes);
+  const displayColors = [...significantColors];
+  while (displayColors.length < 4) {
+    displayColors.push(TERRITORY_ALL_THEME_FALLBACK_COLORS[displayColors.length % TERRITORY_ALL_THEME_FALLBACK_COLORS.length]);
+  }
+
+  const bandStops = displayColors.map((color, index) => {
+    const start = Math.round((index / displayColors.length) * 100);
+    const end = Math.round(((index + 1) / displayColors.length) * 100);
+    return `${color} ${start}% ${end}%`;
+  }).join(', ');
+
+  return {
+    '--terr-theme-color': displayColors[0],
+    '--terr-theme-all-gradient': `conic-gradient(from 35deg, ${displayColors.join(', ')}, ${displayColors[0]})`,
+    '--terr-theme-all-band': `linear-gradient(90deg, ${bandStops})`,
+  };
+}
+
+function TerritoryScopeSwitch({
+  themes,
+  scope,
+  activeTheme,
+  onScopeChange,
+  copy,
+}) {
+  const ownAvailable = Boolean(activeTheme?.ownerKey);
+  const ownSelected = scope === 'own' && ownAvailable;
+  const globalSelected = !ownSelected;
+
+  return (
+    <aside className="terr-scope-switcher" aria-label={copy('territoryScope')}>
+      <button
+        type="button"
+        className={`terr-scope-button terr-scope-button--own${ownSelected ? ' is-selected' : ''}`}
+        style={{ '--terr-theme-color': safeColor(activeTheme?.color, '#f07561') }}
+        aria-pressed={ownSelected}
+        disabled={!ownAvailable}
+        onClick={() => onScopeChange('own')}
+      >
+        <span className="terr-scope-swatch" aria-hidden="true" />
+        <span className="terr-scope-copy">
+          <strong>{copy('ownTerritory')}</strong>
+          <small>{copy('ownTerritoryHint')}</small>
+        </span>
+      </button>
+      <button
+        type="button"
+        className={`terr-scope-button terr-scope-button--global${globalSelected ? ' is-selected' : ''}`}
+        style={territoryAllThemeStyle(themes)}
+        aria-pressed={globalSelected}
+        onClick={() => onScopeChange('global')}
+      >
+        <span className="terr-scope-swatch terr-scope-swatch--global" aria-hidden="true" />
+        <span className="terr-scope-copy">
+          <strong>{copy('globalTerritory')}</strong>
+          <small>{copy('globalTerritoryHint')}</small>
+        </span>
+      </button>
+    </aside>
+  );
+}
+
+function TerritoryOwnerInfoPanel({
+  owner,
+  copy,
+  onClose,
+}) {
+  if (!owner) {
+    return null;
+  }
+
+  return (
+    <aside
+      className={`terr-owner-inspector${owner.active ? ' is-active-owner' : ''}`}
+      style={{ '--terr-owner-color': owner.color }}
+      aria-label={`${copy('ownerInfoTitle')}: ${owner.label}`}
+      aria-live="polite"
+    >
+      <div className="terr-owner-inspector-head">
+        <span className="terr-owner-inspector-swatch" aria-hidden="true" />
+        <span className="terr-owner-inspector-title">
+          <small>{copy('ownerInfoTitle')}</small>
+          <strong>{owner.label}</strong>
+        </span>
+        <button
+          type="button"
+          className="terr-owner-inspector-close"
+          onClick={onClose}
+          aria-label={copy('closeOwnerInfo')}
+        >
+          <AppIcon name="close" />
+        </button>
+      </div>
+
+      <dl className="terr-owner-inspector-grid">
+        <div>
+          <dt>{copy('username')}</dt>
+          <dd>{owner.label}</dd>
+        </div>
+        <div>
+          <dt>{copy('status')}</dt>
+          <dd>{owner.statusLabel}</dd>
+        </div>
+        <div>
+          <dt>{copy('ownedArea')}</dt>
+          <dd>{owner.areaLabel}</dd>
+        </div>
+        <div>
+          <dt>{copy('mappedRegions')}</dt>
+          <dd>{owner.regionLabel}</dd>
+        </div>
+        {owner.ownerIdLabel ? (
+          <div>
+            <dt>{copy('ownerId')}</dt>
+            <dd>{owner.ownerIdLabel}</dd>
+          </div>
+        ) : null}
+      </dl>
+    </aside>
+  );
+}
+
+function TerritoryMap({
+  territory,
+  polygons,
+  polygonSignature,
+  cachedRenderSnapshot,
+  showPolygons,
+  recenterSignal,
+  selectedOwnerKey,
+  focusOwnerKey,
+  focusSignal,
+  onTerritoryOwnerClick,
+  lang,
+}) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const polygonLayerRef = useRef(null);
+  const lastFittedConcreteBoundsKeyRef = useRef(null);
+  const lastFittedConcreteIntentKeyRef = useRef(null);
+  const lastFittedConcreteActionKeyRef = useRef(null);
+  const lastFittedConcreteSourceKeyRef = useRef(null);
+  const viewportMovedAfterFitRef = useRef(false);
+  const programmaticFitInProgressRef = useRef(false);
+  const ownerClickHandlerRef = useRef(onTerritoryOwnerClick);
+  const processedRenderCacheRef = useRef(null);
+  const lastRenderedTerritoryOwnerSetKeyRef = useRef('');
+  const lastRenderedTerritoryGeometryKeyRef = useRef('');
   const [mapReady, setMapReady] = useState(false);
+  const [mapViewportKey, setMapViewportKey] = useState('');
   const territoryCenter = isValidMapCenter(territory?.center) ? territory.center : null;
+
+  useEffect(() => {
+    ownerClickHandlerRef.current = onTerritoryOwnerClick;
+  }, [onTerritoryOwnerClick]);
 
   useEffect(() => {
     let cancelled = false;
     let mountedMapContainer = null;
+    let updateMountedMapViewportKey = null;
 
     async function mountMap() {
       if (!mapRef.current || mapInstanceRef.current) return;
@@ -1463,6 +3849,18 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
       mapInstanceRef.current = map;
+      updateMountedMapViewportKey = () => {
+        if (!cancelled) {
+          if (programmaticFitInProgressRef.current) {
+            programmaticFitInProgressRef.current = false;
+          } else {
+            viewportMovedAfterFitRef.current = true;
+          }
+          setMapViewportKey(territoryMapViewportKey(map));
+        }
+      };
+      map.on('moveend zoomend', updateMountedMapViewportKey);
+      updateMountedMapViewportKey();
       Object.defineProperty(mapContainer, '__hermesTerritoryMap', {
         configurable: true,
         enumerable: false,
@@ -1480,9 +3878,21 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
         delete mapContainer.__hermesTerritoryMap;
       }
       if (mapInstanceRef.current) {
+        if (updateMountedMapViewportKey) {
+          mapInstanceRef.current.off('moveend zoomend', updateMountedMapViewportKey);
+        }
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
+      lastFittedConcreteBoundsKeyRef.current = null;
+      lastFittedConcreteIntentKeyRef.current = null;
+      lastFittedConcreteActionKeyRef.current = null;
+      lastFittedConcreteSourceKeyRef.current = null;
+      viewportMovedAfterFitRef.current = false;
+      programmaticFitInProgressRef.current = false;
+      lastRenderedTerritoryOwnerSetKeyRef.current = '';
+      lastRenderedTerritoryGeometryKeyRef.current = '';
+      setMapViewportKey('');
     };
   }, [territoryCenter?.latitude, territoryCenter?.longitude, territoryCenter?.zoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1505,109 +3915,348 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
       const L = await loadLeaflet();
       if (cancelled) return;
 
-      if (polygonLayerRef.current) {
-        polygonLayerRef.current.remove();
-        polygonLayerRef.current = null;
+      const selectedOwnerKeyValue = String(selectedOwnerKey || '');
+      const focusOwnerKeyValue = String(focusOwnerKey || '');
+      const shouldUseGlobalRenderCache = !selectedOwnerKeyValue;
+      const hasRawPolygons = showPolygons && Array.isArray(polygons) && polygons.length > 0;
+      const shouldUseProcessedRenderCache = !hasRawPolygons || (shouldUseGlobalRenderCache && Boolean(polygonSignature));
+      const memoryRenderSnapshot = processedRenderCacheRef.current;
+      const memoryRenderData = shouldUseProcessedRenderCache
+        && memoryRenderSnapshot?.signature
+        && polygonSignature
+        && memoryRenderSnapshot.signature === polygonSignature
+        && hasDrawableTerritoryRenderData(memoryRenderSnapshot?.data)
+        ? memoryRenderSnapshot.data
+        : null;
+      const snapshotData = memoryRenderData
+        || (shouldUseProcessedRenderCache
+        && cachedRenderSnapshot?.signature
+        && (!polygonSignature || cachedRenderSnapshot.signature === polygonSignature)
+        && hasDrawableTerritoryRenderData(cachedRenderSnapshot?.data)
+        ? cachedRenderSnapshot.data
+        : null);
+
+      if (!hasRawPolygons && !snapshotData) {
+        if (polygonLayerRef.current) {
+          polygonLayerRef.current.remove();
+          polygonLayerRef.current = null;
+        }
+        lastRenderedTerritoryOwnerSetKeyRef.current = '';
+        lastRenderedTerritoryGeometryKeyRef.current = '';
+        lastFittedConcreteBoundsKeyRef.current = null;
+        return;
       }
 
-      if (!showPolygons || !Array.isArray(polygons) || polygons.length === 0) return;
-
       const strokeColor = getCoralStroke();
+      const renderViewport = territoryMapViewportInfo(map);
+      const shouldUseViewportRegionPriority = Boolean(selectedOwnerKeyValue);
+
+      let allCoords = [];
+      let contourRenderEntries = [];
+      const renderMode = cachedRenderSnapshot?.mode === 'preview' ? 'preview' : 'full';
+      const cachedRender = snapshotData
+        ? { data: snapshotData }
+        : (shouldUseProcessedRenderCache && (shouldUseGlobalRenderCache || selectedOwnerKeyValue) && polygonSignature
+            ? await readCachedTerritoryRender(polygonSignature)
+            : null);
+      if (
+        cachedRender?.data
+        && hasDrawableTerritoryRenderData(cachedRender.data)
+      ) {
+        if (polygonSignature) {
+          processedRenderCacheRef.current = {
+            signature: polygonSignature,
+            data: cachedRender.data,
+          };
+        }
+        const fullCachedEntries = Array.isArray(cachedRender.data.contourRenderEntries)
+          ? cachedRender.data.contourRenderEntries
+          : [];
+        const previewCachedEntries = renderMode === 'preview'
+          && Array.isArray(cachedRender.data.previewContourRenderEntries)
+          && cachedRender.data.previewContourRenderEntries.length > 0
+          ? cachedRender.data.previewContourRenderEntries
+          : fullCachedEntries;
+        const focusCachedOwnerKey = selectedOwnerKeyValue || focusOwnerKeyValue;
+        const focusedFullCachedEntries = focusCachedOwnerKey
+          ? fullCachedEntries.filter((entry) => String(entry?.ownerKey || '') === focusCachedOwnerKey)
+          : [];
+        const cachedEntries = selectedOwnerKeyValue
+          ? focusedFullCachedEntries
+          : (renderMode === 'preview' && focusedFullCachedEntries.length > 0
+              ? [
+                  ...previewCachedEntries.filter((entry) => String(entry?.ownerKey || '') !== focusCachedOwnerKey),
+                  ...focusedFullCachedEntries,
+                ]
+              : previewCachedEntries);
+        contourRenderEntries = cachedEntries;
+        const focusedCachedEntries = focusCachedOwnerKey
+          ? cachedEntries.filter((entry) => String(entry?.ownerKey || '') === focusCachedOwnerKey)
+          : [];
+        allCoords = focusedCachedEntries.length > 0
+          ? territoryOwnerFocusBoundsCoords(focusedCachedEntries)
+          : (renderMode === 'preview' ? cachedPreviewBoundsCoords(cachedEntries) : cachedRender.data.allCoords);
+      } else {
+        const ownerPolygons = renderCellMaskPolygonsBySource(polygons);
+        const renderPolygons = selectedOwnerKeyValue
+          ? ownerPolygons.filter((poly, index) => String(poly?.ownerKey || polygonOwnerMergeKey(poly, index)) === selectedOwnerKeyValue)
+          : initialGlobalTerritoryRenderPolygons(ownerPolygons);
+        const renderGrid = territoryMaskRenderGrid(renderPolygons);
+        const sourceRenderEntries = resolveMaskTileOwnership(renderPolygons, renderGrid).slice().reverse();
+        const renderEntries = mergeResolvedMaskEntriesByOwner(sourceRenderEntries, renderGrid);
+        const globalOccupied = new Set();
+        renderEntries.forEach(({ tiles }) => {
+          (Array.isArray(tiles) ? tiles : []).forEach((tile) => {
+            globalOccupied.add(maskTileClaimKey(tile));
+          });
+        });
+        renderEntries.forEach(({ poly, tiles }, renderIndex) => {
+          const active = Boolean(poly.active);
+          const color = safeColor(poly.color, strokeColor);
+          const ownerKey = String(poly.ownerKey || polygonOwnerMergeKey(poly, renderIndex));
+
+          if (!hasCellMaskPolygon(poly)) return;
+
+          const sourceCellMeters = Number(renderGrid.sourceCellMeters);
+          const tileMeters = Number(tiles?.[0]?.tileMeters);
+          const cosLat = Number(tiles?.[0]?.cosLat);
+          const routeInteriorDistanceMeters = sourceCellMeters * LAND_MASK_ROUTE_INTERIOR_DISTANCE_RATIO;
+          const routeSegments = routeTraceSegments(poly, renderGrid, {
+            maxSegmentMeters: routeTraceConcreteMaxSegmentMeters(renderGrid),
+          });
+          const routeSegmentIndex = routeSegmentSpatialIndex(routeSegments, routeInteriorDistanceMeters, tileMeters);
+          const componentRecords = visibleMaskConnectedComponents(maskTileConnectedComponents(tiles), { preserveAll: active })
+            .map((component) => {
+              const regions = maskBoundaryLoops(component, { globalOccupied }).filter((loop) => loop.length >= 4);
+              if (!regions.length) return null;
+
+              const componentBounds = maskComponentBounds(component);
+              const componentDensity = maskComponentDensity(component, componentBounds);
+              const componentAreaSquareMeters = Number.isFinite(tileMeters) && tileMeters > 0
+                ? component.length * tileMeters * tileMeters
+                : 0;
+              const largeLandmass = (
+                componentDensity >= LAND_MASK_SOLID_COMPONENT_MIN_DENSITY
+                && (
+                  componentAreaSquareMeters >= LAND_MASK_TOPOLOGY_LARGE_CLOSE_MIN_AREA_SQUARE_METERS
+                  || component.length >= LAND_MASK_TOPOLOGY_LARGE_CLOSE_MIN_TILES
+                )
+              );
+              const routeCorridor = !largeLandmass
+                && routeSegments.length > 0
+                && Number.isFinite(routeInteriorDistanceMeters)
+                && routeInteriorDistanceMeters > 0
+                && component.some((tile) => tileIsNearRouteSegments(
+                  tile,
+                  routeSegmentCandidatesForTile(tile, routeSegments, routeSegmentIndex),
+                  routeInteriorDistanceMeters,
+                  tileMeters,
+                ));
+
+              return {
+                regions,
+                options: { largeLandmass, routeCorridor, preserveAll: active },
+              };
+            })
+            .filter(Boolean);
+          const exactRegionGroups = componentRecords.map((record) => record.regions);
+          const exactRegions = exactRegionGroups.flat();
+          const useLocalViewportRegionBudget = shouldUseViewportRegionPriority
+            && viewportMovedAfterFitRef.current
+            && lastFittedConcreteBoundsKeyRef.current !== null
+            && Number(renderViewport?.zoom) > 12;
+          const activeRegionBudget = LAND_MASK_GLOBAL_ACTIVE_VISIBLE_REGIONS_PER_OWNER;
+          const standardRegionBudget = useLocalViewportRegionBudget
+            ? LAND_MASK_MAX_LOCAL_VIEW_REGIONS_PER_OWNER
+            : LAND_MASK_MAX_VISIBLE_REGIONS_PER_OWNER;
+          const concreteLandRegionBudget = active ? activeRegionBudget : standardRegionBudget;
+          const regionOptions = {
+            tileMeters,
+            sourceCellMeters,
+            cosLat,
+            globalOccupied,
+            preserveAll: active,
+            viewport: shouldUseViewportRegionPriority ? renderViewport : null,
+            maxGroups: concreteLandRegionBudget,
+          };
+          const concreteLandRegionGroups = limitMaskRegionGroupsByLoopBudget(
+            visibleMaskLandRegionGroups(componentRecords, regionOptions),
+            concreteLandRegionBudget,
+          );
+          const concreteLandRegions = visibleMaskStrokeRegions(concreteLandRegionGroups.flat(), { cosLat });
+          const concreteContourRegions = concreteLandRegions;
+          exactRegions.forEach((region) => {
+            region.forEach((coord) => allCoords.push(coord));
+          });
+          concreteLandRegions.forEach((region) => {
+            region.forEach((coord) => allCoords.push(coord));
+          });
+          concreteContourRegions.forEach((region) => {
+            region.forEach((coord) => allCoords.push(coord));
+          });
+
+          contourRenderEntries.push({
+            ownerKey,
+            active,
+            color,
+            borderColor: color,
+            ownerName: String(poly.ownerName || '').trim(),
+            ownerId: poly.ownerId ?? null,
+            areaSquareMeters: Number(poly?.areaSquareMeters) || 0,
+            activityId: poly.activityId ?? null,
+            createdAt: poly.createdAt ?? null,
+            routeTraces: Array.isArray(poly.routeTraces) ? poly.routeTraces : [],
+            landRegions: concreteLandRegions,
+            landRegionGroups: concreteLandRegionGroups,
+            contourRegions: concreteContourRegions,
+          });
+        });
+        const fullContourRenderEntries = contourRenderEntries;
+        const fullCoords = allCoords;
+        const previewContourRenderEntries = cachedPreviewRenderEntries(fullContourRenderEntries);
+        const scopedRenderCoversAllOwners = renderPolygons.length === ownerPolygons.length;
+        if ((shouldUseGlobalRenderCache || scopedRenderCoversAllOwners) && polygonSignature && fullContourRenderEntries.length > 0) {
+          const renderData = {
+            allCoords: fullCoords,
+            contourRenderEntries: fullContourRenderEntries,
+            previewContourRenderEntries,
+          };
+          processedRenderCacheRef.current = {
+            signature: polygonSignature,
+            data: renderData,
+          };
+          writeCachedTerritoryRender(polygonSignature, renderData);
+        }
+        contourRenderEntries = fullContourRenderEntries;
+        allCoords = fullCoords;
+      }
+
+      contourRenderEntries = territoryAssignLocalOwnerColors(contourRenderEntries.map((entry, index) => ({
+        ...entry,
+        ownerKey: String(entry?.ownerKey || polygonOwnerMergeKey(entry, index)),
+      })));
+      contourRenderEntries = interactiveDisplayRenderEntries(contourRenderEntries);
+
+      const targetOwnerSetKey = territoryRenderOwnerSetKey(contourRenderEntries);
+      const stableViewportGeometryKey = shouldUseGlobalRenderCache && polygonSignature
+        ? 'global-stable'
+        : (mapViewportKey || 'initial');
+      const geometryKey = [
+        polygonSignature || 'no-signature',
+        hasRawPolygons ? 'raw' : 'cached',
+        renderMode,
+        stableViewportGeometryKey,
+        recenterSignal,
+        lang || 'en',
+      ].join('|');
+      if (
+        polygonLayerRef.current
+        && targetOwnerSetKey
+        && targetOwnerSetKey === lastRenderedTerritoryOwnerSetKeyRef.current
+        && geometryKey === lastRenderedTerritoryGeometryKeyRef.current
+      ) {
+        applyTerritoryOwnerFocusClasses(polygonLayerRef.current, selectedOwnerKeyValue);
+        return;
+      }
+
+      const previousLayer = polygonLayerRef.current;
       const layer = L.layerGroup().addTo(map);
       const renderers = territoryLayerRenderers(L, map);
 
-      const allCoords = [];
-      const localPolygons = polygonsNearActiveTerritory(polygons);
-      const ownerPolygons = mergeCellMaskPolygonsByOwner(localPolygons);
-      const renderGrid = territoryMaskRenderGrid(ownerPolygons);
-      const renderEntries = resolveMaskTileOwnership(ownerPolygons, renderGrid).slice().reverse();
-      const globalOccupied = new Set(renderEntries.flatMap(({ tiles }) => (
-        Array.isArray(tiles) ? tiles.map((tile) => maskTileClaimKey(tile)) : []
-      )));
-      const contourRenderEntries = [];
-      renderEntries.forEach(({ poly, tiles }) => {
-        const color = safeColor(poly.color, strokeColor);
+      function ownerFocusClass(ownerKey, baseClassName) {
+        return territoryOwnerFocusClassName(ownerKey, selectedOwnerKeyValue, baseClassName);
+      }
 
-        if (!hasCellMaskPolygon(poly) && hasCoordinatePolygon(poly)) {
-          contourRenderEntries.push({
-            active: Boolean(poly.active),
-            color,
-            borderColor: color,
-            landRegions: [poly.coordinates],
-            contourRegions: [poly.coordinates],
-          });
-          poly.coordinates.forEach((coord) => allCoords.push(coord));
-          return;
-        }
+      function inspectOwnerFromPath(event, { ownerKey }) {
+        if (!ownerKey) return;
+        L.DomEvent.stopPropagation(event);
+        L.DomEvent.preventDefault(event);
+        ownerClickHandlerRef.current?.(ownerKey);
+      }
 
-        if (!hasCellMaskPolygon(poly)) return;
-
-        const tileMeters = Number(tiles?.[0]?.tileMeters);
-        const cosLat = Number(tiles?.[0]?.cosLat);
-        const exactRegions = maskTileConnectedComponents(tiles).flatMap((component) => maskBoundaryLoops(component, { globalOccupied }))
-          .filter((loop) => loop.length >= 4);
-        const sourceCellMeters = Number(renderGrid.sourceCellMeters);
-        const concreteRegions = visualMaskRegions(tiles, {
-          tileMeters,
-          sourceCellMeters,
-          cosLat,
-          globalOccupied,
-        });
-        const visibleConcreteRegions = visibleMaskStrokeRegions(concreteRegions, { cosLat });
-        exactRegions.forEach((region) => {
-          region.forEach((coord) => allCoords.push(coord));
-        });
-
-        contourRenderEntries.push({
-          active: Boolean(poly.active),
-          color,
-          borderColor: color,
-          landRegions: visibleConcreteRegions,
-          contourRegions: visibleConcreteRegions,
-        });
-      });
+      function markTerritoryPathOwner(path, { active, ownerName, ownerId, ownerKey }) {
+        const mapLang = lang || 'en';
+        const ownerLabel = ownerName || (active ? mapChromeCopy(mapLang, 'you') : mapChromeCopy(mapLang, 'opponent'));
+        const mark = () => {
+          const element = path?.getElement?.();
+          if (!element) return;
+          element.dataset.hermesOwnerActive = active ? 'true' : 'false';
+          if (ownerKey) element.dataset.hermesOwnerKey = ownerKey;
+          if (ownerName) element.dataset.hermesOwnerName = ownerName;
+          if (ownerId !== null && ownerId !== undefined) {
+            element.dataset.hermesOwnerId = String(ownerId);
+          }
+          element.setAttribute('role', 'button');
+          element.setAttribute('tabindex', '0');
+          element.setAttribute('aria-label', `${mapChromeCopy(mapLang, 'clickTerritoryOwner')} ${ownerLabel}`);
+          if (!element.__hermesTerritoryOwnerKeydownBound) {
+            element.__hermesTerritoryOwnerKeydownBound = true;
+            element.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                inspectOwnerFromPath(event, { ownerKey });
+              }
+            });
+          }
+        };
+        path.on?.('click', (event) => inspectOwnerFromPath(event, { ownerKey }));
+        path.on?.('add', mark);
+        mark();
+      }
 
       function paintLandRegions(entries, renderer) {
-        entries.forEach(({ active, color, landRegions }) => {
-          landRegions.forEach((region) => {
-            const concreteLand = L.polygon(region, {
-              color,
-              renderer,
-              weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,
-              opacity: active
-                ? LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.active
-                : LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.rival,
-              stroke: false,
-              fillColor: color,
-              fillOpacity: active ? LAND_MASK_CONCRETE_LAND_OPACITY.active : LAND_MASK_CONCRETE_LAND_OPACITY.rival,
-              fillRule: 'nonzero',
-              interactive: false,
-              lineCap: 'round',
-              lineJoin: 'round',
-              smoothFactor: 0.35,
-              className: `terr-land-mask-concrete-land${active ? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'}`,
-            }).addTo(layer);
-            attachSmoothTerritoryPath(map, concreteLand, region);
-          });
+        entries.forEach(({ active, color, ownerName, ownerId, ownerKey, landRegions, landRegionGroups }) => {
+          const drawableLandRegions = (Array.isArray(landRegions) ? landRegions : [])
+            .filter((region) => Array.isArray(region) && region.length >= 4);
+          const drawableLandRegionGroups = (Array.isArray(landRegionGroups) ? landRegionGroups : [])
+            .map((regions) => (Array.isArray(regions) ? regions : [])
+              .filter((region) => Array.isArray(region) && region.length >= 4))
+            .filter((regions) => regions.length > 0);
+          const landLatLngs = drawableLandRegionGroups.length > 0
+            ? drawableLandRegionGroups
+            : drawableLandRegions.map((region) => [region]);
+          if (!landLatLngs.length) return;
+
+          const concreteLand = L.polygon(landLatLngs, {
+            color,
+            renderer,
+            weight: LAND_MASK_CONCRETE_LAND_EDGE_WEIGHT,
+            opacity: active
+              ? LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.active
+              : LAND_MASK_CONCRETE_LAND_EDGE_OPACITY.rival,
+            stroke: false,
+            fillColor: color,
+            fillOpacity: active ? LAND_MASK_CONCRETE_LAND_OPACITY.active : LAND_MASK_CONCRETE_LAND_OPACITY.rival,
+            fillRule: 'nonzero',
+            interactive: true,
+            lineCap: 'round',
+            lineJoin: 'round',
+            smoothFactor: 0,
+            className: `terr-land-mask-concrete-land${active ? ' terr-land-mask-concrete-land--active' : ' terr-land-mask-concrete-land--rival'}${ownerFocusClass(ownerKey, 'terr-land-mask-concrete-land')}`,
+          }).addTo(layer);
+          markTerritoryPathOwner(concreteLand, { active, ownerName, ownerId, ownerKey });
         });
       }
 
       function paintContourRegions(entries, renderer) {
-        entries.forEach(({ active, borderColor, contourRegions }) => {
-          contourRegions.forEach((region) => {
-            const contourLine = L.polyline(region, {
-              color: borderColor,
-              renderer,
-              weight: active ? LAND_MASK_CONTOUR_WEIGHT.active : LAND_MASK_CONTOUR_WEIGHT.rival,
-              opacity: active ? LAND_MASK_CONTOUR_OPACITY.active : LAND_MASK_CONTOUR_OPACITY.rival,
-              interactive: false,
-              lineCap: 'round',
-              lineJoin: 'round',
-              smoothFactor: 0.35,
-              className: `terr-land-mask-contour${active ? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'}`,
-            }).addTo(layer);
-            attachSmoothTerritoryPath(map, contourLine, region);
-          });
+        entries.forEach(({ active, borderColor, ownerName, ownerId, ownerKey, contourRegions }) => {
+          const drawableContourRegions = (Array.isArray(contourRegions) ? contourRegions : [])
+            .filter((region) => Array.isArray(region) && region.length >= 4);
+          if (!drawableContourRegions.length) return;
+
+          const contour = L.polygon(drawableContourRegions.map((region) => [region]), {
+            color: borderColor,
+            renderer,
+            weight: active ? LAND_MASK_CONTOUR_WEIGHT.active : LAND_MASK_CONTOUR_WEIGHT.rival,
+            opacity: active ? LAND_MASK_CONTOUR_OPACITY.active : LAND_MASK_CONTOUR_OPACITY.rival,
+            fill: false,
+            fillOpacity: 0,
+            interactive: true,
+            lineCap: 'round',
+            lineJoin: 'round',
+            smoothFactor: 0,
+            className: `terr-land-mask-contour${active ? ' terr-land-mask-contour--active' : ' terr-land-mask-contour--rival'}${ownerFocusClass(ownerKey, 'terr-land-mask-contour')}`,
+          }).addTo(layer);
+          markTerritoryPathOwner(contour, { active, ownerName, ownerId, ownerKey });
         });
       }
 
@@ -1618,35 +4267,130 @@ function TerritoryMap({ territory, polygons, showPolygons, recenterSignal }) {
       paintLandRegions(activeEntries, renderers.activeFill);
       paintContourRegions(activeEntries, renderers.activeContour);
 
-      if (recenterSignal > 0) {
-        if (allCoords.length > 0) {
-          const bounds = L.latLngBounds(allCoords);
-          if (bounds.isValid()) {
-            map.flyToBounds(bounds, { padding: [34, 34], maxZoom: 14, duration: 0.8 });
+      if (previousLayer && previousLayer !== layer) {
+        previousLayer.remove();
+      }
+
+      if (recenterSignal === 0 && selectedOwnerKeyValue && activeEntries.length > 0) {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            if (!cancelled) ensureActiveConcretePathsInView(map);
+            window.setTimeout(() => {
+              if (!cancelled) ensureActiveConcretePathsInView(map);
+            }, 450);
+          });
+        });
+      }
+
+      const selectedEntries = selectedOwnerKeyValue
+        ? contourRenderEntries.filter((entry) => entry.ownerKey === selectedOwnerKeyValue)
+        : [];
+      const focusedEntries = selectedEntries.length > 0
+        ? selectedEntries
+        : (focusOwnerKeyValue ? contourRenderEntries.filter((entry) => entry.ownerKey === focusOwnerKeyValue) : []);
+      const boundsCoords = focusedEntries.length > 0
+        ? territoryOwnerFocusBoundsCoords(focusedEntries)
+        : territoryDefaultBoundsCoords(contourRenderEntries, allCoords);
+
+      if (boundsCoords.length > 0) {
+        const bounds = L.latLngBounds(boundsCoords);
+        if (bounds.isValid()) {
+          const focusKey = selectedOwnerKeyValue || (focusOwnerKeyValue ? `focus:${focusOwnerKeyValue}` : 'all');
+          const boundsKey = `${focusKey}:${focusSignal}:${territoryBoundsKey(bounds)}`;
+          const fitActionKey = `${focusKey}:${focusSignal}:${recenterSignal}`;
+          const fitSourceKey = polygonSignature || 'no-signature';
+          const fitIntentKey = `${fitActionKey}:${fitSourceKey}`;
+          const fitActionChanged = lastFittedConcreteActionKeyRef.current !== fitActionKey;
+          const fitSourceChanged = lastFittedConcreteSourceKeyRef.current !== fitSourceKey;
+          const actualFocusOrRecenterIntent = lastFittedConcreteActionKeyRef.current !== null && fitActionChanged;
+          const manualViewportLocksFit = viewportMovedAfterFitRef.current
+            && lastFittedConcreteBoundsKeyRef.current !== null
+            && recenterSignal <= 0
+            && !actualFocusOrRecenterIntent;
+          const shouldFitConcreteBounds = !manualViewportLocksFit && (
+            lastFittedConcreteBoundsKeyRef.current === null
+            || fitActionChanged
+            || (fitSourceChanged && !viewportMovedAfterFitRef.current)
+          );
+          if (shouldFitConcreteBounds && (
+            lastFittedConcreteBoundsKeyRef.current !== boundsKey
+            || lastFittedConcreteIntentKeyRef.current !== fitIntentKey
+          )) {
+            const applyConcreteBounds = () => {
+              if (cancelled) return;
+              const redrawConcreteLayer = () => {
+                if (cancelled) return;
+                layer.eachLayer((childLayer) => {
+                  if (typeof childLayer?.redraw === 'function') {
+                    childLayer.redraw();
+                  }
+                });
+              };
+              map.invalidateSize({ pan: false });
+              map.once('moveend', redrawConcreteLayer);
+              programmaticFitInProgressRef.current = true;
+              window.setTimeout(() => {
+                programmaticFitInProgressRef.current = false;
+              }, 900);
+              if (recenterSignal > 0) {
+                map.flyToBounds(bounds, {
+                  padding: focusedEntries.length > 0 ? [76, 76] : [34, 34],
+                  maxZoom: focusedEntries.length > 0 ? 14 : 14,
+                  duration: focusedEntries.length > 0 ? 0.65 : 0.8,
+                });
+              } else if (focusedEntries.length > 0) {
+                map.fitBounds(bounds, { padding: [76, 76], maxZoom: 14, animate: false });
+              } else {
+                map.fitBounds(bounds, { padding: [34, 34], maxZoom: 12, animate: false });
+                map.setZoom(Math.min(map.getZoom(), 12), { animate: false });
+              }
+              lastFittedConcreteBoundsKeyRef.current = boundsKey;
+              lastFittedConcreteIntentKeyRef.current = fitIntentKey;
+              lastFittedConcreteActionKeyRef.current = fitActionKey;
+              lastFittedConcreteSourceKeyRef.current = fitSourceKey;
+              viewportMovedAfterFitRef.current = false;
+              window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(redrawConcreteLayer);
+              });
+              window.setTimeout(redrawConcreteLayer, 260);
+            };
+
+            applyConcreteBounds();
           }
         }
       }
 
       polygonLayerRef.current = layer;
+      lastRenderedTerritoryOwnerSetKeyRef.current = targetOwnerSetKey;
+      lastRenderedTerritoryGeometryKeyRef.current = geometryKey;
     }
 
     paintPolygons();
     return () => {
       cancelled = true;
     };
-  }, [polygons, showPolygons, mapReady, recenterSignal]);
+  }, [polygons, polygonSignature, cachedRenderSnapshot, showPolygons, mapReady, mapViewportKey, recenterSignal, selectedOwnerKey, focusOwnerKey, focusSignal, lang]);
 
   return <div ref={mapRef} className="terr-leaflet-map" />;
 }
 
 export default function Territory() {
   const navigate = useNavigate();
-  const { isAuthenticated, authHydrated } = useAuth();
+  const { isAuthenticated, authHydrated, email, logout } = useAuth();
   const { t, lang } = useI18n();
-  const [territory, setTerritory] = useState(null);
-  const [polygonData, setPolygonData] = useState(null);
+  const initialTerritoryShell = readCachedTerritoryShell();
+  const [territory, setTerritory] = useState(() => initialTerritoryShell?.data || null);
+  const [polygonData, setPolygonData] = useState(undefined);
+  const [polygonDataSignature, setPolygonDataSignature] = useState('');
+  const [cachedRenderSnapshot, setCachedRenderSnapshot] = useState(null);
   const [profile, setProfile] = useState(null);
   const [recenterSignal, setRecenterSignal] = useState(0);
+  const [scopeFocusSignal, setScopeFocusSignal] = useState(0);
+  const [territoryScope, setTerritoryScope] = useState('global');
+  const [inspectedOwnerKey, setInspectedOwnerKey] = useState('');
+  const territoryShellSignatureRef = useRef(initialTerritoryShell?.signature || '');
+  const polygonSignatureRef = useRef('');
+  const cacheAccountKeyRef = useRef(territoryCacheAccountKey());
 
   useEffect(() => {
     if (!authHydrated) {
@@ -1657,34 +4401,107 @@ export default function Territory() {
       return;
     }
 
-    let cancelled = false;
-    let initialPolygonTimer = null;
-    let polygonRefreshTimer = null;
+    const activeCacheAccountKey = territoryCacheAccountKey();
+    if (cacheAccountKeyRef.current !== activeCacheAccountKey) {
+      cacheAccountKeyRef.current = activeCacheAccountKey;
+      polygonSignatureRef.current = '';
+      setPolygonData(undefined);
+      setPolygonDataSignature('');
+      setCachedRenderSnapshot(null);
+      setScopeFocusSignal(0);
+      setTerritoryScope('global');
+      setInspectedOwnerKey('');
+      const cachedShell = readCachedTerritoryShell();
+      territoryShellSignatureRef.current = cachedShell?.signature || '';
+      setTerritory(cachedShell?.data || null);
+    }
 
-    function scheduleInitialPolygonLoad() {
-      if (initialPolygonTimer) {
-        window.clearTimeout(initialPolygonTimer);
+    let cancelled = false;
+    let polygonInitialTimer = null;
+    let polygonRefreshTimer = null;
+    let freshPolygonsLoaded = false;
+    let cachedPolygonsLoaded = false;
+
+    function commitTerritoryShellData(territoryData, serverEtag = '') {
+      const nextTerritory = territoryData?.available ? territoryData : EMPTY_TERRITORY;
+      const nextSignature = serverEtag || territoryPayloadSignature(nextTerritory);
+      if (nextSignature !== territoryShellSignatureRef.current) {
+        territoryShellSignatureRef.current = nextSignature;
+        setTerritory(nextTerritory);
       }
-      initialPolygonTimer = window.setTimeout(() => {
-        initialPolygonTimer = null;
-        loadTerritoryPolygons();
-      }, TERRITORY_POLYGON_INITIAL_DELAY_MS);
+      writeCachedTerritoryShell(nextTerritory, nextSignature);
+    }
+
+    function commitTerritoryPolygons(polygonsData, serverSignature = '') {
+      if (!polygonsData || typeof polygonsData !== 'object') {
+        if (!polygonSignatureRef.current) {
+          setPolygonData(null);
+          setPolygonDataSignature('');
+        }
+        return;
+      }
+
+      const nextSignature = normalizeTerritoryServerSignature(serverSignature) || territoryPayloadSignature(polygonsData);
+      if (nextSignature === polygonSignatureRef.current) {
+        return;
+      }
+      polygonSignatureRef.current = nextSignature;
+      setCachedRenderSnapshot((current) => (
+        current?.signature === nextSignature ? current : null
+      ));
+      setPolygonData(polygonsData);
+      setPolygonDataSignature(nextSignature);
+
+      if (!shouldRefreshTerritoryPolygons(polygonsData)) {
+        writeCachedTerritoryPolygons(polygonsData, nextSignature);
+      }
+    }
+
+    function commitEmptyTerritoryPolygons(polygonsData, serverSignature = '') {
+      const emptyData = emptyTerritoryPolygonPayload(polygonsData);
+      const nextSignature = normalizeTerritoryServerSignature(serverSignature) || territoryPayloadSignature(emptyData);
+      const previousSignature = polygonSignatureRef.current;
+      polygonSignatureRef.current = nextSignature;
+      setCachedRenderSnapshot(null);
+      setPolygonData(emptyData);
+      setPolygonDataSignature(nextSignature);
+      clearCachedTerritoryLatestRender(previousSignature, nextSignature);
+      clearCachedTerritoryPolygons();
     }
 
     async function loadTerritoryShellData() {
       try {
-        const [profileData, territoryData] = await Promise.all([
+        const [profileData, territoryResult] = await Promise.all([
           apiJson('/api/profile/me').catch(() => null),
-          apiJson('/api/territory').catch(() => null),
+          (async () => {
+            const currentSignature = territoryShellSignatureRef.current;
+            const headers = currentSignature
+              ? { 'If-None-Match': `"${currentSignature}"` }
+              : undefined;
+            const response = await apiFetch('/api/territory', { headers }).catch(() => null);
+            if (!response) return { data: null, etag: null };
+            if (response.status === 401) return { data: null, etag: null, unauthorized: true };
+            if (response.status === 304) return { data: null, etag: currentSignature };
+            if (!response.ok) return { data: null, etag: null };
+            const etag = normalizeEntityTag(response.headers.get('ETag') || '');
+            const data = await response.json().catch(() => null);
+            return { data, etag: etag || null };
+          })(),
         ]);
         if (cancelled) return;
         setProfile(profileData && typeof profileData === 'object' ? profileData : null);
-        setTerritory(territoryData?.available ? territoryData : EMPTY_TERRITORY);
-        scheduleInitialPolygonLoad();
+        if (territoryResult?.unauthorized) {
+          logout();
+          return;
+        }
+        if (territoryResult?.data !== null && territoryResult?.data !== undefined) {
+          commitTerritoryShellData(territoryResult.data, territoryResult.etag);
+        } else if (territoryResult?.etag) {
+          territoryShellSignatureRef.current = territoryResult.etag;
+        }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !territoryShellSignatureRef.current) {
           setTerritory(EMPTY_TERRITORY);
-          scheduleInitialPolygonLoad();
         }
       }
     }
@@ -1695,32 +4512,132 @@ export default function Territory() {
         polygonRefreshTimer = null;
       }
 
-      const polygonsData = await apiJson('/api/territory/polygons').catch(() => null);
+      // Render-only cache may be enough for an instant preview, but it is derived
+      // data. Only a hydrated raw polygon payload can safely suppress a canonical
+      // polygon fetch with 304; otherwise an orphaned/bad render cache can blank
+      // the map while still showing owner chips.
+      const hasUsablePaintCache = cachedPolygonsLoaded;
+      const currentCachedSignature = hasUsablePaintCache ? polygonSignatureRef.current : '';
+      const canUseConditionalRefresh = hasUsablePaintCache && Boolean(currentCachedSignature);
+      const polygonUrl = canUseConditionalRefresh
+        ? '/api/territory/polygons?initial=true&cells=false'
+        : '/api/territory/polygons?initial=true';
+      const response = await apiFetch(polygonUrl, {
+        headers: canUseConditionalRefresh ? territoryPolygonRefreshHeaders(currentCachedSignature) : {},
+      }).catch(() => null);
       if (cancelled) return;
 
-      setPolygonData(polygonsData && typeof polygonsData === 'object' ? polygonsData : null);
-      if (shouldRefreshTerritoryPolygons(polygonsData)) {
+      if (response?.status === 304) {
+        return;
+      }
+      if (response?.status === 401) {
+        logout();
+        return;
+      }
+
+      let polygonResponse = response;
+      let polygonsData = polygonResponse?.ok
+        ? await polygonResponse.json().catch(() => null)
+        : null;
+
+      if (polygonResponse?.ok && canUseConditionalRefresh && !hasDrawableTerritoryPolygonData(polygonsData)) {
+        polygonResponse = await apiFetch('/api/territory/polygons?initial=true').catch(() => null);
+        if (cancelled) return;
+        if (polygonResponse?.status === 401) {
+          logout();
+          return;
+        }
+        polygonsData = polygonResponse?.ok
+          ? await polygonResponse.json().catch(() => null)
+          : null;
+      }
+
+      if (!hasDrawableTerritoryPolygonData(polygonsData)) {
+        if (polygonResponse?.ok) {
+          commitEmptyTerritoryPolygons(polygonsData, territoryPolygonResponseSignature(polygonResponse));
+          freshPolygonsLoaded = true;
+          cachedPolygonsLoaded = false;
+        } else if (!polygonSignatureRef.current) {
+          setPolygonData(null);
+          setPolygonDataSignature('');
+        }
+        return;
+      }
+
+      const drawablePolygonsData = polygonsData;
+      if (cancelled) return;
+
+      commitTerritoryPolygons(drawablePolygonsData, territoryPolygonResponseSignature(polygonResponse));
+      freshPolygonsLoaded = true;
+      cachedPolygonsLoaded = true;
+      if (shouldRefreshTerritoryPolygons(drawablePolygonsData)) {
         polygonRefreshTimer = window.setTimeout(loadTerritoryPolygons, TERRITORY_POLYGON_REFRESH_MS);
       }
     }
 
+    // Fire cached reads and both API calls in parallel 鈥?cached data renders instantly,
+    // fresh API data overlays when it arrives.
+    function scheduleInitialPolygonLoad() {
+      if (polygonInitialTimer) {
+        window.clearTimeout(polygonInitialTimer);
+      }
+      polygonInitialTimer = window.setTimeout(loadTerritoryPolygons, TERRITORY_POLYGON_INITIAL_DELAY_MS);
+    }
+
+    readCachedTerritoryPolygons().then((cached) => {
+      if (cancelled || !cached || freshPolygonsLoaded) return;
+      cachedPolygonsLoaded = true;
+      polygonSignatureRef.current = cached.signature;
+      setPolygonData(cached.data);
+      setPolygonDataSignature(cached.signature);
+    });
+    readCachedTerritoryLatestRender().then((cached) => {
+      if (cancelled || !cached || freshPolygonsLoaded) return;
+      const hasPreviewEntries = Array.isArray(cached.data?.previewContourRenderEntries)
+        && cached.data.previewContourRenderEntries.length > 0;
+      setCachedRenderSnapshot({ signature: cached.signature, data: cached.data, mode: hasPreviewEntries ? 'preview' : 'full' });
+      if (hasPreviewEntries) {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            if (!cancelled && !freshPolygonsLoaded) {
+              setCachedRenderSnapshot({ signature: cached.signature, data: cached.data, mode: 'full' });
+            }
+          });
+        });
+      }
+    });
     loadTerritoryShellData();
+    scheduleInitialPolygonLoad();
     return () => {
       cancelled = true;
-      if (initialPolygonTimer) {
-        window.clearTimeout(initialPolygonTimer);
+      if (polygonInitialTimer) {
+        window.clearTimeout(polygonInitialTimer);
       }
       if (polygonRefreshTimer) {
         window.clearTimeout(polygonRefreshTimer);
       }
     };
-  }, [authHydrated, isAuthenticated, navigate]);
+  }, [authHydrated, isAuthenticated, navigate, email, logout]);
+
+  // Preload Leaflet as soon as we know the user is authenticated, so the map
+  // library is already loaded when territory data arrives.
+  useEffect(() => {
+    if (authHydrated && isAuthenticated) {
+      loadLeaflet();
+    }
+  }, [authHydrated, isAuthenticated]);
 
   const polygons = useMemo(() => {
-    const backendPolygons = Array.isArray(polygonData?.polygons) ? polygonData.polygons : [];
-    const hasActiveBackendPolygon = backendPolygons.some((poly) => poly?.active === true);
-    return hasActiveBackendPolygon ? backendPolygons : territoryCellFallbackPolygons(territory);
-  }, [polygonData, territory]);
+    const backendPolygons = Array.isArray(polygonData?.polygons)
+      ? polygonData.polygons.filter(hasDrawableTerritoryPolygon)
+      : [];
+    if (polygonData === undefined) {
+      return [];
+    }
+    return backendPolygons;
+  }, [polygonData]);
+    // Fire cached reads and both API calls in parallel — cached data renders instantly,
+    // fresh API data overlays when it arrives.
   const navItems = useMemo(
     () => getRunnerShellNavItems({ t, lang, activeKey: 'territory' }),
     [lang, t],
@@ -1728,18 +4645,61 @@ export default function Territory() {
   const tc = (key) => mapChromeCopy(lang, key);
   const center = territory?.center || null;
   const initials = String(profile?.displayName || profile?.email || 'H').trim().slice(0, 1).toUpperCase() || 'H';
-  const leaderboardRows = territoryLeaderboardRows(territory, profile);
-  const activeLeader = activeTerritoryRunner(territory, profile);
-  const rivalLeader = rivalTerritoryRunner(territory);
-  const battleShares = territoryBattleShares(territory, activeLeader, rivalLeader);
-  const activeName = runnerDisplayName(activeLeader, profile, tc('you'));
-  const rivalName = runnerDisplayName(rivalLeader, null, tc('opponent'));
-  const activeColor = safeColor(activeLeader?.color);
-  const rivalColor = safeColor(rivalLeader?.color, '#82ffd8');
-  const summary = territory?.summary || EMPTY_TERRITORY.summary;
-  const ownedZones = ownedTerritoryZones(territory, activeName);
-  const recentCaptures = recentCaptureRows(territory);
-  const nextTarget = territory?.nextTarget || null;
+  const hasCachedRenderSnapshot = Boolean(
+    cachedRenderSnapshot?.data
+    && cachedRenderSnapshot?.signature
+    && hasDrawableTerritoryRenderData(cachedRenderSnapshot.data),
+  );
+  const ownerThemes = useMemo(
+    () => territoryOwnerThemes(polygons, cachedRenderSnapshot, profile, lang),
+    [polygons, cachedRenderSnapshot, profile, lang],
+  );
+  const activeOwnerTheme = ownerThemes.find((theme) => theme.active) || null;
+  const selectedOwnerKey = territoryScope === 'own' ? activeOwnerTheme?.ownerKey || '' : '';
+  const focusOwnerKey = activeOwnerTheme?.ownerKey || '';
+
+  useEffect(() => {
+    if (polygonData !== undefined && ownerThemes.length > 0 && territoryScope === 'own' && !activeOwnerTheme) {
+      setTerritoryScope('global');
+    }
+  }, [activeOwnerTheme, ownerThemes.length, polygonData, territoryScope]);
+
+  useEffect(() => {
+    if (!inspectedOwnerKey) return;
+    if (!ownerThemes.some((theme) => theme.ownerKey === inspectedOwnerKey)) {
+      setInspectedOwnerKey('');
+    }
+  }, [ownerThemes, inspectedOwnerKey]);
+
+  const inspectedOwner = ownerThemes.find((theme) => theme.ownerKey === inspectedOwnerKey) || null;
+
+  function handleScopeChange(nextScope) {
+    setTerritoryScope(nextScope === 'own' ? 'own' : 'global');
+    setInspectedOwnerKey('');
+    setScopeFocusSignal((value) => value + 1);
+  }
+
+  function handleTerritoryOwnerClick(ownerKey) {
+    if (!ownerKey) return;
+    setInspectedOwnerKey(ownerKey);
+  }
+
+  if (!authHydrated || !isAuthenticated || territory === null) {
+    return (
+      <TerritoryInitialLoading
+        label={tc('loadingTerritory')}
+        copy={tc('loadingCopy')}
+        kicker={tc('loadingKicker')}
+        centerLabel={tc('recenter')}
+        runsLabel={tc('viewRuns')}
+        settingsLabel={tc('settings')}
+        initials={initials}
+        onProfile={() => navigate('/profile')}
+        onRuns={() => navigate('/runs')}
+        onSettings={() => navigate('/settings')}
+      />
+    );
+  }
 
   return (
     <div className="runner-shell-page territory-page territory-heatmap-outline territory-map-only runner-dashboard-page">
@@ -1798,205 +4758,32 @@ export default function Territory() {
               ))}
             </nav>
 
-            <aside
-              className="terr-game-campaign-panel"
-              aria-label={tc('campaignPanel')}
-              style={{
-                '--terr-active-color': activeColor,
-                '--terr-rival-color': rivalColor,
-              }}
-            >
-              <span className="terr-game-campaign-kicker">
-                <AppIcon name="territory" />
-                {tc('campaignKicker')}
-              </span>
-              <h1 className="terr-game-campaign-title">{tc('campaignTitle')}</h1>
-              <p className="terr-game-campaign-body">{tc('campaignBody')}</p>
-              <div className="terr-game-campaign-actions">
-                <button type="button" className="terr-game-campaign-primary" onClick={() => navigate('/today-run')}>
-                  {tc('startRun')}
-                </button>
-                <button type="button" className="terr-game-campaign-secondary" onClick={() => setRecenterSignal((value) => value + 1)}>
-                  {tc('recenter')}
-                </button>
-              </div>
-              <div className="terr-game-campaign-strip" aria-label={tc('targetPressure')}>
-                <span>
-                  <small>{tc('nextTarget')}</small>
-                  <strong>{nextTarget?.name || rivalName}</strong>
-                </span>
-                <span>
-                  <small>{tc('samplesToContest')}</small>
-                  <strong>{formatSampleCount(nextTarget?.samplesToContest)} {tc('samples')}</strong>
-                </span>
-                <span>
-                  <small>{tc('sectorValue')}</small>
-                  <strong>{formatTerritoryArea(summary.areaKm2)}</strong>
-                </span>
-              </div>
-            </aside>
-
-            <div
-              className="terr-game-hud"
-              aria-label={tc('gameHud')}
-              style={{
-                '--terr-active-color': activeColor,
-                '--terr-rival-color': rivalColor,
-                '--terr-active-share': `${battleShares.active}%`,
-                '--terr-rival-share': `${battleShares.rival}%`,
-              }}
-            >
-              <div className="terr-game-mode-tabs" role="tablist" aria-label={tc('modeTabs')}>
-                <span role="tab" aria-selected="false">{tc('myTerritories')}</span>
-                <span role="tab" aria-selected="true">{tc('singlePlayer')}</span>
-                <span role="tab" aria-selected="false">{tc('myClub')}</span>
-              </div>
-
-              <div className="terr-game-player-card">
-                <span className="terr-game-alert" aria-hidden="true">
-                  <AppIcon name="notifications" />
-                </span>
-                <span className="terr-game-player-avatar">{runnerInitials(activeName)}</span>
-                <div className="terr-game-player-copy">
-                  <strong>{activeName}</strong>
-                  <span>
-                    <AppIcon name="workspace_premium" />
-                    {activeLeader?.active ? tc('kingOfArea') : tc('territoryRunner')}
-                  </span>
-                </div>
-                <strong className="terr-game-area-score">{formatTerritoryArea(activeLeader?.areaKm2 ?? summary.areaKm2)}</strong>
-              </div>
-
-              <div className="terr-game-battle-card" aria-label={tc('localBattle')}>
-                <div className="terr-game-battle-labels">
-                  <span>{tc('you')}</span>
-                  <strong>{tc('localBattle')}</strong>
-                  <span>{tc('opponent')}</span>
-                </div>
-                <div className="terr-game-battle-meter" aria-hidden="true">
-                  <span className="is-you" />
-                  <span className="is-rival" />
-                </div>
-                <div className="terr-game-battle-names">
-                  <span>{activeName}</span>
-                  <span>{rivalName}</span>
-                </div>
-              </div>
-            </div>
-
-            <aside
-              className="terr-game-territory-dock"
-              aria-label={tc('playerTerritory')}
-              style={{
-                '--terr-active-color': activeColor,
-                '--terr-rival-color': rivalColor,
-                '--terr-active-share': `${battleShares.active}%`,
-              }}
-            >
-              <section className="terr-game-dock-primary" aria-label={tc('controlledLand')}>
-                <div className="terr-game-dock-heading">
-                  <span>{tc('playerTerritory')}</span>
-                  <strong>{formatTerritoryArea(summary.areaKm2)}</strong>
-                </div>
-                <div className="terr-game-dock-meter" aria-hidden="true">
-                  <span />
-                </div>
-                <div className="terr-game-dock-metrics">
-                  <span>
-                    <small>{tc('coverage')}</small>
-                    <strong>{formatTerritoryPercent(summary.coveragePct)}</strong>
-                  </span>
-                  <span>
-                    <small>{tc('rank')}</small>
-                    <strong>{formatTerritoryRank(summary)}</strong>
-                  </span>
-                  <span>
-                    <small>{tc('zonesControlled')}</small>
-                    <strong>{summary.cellCount || 0}</strong>
-                  </span>
-                </div>
-              </section>
-
-              <section className="terr-game-zone-panel" aria-label={tc('ownedSectors')}>
-                <div className="terr-game-panel-title">
-                  <strong>{tc('ownedSectors')}</strong>
-                  <span>{ownedZones.length || summary.cellCount || 0}</span>
-                </div>
-                <div className="terr-game-zone-list">
-                  {(ownedZones.length ? ownedZones : [{ name: tc('loadingTerritory'), controlPct: summary.coveragePct, areaKm2: summary.areaKm2 }]).map((zone, index) => (
-                    <div
-                      key={zone.id || zone.name || index}
-                      className="terr-game-zone-row"
-                    >
-                      <span>
-                        <strong>{zone.name || tc('territoriesTab')}</strong>
-                        <small>{formatTerritoryArea(zone.areaKm2)}</small>
-                      </span>
-                      <em>{formatTerritoryPercent(zone.controlPct)}</em>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="terr-game-intel-panel" aria-label={tc('nextTarget')}>
-                <div className="terr-game-target-card">
-                  <span>{tc('nextTarget')}</span>
-                  <strong>{nextTarget?.name || rivalName}</strong>
-                  <small>
-                    {tc('samplesToContest')}: {formatSampleCount(nextTarget?.samplesToContest)} {tc('samples')}
-                  </small>
-                </div>
-
-                <div className="terr-game-capture-feed" aria-label={tc('captureFeed')}>
-                  <div className="terr-game-panel-title">
-                    <strong>{tc('captureFeed')}</strong>
-                    <span>{recentCaptures.length}</span>
-                  </div>
-                  {(recentCaptures.length ? recentCaptures : [{ name: tc('loadingTerritory'), dateLabel: '--', sampleCount: 0 }]).map((capture, index) => (
-                    <div key={`${capture.name || 'capture'}-${index}`} className="terr-game-capture-row">
-                      <span>
-                        <strong>{capture.name || tc('territoriesTab')}</strong>
-                        <small>{capture.dateLabel || '--'}</small>
-                      </span>
-                      <em>{formatSampleCount(capture.sampleCount)}</em>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="terr-game-rival-stack" aria-label={tc('leaderboard')}>
-                <div className="terr-game-panel-title">
-                  <strong>{tc('leaderboard')}</strong>
-                  <span>{tc('localBattle')}</span>
-                </div>
-                <div className="terr-game-leaderboard-list">
-                  {leaderboardRows.slice(0, 3).map((runner, index) => {
-                    const rowName = runnerDisplayName(runner, profile, tc('opponent'));
-                    return (
-                      <div
-                        key={runner.id || `${rowName}-${index}`}
-                        className={`terr-game-leaderboard-row${runner.active ? ' is-active' : ''}`}
-                        style={{ '--terr-row-color': safeColor(runner.color, index % 2 === 0 ? '#5b9cf5' : '#86efac') }}
-                      >
-                        <strong className="terr-game-row-rank">{runner.rank || index + 1}</strong>
-                        <span className="terr-game-row-avatar">{runnerInitials(rowName)}</span>
-                        <span className="terr-game-row-name">
-                          <strong>{rowName}</strong>
-                          <small>{runner.active ? tc('you') : tc('opponent')}</small>
-                        </span>
-                        <strong className="terr-game-row-area">{formatTerritoryArea(runner.areaKm2)}</strong>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            </aside>
-
             <TerritoryMap
               territory={territory}
               polygons={polygons}
-              showPolygons={polygons.length > 0}
+              polygonSignature={polygonDataSignature}
+              cachedRenderSnapshot={cachedRenderSnapshot}
+              showPolygons={polygons.length > 0 || hasCachedRenderSnapshot}
               recenterSignal={recenterSignal}
+              selectedOwnerKey={selectedOwnerKey}
+              focusOwnerKey={focusOwnerKey}
+              focusSignal={scopeFocusSignal}
+              onTerritoryOwnerClick={handleTerritoryOwnerClick}
+              lang={lang}
+            />
+
+            <TerritoryOwnerInfoPanel
+              owner={inspectedOwner}
+              copy={tc}
+              onClose={() => setInspectedOwnerKey('')}
+            />
+
+            <TerritoryScopeSwitch
+              themes={ownerThemes}
+              scope={territoryScope}
+              activeTheme={activeOwnerTheme}
+              onScopeChange={handleScopeChange}
+              copy={tc}
             />
           </section>
         </div>

@@ -19,15 +19,21 @@ const heatmapSource = read('pages/Heatmap.jsx');
 const styleSource = read('styles/style.css');
 
 assert(
-  heatmapSource.includes("aria-label={t('heatmap.page_focus_collapse')}")
-    && heatmapSource.includes("aria-label={t('heatmap.page_focus_expand')}")
-    && heatmapSource.includes("aria-label={t('heatmap.page_recenter')}"),
-  'Heatmap map controls should keep accessible labels for collapse, expand, and recenter interactions.',
+  heatmapSource.includes("aria-label={t('heatmap.page_recenter')}"),
+  'Heatmap map controls should keep an accessible label for the recenter interaction.',
 );
 
 assert(
-  /@media\s+\(max-width:\s*920px\)\s*\{[\s\S]*\.heatmap-sessions-card\s*\{[\s\S]*display:\s*none;[\s\S]*\.heatmap-page-story-card\s*\{[\s\S]*bottom:\s*356px;[\s\S]*max-height:\s*clamp\(180px,\s*30vh,\s*252px\);[\s\S]*overflow-y:\s*auto;[\s\S]*\.heatmap-page-legend-card\s*\{[\s\S]*bottom:\s*92px;[\s\S]*max-height:\s*244px;[\s\S]*overflow-y:\s*auto;/,
-  'Heatmap mobile overlay stack should hide the optional sessions drawer and bound the story/legend cards above the utility rail.',
+  !heatmapSource.includes('heatmap-page-story-card')
+    && !heatmapSource.includes('heatmap-page-focus-toggle')
+    && !styleSource.includes('.heatmap-page-story-card')
+    && !styleSource.includes('.heatmap-page-focus-card'),
+  'Heatmap should not render or style the retired story/focus card overlay.',
+);
+
+assert(
+  /@media\s+\(max-width:\s*920px\)\s*\{[\s\S]*\.heatmap-sessions-card\s*\{[\s\S]*display:\s*none;[\s\S]*\.heatmap-page-legend-card\s*\{[\s\S]*bottom:\s*92px;[\s\S]*max-height:\s*244px;[\s\S]*overflow-y:\s*auto;/,
+  'Heatmap mobile overlay stack should hide the optional sessions drawer and bound the legend card above the utility rail.',
 );
 
 assert(

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +42,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     Optional<Activity> findByRunnerAndProviderAndSourceChecksum(Runner runner, ImportProvider provider, String sourceChecksum);
 
     Optional<Activity> findByIdAndRunner(Long id, Runner runner);
+
+    List<Activity> findByIdInAndRunner(Collection<Long> ids, Runner runner);
 
     long countByRunner(Runner runner);
 
@@ -99,6 +102,52 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     Object[] findGlobalActivitySetSignatureByActivityType(
             @Param("activityType") ActivityType activityType
     );
+
+    @Query("""
+            SELECT COUNT(a), MAX(a.id), MAX(COALESCE(a.startTime, a.createdAt))
+            FROM Activity a
+            JOIN a.runner runner
+            WHERE a.activityType = :activityType
+              AND runner.deleted = false
+              AND (
+                runner.email IS NULL
+                OR lower(runner.email) NOT LIKE 'territory-%@hermes.local'
+              )
+            """)
+    Object[] findRealUserGlobalActivitySetSignatureByActivityType(
+            @Param("activityType") ActivityType activityType
+    );
+
+    @Query("""
+            SELECT a.id
+            FROM Activity a
+            JOIN a.runner runner
+            WHERE a.activityType = :activityType
+              AND runner.deleted = false
+              AND runner.id <> :excludedRunnerId
+              AND (
+                runner.email IS NULL
+                OR lower(runner.email) NOT LIKE 'territory-%@hermes.local'
+              )
+              AND a.id NOT IN (
+                SELECT polygon.activityId
+                FROM TerritoryPolygon polygon
+                WHERE polygon.activityId IS NOT NULL
+              )
+            ORDER BY COALESCE(a.startTime, a.createdAt) DESC, a.id DESC
+            """)
+    List<Long> findMissingRealUserTerritoryActivityIdsExcludingRunner(
+            @Param("activityType") ActivityType activityType,
+            @Param("excludedRunnerId") Long excludedRunnerId,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT a.id, COALESCE(a.startTime, a.createdAt)
+            FROM Activity a
+            WHERE a.id IN :activityIds
+            """)
+    List<Object[]> findEffectiveTimesByActivityIds(@Param("activityIds") Collection<Long> activityIds);
 
     @Query("""
             SELECT

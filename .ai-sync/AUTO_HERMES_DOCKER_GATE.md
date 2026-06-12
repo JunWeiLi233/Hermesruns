@@ -1,8 +1,8 @@
 # Auto-Hermes Docker Gate
 
-Generated: 2026-06-12T18:40:04.800Z
+Generated: 2026-06-12T18:44:35.666Z
 Passed: yes
-Git Head: ada662d8a60d5d0c19e04320da838ca7a6a230a4
+Git Head: c8f3a9f217efe9d332b45c23dff7fb1837bc2ed6
 Command: docker build -f C:\Users\Junwei\Downloads\Hermes\Dockerfile -t hermes-autohermes-gate:local .
 Reason: Docker publish gate passed for the current working tree.
 
@@ -10,92 +10,100 @@ Reason: Docker publish gate passed for the current working tree.
 ```text
 M .ai-sync/AGENT_SYNC.json
  M .ai-sync/AGENT_SYNC.md
- M .ai-sync/AUTO_HERMES_DOCKER_GATE.json
- M .ai-sync/AUTO_HERMES_DOCKER_GATE.md
+M  .ai-sync/AUTO_HERMES_DOCKER_GATE.json
+M  .ai-sync/AUTO_HERMES_DOCKER_GATE.md
  M .ai-sync/CONTEXT_LEDGER.md
  M .ai-sync/HUMAN_LOOP.md
+A  .ai-sync/security-reports/auto-hermes-push-main-20260612184304.json
+A  .ai-sync/security-reports/auto-hermes-push-main-20260612184304.md
  M .codex/commands/README.md
  M .codex/config.toml
- M .gitignore
+M  .gitignore
  M .tools/verify-territory-border-runtime.mjs
- M DESIGN_VERSIONS.md
+M  DESIGN_VERSIONS.md
  M TASKS.md
- M backend/src/main/java/com/hermes/backend/ActivityController.java
- M backend/src/main/java/com/hermes/backend/ActivityPointRepository.java
- M backend/src/main/java/com/hermes/backend/ActivityRepository.java
- M backend/src/main/java/com/hermes/backend/AuthService.java
- M backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapConfiguration.java
- M backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java
- M backend/src/main/java/com/hermes/backend/LoginController.java
- M backend/src/main/java/com/hermes/backend/SecurityConfig.java
- M backend/src/main/java/com/hermes/backend/TerritoryController.java
- M backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java
- M backend/src/main/java/com/hermes/backend/TerritoryPolygonRepository.java
- M backend/src/main/java/com/hermes/backend/TerritoryService.java
- M backend/src/main/resources/application.properties
- M backend/src/test/java/com/hermes/backend/ActivityControllerTests.java
- M backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java
- M backend/src/test/java/com/hermes/backend/SecurityHardeningTests.java
- M backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java
- M backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java
-M  docs/architecture/saas-architecture.html
-M  docs/architecture/saas-architecture.svg
- M frontend/package.json
- M frontend/src/App.jsx
- M frontend/src/api.js
- M frontend/src/components/ComebackMessage.jsx
- M frontend/src/components/runnerShellTopNavRedesign.smoke.test.js
- D frontend/src/components/workflow/NodePalette.jsx
- D frontend/src/components/workflow/WorkflowCanvas.jsx
- D frontend/src/components/workflow/edges/SmartEdge.jsx
- D frontend/src/components/workflow/nodes/AgentNode.jsx
- D frontend/src/components/workflow/nodes/DataSourceNode.jsx
- D frontend/src/components/workflow/nodes/InputNode.jsx
- D frontend/src/components/workflow/nodes/NodeStatusBadge.jsx
- D frontend/src/components/workflow/nodes/OutputNode.jsx
- D frontend/src/components/workflow/nodes/TransformNode.jsx
- M frontend/src/contexts/AuthContext.jsx
- M frontend/src/i18n/locales/en/pages.js
- M frontend/src/i18n/locales/zh-CN/pages.js
- M frontend/src/index.css
- M frontend/src/pages/AddShoes.jsx
- M frontend/src/pages/AnalysisInsightDetail.jsx
- M frontend/src/pages/Heatmap.jsx
- M frontend/src/pages/LegalPage.jsx
- M frontend/src/pages/Login.jsx
- M frontend/src/pages/MuscleTraining.jsx
- M frontend/src/pages/ProfileDashboard.jsx
- M frontend/src/pages/RacesDetail.jsx
- M frontend/src/pages/Rewards.jsx
- M frontend/src/pages/Runs.jsx
- M frontend/src/pages/Territory.jsx
- D frontend/src/pages/WorkflowBuilder.jsx
- M frontend/src/pages/heatmapMobileOverlay.smoke.test.js
- M frontend/src/pages/loginBrandCarousel.smoke.test.js
- M frontend/src/pages/runsHeroOverlayContrast.smoke.test.js
- M frontend/src/pages/runsRoutePreviewCache.smoke.test.js
- M frontend/src/pages/runsThumbDarkMapTile.smoke.test.js
- M frontend/src/pages/territoryBackendWiring.smoke.test.js
- M frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js
- D frontend/src/pages/workflowBuilderStatesA11y.smoke.test.js
- D frontend/src/stores/useWorkflowStore.js
- M frontend/src/styles/_split/heatmap.css
- M frontend/src/styles/_split/light-theme-overrides.css
- M frontend/src/styles/_split/misc.css
- M frontend/src/styles/_split/profile.css
- M frontend/src/styles/_split/runs.css
- M frontend/src/styles/_split/territory.css
- D frontend/src/styles/_split/workflow.css
- M frontend/src/styles/analysis-detail-redesigns.css
- M frontend/src/styles/contrast-fixes.css
- M frontend/src/styles/dark-mode-final-fixes.css
- M frontend/src/styles/style.css
- M frontend/src/utils/rewardBadges.jsx
- M frontend/src/utils/runnerShellNav.js
- M frontend/src/utils/todayRun.js
- D frontend/src/utils/workflowEngine.js
- D frontend/src/utils/workflowHelpers.js
- D frontend/src/utils/workflowTemplates.js
+M  backend/src/main/java/com/hermes/backend/ActivityController.java
+M  backend/src/main/java/com/hermes/backend/ActivityPointRepository.java
+M  backend/src/main/java/com/hermes/backend/ActivityRepository.java
+M  backend/src/main/java/com/hermes/backend/AuthService.java
+M  backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapConfiguration.java
+M  backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java
+M  backend/src/main/java/com/hermes/backend/LoginController.java
+M  backend/src/main/java/com/hermes/backend/SecurityConfig.java
+M  backend/src/main/java/com/hermes/backend/TerritoryController.java
+M  backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java
+M  backend/src/main/java/com/hermes/backend/TerritoryPolygonRepository.java
+M  backend/src/main/java/com/hermes/backend/TerritoryService.java
+M  backend/src/main/resources/application.properties
+M  backend/src/test/java/com/hermes/backend/ActivityControllerTests.java
+M  backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java
+M  backend/src/test/java/com/hermes/backend/SecurityHardeningTests.java
+M  backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java
+M  backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java
+A  backend/src/test/resources/application.properties
+M  frontend/package.json
+M  frontend/src/App.jsx
+M  frontend/src/api.js
+M  frontend/src/components/ComebackMessage.jsx
+M  frontend/src/components/runnerShellTopNavRedesign.smoke.test.js
+D  frontend/src/components/workflow/NodePalette.jsx
+D  frontend/src/components/workflow/WorkflowCanvas.jsx
+D  frontend/src/components/workflow/edges/SmartEdge.jsx
+D  frontend/src/components/workflow/nodes/AgentNode.jsx
+D  frontend/src/components/workflow/nodes/DataSourceNode.jsx
+D  frontend/src/components/workflow/nodes/InputNode.jsx
+D  frontend/src/components/workflow/nodes/NodeStatusBadge.jsx
+D  frontend/src/components/workflow/nodes/OutputNode.jsx
+D  frontend/src/components/workflow/nodes/TransformNode.jsx
+M  frontend/src/contexts/AuthContext.jsx
+M  frontend/src/i18n/locales/en/pages.js
+M  frontend/src/i18n/locales/zh-CN/pages.js
+M  frontend/src/index.css
+M  frontend/src/pages/AddShoes.jsx
+M  frontend/src/pages/AnalysisInsightDetail.jsx
+M  frontend/src/pages/Heatmap.jsx
+M  frontend/src/pages/LegalPage.jsx
+M  frontend/src/pages/Login.jsx
+M  frontend/src/pages/MuscleTraining.jsx
+M  frontend/src/pages/ProfileDashboard.jsx
+M  frontend/src/pages/RacesDetail.jsx
+M  frontend/src/pages/Rewards.jsx
+M  frontend/src/pages/Runs.jsx
+M  frontend/src/pages/Territory.jsx
+D  frontend/src/pages/WorkflowBuilder.jsx
+M  frontend/src/pages/heatmapMobileOverlay.smoke.test.js
+A  frontend/src/pages/legalPrivacyRedesign.smoke.test.js
+M  frontend/src/pages/loginBrandCarousel.smoke.test.js
+A  frontend/src/pages/profileComebackCardActions.smoke.test.js
+M  frontend/src/pages/runsHeroOverlayContrast.smoke.test.js
+A  frontend/src/pages/runsInsightPrimaryCard.smoke.test.js
+M  frontend/src/pages/runsRoutePreviewCache.smoke.test.js
+M  frontend/src/pages/runsThumbDarkMapTile.smoke.test.js
+M  frontend/src/pages/territoryBackendWiring.smoke.test.js
+M  frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js
+D  frontend/src/pages/workflowBuilderStatesA11y.smoke.test.js
+D  frontend/src/stores/useWorkflowStore.js
+M  frontend/src/styles/_split/heatmap.css
+M  frontend/src/styles/_split/light-theme-overrides.css
+M  frontend/src/styles/_split/misc.css
+M  frontend/src/styles/_split/profile.css
+M  frontend/src/styles/_split/runs.css
+M  frontend/src/styles/_split/territory.css
+D  frontend/src/styles/_split/workflow.css
+M  frontend/src/styles/analysis-detail-redesigns.css
+M  frontend/src/styles/contrast-fixes.css
+M  frontend/src/styles/dark-mode-final-fixes.css
+M  frontend/src/styles/style.css
+M  frontend/src/utils/rewardBadges.jsx
+A  frontend/src/utils/rewardCatalog.js
+A  frontend/src/utils/rewardCatalog.test.js
+A  frontend/src/utils/rewardCatalogIntegration.smoke.test.js
+M  frontend/src/utils/runnerShellNav.js
+M  frontend/src/utils/todayRun.js
+A  frontend/src/utils/todayRunIntent.test.js
+D  frontend/src/utils/workflowEngine.js
+D  frontend/src/utils/workflowHelpers.js
+D  frontend/src/utils/workflowTemplates.js
  D territory-reference-weight-closeup.jpg
 ?? .agents/skills/autoresearch-debug/SKILL.md
 ?? .agents/skills/autoresearch-evals/SKILL.md
@@ -388,14 +396,6 @@ M  docs/architecture/saas-architecture.svg
 ?? .worktree-align-backups/territory-20260610-215438/C__Users_Junwei_.codex_worktrees_ea2e_Hermes/frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js
 ?? .worktree-align-backups/territory-20260610-215438/C__Users_Junwei_.codex_worktrees_ea2e_Hermes/frontend/src/styles/_split/territory.css
 ?? .worktree-align-backups/territory-20260610-215438/C__Users_Junwei_.codex_worktrees_ea2e_Hermes/frontend/src/styles/style.css
-?? backend/src/test/resources/application.properties
-?? frontend/src/pages/legalPrivacyRedesign.smoke.test.js
-?? frontend/src/pages/profileComebackCardActions.smoke.test.js
-?? frontend/src/pages/runsInsightPrimaryCard.smoke.test.js
-?? frontend/src/utils/rewardCatalog.js
-?? frontend/src/utils/rewardCatalog.test.js
-?? frontend/src/utils/rewardCatalogIntegration.smoke.test.js
-?? frontend/src/utils/todayRunIntent.test.js
 ```
 
 ## Output

@@ -371,7 +371,42 @@ export default function Rewards() {
               </div>
             )}
           </section>
-
+          {/* Full catalog */}
+          <section className="rewards-ledger-section rewards-ledger-catalog-section" aria-labelledby="rewards-ledger-catalog">
+            <header className="rewards-ledger-section-head">
+              <div>
+                <span className="rewards-ledger-section-eyebrow">{t('rewards.hero_kicker')}</span>
+                <h2 id="rewards-ledger-catalog" className="rewards-ledger-section-title">{t('rewards.heading')}</h2>
+                <p className="rewards-ledger-section-sub">{t('rewards.catalog_copy')}</p>
+              </div>
+              <span className="rewards-ledger-section-count">{earnedCount}/{totalCount || 0}</span>
+            </header>
+            <div className="rewards-ledger-catalog-grid rewards-progress-card-grid--catalog">
+              {allRewards.map((reward) => {
+                const pct = Math.round((reward.progress || 0) * 100);
+                return (
+                  <article key={reward.id} className={cx('rewards-ledger-catalog-card', reward.earned ? 'is-earned' : 'is-locked')}>
+                    <div className="rewards-ledger-catalog-icon" aria-hidden="true">
+                      <RewardGlyph icon={reward.icon} />
+                    </div>
+                    <div className="rewards-ledger-catalog-body">
+                      <h3 className="rewards-ledger-catalog-title">{reward.title}</h3>
+                      <p className="rewards-ledger-catalog-sub">{reward.earned ? reward.subtitle : reward.hint}</p>
+                      {!reward.earned && (
+                        <div className="rewards-ledger-catalog-progress">
+                          <div className="rewards-ledger-pipeline-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                            <span style={{ width: `${pct}%` }} />
+                          </div>
+                          <span>{pct}%</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="rewards-ledger-catalog-status">{t(reward.earned ? 'profile.rewards_earned' : 'profile.rewards_locked')}</span>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
           <footer className="runner-shell-footer runner-dashboard-footer">
             <FooterNavLinks />
             <p className="rewards-ledger-signoff" aria-hidden="true">{runnerName} · {t('rewards.editorial_kicker')}</p>

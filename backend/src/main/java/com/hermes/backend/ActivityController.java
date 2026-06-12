@@ -14,11 +14,14 @@ import org.springframework.web.client.RestTemplate;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -27,8 +30,10 @@ public class ActivityController {
     private static final int POINTS_BATCH_SIZE = 500;
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
     private static final int ROUTE_PREVIEW_POINT_LIMIT = ActivityAnalyticsHelper.ROUTE_PREVIEW_POINT_LIMIT;
+    private static final int ROUTE_THUMB_PREVIEW_POINT_LIMIT = 240;
     private static final int MAX_ROUTE_PREVIEW_PATH_LENGTH = 255;
     private static final int MAX_ANALYSIS_SUMMARY_LIMIT = 500;
+    private static final int MAX_ROUTE_PREVIEW_BATCH_SIZE = 50;
     private static final Duration ACTIVITY_ANALYTICS_CACHE_TTL = Duration.ofMinutes(10);
 
     private final AuthService authService;
@@ -86,6 +91,95 @@ public class ActivityController {
         List<Activity> runs = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(activeUser.get(), ActivityType.RUN);
         hydrateMissingRoutePreviews(runs);
         return ResponseEntity.ok(runs.stream().map(this::toRunFeedItem).toList());
+    }
+
+    @GetMapping("/route-previews")
+    public ResponseEntity<?> getRoutePreviewBatch(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "ids", required = false) String idsParam
+    ) {
+        Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
+        if (activeUser.isEmpty()) {
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
+        }
+
+        final List<Long> requestedIds;
+        try {
+            requestedIds = parseRoutePreviewIds(idsParam);
+        } catch (IllegalArgumentException exception) {
+            return err(HttpStatus.BAD_REQUEST, "INVALID_PARAM", exception.getMessage());
+        }
+        if (requestedIds.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        Runner runner = activeUser.get();
+        List<Activity> ownedActivities = activityRepository.findByIdInAndRunner(requestedIds, runner);
+        if (ownedActivities.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        Map<Long, Activity> activityById = new HashMap<>();
+        for (Activity activity : ownedActivities) {
+            if (activity == null || activity.getId() == null) continue;
+            hydrateActivityPointsIfMissing(activity, runner);
+            activityById.put(activity.getId(), activity);
+        }
+
+        List<Long> ownedIds = requestedIds.stream()
+                .filter(activityById::containsKey)
+                .toList();
+        if (ownedIds.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        Map<Long, List<LatLngPoint>> pointsByActivityId = new LinkedHashMap<>();
+        for (Object[] row : activityPointRepository.findRoutePreviewSamplesByActivityIds(ownedIds, ROUTE_THUMB_PREVIEW_POINT_LIMIT)) {
+            if (row == null || row.length < 4 || !(row[0] instanceof Number activityIdNumber)) {
+                continue;
+            }
+            double latitude = row[1] instanceof Number number ? number.doubleValue() : Double.NaN;
+            double longitude = row[2] instanceof Number number ? number.doubleValue() : Double.NaN;
+            if (!Double.isFinite(latitude) || !Double.isFinite(longitude)) {
+                continue;
+            }
+            long activityId = activityIdNumber.longValue();
+            pointsByActivityId.computeIfAbsent(activityId, ignored -> new ArrayList<>())
+                    .add(new LatLngPoint(latitude, longitude));
+        }
+
+        Map<Long, GeoBbox> bboxByActivityId = new LinkedHashMap<>();
+        Map<Long, Long> pointCountByActivityId = new LinkedHashMap<>();
+        for (Object[] row : activityPointRepository.findRoutePreviewBboxesByActivityIds(ownedIds)) {
+            if (row == null || row.length < 6 || !(row[0] instanceof Number activityIdNumber)) {
+                continue;
+            }
+            double minLatitude = row[1] instanceof Number number ? number.doubleValue() : Double.NaN;
+            double maxLatitude = row[2] instanceof Number number ? number.doubleValue() : Double.NaN;
+            double minLongitude = row[3] instanceof Number number ? number.doubleValue() : Double.NaN;
+            double maxLongitude = row[4] instanceof Number number ? number.doubleValue() : Double.NaN;
+            long pointCount = row[5] instanceof Number number ? number.longValue() : 0L;
+            if (!Double.isFinite(minLatitude) || !Double.isFinite(maxLatitude)
+                    || !Double.isFinite(minLongitude) || !Double.isFinite(maxLongitude)) {
+                continue;
+            }
+            long activityId = activityIdNumber.longValue();
+            bboxByActivityId.put(
+                    activityId,
+                    new GeoBbox(minLatitude, maxLatitude, minLongitude, maxLongitude)
+            );
+            pointCountByActivityId.put(activityId, Math.max(0L, pointCount));
+        }
+
+        List<RoutePreviewBatchItem> response = ownedIds.stream()
+                .map(activityId -> new RoutePreviewBatchItem(
+                        activityId,
+                        pointsByActivityId.getOrDefault(activityId, List.of()),
+                        bboxByActivityId.get(activityId),
+                        pointCountByActivityId.getOrDefault(activityId, 0L)
+                ))
+                .toList();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/analysis")
@@ -149,6 +243,32 @@ public class ActivityController {
             return 0;
         }
         return Math.min(limit, MAX_ANALYSIS_SUMMARY_LIMIT);
+    }
+
+    private List<Long> parseRoutePreviewIds(String idsParam) {
+        if (idsParam == null || idsParam.isBlank()) {
+            return List.of();
+        }
+
+        Set<Long> ids = new LinkedHashSet<>();
+        for (String rawToken : idsParam.split(",")) {
+            String token = rawToken == null ? "" : rawToken.trim();
+            if (token.isEmpty()) continue;
+            long id;
+            try {
+                id = Long.parseLong(token);
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException("Invalid activity id list.");
+            }
+            if (id <= 0) {
+                throw new IllegalArgumentException("Invalid activity id list.");
+            }
+            ids.add(id);
+            if (ids.size() > MAX_ROUTE_PREVIEW_BATCH_SIZE) {
+                throw new IllegalArgumentException("Too many activity ids requested.");
+            }
+        }
+        return List.copyOf(ids);
     }
 
     @GetMapping("/heatmap")
@@ -649,6 +769,21 @@ public class ActivityController {
         return out;
     }
 
+    private void hydrateActivityPointsIfMissing(Activity activity, Runner runner) {
+        if (activity == null || runner == null || activity.getStravaId() == null || activityPointRepository.existsByActivity(activity)) {
+            return;
+        }
+        String stravaToken = resolveRunnerStravaAccessToken(runner);
+        if (stravaToken == null || stravaToken.isBlank()) {
+            return;
+        }
+        try {
+            fetchAndCacheStravaStream(activity, activity.getStravaId(), stravaToken);
+        } catch (Exception exception) {
+            logger.warn("Failed to prefetch route-preview points for activity {}: {}", activity.getStravaId(), exception.getMessage());
+        }
+    }
+
     private void cacheRoutePreviewIfMissing(Activity activity, List<LatLngPoint> points) {
         if (activity == null || hasRoutePreview(activity) || points == null || points.size() < 2) {
             return;
@@ -889,6 +1024,8 @@ public class ActivityController {
     }
 
     public record LatLngPoint(double latitude, double longitude) {}
+    public record GeoBbox(double minLat, double maxLat, double minLng, double maxLng) {}
+    public record RoutePreviewBatchItem(Long activityId, List<LatLngPoint> points, GeoBbox bbox, long pointCount) {}
     private record PreviewSample(double latitude, double longitude, int sequenceIndex) {}
     private record PreviewPoint(double x, double y) {}
     private record RoutePreview(String path, double startX, double startY, double finishX, double finishY) {}

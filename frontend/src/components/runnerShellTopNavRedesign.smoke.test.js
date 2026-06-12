@@ -81,7 +81,6 @@ const runnerPages = [
   'Shoes.jsx',
   'TodayRun.jsx',
   'WeatherEngine.jsx',
-  'WorkflowBuilder.jsx',
 ];
 
 runnerPages.forEach((fileName) => {
