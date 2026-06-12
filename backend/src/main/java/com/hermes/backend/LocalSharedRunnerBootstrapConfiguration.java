@@ -17,13 +17,13 @@ public class LocalSharedRunnerBootstrapConfiguration {
     @Value("${app.local-shared-runner.enabled:false}")
     private boolean enabled;
 
-    @Value("${app.local-shared-runner.email:strava+140971747@hermes.local}")
+    @Value("${app.local-shared-runner.email:#{T(com.hermes.backend.LocalSharedRunnerBootstrapService).DEFAULT_EMAIL}}")
     private String email;
 
     @Value("${app.local-shared-runner.password:}")
     private String password;
 
-    @Value("${app.local-shared-runner.strava-athlete-id:140971747}")
+    @Value("${app.local-shared-runner.strava-athlete-id:#{T(com.hermes.backend.LocalSharedRunnerBootstrapService).DEFAULT_STRAVA_ATHLETE_ID}}")
     private Long stravaAthleteId;
 
     @Value("${app.local-shared-runner.display-name:Hermes Shared Runner}")
@@ -41,7 +41,7 @@ public class LocalSharedRunnerBootstrapConfiguration {
     @Value("${app.local-territory-rival.password:}")
     private String territoryRivalPassword;
 
-    @Value("${app.local-territory-rival.strava-athlete-id:140971748}")
+    @Value("${app.local-territory-rival.strava-athlete-id:#{T(com.hermes.backend.LocalSharedRunnerBootstrapService).TERRITORY_RIVAL_STRAVA_ATHLETE_ID}}")
     private Long territoryRivalStravaAthleteId;
 
     @Value("${app.local-territory-rival.display-name:Hermes Temporal Rival}")
@@ -59,7 +59,7 @@ public class LocalSharedRunnerBootstrapConfiguration {
     @Value("${app.local-territory-flushing.password:}")
     private String territoryFlushingPassword;
 
-    @Value("${app.local-territory-flushing.strava-athlete-id:140971749}")
+    @Value("${app.local-territory-flushing.strava-athlete-id:#{T(com.hermes.backend.LocalSharedRunnerBootstrapService).FLUSHING_TERRITORY_STRAVA_ATHLETE_ID}}")
     private Long territoryFlushingStravaAthleteId;
 
     @Value("${app.local-territory-flushing.display-name:Hermes Flushing Territory Tester}")
@@ -77,7 +77,7 @@ public class LocalSharedRunnerBootstrapConfiguration {
     @Value("${app.local-territory-flushing-inner.password:}")
     private String territoryFlushingInnerPassword;
 
-    @Value("${app.local-territory-flushing-inner.strava-athlete-id:140971750}")
+    @Value("${app.local-territory-flushing-inner.strava-athlete-id:#{T(com.hermes.backend.LocalSharedRunnerBootstrapService).INNER_FLUSHING_TERRITORY_STRAVA_ATHLETE_ID}}")
     private Long territoryFlushingInnerStravaAthleteId;
 
     @Value("${app.local-territory-flushing-inner.display-name:Hermes Inner Flushing Occupier}")
@@ -85,6 +85,24 @@ public class LocalSharedRunnerBootstrapConfiguration {
 
     @Value("${app.local-territory-flushing-inner.seed-mock-data:true}")
     private boolean territoryFlushingInnerSeedMockData;
+
+    @Value("${app.local-territory-flushing-conqueror.enabled:true}")
+    private boolean territoryFlushingConquerorEnabled;
+
+    @Value("${app.local-territory-flushing-conqueror.email:territory-flushing-conqueror@hermes.local}")
+    private String territoryFlushingConquerorEmail;
+
+    @Value("${app.local-territory-flushing-conqueror.password:}")
+    private String territoryFlushingConquerorPassword;
+
+    @Value("${app.local-territory-flushing-conqueror.strava-athlete-id:#{T(com.hermes.backend.LocalSharedRunnerBootstrapService).FLUSHING_CONQUEROR_STRAVA_ATHLETE_ID}}")
+    private Long territoryFlushingConquerorAthleteId;
+
+    @Value("${app.local-territory-flushing-conqueror.display-name:Hermes Flushing Conqueror}")
+    private String territoryFlushingConquerorDisplayName;
+
+    @Value("${app.local-territory-flushing-conqueror.seed-mock-data:true}")
+    private boolean territoryFlushingConquerorSeedMockData;
 
     @Value("${app.local-territory-berlin.enabled:true}")
     private boolean territoryBerlinEnabled;
@@ -95,7 +113,7 @@ public class LocalSharedRunnerBootstrapConfiguration {
     @Value("${app.local-territory-berlin.password:}")
     private String territoryBerlinPassword;
 
-    @Value("${app.local-territory-berlin.strava-athlete-id:140971751}")
+    @Value("${app.local-territory-berlin.strava-athlete-id:#{T(com.hermes.backend.LocalSharedRunnerBootstrapService).BERLIN_TERRITORY_STRAVA_ATHLETE_ID}}")
     private Long territoryBerlinStravaAthleteId;
 
     @Value("${app.local-territory-berlin.display-name:Hermes Berlin Land Conqueror}")
@@ -103,6 +121,18 @@ public class LocalSharedRunnerBootstrapConfiguration {
 
     @Value("${app.local-territory-berlin.seed-mock-data:true}")
     private boolean territoryBerlinSeedMockData;
+
+    @Value("${app.local-territory-world.enabled:true}")
+    private boolean territoryWorldEnabled;
+
+    @Value("${app.local-territory-world.password:}")
+    private String territoryWorldPassword;
+
+    @Value("${app.local-territory-world.seed-mock-data:true}")
+    private boolean territoryWorldSeedMockData;
+
+    @Value("${app.local-territory-world.accounts-per-country:${app.local-territory-world.accounts-per-continent:100}}")
+    private int territoryWorldAccountsPerCountry;
 
     @Bean
     ApplicationRunner localSharedRunnerBootstrapRunner(LocalSharedRunnerBootstrapService bootstrapService) {
@@ -160,6 +190,10 @@ public class LocalSharedRunnerBootstrapConfiguration {
                 }
             }
 
+            if (territoryWorldEnabled) {
+                bootstrapWorldTerritory(bootstrapService);
+            }
+
             if (!territoryFlushingEnabled) {
                 return;
             }
@@ -211,6 +245,29 @@ public class LocalSharedRunnerBootstrapConfiguration {
                     innerFlushingResult.seededShoes(),
                     innerFlushingResult.seededActivities()
             );
+
+            if (territoryFlushingConquerorEnabled) {
+                if (territoryFlushingConquerorPassword == null || territoryFlushingConquerorPassword.isBlank()) {
+                    log.warn("[Hermes] Local Flushing conqueror bootstrap is enabled, but APP_LOCAL_TERRITORY_FLUSHING_CONQUEROR_PASSWORD is missing.");
+                } else {
+                    LocalSharedRunnerBootstrapService.BootstrapResult flushingConquerorResult = bootstrapService.bootstrap(
+                            new LocalSharedRunnerBootstrapService.BootstrapConfig(
+                                    territoryFlushingConquerorEmail,
+                                    territoryFlushingConquerorPassword,
+                                    territoryFlushingConquerorAthleteId,
+                                    territoryFlushingConquerorDisplayName,
+                                    territoryFlushingConquerorSeedMockData,
+                                    LocalSharedRunnerBootstrapService.SeedProfile.FLUSHING_CONQUEROR
+                            )
+                    );
+                    log.info(
+                            "[Hermes] Flushing conqueror account {} is ready (seeded shoes={}, seeded activities={}).",
+                            flushingConquerorResult.email(),
+                            flushingConquerorResult.seededShoes(),
+                            flushingConquerorResult.seededActivities()
+                    );
+                }
+            }
 
             if (!territoryBerlinEnabled) {
                 return;
@@ -284,6 +341,35 @@ public class LocalSharedRunnerBootstrapConfiguration {
                 result.email(),
                 result.seededShoes(),
                 result.seededActivities()
+        );
+    }
+
+    private void bootstrapWorldTerritory(LocalSharedRunnerBootstrapService bootstrapService) {
+        if (territoryWorldPassword == null || territoryWorldPassword.isBlank()) {
+            log.warn("[Hermes] Local world territory bootstrap is enabled, but APP_LOCAL_TERRITORY_WORLD_PASSWORD is missing.");
+            return;
+        }
+
+        int accountCount = 0;
+        int seededShoes = 0;
+        int seededActivities = 0;
+        for (LocalSharedRunnerBootstrapService.BootstrapConfig config : LocalSharedRunnerBootstrapService.BootstrapConfig.worldTerritoryDefaults(
+                territoryWorldPassword,
+                territoryWorldAccountsPerCountry,
+                territoryWorldSeedMockData
+        )) {
+            LocalSharedRunnerBootstrapService.BootstrapResult result = bootstrapService.bootstrap(config);
+            accountCount += 1;
+            seededShoes += result.seededShoes();
+            seededActivities += result.seededActivities();
+        }
+
+        log.info(
+                "[Hermes] World territory mock accounts are ready (accounts={}, countries={}, seeded shoes={}, seeded activities={}).",
+                accountCount,
+                LocalSharedRunnerBootstrapService.WORLD_TERRITORY_COUNTRIES.size(),
+                seededShoes,
+                seededActivities
         );
     }
 }

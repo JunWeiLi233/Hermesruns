@@ -199,7 +199,6 @@ export default function AddShoes() {
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
     { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
-    { key: 'workflows', icon: 'account_tree', label: t('profile.dashboard_nav_workflows'), route: '/workflows' },
   ];
 
   const browserBrands = useMemo(() => [...catalog].sort((a, b) => (b.models?.length || 0) - (a.models?.length || 0)), [catalog]);

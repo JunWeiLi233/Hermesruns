@@ -29,9 +29,15 @@ function isAllowedRaceImageUrl(imageUrl) {
 function readPersistedRaceImageCache() {
   if (typeof window === 'undefined') return {};
   try {
-    const raw = window.sessionStorage.getItem(RACE_IMAGE_CACHE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
+    const storage = window.localStorage || window.sessionStorage;
+    const raw = storage?.getItem(RACE_IMAGE_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    }
+    const sessionRaw = window.sessionStorage?.getItem(RACE_IMAGE_CACHE_KEY);
+    if (!sessionRaw) return {};
+    const parsed = JSON.parse(sessionRaw);
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
     return {};
@@ -41,9 +47,48 @@ function readPersistedRaceImageCache() {
 function writePersistedRaceImageCache(snapshot) {
   if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.setItem(RACE_IMAGE_CACHE_KEY, JSON.stringify(snapshot));
+    const serialized = JSON.stringify(snapshot);
+    if (window.localStorage) {
+      window.localStorage.setItem(RACE_IMAGE_CACHE_KEY, serialized);
+      return;
+    }
+    window.sessionStorage?.setItem(RACE_IMAGE_CACHE_KEY, serialized);
   } catch {
-    // Ignore persistence failures and keep the in-memory cache.
+    try {
+      window.sessionStorage?.setItem(RACE_IMAGE_CACHE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Ignore persistence failures and keep the in-memory cache.
+    }
+  }
+}
+
+function removePersistedRaceImageEntry(cacheKey) {
+  if (typeof window === 'undefined') return;
+  try {
+    const persisted = readPersistedRaceImageCache();
+    delete persisted[cacheKey];
+    writePersistedRaceImageCache(persisted);
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+  try {
+    const sessionPersisted = readSessionRaceImageCache();
+    delete sessionPersisted[cacheKey];
+    window.sessionStorage?.setItem(RACE_IMAGE_CACHE_KEY, JSON.stringify(sessionPersisted));
+  } catch {
+    // Ignore legacy session cache cleanup failures.
+  }
+}
+
+function readSessionRaceImageCache() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.sessionStorage?.getItem(RACE_IMAGE_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
   }
 }
 
@@ -53,7 +98,10 @@ function buildRaceImageCacheKey(race) {
 
 function primeMemoryCache() {
   if (raceImageMemoryCache.size > 0) return;
-  const persisted = readPersistedRaceImageCache();
+  const persisted = {
+    ...readSessionRaceImageCache(),
+    ...readPersistedRaceImageCache(),
+  };
   Object.entries(persisted).forEach(([key, value]) => {
     const normalized = normalizeRaceImageCacheEntry(value);
     if (!normalized) return;
@@ -70,6 +118,16 @@ function persistRaceImageEntry(cacheKey, entry) {
   writePersistedRaceImageCache(persisted);
 }
 
+export function rememberLoadedRaceImage(race, imageUrl) {
+  const cacheKey = buildRaceImageCacheKey(race);
+  if (!cacheKey || !isAllowedRaceImageUrl(imageUrl)) return;
+  persistRaceImageEntry(cacheKey, {
+    imageUrl,
+    sourceWebsite: typeof race?.officialWebsite === 'string' ? race.officialWebsite : '',
+    retryAfterAt: 0,
+  });
+}
+
 export function getCachedRaceImage(race) {
   const cacheKey = buildRaceImageCacheKey(race);
   if (!cacheKey) return { imageUrl: '', sourceWebsite: '', retryAfterAt: 0 };
@@ -79,9 +137,7 @@ export function getCachedRaceImage(race) {
   if (isAllowedRaceImageUrl(cached.imageUrl)) return cached;
   if (isFutureTimestamp(cached.retryAfterAt)) return cached;
   raceImageMemoryCache.delete(cacheKey);
-  const persisted = readPersistedRaceImageCache();
-  delete persisted[cacheKey];
-  writePersistedRaceImageCache(persisted);
+  removePersistedRaceImageEntry(cacheKey);
   return { imageUrl: '', sourceWebsite: '', retryAfterAt: 0 };
 }
 
@@ -188,7 +244,5 @@ export function invalidateRaceImageCache(race) {
   if (!cacheKey) return;
   raceImageMemoryCache.delete(cacheKey);
   raceImageInFlightCache.delete(cacheKey);
-  const persisted = readPersistedRaceImageCache();
-  delete persisted[cacheKey];
-  writePersistedRaceImageCache(persisted);
+  removePersistedRaceImageEntry(cacheKey);
 }

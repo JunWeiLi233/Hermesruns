@@ -4528,7 +4528,6 @@ body.theme-light .recent-runs-insight-card span,
 body.theme-light .recent-runs-stat-card span,
 body.theme-light .recent-runs-card-date,
 body.theme-light .recent-runs-card-metric span,
-body.theme-light .recent-runs-card-menu,
 body.theme-light .recent-runs-thumb-route-empty {
   color: var(--text-muted);
 }

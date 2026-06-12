@@ -6,8 +6,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 public class LocalSharedRunnerBootstrapService {
@@ -19,6 +23,8 @@ public class LocalSharedRunnerBootstrapService {
     public static final long FLUSHING_TERRITORY_STRAVA_ATHLETE_ID = 140971749L;
     public static final String INNER_FLUSHING_TERRITORY_EMAIL = "territory-flushing-inner@hermes.local";
     public static final long INNER_FLUSHING_TERRITORY_STRAVA_ATHLETE_ID = 140971750L;
+    public static final String FLUSHING_CONQUEROR_EMAIL = "territory-flushing-conqueror@hermes.local";
+    public static final long FLUSHING_CONQUEROR_STRAVA_ATHLETE_ID = 140971758L;
     public static final String BERLIN_TERRITORY_EMAIL = "territory-berlin@hermes.local";
     public static final long BERLIN_TERRITORY_STRAVA_ATHLETE_ID = 140971751L;
     public static final String BERLIN_RIVAL_BLUE_EMAIL = "territory-berlin-blue@hermes.local";
@@ -33,10 +39,14 @@ public class LocalSharedRunnerBootstrapService {
     public static final long BERLIN_RIVAL_LIME_STRAVA_ATHLETE_ID = 140971756L;
     public static final String BERLIN_RIVAL_CYAN_EMAIL = "territory-berlin-cyan@hermes.local";
     public static final long BERLIN_RIVAL_CYAN_STRAVA_ATHLETE_ID = 140971757L;
+    public static final int WORLD_TERRITORY_ACCOUNTS_PER_COUNTRY = 100;
+    public static final long WORLD_TERRITORY_STRAVA_ATHLETE_ID_BASE = 140972000L;
+    public static final List<WorldTerritoryCountry> WORLD_TERRITORY_COUNTRIES = createWorldTerritoryCountries();
     private static final String DEFAULT_DISPLAY_NAME = "Hermes Shared Runner";
     private static final String TERRITORY_RIVAL_DISPLAY_NAME = "Hermes Temporal Rival";
     private static final String FLUSHING_TERRITORY_DISPLAY_NAME = "Hermes Flushing Territory Tester";
     private static final String INNER_FLUSHING_TERRITORY_DISPLAY_NAME = "Hermes Inner Flushing Occupier";
+    private static final String FLUSHING_CONQUEROR_DISPLAY_NAME = "Hermes Flushing Conqueror";
     private static final String BERLIN_TERRITORY_DISPLAY_NAME = "Hermes Berlin Land Conqueror";
     private static final String BERLIN_RIVAL_BLUE_DISPLAY_NAME = "Hermes Berlin Blue Rival";
     private static final String BERLIN_RIVAL_GREEN_DISPLAY_NAME = "Hermes Berlin Green Rival";
@@ -48,6 +58,7 @@ public class LocalSharedRunnerBootstrapService {
     private static final int TERRITORY_RIVAL_ACTIVITY_SEED_COUNT = 6;
     private static final int FLUSHING_TERRITORY_ACTIVITY_SEED_COUNT = 3;
     private static final int INNER_FLUSHING_TERRITORY_ACTIVITY_SEED_COUNT = 2;
+    private static final int FLUSHING_CONQUEROR_ACTIVITY_SEED_COUNT = 3;
     private static final int BERLIN_TERRITORY_ACTIVITY_SEED_COUNT = 3;
     private static final int TERRITORY_RIVAL_CONFLICT_START_INDEX = ACTIVITY_SEED_COUNT - TERRITORY_RIVAL_ACTIVITY_SEED_COUNT;
     private static final double TERRITORY_CELL_DEGREES = 0.0065;
@@ -56,17 +67,37 @@ public class LocalSharedRunnerBootstrapService {
     private static final int TERRITORY_RIVAL_MIN_DYNAMIC_SOURCE_SAMPLES = 8;
     private static final int TERRITORY_RIVAL_SOURCE_SAMPLE_WINDOW = 25_000;
     private static final String TERRITORY_RIVAL_LIVE_SEED_MARKER = "local-territory-rival-live-v5-marker";
+    private static final String SHARED_RUNNER_SOURCE_FILE = "local-shared-runner-bootstrap";
+    private static final String SHARED_RUNNER_SEED_PREFIX = "local-shared-runner-loop-";
+    private static final String SHARED_RUNNER_SEED_VERSION = "local-shared-runner-loop-v3";
     private static final String FLUSHING_TERRITORY_SOURCE_FILE = "local-flushing-territory-bootstrap";
     private static final String FLUSHING_TERRITORY_SEED_PREFIX = "local-flushing-territory-loop-";
     private static final String FLUSHING_TERRITORY_SEED_VERSION = "local-flushing-territory-loop-v2";
     private static final String INNER_FLUSHING_TERRITORY_SOURCE_FILE = "local-inner-flushing-territory-bootstrap";
     private static final String INNER_FLUSHING_TERRITORY_SEED_VERSION = "local-inner-flushing-territory-loop-v1";
+    private static final String FLUSHING_CONQUEROR_SOURCE_FILE = "local-flushing-conqueror-territory-bootstrap";
+    private static final String FLUSHING_CONQUEROR_SEED_PREFIX = "local-flushing-conqueror-loop-";
+    private static final String FLUSHING_CONQUEROR_SEED_VERSION = "local-flushing-conqueror-loop-v2";
+    private static final LocalDateTime FLUSHING_CONQUEROR_ANCHOR_TIME = LocalDateTime.of(2026, 6, 7, 10, 0);
     private static final String BERLIN_TERRITORY_SOURCE_FILE = "local-berlin-territory-bootstrap";
     private static final String BERLIN_TERRITORY_SEED_PREFIX = "local-berlin-territory-loop-";
     private static final String BERLIN_TERRITORY_SEED_VERSION = "local-berlin-territory-loop-v5";
     private static final String BERLIN_RIVAL_SOURCE_FILE = "local-berlin-rival-territory-bootstrap";
     private static final String BERLIN_RIVAL_SEED_PREFIX = "local-berlin-rival-loop-";
     private static final String BERLIN_RIVAL_SEED_VERSION = "local-berlin-rival-loop-v5";
+    private static final String WORLD_TERRITORY_SOURCE_FILE = "local-world-territory-bootstrap";
+    private static final String WORLD_TERRITORY_SEED_PREFIX = "local-world-territory-loop-";
+    private static final String WORLD_TERRITORY_SEED_VERSION = "local-world-territory-loop-v3-country-grid";
+    private static final LocalDateTime WORLD_TERRITORY_ANCHOR_TIME = LocalDateTime.of(2026, 6, 6, 0, 0);
+    private static final int WORLD_TERRITORY_GRID_COLUMNS = 10;
+    private static final double WORLD_TERRITORY_CENTER_SPACING_METERS = 760.0;
+    private static final double WORLD_TERRITORY_LOOP_RADIUS_METERS = 610.0;
+    private static final double WORLD_TERRITORY_MASK_CELL_METERS = 160.0;
+    private static final double WORLD_TERRITORY_MASK_RADIUS_METERS = 520.0;
+    private static final List<String> WORLD_TERRITORY_FAKE_NAMES = List.of(
+            "Alice", "Bob", "Chloe", "Daniel", "Emma", "Felix", "Grace", "Hugo", "Ivy", "Jack",
+            "Kira", "Leo", "Maya", "Noah", "Olivia", "Pavel", "Quinn", "Rina", "Sofia", "Theo"
+    );
 
     private final RunnerRepository runnerRepository;
     private final ShoeRepository shoeRepository;
@@ -75,6 +106,7 @@ public class LocalSharedRunnerBootstrapService {
     private final TerritoryPolygonRepository territoryPolygonRepository;
     private final TerritoryPolygonComputer territoryPolygonComputer;
     private final AuthService authService;
+    private final ConcurrentMap<String, String> localWorldPasswordHashes = new ConcurrentHashMap<>();
 
     public LocalSharedRunnerBootstrapService(
             RunnerRepository runnerRepository,
@@ -111,25 +143,34 @@ public class LocalSharedRunnerBootstrapService {
 
         Runner runner = runnerRepository.findByEmailIgnoreCase(normalizedEmail).orElseGet(Runner::new);
         applyRunnerDefaults(runner, normalizedEmail, config);
-        authService.storePassword(runner, config.password());
+        storeBootstrapPassword(runner, config);
         runner = runnerRepository.save(runner);
 
         int seededShoes = 0;
         int seededActivities = 0;
         long existingActivityCount = activityRepository.countByRunner(runner);
+        if (config.seedMockData() && seedProfile == SeedProfile.SHARED_RUNNER) {
+            existingActivityCount = repairOldSharedRunnerSeedIfNeeded(runner, existingActivityCount);
+        }
         if (config.seedMockData() && seedProfile == SeedProfile.FLUSHING_TERRITORY) {
             existingActivityCount = repairOldFlushingTerritorySeedIfNeeded(runner, existingActivityCount);
         }
         if (config.seedMockData() && seedProfile == SeedProfile.BERLIN_TERRITORY) {
             existingActivityCount = repairOldBerlinTerritorySeedIfNeeded(runner, existingActivityCount);
         }
+        if (config.seedMockData() && seedProfile == SeedProfile.FLUSHING_CONQUEROR) {
+            existingActivityCount = repairOldFlushingConquerorSeedIfNeeded(runner, existingActivityCount);
+        }
         if (config.seedMockData() && isBerlinRival(seedProfile)) {
             existingActivityCount = repairOldBerlinRivalSeedIfNeeded(runner, existingActivityCount, seedProfile);
         }
-        if (config.seedMockData() && shouldSeedActivities(runner, seedProfile, existingActivityCount)) {
+        if (config.seedMockData() && seedProfile == SeedProfile.WORLD_TERRITORY) {
+            existingActivityCount = repairOldWorldTerritorySeedIfNeeded(runner, config, existingActivityCount);
+        }
+        if (config.seedMockData() && shouldSeedActivities(runner, config, existingActivityCount)) {
             ShoeSeedResult shoeSeedResult = ensureShoes(runner);
             seededShoes = shoeSeedResult.seededShoes();
-            seededActivities = seedActivities(runner, shoeSeedResult.availableShoes(), seedProfile);
+            seededActivities = seedActivities(runner, shoeSeedResult.availableShoes(), config);
         }
 
         return new BootstrapResult(
@@ -140,7 +181,23 @@ public class LocalSharedRunnerBootstrapService {
         );
     }
 
-    private boolean shouldSeedActivities(Runner runner, SeedProfile seedProfile, long existingActivityCount) {
+    private void storeBootstrapPassword(Runner runner, BootstrapConfig config) {
+        if (config.effectiveSeedProfile() != SeedProfile.WORLD_TERRITORY) {
+            authService.storePassword(runner, config.password());
+            return;
+        }
+
+        runner.setPassword(localWorldPasswordHashes.computeIfAbsent(config.password(), this::hashLocalPasswordOnce));
+    }
+
+    private String hashLocalPasswordOnce(String password) {
+        Runner scratch = new Runner();
+        authService.storePassword(scratch, password);
+        return scratch.getPassword();
+    }
+
+    private boolean shouldSeedActivities(Runner runner, BootstrapConfig config, long existingActivityCount) {
+        SeedProfile seedProfile = config.effectiveSeedProfile();
         if (existingActivityCount == 0) {
             return true;
         }
@@ -149,6 +206,12 @@ public class LocalSharedRunnerBootstrapService {
                         runner,
                         ImportProvider.STRAVA,
                         TERRITORY_RIVAL_LIVE_SEED_MARKER
+                ))
+                || (seedProfile == SeedProfile.SHARED_RUNNER
+                && !activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                        runner,
+                        ImportProvider.STRAVA,
+                        SHARED_RUNNER_SEED_VERSION + "-1"
                 ))
                 || (seedProfile == SeedProfile.FLUSHING_TERRITORY
                 && !activityRepository.existsByRunnerAndProviderAndSourceChecksum(
@@ -162,6 +225,12 @@ public class LocalSharedRunnerBootstrapService {
                         ImportProvider.STRAVA,
                         INNER_FLUSHING_TERRITORY_SEED_VERSION + "-1"
                 ))
+                || (seedProfile == SeedProfile.FLUSHING_CONQUEROR
+                && !activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                        runner,
+                        ImportProvider.STRAVA,
+                        FLUSHING_CONQUEROR_SEED_VERSION + "-1"
+                ))
                 || (seedProfile == SeedProfile.BERLIN_TERRITORY
                 && !activityRepository.existsByRunnerAndProviderAndSourceChecksum(
                         runner,
@@ -173,6 +242,12 @@ public class LocalSharedRunnerBootstrapService {
                         runner,
                         ImportProvider.STRAVA,
                         BERLIN_RIVAL_SEED_VERSION + "-" + berlinRivalIndex(seedProfile) + "-1"
+                ))
+                || (seedProfile == SeedProfile.WORLD_TERRITORY
+                && !activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                        runner,
+                        ImportProvider.STRAVA,
+                        worldTerritorySourceChecksum(config, 1)
                 ));
     }
 
@@ -198,6 +273,38 @@ public class LocalSharedRunnerBootstrapService {
         return activityRepository.countByRunner(runner);
     }
 
+    private long repairOldSharedRunnerSeedIfNeeded(Runner runner, long existingActivityCount) {
+        if (runner == null || existingActivityCount == 0 || activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                runner,
+                ImportProvider.STRAVA,
+                SHARED_RUNNER_SEED_VERSION + "-1"
+        )) {
+            return existingActivityCount;
+        }
+
+        List<Activity> activities = activityRepository.findByRunnerOrderByIdDesc(runner);
+        for (Activity activity : activities) {
+            if (!isLocalSharedRunnerSeed(activity)) {
+                continue;
+            }
+            if (activity.getId() != null) {
+                territoryPolygonRepository.deleteByActivityId(activity.getId());
+            }
+            activityRepository.delete(activity);
+        }
+        return activityRepository.countByRunner(runner);
+    }
+
+    private static boolean isLocalSharedRunnerSeed(Activity activity) {
+        if (activity == null) {
+            return false;
+        }
+        String checksum = activity.getSourceChecksum();
+        String sourceFile = activity.getSourceFileName();
+        return (checksum != null && checksum.startsWith(SHARED_RUNNER_SEED_PREFIX))
+                || SHARED_RUNNER_SOURCE_FILE.equals(sourceFile);
+    }
+
     private static boolean isLocalFlushingTerritorySeed(Activity activity) {
         if (activity == null) {
             return false;
@@ -206,6 +313,38 @@ public class LocalSharedRunnerBootstrapService {
         String sourceFile = activity.getSourceFileName();
         return (checksum != null && checksum.startsWith(FLUSHING_TERRITORY_SEED_PREFIX))
                 || FLUSHING_TERRITORY_SOURCE_FILE.equals(sourceFile);
+    }
+
+    private long repairOldFlushingConquerorSeedIfNeeded(Runner runner, long existingActivityCount) {
+        if (runner == null || existingActivityCount == 0 || activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                runner,
+                ImportProvider.STRAVA,
+                FLUSHING_CONQUEROR_SEED_VERSION + "-1"
+        )) {
+            return existingActivityCount;
+        }
+
+        List<Activity> activities = activityRepository.findByRunnerOrderByIdDesc(runner);
+        for (Activity activity : activities) {
+            if (!isLocalFlushingConquerorSeed(activity)) {
+                continue;
+            }
+            if (activity.getId() != null) {
+                territoryPolygonRepository.deleteByActivityId(activity.getId());
+            }
+            activityRepository.delete(activity);
+        }
+        return activityRepository.countByRunner(runner);
+    }
+
+    private static boolean isLocalFlushingConquerorSeed(Activity activity) {
+        if (activity == null) {
+            return false;
+        }
+        String checksum = activity.getSourceChecksum();
+        String sourceFile = activity.getSourceFileName();
+        return (checksum != null && checksum.startsWith(FLUSHING_CONQUEROR_SEED_PREFIX))
+                || FLUSHING_CONQUEROR_SOURCE_FILE.equals(sourceFile);
     }
 
     private long repairOldBerlinTerritorySeedIfNeeded(Runner runner, long existingActivityCount) {
@@ -272,6 +411,38 @@ public class LocalSharedRunnerBootstrapService {
                 || BERLIN_RIVAL_SOURCE_FILE.equals(sourceFile);
     }
 
+    private long repairOldWorldTerritorySeedIfNeeded(Runner runner, BootstrapConfig config, long existingActivityCount) {
+        if (runner == null || existingActivityCount == 0 || activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                runner,
+                ImportProvider.STRAVA,
+                worldTerritorySourceChecksum(config, 1)
+        )) {
+            return existingActivityCount;
+        }
+
+        List<Activity> activities = activityRepository.findByRunnerOrderByIdDesc(runner);
+        for (Activity activity : activities) {
+            if (!isLocalWorldTerritorySeed(activity)) {
+                continue;
+            }
+            if (activity.getId() != null) {
+                territoryPolygonRepository.deleteByActivityId(activity.getId());
+            }
+            activityRepository.delete(activity);
+        }
+        return activityRepository.countByRunner(runner);
+    }
+
+    private static boolean isLocalWorldTerritorySeed(Activity activity) {
+        if (activity == null) {
+            return false;
+        }
+        String checksum = activity.getSourceChecksum();
+        String sourceFile = activity.getSourceFileName();
+        return (checksum != null && checksum.startsWith(WORLD_TERRITORY_SEED_PREFIX))
+                || WORLD_TERRITORY_SOURCE_FILE.equals(sourceFile);
+    }
+
     private static boolean isBerlinRival(SeedProfile seedProfile) {
         return seedProfile == SeedProfile.BERLIN_RIVAL_BLUE
                 || seedProfile == SeedProfile.BERLIN_RIVAL_GREEN
@@ -326,7 +497,7 @@ public class LocalSharedRunnerBootstrapService {
         runner.setEmailVerified(true);
         runner.setDisplayName(defaultIfBlank(config.displayName(), defaultDisplayName(seedProfile)));
         runner.setStravaAthleteId(config.stravaAthleteId());
-        runner.setStravaUsername(defaultStravaUsername(seedProfile));
+        runner.setStravaUsername(defaultStravaUsername(config));
         runner.setMaxHeartRateBpm(seedProfile == SeedProfile.TERRITORY_RIVAL ? 188 : 192);
         runner.setRestingHeartRateBpm(seedProfile == SeedProfile.TERRITORY_RIVAL ? 51 : 48);
         runner.setSubscriptionTier("PRO");
@@ -340,6 +511,7 @@ public class LocalSharedRunnerBootstrapService {
             case TERRITORY_RIVAL -> TERRITORY_RIVAL_DISPLAY_NAME;
             case FLUSHING_TERRITORY -> FLUSHING_TERRITORY_DISPLAY_NAME;
             case INNER_FLUSHING_TERRITORY -> INNER_FLUSHING_TERRITORY_DISPLAY_NAME;
+            case FLUSHING_CONQUEROR -> FLUSHING_CONQUEROR_DISPLAY_NAME;
             case BERLIN_TERRITORY -> BERLIN_TERRITORY_DISPLAY_NAME;
             case BERLIN_RIVAL_BLUE -> BERLIN_RIVAL_BLUE_DISPLAY_NAME;
             case BERLIN_RIVAL_GREEN -> BERLIN_RIVAL_GREEN_DISPLAY_NAME;
@@ -347,8 +519,19 @@ public class LocalSharedRunnerBootstrapService {
             case BERLIN_RIVAL_PINK -> BERLIN_RIVAL_PINK_DISPLAY_NAME;
             case BERLIN_RIVAL_LIME -> BERLIN_RIVAL_LIME_DISPLAY_NAME;
             case BERLIN_RIVAL_CYAN -> BERLIN_RIVAL_CYAN_DISPLAY_NAME;
+            case WORLD_TERRITORY -> "Hermes World Territory Runner";
             case SHARED_RUNNER -> DEFAULT_DISPLAY_NAME;
         };
+    }
+
+    private static String defaultStravaUsername(BootstrapConfig config) {
+        if (config != null && config.effectiveSeedProfile() == SeedProfile.WORLD_TERRITORY) {
+            WorldTerritoryCountry country = config.worldCountry();
+            int accountIndex = normalizedWorldAccountIndex(config.worldAccountIndex());
+            String slug = country != null ? country.slug() : "world";
+            return "hermes-world-" + slug + "-" + paddedWorldIndex(accountIndex);
+        }
+        return defaultStravaUsername(config == null ? SeedProfile.SHARED_RUNNER : config.effectiveSeedProfile());
     }
 
     private static String defaultStravaUsername(SeedProfile seedProfile) {
@@ -356,6 +539,7 @@ public class LocalSharedRunnerBootstrapService {
             case TERRITORY_RIVAL -> "hermes-temporal-territory-rival";
             case FLUSHING_TERRITORY -> "hermes-flushing-territory-tester";
             case INNER_FLUSHING_TERRITORY -> "hermes-inner-flushing-occupier";
+            case FLUSHING_CONQUEROR -> "hermes-flushing-conqueror";
             case BERLIN_TERRITORY -> "hermes-berlin-land-conqueror";
             case BERLIN_RIVAL_BLUE -> "hermes-berlin-blue-rival";
             case BERLIN_RIVAL_GREEN -> "hermes-berlin-green-rival";
@@ -363,6 +547,7 @@ public class LocalSharedRunnerBootstrapService {
             case BERLIN_RIVAL_PINK -> "hermes-berlin-pink-rival";
             case BERLIN_RIVAL_LIME -> "hermes-berlin-lime-rival";
             case BERLIN_RIVAL_CYAN -> "hermes-berlin-cyan-rival";
+            case WORLD_TERRITORY -> "hermes-world-territory-runner";
             case SHARED_RUNNER -> "hermes-local-shared-runner";
         };
     }
@@ -405,7 +590,8 @@ public class LocalSharedRunnerBootstrapService {
         return saved != null ? saved : shoe;
     }
 
-    private int seedActivities(Runner runner, List<Shoe> shoes, SeedProfile seedProfile) {
+    private int seedActivities(Runner runner, List<Shoe> shoes, BootstrapConfig config) {
+        SeedProfile seedProfile = config.effectiveSeedProfile();
         if (seedProfile == SeedProfile.TERRITORY_RIVAL) {
             return seedTerritoryRivalActivities(runner, shoes);
         }
@@ -415,11 +601,17 @@ public class LocalSharedRunnerBootstrapService {
         if (seedProfile == SeedProfile.INNER_FLUSHING_TERRITORY) {
             return seedInnerFlushingTerritoryActivities(runner, shoes);
         }
+        if (seedProfile == SeedProfile.FLUSHING_CONQUEROR) {
+            return seedFlushingConquerorActivities(runner, shoes);
+        }
         if (seedProfile == SeedProfile.BERLIN_TERRITORY) {
             return seedBerlinTerritoryActivities(runner, shoes);
         }
         if (isBerlinRival(seedProfile)) {
             return seedBerlinRivalActivities(runner, shoes, seedProfile);
+        }
+        if (seedProfile == SeedProfile.WORLD_TERRITORY) {
+            return seedWorldTerritoryActivities(runner, shoes, config);
         }
         return seedSharedRunnerActivities(runner, shoes);
     }
@@ -461,8 +653,8 @@ public class LocalSharedRunnerBootstrapService {
             activity.setDurationSeconds((long) durationSeconds);
             activity.setStartTime(startTime);
             activity.setStartDate(startTime.toString());
-            activity.setSourceFileName("local-shared-runner-bootstrap");
-            activity.setSourceChecksum("local-shared-140971747-" + (index + 1));
+            activity.setSourceFileName(SHARED_RUNNER_SOURCE_FILE);
+            activity.setSourceChecksum(SHARED_RUNNER_SEED_VERSION + "-" + (index + 1));
             activity.setAverageHeartRate(136.0 + (index % 5) * 4.0 + (distanceKm >= 18 ? 5.0 : 0.0));
             activity.setMaxHeartRate(168.0 + (index % 4) * 3.0);
             activity.setAverageCadence(170.0 + (index % 7));
@@ -476,6 +668,7 @@ public class LocalSharedRunnerBootstrapService {
             addRouteSamples(activity, index, distanceKm, durationSeconds);
 
             activityRepository.save(activity);
+            persistSeededTerritoryMask(activity);
             seeded++;
         }
         return seeded;
@@ -643,6 +836,85 @@ public class LocalSharedRunnerBootstrapService {
         return seeded;
     }
 
+    private int seedFlushingConquerorActivities(Runner runner, List<Shoe> shoes) {
+        double[][][] routes = {
+                {
+                        {40.7248, -73.8588},
+                        {40.7422, -73.8662},
+                        {40.7678, -73.8544},
+                        {40.7830, -73.8290},
+                        {40.7788, -73.7938},
+                        {40.7552, -73.7720},
+                        {40.7318, -73.7838},
+                        {40.7238, -73.8188},
+                },
+                {
+                        {40.7306, -73.8496},
+                        {40.7502, -73.8542},
+                        {40.7698, -73.8388},
+                        {40.7714, -73.8070},
+                        {40.7524, -73.7852},
+                        {40.7334, -73.7956},
+                        {40.7280, -73.8248},
+                },
+                {
+                        {40.7356, -73.8420},
+                        {40.7528, -73.8466},
+                        {40.7636, -73.8272},
+                        {40.7604, -73.8002},
+                        {40.7440, -73.7878},
+                        {40.7328, -73.8062},
+                        {40.7314, -73.8296},
+                },
+        };
+        String[] names = {
+                "Flushing conqueror full-board loop",
+                "Flushing conqueror central compression loop",
+                "Flushing conqueror inner seal loop",
+        };
+        double[] distancesKm = {26.4, 18.1, 13.7};
+
+        int seeded = 0;
+        for (int index = 0; index < FLUSHING_CONQUEROR_ACTIVITY_SEED_COUNT; index++) {
+            double distanceKm = distancesKm[index];
+            int paceSecondsPerKm = 316 + index * 9;
+            int durationSeconds = (int) Math.round(distanceKm * paceSecondsPerKm);
+            LocalDateTime startTime = FLUSHING_CONQUEROR_ANCHOR_TIME
+                    .minusHours(FLUSHING_CONQUEROR_ACTIVITY_SEED_COUNT - index);
+
+            Activity activity = new Activity();
+            activity.setRunner(runner);
+            activity.setName(names[index]);
+            activity.setStravaId("local-flushing-conqueror-140971758-" + (index + 1));
+            activity.setProvider(ImportProvider.STRAVA);
+            activity.setActivityType(ActivityType.RUN);
+            activity.setDistanceKm(distanceKm);
+            activity.setDistanceMeters(distanceKm * 1000.0);
+            activity.setMovingTimeSeconds(durationSeconds);
+            activity.setDurationSeconds((long) durationSeconds);
+            activity.setStartTime(startTime);
+            activity.setStartDate(startTime.toString());
+            activity.setSourceFileName(FLUSHING_CONQUEROR_SOURCE_FILE);
+            activity.setSourceChecksum(FLUSHING_CONQUEROR_SEED_VERSION + "-" + (index + 1));
+            activity.setAverageHeartRate(141.0 + index * 3.0);
+            activity.setMaxHeartRate(176.0 + index * 2.0);
+            activity.setAverageCadence(170.0 + index);
+            activity.setAverageWatts(224.0 + index * 7.0);
+            activity.setMaxSpeedMps(5.0 + index * 0.08);
+            activity.setTotalElevationGain(18.0 + distanceKm * 1.1);
+            activity.setCalories((int) Math.round(distanceKm * 67.0));
+            activity.setSufferScore(32 + (int) Math.round(distanceKm * 1.4));
+            activity.setWeatherAdjusted(false);
+            activity.setShoe(selectShoe(shoes, index));
+            addFlushingLoopSamples(activity, routes[index], distanceKm, durationSeconds, 54);
+
+            Activity saved = activityRepository.save(activity);
+            persistSeededTerritoryMask(saved != null ? saved : activity);
+            seeded++;
+        }
+        return seeded;
+    }
+
     private int seedBerlinTerritoryActivities(Runner runner, List<Shoe> shoes) {
         double[][][] routes = {
                 {
@@ -779,6 +1051,71 @@ public class LocalSharedRunnerBootstrapService {
             seeded++;
         }
         return seeded;
+    }
+
+    private int seedWorldTerritoryActivities(Runner runner, List<Shoe> shoes, BootstrapConfig config) {
+        WorldTerritoryCountry country = config.worldCountry();
+        if (country == null) {
+            return 0;
+        }
+
+        int accountIndex = normalizedWorldAccountIndex(config.worldAccountIndex());
+        int globalIndex = Math.max(0, config.worldGlobalIndex());
+        double distanceKm = 7.6 + (accountIndex % 7) * 0.24;
+        int durationSeconds = (int) Math.round(distanceKm * (310 + (accountIndex % 5) * 7));
+        LocalDateTime startTime = WORLD_TERRITORY_ANCHOR_TIME.plusMinutes(globalIndex * 7L);
+
+        Activity activity = new Activity();
+        activity.setRunner(runner);
+        activity.setName(country.cityName() + " " + country.countryName() + " territory conquest " + paddedWorldIndex(accountIndex));
+        activity.setStravaId("local-world-territory-" + country.slug() + "-" + paddedWorldIndex(accountIndex));
+        activity.setProvider(ImportProvider.STRAVA);
+        activity.setActivityType(ActivityType.RUN);
+        activity.setDistanceKm(distanceKm);
+        activity.setDistanceMeters(distanceKm * 1000.0);
+        activity.setMovingTimeSeconds(durationSeconds);
+        activity.setDurationSeconds((long) durationSeconds);
+        activity.setStartTime(startTime);
+        activity.setStartDate(startTime.toString());
+        activity.setSourceFileName(WORLD_TERRITORY_SOURCE_FILE);
+        activity.setSourceChecksum(worldTerritorySourceChecksum(config, 1));
+        activity.setAverageHeartRate(130.0 + (accountIndex % 14));
+        activity.setMaxHeartRate(164.0 + (accountIndex % 11));
+        activity.setAverageCadence(164.0 + (accountIndex % 8));
+        activity.setAverageWatts(196.0 + (accountIndex % 12) * 4.0);
+        activity.setMaxSpeedMps(4.45 + (accountIndex % 6) * 0.08);
+        activity.setTotalElevationGain(8.0 + (accountIndex % 9) * 1.6);
+        activity.setCalories((int) Math.round(distanceKm * 64.0));
+        activity.setSufferScore(14 + accountIndex % 18);
+        activity.setWeatherAdjusted(false);
+        activity.setShoe(selectShoe(shoes, accountIndex));
+        addFlushingLoopSamples(activity, worldTerritoryRouteVertices(country, accountIndex), distanceKm, durationSeconds, 9);
+
+        Activity saved = activityRepository.save(activity);
+        persistSeededTerritoryMask(saved != null ? saved : activity);
+        return 1;
+    }
+
+    private static double[][] worldTerritoryRouteVertices(WorldTerritoryCountry country, int accountIndex) {
+        int zeroIndex = Math.max(0, accountIndex - 1);
+        int row = zeroIndex / WORLD_TERRITORY_GRID_COLUMNS;
+        int col = zeroIndex % WORLD_TERRITORY_GRID_COLUMNS;
+        double centerLat = country.anchorLatitude()
+                + metersToLatitudeDegrees((row - 4.5) * WORLD_TERRITORY_CENTER_SPACING_METERS);
+        double centerLng = country.anchorLongitude()
+                + metersToLongitudeDegrees((col - 4.5) * WORLD_TERRITORY_CENTER_SPACING_METERS, centerLat);
+        double radiusMeters = WORLD_TERRITORY_LOOP_RADIUS_METERS + (zeroIndex % 4) * 4.0;
+        double latRadius = metersToLatitudeDegrees(radiusMeters);
+        double lngRadius = metersToLongitudeDegrees(radiusMeters, centerLat);
+        double skew = (zeroIndex % 3 - 1) * 0.12;
+        return new double[][]{
+                {centerLat - latRadius, centerLng - lngRadius * (0.42 + skew)},
+                {centerLat - latRadius * 0.34, centerLng - lngRadius},
+                {centerLat + latRadius * 0.58, centerLng - lngRadius * 0.78},
+                {centerLat + latRadius, centerLng + lngRadius * (0.20 - skew)},
+                {centerLat + latRadius * 0.30, centerLng + lngRadius},
+                {centerLat - latRadius * 0.66, centerLng + lngRadius * 0.70},
+        };
     }
 
     private static double[][][] berlinRivalRoutes(SeedProfile seedProfile) {
@@ -1118,6 +1455,10 @@ public class LocalSharedRunnerBootstrapService {
         if (activity == null || activity.getId() == null || territoryPolygonRepository == null || territoryPolygonComputer == null) {
             return;
         }
+        if (WORLD_TERRITORY_SOURCE_FILE.equals(activity.getSourceFileName())) {
+            persistWorldTerritoryMask(activity);
+            return;
+        }
         List<double[]> points = activity.getPoints().stream()
                 .filter(point -> point != null
                         && isValidCoordinate(point.getLatitude(), point.getLongitude()))
@@ -1125,6 +1466,19 @@ public class LocalSharedRunnerBootstrapService {
                 .toList();
         List<TerritoryPolygonComputer.DetectedTerritoryMask> masks = territoryPolygonComputer.detectTerritoryMasks(points);
         territoryPolygonRepository.deleteByActivityId(activity.getId());
+        if (masks.isEmpty()) {
+            TerritoryPolygon marker = new TerritoryPolygon();
+            marker.setUserId(activity.getRunner().getId());
+            marker.setActivityId(activity.getId());
+            marker.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                    List.of(),
+                    TerritoryPolygonComputer.LAND_MASK_CELL_METERS,
+                    TerritoryPolygonComputer.TerritoryMaskKind.LAND
+            ));
+            marker.setAreaSquareMeters(0.0);
+            territoryPolygonRepository.save(marker);
+            return;
+        }
         for (TerritoryPolygonComputer.DetectedTerritoryMask mask : masks) {
             TerritoryPolygon polygon = new TerritoryPolygon();
             polygon.setUserId(activity.getRunner().getId());
@@ -1133,6 +1487,58 @@ public class LocalSharedRunnerBootstrapService {
             polygon.setAreaSquareMeters(mask.areaSquareMeters());
             territoryPolygonRepository.save(polygon);
         }
+    }
+
+    private void persistWorldTerritoryMask(Activity activity) {
+        List<ActivityPoint> points = activity.getPoints().stream()
+                .filter(point -> point != null
+                        && isValidCoordinate(point.getLatitude(), point.getLongitude()))
+                .toList();
+        if (points.isEmpty() || activity.getRunner() == null || activity.getRunner().getId() == null) {
+            return;
+        }
+
+        double centerLat = points.stream().mapToDouble(ActivityPoint::getLatitude).average().orElse(Double.NaN);
+        double centerLng = points.stream().mapToDouble(ActivityPoint::getLongitude).average().orElse(Double.NaN);
+        if (!isValidCoordinate(centerLat, centerLng)) {
+            return;
+        }
+
+        List<TerritoryPolygonComputer.MaskCell> cells = worldTerritoryCoarseMaskCells(centerLat, centerLng);
+        if (cells.isEmpty()) {
+            return;
+        }
+
+        territoryPolygonRepository.deleteByActivityId(activity.getId());
+        TerritoryPolygon polygon = new TerritoryPolygon();
+        polygon.setUserId(activity.getRunner().getId());
+        polygon.setActivityId(activity.getId());
+        polygon.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(cells, WORLD_TERRITORY_MASK_CELL_METERS));
+        polygon.setAreaSquareMeters(cells.size() * WORLD_TERRITORY_MASK_CELL_METERS * WORLD_TERRITORY_MASK_CELL_METERS);
+        territoryPolygonRepository.save(polygon);
+    }
+
+    private static List<TerritoryPolygonComputer.MaskCell> worldTerritoryCoarseMaskCells(double centerLat, double centerLng) {
+        double cosLat = Math.cos(Math.toRadians(centerLat));
+        if (Math.abs(cosLat) < 1e-6) {
+            return List.of();
+        }
+
+        int radiusCells = Math.max(1, (int) Math.ceil(WORLD_TERRITORY_MASK_RADIUS_METERS / WORLD_TERRITORY_MASK_CELL_METERS));
+        List<TerritoryPolygonComputer.MaskCell> cells = new ArrayList<>();
+        for (int y = -radiusCells; y <= radiusCells; y += 1) {
+            for (int x = -radiusCells; x <= radiusCells; x += 1) {
+                double metersX = x * WORLD_TERRITORY_MASK_CELL_METERS;
+                double metersY = y * WORLD_TERRITORY_MASK_CELL_METERS;
+                if (Math.hypot(metersX, metersY) > WORLD_TERRITORY_MASK_RADIUS_METERS) {
+                    continue;
+                }
+                double latitude = centerLat + metersToLatitudeDegrees(metersY);
+                double longitude = centerLng + metersToLongitudeDegrees(metersX, centerLat);
+                cells.add(new TerritoryPolygonComputer.MaskCell(round6(latitude), round6(longitude)));
+            }
+        }
+        return cells;
     }
 
     private static void addFlushingLoopSamples(
@@ -1228,16 +1634,18 @@ public class LocalSharedRunnerBootstrapService {
     }
 
     private void addRouteSamples(Activity activity, int activityIndex, double distanceKm, int durationSeconds) {
-        addRouteSamples(activity, activityIndex, distanceKm, durationSeconds, 14);
+        addRouteSamples(activity, activityIndex, distanceKm, durationSeconds, 32);
     }
 
     private void addRouteSamples(Activity activity, int activityIndex, double distanceKm, int durationSeconds, int samples) {
+        double[][] vertices = sharedRouteVertices(activityIndex, distanceKm);
         for (int sample = 0; sample < samples; sample++) {
             double progress = sample / (double) (samples - 1);
+            double[] coordinate = interpolateLoopVertex(vertices, progress);
             ActivityPoint point = new ActivityPoint();
             point.setSequenceIndex(sample);
-            point.setLatitude(sharedRouteLatitude(activityIndex, sample, samples));
-            point.setLongitude(sharedRouteLongitude(activityIndex, sample, samples));
+            point.setLatitude(coordinate[0]);
+            point.setLongitude(coordinate[1]);
             point.setElapsedSeconds((int) Math.round(durationSeconds * progress));
             point.setDistanceMeters(distanceKm * 1000.0 * progress);
             double routePhase = activityIndex * 0.37;
@@ -1250,18 +1658,92 @@ public class LocalSharedRunnerBootstrapService {
         }
     }
 
-    private static double sharedRouteLatitude(int activityIndex, int sample, int samples) {
-        double progress = sample / (double) (samples - 1);
-        double routePhase = activityIndex * 0.37;
-        double baseLatitude = 42.3520 + (activityIndex % 4) * 0.003;
-        return baseLatitude + Math.sin(progress * Math.PI * 2.0 + routePhase) * 0.008 + progress * 0.011;
+    private static double[][] sharedRouteVertices(int activityIndex, double distanceKm) {
+        double baseLatitude = 40.7345 + (activityIndex / 6) * 0.0062 + (activityIndex % 3) * 0.0009;
+        double baseLongitude = -73.8285 + (activityIndex % 6) * 0.0046;
+        double widthMeters = 260.0 + distanceKm * 22.0 + (activityIndex % 4) * 28.0;
+        double heightMeters = 180.0 + distanceKm * 16.0 + (activityIndex % 3) * 24.0;
+        double notchMeters = Math.max(30.0, Math.min(widthMeters * 0.22, 110.0));
+        double tailMeters = (activityIndex % 3 == 0) ? 0.0 : Math.min(36.0, distanceKm * 1.8);
+        double cosLat = Math.cos(Math.toRadians(baseLatitude));
+        double widthLng = widthMeters / (TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosLat);
+        double heightLat = heightMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double notchLng = notchMeters / (TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosLat);
+        double tailLat = tailMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+
+        return switch (activityIndex % 6) {
+            case 0 -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude},
+            };
+            case 1 -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude - tailLat, baseLongitude},
+                    {baseLatitude, baseLongitude + widthLng * 0.86},
+                    {baseLatitude + heightLat * 0.34, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.76},
+                    {baseLatitude + heightLat * 0.92, baseLongitude + notchLng},
+                    {baseLatitude + heightLat * 0.42, baseLongitude},
+            };
+            case 2 -> new double[][]{
+                    {baseLatitude, baseLongitude + widthLng * 0.14},
+                    {baseLatitude + heightLat * 0.18, baseLongitude + widthLng},
+                    {baseLatitude + heightLat * 0.82, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.18},
+                    {baseLatitude + heightLat * 0.52, baseLongitude},
+            };
+            case 3 -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude - tailLat, baseLongitude + notchLng * 0.25},
+                    {baseLatitude, baseLongitude + widthLng},
+                    {baseLatitude + heightLat * 0.55, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.62},
+                    {baseLatitude + heightLat * 0.92, baseLongitude},
+            };
+            case 4 -> new double[][]{
+                    {baseLatitude, baseLongitude + widthLng * 0.22},
+                    {baseLatitude + heightLat * 0.12, baseLongitude + widthLng},
+                    {baseLatitude + heightLat * 0.48, baseLongitude + widthLng * 0.84},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.58},
+                    {baseLatitude + heightLat * 0.88, baseLongitude},
+                    {baseLatitude + heightLat * 0.32, baseLongitude},
+            };
+            default -> new double[][]{
+                    {baseLatitude, baseLongitude},
+                    {baseLatitude, baseLongitude + widthLng * 0.52},
+                    {baseLatitude + heightLat * 0.28, baseLongitude + widthLng},
+                    {baseLatitude + heightLat, baseLongitude + widthLng * 0.78},
+                    {baseLatitude + heightLat * 0.88, baseLongitude},
+                    {baseLatitude + heightLat * 0.36, baseLongitude},
+            };
+        };
     }
 
-    private static double sharedRouteLongitude(int activityIndex, int sample, int samples) {
-        double progress = sample / (double) (samples - 1);
-        double routePhase = activityIndex * 0.37;
-        double baseLongitude = -71.0720 + (activityIndex % 5) * 0.004;
-        return baseLongitude + Math.cos(progress * Math.PI * 2.0 + routePhase) * 0.010 + progress * 0.006;
+    private static double[] interpolateLoopVertex(double[][] vertices, double progress) {
+        if (vertices == null || vertices.length == 0) {
+            return new double[]{40.7345, -73.8285};
+        }
+        if (vertices.length == 1) {
+            return new double[]{vertices[0][0], vertices[0][1]};
+        }
+        double normalized = progress - Math.floor(progress);
+        if (progress >= 1.0) {
+            normalized = 0.0;
+        }
+        double scaled = normalized * vertices.length;
+        int startIndex = (int) Math.floor(scaled) % vertices.length;
+        int endIndex = (startIndex + 1) % vertices.length;
+        double segmentProgress = scaled - Math.floor(scaled);
+        double startLat = vertices[startIndex][0];
+        double startLng = vertices[startIndex][1];
+        double endLat = vertices[endIndex][0];
+        double endLng = vertices[endIndex][1];
+        return new double[]{
+                startLat + (endLat - startLat) * segmentProgress,
+                startLng + (endLng - startLng) * segmentProgress
+        };
     }
 
     private static boolean isBlank(String value) {
@@ -1311,14 +1793,71 @@ public class LocalSharedRunnerBootstrapService {
         return Integer.parseInt(value.toString());
     }
 
+    private static double metersToLatitudeDegrees(double meters) {
+        return meters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+    }
+
+    private static double metersToLongitudeDegrees(double meters, double latitude) {
+        double cosLat = Math.cos(Math.toRadians(latitude));
+        if (Math.abs(cosLat) < 1e-6) {
+            return 0.0;
+        }
+        return meters / (TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosLat);
+    }
+
+    private static int normalizedWorldAccountIndex(int accountIndex) {
+        return Math.max(1, accountIndex);
+    }
+
+    private static String paddedWorldIndex(int accountIndex) {
+        int normalized = normalizedWorldAccountIndex(accountIndex);
+        if (normalized < 10) {
+            return "00" + normalized;
+        }
+        if (normalized < 100) {
+            return "0" + normalized;
+        }
+        return String.valueOf(normalized);
+    }
+
+    private static String worldTerritorySourceChecksum(BootstrapConfig config, int activityIndex) {
+        WorldTerritoryCountry country = config != null ? config.worldCountry() : null;
+        String slug = country != null ? country.slug() : "world";
+        int accountIndex = normalizedWorldAccountIndex(config != null ? config.worldAccountIndex() : 1);
+        return WORLD_TERRITORY_SEED_VERSION + "-" + slug + "-" + paddedWorldIndex(accountIndex) + "-" + activityIndex;
+    }
+
+    private static String worldTerritoryEmail(WorldTerritoryCountry country, int accountIndex) {
+        return "territory-world-" + country.slug() + "-" + paddedWorldIndex(accountIndex) + "@hermes.local";
+    }
+
+    private static String worldTerritoryDisplayName(WorldTerritoryCountry country, int accountIndex) {
+        String fakeName = WORLD_TERRITORY_FAKE_NAMES.get(Math.floorMod(accountIndex - 1, WORLD_TERRITORY_FAKE_NAMES.size()));
+        return fakeName + " " + country.countryName() + " Territory " + paddedWorldIndex(accountIndex);
+    }
+
     public record BootstrapConfig(
             String email,
             String password,
             Long stravaAthleteId,
             String displayName,
             boolean seedMockData,
-            SeedProfile seedProfile
+            SeedProfile seedProfile,
+            WorldTerritoryCountry worldCountry,
+            int worldAccountIndex,
+            int worldGlobalIndex
     ) {
+        public BootstrapConfig(
+                String email,
+                String password,
+                Long stravaAthleteId,
+                String displayName,
+                boolean seedMockData,
+            SeedProfile seedProfile
+        ) {
+            this(email, password, stravaAthleteId, displayName, seedMockData, seedProfile, null, 0, 0);
+        }
+
         public BootstrapConfig(
                 String email,
                 String password,
@@ -1373,6 +1912,17 @@ public class LocalSharedRunnerBootstrapService {
             );
         }
 
+        public static BootstrapConfig flushingConquerorDefault(String password) {
+            return new BootstrapConfig(
+                    FLUSHING_CONQUEROR_EMAIL,
+                    password,
+                    FLUSHING_CONQUEROR_STRAVA_ATHLETE_ID,
+                    FLUSHING_CONQUEROR_DISPLAY_NAME,
+                    true,
+                    SeedProfile.FLUSHING_CONQUEROR
+            );
+        }
+
         public static BootstrapConfig berlinTerritoryDefault(String password) {
             return new BootstrapConfig(
                     BERLIN_TERRITORY_EMAIL,
@@ -1398,6 +1948,52 @@ public class LocalSharedRunnerBootstrapService {
             );
         }
 
+        public static List<BootstrapConfig> worldTerritoryDefaults(String password) {
+            return worldTerritoryDefaults(password, WORLD_TERRITORY_ACCOUNTS_PER_COUNTRY, true);
+        }
+
+        public static List<BootstrapConfig> worldTerritoryDefaults(
+                String password,
+                int accountsPerCountry,
+                boolean seedMockData
+        ) {
+            int count = Math.max(0, accountsPerCountry);
+            List<BootstrapConfig> configs = new ArrayList<>();
+            List<WorldTerritoryCountry> countries = WORLD_TERRITORY_COUNTRIES;
+            for (int countryIndex = 0; countryIndex < countries.size(); countryIndex += 1) {
+                WorldTerritoryCountry country = countries.get(countryIndex);
+                for (int accountIndex = 1; accountIndex <= count; accountIndex += 1) {
+                    int globalIndex = countryIndex * count + accountIndex - 1;
+                    configs.add(worldTerritoryDefault(password, country, accountIndex, globalIndex, seedMockData));
+                }
+            }
+            return configs;
+        }
+
+        public static BootstrapConfig worldTerritoryDefault(
+                String password,
+                WorldTerritoryCountry country,
+                int accountIndex,
+                int globalIndex,
+                boolean seedMockData
+        ) {
+            if (country == null) {
+                throw new IllegalArgumentException("World territory country is required.");
+            }
+            int normalizedIndex = normalizedWorldAccountIndex(accountIndex);
+            return new BootstrapConfig(
+                    worldTerritoryEmail(country, normalizedIndex),
+                    password,
+                    WORLD_TERRITORY_STRAVA_ATHLETE_ID_BASE + Math.max(0, globalIndex),
+                    worldTerritoryDisplayName(country, normalizedIndex),
+                    seedMockData,
+                    SeedProfile.WORLD_TERRITORY,
+                    country,
+                    normalizedIndex,
+                    Math.max(0, globalIndex)
+            );
+        }
+
         SeedProfile effectiveSeedProfile() {
             return seedProfile == null ? SeedProfile.SHARED_RUNNER : seedProfile;
         }
@@ -1417,17 +2013,107 @@ public class LocalSharedRunnerBootstrapService {
     private record TerritoryConflictSeedCell(String key, double centerLat, double centerLng, int sourceSampleCount) {
     }
 
+    private static List<WorldTerritoryCountry> createWorldTerritoryCountries() {
+        String[] isoCodes = Locale.getISOCountries();
+        Arrays.sort(isoCodes);
+        List<WorldTerritoryCountry> countries = new ArrayList<>();
+        int fallbackIndex = 0;
+        for (String isoCode : isoCodes) {
+            Locale locale = new Locale("", isoCode);
+            String countryName = locale.getDisplayCountry(Locale.ENGLISH);
+            if (countryName == null || countryName.isBlank()) {
+                continue;
+            }
+            double[] anchor = worldTerritoryCountryAnchor(isoCode, fallbackIndex);
+            if (!hasNamedWorldTerritoryAnchor(isoCode)) {
+                fallbackIndex += 1;
+            }
+            countries.add(new WorldTerritoryCountry(
+                    isoCode,
+                    isoCode.toLowerCase(Locale.ROOT),
+                    countryName,
+                    countryName + " Test City",
+                    anchor[0],
+                    anchor[1]
+            ));
+        }
+        return List.copyOf(countries);
+    }
+
+    private static boolean hasNamedWorldTerritoryAnchor(String isoCode) {
+        return switch (String.valueOf(isoCode).toUpperCase(Locale.ROOT)) {
+            case "US", "CN", "JP", "GB", "FR", "DE", "BR", "AU", "ZA", "CA", "MX", "IN", "RU",
+                 "KR", "SG", "IT", "ES", "AR", "CL", "EG", "KE", "NG" -> true;
+            default -> false;
+        };
+    }
+
+    private static double[] worldTerritoryCountryAnchor(String isoCode, int fallbackIndex) {
+        return switch (String.valueOf(isoCode).toUpperCase(Locale.ROOT)) {
+            case "US" -> new double[]{40.7128, -74.0060};
+            case "CN" -> new double[]{39.9042, 116.4074};
+            case "JP" -> new double[]{35.6762, 139.6503};
+            case "GB" -> new double[]{51.5074, -0.1278};
+            case "FR" -> new double[]{48.8566, 2.3522};
+            case "DE" -> new double[]{52.5200, 13.4050};
+            case "BR" -> new double[]{-23.5505, -46.6333};
+            case "AU" -> new double[]{-33.8688, 151.2093};
+            case "ZA" -> new double[]{-26.2041, 28.0473};
+            case "CA" -> new double[]{43.6532, -79.3832};
+            case "MX" -> new double[]{19.4326, -99.1332};
+            case "IN" -> new double[]{19.0760, 72.8777};
+            case "RU" -> new double[]{55.7558, 37.6173};
+            case "KR" -> new double[]{37.5665, 126.9780};
+            case "SG" -> new double[]{1.3521, 103.8198};
+            case "IT" -> new double[]{41.9028, 12.4964};
+            case "ES" -> new double[]{40.4168, -3.7038};
+            case "AR" -> new double[]{-34.6037, -58.3816};
+            case "CL" -> new double[]{-33.4489, -70.6693};
+            case "EG" -> new double[]{30.0444, 31.2357};
+            case "KE" -> new double[]{-1.2864, 36.8172};
+            case "NG" -> new double[]{6.5244, 3.3792};
+            default -> worldTerritoryFallbackAnchor(fallbackIndex);
+        };
+    }
+
+    private static double[] worldTerritoryFallbackAnchor(int fallbackIndex) {
+        int safeIndex = Math.max(0, fallbackIndex);
+        int columns = 19;
+        int row = safeIndex / columns;
+        int column = safeIndex % columns;
+        double latitude = -66.0 + row * 12.0;
+        double longitude = -171.0 + column * 18.0;
+        return new double[]{round6(latitude), round6(longitude)};
+    }
+
+    private static double round6(double value) {
+        return Math.round(value * 1_000_000.0) / 1_000_000.0;
+    }
+
+    public record WorldTerritoryCountry(
+            String isoCode,
+            String slug,
+            String countryName,
+            String cityName,
+            double anchorLatitude,
+            double anchorLongitude
+    ) {
+    }
+
     public enum SeedProfile {
         SHARED_RUNNER,
         TERRITORY_RIVAL,
         FLUSHING_TERRITORY,
         INNER_FLUSHING_TERRITORY,
+        FLUSHING_CONQUEROR,
         BERLIN_TERRITORY,
         BERLIN_RIVAL_BLUE,
         BERLIN_RIVAL_GREEN,
         BERLIN_RIVAL_GOLD,
         BERLIN_RIVAL_PINK,
         BERLIN_RIVAL_LIME,
-        BERLIN_RIVAL_CYAN
+        BERLIN_RIVAL_CYAN,
+        WORLD_TERRITORY
     }
+
 }

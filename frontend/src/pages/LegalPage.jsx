@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { createElement, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Database, FileCheck2, LockKeyhole, ShieldCheck } from 'lucide-react';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
@@ -152,9 +153,19 @@ export default function LegalPage({ variant = 'terms' }) {
 
   const dictionary = lang === 'zh-CN' ? LEGAL_COPY.zh : LEGAL_COPY.en;
   const page = useMemo(() => dictionary[variant] || dictionary.terms, [dictionary, variant]);
+  const isPrivacy = variant === 'privacy';
+  const privacySignals = useMemo(() => {
+    if (!isPrivacy) return [];
+    return [
+      { icon: Database, label: page.sections[0]?.heading, value: '01' },
+      { icon: ShieldCheck, label: page.sections[2]?.heading, value: '02' },
+      { icon: LockKeyhole, label: page.sections[3]?.heading, value: '03' },
+      { icon: FileCheck2, label: page.sections[4]?.heading, value: '04' },
+    ].filter((item) => item.label);
+  }, [isPrivacy, page.sections]);
 
   return (
-    <div className="legal-page">
+    <div className={`legal-page legal-page--${variant}`}>
       <div className="legal-page-shell">
         <header className="legal-page-header">
           <button
@@ -165,19 +176,47 @@ export default function LegalPage({ variant = 'terms' }) {
             <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
             <span>{isAuthenticated ? dictionary.backApp : dictionary.backHome}</span>
           </button>
-          <HermesLogo dark />
+          <HermesLogo tone="dark" />
         </header>
 
         <main className="legal-page-content">
           <section className="legal-page-hero">
-            <span className="legal-page-eyebrow">{page.eyebrow}</span>
-            <h1>{page.title}</h1>
-            <p>{page.intro}</p>
+            <div className="legal-page-hero-copy">
+              <span className="legal-page-eyebrow">{page.eyebrow}</span>
+              <h1>{page.title}</h1>
+              <p>{page.intro}</p>
+            </div>
+
+            {isPrivacy && (
+              <aside className="privacy-hero-panel" aria-label={page.title}>
+                <div className="privacy-hero-panel-ring" aria-hidden="true">
+                  <ShieldCheck size={44} strokeWidth={1.7} />
+                </div>
+                <div>
+                  <span>{page.updated}</span>
+                  <strong>{page.sections[2]?.heading}</strong>
+                </div>
+                <p>{page.sections[2]?.body}</p>
+              </aside>
+            )}
           </section>
+
+          {isPrivacy && (
+            <section className="privacy-signal-strip" aria-label={page.title}>
+              {privacySignals.map((signal) => (
+                <article className="privacy-signal" key={signal.label}>
+                  {createElement(signal.icon, { size: 22, strokeWidth: 1.7, 'aria-hidden': true })}
+                  <span>{signal.value}</span>
+                  <strong>{signal.label}</strong>
+                </article>
+              ))}
+            </section>
+          )}
 
           <section className="legal-page-sections">
             {page.sections.map((section) => (
               <article key={section.heading} className="legal-page-card">
+                {isPrivacy && <span className="legal-page-card-index" aria-hidden="true" />}
                 <h2>{section.heading}</h2>
                 <p>{section.body}</p>
               </article>

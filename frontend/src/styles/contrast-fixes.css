@@ -112,6 +112,11 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(
   color: var(--text-strong, #2c2f30) !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-signal--count :is(span, strong, p) {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
 /* Restore cream on the dark cinematic command cards that legitimately want
    light text on a dark gradient. These intentionally override the blanket
    rule above. */
@@ -174,25 +179,6 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .
 /* Pattern A'' — the Runs generated image hero is intentionally photographic
    even in light mode. Keep its copy in the dark-hero treatment so the text does
    not fall back to charcoal/muted gray over the image. */
-body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-overlay::after {
-  background:
-    linear-gradient(90deg, rgba(18, 16, 13, 0.9) 0%, rgba(18, 16, 13, 0.72) 42%, rgba(18, 16, 13, 0.2) 76%),
-    linear-gradient(180deg, rgba(18, 16, 13, 0.08) 0%, rgba(18, 16, 13, 0.2) 46%, rgba(18, 16, 13, 0.82) 100%) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-copy {
-  color: #fff8ee !important;
-  text-shadow: 0 2px 20px rgba(18, 16, 13, 0.72);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-copy :is(h1, h2, p, span, small, em) {
-  color: inherit !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .recent-runs-hero--dashboard .recent-runs-hero-copy .recent-runs-hero-kicker {
-  color: rgba(255, 194, 169, 0.94) !important;
-}
-
 /* ----------------------------------------------------------------------------
    Pattern B — footer "条款 / 隐私 / 服务" links rendered as `rgb(242,240,238)`
    cream on a near-white footer (ratio 1.05) across /runs, /weather, /races,
