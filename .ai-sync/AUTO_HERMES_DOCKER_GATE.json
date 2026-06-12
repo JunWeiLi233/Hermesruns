@@ -1,21 +1,15 @@
 {
-  "generatedAt": "2026-06-12T17:47:34.964Z",
-  "passed": false,
-  "gitHead": "2494edca50318b233d73734bc521b7f8d7072bae",
-  "statusSnapshot": "M  DESIGN_VERSIONS.md\nM  backend/src/main/java/com/hermes/backend/ActivityController.java\nM  backend/src/main/java/com/hermes/backend/ActivityPointRepository.java\nM  backend/src/main/java/com/hermes/backend/ActivityRepository.java\nM  backend/src/test/java/com/hermes/backend/ActivityControllerTests.java\nM  frontend/src/pages/Runs.jsx\nM  frontend/src/pages/runsRoutePreviewCache.smoke.test.js\nM  frontend/src/pages/runsThumbDarkMapTile.smoke.test.js\nM  frontend/src/styles/_split/runs.css\nM  frontend/src/styles/style.css",
+  "generatedAt": "2026-06-12T18:10:11.229Z",
+  "passed": true,
+  "gitHead": "ba8825b42ac61a786fcb1ce843b5f0b6b04e568b",
+  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md\n M backend/src/test/java/com/hermes/backend/GoogleHealthImportServiceTest.java\n M frontend/src/pages/runsHeroOverlayContrast.smoke.test.js",
   "changedPaths": [
-    "DESIGN_VERSIONS.md",
-    "backend/src/main/java/com/hermes/backend/ActivityController.java",
-    "backend/src/main/java/com/hermes/backend/ActivityPointRepository.java",
-    "backend/src/main/java/com/hermes/backend/ActivityRepository.java",
-    "backend/src/test/java/com/hermes/backend/ActivityControllerTests.java",
-    "frontend/src/pages/Runs.jsx",
-    "frontend/src/pages/runsRoutePreviewCache.smoke.test.js",
-    "frontend/src/pages/runsThumbDarkMapTile.smoke.test.js",
-    "frontend/src/styles/_split/runs.css",
-    "frontend/src/styles/style.css"
+    ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
+    "ai-sync/AUTO_HERMES_DOCKER_GATE.json",
+    "backend/src/test/java/com/hermes/backend/GoogleHealthImportServiceTest.java",
+    "frontend/src/pages/runsHeroOverlayContrast.smoke.test.js"
   ],
   "command": "docker build -f C:\\Users\\Junwei\\Downloads\\Hermes\\.worktrees\\runs-route-thumb-pr\\Dockerfile -t hermes-autohermes-gate:local .",
-  "reason": "Docker publish gate failed for the current working tree.",
-  "output": "ERROR: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.\nCommand failed: C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe build -f C:\\Users\\Junwei\\Downloads\\Hermes\\.worktrees\\runs-route-thumb-pr\\Dockerfile -t hermes-autohermes-gate:local .\nERROR: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified."
+  "reason": "Docker publish gate passed for the current working tree.",
+  "output": ""
 }
