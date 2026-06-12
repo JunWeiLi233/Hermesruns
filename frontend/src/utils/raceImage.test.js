@@ -24,6 +24,7 @@ globalThis.window = {
     port: '5173',
   },
   sessionStorage,
+  localStorage,
 };
 globalThis.localStorage = localStorage;
 
@@ -50,7 +51,12 @@ globalThis.fetch = async () => {
   };
 };
 
-const { invalidateRaceImageCache, resolveRaceImage } = await import('./raceImage.js');
+const {
+  getCachedRaceImage,
+  invalidateRaceImageCache,
+  rememberLoadedRaceImage,
+  resolveRaceImage,
+} = await import('./raceImage.js');
 
 invalidateRaceImageCache(race);
 const [firstResolved, secondResolved] = await Promise.all([
@@ -89,5 +95,22 @@ const secondMiss = await resolveRaceImage(race);
 assert.equal(fetchCount, 1);
 assert.equal(firstMiss.imageUrl, '');
 assert.equal(secondMiss.imageUrl, '');
+
+invalidateRaceImageCache(race);
+sessionStorage.removeItem('hermes.raceImageCache.v1');
+localStorage.removeItem('hermes.raceImageCache.v1');
+
+rememberLoadedRaceImage(race, 'https://cdn.example.com/loaded-race.jpg');
+
+assert.equal(
+  getCachedRaceImage(race).imageUrl,
+  'https://cdn.example.com/loaded-race.jpg',
+  'loaded race images should be reused from the app cache',
+);
+assert.match(
+  localStorage.getItem('hermes.raceImageCache.v1') || '',
+  /loaded-race\.jpg/,
+  'loaded race images should persist beyond the current session',
+);
 
 console.log('[PASS] Race image request dedupe and cooldown guards passed.');

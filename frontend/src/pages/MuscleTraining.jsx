@@ -712,11 +712,6 @@ const TARGET_MUSCLE_SLUGS = {
   core: ['abs', 'obliques'],
 };
 
-const SLUG_TO_TARGET = Object.entries(TARGET_MUSCLE_SLUGS).reduce((acc, [target, slugs]) => {
-  slugs.forEach((slug) => { if (!acc[slug]) acc[slug] = target; });
-  return acc;
-}, {});
-
 const MUSCLE_SLUG_LABEL = {
   chest: { zh: '胸部', en: 'Chest' },
   'upper-back': { zh: '上背', en: 'Upper Back' },
@@ -3326,11 +3321,6 @@ export default function MuscleTraining() {
     [buildTopRecommendationItems, selectedMuscleTarget],
   );
 
-  const muscleVisualHeatmapData = useMemo(() => {
-    const slugs = TARGET_MUSCLE_SLUGS[selectedMuscleTarget] || [];
-    return slugs.map((slug) => ({ slug, intensity: 2 }));
-  }, [selectedMuscleTarget]);
-
   const selectedProtocolItem = useMemo(() => (
     visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
     || visibleExerciseItems[0]
@@ -3395,7 +3385,8 @@ export default function MuscleTraining() {
     const dayLabel = nextStrengthIndex === 0
       ? stitchCopy.todayBadge
       : formatDayLabel(strengthDay.date, strengthDay.dayLabel, displayLang);
-    const sessionLabel = pickLabel(copy.sessionTypes, strengthDay.strength?.sessionType, stitchCopy.strengthDayBadge);
+    const sessionLabel = pickStrengthSessionLabel(copy, strengthDay.strength?.sessionType)
+      || stitchCopy.strengthDayBadge;
     const durationLabel = strengthDay.strength?.durationMinutes
       ? formatMinutes(strengthDay.strength.durationMinutes, isZh)
       : '';
@@ -3403,7 +3394,7 @@ export default function MuscleTraining() {
       label: [dayLabel, sessionLabel].filter(Boolean).join(' - '),
       meta: [durationLabel, strengthDay.strength?.targetRpe != null ? `RPE ${strengthDay.strength.targetRpe}` : ''].filter(Boolean).join(' · ') || stitchCopy.weekAlignLabel,
     };
-  }, [copy.sessionTypes, displayLang, isZh, plan, stitchCopy]);
+  }, [copy, displayLang, isZh, plan, stitchCopy]);
 
   const currentSplitLabel = useMemo(() => (
     pickLabel(copy.currentFocus, plan?.weekContext?.currentFocus, featuredSession?.emphasis || stitchCopy.strength)
@@ -3545,18 +3536,12 @@ export default function MuscleTraining() {
     const nextItems = buildTopRecommendationItems(targetKey);
     setSelectedMuscleTarget(targetKey);
     setSelectedMuscleHitZoneId(hitZoneId);
+    setClickedMuscleSlug(TARGET_MUSCLE_SLUGS[targetKey]?.[0] || null);
     setActiveTarget(targetKey);
     setExpandedExerciseIdx(null);
     if (nextItems[0]) {
       setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
     }
-  }
-
-  function handleMusclePartClick(bodyPart) {
-    const slug = bodyPart?.slug;
-    if (!slug || !SLUG_TO_TARGET[slug]) return;
-    setClickedMuscleSlug(slug);
-    handleTopMuscleSelect(SLUG_TO_TARGET[slug]);
   }
 
   function handleTopExerciseSelect(item) {

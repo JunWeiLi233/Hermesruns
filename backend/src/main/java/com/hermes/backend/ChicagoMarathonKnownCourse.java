@@ -7,18 +7,18 @@ final class ChicagoMarathonKnownCourse {
     static final String RACE_ID = "chicago-marathon";
     static final String OFFICIAL_COURSE_URL = "https://assets-chicagomarathon-com.s3.amazonaws.com/wp-content/uploads/2025/08/25-BACM-COURSE-MAP-1.pdf";
     static final String OFFICIAL_SOURCE = "chicago-official-course";
-    static final int OFFICIAL_TOTAL_CLIMB_METERS = 35;
-    static final String SOURCE_NOTE = "Chicago Marathon 2025 official course-map route cross-check";
+    static final int OFFICIAL_TOTAL_CLIMB_METERS = 74;
+    static final String SOURCE_NOTE = "Chicago Marathon 2025 official course-map route cross-check with published flat-profile elevation range";
 
     private static final int[] ELEVATION_PROFILE_METERS = {
-            181, 180, 180, 179, 179, 180, 181, 181,
-            180, 179, 178, 178, 179, 180, 181, 182,
-            181, 180, 179, 178, 178, 177, 177, 178,
-            179, 180, 181, 181, 180, 179, 178, 177,
-            176, 176, 177, 178, 179, 180, 181, 182,
-            182, 181, 180, 179, 178, 178, 179, 180,
-            181, 182, 183, 182, 181, 180, 179, 178,
-            178, 179, 180, 181, 182, 181, 180, 181
+            184, 185, 184, 183, 182, 178, 176, 180,
+            184, 184, 184, 185, 181, 176, 177, 182,
+            183, 183, 186, 185, 179, 176, 179, 182,
+            182, 184, 187, 183, 178, 178, 180, 180,
+            182, 186, 186, 181, 178, 179, 179, 179,
+            184, 187, 184, 180, 179, 179, 178, 180,
+            186, 187, 183, 181, 180, 178, 177, 182,
+            186, 185, 182, 182, 180, 176, 178, 184
     };
 
     private static final double[][] COORDINATES = {

@@ -201,7 +201,6 @@ export default function Heatmap() {
   const [heatmapState, setHeatmapState] = useState('loading');
   const [heatmapReloadToken, setHeatmapReloadToken] = useState(0);
   const [mapMountFailed, setMapMountFailed] = useState(false);
-  const [isFocusGridCollapsed, setIsFocusGridCollapsed] = useState(false);
   const [viewBounds, setViewBounds] = useState(null);
 
   const mapRef = useRef(null);
@@ -414,11 +413,6 @@ export default function Heatmap() {
     }).slice(0, 10);
   }, [viewBounds, runs]);
 
-  const focusCards = [
-    { label: t('heatmap.page_runs_label'), value: activityCount },
-    { label: t('heatmap.page_points_label'), value: pointCount },
-    { label: t('heatmap.page_density_label'), value: densityPerRun, emphasis: 'density' },
-  ];
   const speedLegendLabels = {
     slow: t('heatmap.page_legend_slow'),
     mid: t('heatmap.page_legend_mid'),
@@ -556,53 +550,6 @@ export default function Heatmap() {
                 <AppIcon name="map" className="heatmap-page-utility-icon" />
               </button>
             </nav>
-
-            <section className={cx('heatmap-page-story-card', isFocusGridCollapsed && 'is-collapsed')}>
-              {isFocusGridCollapsed ? (
-                <button
-                  type="button"
-                  className="heatmap-page-focus-toggle is-collapsed"
-                  onClick={() => setIsFocusGridCollapsed(false)}
-                  aria-label={t('heatmap.page_focus_expand')}
-                  title={t('heatmap.page_focus_expand')}
-                  aria-pressed="true"
-                  aria-expanded="false"
-                >
-                  <span className="heatmap-page-focus-toggle-dot" aria-hidden="true" />
-                </button>
-              ) : (
-                <>
-                  <div className="heatmap-page-story-head">
-                    <span className="heatmap-page-card-kicker">{t('heatmap.page_map_kicker')}</span>
-                    <button
-                      type="button"
-                      className="heatmap-page-focus-toggle"
-                      onClick={() => setIsFocusGridCollapsed(true)}
-                      aria-label={t('heatmap.page_focus_collapse')}
-                      title={t('heatmap.page_focus_collapse')}
-                      aria-pressed="false"
-                      aria-expanded="true"
-                    >
-                      <span className="heatmap-page-focus-toggle-dot" aria-hidden="true" />
-                    </button>
-                  </div>
-                  <h1>{t('heatmap.page_title')}</h1>
-                  <p>{t('heatmap.page_copy')}</p>
-
-                  <div className="heatmap-page-focus-grid">
-                    {focusCards.map((card) => (
-                      <div
-                        key={card.label}
-                        className={cx('heatmap-page-focus-card', card.emphasis === 'density' && 'is-density')}
-                      >
-                        <span>{card.label}</span>
-                        <strong>{card.value}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </section>
 
             <aside className="heatmap-page-legend-card">
               <span className="heatmap-page-card-kicker">{t('heatmap.page_legend_title')}</span>

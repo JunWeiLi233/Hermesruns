@@ -108,6 +108,16 @@ public class LoginController {
         return ResponseEntity.ok(authResponse("Login successful.", token, runner, false));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
+        if (runnerOpt.isPresent()) {
+            authService.invalidateSession(runnerOpt.get());
+            log.info("Auth logout success runnerId={}", runnerOpt.get().getId());
+        }
+        return ResponseEntity.ok(Map.of("message", "Logged out."));
+    }
+
     // ==========================================
     // 2. THE SIGN-UP FUNCTION
     // ==========================================

@@ -41,10 +41,13 @@ public interface TerritoryPolygonRepository extends JpaRepository<TerritoryPolyg
 
     /** Cache signature for live land-mask rows; ownership can change when masks are computed after activities exist. */
     @Query("""
-            select count(p), max(p.id), max(p.createdAt)
+            select count(p), max(p.id), max(p.createdAt),
+                   coalesce(sum(p.areaSquareMeters), 0),
+                   coalesce(sum(length(p.coordinates)), 0)
             from TerritoryPolygon p, Runner runner
             where runner.id = p.userId
               and runner.deleted = false
+              and lower(runner.email) not like 'territory-%@hermes.local'
             """)
     Object[] findGlobalLiveLandMaskSignature();
 

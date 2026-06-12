@@ -839,59 +839,59 @@ body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-
 }
 
 /* ----------------------------------------------------------------------------
-   /runs — `.recent-runs-insight-card--primary` (the "训练节奏 / 已记录 N 次跑步"
-   tile) was inheriting the cream-on-dark text treatment from a page-scoped
-   `:is(.runs-dashboard-page, …) :is(h1, h2, h3, h4, strong, …) { color: #fff4e6 !important; }`
-   rule that was designed for dark hero cards. After light-theme overrides
-   flipped the card surface to white, the cream `<strong>` headline became
-   invisible and the inset pink rectangle on `<strong>` looked broken. Restore
-   the original primary-card treatment: warm coral surface with white text on
-   the headline, muted ink for kicker + sub-copy.
+   /runs `.recent-runs-insight-card--primary` lives inside the profile-aligned
+   history rail now. This file is imported after `runs.css`, so it must not
+   keep the older coral hero-card treatment alive in the live cascade. Keep the
+   override narrow to the current profile history surface and mirror the warm
+   editorial signal panel defined in `runs.css`.
    ---------------------------------------------------------------------------- */
-
-/* Anchored on #root so specificity beats the (0, 5, 0) `:is(...) :is(...) :is(...)`
-   page-scoped cream-text rule (which uses multi-class arguments like
-   `.shoe-inventory-card.is-primary` and `.runner-dashboard-page:has(.muscle-training-page)`
-   to claim higher specificity than plain class chains can). One ID selector
-   trivially outranks any number of classes. */
-#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary {
-  background: linear-gradient(150deg, #ffb4a7 0%, #f07561 55%, #a0392a 100%) !important;
+#root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary {
+  position: relative !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  min-height: 156px !important;
+  padding: 24px 26px !important;
   border: 0 !important;
-  border-radius: 22px !important;
-  box-shadow: 0 22px 48px rgba(160, 57, 42, 0.22) !important;
-  color: #fff6f2 !important;
-  padding: 22px 26px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 84% 22%, rgba(239, 106, 82, 0.2), transparent 31%),
+    linear-gradient(135deg, rgba(255, 248, 240, 0.98), rgba(246, 225, 210, 0.9) 46%, rgba(255, 251, 244, 0.94)) !important;
+  box-shadow:
+    0 26px 68px rgba(85, 48, 24, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+  color: #3f261c !important;
 }
 
-#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary span,
-#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary strong,
-#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary p {
-  color: #fff6f2 !important;
+#root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary span,
+#root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary strong,
+#root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary p {
+  position: relative !important;
+  z-index: 1 !important;
   background: transparent !important;
 }
 
-#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary span {
-  color: rgba(255, 246, 242, 0.82) !important;
-  font-size: 0.7rem !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.16em !important;
-  text-transform: uppercase !important;
+#root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary span {
+  color: rgba(69, 54, 38, 0.62) !important;
 }
 
-#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary strong {
-  font-family: var(--font-display) !important;
+#root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary strong {
+  width: fit-content !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #3f261c !important;
+  font-family: "Manrope", var(--font-display) !important;
   font-style: normal !important;
   font-weight: 800 !important;
-  font-size: clamp(1.4rem, 2vw, 1.85rem) !important;
-  letter-spacing: -0.025em !important;
-  line-height: 1.15 !important;
+  font-size: clamp(1.9rem, 3.3vw, 3.2rem) !important;
+  line-height: 0.92 !important;
+  letter-spacing: -0.075em !important;
 }
 
-#root .runs-dashboard-page .recent-runs-insight-card.recent-runs-insight-card--primary p {
-  color: rgba(255, 246, 242, 0.86) !important;
+#root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary p {
+  max-width: 28ch !important;
+  color: rgba(69, 54, 38, 0.7) !important;
   font-size: 0.95rem !important;
+  font-weight: 700 !important;
   line-height: 1.5 !important;
 }
