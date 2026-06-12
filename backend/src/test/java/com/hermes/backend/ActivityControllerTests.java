@@ -224,6 +224,112 @@ class ActivityControllerTests {
         assertNotNull(body.get("code"));
     }
 
+    @Test
+    void getRoutePreviewBatchReturnsOwnedPreviewDataWithBboxes() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
+        ElevationCorrectionService elevationCorrectionService = mock(ElevationCorrectionService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        ReadinessService readinessService = mock(ReadinessService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        ActivityController controller = new ActivityController(
+                authService,
+                activityRepository,
+                activityPointRepository,
+                runnerRepository,
+                secretEncryptionService,
+                elevationCorrectionService,
+                acclimatizationService,
+                readinessService,
+                restTemplate
+        );
+
+        Runner runner = new Runner();
+        runner.setId(77L);
+        runner.setEmail("runner@hermes.test");
+
+        Activity ownedA = new Activity();
+        ownedA.setId(19L);
+        ownedA.setRunner(runner);
+        ownedA.setActivityType(ActivityType.RUN);
+
+        Activity ownedB = new Activity();
+        ownedB.setId(21L);
+        ownedB.setRunner(runner);
+        ownedB.setActivityType(ActivityType.RUN);
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdInAndRunner(List.of(19L, 21L, 999L), runner)).thenReturn(List.of(ownedA, ownedB));
+        when(activityPointRepository.existsByActivity(ownedA)).thenReturn(true);
+        when(activityPointRepository.existsByActivity(ownedB)).thenReturn(true);
+        when(activityPointRepository.findRoutePreviewSamplesByActivityIds(List.of(19L, 21L), 240)).thenReturn(List.of(
+                new Object[]{19L, 40.7128, -74.0060, 0},
+                new Object[]{19L, 40.7141, -74.0027, 1},
+                new Object[]{21L, 40.7301, -73.9995, 0},
+                new Object[]{21L, 40.7314, -73.9958, 1}
+        ));
+        when(activityPointRepository.findRoutePreviewBboxesByActivityIds(List.of(19L, 21L))).thenReturn(List.of(
+                new Object[]{19L, 40.7128, 40.7141, -74.0060, -74.0027, 1644L},
+                new Object[]{21L, 40.7301, 40.7314, -73.9995, -73.9958, 88L}
+        ));
+
+        ResponseEntity<?> response = controller.getRoutePreviewBatch("Bearer session-token", "19,21,999");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertInstanceOf(List.class, response.getBody());
+
+        @SuppressWarnings("unchecked")
+        List<ActivityController.RoutePreviewBatchItem> body =
+                (List<ActivityController.RoutePreviewBatchItem>) response.getBody();
+        assertEquals(2, body.size());
+        assertEquals(19L, body.get(0).activityId());
+        assertEquals(21L, body.get(1).activityId());
+        assertEquals(2, body.get(0).points().size());
+        assertNotNull(body.get(0).bbox());
+        assertEquals(40.7128, body.get(0).bbox().minLat());
+        assertEquals(-74.0027, body.get(0).bbox().maxLng());
+        assertEquals(1644L, body.get(0).pointCount());
+    }
+
+    @Test
+    void getRoutePreviewBatchRejectsOversizedRequests() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService,
+                activityRepository,
+                activityPointRepository,
+                mock(RunnerRepository.class),
+                mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class),
+                mock(AcclimatizationService.class),
+                mock(ReadinessService.class),
+                mock(RestTemplate.class)
+        );
+
+        Runner runner = new Runner();
+        runner.setId(77L);
+        runner.setEmail("runner@hermes.test");
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+
+        String oversizedIds = java.util.stream.LongStream.rangeClosed(1, 51)
+                .mapToObj(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+
+        ResponseEntity<?> response = controller.getRoutePreviewBatch("Bearer session-token", oversizedIds);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verifyNoInteractions(activityRepository);
+        verifyNoInteractions(activityPointRepository);
+    }
+
     // --- Ownership-gating tests: ActivityPoint data must be runner-scoped ---
 
     @Test

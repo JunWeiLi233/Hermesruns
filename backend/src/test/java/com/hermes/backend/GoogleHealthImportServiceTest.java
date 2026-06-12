@@ -119,15 +119,24 @@ class GoogleHealthImportServiceTest {
     }
 
     @Test
-    void importWellnessDataReturnsFalseWhenAlreadyRunning() {
+    void importWellnessDataReturnsFalseWhenAlreadyRunning() throws InterruptedException {
         Runner runner = runner(1L);
+        CountDownLatch importsEnteredRepository = new CountDownLatch(1);
+        CountDownLatch releaseImport = new CountDownLatch(1);
         when(wellnessSummaryRepository.findByRunnerAndProviderAndDate(any(), any(), any()))
-                .thenReturn(Optional.empty());
+                .thenAnswer(invocation -> {
+                    importsEnteredRepository.countDown();
+                    releaseImport.await(2, TimeUnit.SECONDS);
+                    return Optional.empty();
+                });
         when(coachRunnerStateRepository.findByRunner(runner)).thenReturn(Optional.empty());
 
         Map<String, Object> dataPoint = Map.of("type", "wellness", "date", "2026-04-20", "restingHeartRate", 60);
+
         assertThat(service.importWellnessData(runner, List.of(dataPoint))).isTrue();
+        assertThat(importsEnteredRepository.await(2, TimeUnit.SECONDS)).isTrue();
         assertThat(service.importWellnessData(runner, List.of(dataPoint))).isFalse();
+        releaseImport.countDown();
     }
 
     @Test

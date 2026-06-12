@@ -189,6 +189,20 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("targetPointsPerActivity") int targetPointsPerActivity
     );
 
+    @Query(value = """
+            select
+                ap.activity_id,
+                min(ap.latitude) as min_latitude,
+                max(ap.latitude) as max_latitude,
+                min(ap.longitude) as min_longitude,
+                max(ap.longitude) as max_longitude,
+                count(*) as point_count
+            from activity_points ap
+            where ap.activity_id in (:activityIds)
+            group by ap.activity_id
+            """, nativeQuery = true)
+    List<Object[]> findRoutePreviewBboxesByActivityIds(@Param("activityIds") List<Long> activityIds);
+
     /**
      * Returns [elapsedSeconds, heartRate] pairs for all stored points that have both values.
      * Returns only up to 10 000 samples (dense per-second data from FIT/GPX/Strava streams).
@@ -260,6 +274,7 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             join activity.runner runner
             where activity.activityType = :activityType
               and runner.deleted = false
+              and lower(runner.email) not like 'territory-%@hermes.local'
             order by coalesce(activity.startTime, activity.createdAt) desc, activity.id desc, p.sequenceIndex asc
             """)
     List<Object[]> findTerritorySamples(
