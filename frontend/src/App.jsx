@@ -35,7 +35,6 @@ const Settings = React.lazy(() => import('./pages/Settings'));
 const GarminImportSettings = React.lazy(() => import('./pages/GarminImportSettings'));
 const ImportDataSettings = React.lazy(() => import('./pages/ImportDataSettings'));
 const LegalPage = React.lazy(() => import('./pages/LegalPage'));
-const WorkflowBuilder = React.lazy(() => import('./pages/WorkflowBuilder'));
 
 function ScrollToTop() {
   const location = useLocation();
@@ -124,7 +123,7 @@ function App() {
                   <Route path="/races/details/:raceId" element={<UserOnlyRoute><RacesDetail /></UserOnlyRoute>} />
                   <Route path="/schedule" element={<UserOnlyRoute><Schedule /></UserOnlyRoute>} />
                   <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
-                  <Route path="/workflows" element={<UserOnlyRoute><WorkflowBuilder /></UserOnlyRoute>} />
+
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>

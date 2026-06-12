@@ -160,6 +160,12 @@ backend/src/main/resources/static/icons.svg
 
 # Local AI workflow files - SHARED
 .agents/
+!.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/autoresearch*/
+!.agents/skills/autoresearch*/SKILL.md
 .ai/
 AGENTS.md
 CLAUDE.md
@@ -336,3 +342,5 @@ test-results/
 
 # Autoresearch local loop artifacts (handoff JSON contains high-entropy run IDs)
 autoresearch/
+!.codex/commands/autoresearch/
+!.codex/commands/autoresearch/*.md

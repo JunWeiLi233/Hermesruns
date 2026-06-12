@@ -78,6 +78,12 @@ public class AuthService {
         return token;
     }
 
+    public void invalidateSession(Runner runner) {
+        runner.setSessionToken(null);
+        runner.setTokenIssuedAt(null);
+        runnerRepository.save(runner);
+    }
+
     public Optional<Runner> findByAuthorizationHeader(String authorizationHeader) {
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             return Optional.empty();

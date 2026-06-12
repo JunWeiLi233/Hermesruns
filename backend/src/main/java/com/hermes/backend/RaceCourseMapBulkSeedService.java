@@ -609,6 +609,9 @@ public class RaceCourseMapBulkSeedService {
         if (ChicagoMarathonKnownCourse.RACE_ID.equals(raceId)) {
             return ChicagoMarathonKnownCourse.routePoints();
         }
+        if (NycMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+            return generateNewYorkDetailedCoursePolyline();
+        }
         if (AthensMarathonOfficialCourse.RACE_ID.equals(raceId)) {
             return generateOfficialGpxPolyline(
                     AthensMarathonOfficialCourse.RACE_ID,
@@ -652,7 +655,10 @@ public class RaceCourseMapBulkSeedService {
             double directKm = geometryService.haversineKm(
                     waypoints.get(i)[0], waypoints.get(i)[1],
                     waypoints.get(i + 1)[0], waypoints.get(i + 1)[1]);
-            List<RoutePoint> legGeometry = osrmRouteWaypoints(legPair, OsrmProfile.FOOT);
+            boolean forcedOfficialLeg = shouldUseOfficialStraightLineLeg(raceId, i);
+            List<RoutePoint> legGeometry = forcedOfficialLeg
+                    ? interpolateStraightLine(waypoints.get(i), waypoints.get(i + 1), 16)
+                    : osrmRouteWaypoints(legPair, OsrmProfile.FOOT);
             // Foot routing sometimes detours wildly around bridges with
             // restricted pedestrian access (e.g. Verrazzano-Narrows is
             // marathon-day-only; the Queensboro Bridge lower roadway has
@@ -663,7 +669,7 @@ public class RaceCourseMapBulkSeedService {
             // race route DOES go straight across these bridges on race
             // day, so the driving geometry is faithful to the course.
             double legKm = legGeometry.isEmpty() ? 0.0 : geometryService.polylineDistanceKm(legGeometry);
-            boolean footDetoured = legGeometry.size() >= 2 && directKm > 0.4
+            boolean footDetoured = !forcedOfficialLeg && legGeometry.size() >= 2 && directKm > 0.4
                     && (legKm / directKm) > 2.0;
             if (legGeometry.isEmpty() || footDetoured) {
                 if (footDetoured) {
@@ -775,6 +781,57 @@ public class RaceCourseMapBulkSeedService {
             return List.of();
         }
         return labeled;
+    }
+
+    private List<RoutePoint> generateNewYorkDetailedCoursePolyline() {
+        List<RoutePoint> rawRoute = NycMarathonOfficialCourse.detailedRoute().stream()
+                .map(point -> new RoutePoint(point[0], point[1], null))
+                .toList();
+        List<RoutePoint> resampled = geometryService.resampleRoute(rawRoute, 600);
+        List<RoutePoint> labeled = stampOfficialCourseLabels(
+                resampled,
+                NycMarathonOfficialCourse.waypoints(),
+                NycMarathonOfficialCourse.waypointCount(),
+                NycMarathonOfficialCourse.RACE_ID
+        );
+        if (labeled.isEmpty()) {
+            return List.of();
+        }
+        List<RoutePoint> result = new ArrayList<>(labeled);
+        clearInteriorLabel(result, "Start - Fort Wadsworth");
+        clearInteriorLabel(result, "Finish - West Drive at Tavern on the Green");
+        RoutePoint start = result.get(0);
+        RoutePoint finish = result.get(result.size() - 1);
+        result.set(0, new RoutePoint(start.lat(), start.lng(), "Start - Fort Wadsworth"));
+        result.set(result.size() - 1, new RoutePoint(finish.lat(), finish.lng(), "Finish - West Drive at Tavern on the Green"));
+        double routeKm = geometryService.polylineDistanceKm(result);
+        if (routeKm < 42.0 || routeKm > 43.2) {
+            logger.warn("NYC detailed official course had implausible distance {} km", routeKm);
+            return List.of();
+        }
+        return result;
+    }
+
+    private void clearInteriorLabel(List<RoutePoint> route, String label) {
+        for (int i = 1; i < route.size() - 1; i++) {
+            RoutePoint point = route.get(i);
+            if (label.equals(point.label())) {
+                route.set(i, new RoutePoint(point.lat(), point.lng(), null));
+            }
+        }
+    }
+
+    private boolean shouldUseOfficialStraightLineLeg(String raceId, int legIndex) {
+        if (!NycMarathonOfficialCourse.RACE_ID.equals(raceId)) return false;
+        // NYRR's race-day course uses bridge roadway corridors that public
+        // pedestrian/driving routers often cannot traverse or route in the
+        // wrong direction. Keep these legs pinned to the official waypoints so
+        // the rendered course map does not detour into Staten Island ramps,
+        // Queensboro approaches, or Harlem River access loops.
+        return (legIndex >= 0 && legIndex <= 2)   // Verrazzano-Narrows Bridge
+                || (legIndex >= 23 && legIndex <= 25) // Queensboro Bridge
+                || (legIndex >= 33 && legIndex <= 35) // Willis Avenue Bridge
+                || (legIndex >= 39 && legIndex <= 41); // Madison Avenue Bridge
     }
 
     private boolean isKnownOfficialCourseRace(String raceId) {

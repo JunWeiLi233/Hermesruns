@@ -104,6 +104,15 @@ class SecurityHardeningTests {
     }
 
     @Test
+    void loginPageStravaStatusIsPublicBeforeSessionExists() throws Exception {
+        mockMvc.perform(get("/api/auth/strava/status")
+                        .header("X-Forwarded-For", "198.51.100.20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.linked").value(false))
+                .andExpect(jsonPath("$.autoUpdateMode").value("webhook_retry_burst_then_on_open_catch_up"));
+    }
+
+    @Test
     void authenticatedUserRateLimitAppliesAcrossIps() throws Exception {
         Runner runner = createRunner("user-limit@test.local", "USER");
         String bearer = bearer(runner);

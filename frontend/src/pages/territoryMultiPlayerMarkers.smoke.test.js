@@ -11,7 +11,7 @@ const territorySource = readFileSync(path.join(here, 'Territory.jsx'), 'utf8');
 // territory center; explicit recenter actions should still animate to full bounds.
 assert.match(
   territorySource,
-  /if \(recenterSignal > 0\) \{[\s\S]*map\.flyToBounds\([\s\S]*?duration:\s*0\.8/,
+  /if \(recenterSignal > 0\) \{[\s\S]*map\.flyToBounds\([\s\S]*?duration:\s*focusedEntries\.length > 0 \? 0\.65 : 0\.8/,
   'Territory map should keep flyToBounds animation for explicit recenter actions.',
 );
 assert.match(
@@ -21,8 +21,8 @@ assert.match(
 );
 assert.match(
   territorySource,
-  /function territoryInitialZoom\(center\)[\s\S]*?Math\.max\(Number\.isFinite\(zoom\) \? zoom : 14, 14\)/,
-  'Territory should use non-animated setView with a minimum zoom so disconnected territory components do not force a sparse map.',
+  /function territoryInitialZoom\(center\)[\s\S]*?Math\.min\(Math\.max\(Number\.isFinite\(zoom\) \? zoom : 13, 12\), 14\)/,
+  'Territory should use non-animated setView with a bounded game-map zoom so territory and place labels both remain visible.',
 );
 
 // ── 2. Marker-free concrete land layer ──────────────────────────────────────

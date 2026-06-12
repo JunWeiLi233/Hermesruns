@@ -20,7 +20,7 @@ import {
 } from '../utils/raceLocalization';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { standardCityRoadMarathonCatalog, worldRaceCountries } from '../data/worldRaceCatalog';
-import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache } from '../utils/raceImage';
+import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache, rememberLoadedRaceImage } from '../utils/raceImage';
 
 const STATUS_OPTIONS = ['INTERESTED', 'APPLIED', 'REGISTERED', 'WAITLIST', 'COMPLETED', 'CANCELED'];
 
@@ -156,6 +156,7 @@ const RaceCard = memo(function RaceCard({
   onNavigate,
   onAddToPlan,
   onImageError,
+  onImageLoad,
 }) {
   const imgSrc = getRaceCardImage(race, officialDiscoveryImages);
   const raceName = getLocalizedRaceLabel(race, lang);
@@ -179,6 +180,7 @@ const RaceCard = memo(function RaceCard({
           alt={raceName}
           loading="lazy"
           decoding="async"
+          onLoad={(event) => onImageLoad(event, race)}
           onError={(e) => onImageError(e, race)}
         />
         <span className="race-center-card-tag">
@@ -214,6 +216,7 @@ const FeaturedRaceCard = memo(function FeaturedRaceCard({
   onNavigate,
   onAddToPlan,
   onImageError,
+  onImageLoad,
 }) {
   const imgSrc = getRaceCardImage(race, officialDiscoveryImages);
   const raceName = getLocalizedRaceLabel(race, lang);
@@ -237,6 +240,7 @@ const FeaturedRaceCard = memo(function FeaturedRaceCard({
           alt={raceName}
           loading="eager"
           decoding="async"
+          onLoad={(event) => onImageLoad(event, race)}
           onError={(e) => onImageError(e, race)}
         />
         <div className="race-center-featured-overlay" aria-hidden="true" />
@@ -687,6 +691,11 @@ const Races = memo(function Races() {
     invalidateRaceImageCache(race);
   }, []);
 
+  const handleImageLoad = useCallback((event, race) => {
+    const loadedUrl = event.currentTarget?.currentSrc || event.currentTarget?.src || '';
+    rememberLoadedRaceImage(race, loadedUrl);
+  }, []);
+
   const handleLoadMore = useCallback(() => {
     setVisibleCount((prev) => prev + PAGE_SIZE_MORE);
   }, []);
@@ -947,6 +956,7 @@ const Races = memo(function Races() {
                       onNavigate={handleNavigateToRace}
                       onAddToPlan={handleAddToPlan}
                       onImageError={handleImageError}
+                      onImageLoad={handleImageLoad}
                     />
 
                     {/* 2-col grid of remaining cards */}
@@ -962,6 +972,7 @@ const Races = memo(function Races() {
                             onNavigate={handleNavigateToRace}
                             onAddToPlan={handleAddToPlan}
                             onImageError={handleImageError}
+                            onImageLoad={handleImageLoad}
                           />
                         ))}
                       </div>

@@ -1686,6 +1686,30 @@
     text-transform: uppercase;
 }
 
+.race-detail-count-card.is-seconds strong {
+    animation: race-detail-count-tick 0.42s cubic-bezier(0.2, 0.9, 0.22, 1) both;
+}
+
+@keyframes race-detail-count-tick {
+    0% {
+        opacity: 0.32;
+        transform: translateY(-8px) scale(0.94);
+        filter: blur(4px);
+    }
+
+    58% {
+        opacity: 1;
+        transform: translateY(2px) scale(1.03);
+        filter: blur(0);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
 .race-detail-grid {
     position: relative;
     z-index: 2;

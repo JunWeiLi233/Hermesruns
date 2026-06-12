@@ -211,6 +211,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    const tokenToInvalidate = token || localStorage.getItem('hermes_jwt');
+    // Clear local state immediately so the UI updates before the API call.
     localStorage.removeItem('hermes_jwt');
     localStorage.removeItem('hermes_email');
     localStorage.removeItem(ROLE_STORAGE_KEY);
@@ -218,9 +220,6 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('hermes_admin');
     } catch { /* ignore */ }
     try {
-      // Clear cached dashboard snapshots from every account on this device so
-      // the next runner who signs in does not see another runner's data flash
-      // before the fresh fetch resolves.
       for (let i = localStorage.length - 1; i >= 0; i -= 1) {
         const key = localStorage.key(i);
         if (key && key.startsWith('hermes_profile_dashboard_')) {
@@ -234,7 +233,14 @@ export function AuthProvider({ children }) {
     setAuthHydrated(true);
     setStravaOauthPending(false);
     navigate('/login');
-  }, [navigate]);
+    // Best-effort backend invalidation — fire and forget.
+    if (tokenToInvalidate) {
+      apiFetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tokenToInvalidate}` },
+      }).catch(() => {});
+    }
+  }, [navigate, token]);
 
   const isAuthenticated = Boolean(token);
   const isAdmin = role === 'ADMIN';

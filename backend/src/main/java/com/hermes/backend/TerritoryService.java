@@ -11,14 +11,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 @Service
 public class TerritoryService {
@@ -47,18 +48,26 @@ public class TerritoryService {
     private static final double SECURE_RATIO = 1.22;
     private static final double MIN_CONTEST_SCORE = 4.0;
     private static final String POLYGON_CACHE_NAMESPACE = "territory-polygons";
-    private static final String POLYGON_CACHE_VERSION = "land-mask-union-v10-continuous-loop-fill";
+    private static final String POLYGON_CACHE_VERSION = "land-mask-union-v54-mask-v30-concrete-boundary-sampling";
     private static final Duration POLYGON_CACHE_TTL = Duration.ofMinutes(20);
-    private static final Duration POLYGON_WARMING_CACHE_TTL = Duration.ofSeconds(8);
+    private static final Duration POLYGON_WARMING_CACHE_TTL = Duration.ofSeconds(45);
     private static final int MIN_TERRITORY_ROUTE_POINTS = 8;
     private static final int MAX_RESPONSE_MASK_CELLS = 200_000;
+    private static final int LARGE_LAND_MASK_SOURCE_CELL_COUNT = 10_000;
+    private static final double LARGE_LAND_MASK_RESPONSE_CELL_METERS = 16.0;
+    private static final double MAX_REAL_USER_LAND_MASK_RESPONSE_CELL_METERS = 16.0;
+    private static final int MAX_COARSE_LAND_MASK_RESPONSE_CELLS = 1_250_000;
+    private static final int INITIAL_GLOBAL_POLYGON_MAX_OWNERS = 96;
+    private static final double COARSE_LAND_MASK_CELL_METERS = 128.0;
+    private static final int MAX_TERRITORY_ROUTE_TRACES = 256;
     private static final int MAX_TERRITORY_ROUTE_TRACE_POINTS = 180;
     private static final double TERRITORY_ROUTE_TRACE_RADIUS_METERS = 18.0;
-    private static final int RESPONSE_MASK_CLOSE_RADIUS_CELLS = 1;
     private static final String TERRITORY_MAP_CACHE_NAMESPACE = "territory-map";
-    private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v5-continuous-loop-fill";
-    private static final Duration TERRITORY_MAP_CACHE_TTL = Duration.ofMinutes(2);
-    private static final String OPTIONAL_TERRITORY_RIVAL_YELLOW_EMAIL = "territory-rival-yellow@hermes.local";
+    private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v25-activity-split-render";
+    private static final Duration TERRITORY_MAP_CACHE_TTL = Duration.ofMinutes(15);
+    private static final int SYNC_POLYGON_WARMUP_ACTIVITY_LIMIT = 4;
+    private static final int GLOBAL_SYNC_POLYGON_WARMUP_ACTIVITY_LIMIT = 96;
+    private static final int GLOBAL_POLYGON_WARMUP_SCAN_LIMIT = 512;
 
     private final ActivityPointRepository activityPointRepository;
     private final TerritoryPolygonRepository territoryPolygonRepository;
@@ -66,6 +75,8 @@ public class TerritoryService {
     private final ActivityRepository activityRepository;
     private final RunnerRepository runnerRepository;
     private final TtlCacheStore cacheStore;
+    private volatile long lastGlobalSignatureTimestamp;
+    private volatile String cachedGlobalSignature;
     private final TransactionTemplate transactionTemplate;
     private final ConcurrentMap<Long, Object> polygonResponseLocks = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, String> polygonBackfillInFlight = new ConcurrentHashMap<>();
@@ -131,11 +142,28 @@ public class TerritoryService {
 
         List<TerritoryPolygonComputer.DetectedTerritoryMask> territories = polygonComputer.detectTerritoryMasks(points);
         territoryPolygonRepository.deleteByActivityId(activityId);
+        if (territories.isEmpty()) {
+            TerritoryPolygon marker = new TerritoryPolygon();
+            marker.setUserId(userId);
+            marker.setActivityId(activityId);
+            marker.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                    List.of(),
+                    TerritoryPolygonComputer.LAND_MASK_CELL_METERS,
+                    TerritoryPolygonComputer.TerritoryMaskKind.LAND
+            ));
+            marker.setAreaSquareMeters(0.0);
+            territoryPolygonRepository.save(marker);
+            return;
+        }
         for (TerritoryPolygonComputer.DetectedTerritoryMask territory : territories) {
             TerritoryPolygon polygon = new TerritoryPolygon();
             polygon.setUserId(userId);
             polygon.setActivityId(activityId);
-            polygon.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(territory.cells(), territory.cellMeters()));
+            polygon.setCoordinates(TerritoryPolygonComputer.encodeMaskCells(
+                    territory.cells(),
+                    territory.cellMeters(),
+                    territory.kind()
+            ));
             polygon.setAreaSquareMeters(territory.areaSquareMeters());
             territoryPolygonRepository.save(polygon);
         }
@@ -179,6 +207,16 @@ public class TerritoryService {
      */
     @Transactional
     public PolygonResponse buildPolygonResponse(Long userId) {
+        return buildPolygonResponse(userId, true);
+    }
+
+    /**
+     * Returns the concrete land-mask response for the authenticated user.
+     * When {@code includeCells} is false, cells and routeTraces are omitted from
+     * every polygon — useful when the caller already has a valid render cache.
+     */
+    @Transactional
+    public PolygonResponse buildPolygonResponse(Long userId, boolean includeCells) {
         if (userId == null) {
             return new PolygonResponse(List.of(), 0.0, 0, false, 0);
         }
@@ -186,35 +224,45 @@ public class TerritoryService {
         String activitySignature = globalPolygonActivitySignature(userId);
         PolygonResponse cached = readCachedPolygonResponse(userId, activitySignature);
         if (cached != null) {
-            return cached;
+            return includeCells ? cached : stripCells(cached);
         }
 
         Object lock = polygonResponseLocks.computeIfAbsent(userId, ignored -> new Object());
         synchronized (lock) {
             cached = readCachedPolygonResponse(userId, activitySignature);
             if (cached != null) {
-                return cached;
+                return includeCells ? cached : stripCells(cached);
             }
 
+            boolean localSharedRunner = isLocalSharedRunner(userId);
             List<TerritoryPolygon> activeRows = territoryPolygonRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
             List<TerritoryPolygon> liveRows = territoryPolygonRepository.findAllLiveLandMasksOrderByActivityTimeDesc();
             List<Long> missingOwnActivityIds = findMissingPolygonActivityIds(userId, activeRows);
-            if (!missingOwnActivityIds.isEmpty() && isLocalSharedRunner(userId)) {
-                computeMissingPolygonsSynchronously(missingOwnActivityIds);
+            if (!missingOwnActivityIds.isEmpty()) {
+                List<Long> synchronousWarmupActivityIds = localSharedRunner
+                        ? missingOwnActivityIds
+                        : missingOwnActivityIds.stream().limit(SYNC_POLYGON_WARMUP_ACTIVITY_LIMIT).toList();
+                computeMissingPolygonsSynchronously(synchronousWarmupActivityIds);
                 activeRows = territoryPolygonRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
                 liveRows = territoryPolygonRepository.findAllLiveLandMasksOrderByActivityTimeDesc();
                 missingOwnActivityIds = findMissingPolygonActivityIds(userId, activeRows);
             }
+            List<Long> missingGlobalActivityIds = findMissingGlobalPolygonActivityIds(userId);
+            if (!missingGlobalActivityIds.isEmpty()) {
+                computeMissingPolygonsSynchronously(missingGlobalActivityIds.stream()
+                        .limit(GLOBAL_SYNC_POLYGON_WARMUP_ACTIVITY_LIMIT)
+                        .toList());
+                activeRows = territoryPolygonRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+                liveRows = territoryPolygonRepository.findAllLiveLandMasksOrderByActivityTimeDesc();
+                missingOwnActivityIds = findMissingPolygonActivityIds(userId, activeRows);
+                missingGlobalActivityIds = findMissingGlobalPolygonActivityIds(userId);
+            }
             List<TerritoryPolygon> relevantRows = relevantLiveLandMaskRows(liveRows, userId);
             List<Long> missingActivityIds = new ArrayList<>(missingOwnActivityIds);
-            for (Long rivalActivityId : findMissingLocalTerritoryRivalActivityIds(userId, liveRows)) {
-                if (!missingActivityIds.contains(rivalActivityId)) {
-                    missingActivityIds.add(rivalActivityId);
-                }
-            }
+            appendMissingActivityIds(missingActivityIds, missingGlobalActivityIds);
             boolean warming = !missingActivityIds.isEmpty();
 
-            PolygonResponse response = toPolygonResponse(relevantRows, userId, warming, missingActivityIds.size());
+            PolygonResponse response = toPolygonResponse(relevantRows, userId, warming, missingActivityIds.size(), true);
             cacheStore.put(
                     POLYGON_CACHE_NAMESPACE,
                     polygonCacheKey(userId),
@@ -222,11 +270,93 @@ public class TerritoryService {
                     warming ? POLYGON_WARMING_CACHE_TTL : POLYGON_CACHE_TTL
             );
             scheduleMissingPolygonBackfill(userId, missingActivityIds);
-            return response;
+            return includeCells ? response : stripCells(response);
         }
     }
 
-    private PolygonResponse toPolygonResponse(List<TerritoryPolygon> rows, Long activeUserId, boolean backfillInProgress, int pendingActivityCount) {
+    public PolygonResponse toInitialGlobalPolygonResponse(PolygonResponse response) {
+        if (response == null || response.polygons() == null || response.polygons().isEmpty()
+                || response.polygons().size() <= INITIAL_GLOBAL_POLYGON_MAX_OWNERS) {
+            return response;
+        }
+
+        List<PolygonDtoInfo> polygonInfos = new ArrayList<>();
+        for (int index = 0; index < response.polygons().size(); index += 1) {
+            PolygonDto polygon = response.polygons().get(index);
+            PolygonDtoBounds bounds = polygonDtoBounds(polygon);
+            if (bounds != null) {
+                polygonInfos.add(new PolygonDtoInfo(polygon, index, bounds, Double.POSITIVE_INFINITY));
+            }
+        }
+
+        List<PolygonDtoInfo> activeInfos = polygonInfos.stream()
+                .filter(info -> info.polygon().active())
+                .toList();
+        if (activeInfos.isEmpty()) {
+            return new PolygonResponse(
+                    response.polygons().stream().limit(INITIAL_GLOBAL_POLYGON_MAX_OWNERS).toList(),
+                    response.totalAreaSquareMeters(),
+                    response.polygonCount(),
+                    response.backfillInProgress(),
+                    response.pendingActivityCount()
+            );
+        }
+
+        PolygonDtoBounds activeBounds = activeInfos.stream()
+                .map(PolygonDtoInfo::bounds)
+                .reduce(null, TerritoryService::mergePolygonDtoBounds);
+        if (activeBounds == null) {
+            return response;
+        }
+
+        Set<Long> activeOwnerIds = new HashSet<>();
+        activeInfos.forEach(info -> activeOwnerIds.add(info.polygon().ownerId()));
+        List<PolygonDtoInfo> rankedRivals = polygonInfos.stream()
+                .filter(info -> !activeOwnerIds.contains(info.polygon().ownerId()))
+                .map(info -> info.withDistance(polygonDtoBoundsDistanceMeters(activeBounds, info.bounds())))
+                .sorted(Comparator
+                        .comparingDouble(PolygonDtoInfo::distanceMeters)
+                        .thenComparing((PolygonDtoInfo info) -> -safeDouble(info.polygon().areaSquareMeters()))
+                        .thenComparingInt(PolygonDtoInfo::index))
+                .toList();
+        int rivalLimit = Math.max(0, INITIAL_GLOBAL_POLYGON_MAX_OWNERS - activeOwnerIds.size());
+        List<PolygonDtoInfo> selectedInfos = new ArrayList<>();
+        selectedInfos.addAll(activeInfos);
+        selectedInfos.addAll(rankedRivals.stream()
+                .limit(rivalLimit)
+                .toList());
+        selectedInfos.sort(Comparator.comparingInt(PolygonDtoInfo::index));
+
+        return new PolygonResponse(
+                selectedInfos.stream().map(PolygonDtoInfo::polygon).toList(),
+                response.totalAreaSquareMeters(),
+                response.polygonCount(),
+                response.backfillInProgress(),
+                response.pendingActivityCount()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public String territoryMapSignature(Long runnerId) {
+        if (runnerId == null) {
+            return TERRITORY_MAP_CACHE_VERSION + "|global:0:0:none|active:0:0:none";
+        }
+        return TERRITORY_MAP_CACHE_VERSION + "|" + territoryMapActivitySignature(runnerId);
+    }
+
+    @Transactional(readOnly = true)
+    public String polygonResponseSignature(Long userId) {
+        if (userId == null) {
+            return POLYGON_CACHE_VERSION + "|global:0:0:none|polygons:0:0:none|active:0:0:none";
+        }
+        return POLYGON_CACHE_VERSION + "|" + globalPolygonActivitySignature(userId);
+    }
+
+    private PolygonResponse toPolygonResponse(List<TerritoryPolygon> rows,
+                                              Long activeUserId,
+                                              boolean backfillInProgress,
+                                              int pendingActivityCount,
+                                              boolean includeCells) {
         List<OwnedLandMask> masks = ownedLandMasks(rows, activeUserId);
         if (masks.isEmpty()) {
             return new PolygonResponse(List.of(), 0.0, 0, backfillInProgress, pendingActivityCount);
@@ -242,11 +372,11 @@ public class TerritoryService {
                         mask.active(),
                         mask.areaSquareMeters(),
                         List.of(),
-                        mask.cells(),
+                        includeCells ? mask.cells() : List.of(),
                         "land-mask",
                         mask.cellMeters(),
                         mask.createdAt(),
-                        routeTracesFor(mask)
+                        includeCells ? routeTracesFor(mask) : List.of()
                 ))
                 .toList();
         double totalArea = masks.stream().mapToDouble(OwnedLandMask::areaSquareMeters).sum();
@@ -258,10 +388,28 @@ public class TerritoryService {
             return List.of();
         }
 
+        Set<Long> userIds = rows.stream()
+                .filter(Objects::nonNull)
+                .map(TerritoryPolygon::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, Runner> runnersById = new HashMap<>();
+        runnerRepository.findAllById(userIds).forEach(runner -> runnersById.put(runner.getId(), runner));
+
         return rows.stream()
                 .filter(Objects::nonNull)
                 .filter(row -> row.getUserId() != null)
+                .filter(row -> row.getUserId().equals(activeUserId)
+                        || !isLocalTerritoryFixtureRunner(runnersById.get(row.getUserId())))
                 .toList();
+    }
+
+    private static boolean isLocalTerritoryFixtureRunner(Runner runner) {
+        if (runner == null || runner.getEmail() == null) {
+            return false;
+        }
+        String email = runner.getEmail().trim().toLowerCase(Locale.ROOT);
+        return email.endsWith("@hermes.local") && email.startsWith("territory-");
     }
 
     private boolean isLocalSharedRunner(Long userId) {
@@ -290,10 +438,10 @@ public class TerritoryService {
     private List<OwnedLandMask> ownedLandMasks(List<TerritoryPolygon> rows, Long activeUserId) {
         List<DecodedLandMaskRow> decodedRows = new ArrayList<>();
         int sourceCellCount = 0;
-        double sourceCellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double sourceCellMeters = Double.POSITIVE_INFINITY;
         for (TerritoryPolygon row : rows) {
             TerritoryPolygonComputer.DecodedTerritoryMask mask = TerritoryPolygonComputer.decodeMaskCells(row.getCoordinates());
-            if (mask.cells().isEmpty()) {
+            if (!isRenderableTerritoryMask(mask)) {
                 continue;
             }
             decodedRows.add(new DecodedLandMaskRow(row, mask));
@@ -303,7 +451,11 @@ public class TerritoryService {
         if (decodedRows.isEmpty() || sourceCellCount == 0) {
             return List.of();
         }
+        if (!Double.isFinite(sourceCellMeters) || sourceCellMeters <= 0.0) {
+            sourceCellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        }
 
+        Map<Long, LocalDateTime> activityTimes = effectiveActivityTimes(decodedRows);
         double responseCellMeters = responseCellMetersFor(sourceCellCount, sourceCellMeters);
         double refLat = decodedRows.get(0).mask().cells().get(0).latitude();
         double cosRef = Math.cos(Math.toRadians(refLat));
@@ -312,10 +464,11 @@ public class TerritoryService {
         }
 
         Map<Long, PolygonOwner> owners = polygonOwners(decodedRows, activeUserId);
-        Map<Long, Map<String, MaskAccumulator>> cellsByOwner = new LinkedHashMap<>();
-        Map<Long, Integer> rowCountByOwner = new HashMap<>();
-        Map<Long, TerritoryPolygon> newestRowByOwner = new HashMap<>();
-        Set<String> claimedCells = new HashSet<>();
+        Map<String, Map<OwnerActivityKey, MaskCellClaim>> claimsByCell = new LinkedHashMap<>();
+        Map<OwnerActivityKey, Integer> rowCountBySource = new HashMap<>();
+        Map<OwnerActivityKey, TerritoryPolygon> newestRowBySource = new HashMap<>();
+        Map<OwnerActivityKey, List<Long>> routeActivityIdsBySource = new HashMap<>();
+        Map<Long, Integer> ownerOrder = new HashMap<>();
 
         for (DecodedLandMaskRow decoded : decodedRows) {
             TerritoryPolygon row = decoded.row();
@@ -323,83 +476,259 @@ public class TerritoryService {
             if (owner == null) {
                 continue;
             }
-            rowCountByOwner.merge(row.getUserId(), 1, Integer::sum);
-            newestRowByOwner.putIfAbsent(row.getUserId(), row);
-            Map<String, MaskAccumulator> ownerCells = cellsByOwner.computeIfAbsent(row.getUserId(), ignored -> new LinkedHashMap<>());
+            ownerOrder.putIfAbsent(row.getUserId(), ownerOrder.size());
+            OwnerActivityKey sourceKey = new OwnerActivityKey(row.getUserId(), row.getActivityId());
+            rowCountBySource.merge(sourceKey, 1, Integer::sum);
+            LocalDateTime activityTime = ownershipTimeFor(row, activityTimes);
+            TerritoryPolygon currentNewestRow = newestRowBySource.get(sourceKey);
+            if (isNewerTerritoryRow(row, activityTime, currentNewestRow, ownershipTimeFor(currentNewestRow, activityTimes))) {
+                newestRowBySource.put(sourceKey, row);
+            }
+            if (row.getActivityId() != null) {
+                routeActivityIdsBySource
+                        .computeIfAbsent(sourceKey, ignored -> new ArrayList<>())
+                        .add(row.getActivityId());
+            }
             for (TerritoryPolygonComputer.MaskCell cell : decoded.mask().cells()) {
-                if (!Double.isFinite(cell.latitude()) || !Double.isFinite(cell.longitude())) {
-                    continue;
-                }
-                MaskGridPoint point = responseCellPoint(cell.latitude(), cell.longitude(), responseCellMeters, cosRef);
-                if (!claimedCells.add(point.key())) {
-                    continue;
-                }
-                ownerCells.computeIfAbsent(point.key(), ignored -> new MaskAccumulator(point.x(), point.y()))
-                        .record(cell.latitude(), cell.longitude());
+                recordSourceCellFootprintClaims(
+                        claimsByCell,
+                        row,
+                        cell,
+                        decoded.mask().cellMeters(),
+                        responseCellMeters,
+                        cosRef,
+                        sourceKey,
+                        activityTime
+                );
             }
         }
 
-        List<OwnedLandMask> masks = new ArrayList<>();
-        for (Map.Entry<Long, Map<String, MaskAccumulator>> entry : cellsByOwner.entrySet()) {
-            Long ownerId = entry.getKey();
-            Map<String, MaskAccumulator> ownerCells = entry.getValue();
-            if (ownerCells.isEmpty()) {
+        Map<OwnerActivityKey, Map<String, MaskAccumulator>> cellsBySource = new LinkedHashMap<>();
+        for (Map.Entry<String, Map<OwnerActivityKey, MaskCellClaim>> entry : claimsByCell.entrySet()) {
+            Map.Entry<OwnerActivityKey, MaskCellClaim> winner = entry.getValue().entrySet().stream()
+                    .max((left, right) -> MaskCellClaim.compareOwnership(left.getValue(), right.getValue()))
+                    .orElse(null);
+            if (winner == null) {
                 continue;
             }
-            fillInteriorVoids(ownerCells, responseCellMeters, cosRef, claimedCells);
+            OwnerActivityKey sourceKey = winner.getKey();
+            cellsBySource.computeIfAbsent(sourceKey, ignored -> new LinkedHashMap<>())
+                    .put(entry.getKey(), winner.getValue().accumulator);
+        }
+
+        List<OwnedLandMask> masks = new ArrayList<>();
+        List<OwnerActivityKey> sourceKeys = new ArrayList<>(cellsBySource.keySet());
+        sourceKeys.sort(Comparator
+                .comparingInt((OwnerActivityKey key) -> ownerOrder.getOrDefault(key.ownerId(), Integer.MAX_VALUE))
+                .thenComparing((OwnerActivityKey key) -> ownershipTimeFor(newestRowBySource.get(key), activityTimes), Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing((OwnerActivityKey key) -> key.activityId(), Comparator.nullsLast(Comparator.reverseOrder())));
+        for (OwnerActivityKey sourceKey : sourceKeys) {
+            Long ownerId = sourceKey.ownerId();
+            Map<String, MaskAccumulator> ownerCells = cellsBySource.get(sourceKey);
+            if (ownerId == null || ownerCells == null || ownerCells.isEmpty()) {
+                continue;
+            }
             List<MaskCellDto> cellDtos = ownerCells.values().stream()
                     .map(MaskAccumulator::toDto)
                     .toList();
             PolygonOwner owner = owners.get(ownerId);
-            TerritoryPolygon newestRow = newestRowByOwner.get(ownerId);
-            int sourceRows = rowCountByOwner.getOrDefault(ownerId, 0);
+            if (owner == null) {
+                continue;
+            }
+            TerritoryPolygon newestRow = newestRowBySource.get(sourceKey);
+            int sourceRows = rowCountBySource.getOrDefault(sourceKey, 0);
+            List<Long> routeActivityIds = routeActivityIdsBySource.getOrDefault(sourceKey, List.of()).stream()
+                    .distinct()
+                    .toList();
+            if (routeActivityIds.isEmpty() && sourceKey.activityId() != null) {
+                routeActivityIds = List.of(sourceKey.activityId());
+            }
+            LocalDateTime maskTime = ownershipTimeFor(newestRow, activityTimes);
             masks.add(new OwnedLandMask(
                     sourceRows == 1 && newestRow != null ? newestRow.getId() : null,
-                    sourceRows == 1 && newestRow != null ? newestRow.getActivityId() : null,
+                    sourceKey.activityId(),
                     ownerId,
                     owner.name(),
                     owner.color(),
                     owner.active(),
+                    routeActivityIds,
                     cellDtos,
                     responseCellMeters,
                     cellDtos.size() * responseCellMeters * responseCellMeters,
-                    newestRow != null && newestRow.getCreatedAt() != null ? newestRow.getCreatedAt().toString() : null
+                    maskTime != null ? maskTime.toString() : null
             ));
         }
         return masks;
     }
 
+    private static boolean isRenderableTerritoryMask(TerritoryPolygonComputer.DecodedTerritoryMask mask) {
+        return mask != null
+                && mask.isLandTerritory()
+                && !mask.cells().isEmpty();
+    }
+
+    private Map<Long, LocalDateTime> effectiveActivityTimes(List<DecodedLandMaskRow> rows) {
+        Set<Long> activityIds = rows.stream()
+                .map(DecodedLandMaskRow::row)
+                .map(TerritoryPolygon::getActivityId)
+                .filter(Objects::nonNull)
+                .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+        return effectiveActivityTimesForIds(activityIds);
+    }
+
+    private Map<Long, LocalDateTime> effectiveActivityTimesForIds(Iterable<Long> activityIds) {
+        Set<Long> uniqueActivityIds = new LinkedHashSet<>();
+        if (activityIds != null) {
+            for (Long activityId : activityIds) {
+                if (activityId != null) {
+                    uniqueActivityIds.add(activityId);
+                }
+            }
+        }
+        if (uniqueActivityIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, LocalDateTime> times = new HashMap<>();
+        for (Object[] row : activityRepository.findEffectiveTimesByActivityIds(uniqueActivityIds)) {
+            if (row == null || row.length < 2 || row[0] == null || row[1] == null) {
+                continue;
+            }
+            times.put(((Number) row[0]).longValue(), (LocalDateTime) row[1]);
+        }
+        return times;
+    }
+
+    private static LocalDateTime ownershipTimeFor(TerritoryPolygon row, Map<Long, LocalDateTime> activityTimes) {
+        if (row == null) {
+            return null;
+        }
+        LocalDateTime activityTime = activityTimes.get(row.getActivityId());
+        return activityTime != null ? activityTime : row.getCreatedAt();
+    }
+
+    private static boolean isNewerTerritoryRow(TerritoryPolygon candidate,
+                                               LocalDateTime candidateTime,
+                                               TerritoryPolygon current,
+                                               LocalDateTime currentTime) {
+        if (candidate == null) {
+            return false;
+        }
+        if (current == null) {
+            return true;
+        }
+        int timeCompare = compareNullableTime(candidateTime, currentTime);
+        if (timeCompare != 0) {
+            return timeCompare > 0;
+        }
+        return compareNullableLong(candidate.getActivityId(), current.getActivityId()) > 0;
+    }
+
+    private static int compareNullableTime(LocalDateTime left, LocalDateTime right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return -1;
+        }
+        if (right == null) {
+            return 1;
+        }
+        return left.compareTo(right);
+    }
+
+    private static int compareNullableLong(Long left, Long right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return -1;
+        }
+        if (right == null) {
+            return 1;
+        }
+        return left.compareTo(right);
+    }
+
     private List<RouteTraceDto> routeTracesFor(OwnedLandMask mask) {
-        if (mask == null || !mask.active() || mask.activityId() == null) {
+        if (mask == null || !mask.active() || mask.routeActivityIds().isEmpty()) {
             return List.of();
         }
 
+        List<Long> routeActivityIds = representativeRouteActivityIds(mask.routeActivityIds(), MAX_TERRITORY_ROUTE_TRACES);
+        if (routeActivityIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, LocalDateTime> activityTimes = effectiveActivityTimesForIds(routeActivityIds);
         List<Object[]> rows = activityPointRepository.findRoutePreviewSamplesByActivityIds(
-                List.of(mask.activityId()),
+                routeActivityIds,
                 MAX_TERRITORY_ROUTE_TRACE_POINTS
         );
-        List<RoutePointDto> points = new ArrayList<>();
+        Map<Long, List<RoutePointDto>> pointsByActivityId = new LinkedHashMap<>();
         for (Object[] row : rows) {
             if (row == null || row.length < 3 || row[1] == null || row[2] == null) {
                 continue;
             }
+            Long activityId = ((Number) row[0]).longValue();
             double latitude = ((Number) row[1]).doubleValue();
             double longitude = ((Number) row[2]).doubleValue();
             if (Double.isFinite(latitude) && Double.isFinite(longitude)) {
-                points.add(new RoutePointDto(round6(latitude), round6(longitude)));
+                pointsByActivityId
+                        .computeIfAbsent(activityId, ignored -> new ArrayList<>())
+                        .add(new RoutePointDto(round6(latitude), round6(longitude)));
             }
         }
 
-        if (points.size() < MIN_TERRITORY_ROUTE_POINTS) {
+        List<RouteTraceDto> traces = new ArrayList<>();
+        for (Map.Entry<Long, List<RoutePointDto>> entry : pointsByActivityId.entrySet()) {
+            List<RoutePointDto> points = entry.getValue();
+            if (points.size() < MIN_TERRITORY_ROUTE_POINTS) {
+                continue;
+            }
+            LocalDateTime activityTime = activityTimes.get(entry.getKey());
+            traces.add(new RouteTraceDto(
+                    entry.getKey(),
+                    points,
+                    TERRITORY_ROUTE_TRACE_RADIUS_METERS,
+                    activityTime != null ? activityTime.toString() : mask.createdAt()
+            ));
+        }
+        return traces;
+    }
+
+    private static List<Long> representativeRouteActivityIds(List<Long> activityIds, int maxCount) {
+        if (activityIds == null || activityIds.isEmpty() || maxCount <= 0) {
             return List.of();
         }
 
-        return List.of(new RouteTraceDto(
-                mask.activityId(),
-                points,
-                TERRITORY_ROUTE_TRACE_RADIUS_METERS,
-                mask.createdAt()
-        ));
+        List<Long> distinctIds = activityIds.stream()
+                .filter(Objects::nonNull)
+                .collect(
+                        LinkedHashSet<Long>::new,
+                        LinkedHashSet::add,
+                        LinkedHashSet::addAll
+                )
+                .stream()
+                .toList();
+        if (distinctIds.size() <= maxCount) {
+            return distinctIds;
+        }
+
+        LinkedHashSet<Long> selectedIds = new LinkedHashSet<>();
+        double step = (distinctIds.size() - 1.0) / (maxCount - 1.0);
+        for (int index = 0; index < maxCount; index += 1) {
+            int selectedIndex = (int) Math.round(index * step);
+            selectedIds.add(distinctIds.get(Math.min(distinctIds.size() - 1, selectedIndex)));
+        }
+
+        int fillIndex = 0;
+        while (selectedIds.size() < maxCount && fillIndex < distinctIds.size()) {
+            selectedIds.add(distinctIds.get(fillIndex));
+            fillIndex += 1;
+        }
+
+        return List.copyOf(selectedIds);
     }
 
     private Map<Long, PolygonOwner> polygonOwners(List<DecodedLandMaskRow> rows, Long activeUserId) {
@@ -445,32 +774,41 @@ public class TerritoryService {
         String newestCreatedAt = null;
         Long sourceId = null;
         Long sourceActivityId = null;
+        List<Long> routeActivityIds = new ArrayList<>();
         int sourceRowCount = 0;
-        double sourceCellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
+        double sourceCellMeters = Double.POSITIVE_INFINITY;
         for (TerritoryPolygon row : rows) {
             TerritoryPolygonComputer.DecodedTerritoryMask mask = TerritoryPolygonComputer.decodeMaskCells(row.getCoordinates());
-            if (mask.cells().isEmpty()) {
+            if (!mask.isLandTerritory() || mask.cells().isEmpty()) {
                 continue;
             }
             sourceRowCount += 1;
             sourceId = row.getId();
             sourceActivityId = row.getActivityId();
+            if (row.getActivityId() != null) {
+                routeActivityIds.add(row.getActivityId());
+            }
             sourceCellMeters = Math.min(sourceCellMeters, mask.cellMeters());
             if (newestCreatedAt == null && row.getCreatedAt() != null) {
                 newestCreatedAt = row.getCreatedAt().toString();
             }
             sourceCells.addAll(mask.cells());
         }
+        List<Long> distinctRouteActivityIds = routeActivityIds.stream().distinct().toList();
 
         if (sourceCells.isEmpty()) {
-            return new UnionedLandMask(null, null, List.of(), sourceCellMeters, 0.0, newestCreatedAt);
+            return new UnionedLandMask(null, null, distinctRouteActivityIds, List.of(),
+                    TerritoryPolygonComputer.LAND_MASK_CELL_METERS, 0.0, newestCreatedAt);
+        }
+        if (!Double.isFinite(sourceCellMeters) || sourceCellMeters <= 0.0) {
+            sourceCellMeters = TerritoryPolygonComputer.LAND_MASK_CELL_METERS;
         }
 
         double responseCellMeters = responseCellMetersFor(sourceCells.size(), sourceCellMeters);
         double refLat = sourceCells.get(0).latitude();
         double cosRef = Math.cos(Math.toRadians(refLat));
         if (Math.abs(cosRef) < 1e-6) {
-            return new UnionedLandMask(null, null, List.of(), responseCellMeters, 0.0, newestCreatedAt);
+            return new UnionedLandMask(null, null, distinctRouteActivityIds, List.of(), responseCellMeters, 0.0, newestCreatedAt);
         }
 
         Map<String, MaskAccumulator> union = new LinkedHashMap<>();
@@ -482,8 +820,6 @@ public class TerritoryService {
             union.computeIfAbsent(point.key(), ignored -> new MaskAccumulator(point.x(), point.y()))
                     .record(cell.latitude(), cell.longitude());
         }
-        fillInteriorVoids(union, responseCellMeters, cosRef);
-
         List<MaskCellDto> cellDtos = union.values().stream()
                 .map(MaskAccumulator::toDto)
                 .toList();
@@ -491,6 +827,7 @@ public class TerritoryService {
         return new UnionedLandMask(
                 sourceRowCount == 1 ? sourceId : null,
                 sourceRowCount == 1 ? sourceActivityId : null,
+                distinctRouteActivityIds,
                 cellDtos,
                 responseCellMeters,
                 totalArea,
@@ -500,15 +837,21 @@ public class TerritoryService {
 
     private static double responseCellMetersFor(int sourceCellCount, double sourceCellMeters) {
         double meters = Math.max(TerritoryPolygonComputer.LAND_MASK_CELL_METERS, sourceCellMeters);
-        if (sourceCellCount <= MAX_RESPONSE_MASK_CELLS) {
+        if (sourceCellMeters >= COARSE_LAND_MASK_CELL_METERS
+                && sourceCellCount <= MAX_COARSE_LAND_MASK_RESPONSE_CELLS) {
             return meters;
         }
+        if (sourceCellCount > LARGE_LAND_MASK_SOURCE_CELL_COUNT) {
+            meters = Math.max(meters, LARGE_LAND_MASK_RESPONSE_CELL_METERS);
+        }
+        if (sourceCellCount <= MAX_RESPONSE_MASK_CELLS) {
+            return Math.min(meters, MAX_REAL_USER_LAND_MASK_RESPONSE_CELL_METERS);
+        }
         double scale = Math.sqrt(sourceCellCount / (double) MAX_RESPONSE_MASK_CELLS);
-        return Math.ceil(meters * scale);
-    }
-
-    private static String responseCellKey(double latitude, double longitude, double cellMeters, double cosRef) {
-        return responseCellPoint(latitude, longitude, cellMeters, cosRef).key();
+        return Math.min(
+                Math.ceil(meters * scale),
+                MAX_REAL_USER_LAND_MASK_RESPONSE_CELL_METERS
+        );
     }
 
     private static MaskGridPoint responseCellPoint(double latitude, double longitude, double cellMeters, double cosRef) {
@@ -517,120 +860,127 @@ public class TerritoryService {
         return new MaskGridPoint(x, y);
     }
 
-    private static void fillInteriorVoids(Map<String, MaskAccumulator> union, double cellMeters, double cosRef) {
-        fillInteriorVoids(union, cellMeters, cosRef, null);
-    }
-
-    private static void fillInteriorVoids(Map<String, MaskAccumulator> union,
-                                          double cellMeters,
-                                          double cosRef,
-                                          Set<String> globallyClaimedCells) {
-        if (union.isEmpty() || !Double.isFinite(cellMeters) || cellMeters <= 0 || Math.abs(cosRef) < 1e-6) {
+    private static void recordSourceCellFootprintClaims(
+            Map<String, Map<OwnerActivityKey, MaskCellClaim>> claimsByCell,
+            TerritoryPolygon row,
+            TerritoryPolygonComputer.MaskCell cell,
+            double sourceCellMeters,
+            double responseCellMeters,
+            double cosRef,
+            OwnerActivityKey sourceKey,
+            LocalDateTime activityTime
+    ) {
+        if (row == null || row.getUserId() == null || cell == null
+                || sourceKey == null || sourceKey.ownerId() == null
+                || !Double.isFinite(cell.latitude()) || !Double.isFinite(cell.longitude())) {
             return;
         }
-
-        long minX = Long.MAX_VALUE;
-        long maxX = Long.MIN_VALUE;
-        long minY = Long.MAX_VALUE;
-        long maxY = Long.MIN_VALUE;
-        for (MaskAccumulator cell : union.values()) {
-            minX = Math.min(minX, cell.gridX);
-            maxX = Math.max(maxX, cell.gridX);
-            minY = Math.min(minY, cell.gridY);
-            maxY = Math.max(maxY, cell.gridY);
-        }
-
-        long occupiedMinX = minX;
-        long occupiedMaxX = maxX;
-        long occupiedMinY = minY;
-        long occupiedMaxY = maxY;
-        long floodMinX = minX - RESPONSE_MASK_CLOSE_RADIUS_CELLS - 1L;
-        long floodMaxX = maxX + RESPONSE_MASK_CLOSE_RADIUS_CELLS + 1L;
-        long floodMinY = minY - RESPONSE_MASK_CLOSE_RADIUS_CELLS - 1L;
-        long floodMaxY = maxY + RESPONSE_MASK_CLOSE_RADIUS_CELLS + 1L;
-        long width = floodMaxX - floodMinX + 1;
-        long height = floodMaxY - floodMinY + 1;
-        if (width <= 0 || height <= 0 || width * height > MAX_RESPONSE_MASK_CELLS * 4L) {
-            return;
-        }
-
-        Set<String> floodBarrier = responseFloodBarrier(union);
-        Set<String> outside = new HashSet<>();
-        Deque<MaskGridPoint> queue = new ArrayDeque<>();
-        for (long x = floodMinX; x <= floodMaxX; x += 1) {
-            seedOutsideCell(floodBarrier, outside, queue, x, floodMinY);
-            seedOutsideCell(floodBarrier, outside, queue, x, floodMaxY);
-        }
-        for (long y = floodMinY + 1; y < floodMaxY; y += 1) {
-            seedOutsideCell(floodBarrier, outside, queue, floodMinX, y);
-            seedOutsideCell(floodBarrier, outside, queue, floodMaxX, y);
-        }
-
-        long[] dx = {1, -1, 0, 0};
-        long[] dy = {0, 0, 1, -1};
-        while (!queue.isEmpty()) {
-            MaskGridPoint point = queue.removeFirst();
-            for (int i = 0; i < dx.length; i += 1) {
-                long nextX = point.x() + dx[i];
-                long nextY = point.y() + dy[i];
-                if (nextX < floodMinX || nextX > floodMaxX || nextY < floodMinY || nextY > floodMaxY) {
+        MaskGridPoint center = responseCellPoint(cell.latitude(), cell.longitude(), responseCellMeters, cosRef);
+        double sourceMeters = Double.isFinite(sourceCellMeters) && sourceCellMeters > 0
+                ? sourceCellMeters
+                : responseCellMeters;
+        double overlapRadius = sourceMeters <= responseCellMeters * 1.05
+                ? 0.0
+                : Math.max(0.5, (sourceMeters + responseCellMeters) / (2.0 * responseCellMeters));
+        long gridRadius = Math.max(0, (long) Math.ceil(overlapRadius));
+        for (long dy = -gridRadius; dy <= gridRadius; dy += 1) {
+            for (long dx = -gridRadius; dx <= gridRadius; dx += 1) {
+                if (Math.abs(dx) > overlapRadius || Math.abs(dy) > overlapRadius) {
                     continue;
                 }
-                seedOutsideCell(floodBarrier, outside, queue, nextX, nextY);
-            }
-        }
-
-        for (long y = occupiedMinY; y <= occupiedMaxY; y += 1) {
-            for (long x = occupiedMinX; x <= occupiedMaxX; x += 1) {
+                long x = center.x() + dx;
+                long y = center.y() + dy;
                 MaskGridPoint point = new MaskGridPoint(x, y);
-                String key = point.key();
-                if (union.containsKey(key)
-                        || outside.contains(key)
-                        || (globallyClaimedCells != null && globallyClaimedCells.contains(key))) {
-                    continue;
-                }
-                long fillX = x;
-                long fillY = y;
-                union.computeIfAbsent(key, ignored -> new MaskAccumulator(fillX, fillY))
-                        .record(responseCellLatitude(fillY, cellMeters), responseCellLongitude(fillX, cellMeters, cosRef));
-                if (globallyClaimedCells != null) {
-                    globallyClaimedCells.add(key);
-                }
+                double[] pointCenter = responseCellCenter(point, responseCellMeters, cosRef);
+                claimsByCell.computeIfAbsent(point.key(), ignored -> new LinkedHashMap<>())
+                        .computeIfAbsent(sourceKey, ignored -> new MaskCellClaim(row.getUserId(), point.x(), point.y()))
+                        .record(pointCenter[0], pointCenter[1], row, activityTime);
             }
         }
     }
 
-    private static Set<String> responseFloodBarrier(Map<String, MaskAccumulator> union) {
-        Set<String> barrier = new HashSet<>();
-        for (MaskAccumulator cell : union.values()) {
-            for (long dy = -RESPONSE_MASK_CLOSE_RADIUS_CELLS; dy <= RESPONSE_MASK_CLOSE_RADIUS_CELLS; dy += 1) {
-                for (long dx = -RESPONSE_MASK_CLOSE_RADIUS_CELLS; dx <= RESPONSE_MASK_CLOSE_RADIUS_CELLS; dx += 1) {
-                    barrier.add(new MaskGridPoint(cell.gridX + dx, cell.gridY + dy).key());
-                }
+    private static double[] responseCellCenter(MaskGridPoint point, double cellMeters, double cosRef) {
+        double latitude = point.y() * cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT;
+        double longitude = point.x() * cellMeters / (TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosRef);
+        return new double[]{latitude, longitude};
+    }
+
+    private static PolygonResponse stripCells(PolygonResponse response) {
+        if (response == null || response.polygons().isEmpty()) {
+            return response;
+        }
+        List<PolygonDto> stripped = response.polygons().stream()
+                .map(poly -> new PolygonDto(
+                        poly.id(), poly.activityId(), poly.ownerId(),
+                        poly.ownerName(), poly.color(), poly.active(),
+                        poly.areaSquareMeters(), List.of(), List.of(),
+                        poly.shapeType(), poly.cellMeters(), poly.createdAt(),
+                        List.of()))
+                .toList();
+        return new PolygonResponse(stripped, response.totalAreaSquareMeters(),
+                response.polygonCount(), response.backfillInProgress(),
+                response.pendingActivityCount());
+    }
+
+    private static PolygonDtoBounds polygonDtoBounds(PolygonDto polygon) {
+        if (polygon == null || polygon.cells() == null || polygon.cells().isEmpty()) {
+            return null;
+        }
+        double minLat = Double.POSITIVE_INFINITY;
+        double maxLat = Double.NEGATIVE_INFINITY;
+        double minLng = Double.POSITIVE_INFINITY;
+        double maxLng = Double.NEGATIVE_INFINITY;
+        for (MaskCellDto cell : polygon.cells()) {
+            if (cell == null || !Double.isFinite(cell.latitude()) || !Double.isFinite(cell.longitude())) {
+                continue;
             }
+            minLat = Math.min(minLat, cell.latitude());
+            maxLat = Math.max(maxLat, cell.latitude());
+            minLng = Math.min(minLng, cell.longitude());
+            maxLng = Math.max(maxLng, cell.longitude());
         }
-        return barrier;
-    }
-
-    private static void seedOutsideCell(Set<String> blocked,
-                                        Set<String> outside,
-                                        Deque<MaskGridPoint> queue,
-                                        long x,
-                                        long y) {
-        MaskGridPoint point = new MaskGridPoint(x, y);
-        String key = point.key();
-        if (blocked.contains(key) || !outside.add(key)) {
-            return;
+        if (!Double.isFinite(minLat) || !Double.isFinite(maxLat)
+                || !Double.isFinite(minLng) || !Double.isFinite(maxLng)) {
+            return null;
         }
-        queue.addLast(point);
+        return new PolygonDtoBounds(minLat, maxLat, minLng, maxLng);
     }
 
-    private static double responseCellLatitude(long gridY, double cellMeters) {
-        return round6(gridY * cellMeters / TerritoryPolygonComputer.METERS_PER_DEG_LAT);
+    private static PolygonDtoBounds mergePolygonDtoBounds(PolygonDtoBounds current, PolygonDtoBounds next) {
+        if (current == null) {
+            return next;
+        }
+        if (next == null) {
+            return current;
+        }
+        return new PolygonDtoBounds(
+                Math.min(current.minLat(), next.minLat()),
+                Math.max(current.maxLat(), next.maxLat()),
+                Math.min(current.minLng(), next.minLng()),
+                Math.max(current.maxLng(), next.maxLng())
+        );
     }
 
-    private static double responseCellLongitude(long gridX, double cellMeters, double cosRef) {
-        return round6(gridX * cellMeters / (TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosRef));
+    private static double polygonDtoBoundsDistanceMeters(PolygonDtoBounds a, PolygonDtoBounds b) {
+        if (a == null || b == null) {
+            return Double.POSITIVE_INFINITY;
+        }
+        double latGap = a.maxLat() < b.minLat()
+                ? b.minLat() - a.maxLat()
+                : (b.maxLat() < a.minLat() ? a.minLat() - b.maxLat() : 0.0);
+        double lngGap = a.maxLng() < b.minLng()
+                ? b.minLng() - a.maxLng()
+                : (b.maxLng() < a.minLng() ? a.minLng() - b.maxLng() : 0.0);
+        double centerLat = (a.centerLat() + b.centerLat()) / 2.0;
+        double cosLat = Math.max(1e-6, Math.abs(Math.cos(Math.toRadians(centerLat))));
+        return Math.hypot(
+                latGap * TerritoryPolygonComputer.METERS_PER_DEG_LAT,
+                lngGap * TerritoryPolygonComputer.METERS_PER_DEG_LAT * cosLat
+        );
+    }
+
+    private static double safeDouble(Double value) {
+        return value != null && Double.isFinite(value) ? value : 0.0;
     }
 
     private static double round6(double value) {
@@ -645,7 +995,7 @@ public class TerritoryService {
             }
             TerritoryPolygonComputer.DecodedTerritoryMask mask =
                     TerritoryPolygonComputer.decodeMaskCells(row.getCoordinates());
-            if (!mask.cells().isEmpty()) {
+            if (mask.processed()) {
                 alreadyComputedActivityIds.add(row.getActivityId());
             }
         }
@@ -667,43 +1017,38 @@ public class TerritoryService {
         return missingActivityIds;
     }
 
-    private List<Long> findMissingLocalTerritoryRivalActivityIds(Long activeUserId, List<TerritoryPolygon> liveRows) {
+    private List<Long> findMissingGlobalPolygonActivityIds(Long activeUserId) {
         if (activeUserId == null) {
             return List.of();
         }
-        var activeRunner = runnerRepository.findById(activeUserId);
-        if (activeRunner.isEmpty()
-                || !LocalSharedRunnerBootstrapService.DEFAULT_EMAIL.equalsIgnoreCase(activeRunner.get().getEmail())) {
+        List<Long> candidates = activityRepository.findMissingRealUserTerritoryActivityIdsExcludingRunner(
+                ActivityType.RUN,
+                activeUserId,
+                PageRequest.of(0, GLOBAL_POLYGON_WARMUP_SCAN_LIMIT)
+        );
+        if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
         List<Long> missingActivityIds = new ArrayList<>();
-        appendMissingLocalTerritoryRivalActivityIds(
-                LocalSharedRunnerBootstrapService.TERRITORY_RIVAL_EMAIL,
-                liveRows,
-                missingActivityIds
-        );
-        appendMissingLocalTerritoryRivalActivityIds(
-                OPTIONAL_TERRITORY_RIVAL_YELLOW_EMAIL,
-                liveRows,
-                missingActivityIds
-        );
+        for (Long activityId : candidates) {
+            if (activityId == null || !isGpsQualifiedTerritoryActivity(activityId)) {
+                continue;
+            }
+            missingActivityIds.add(activityId);
+        }
         return missingActivityIds;
     }
 
-    private void appendMissingLocalTerritoryRivalActivityIds(
-            String email,
-            List<TerritoryPolygon> liveRows,
-            List<Long> missingActivityIds
-    ) {
-        var rival = runnerRepository.findByEmailIgnoreCase(email);
-        if (rival.isEmpty()) {
+    private static void appendMissingActivityIds(List<Long> target, List<Long> source) {
+        if (target == null || source == null || source.isEmpty()) {
             return;
         }
-        Long rivalId = rival.get().getId();
-        List<TerritoryPolygon> rivalRows = liveRows.stream()
-                .filter(row -> rivalId.equals(row.getUserId()))
-                .toList();
-        missingActivityIds.addAll(findMissingPolygonActivityIds(rivalId, rivalRows));
+        Set<Long> seen = new HashSet<>(target);
+        for (Long activityId : source) {
+            if (activityId != null && seen.add(activityId)) {
+                target.add(activityId);
+            }
+        }
     }
 
     private boolean isGpsQualifiedTerritoryActivity(Long activityId) {
@@ -753,19 +1098,29 @@ public class TerritoryService {
     }
 
     private String globalPolygonActivitySignature(Long activeUserId) {
-        Object[] row = activityRepository.findGlobalActivitySetSignatureByActivityType(ActivityType.RUN);
+        long now = System.currentTimeMillis();
+        String activityPart;
+        if (cachedGlobalSignature != null && (now - lastGlobalSignatureTimestamp) < 30_000) {
+            activityPart = cachedGlobalSignature;
+        } else {
+                Object[] row = activityRepository.findRealUserGlobalActivitySetSignatureByActivityType(ActivityType.RUN);
+            if (row == null || row.length == 0) {
+                activityPart = "global:0:0:none";
+            } else {
+                Object[] values = row;
+                if (row.length == 1 && row[0] instanceof Object[] nested) {
+                    values = nested;
+                }
+                long count = numberAt(values, 0);
+                long maxId = numberAt(values, 1);
+                String newest = values.length > 2 && values[2] != null ? values[2].toString() : "none";
+                activityPart = "global:" + count + ":" + maxId + ":" + newest;
+            }
+            cachedGlobalSignature = activityPart;
+            lastGlobalSignatureTimestamp = now;
+        }
         String polygonSignature = globalLiveLandMaskSignature();
-        if (row == null || row.length == 0) {
-            return "global:0:0:none|" + polygonSignature + "|active:" + polygonActivitySignature(activeUserId);
-        }
-        Object[] values = row;
-        if (row.length == 1 && row[0] instanceof Object[] nested) {
-            values = nested;
-        }
-        long count = numberAt(values, 0);
-        long maxId = numberAt(values, 1);
-        String newest = values.length > 2 && values[2] != null ? values[2].toString() : "none";
-        return "global:" + count + ":" + maxId + ":" + newest + "|" + polygonSignature + "|active:" + polygonActivitySignature(activeUserId);
+        return activityPart + "|" + polygonSignature + "|active:" + polygonActivitySignature(activeUserId);
     }
 
     private String globalLiveLandMaskSignature() {
@@ -780,7 +1135,9 @@ public class TerritoryService {
         long count = numberAt(values, 0);
         long maxId = numberAt(values, 1);
         String newest = values.length > 2 && values[2] != null ? values[2].toString() : "none";
-        return "polygons:" + count + ":" + maxId + ":" + newest;
+        long areaTotal = numberAt(values, 3);
+        long coordinateLengthTotal = numberAt(values, 4);
+        return "polygons:" + count + ":" + maxId + ":" + newest + ":" + areaTotal + ":" + coordinateLengthTotal;
     }
 
     private String polygonActivitySignature(Long userId) {
@@ -835,7 +1192,7 @@ public class TerritoryService {
         return territoryPolygonRepository.findByActivityId(activityId).stream()
                 .map(TerritoryPolygon::getCoordinates)
                 .map(TerritoryPolygonComputer::decodeMaskCells)
-                .anyMatch(mask -> !mask.cells().isEmpty());
+                .anyMatch(TerritoryPolygonComputer.DecodedTerritoryMask::processed);
     }
 
     // -----------------------------------------------------------------------
@@ -869,11 +1226,40 @@ public class TerritoryService {
             String createdAt
     ) {}
 
+    private record PolygonDtoBounds(
+            double minLat,
+            double maxLat,
+            double minLng,
+            double maxLng
+    ) {
+        double centerLat() {
+            return (minLat + maxLat) / 2.0;
+        }
+
+        double centerLng() {
+            return (minLng + maxLng) / 2.0;
+        }
+    }
+
+    private record PolygonDtoInfo(
+            PolygonDto polygon,
+            int index,
+            PolygonDtoBounds bounds,
+            double distanceMeters
+    ) {
+        PolygonDtoInfo withDistance(double nextDistanceMeters) {
+            return new PolygonDtoInfo(polygon, index, bounds, nextDistanceMeters);
+        }
+    }
+
     private record MaskGridPoint(long x, long y) {
         String key() {
             return y + ":" + x;
         }
+
     }
+
+    private record OwnerActivityKey(Long ownerId, Long activityId) {}
 
     private static final class MaskAccumulator {
         private final long gridX;
@@ -898,9 +1284,83 @@ public class TerritoryService {
         }
     }
 
+    private static final class MaskCellClaim {
+        private final Long ownerId;
+        private final MaskAccumulator accumulator;
+        private LocalDateTime latestOwnershipTime;
+        private Long latestActivityId;
+
+        MaskCellClaim(Long ownerId, long gridX, long gridY) {
+            this.ownerId = ownerId;
+            this.accumulator = new MaskAccumulator(gridX, gridY);
+        }
+
+        void record(double latitude, double longitude, TerritoryPolygon row, LocalDateTime ownershipTime) {
+            accumulator.record(latitude, longitude);
+            if (isNewerRow(row, ownershipTime)) {
+                latestOwnershipTime = ownershipTime;
+                latestActivityId = row.getActivityId();
+            }
+        }
+
+        private boolean isNewerRow(TerritoryPolygon row, LocalDateTime ownershipTime) {
+            Long activityId = row.getActivityId();
+            if (ownershipTime != null) {
+                if (latestOwnershipTime == null || ownershipTime.isAfter(latestOwnershipTime)) {
+                    return true;
+                }
+                if (ownershipTime.isBefore(latestOwnershipTime)) {
+                    return false;
+                }
+            } else if (latestOwnershipTime != null) {
+                return false;
+            }
+            return activityId != null && (latestActivityId == null || activityId > latestActivityId);
+        }
+
+        static int compareOwnership(MaskCellClaim left, MaskCellClaim right) {
+            int byOwnershipTime = compareNullableTime(left.latestOwnershipTime, right.latestOwnershipTime);
+            if (byOwnershipTime != 0) {
+                return byOwnershipTime;
+            }
+            int byActivityId = compareNullableLong(left.latestActivityId, right.latestActivityId);
+            if (byActivityId != 0) {
+                return byActivityId;
+            }
+            return Integer.compare(left.accumulator.count, right.accumulator.count);
+        }
+
+        private static int compareNullableTime(LocalDateTime left, LocalDateTime right) {
+            if (left == null && right == null) {
+                return 0;
+            }
+            if (left == null) {
+                return -1;
+            }
+            if (right == null) {
+                return 1;
+            }
+            return left.compareTo(right);
+        }
+
+        private static int compareNullableLong(Long left, Long right) {
+            if (left == null && right == null) {
+                return 0;
+            }
+            if (left == null) {
+                return -1;
+            }
+            if (right == null) {
+                return 1;
+            }
+            return left.compareTo(right);
+        }
+    }
+
     private record UnionedLandMask(
             Long id,
             Long activityId,
+            List<Long> routeActivityIds,
             List<MaskCellDto> cells,
             double cellMeters,
             double areaSquareMeters,
@@ -914,6 +1374,7 @@ public class TerritoryService {
             String ownerName,
             String color,
             boolean active,
+            List<Long> routeActivityIds,
             List<MaskCellDto> cells,
             double cellMeters,
             double areaSquareMeters,
@@ -952,6 +1413,7 @@ public class TerritoryService {
             TerritoryMapResponse response
     ) {}
 
+    @Transactional(readOnly = true)
     public TerritoryMapResponse buildTerritoryMap(Runner activeRunner) {
         if (activeRunner == null || activeRunner.getId() == null) {
             return TerritoryMapResponse.empty();
@@ -984,6 +1446,9 @@ public class TerritoryService {
         double latSum = 0.0;
         double lngSum = 0.0;
         int validSamples = 0;
+        double activeLatSum = 0.0;
+        double activeLngSum = 0.0;
+        int activeSamples = 0;
 
         for (Object[] row : rows) {
             TerritorySample sample = TerritorySample.from(row);
@@ -1003,6 +1468,11 @@ public class TerritoryService {
             latSum += sample.latitude();
             lngSum += sample.longitude();
             validSamples += 1;
+            if (sample.runnerId().equals(activeRunner.getId())) {
+                activeLatSum += sample.latitude();
+                activeLngSum += sample.longitude();
+                activeSamples += 1;
+            }
         }
 
         if (validSamples == 0 || cells.isEmpty()) {
@@ -1079,10 +1549,12 @@ public class TerritoryService {
                 ))
                 .orElse(null);
 
+        double centerLat = activeSamples > 0 ? activeLatSum / activeSamples : latSum / validSamples;
+        double centerLng = activeSamples > 0 ? activeLngSum / activeSamples : lngSum / validSamples;
         TerritoryMapResponse response = new TerritoryMapResponse(
                 true,
                 "live",
-                new MapCenter(round(latSum / validSamples, 6), round(lngSum / validSamples, 6), 13),
+                new MapCenter(round(centerLat, 6), round(centerLng, 6), 13),
                 summary,
                 territoryCells,
                 leaderboard,
