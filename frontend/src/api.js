@@ -6,7 +6,8 @@
 export function getBackendBaseUrl() {
   const { hostname, port } = window.location;
   const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
-  if (!import.meta.env.DEV) return '';
+  const isDev = Boolean(import.meta.env && import.meta.env.DEV);
+  if (!isDev) return '';
   if (!isLocalHost || port === '8080') return '';
   return 'http://localhost:8080';
 }

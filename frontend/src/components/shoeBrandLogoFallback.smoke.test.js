@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const componentSource = readFileSync(path.join(here, 'ShoeBrandLogo.jsx'), 'utf8');
+const utilitySource = readFileSync(path.join(here, '../utils/shoeBrandLogo.js'), 'utf8');
 
 for (const missingAssetBrand of ['anta', 'bmai', 'do-win', 'lining', 'peak']) {
   assert.doesNotMatch(
@@ -15,21 +16,21 @@ for (const missingAssetBrand of ['anta', 'bmai', 'do-win', 'lining', 'peak']) {
 }
 
 assert.match(
-  componentSource,
+  utilitySource,
   /if \(key === 'hoka'\) return make\(\{ bg: '#22c55e', fg: '#ffffff', text: 'HOKA' \}\);/,
-  'ShoeBrandLogo should keep a synthetic fallback spec for HOKA when no shipped asset exists.',
+  'ShoeBrandLogo helper should keep a synthetic fallback spec for HOKA when no shipped asset exists.',
 );
 
 assert.match(
-  componentSource,
+  utilitySource,
   /if \(key === 'brooks'\) return make\(\{ bg: '#3b82f6', fg: '#ffffff', text: 'BROOKS' \}\);/,
-  'ShoeBrandLogo should keep a synthetic fallback spec for Brooks when no shipped asset exists.',
+  'ShoeBrandLogo helper should keep a synthetic fallback spec for Brooks when no shipped asset exists.',
 );
 
 assert.match(
-  componentSource,
+  utilitySource,
   /if \(key === 'on'\) return make\(\{ bg: '#e5e7eb', fg: '#0f172a', text: 'ON' \}\);/,
-  'ShoeBrandLogo should keep a synthetic fallback spec for On when no shipped asset exists.',
+  'ShoeBrandLogo helper should keep a synthetic fallback spec for On when no shipped asset exists.',
 );
 
 assert.match(
