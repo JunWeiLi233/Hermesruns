@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   EXTRA_REWARD_DEFINITIONS,
   buildCatalogRewardEntries,
+  getCatalogRewardStats,
 } from './rewardCatalog.js';
 
 assert.equal(
@@ -45,6 +46,26 @@ for (const reward of rewards) {
 assert.ok(
   rewards.some((reward) => reward.earned),
   'A representative running history should unlock at least one extra reward.',
+);
+
+const staleHistory = [
+  { startTime: '2026-05-01T06:00:00.000Z', distanceKm: 10 },
+  { startTime: '2026-04-30T06:00:00.000Z', distanceKm: 12 },
+  { startTime: '2026-04-29T06:00:00.000Z', distanceKm: 8 },
+];
+
+const staleStats = getCatalogRewardStats(staleHistory);
+
+assert.equal(
+  staleStats.streakDays,
+  0,
+  'Catalog streak days should reset when the most recent run is not today.',
+);
+
+assert.equal(
+  staleStats.streakWeeks,
+  0,
+  'Catalog streak weeks should reset when the most recent run is not in the current week.',
 );
 
 console.log('[PASS] Rewards catalog expansion coverage passed.');
