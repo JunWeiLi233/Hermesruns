@@ -7,15 +7,20 @@ function startOfWeek(date) {
   return copy;
 }
 
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
 export function getConsecutiveRunDayStreak(runs) {
   const sortedDays = [...new Set(
     runs
       .map((run) => new Date(run.startTime || run.startDate || 0))
       .filter((date) => !Number.isNaN(date.getTime()))
-      .map((date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()),
+      .map((date) => startOfDay(date)),
   )].sort((a, b) => b - a);
 
   if (sortedDays.length === 0) return 0;
+  if (sortedDays[0] !== startOfDay(new Date())) return 0;
   let streak = 1;
   for (let i = 1; i < sortedDays.length; i += 1) {
     const diffDays = Math.round((sortedDays[i - 1] - sortedDays[i]) / 86400000);
@@ -34,6 +39,7 @@ export function getConsecutiveRunWeekStreak(runs) {
   )].sort((a, b) => b - a);
 
   if (sortedWeeks.length === 0) return 0;
+  if (sortedWeeks[0] !== startOfWeek(new Date()).getTime()) return 0;
   let streak = 1;
   for (let i = 1; i < sortedWeeks.length; i += 1) {
     const diffWeeks = Math.round((sortedWeeks[i - 1] - sortedWeeks[i]) / (7 * 86400000));
