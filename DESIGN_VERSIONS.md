@@ -3395,18 +3395,27 @@ Notes: The Runs cockpit guard now requires a transparent page canvas, a plain `v
 
 ### Version: DV-2026-06-12-01
 Date: 2026-06-12
+Surface: Real route thumbnails on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `backend/src/main/java/com/hermes/backend/ActivityController.java`, `backend/src/main/java/com/hermes/backend/ActivityPointRepository.java`, `DESIGN_VERSIONS.md`
+What changed: `/runs` thumbnails now draw dense route previews on matching CARTO map tiles, keep the Strava badge above the route line, and preload upcoming preview batches so cards do not visibly upgrade after entering the viewport.
+Why: The route cards were showing oversized or stale simplified paths, and later cards could appear with fallback geometry before the real route preview arrived.
+Rollback target: `DV-2026-05-19-06`
+Notes: The run-detail route source remains authoritative; the list page uses the batched route-preview endpoint only for thumbnail-grade rendering.
+
+### Version: DV-2026-06-12-02
+Date: 2026-06-12
 Surface: Territory enclosed-run land map on `/territory`
 Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-stale-cache-clear-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
 What changed: Removed normal route-corridor territory persistence and made `/api/territory/polygons` land-only. Territory now comes from meaningful enclosed regions within a single run, with newer overlap still winning. Shared-runner bootstrap routes were reseeded as v3 closed loops around Flushing at 32 samples and now persist land masks during bootstrap so the live page has real territory immediately after restart.
 Why: The territory page needed to stop showing open-route artifacts as land and move to the user-approved single-run enclosed-land model, while still proving the shared local account on localhost with real territory instead of an empty page.
-Rollback target: `DV-2026-06-11-04`
+Rollback target: `DV-2026-06-12-01`
 Notes: Backend tests passed for `LocalSharedRunnerBootstrapServiceTests`, `TerritoryPolygonComputerTests`, and `TerritoryControllerTests`; frontend smoke/build/runtime-sync passed; live `/api/territory/polygons` returned `polygonCount=18` for `Hermes Shared Runner`; escalated live verifier saved `task-images/territory-live-shared-account-proof.jpg` and passed with `activeConcrete=1`, `activeContour=1`, `mapZoom=14`, aligned boxes, no helper/synthetic layers, sharp unfiltered tiles, and zero console errors.
 
-### Version: DV-2026-06-12-02
+### Version: DV-2026-06-12-03
 Date: 2026-06-12
 Surface: Territory sparse generated-loop rejection on `/territory`
 Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-live-shared-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-stale-cache-clear-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
 What changed: Bumped territory masks to `mask:v30`, API ETag to `land-mask-union-v54-mask-v30-concrete-boundary-sampling`, and browser cache to `global-owner-territory-cache-v97-concrete-boundary-sampling`. A closed outline must now have at least `48` points and no segment longer than `70m` before it can become land. No-territory activities now persist an empty processed land-mask marker so rejected runs do not remain pending.
 Why: The visible shared-runner "territory" was not real land. It came from 32-point generated local seed loops that were closed but too sparse to prove a concrete covered boundary. The page must show no active territory for those runs instead of drawing false land.
-Rollback target: `DV-2026-06-12-01`
+Rollback target: `DV-2026-06-12-02`
 Notes: Backend tests passed for `TerritoryPolygonComputerTests`, `TerritoryControllerTests`, and `LocalSharedRunnerBootstrapServiceTests`; frontend territory smoke/build/runtime-sync passed; live `/api/territory/polygons` for `Hermes Shared Runner` returned `polygonCount=0`, `activeCount=0`, `pending=0`, and `backfill=false`; in-app Browser on `/territory` rendered map tiles and both scope buttons with `activeConcrete=0` and `activeContour=0` before and after wheel zoom in/out; escalated live verifier passed with `activeBackendCells=0`, no synthetic/helper layers, unfiltered tiles, and zero console errors.

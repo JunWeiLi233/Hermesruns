@@ -11,6 +11,12 @@ const contrastFixes = readFileSync(path.join(here, '../styles/contrast-fixes.css
 
 assert.match(
   runsSource,
+  /<section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">/,
+  'Runs should render the profile-aligned cockpit as the current top surface.',
+);
+
+assert.match(
+  runsSource,
   /className="runs-profile-cockpit"/,
   'Runs should use the profile-aligned cockpit instead of the retired generated-photo hero.',
 );
@@ -23,7 +29,7 @@ assert.match(
 
 assert.match(
   runsSource,
-  /<button type="button" className="recent-runs-card" onClick=\{\(\) => onOpen\(run\)\}>/,
+  /<button type="button" className="recent-runs-card"[^>]*onClick=\{\(\) => onOpen\(run\)\}>/,
   'Run cards should be real buttons so the whole card click target is keyboard-accessible.',
 );
 
@@ -73,6 +79,12 @@ for (const [label, source] of [
     `${label} should not keep the retired Runs photo hero URL, card menu selectors, or cockpit background grid layer.`,
   );
 }
+
+assert.match(
+  splitRunsStyle,
+  /\.runs-dashboard-page\s+\.runs-profile-signal--count\s*\{[\s\S]*background:\s*#191512;[\s\S]*color:\s*#fff7ee;/,
+  'Runs full-history signal text should remain light on its dark cockpit card.',
+);
 
 assert.match(
   contrastFixes,
