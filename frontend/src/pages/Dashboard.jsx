@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { List } from 'react-window';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -11,6 +12,13 @@ import SectionCard from '../components/ui/SectionCard';
 import ActionBar from '../components/ui/ActionBar';
 import DataTable from '../components/ui/DataTable';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
+import {
+  buildCourseMapAdminDetailFallback,
+  buildCourseMapWorkspaceSource,
+  getCourseMapCatalogMarathons,
+  hasCourseMapBackendRecord,
+  mergeCourseMapQueueItems,
+} from '../utils/courseMapCatalogQueue.js';
 import { getDashboardTopbarTabKeys } from '../utils/dashboardTopbarNav';
 
 function ShoeImage({ src, alt, className, noImageLabel }) {
@@ -38,7 +46,7 @@ function ShoeImage({ src, alt, className, noImageLabel }) {
 
   if (!src) return <div className="admin-shoe-img-empty">{noImageLabel || alt || 'No image'}</div>;
   if (!processed) return <div className="admin-shoe-img-loading" />;
-  return <img className={className} src={processed} alt={alt} />;
+  return <img className={className} src={processed} alt={alt} loading="lazy" decoding="async" />;
 }
 
 const TAB_ITEMS = [
@@ -74,6 +82,8 @@ const TAB_ROUTE_MAP = {
 };
 
 const COURSE_MAP_UPLOAD_ACCEPT = 'image/*,application/pdf,.pdf';
+const ADMIN_JOB_STATUS_REQUEST_TIMEOUT_MS = 10000;
+const ADMIN_JOB_POLL_INTERVAL_MS = 2000;
 
 function normalizeDashboardPathname(pathname) {
   const normalized = String(pathname || '').replace(/\/+$/, '');
@@ -110,6 +120,10 @@ function readFileAsDataUrl(file) {
     reader.onerror = () => reject(new Error('file_read_failed'));
     reader.readAsDataURL(file);
   });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isCourseMapUploadFile(file) {
@@ -274,7 +288,20 @@ function getCourseMapImageUrl(asset) {
 function hasAlignedCourseMapPreview(asset) {
   if (!asset || typeof asset !== 'object') return false;
   const routePoints = Array.isArray(asset.routePoints) ? asset.routePoints : [];
-  return Boolean(asset.overlayBounds) || routePoints.length > 1 || (Array.isArray(asset.elevationSamples) && asset.elevationSamples.length > 0);
+  return Boolean(asset.overlayBounds) && routePoints.length > 1;
+}
+
+function hasCourseMapOsmLayer(asset) {
+  if (!asset || typeof asset !== 'object') return false;
+  const routePoints = Array.isArray(asset.routePoints) ? asset.routePoints : [];
+  return routePoints.length > 1;
+}
+
+function getCourseMapRenderableLive(item) {
+  const currentLive = getCourseMapCurrentLive(item);
+  if (hasCourseMapOsmLayer(currentLive)) return currentLive;
+  const storedLive = getCourseMapLive(item);
+  return hasCourseMapOsmLayer(storedLive) ? storedLive : null;
 }
 
 function getCourseMapPreviewConfidence(asset) {
@@ -290,8 +317,8 @@ function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
       tone: 'acquire',
       title: t('dashboard.course_maps_recommendation_acquire_title'),
       body: t('dashboard.course_maps_recommendation_acquire_body'),
-      cta: t('dashboard.course_maps_upload'),
-      action: 'upload',
+      cta: t('dashboard.course_maps_source_scan'),
+      action: 'scan',
     };
   }
 
@@ -300,7 +327,7 @@ function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
       tone: 'refresh',
       title: t('dashboard.course_maps_recommendation_refresh_title'),
       body: t('dashboard.course_maps_recommendation_refresh_body'),
-      cta: t('dashboard.course_maps_scan'),
+      cta: t('dashboard.course_maps_source_scan'),
       action: 'scan',
     };
   }
@@ -331,14 +358,14 @@ function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
     tone: 'acquire',
     title: t('dashboard.course_maps_recommendation_acquire_title'),
     body: t('dashboard.course_maps_recommendation_acquire_body'),
-    cta: t('dashboard.course_maps_upload'),
-    action: 'upload',
+    cta: t('dashboard.course_maps_source_scan'),
+    action: 'scan',
   };
 }
 
 function getCourseMapStatus(item) {
   if (getCourseMapPending(item)) return 'pending';
-  if (getCourseMapLive(item)) return 'live';
+  if (getCourseMapRenderableLive(item)) return 'live';
   return 'missing';
 }
 
@@ -360,6 +387,14 @@ function getDashboardTierLabel(tier, t) {
   return tier || '-';
 }
 
+function formatShoeScanQuota(user, t) {
+  const remaining = Number(user?.shoeScanRemaining);
+  const limit = Number(user?.shoeScanLimit);
+  if (limit < 0 || remaining < 0) return t('dashboard.shoe_scan_quota_unlimited');
+  if (!Number.isFinite(remaining) || !Number.isFinite(limit) || limit <= 0) return '-';
+  return t('dashboard.shoe_scan_quota_fraction', { remaining, total: limit });
+}
+
 function getDashboardJobStatusLabel(status, t) {
   const normalized = String(status || '').toUpperCase();
   if (normalized === 'COMPLETED') return t('dashboard.jobs_filter_status_completed');
@@ -372,8 +407,13 @@ function getDashboardJobStatusLabel(status, t) {
 function getDashboardJobTypeLabel(jobType, t) {
   const normalized = String(jobType || '').toUpperCase();
   if (normalized === 'STRAVA_SYNC') return t('dashboard.jobs_type_strava_sync');
+  if (normalized === 'STRAVA_GLOBAL_SYNC') return t('dashboard.jobs_type_strava_global_sync');
   if (normalized === 'GARMIN_IMPORT') return t('dashboard.jobs_type_garmin_import');
+  if (normalized === 'GARMIN_WELLNESS_SYNC') return t('dashboard.jobs_type_garmin_wellness_sync');
   if (normalized === 'FILE_IMPORT') return t('dashboard.jobs_type_file_import');
+  if (normalized === 'COURSE_MAP_PREVIEW_SCAN') return t('dashboard.jobs_type_course_map_scan');
+  if (normalized === 'COURSE_MAP_PREVIEW_UPLOAD') return t('dashboard.jobs_type_course_map_upload');
+  if (normalized === 'COURSE_MAP_PREVIEW_REANALYZE') return t('dashboard.jobs_type_course_map_reanalyze');
   return jobType || '-';
 }
 
@@ -426,18 +466,105 @@ function getDashboardJobTone(status) {
 }
 
 function getDashboardJobProgress(job) {
+  const normalized = String(job?.status || '').toUpperCase();
+  if (normalized === 'PENDING') return 12;
+  if (normalized === 'FAILED' || normalized === 'COMPLETED') return 100;
+
   const total = Number(job?.totalCount || 0);
   const success = Number(job?.successCount || 0);
   const failure = Number(job?.failureCount || 0);
   const processed = success + failure;
-  if (total > 0) {
+  if (total > 0 && processed > 0) {
     return Math.max(8, Math.min(100, Math.round((processed / total) * 100)));
   }
-  const normalized = String(job?.status || '').toUpperCase();
-  if (normalized === 'FAILED' || normalized === 'COMPLETED') return 100;
   if (normalized === 'RUNNING') return 62;
-  if (normalized === 'PENDING') return 18;
   return 8;
+}
+
+function getCourseMapActionProgress(action) {
+  const explicitProgress = Number(action?.progress);
+  if (Number.isFinite(explicitProgress)) {
+    return Math.max(8, Math.min(100, Math.round(explicitProgress)));
+  }
+  switch (action?.type) {
+    case 'upload':
+      return 12;
+    case 'scan':
+      return 22;
+    case 'queued':
+      return 18;
+    case 'reanalyze':
+      return 38;
+    case 'pipeline':
+      return 62;
+    case 'accept':
+      return 78;
+    case 'refresh':
+      return 92;
+    default:
+      return 8;
+  }
+}
+
+const COURSE_MAP_ACTION_STATUS_KEYS = {
+  upload: 'dashboard.course_maps_status_running_upload',
+  queued: 'dashboard.course_maps_status_running_queued',
+  processing: 'dashboard.course_maps_status_running_processing',
+  scan: 'dashboard.course_maps_status_running_scan',
+  reanalyze: 'dashboard.course_maps_status_running_reanalyze',
+  accept: 'dashboard.course_maps_status_running_accept',
+  clear: 'dashboard.course_maps_status_running_clear',
+  pipeline: 'dashboard.course_maps_status_running_pipeline',
+  refresh: 'dashboard.course_maps_status_running_refresh',
+};
+
+function getCourseMapActionStatusKey(action) {
+  if (String(action?.jobStatus || '').toUpperCase() === 'PENDING') {
+    return 'dashboard.course_maps_status_waiting';
+  }
+  return COURSE_MAP_ACTION_STATUS_KEYS[action?.type] || 'dashboard.course_maps_status_running_processing';
+}
+
+function isStaleCourseMapQueuedSummary(summary) {
+  const normalized = String(summary || '').toLowerCase();
+  return normalized.includes('queued course-map') || normalized.includes('fifo scan');
+}
+
+function getCourseMapActionSummary(action, t) {
+  if (String(action?.jobStatus || '').toUpperCase() === 'PENDING') {
+    return t('dashboard.course_maps_progress_waiting_hint');
+  }
+  if (String(action?.jobStatus || '').toUpperCase() === 'RUNNING' && isStaleCourseMapQueuedSummary(action?.summary)) {
+    return t(COURSE_MAP_ACTION_STATUS_KEYS[action?.type] || 'dashboard.course_maps_status_running_processing');
+  }
+  return action?.summary || t('dashboard.course_maps_progress_fifo_hint');
+}
+
+function getCourseMapActionFromJob(raceId, type, job) {
+  const jobStatus = String(job?.status || '').toUpperCase();
+  const resolvedType = jobStatus === 'PENDING'
+    ? type
+    : type === 'queued'
+      ? 'scan'
+      : type;
+  return {
+    raceId,
+    type: resolvedType,
+    progress: getDashboardJobProgress(job),
+    jobId: job?.id,
+    summary: job?.summary || '',
+    jobStatus,
+  };
+}
+
+function areCourseMapActionsEqual(left, right) {
+  if (!left || !right) return left === right;
+  return left.raceId === right.raceId
+    && left.type === right.type
+    && left.progress === right.progress
+    && left.jobId === right.jobId
+    && left.summary === right.summary
+    && left.jobStatus === right.jobStatus;
 }
 
 function getDashboardJobPriority(job) {
@@ -462,7 +589,217 @@ function getDashboardJobDetailsPreview(job) {
   }
 }
 
-export default function Dashboard() {
+function getDashboardJobParsedDetails(job) {
+  const raw = String(job?.detailsJson || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatDashboardJobValue(value) {
+  if (value == null || value === '') return '-';
+  if (Array.isArray(value)) return `${value.length} items`;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return Number.isFinite(value) ? value.toLocaleString() : String(value);
+  if (typeof value === 'object') {
+    const compact = JSON.stringify(value);
+    return compact.length > 84 ? `${compact.slice(0, 81)}...` : compact;
+  }
+  const text = String(value);
+  return text.length > 96 ? `${text.slice(0, 93)}...` : text;
+}
+
+function getDashboardJobPayloadHighlights(parsedDetails) {
+  if (!parsedDetails) return [];
+  return Object.entries(parsedDetails)
+    .filter(([key]) => key !== 'qwenScanSteps' && key !== 'lastQwenScanStep')
+    .slice(0, 8)
+    .map(([key, value]) => ({
+      key,
+      label: key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' '),
+      value: formatDashboardJobValue(value),
+    }));
+}
+
+function getDashboardJobTimelineSteps(parsedDetails) {
+  if (!parsedDetails) return [];
+  const scanSteps = Array.isArray(parsedDetails.qwenScanSteps) ? parsedDetails.qwenScanSteps : [];
+  if (scanSteps.length > 0) {
+    return scanSteps.map((step, index) => ({
+      key: `${step?.stage || 'step'}-${step?.at || index}`,
+      at: step?.at,
+      stage: step?.stage || `step_${index + 1}`,
+      status: step?.status || 'info',
+      message: step?.message || '',
+      details: step?.details && typeof step.details === 'object' ? step.details : null,
+    }));
+  }
+  const lastStep = parsedDetails.lastQwenScanStep;
+  if (!lastStep || typeof lastStep !== 'object') return [];
+  return [{
+    key: `${lastStep.stage || 'last'}-${lastStep.at || 'step'}`,
+    at: lastStep.at,
+    stage: lastStep.stage || 'last_step',
+    status: lastStep.status || 'info',
+    message: lastStep.message || '',
+    details: lastStep.details && typeof lastStep.details === 'object' ? lastStep.details : null,
+  }];
+}
+
+function getDashboardJobTimelineTone(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (/(fail|error|denied|invalid|timeout|blocked)/.test(normalized)) return 'failed';
+  if (/(running|start|scan|process|align|extract|search|geocode|qwen)/.test(normalized)) return 'running';
+  if (/(pending|queued|wait|retry)/.test(normalized)) return 'pending';
+  if (/(skipped|skip)/.test(normalized)) return 'skipped';
+  if (/(success|done|complete|ok)/.test(normalized)) return 'success';
+  return 'info';
+}
+
+function formatDashboardJobDuration(startValue, endValue) {
+  if (!startValue || !endValue) return '-';
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  const diffMs = end.getTime() - start.getTime();
+  if (!Number.isFinite(diffMs) || diffMs < 0) return '-';
+  const seconds = Math.max(0, Math.round(diffMs / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes < 60) return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
+// ── react-window v2 row components ────────────────────────────────────────
+// These must live at module scope so List's internal memo() wrapping is stable.
+// All state/callbacks are passed via rowProps.
+
+function ShoeQueueRowComponent({ ariaAttributes, index, style, items, selectedId, selectedIds, onSelect, onToggle, t }) {
+  const shoe = items[index];
+  if (!shoe) return null;
+  return (
+    <div style={style}>
+      <button
+        type="button"
+        className={`admin-shoe-workbench__queue-item${selectedId === shoe.id ? ' is-active' : ''}`}
+        onClick={() => onSelect(shoe.id)}
+        {...ariaAttributes}
+      >
+        <div className="admin-shoe-workbench__queue-thumb">
+          <input
+            type="checkbox"
+            className="admin-shoe-select"
+            checked={selectedIds.includes(shoe.id)}
+            onChange={() => onToggle(shoe.id)}
+            onClick={(event) => event.stopPropagation()}
+          />
+          <ShoeImage
+            src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
+            alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
+            className="admin-shoe-img"
+            noImageLabel={t('dashboard.img_no_image')}
+          />
+        </div>
+        <div className="admin-shoe-workbench__queue-body">
+          <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
+          <span>{shoe.runnerEmail}</span>
+          <div className="admin-shoe-badges">
+            <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${getShoeReviewState(shoe)}`}>
+              {t(`dashboard.review_state_${getShoeReviewState(shoe)}`)}
+            </span>
+          </div>
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function ShoeRepositoryRowComponent({ ariaAttributes, index, style, items, selectedId, onSelect, t }) {
+  const shoe = items[index];
+  if (!shoe) return null;
+  const state = getShoeReviewState(shoe);
+  const affinity = getShoeAffinityScore(shoe);
+  const lastModified = getShoeLastModifiedLabel(shoe);
+  return (
+    <div style={style}>
+      <button
+        type="button"
+        className={`admin-shoe-stitch-repository__row${selectedId === shoe.id ? ' is-active' : ''}`}
+        onClick={() => onSelect(shoe.id)}
+        {...ariaAttributes}
+      >
+        <span className="admin-shoe-stitch-repository__identity">
+          <span className="admin-shoe-stitch-repository__thumb">
+            <ShoeImage
+              src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
+              alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
+              className="admin-shoe-stitch-repository__thumb-image"
+              noImageLabel={t('dashboard.img_no_image')}
+            />
+          </span>
+          <span className="admin-shoe-stitch-repository__identity-copy">
+            <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
+            <small>{shoe.runnerEmail}</small>
+          </span>
+        </span>
+        <span className="admin-shoe-stitch-repository__status">
+          <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${state}`}>
+            {t(`dashboard.review_state_${state}`)}
+          </span>
+        </span>
+        <span className="admin-shoe-stitch-repository__affinity">
+          <span className="admin-shoe-stitch-repository__meter">
+            <span className="admin-shoe-stitch-repository__meter-fill" style={{ width: `${affinity}%` }} />
+          </span>
+          <strong>{affinity}%</strong>
+        </span>
+        <span className="admin-shoe-stitch-repository__modified">
+          {lastModified !== '-' ? lastModified : t('dashboard.shoe_stitch_modified_fallback')}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function CatalogRowComponent({ ariaAttributes, index, style, items, onEdit, t }) {
+  const item = items[index];
+  if (!item) return null;
+  return (
+    <div style={style} {...ariaAttributes}>
+      <div className="admin-shoe-card">
+        <div className="admin-shoe-img-wrap">
+          <div className="admin-shoe-img-empty">{item.brand?.slice(0, 1) || '?'}</div>
+        </div>
+        <div className="admin-shoe-info">
+          <span className="admin-shoe-name">{item.model}</span>
+          <span className="admin-shoe-owner">{item.brand}</span>
+          {(item.modelZh || item.modelEn) && (
+            <div className="admin-shoe-badges">
+              {item.modelZh && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_zh')}: {item.modelZh}</span>}
+              {item.modelEn && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_en')}: {item.modelEn}</span>}
+            </div>
+          )}
+          <div className="admin-shoe-badges">
+            <span className="admin-shoe-status-badge admin-shoe-verified">{t(`dashboard.type_${item.type}`)}</span>
+          </div>
+          <button type="button" className="btn-secondary btn-inline-sm" onClick={() => onEdit(item)}>
+            {t('dashboard.btn_edit_catalog')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── end row components ─────────────────────────────────────────────────────
+
+const Dashboard = memo(function Dashboard() {
   const { logout, login, isAuthenticated } = useAuth();
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
@@ -493,6 +830,8 @@ export default function Dashboard() {
   const [selectedShoeIds, setSelectedShoeIds] = useState([]);
   const [selectedShoeWorkbenchId, setSelectedShoeWorkbenchId] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
+  const [selectedJobDetail, setSelectedJobDetail] = useState(null);
+  const [selectedJobDetailState, setSelectedJobDetailState] = useState('idle');
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [userNotes, setUserNotes] = useState([]);
@@ -521,10 +860,80 @@ export default function Dashboard() {
   const [selectedCourseMapId, setSelectedCourseMapId] = useState(null);
   const [courseMapDetail, setCourseMapDetail] = useState(null);
   const [courseMapLoadState, setCourseMapLoadState] = useState('idle');
-  const [courseMapAction, setCourseMapAction] = useState({ raceId: null, type: '' });
+  const [courseMapActions, setCourseMapActions] = useState({});
+  const [courseMapScanTimeline, setCourseMapScanTimeline] = useState([]);
+  const [courseMapTimelineLoadState, setCourseMapTimelineLoadState] = useState('idle');
+  const [courseMapQueueCollapsed, setCourseMapQueueCollapsed] = useState(false);
   const courseMapUploadInputRef = useRef(null);
   const courseMapDetailRequestRef = useRef(0);
   const activeTab = useMemo(() => getDashboardSectionFromPathname(location.pathname), [location.pathname]);
+
+  const courseMapCatalogItems = useMemo(() => getCourseMapCatalogMarathons(), []);
+  const courseMapBackendItems = useMemo(
+    () => (Array.isArray(courseMapsPage.items) ? courseMapsPage.items : []),
+    [courseMapsPage.items],
+  );
+
+  const courseMapQueueItems = useMemo(() => {
+    const combined = mergeCourseMapQueueItems({
+      catalogItems: courseMapCatalogItems,
+      backendItems: courseMapBackendItems,
+    });
+
+    const query = String(courseMapQuery.search || '').trim().toLowerCase();
+    const requestedStatus = String(courseMapQuery.status || '').trim().toLowerCase();
+
+    return combined.filter((item) => {
+      if (requestedStatus && getCourseMapStatus(item) !== requestedStatus) return false;
+      if (!query) return true;
+      const haystack = [
+        getCourseMapRaceName(item),
+        getCourseMapLocation(item),
+        item?.city,
+        item?.country,
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [courseMapBackendItems, courseMapCatalogItems, courseMapQuery.search, courseMapQuery.status]);
+
+  const getCourseMapActionSourceItem = useCallback((raceId) => {
+    const queueItem = courseMapQueueItems.find((item) => getCourseMapRaceId(item) === raceId) || null;
+    const detail = getCourseMapRaceId(courseMapDetail) === raceId ? courseMapDetail : null;
+    return buildCourseMapWorkspaceSource({ queueItem, detail });
+  }, [courseMapDetail, courseMapQueueItems]);
+
+  function setCourseMapActionForRace(raceId, nextAction) {
+    if (!raceId) return;
+    setCourseMapActions((current) => {
+      const next = { raceId, ...nextAction };
+      if (areCourseMapActionsEqual(current[raceId], next)) return current;
+      return { ...current, [raceId]: next };
+    });
+  }
+
+  function setCourseMapAction(nextAction) {
+    if (!nextAction?.raceId) return;
+    setCourseMapActionForRace(nextAction.raceId, nextAction);
+  }
+
+  function clearCourseMapActionForRace(raceId, jobId = null) {
+    if (!raceId) return;
+    setCourseMapActions((current) => {
+      const existing = current[raceId];
+      if (!existing) return current;
+      if (jobId != null && existing.jobId != null && String(existing.jobId) !== String(jobId)) return current;
+      const next = { ...current };
+      delete next[raceId];
+      return next;
+    });
+  }
+
+  function announceCourseMapAction(raceId, nextAction) {
+    if (!raceId) return;
+    const action = { raceId, ...nextAction };
+    setCourseMapActionForRace(raceId, action);
+    setMessage(t(getCourseMapActionStatusKey(action)));
+  }
 
   const navigateToTab = useCallback((tab, options) => {
     navigate(TAB_ROUTE_MAP[tab] || TAB_ROUTE_MAP.overview, options);
@@ -605,8 +1014,20 @@ export default function Dashboard() {
     setSavedFilters(await apiJson(`/api/admin/filters?scope=${scope}`));
   }, []);
 
-  const loadCourseMapDetail = useCallback(async (raceId) => {
+  const loadCourseMapDetail = useCallback(async (raceId, detailOptions = null) => {
     if (!raceId) return;
+    const { fallbackItem = null, forceFetch = false } = detailOptions && typeof detailOptions === 'object' && (
+      Object.hasOwn(detailOptions, 'fallbackItem') || Object.hasOwn(detailOptions, 'forceFetch')
+    )
+      ? detailOptions
+      : { fallbackItem: detailOptions, forceFetch: false };
+    if (!forceFetch && !hasCourseMapBackendRecord(raceId, courseMapBackendItems)) {
+      setCourseMapDetail(buildCourseMapAdminDetailFallback(
+        fallbackItem || courseMapQueueItems.find((item) => getCourseMapRaceId(item) === raceId) || { raceId },
+      ));
+      setCourseMapLoadState('ready');
+      return;
+    }
     const requestId = courseMapDetailRequestRef.current + 1;
     courseMapDetailRequestRef.current = requestId;
     setCourseMapLoadState('loading');
@@ -617,10 +1038,12 @@ export default function Dashboard() {
       setCourseMapLoadState('ready');
     } catch {
       if (courseMapDetailRequestRef.current !== requestId) return;
-      setCourseMapDetail(null);
-      setCourseMapLoadState('error');
+      setCourseMapDetail(buildCourseMapAdminDetailFallback(
+        fallbackItem || courseMapQueueItems.find((item) => getCourseMapRaceId(item) === raceId) || { raceId },
+      ));
+      setCourseMapLoadState('ready');
     }
-  }, []);
+  }, [courseMapBackendItems, courseMapQueueItems]);
 
   const bootstrap = useCallback(async () => {
     setLoadState('loading');
@@ -690,17 +1113,64 @@ export default function Dashboard() {
     loadUsers,
   ]);
 
+  const loadCourseMapScanTimeline = useCallback(async (raceId) => {
+    if (!raceId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    setCourseMapTimelineLoadState('loading');
+    try {
+      const data = await apiJson(`/api/admin/race-course-maps/${raceId}/scan-timeline`);
+      setCourseMapScanTimeline(Array.isArray(data) ? data : []);
+      setCourseMapTimelineLoadState('ready');
+    } catch {
+      setCourseMapScanTimeline([]);
+      setCourseMapTimelineLoadState('error');
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab !== 'courseMaps') return;
-    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapsPage.items?.[0]);
+    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapQueueItems?.[0]);
     if (!nextId) {
       setCourseMapDetail(null);
       setCourseMapLoadState('idle');
       return;
     }
     if (selectedCourseMapId !== nextId) setSelectedCourseMapId(nextId);
-    loadCourseMapDetail(nextId);
-  }, [activeTab, courseMapsPage.items, loadCourseMapDetail, selectedCourseMapId]);
+    const nextItem = courseMapQueueItems.find((item) => getCourseMapRaceId(item) === nextId) || null;
+    loadCourseMapDetail(nextId, nextItem);
+  }, [activeTab, courseMapQueueItems, loadCourseMapDetail, selectedCourseMapId]);
+
+  useEffect(() => {
+    if (activeTab !== 'courseMaps') { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapQueueItems?.[0]);
+    if (!nextId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    loadCourseMapScanTimeline(nextId);
+  }, [activeTab, courseMapQueueItems, loadCourseMapScanTimeline, selectedCourseMapId]);
+
+  useEffect(() => {
+    if (activeTab !== 'jobs' || selectedJobId == null) {
+      setSelectedJobDetail(null);
+      setSelectedJobDetailState('idle');
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setSelectedJobDetailState('loading');
+    apiJson(`/api/admin/jobs/${selectedJobId}`, { signal: controller.signal })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setSelectedJobDetail(data);
+        setSelectedJobDetailState('ready');
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        if (error?.name === 'AbortError') return;
+        setSelectedJobDetail(null);
+        setSelectedJobDetailState('error');
+        setMessage(t('dashboard.jobs_deck_detail_load_failed'));
+      });
+
+    return () => controller.abort();
+  }, [activeTab, selectedJobId, t]);
 
   useEffect(() => {
     if (!imgPickerShoe) return;
@@ -959,14 +1429,14 @@ export default function Dashboard() {
     } catch { /* ignored */ }
   }
 
-  function openCatalogEditor(item) {
+  const openCatalogEditor = useCallback((item) => {
     setCatalogEditingItem(item);
     setCatalogEditModel(item.model || '');
     setCatalogEditModelZh(item.modelZh || '');
     setCatalogEditModelEn(item.modelEn || '');
     setCatalogEditType(item.type || 'daily');
     setCatalogEditOpen(true);
-  }
+  }, []);
 
   async function updateCatalogItem(e) {
     e.preventDefault();
@@ -1080,40 +1550,37 @@ export default function Dashboard() {
   function openCourseMapWorkspace(item) {
     const raceId = getCourseMapRaceId(item);
     setSelectedCourseMapId(raceId);
-    setCourseMapDetail((current) => (getCourseMapRaceId(current) === raceId ? current : null));
-    loadCourseMapDetail(raceId);
-  }
-
-  async function triggerCourseMapScan(raceId) {
-    if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'scan' });
-    try {
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
-      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/scan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
-      });
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
-    } finally {
-      setCourseMapAction({ raceId: null, type: '' });
-    }
+    setCourseMapDetail((current) => (getCourseMapRaceId(current) === raceId ? current : buildCourseMapAdminDetailFallback(item)));
+    loadCourseMapDetail(raceId, item);
   }
 
   async function uploadCourseMapPreview(raceId, file) {
     if (!raceId || !file) return;
-    setCourseMapAction({ raceId, type: 'upload' });
+    let activeJobId = null;
+    announceCourseMapAction(raceId, { type: 'upload', progress: 12 });
     try {
       const imageDataUrl = await readFileAsDataUrl(file);
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
-      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/upload`, {
+      const sourceItem = getCourseMapActionSourceItem(raceId);
+      const { jobId } = await apiJson(`/api/admin/race-course-maps/${raceId}/pending/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...buildCourseMapAdminPayload(sourceItem), imageDataUrl, fileName: file.name }),
       });
+      activeJobId = jobId;
+      announceCourseMapAction(raceId, { type: 'queued', progress: 12, jobId, jobStatus: 'PENDING' });
+      setCourseMapAction({ raceId, type: 'processing' });
+      const job = await waitForAdminJob(jobId);
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      if (job.status === 'FAILED') {
+        throw new Error(job.summary || 'Course-map upload failed.');
+      }
+      if (job.summary) {
+        setMessage(job.summary);
+      }
+    } catch (error) {
+      setMessage(error.message || 'Course-map upload failed.');
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId, activeJobId);
     }
   }
 
@@ -1136,36 +1603,109 @@ export default function Dashboard() {
 
   async function acceptCourseMapLive(raceId) {
     if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'accept' });
+    announceCourseMapAction(raceId, { type: 'accept' });
     try {
       await apiJson(`/api/admin/race-course-maps/${raceId}/accept-live`, { method: 'POST' });
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      await Promise.all([loadCourseMaps(), loadQueues()]);
+      await loadCourseMapDetail(raceId);
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId);
     }
   }
 
   async function reanalyzeCourseMap(raceId) {
     if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'reanalyze' });
+    let activeJobId = null;
+    announceCourseMapAction(raceId, { type: 'reanalyze', progress: 12 });
     try {
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
-      await apiJson(`/api/admin/race-course-maps/${raceId}/pending/reanalyze`, {
+      const sourceItem = getCourseMapActionSourceItem(raceId);
+      const { jobId } = await apiJson(`/api/admin/race-course-maps/${raceId}/pending/reanalyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
       });
+      activeJobId = jobId;
+      announceCourseMapAction(raceId, { type: 'reanalyze', progress: 12, jobId, jobStatus: 'PENDING' });
+      const job = await waitForAdminJob(jobId);
       await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      if (job.status === 'FAILED') {
+        throw new Error(job.summary || 'Course-map re-analysis failed.');
+      }
+      if (job.summary) {
+        setMessage(job.summary);
+      }
+    } catch (error) {
+      setMessage(error.message || 'Course-map re-analysis failed.');
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId, activeJobId);
     }
+  }
+
+  async function scanCourseMapSources(raceId) {
+    if (!raceId) return;
+    let activeJobId = null;
+    announceCourseMapAction(raceId, { type: 'scan', progress: 12 });
+    try {
+      const sourceItem = getCourseMapActionSourceItem(raceId);
+      const { jobId } = await apiJson(`/api/admin/race-course-maps/${raceId}/pending/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildCourseMapAdminPayload(sourceItem)),
+      });
+      activeJobId = jobId;
+      announceCourseMapAction(raceId, { type: 'scan', progress: 12, jobId, jobStatus: 'PENDING' });
+      const job = await waitForAdminJob(jobId, {
+        onProgress: (nextJob) => announceCourseMapAction(raceId, getCourseMapActionFromJob(raceId, 'scan', nextJob)),
+      });
+      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId), loadCourseMapScanTimeline(raceId)]);
+      if (job.status === 'FAILED') {
+        throw new Error(job.summary || 'Course-map source scan failed.');
+      }
+      if (job.summary) {
+        setMessage(job.summary);
+      }
+    } catch (error) {
+      setMessage(error.message || 'Course-map source scan failed.');
+    } finally {
+      clearCourseMapActionForRace(raceId, activeJobId);
+    }
+  }
+
+  async function waitForAdminJob(jobId, maxAttempts = 180) {
+    if (!jobId) {
+      throw new Error('Missing admin job id.');
+    }
+    const options = typeof maxAttempts === 'object' && maxAttempts !== null ? maxAttempts : {};
+    const configuredAttempts = typeof maxAttempts === 'number' ? maxAttempts : options?.maxAttempts;
+    const attemptLimit = Number(configuredAttempts);
+    const hasAttemptLimit = Number.isFinite(attemptLimit) && attemptLimit > 0;
+    const onProgress = typeof options?.onProgress === 'function' ? options.onProgress : null;
+    for (let attempt = 0; !hasAttemptLimit || attempt < attemptLimit; attempt += 1) {
+      const pollSignal = AbortSignal.timeout(ADMIN_JOB_STATUS_REQUEST_TIMEOUT_MS);
+      let job;
+      try {
+        job = await apiJson(`/api/admin/jobs/${jobId}`, { signal: pollSignal });
+      } catch (error) {
+        if (error?.name === 'AbortError' || error?.name === 'TimeoutError') {
+          throw new Error('Timed out checking course-map job status.');
+        }
+        throw error;
+      }
+      const status = String(job.status || '').toUpperCase();
+      if (status === 'COMPLETED' || status === 'FAILED') {
+        return job;
+      }
+      onProgress?.(job);
+      await sleep(ADMIN_JOB_POLL_INTERVAL_MS);
+    }
+    throw new Error('Timed out waiting for course-map job completion.');
   }
 
   async function runMarathonPipeline(raceId) {
     if (!raceId) return;
-    setCourseMapAction({ raceId, type: 'pipeline' });
+    announceCourseMapAction(raceId, { type: 'pipeline' });
     try {
-      const sourceItem = courseMapDetail || courseMapsPage.items?.find(item => getCourseMapRaceId(item) === raceId) || {};
+      const sourceItem = getCourseMapActionSourceItem(raceId);
       const payload = {
         ...buildCourseMapAdminPayload(sourceItem),
         raceId,
@@ -1188,12 +1728,14 @@ export default function Dashboard() {
         throw new Error(jobStatus.error || 'Unknown pipeline failure');
       }
 
+      announceCourseMapAction(raceId, { type: 'refresh' });
+      await Promise.all([loadCourseMaps(), loadQueues()]);
+      await loadCourseMapDetail(raceId, { forceFetch: true, fallbackItem: sourceItem });
       setMessage(t('dashboard.course_maps_pipeline_success'));
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
     } catch (e) {
       setMessage(t('dashboard.course_maps_pipeline_failed', { error: e.message }));
     } finally {
-      setCourseMapAction({ raceId: null, type: '' });
+      clearCourseMapActionForRace(raceId);
     }
   }
 
@@ -1204,7 +1746,7 @@ export default function Dashboard() {
         openCourseMapUploadPicker();
         break;
       case 'scan':
-        triggerCourseMapScan(selectedCourseMapId);
+        scanCourseMapSources(selectedCourseMapId);
         break;
       case 'reanalyze':
         reanalyzeCourseMap(selectedCourseMapId);
@@ -1275,23 +1817,20 @@ export default function Dashboard() {
   }, [shoesPage.items]);
 
   const courseMapSummary = useMemo(() => {
-    const items = courseMapsPage.items || [];
+    const items = courseMapQueueItems || [];
     return items.reduce((summary, item) => {
       const state = getCourseMapStatus(item);
       summary.total += 1;
       summary[state] += 1;
       return summary;
     }, { total: 0, pending: 0, live: 0, missing: 0 });
-  }, [courseMapsPage.items]);
+  }, [courseMapQueueItems]);
 
-  const selectedCourseMapItem = useMemo(
-    () => (
-      getCourseMapRaceId(courseMapDetail) === selectedCourseMapId
-        ? courseMapDetail
-        : courseMapsPage.items?.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null
-    ),
-    [courseMapDetail, courseMapsPage.items, selectedCourseMapId],
-  );
+  const selectedCourseMapItem = useMemo(() => {
+    const queueItem = courseMapQueueItems.find(item => getCourseMapRaceId(item) === selectedCourseMapId) || null;
+    const detail = getCourseMapRaceId(courseMapDetail) === selectedCourseMapId ? courseMapDetail : null;
+    return buildCourseMapWorkspaceSource({ queueItem, detail });
+  }, [courseMapDetail, courseMapQueueItems, selectedCourseMapId]);
 
   const pendingCourseMapPreview = useMemo(
     () => getCourseMapPending(selectedCourseMapItem),
@@ -1301,6 +1840,10 @@ export default function Dashboard() {
   const liveCourseMapPreview = useMemo(
     () => getCourseMapCurrentLive(selectedCourseMapItem) || getCourseMapLive(selectedCourseMapItem),
     [selectedCourseMapItem],
+  );
+  const courseMapSourcePreview = useMemo(
+    () => pendingCourseMapPreview || getCourseMapLive(selectedCourseMapItem),
+    [pendingCourseMapPreview, selectedCourseMapItem],
   );
 
   const courseMapRecommendation = useMemo(
@@ -1312,15 +1855,28 @@ export default function Dashboard() {
     ?? getCourseMapPreviewConfidence(liveCourseMapPreview);
 
   const courseMapDisplayPreview = pendingCourseMapPreview || liveCourseMapPreview || null;
+  const pendingCourseMapPointCount = Array.isArray(pendingCourseMapPreview?.routePoints)
+    ? pendingCourseMapPreview.routePoints.length
+    : Number(pendingCourseMapPreview?.pointCount || 0);
+  const liveCourseMapPointCount = Array.isArray(liveCourseMapPreview?.routePoints)
+    ? liveCourseMapPreview.routePoints.length
+    : Number(liveCourseMapPreview?.pointCount || 0);
   const courseMapRoutePoints = Array.isArray(courseMapDisplayPreview?.routePoints) ? courseMapDisplayPreview.routePoints : [];
   const courseMapElevationSamples = Array.isArray(courseMapDisplayPreview?.elevationSamples) ? courseMapDisplayPreview.elevationSamples : [];
   const courseMapElevationGainValue = courseMapElevationSamples.length > 1
     ? Math.max(0, Math.round(Math.max(...courseMapElevationSamples.map((sample) => Number(sample.elevation || sample.altitude || sample.y || 0))) - Math.min(...courseMapElevationSamples.map((sample) => Number(sample.elevation || sample.altitude || sample.y || 0)))))
     : null;
   const courseMapSatellitesConnected = String(Math.min(8, Math.max(1, courseMapsPage.items?.length || 1))).padStart(2, '0');
-  const courseMapComputeLoad = Math.min(95, 24 + (courseMapSummary.pending * 11) + (courseMapAction.raceId ? 7 : 0));
+  const courseMapActiveActions = Object.values(courseMapActions).filter((action) => Boolean(action?.type));
+  const selectedCourseMapAction = selectedCourseMapId
+    ? courseMapActions[selectedCourseMapId] || { raceId: null, type: '' }
+    : { raceId: null, type: '' };
+  const courseMapAction = selectedCourseMapAction;
+  const courseMapComputeLoad = Math.min(95, 24 + (courseMapSummary.pending * 11) + (courseMapActiveActions.length ? 7 : 0));
+  const courseMapActionProgress = getCourseMapActionProgress(courseMapAction);
+  const courseMapActionIsSelected = Boolean(courseMapAction.type);
   const courseMapPointCount = courseMapRoutePoints.length || Number(courseMapDisplayPreview?.pointCount || 12482);
-  const courseMapActivePipelines = Math.max(1, courseMapSummary.pending + (courseMapAction.raceId ? 1 : 0));
+  const courseMapActivePipelines = Math.max(1, courseMapSummary.pending + courseMapActiveActions.length);
   const courseMapSurfaceQuality = courseMapConfidenceValue == null
     ? 'B'
     : courseMapConfidenceValue >= 90
@@ -1335,32 +1891,33 @@ export default function Dashboard() {
     : liveCourseMapPreview
       ? t('dashboard.review_panel_live')
       : t('dashboard.review_state_missing');
+  const courseMapDisplaySummary = courseMapDisplayPreview?.summary || '';
 
   const courseMapSecondaryActions = !selectedCourseMapId
     ? []
     : [
       {
-        key: 'upload',
-        label: t('dashboard.course_maps_upload'),
-        disabled: courseMapAction.raceId === selectedCourseMapId,
-        onClick: openCourseMapUploadPicker,
+        key: 'scan',
+        label: t('dashboard.course_maps_source_scan'),
+        disabled: courseMapActionIsSelected,
+        onClick: () => scanCourseMapSources(selectedCourseMapId),
       },
       {
-        key: 'scan',
-        label: t('dashboard.course_maps_scan'),
-        disabled: courseMapAction.raceId === selectedCourseMapId,
-        onClick: () => triggerCourseMapScan(selectedCourseMapId),
+        key: 'upload',
+        label: t('dashboard.course_maps_upload'),
+        disabled: courseMapActionIsSelected,
+        onClick: openCourseMapUploadPicker,
       },
       {
         key: 'reanalyze',
         label: t('dashboard.course_maps_reanalyze'),
-        disabled: !pendingCourseMapPreview || courseMapAction.raceId === selectedCourseMapId,
+        disabled: !pendingCourseMapPreview || courseMapActionIsSelected,
         onClick: () => reanalyzeCourseMap(selectedCourseMapId),
       },
       {
         key: 'pipeline',
         label: t('dashboard.course_maps_run_pipeline'),
-        disabled: (!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId,
+        disabled: !courseMapSourcePreview || courseMapActionIsSelected,
         onClick: () => runMarathonPipeline(selectedCourseMapId),
       },
     ]
@@ -1369,6 +1926,12 @@ export default function Dashboard() {
 
   const pendingCourseMapConfidence = getCourseMapPreviewConfidence(pendingCourseMapPreview);
   const liveCourseMapConfidence = getCourseMapPreviewConfidence(liveCourseMapPreview);
+  const pendingCourseMapBadgeValue = pendingCourseMapPreview
+    ? (pendingCourseMapConfidence != null ? `${pendingCourseMapConfidence}%` : courseMapSurfaceQuality)
+    : t('dashboard.review_state_missing');
+  const liveCourseMapBadgeValue = liveCourseMapPreview
+    ? (liveCourseMapConfidence != null ? `${liveCourseMapConfidence}%` : t('dashboard.review_state_live'))
+    : t('dashboard.review_state_missing');
   const courseMapFooterSignals = [
     {
       key: 'pending',
@@ -1391,7 +1954,7 @@ export default function Dashboard() {
     { key: 'points', label: t('dashboard.course_maps_stage_point_count'), value: courseMapPointCount.toLocaleString() },
     { key: 'surface', label: t('dashboard.course_maps_metric_surface_quality'), value: courseMapSurfaceQuality },
   ];
-  const courseMapAlignmentReady = (pendingCourseMapConfidence ?? liveCourseMapConfidence ?? 0) >= 90;
+  const courseMapAlignmentReady = hasAlignedCourseMapPreview(pendingCourseMapPreview || liveCourseMapPreview) && ((pendingCourseMapConfidence ?? liveCourseMapConfidence ?? 0) >= 90);
 
   const adminStatusItems = useMemo(() => {
     const failedSyncCount = queueCards.find((card) => card.key === 'FAILED')?.count || 0;
@@ -1437,10 +2000,6 @@ export default function Dashboard() {
     ];
   }, [navigateToTab, queueCards, t, totalQueueCount]);
 
-  const activeTabLabel = useMemo(
-    () => t(TAB_ITEMS.find((tab) => tab.key === activeTab)?.labelKey || 'dashboard.tab_overview'),
-    [activeTab, t],
-  );
   const topbarTabs = useMemo(
     () => getDashboardTopbarTabKeys(activeTab)
       .map((tabKey) => TAB_ITEM_MAP[tabKey])
@@ -1491,10 +2050,16 @@ export default function Dashboard() {
     }
   }, [jobsPage.items, prioritizedJobId, selectedJobId]);
 
-  const selectedJob = useMemo(
+  const selectedJobListRow = useMemo(
     () => jobsPage.items?.find((job) => job.id === selectedJobId) || null,
     [jobsPage.items, selectedJobId],
   );
+  const selectedJob = useMemo(() => {
+    if (selectedJobDetail && selectedJobDetail.id === selectedJobId) {
+      return { ...(selectedJobListRow || {}), ...selectedJobDetail };
+    }
+    return selectedJobListRow;
+  }, [selectedJobDetail, selectedJobId, selectedJobListRow]);
 
   const jobsCommandMetrics = useMemo(() => {
     const items = jobsPage.items || [];
@@ -1537,11 +2102,29 @@ export default function Dashboard() {
     () => getDashboardJobDetailsPreview(selectedJob),
     [selectedJob],
   );
+  const jobsSelectedParsedDetails = useMemo(
+    () => getDashboardJobParsedDetails(selectedJob),
+    [selectedJob],
+  );
+  const jobsSelectedPayloadHighlights = useMemo(
+    () => getDashboardJobPayloadHighlights(jobsSelectedParsedDetails),
+    [jobsSelectedParsedDetails],
+  );
+  const jobsSelectedTimelineSteps = useMemo(
+    () => getDashboardJobTimelineSteps(jobsSelectedParsedDetails),
+    [jobsSelectedParsedDetails],
+  );
   const jobsSelectedProgress = selectedJob ? getDashboardJobProgress(selectedJob) : 0;
   const jobsSelectedProcessed = selectedJob
     ? Number(selectedJob.successCount || 0) + Number(selectedJob.failureCount || 0)
     : 0;
   const jobsSelectedTotal = selectedJob ? Number(selectedJob.totalCount || 0) : 0;
+  const jobsSelectedQueueDelay = selectedJob
+    ? formatDashboardJobDuration(selectedJob.createdAt, selectedJob.startedAt || selectedJob.finishedAt)
+    : '-';
+  const jobsSelectedRunDuration = selectedJob
+    ? formatDashboardJobDuration(selectedJob.startedAt, selectedJob.finishedAt)
+    : '-';
   const jobsFeaturedMeta = jobsFeaturedJob
     ? [
       getDashboardJobStatusLabel(jobsFeaturedJob.status, t),
@@ -1598,6 +2181,37 @@ export default function Dashboard() {
       .sort((left, right) => getShoeSpotlightPriority(right) - getShoeSpotlightPriority(left));
     return [selected, ...others].filter(Boolean).slice(0, 2);
   }, [selectedShoeWorkbench, shoesPage.items]);
+
+  // ── react-window v2 rowProps ─────────────────────────────────────────────
+  const shoesQueueItems = useMemo(() => shoesPage.items || [], [shoesPage.items]);
+
+  const toggleShoeSelected = useCallback((id) => {
+    setSelectedShoeIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  }, []);
+
+  const shoeQueueRowProps = useMemo(() => ({
+    items: shoesQueueItems,
+    selectedId: selectedShoeWorkbench?.id ?? null,
+    selectedIds: selectedShoeIds,
+    onSelect: setSelectedShoeWorkbenchId,
+    onToggle: toggleShoeSelected,
+    t,
+  }), [shoesQueueItems, selectedShoeWorkbench, selectedShoeIds, setSelectedShoeWorkbenchId, toggleShoeSelected, t]);
+
+  const shoeRepositoryRowProps = useMemo(() => ({
+    items: shoesQueueItems,
+    selectedId: selectedShoeWorkbench?.id ?? null,
+    onSelect: setSelectedShoeWorkbenchId,
+    t,
+  }), [shoesQueueItems, selectedShoeWorkbench, setSelectedShoeWorkbenchId, t]);
+
+  const catalogRowProps = useMemo(() => ({
+    items: filteredCatalogItems,
+    onEdit: openCatalogEditor,
+    t,
+  }), [filteredCatalogItems, openCatalogEditor, t]);
+
+  // ── end rowProps ──────────────────────────────────────────────────────────
 
   const adminRouteSurfaces = {
     overview: {
@@ -1680,28 +2294,71 @@ export default function Dashboard() {
   };
   const activeRouteSurface = adminRouteSurfaces[activeTab || 'overview'] || adminRouteSurfaces.overview;
 
+  function renderCourseMapProgressCard(placement = 'header') {
+    if (!courseMapActionIsSelected) return null;
+    const progressClassName = [
+      'admin-coursemap-progress',
+      placement === 'dock' ? 'admin-coursemap-progress--dock' : '',
+    ].filter(Boolean).join(' ');
+    const courseMapActionStatus = t(getCourseMapActionStatusKey(courseMapAction));
+    const courseMapActionSummary = getCourseMapActionSummary(courseMapAction, t);
+    const courseMapActionPercentLabel = t('dashboard.course_maps_progress_percent', { percent: courseMapActionProgress });
+    return (
+      <div className={progressClassName} aria-live="polite">
+        <div className="admin-coursemap-working-notice" role="status" aria-live="polite">
+          <span className="admin-coursemap-working-notice__pulse" aria-hidden="true" />
+          <span className="admin-coursemap-working-notice__body">
+            <strong>{courseMapActionStatus}</strong>
+            <small>{courseMapActionSummary}</small>
+          </span>
+        </div>
+        <div className="admin-coursemap-progress__meta">
+          <span className="admin-track-hub-stage__status-line">
+            {courseMapActionStatus}
+          </span>
+          <strong className="admin-coursemap-progress__percent">{courseMapActionPercentLabel}</strong>
+        </div>
+        <div
+          className="admin-coursemap-progress__bar"
+          role="progressbar"
+          aria-label={t('dashboard.course_maps_progress_label')}
+          aria-valuetext={courseMapActionPercentLabel}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={courseMapActionProgress}
+        >
+          <span style={{ width: `${courseMapActionProgress}%` }} />
+        </div>
+        <small>{courseMapActionSummary}</small>
+      </div>
+    );
+  }
+
   if (loadState === 'loading') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_loading')}</div></div>;
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
 
   return (
     <div className="dashboard-body admin-command-page">
       <div className="admin-command-layout">
-        <aside className="admin-command-sidebar">
-          <div className="admin-command-sidebar__brand">
+        <aside className="admin-command-sidebar ad-sidebar" aria-label={t('admin.kinetic.sidebar_brand')}>
+          <div className="admin-command-sidebar__brand ad-sidebar-brand">
             <HermesLogo dark />
-            <p>{activeRouteSurface.eyebrow}</p>
-            <small>{activeRouteSurface.title}</small>
+            <div>
+              <div className="ad-sidebar-brand-wordmark">{t('admin.kinetic.sidebar_brand')}</div>
+              <div className="ad-sidebar-brand-sub">{t('admin.kinetic.sidebar_brand_sub')}</div>
+            </div>
           </div>
 
-          <div className="admin-command-sidebar__nav">
+          <nav className="admin-command-sidebar__nav ad-sidebar-nav">
             {TAB_ITEMS.map((tab, index) => (
               <button
                 key={tab.key}
                 type="button"
-                className={`admin-command-sidebar__nav-item${activeTab === tab.key ? ' is-active' : ''}`}
+                aria-label={t(tab.labelKey)}
+                className={`admin-command-sidebar__nav-item ad-sidebar-link${activeTab === tab.key ? ' is-active' : ''}`}
                 onClick={() => navigateToTab(tab.key)}
               >
-                <span className="admin-command-sidebar__nav-icon" data-icon={TAB_ICONS[tab.key]} aria-hidden="true" />
+                <span className="material-symbols-outlined" aria-hidden="true">{TAB_ICONS[tab.key]}</span>
                 <span className="admin-command-sidebar__nav-copy">
                   <strong>{t(tab.labelKey)}</strong>
                   <span>{adminRouteSurfaces[tab.key]?.navCopy || t(tab.labelKey)}</span>
@@ -1709,7 +2366,7 @@ export default function Dashboard() {
                 <span className="admin-command-sidebar__nav-index">{String(index + 1).padStart(2, '0')}</span>
               </button>
             ))}
-          </div>
+          </nav>
 
           <div className="admin-command-sidebar__status">
             {adminStatusItems.map((item) => (
@@ -1726,34 +2383,31 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="admin-command-sidebar__footer">
-            <button type="button" className="admin-command-sidebar__cta" onClick={() => navigateToTab('courseMaps')}>
-              <span className="admin-command-sidebar__cta-icon" data-icon="add" aria-hidden="true" />
+          <div className="admin-command-sidebar__footer ad-sidebar-footer">
+            <button type="button" className="admin-command-sidebar__cta ad-sidebar-link" onClick={() => navigateToTab('courseMaps')} aria-label={t('dashboard.tab_course_maps')}>
+              <span className="material-symbols-outlined" aria-hidden="true">add</span>
               <span>{t('dashboard.tab_course_maps')}</span>
             </button>
-            <button type="button" className="admin-command-sidebar__link" onClick={() => navigateToTab('users')}>
-              <span className="admin-command-sidebar__link-icon" data-icon="help" aria-hidden="true" />
-              <span>{t('dashboard.tab_users')}</span>
-            </button>
-            <button type="button" className="admin-command-sidebar__link" onClick={() => navigateToTab('audit')}>
-              <span className="admin-command-sidebar__link-icon" data-icon="history" aria-hidden="true" />
-              <span>{t('dashboard.tab_audit')}</span>
-            </button>
-            <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout" onClick={logout}>
-              <span className="admin-command-sidebar__link-icon" data-icon="logout" aria-hidden="true" />
+            <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout ad-sidebar-link" onClick={logout} aria-label={t('dashboard.nav_logout')}>
+              <span className="material-symbols-outlined" aria-hidden="true">logout</span>
               <span>{t('dashboard.nav_logout')}</span>
             </button>
           </div>
         </aside>
 
-        <div className="admin-command-main">
-          <header className="admin-command-topbar">
+        <div className="admin-command-main ad-content">
+          <header className="admin-command-topbar ad-topbar">
             <div className="admin-command-topbar__headline">
+              <div className="ad-topbar-breadcrumb" aria-label="breadcrumb">
+                <span>{t('admin.kinetic.topbar_brand')}</span>
+                <span className="ad-topbar-breadcrumb-sep" aria-hidden="true">/</span>
+                <span className="ad-topbar-breadcrumb-current">{activeRouteSurface.title}</span>
+              </div>
               <span className="admin-command-topbar__eyebrow">{activeRouteSurface.eyebrow}</span>
               <strong>{activeRouteSurface.title}</strong>
               <p>{activeRouteSurface.summary}</p>
             </div>
-            <div className="admin-command-topbar__controls">
+            <div className="admin-command-topbar__controls ad-topbar-actions">
               <div className="admin-command-topbar__brand">
                 <div className="admin-command-topbar__wordmark">HERMES</div>
                 <div className="admin-command-topbar__nav">
@@ -1769,37 +2423,132 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-              <div className="admin-command-topbar__actions">
-                <div className="admin-command-topbar__pills">
-                  <span className="admin-command-topbar__pill">{currentLanguageLabel}</span>
-                  <span className="admin-command-topbar__pill">{currentThemeLabel}</span>
-                  <span className="admin-command-topbar__pill is-live">{t('dashboard.settings_live_badge')}</span>
-                </div>
-                <button type="button" className={`admin-command-topbar__icon${activeTab === 'settings' ? ' is-active' : ''}`} onClick={() => navigateToTab('settings')}>
-                  <span className="admin-command-topbar__icon-mark" data-icon="settings" aria-hidden="true" />
-                </button>
-                <button type="button" className="admin-command-topbar__avatar" onClick={logout} aria-label={t('dashboard.nav_logout')}>
-                  <span>{String(activeTabLabel || 'H').slice(0, 1)}</span>
-                </button>
-              </div>
             </div>
           </header>
 
           <main className={`dashboard-container admin-portal-container admin-command-shell${activeTab === 'courseMaps' ? ' admin-command-shell--coursemaps' : ''}`}>
         <div className={`admin-command-route admin-command-route--${activeTab || 'overview'}`}>
-        <div className="admin-command-route__summary">
-          {activeRouteSurface.metrics.map((metric) => (
-            <article key={`${activeTab || 'overview'}-${metric.label}`} className="admin-command-route__summary-card">
+        <div className="admin-command-route__summary admin-command-lane">
+          {activeRouteSurface.metrics.map((metric, index) => (
+            <article
+              key={`${activeTab || 'overview'}-${metric.label}`}
+              className={`admin-command-route__summary-card${index === 0 ? ' is-primary' : ''}`}
+            >
               <span>{metric.label}</span>
               <strong>{metric.value}</strong>
               {metric.helper ? <small>{metric.helper}</small> : null}
             </article>
           ))}
         </div>
-        {message && <div className="admin-shoe-status dashboard-message">{message}</div>}
+        {message && <div className="admin-shoe-status dashboard-message" role="status" aria-live="polite">{message}</div>}
 
         {activeTab === 'overview' && overview && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
+
+            {/* Kinetic Editorial: metric strip */}
+            <div className="ad-metric-strip">
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_active_users')}</div>
+                <div className="ad-metric-value">{usersPage.totalItems || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_active_users')}</div>
+              </div>
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_shoes_inventory')}</div>
+                <div className="ad-metric-value">{shoesPage.totalItems || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_shoes_inventory')}</div>
+              </div>
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_audit_24h')}</div>
+                <div className="ad-metric-value">{auditPage.totalItems || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_audit_24h')}</div>
+              </div>
+              <div className="ad-metric-card">
+                <div className="ad-metric-kicker">{t('admin.kinetic.metric_pending_maps')}</div>
+                <div className="ad-metric-value">{courseMapsPage.items?.filter(item => getCourseMapPending(item)).length || 0}</div>
+                <div className="ad-metric-label">{t('admin.kinetic.metric_pending_maps')}</div>
+              </div>
+            </div>
+
+            {/* Kinetic Editorial: ops grid */}
+            <div className="ad-ops-grid">
+              {[
+                { key: 'users', icon: 'groups', tab: 'users', titleKey: 'admin.kinetic.ops_users', subKey: 'admin.kinetic.ops_users_sub' },
+                { key: 'courseMaps', icon: 'map', tab: 'courseMaps', titleKey: 'admin.kinetic.ops_course_maps', subKey: 'admin.kinetic.ops_course_maps_sub' },
+                { key: 'shoes', icon: 'footprint', tab: 'shoes', titleKey: 'admin.kinetic.ops_shoes', subKey: 'admin.kinetic.ops_shoes_sub' },
+                { key: 'jobs', icon: 'sync', tab: 'jobs', titleKey: 'admin.kinetic.ops_jobs', subKey: 'admin.kinetic.ops_jobs_sub' },
+                { key: 'audit', icon: 'history', tab: 'audit', titleKey: 'admin.kinetic.ops_audit', subKey: 'admin.kinetic.ops_audit_sub' },
+                { key: 'settings', icon: 'settings', tab: 'settings', titleKey: 'admin.kinetic.ops_settings', subKey: 'admin.kinetic.ops_settings_sub' },
+              ].map(op => (
+                <button
+                  key={op.key}
+                  type="button"
+                  className="ad-ops-card"
+                  aria-label={t(op.titleKey)}
+                  onClick={() => navigateToTab(op.tab)}
+                >
+                  <div className="ad-ops-card-icon">
+                    <span className="material-symbols-outlined" aria-hidden="true">{op.icon}</span>
+                  </div>
+                  <div className="ad-ops-card-body">
+                    <div className="ad-ops-card-title">{t(op.titleKey)}</div>
+                    <div className="ad-ops-card-sub">{t(op.subKey)}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Kinetic Editorial: two-col — system health + recent audit */}
+            <div className="ad-two-col">
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.health_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.health_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-health-grid">
+                  {adminStatusItems.map((item) => (
+                    <div key={item.label} className="ad-health-row">
+                      <span className={`ad-health-dot${item.tone === 'ready' ? ' is-ok' : item.tone === 'action' ? ' is-fail' : ' is-warn'}`} aria-hidden="true" />
+                      <span className="ad-health-label">{item.label}</span>
+                      <span className="ad-health-val">{item.value}</span>
+                    </div>
+                  ))}
+                  {queueCards.slice(0, 4).map((card) => (
+                    <div key={card.key} className="ad-health-row">
+                      <span className={`ad-health-dot${card.count === 0 ? ' is-ok' : card.key === 'FAILED' ? ' is-fail' : ' is-warn'}`} aria-hidden="true" />
+                      <span className="ad-health-label">{t(card.titleKey)}</span>
+                      <span className="ad-health-val">{card.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.audit_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.audit_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-audit-mini">
+                  {overviewAuditPreview.map((item, index) => (
+                    <div key={item.id ?? index} className="ad-audit-row">
+                      <span className="ad-avatar-sm" aria-hidden="true">
+                        {String(item.actorEmail || '?').slice(0, 1).toUpperCase()}
+                      </span>
+                      <span className="ad-audit-actor">{item.actorEmail || '-'}</span>
+                      <span className="ad-audit-action">{item.action || item.summary || '-'}</span>
+                      <span className="ad-audit-time">{formatAdminDate(item.timestamp || item.createdAt)}</span>
+                    </div>
+                  ))}
+                  {overviewAuditPreview.length === 0 && (
+                    <div className="ad-muted">{t('dashboard.audit_status_success')}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <section className="admin-overview-hud">
               <article className="admin-overview-hud__hero">
                 <span className="admin-overview-hud__eyebrow">{t('dashboard.ops_overview_title')}</span>
@@ -1812,8 +2561,18 @@ export default function Dashboard() {
                   </div>
                 ) : null}
                 <div className="admin-overview-hud__status-pills">
-                  <span className="admin-overview-hud__status-pill is-live">{t('dashboard.nav_sync_strava')}</span>
-                  <span className="admin-overview-hud__status-pill">{t('dashboard.jobs_type_garmin_import')}</span>
+                  {overviewQueueSpotlights.length > 0 ? (
+                    overviewQueueSpotlights.map((card) => (
+                      <span
+                        key={card.key}
+                        className={`admin-overview-hud__status-pill${card.count > 0 ? ' is-live' : ''}`}
+                      >
+                        {t(card.titleKey)} {card.count > 0 ? `(${card.count})` : ''}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="admin-overview-hud__status-pill is-live">{t('dashboard.status_queue_health_healthy')}</span>
+                  )}
                 </div>
                 <div className="admin-overview-hud__actions">
                   <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('users')}>
@@ -1849,8 +2608,8 @@ export default function Dashboard() {
             <section className="admin-overview-section">
               <div className="admin-overview-section__head">
                 <div>
-                  <h3>{t('dashboard.ops_overview_title')}</h3>
-                  <p>{t('dashboard.portal_desc')}</p>
+                  <h3>{t('dashboard.ops_overview_kicker')}</h3>
+                  <p>{totalQueueCount > 0 ? t('dashboard.status_queue_health_attention', { count: totalQueueCount }) : t('dashboard.status_queue_health_healthy')}</p>
                 </div>
                 <div className="admin-overview-section__actions">
                   <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('users')}>
@@ -2012,8 +2771,8 @@ export default function Dashboard() {
               <article className="admin-overview-bento__panel admin-overview-bento__panel--spotlight">
                 <div className="admin-overview-bento__panel-head">
                   <div>
-                    <span className="section-intro-kicker">{t('dashboard.ops_overview_title')}</span>
-                    <h3>{t('dashboard.quick_actions_title')}</h3>
+                    <span className="section-intro-kicker">{t('dashboard.ops_overview_kicker')}</span>
+                    <h3>{t('dashboard.status_queue_health_label')}</h3>
                   </div>
                   <strong>{totalQueueCount}</strong>
                 </div>
@@ -2041,8 +2800,8 @@ export default function Dashboard() {
               <article className="admin-overview-bento__panel admin-overview-bento__panel--status">
                 <div className="admin-overview-bento__panel-head">
                   <div>
-                    <span className="section-intro-kicker">{t('dashboard.status_queue_health_label')}</span>
-                    <h3>{t('dashboard.status_audit_label')}</h3>
+                    <span className="section-intro-kicker">{t('dashboard.status_jobs_label')}</span>
+                    <h3>{t('dashboard.system_health_title')}</h3>
                   </div>
                 </div>
                 <div className="admin-overview-bento__status-stack">
@@ -2059,12 +2818,9 @@ export default function Dashboard() {
               <article className="admin-overview-bento__panel admin-overview-bento__panel--workbench">
                 <div className="admin-overview-bento__panel-head">
                   <div>
-                    <span className="section-intro-kicker">{t('dashboard.tab_course_maps')}</span>
-                    <h3>{t('dashboard.course_maps_title')}</h3>
+                    <span className="section-intro-kicker">{t('dashboard.portal_eyebrow')}</span>
+                    <h3>{t('dashboard.shoe_review_title')}</h3>
                   </div>
-                  <button type="button" className="btn-secondary btn-inline-sm" onClick={() => navigateToTab('courseMaps')}>
-                    {t('dashboard.tab_course_maps')}
-                  </button>
                 </div>
                 <div className="admin-overview-bento__workbench-card is-coursemaps">
                   <strong>{courseMapSummary.pending}</strong>
@@ -2086,23 +2842,23 @@ export default function Dashboard() {
               <span className="admin-quick-actions__label">{t('dashboard.quick_actions_title')}</span>
               <div className="admin-quick-actions__row">
                 <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('users')}>
-                  <span className="admin-quick-action-icon">👤</span>
+                  <span className="admin-quick-action-icon" data-icon="groups" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_users')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={() => { setShoeQuery(prev => ({ ...prev, queue: 'unverified_photo', page: 0 })); navigateToTab('shoes'); }}>
-                  <span className="admin-quick-action-icon">👟</span>
+                  <span className="admin-quick-action-icon" data-icon="footprint" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_shoe_review')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('jobs')}>
-                  <span className="admin-quick-action-icon">⚙</span>
+                  <span className="admin-quick-action-icon" data-icon="sync" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_jobs')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={() => navigateToTab('audit')}>
-                  <span className="admin-quick-action-icon">🔍</span>
+                  <span className="admin-quick-action-icon" data-icon="history" aria-hidden="true" />
                   <span>{t('dashboard.quick_action_audit')}</span>
                 </button>
                 <button type="button" className="admin-quick-action-btn" onClick={triggerSync}>
-                  <span className="admin-quick-action-icon">↻</span>
+                  <span className="admin-quick-action-icon" data-icon="autorenew" aria-hidden="true" />
                   <span>{t('dashboard.nav_sync_strava')}</span>
                 </button>
               </div>
@@ -2137,7 +2893,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'users' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
           <section className="admin-users-command-center">
             <section className="admin-users-command-hero">
               <div className="admin-users-command-hero__copy">
@@ -2319,6 +3075,7 @@ export default function Dashboard() {
                         <th>{t('dashboard.th_email')}</th>
                         <th>{t('dashboard.th_role')}</th>
                         <th>{t('dashboard.th_tier')}</th>
+                        <th>{t('dashboard.th_shoe_scan_quota')}</th>
                         <th>{t('dashboard.th_created')}</th>
                         <th>{t('dashboard.th_notes')}</th>
                         <th>{t('dashboard.th_actions')}</th>
@@ -2355,6 +3112,12 @@ export default function Dashboard() {
                           </td>
                           <td>
                             <div className="admin-users-roster-table__meta">
+                              <strong>{formatShoeScanQuota(user, t)}</strong>
+                              <span>{t('dashboard.shoe_scan_quota_used_meta', { used: user.shoeScanUsed ?? 0 })}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="admin-users-roster-table__meta">
                               <strong>{user.createdAt?.slice(0, 10) || '-'}</strong>
                               <span>{t('dashboard.users_table_created_meta')}</span>
                             </div>
@@ -2382,7 +3145,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'courseMaps' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
             <section className="admin-track-hub-hero">
               <div className="admin-track-hub-hero__copy">
                 <span className="section-intro-kicker admin-track-hub-hero__eyebrow">{t('dashboard.course_maps_kicker')}</span>
@@ -2408,70 +3171,84 @@ export default function Dashboard() {
 
             <div className="admin-track-hub-grid admin-coursemap-workbench">
                 <aside className="admin-coursemap-workbench__rail admin-track-hub-sidebar">
-                  <section className="admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--queue">
+                  <section className={`admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--queue${courseMapQueueCollapsed ? ' is-collapsed' : ''}`}>
                   <div className="admin-coursemap-workbench__rail-head">
                     <div>
                       <span className="section-intro-kicker">{t('dashboard.course_maps_kicker')}</span>
                       <h3>{t('dashboard.course_maps_sidebar_title')}</h3>
                     </div>
-                    <strong>{courseMapsPage.totalItems}</strong>
+                    <div className="admin-track-hub-sidebar__queue-actions">
+                      <strong>{courseMapQueueItems.length}</strong>
+                      <button
+                        type="button"
+                        className="admin-track-hub-sidebar__fold-toggle"
+                        aria-expanded={!courseMapQueueCollapsed}
+                        aria-controls="admin-coursemap-queue-panel-body"
+                        onClick={() => setCourseMapQueueCollapsed((current) => !current)}
+                      >
+                        <span>{t(courseMapQueueCollapsed ? 'dashboard.course_maps_queue_expand' : 'dashboard.course_maps_queue_collapse')}</span>
+                        <span className="admin-track-hub-sidebar__fold-glyph" aria-hidden="true">{courseMapQueueCollapsed ? '+' : '-'}</span>
+                      </button>
+                    </div>
                   </div>
-                  <p className="admin-coursemap-workbench__rail-copy">{t('dashboard.course_maps_workbench_list_copy')}</p>
-                  <div className="admin-track-hub-sidebar__search">
-                    <input className="admin-shoe-filter" placeholder={t('dashboard.course_maps_search')} value={courseMapQuery.search} onChange={e => setCourseMapQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))} />
-                    <select className="admin-shoe-filter" value={courseMapQuery.status} onChange={e => setCourseMapQuery(prev => ({ ...prev, status: e.target.value, page: 0 }))}>
-                      <option value="">{t('dashboard.course_maps_filter_all')}</option>
-                      <option value="pending">{t('dashboard.course_maps_filter_pending')}</option>
-                      <option value="live">{t('dashboard.course_maps_filter_live')}</option>
-                      <option value="missing">{t('dashboard.course_maps_filter_missing')}</option>
-                    </select>
-                    <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCourseMaps()}>{t('dashboard.btn_refresh')}</button>
-                  </div>
-                  <div className="admin-coursemap-rail">
-                    {courseMapsPage.items?.map(item => {
-                      const raceId = getCourseMapRaceId(item);
-                      const status = getCourseMapStatus(item);
-                      const pending = getCourseMapPending(item);
-                      const live = getCourseMapLive(item);
-                      return (
-                        <button
-                          key={raceId || getCourseMapRaceName(item)}
-                          type="button"
-                          className={`admin-coursemap-rail__item${selectedCourseMapId === raceId ? ' is-active' : ''}`}
-                          onClick={() => openCourseMapWorkspace(item)}
-                        >
-                          <div className="admin-coursemap-rail__preview">
-                            <AdminCourseMapPreview
-                              preview={pending || live}
-                              title={getCourseMapRaceName(item)}
-                              emptyLabel={getCourseMapRaceName(item).slice(0, 1)}
-                              variant="card"
-                              forceLiveMap={true}
-                              fallbackCenter={getCourseMapViewportFallback(item)}
-                            />
-                          </div>
-                          <div className="admin-coursemap-rail__body">
-                            <div className="admin-coursemap-rail__head">
-                              <strong>{getCourseMapRaceName(item)}</strong>
-                              <span>{getCourseMapLocation(item) || t('dashboard.course_maps_location_fallback')}</span>
+                  <div id="admin-coursemap-queue-panel-body" className="admin-track-hub-sidebar__queue-body" hidden={courseMapQueueCollapsed}>
+                    <p className="admin-coursemap-workbench__rail-copy">{t('dashboard.course_maps_workbench_list_copy')}</p>
+                    <div className="admin-track-hub-sidebar__search">
+                      <input className="admin-shoe-filter" placeholder={t('dashboard.course_maps_search')} value={courseMapQuery.search} onChange={e => setCourseMapQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))} />
+                      <select className="admin-shoe-filter" value={courseMapQuery.status} onChange={e => setCourseMapQuery(prev => ({ ...prev, status: e.target.value, page: 0 }))}>
+                        <option value="">{t('dashboard.course_maps_filter_all')}</option>
+                        <option value="pending">{t('dashboard.course_maps_filter_pending')}</option>
+                        <option value="live">{t('dashboard.course_maps_filter_live')}</option>
+                        <option value="missing">{t('dashboard.course_maps_filter_missing')}</option>
+                      </select>
+                      <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCourseMaps()}>{t('dashboard.btn_refresh')}</button>
+                    </div>
+                    <div className="admin-coursemap-rail">
+                      {courseMapQueueItems.map(item => {
+                        const raceId = getCourseMapRaceId(item);
+                        const status = getCourseMapStatus(item);
+                        const pending = getCourseMapPending(item);
+                        const live = getCourseMapRenderableLive(item);
+                        return (
+                          <button
+                            key={raceId || getCourseMapRaceName(item)}
+                            type="button"
+                            className={`admin-coursemap-rail__item${selectedCourseMapId === raceId ? ' is-active' : ''}`}
+                            onClick={() => openCourseMapWorkspace(item)}
+                          >
+                            <div className="admin-coursemap-rail__preview">
+                              <AdminCourseMapPreview
+                                preview={pending || live}
+                                title={getCourseMapRaceName(item)}
+                                emptyLabel={getCourseMapRaceName(item).slice(0, 1)}
+                                variant="card"
+                                forceLiveMap={true}
+                                fallbackCenter={getCourseMapViewportFallback(item)}
+                              />
                             </div>
-                            <div className="admin-coursemap-rail__badges">
-                              <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${status}`}>{t(`dashboard.review_state_${status}`)}</span>
+                            <div className="admin-coursemap-rail__body">
+                              <div className="admin-coursemap-rail__head">
+                                <strong>{getCourseMapRaceName(item)}</strong>
+                                <span>{getCourseMapLocation(item) || t('dashboard.course_maps_location_fallback')}</span>
+                              </div>
+                              <div className="admin-coursemap-rail__badges">
+                                <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${status}`}>{t(`dashboard.review_state_${status}`)}</span>
+                              </div>
+                              <p className="admin-coursemap-rail__meta">{formatAdminDate(item?.updatedAt || pending?.updatedAt || live?.updatedAt)}</p>
                             </div>
-                            <p className="admin-coursemap-rail__meta">{formatAdminDate(item?.updatedAt || pending?.updatedAt || live?.updatedAt)}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Pagination pageData={courseMapsPage} onPageChange={page => setCourseMapQuery(prev => ({ ...prev, page }))} t={t} />
+                    <button
+                      type="button"
+                      className="btn-secondary btn-inline-md admin-track-hub-sidebar__archives"
+                      onClick={() => setCourseMapQuery(prev => ({ ...prev, status: '', page: 0 }))}
+                    >
+                      {t('dashboard.course_maps_sidebar_archives')}
+                    </button>
                   </div>
-                  <Pagination pageData={courseMapsPage} onPageChange={page => setCourseMapQuery(prev => ({ ...prev, page }))} t={t} />
-                  <button
-                    type="button"
-                    className="btn-secondary btn-inline-md admin-track-hub-sidebar__archives"
-                    onClick={() => setCourseMapQuery(prev => ({ ...prev, status: '', page: 0 }))}
-                  >
-                    {t('dashboard.course_maps_sidebar_archives')}
-                  </button>
                   </section>
 
                   <section className="admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--metrics">
@@ -2514,62 +3291,128 @@ export default function Dashboard() {
                             <span className={`admin-track-hub-stage__badge is-${getCourseMapStatus(selectedCourseMapItem || {})}`}>{t(`dashboard.review_state_${getCourseMapStatus(selectedCourseMapItem || {})}`)}</span>
                           </div>
                           <p>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</p>
-                          {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type ? (
-                            <p className="admin-track-hub-stage__status-line">
-                              {t(`dashboard.course_maps_status_running_${courseMapAction.type}`)}
-                            </p>
-                          ) : null}
+                          {renderCourseMapProgressCard('header')}
                         </div>
                         <div className="admin-track-hub-stage__actions">
                           <button
                             type="button"
                             className="btn-secondary btn-inline-md"
-                            disabled={!pendingCourseMapPreview || courseMapAction.raceId === selectedCourseMapId}
+                            disabled={!pendingCourseMapPreview || courseMapActionIsSelected}
                             onClick={() => reanalyzeCourseMap(selectedCourseMapId)}
                           >
                             {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'reanalyze' ? t('dashboard.course_maps_reanalyzing') : t('dashboard.course_maps_reanalyze')}
                           </button>
-                          <button type="button" className="btn-primary btn-inline-md" disabled={(!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId} onClick={() => runMarathonPipeline(selectedCourseMapId)}>
-                            {t('dashboard.course_maps_run_pipeline')}
+                          <button type="button" className="btn-primary btn-inline-md" disabled={!courseMapSourcePreview || courseMapActionIsSelected} onClick={() => runMarathonPipeline(selectedCourseMapId)}>
+                            {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'refresh'
+                              ? t('dashboard.course_maps_refreshing_preview')
+                              : courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline'
+                                ? t('dashboard.course_maps_pipeline_running')
+                                : t('dashboard.course_maps_run_pipeline')}
                           </button>
                         </div>
                       </div>
 
-                      <div className="admin-track-hub-map-stage">
-                        <div className="admin-track-hub-map-stage__frame">
-                          <AdminCourseMapPreview
-                            preview={courseMapDisplayPreview}
-                            title={getCourseMapRaceName(selectedCourseMapItem || {})}
-                            emptyLabel={t('dashboard.review_pending_empty')}
-                          />
-                          <div className="admin-track-hub-map-stage__overlay">
-                            <div className="admin-track-hub-map-stage__scan">
-                              <span className="admin-track-hub-map-stage__scan-indicator" aria-hidden="true" />
-                              <div>
-                                <span>{t('dashboard.course_maps_stage_scan_area')}</span>
-                                <strong>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</strong>
-                              </div>
-                            </div>
-                            <div className="admin-track-hub-map-stage__footer">
-                              <div className="admin-track-hub-map-stage__telemetry-grid">
-                                <div className="admin-track-hub-map-stage__telemetry-card">
-                                  <span>{t('dashboard.course_maps_stage_map_source')}</span>
-                                  <strong>{courseMapPrimarySourceLabel}</strong>
-                                </div>
-                                <div className="admin-track-hub-map-stage__telemetry-card">
-                                  <span>{t('dashboard.course_maps_stage_extraction_pipeline')}</span>
-                                  <strong>{t('dashboard.course_maps_run_pipeline')}</strong>
-                                </div>
-                                <div className="admin-track-hub-map-stage__telemetry-card">
-                                  <span>{t('dashboard.course_maps_stage_point_count')}</span>
-                                  <strong>{courseMapPointCount.toLocaleString()}</strong>
-                                </div>
-                              </div>
-                              <button type="button" className="btn-secondary btn-inline-md admin-track-hub-map-stage__telemetry-action" onClick={() => triggerCourseMapScan(selectedCourseMapId)}>
-                                {t('dashboard.course_maps_scan')}
-                              </button>
+                      <div className="admin-track-hub-map-stage admin-track-hub-map-stage--compare">
+                        <div className="admin-track-hub-map-stage__headerband">
+                          <div className="admin-track-hub-map-stage__scan">
+                            <span className="admin-track-hub-map-stage__scan-indicator" aria-hidden="true" />
+                            <div>
+                              <span>{t('dashboard.course_maps_stage_scan_area')}</span>
+                              <strong>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</strong>
                             </div>
                           </div>
+                          <div className="admin-track-hub-map-stage__compare-copy">
+                            <span>{t('dashboard.course_maps_stage_preview_comparison')}</span>
+                            <strong>{getCourseMapRaceName(selectedCourseMapItem || {})}</strong>
+                          </div>
+                        </div>
+
+                        <div className="admin-track-hub-map-stage__compare-grid">
+                          <article className="admin-track-hub-map-panel admin-track-hub-map-panel--live">
+                            <div className="admin-track-hub-map-panel__head">
+                              <div>
+                                <span>{t('dashboard.review_panel_live')}</span>
+                                <strong>{liveCourseMapPreview ? t('dashboard.review_state_live') : t('dashboard.review_state_missing')}</strong>
+                              </div>
+                              <span className={`admin-track-hub-map-panel__badge is-${liveCourseMapPreview ? 'live' : 'missing'}`}>
+                                {liveCourseMapBadgeValue}
+                              </span>
+                            </div>
+                            <div className="admin-track-hub-map-panel__frame">
+                              <AdminCourseMapPreview
+                                preview={liveCourseMapPreview}
+                                title={`${getCourseMapRaceName(selectedCourseMapItem || {})} ${t('dashboard.review_panel_live')}`}
+                                emptyLabel={t('dashboard.review_live_empty')}
+                                forceLiveMap={true}
+                                fallbackCenter={getCourseMapViewportFallback(selectedCourseMapItem)}
+                                allowImageFallback={false}
+                                unalignedLabel={t('dashboard.course_maps_unaligned_preview')}
+                              />
+                            </div>
+                            <div className="admin-track-hub-map-panel__meta">
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_map_source')}</span>
+                                <strong>{t('dashboard.review_panel_live')}</strong>
+                              </article>
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_point_count')}</span>
+                                <strong>{liveCourseMapPreview ? liveCourseMapPointCount.toLocaleString() : '--'}</strong>
+                              </article>
+                            </div>
+                          </article>
+
+                          <article className="admin-track-hub-map-panel admin-track-hub-map-panel--pending">
+                            <div className="admin-track-hub-map-panel__head">
+                              <div>
+                                <span>{t('dashboard.review_panel_pending')}</span>
+                                <strong>{pendingCourseMapPreview ? t('dashboard.review_state_pending') : t('dashboard.review_state_missing')}</strong>
+                              </div>
+                              <span className={`admin-track-hub-map-panel__badge is-${pendingCourseMapPreview ? 'pending' : 'missing'}`}>
+                                {pendingCourseMapBadgeValue}
+                              </span>
+                            </div>
+                            <div className="admin-track-hub-map-panel__frame">
+                              <AdminCourseMapPreview
+                                preview={pendingCourseMapPreview}
+                                title={`${getCourseMapRaceName(selectedCourseMapItem || {})} ${t('dashboard.review_panel_pending')}`}
+                                emptyLabel={t('dashboard.review_pending_empty')}
+                                forceLiveMap={true}
+                                fallbackCenter={getCourseMapViewportFallback(selectedCourseMapItem)}
+                                allowImageFallback={false}
+                                unalignedLabel={t('dashboard.course_maps_unaligned_preview')}
+                              />
+                            </div>
+                            <div className="admin-track-hub-map-panel__meta">
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_map_source')}</span>
+                                <strong>{t('dashboard.review_panel_pending')}</strong>
+                              </article>
+                              <article>
+                                <span>{t('dashboard.course_maps_stage_point_count')}</span>
+                                <strong>{pendingCourseMapPreview ? pendingCourseMapPointCount.toLocaleString() : '--'}</strong>
+                              </article>
+                            </div>
+                          </article>
+                        </div>
+
+                        <div className="admin-track-hub-map-stage__footer">
+                          <div className="admin-track-hub-map-stage__telemetry-grid">
+                            <div className="admin-track-hub-map-stage__telemetry-card">
+                              <span>{t('dashboard.course_maps_stage_map_source')}</span>
+                              <strong>{courseMapPrimarySourceLabel}</strong>
+                            </div>
+                            <div className="admin-track-hub-map-stage__telemetry-card">
+                              <span>{t('dashboard.course_maps_stage_extraction_pipeline')}</span>
+                              <strong>{t('dashboard.course_maps_run_pipeline')}</strong>
+                            </div>
+                            <div className="admin-track-hub-map-stage__telemetry-card">
+                              <span>{t('dashboard.course_maps_stage_point_count')}</span>
+                              <strong>{courseMapPointCount.toLocaleString()}</strong>
+                            </div>
+                          </div>
+                          <button type="button" className="btn-secondary btn-inline-md admin-track-hub-map-stage__telemetry-action" onClick={openCourseMapUploadPicker}>
+                            {t('dashboard.course_maps_upload')}
+                          </button>
                         </div>
                       </div>
 
@@ -2616,7 +3459,30 @@ export default function Dashboard() {
                                 <p className="admin-coursemap-publish-canvas__location">
                                   {getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}
                                 </p>
+                                {courseMapDisplaySummary ? (
+                                  <p className="admin-coursemap-publish-canvas__copy">{courseMapDisplaySummary}</p>
+                                ) : null}
                               </div>
+
+                              <div className="admin-coursemap-publish-canvas__decision-dock">
+                                <div className="admin-track-hub-footer-verdict">
+                                  <span className="admin-track-hub-footer-verdict__icon material-symbols-outlined" aria-hidden="true">
+                                    {courseMapAlignmentReady ? 'verified' : 'schedule'}
+                                  </span>
+                                  <span className="admin-track-hub-footer-verdict__text">
+                                    {courseMapAlignmentReady ? t('dashboard.course_maps_alignment_verified') : courseMapRecommendation.title}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="btn-primary btn-inline-md admin-coursemap-publish-canvas__primary"
+                                  disabled={courseMapActionIsSelected}
+                                  onClick={() => runRecommendedCourseMapAction(courseMapRecommendation)}
+                                >
+                                  {courseMapRecommendation.cta}
+                                </button>
+                              </div>
+                              {renderCourseMapProgressCard('dock')}
 
                               <aside className="admin-coursemap-evidence-stack admin-track-hub-footer-output-grid">
                                 {courseMapFooterOutputCards.map((card) => (
@@ -2636,23 +3502,7 @@ export default function Dashboard() {
                                 <p>{courseMapRecommendation.body}</p>
                               </div>
                             </div>
-                            <div className="admin-track-hub-footer-verdict">
-                              <span className="admin-track-hub-footer-verdict__icon material-symbols-outlined" aria-hidden="true">
-                                {courseMapAlignmentReady ? 'verified' : 'schedule'}
-                              </span>
-                              <span className="admin-track-hub-footer-verdict__text">
-                                {courseMapAlignmentReady ? t('dashboard.course_maps_alignment_verified') : courseMapRecommendation.title}
-                              </span>
-                            </div>
                             <div className="admin-coursemap-publish-canvas__actions">
-                              <button
-                                type="button"
-                                className="btn-primary btn-inline-md admin-coursemap-publish-canvas__primary"
-                                disabled={courseMapAction.raceId === selectedCourseMapId}
-                                onClick={() => runRecommendedCourseMapAction(courseMapRecommendation)}
-                              >
-                                {courseMapRecommendation.cta}
-                              </button>
                               <div className="admin-coursemap-publish-canvas__secondary">
                                 <span className="admin-coursemap-publish-canvas__secondary-label">{t('dashboard.course_maps_secondary_actions_label')}</span>
                                 <div className="admin-coursemap-publish-canvas__secondary-row">
@@ -2674,11 +3524,11 @@ export default function Dashboard() {
                               <div className="admin-coursemap-action-group">
                                 <span className="admin-coursemap-action-group__label">{t('dashboard.course_maps_action_group_source')}</span>
                                 <div className="admin-coursemap-action-group__buttons">
-                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapAction.raceId === selectedCourseMapId} onClick={openCourseMapUploadPicker}>
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'upload' ? t('dashboard.course_maps_uploading') : t('dashboard.course_maps_upload')}
+                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapActionIsSelected} onClick={() => scanCourseMapSources(selectedCourseMapId)}>
+                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'scan' ? t('dashboard.course_maps_source_scanning') : t('dashboard.course_maps_source_scan')}
                                   </button>
-                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapAction.raceId === selectedCourseMapId} onClick={() => triggerCourseMapScan(selectedCourseMapId)}>
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'scan' ? t('dashboard.course_maps_scan_running') : t('dashboard.course_maps_scan')}
+                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapActionIsSelected} onClick={openCourseMapUploadPicker}>
+                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'upload' ? t('dashboard.course_maps_uploading') : t('dashboard.course_maps_upload')}
                                   </button>
                                 </div>
                                 <p>{t('dashboard.course_maps_action_group_source_hint')}</p>
@@ -2690,7 +3540,7 @@ export default function Dashboard() {
                                   <button
                                     type="button"
                                     className="btn-secondary btn-inline-md"
-                                    disabled={!pendingCourseMapPreview || courseMapAction.raceId === selectedCourseMapId}
+                                    disabled={!pendingCourseMapPreview || courseMapActionIsSelected}
                                     onClick={() => reanalyzeCourseMap(selectedCourseMapId)}
                                   >
                                     {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'reanalyze' ? t('dashboard.course_maps_reanalyzing') : t('dashboard.course_maps_reanalyze')}
@@ -2698,16 +3548,148 @@ export default function Dashboard() {
                                   <button
                                     type="button"
                                     className="btn-primary btn-inline-md"
-                                    disabled={(!pendingCourseMapPreview && !liveCourseMapPreview) || courseMapAction.raceId === selectedCourseMapId}
+                                    disabled={!courseMapSourcePreview || courseMapActionIsSelected}
                                     onClick={() => runMarathonPipeline(selectedCourseMapId)}
                                   >
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline' ? t('dashboard.course_maps_pipeline_running') : t('dashboard.course_maps_run_pipeline')}
+                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'refresh'
+                                      ? t('dashboard.course_maps_refreshing_preview')
+                                      : courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline'
+                                        ? t('dashboard.course_maps_pipeline_running')
+                                        : t('dashboard.course_maps_run_pipeline')}
                                   </button>
                                 </div>
                                 <p>{t('dashboard.course_maps_action_group_analysis_hint')}</p>
                               </div>
                             </div>
                           </section>
+                        </div>
+
+                        <div className="admin-jobs-detail__timeline-shell admin-coursemap-scan-timeline">
+                          <style>{`
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-success .admin-jobs-detail__timeline-dot {
+                              background: var(--accent-coral-strong);
+                              box-shadow: 0 0 0 5px var(--admin-accent-glow);
+                            }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-skipped .admin-jobs-detail__timeline-dot {
+                              background: var(--admin-text-muted);
+                              box-shadow: 0 0 0 5px var(--admin-border-subtle);
+                            }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-info .admin-jobs-detail__timeline-dot {
+                              background: var(--admin-text-secondary);
+                              box-shadow: 0 0 0 5px var(--admin-border-subtle);
+                            }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li.is-success .admin-jobs-detail__timeline-meta span {
+                              background: var(--admin-accent-soft);
+                              color: var(--accent-coral-strong);
+                            }
+                            .admin-coursemap-scan-timeline .timeline-step-icon {
+                              font-size: 16px;
+                              line-height: 1;
+                              width: 16px;
+                              height: 16px;
+                              display: inline-flex;
+                              align-items: center;
+                              justify-content: center;
+                              flex-shrink: 0;
+                              font-variation-settings: 'FILL' 1;
+                            }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-success { color: var(--accent-coral-strong); }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-failed { color: #f87171; /* tokens-ok */ }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-running { color: #86efac; /* tokens-ok */ }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-pending { color: var(--accent-coral); }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-skipped { color: var(--admin-text-muted); }
+                            .admin-coursemap-scan-timeline .timeline-step-icon.is-info { color: var(--admin-text-secondary); }
+                            .admin-coursemap-scan-timeline .admin-jobs-detail__timeline-meta small.timeline-duration {
+                              color: var(--admin-text-muted);
+                              font-style: italic;
+                            }
+                            @media (max-width: 480px) {
+                              .admin-coursemap-scan-timeline .admin-jobs-detail__timeline-meta {
+                                gap: 6px;
+                              }
+                              .admin-coursemap-scan-timeline .admin-jobs-detail__timeline li {
+                                padding: 12px;
+                              }
+                            }
+                          `}</style>
+                          <div className="admin-jobs-detail__section-head">
+                            <span className="section-intro-kicker">{t('dashboard.course_maps_timeline_label')}</span>
+                            <strong>{t('dashboard.course_maps_scan_timeline_title')}</strong>
+                            {courseMapTimelineLoadState === 'loading' && <span>{t('dashboard.course_maps_timeline_loading')}</span>}
+                            {courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 && (
+                              <span>{courseMapScanTimeline.length} {t('dashboard.course_maps_timeline_steps')}</span>
+                            )}
+                          </div>
+                          {courseMapTimelineLoadState === 'loading' ? (
+                            <div className="admin-jobs-detail__json-empty">{t('dashboard.course_maps_timeline_loading')}</div>
+                          ) : courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 ? (
+                            <ol className="admin-jobs-detail__timeline">
+                              {courseMapScanTimeline.map((step, index) => {
+                                const rawStatus = String(step.status || '');
+                                const tone = getDashboardJobTimelineTone(rawStatus);
+                                const stepName = step.stage || step.step || `Step ${index + 1}`;
+                                const startedAt = step.startedAt || step.at || null;
+                                const completedAt = step.completedAt || null;
+                                const statusLabel = (() => {
+                                  const s = rawStatus.toUpperCase();
+                                  if (s === 'SUCCESS') return 'OK';
+                                  if (s === 'FAILED') return 'FAIL';
+                                  return s.length > 12 ? `${s.slice(0, 10)}…` : s;
+                                })();
+                                const iconName = tone === 'running' ? 'progress_activity'
+                                  : tone === 'success' ? 'check_circle'
+                                  : tone === 'failed' ? 'cancel'
+                                  : tone === 'skipped' ? 'skip_next'
+                                  : tone === 'pending' ? 'schedule'
+                                  : 'info';
+                                const timeDisplay = (() => {
+                                  if (completedAt) {
+                                    const d = new Date(completedAt);
+                                    return `${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                                  }
+                                  if (startedAt) {
+                                    const d = new Date(startedAt);
+                                    return `${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                                  }
+                                  return '';
+                                })();
+                                const duration = startedAt && completedAt
+                                  ? (() => {
+                                      const diff = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+                                      if (diff <= 0) return '';
+                                      const sec = Math.round(diff / 1000);
+                                      return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`;
+                                    })()
+                                  : '';
+                                return (
+                                  <li className={`is-${tone}`} key={`scan-${stepName}-${index}`}>
+                                    <span className="admin-jobs-detail__timeline-dot" aria-hidden="true" />
+                                    <div className="admin-jobs-detail__timeline-main">
+                                      <div className="admin-jobs-detail__timeline-meta">
+                                        <span className={`timeline-step-icon material-symbols-outlined is-${tone}`} aria-hidden="true">{iconName}</span>
+                                        <strong>{stepName}</strong>
+                                        <span>{statusLabel}</span>
+                                        {timeDisplay ? <small>{timeDisplay}</small> : null}
+                                        {duration ? <small className="timeline-duration">{duration}</small> : null}
+                                      </div>
+                                      {step.message && <p>{step.message}</p>}
+                                      {step.details && typeof step.details === 'object' && (
+                                        <div className="admin-jobs-detail__timeline-details">
+                                          {Object.entries(step.details).slice(0, 4).map(([key, value]) => (
+                                            <span key={key}>{key}: {formatDashboardJobValue(value)}</span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          ) : courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length === 0 ? (
+                            <div className="admin-jobs-detail__json-empty">{t('dashboard.course_maps_timeline_no_steps')}</div>
+                          ) : courseMapTimelineLoadState === 'error' ? (
+                            <div className="admin-jobs-detail__json-empty">{t('dashboard.course_maps_timeline_load_error')}</div>
+                          ) : null}
                         </div>
 
                         {courseMapLoadState === 'error' && (
@@ -2722,7 +3704,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'shoes' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
             <SectionCard className="section-card--compact section-card--spaced">
               <div className="admin-shoe-stitch-hero">
                 <div className="admin-shoe-stitch-hero__copy">
@@ -2811,37 +3793,15 @@ export default function Dashboard() {
                     <button type="button" className="delete-btn" onClick={() => runShoeBulk('clear_photo')}>{t('dashboard.btn_clear_photos')}</button>
                   </div>
                   <div className="admin-shoe-workbench__queue-list">
-                    {shoesPage.items?.map((shoe) => (
-                      <button
-                        key={shoe.id}
-                        type="button"
-                        className={`admin-shoe-workbench__queue-item${selectedShoeWorkbench?.id === shoe.id ? ' is-active' : ''}`}
-                        onClick={() => setSelectedShoeWorkbenchId(shoe.id)}
-                      >
-                        <div className="admin-shoe-workbench__queue-thumb">
-                          <input
-                            type="checkbox"
-                            className="admin-shoe-select"
-                            checked={selectedShoeIds.includes(shoe.id)}
-                            onChange={() => toggleSelected(setSelectedShoeIds, shoe.id)}
-                            onClick={(event) => event.stopPropagation()}
-                          />
-                          <ShoeImage
-                            src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
-                            alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
-                            className="admin-shoe-img"
-                            noImageLabel={t('dashboard.img_no_image')}
-                          />
-                        </div>
-                        <div className="admin-shoe-workbench__queue-body">
-                          <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
-                          <span>{shoe.runnerEmail}</span>
-                          <div className="admin-shoe-badges">
-                            <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${getShoeReviewState(shoe)}`}>{t(`dashboard.review_state_${getShoeReviewState(shoe)}`)}</span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                    {shoesQueueItems.length > 0 && (
+                      <List
+                        rowComponent={ShoeQueueRowComponent}
+                        rowCount={shoesQueueItems.length}
+                        rowHeight={132}
+                        rowProps={shoeQueueRowProps}
+                        style={{ height: Math.min(shoesQueueItems.length * 132, 528), overflowX: 'hidden' }}
+                      />
+                    )}
                   </div>
                   <Pagination pageData={shoesPage} onPageChange={page => setShoeQuery(prev => ({ ...prev, page }))} t={t} />
                 </aside>
@@ -2957,48 +3917,15 @@ export default function Dashboard() {
                             <span>{t('dashboard.shoe_stitch_repository_modified')}</span>
                           </div>
 
-                          {shoesPage.items?.map((shoe) => {
-                            const state = getShoeReviewState(shoe);
-                            const affinity = getShoeAffinityScore(shoe);
-                            const lastModified = getShoeLastModifiedLabel(shoe);
-                            return (
-                              <button
-                                key={shoe.id}
-                                type="button"
-                                className={`admin-shoe-stitch-repository__row${selectedShoeWorkbench?.id === shoe.id ? ' is-active' : ''}`}
-                                onClick={() => setSelectedShoeWorkbenchId(shoe.id)}
-                              >
-                                <span className="admin-shoe-stitch-repository__identity">
-                                  <span className="admin-shoe-stitch-repository__thumb">
-                                    <ShoeImage
-                                      src={getShoePendingPhotoUrl(shoe) || getShoeLivePhotoUrl(shoe)}
-                                      alt={getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}
-                                      className="admin-shoe-stitch-repository__thumb-image"
-                                      noImageLabel={t('dashboard.img_no_image')}
-                                    />
-                                  </span>
-                                  <span className="admin-shoe-stitch-repository__identity-copy">
-                                    <strong>{getShoeDisplayName(shoe, t('dashboard.shoe_unknown'))}</strong>
-                                    <small>{shoe.runnerEmail}</small>
-                                  </span>
-                                </span>
-                                <span className="admin-shoe-stitch-repository__status">
-                                  <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${state}`}>
-                                    {t(`dashboard.review_state_${state}`)}
-                                  </span>
-                                </span>
-                                <span className="admin-shoe-stitch-repository__affinity">
-                                  <span className="admin-shoe-stitch-repository__meter">
-                                    <span className="admin-shoe-stitch-repository__meter-fill" style={{ width: `${affinity}%` }} />
-                                  </span>
-                                  <strong>{affinity}%</strong>
-                                </span>
-                                <span className="admin-shoe-stitch-repository__modified">
-                                  {lastModified !== '-' ? lastModified : t('dashboard.shoe_stitch_modified_fallback')}
-                                </span>
-                              </button>
-                            );
-                          })}
+                          {shoesQueueItems.length > 0 && (
+                            <List
+                              rowComponent={ShoeRepositoryRowComponent}
+                              rowCount={shoesQueueItems.length}
+                              rowHeight={72}
+                              rowProps={shoeRepositoryRowProps}
+                              style={{ height: Math.min(shoesQueueItems.length * 72, 360), overflowX: 'hidden' }}
+                            />
+                          )}
                         </div>
                       </div>
                     </>
@@ -3026,29 +3953,15 @@ export default function Dashboard() {
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCatalogInventory()}>{t('dashboard.btn_refresh')}</button>
               </ActionBar>
               <div className="admin-shoe-grid">
-                {filteredCatalogItems.map(item => (
-                  <div key={item.key} className="admin-shoe-card">
-                    <div className="admin-shoe-img-wrap">
-                      <div className="admin-shoe-img-empty">{item.brand?.slice(0, 1) || '?'}</div>
-                    </div>
-                    <div className="admin-shoe-info">
-                      <span className="admin-shoe-name">{item.model}</span>
-                      <span className="admin-shoe-owner">{item.brand}</span>
-                      {(item.modelZh || item.modelEn) && (
-                        <div className="admin-shoe-badges">
-                          {item.modelZh && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_zh')}: {item.modelZh}</span>}
-                          {item.modelEn && <span className="admin-shoe-status-badge admin-shoe-unset">{t('dashboard.catalog_lang_en')}: {item.modelEn}</span>}
-                        </div>
-                      )}
-                      <div className="admin-shoe-badges">
-                        <span className="admin-shoe-status-badge admin-shoe-verified">{t(`dashboard.type_${item.type}`)}</span>
-                      </div>
-                      <button type="button" className="btn-secondary btn-inline-sm" onClick={() => openCatalogEditor(item)}>
-                        {t('dashboard.btn_edit_catalog')}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                {filteredCatalogItems.length > 0 && (
+                  <List
+                    rowComponent={CatalogRowComponent}
+                    rowCount={filteredCatalogItems.length}
+                    rowHeight={180}
+                    rowProps={catalogRowProps}
+                    style={{ height: Math.min(filteredCatalogItems.length * 180, 540), overflowX: 'hidden' }}
+                  />
+                )}
               </div>
               {filteredCatalogItems.length === 0 && <div className="history-status">{t('dashboard.catalog_inventory_empty')}</div>}
             </SectionCard>
@@ -3069,7 +3982,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'jobs' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
           <section className="admin-jobs-command-deck">
             <div className="admin-jobs-command-deck__hero">
               <div className="admin-jobs-command-deck__hero-copy">
@@ -3170,8 +4083,13 @@ export default function Dashboard() {
                     <select className="admin-shoe-filter" value={jobQuery.jobType} onChange={e => setJobQuery(prev => ({ ...prev, jobType: e.target.value, page: 0 }))}>
                       <option value="">{t('dashboard.jobs_filter_all_types')}</option>
                       <option value="STRAVA_SYNC">{t('dashboard.jobs_type_strava_sync')}</option>
+                      <option value="STRAVA_GLOBAL_SYNC">{t('dashboard.jobs_type_strava_global_sync')}</option>
                       <option value="GARMIN_IMPORT">{t('dashboard.jobs_type_garmin_import')}</option>
+                      <option value="GARMIN_WELLNESS_SYNC">{t('dashboard.jobs_type_garmin_wellness_sync')}</option>
                       <option value="FILE_IMPORT">{t('dashboard.jobs_type_file_import')}</option>
+                      <option value="COURSE_MAP_PREVIEW_SCAN">{t('dashboard.jobs_type_course_map_scan')}</option>
+                      <option value="COURSE_MAP_PREVIEW_UPLOAD">{t('dashboard.jobs_type_course_map_upload')}</option>
+                      <option value="COURSE_MAP_PREVIEW_REANALYZE">{t('dashboard.jobs_type_course_map_reanalyze')}</option>
                     </select>
                     {(jobQuery.status || jobQuery.jobType) && (
                       <button type="button" className="btn-secondary btn-inline-md" onClick={() => setJobQuery({ jobType: '', status: '', page: 0 })}>
@@ -3256,6 +4174,13 @@ export default function Dashboard() {
                       <span className="section-intro-kicker">{t('dashboard.jobs_deck_detail_title')}</span>
                       <h3>{getDashboardJobTraceId(selectedJob)}</h3>
                       <p>{selectedJob.summary || t('dashboard.jobs_deck_detail_empty_copy')}</p>
+                      <span className={`admin-jobs-detail__fetch-state is-${selectedJobDetailState}`}>
+                        {selectedJobDetailState === 'loading'
+                          ? t('dashboard.jobs_deck_detail_loading')
+                          : selectedJobDetailState === 'error'
+                            ? t('dashboard.jobs_deck_detail_load_failed')
+                            : t('dashboard.jobs_deck_detail_loaded')}
+                      </span>
                     </div>
 
                     <div className="admin-jobs-detail__badges">
@@ -3309,6 +4234,69 @@ export default function Dashboard() {
                         <span>{t('dashboard.jobs_deck_detail_total')}</span>
                         <strong>{Number(selectedJob.totalCount || 0).toLocaleString()}</strong>
                       </article>
+                      <article className="admin-jobs-detail__stat">
+                        <span>{t('dashboard.jobs_deck_detail_queue_delay')}</span>
+                        <strong>{jobsSelectedQueueDelay}</strong>
+                      </article>
+                      <article className="admin-jobs-detail__stat">
+                        <span>{t('dashboard.jobs_deck_detail_run_duration')}</span>
+                        <strong>{jobsSelectedRunDuration}</strong>
+                      </article>
+                    </div>
+
+                    <div className="admin-jobs-detail__payload-shell">
+                      <div className="admin-jobs-detail__section-head">
+                        <strong>{t('dashboard.jobs_deck_detail_payload_highlights')}</strong>
+                        <span>{t('dashboard.jobs_deck_detail_payload_highlights_copy')}</span>
+                      </div>
+                      {jobsSelectedPayloadHighlights.length > 0 ? (
+                        <div className="admin-jobs-detail__payload-grid">
+                          {jobsSelectedPayloadHighlights.map((item) => (
+                            <article className="admin-jobs-detail__payload-card" key={item.key}>
+                              <span>{item.label}</span>
+                              <strong>{item.value}</strong>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="admin-jobs-detail__json-empty">{t('dashboard.jobs_deck_detail_no_payload_highlights')}</div>
+                      )}
+                    </div>
+
+                    <div className="admin-jobs-detail__timeline-shell">
+                      <div className="admin-jobs-detail__section-head">
+                        <strong>{t('dashboard.jobs_deck_detail_timeline')}</strong>
+                        <span>{t('dashboard.jobs_deck_detail_timeline_copy')}</span>
+                      </div>
+                      {jobsSelectedTimelineSteps.length > 0 ? (
+                        <ol className="admin-jobs-detail__timeline">
+                          {jobsSelectedTimelineSteps.map((step) => {
+                            const tone = getDashboardJobTimelineTone(step.status);
+                            return (
+                              <li className={`is-${tone}`} key={step.key}>
+                                <span className="admin-jobs-detail__timeline-dot" aria-hidden="true" />
+                                <div className="admin-jobs-detail__timeline-main">
+                                  <div className="admin-jobs-detail__timeline-meta">
+                                    <strong>{step.stage}</strong>
+                                    <span>{step.status}</span>
+                                    <small>{formatAdminDate(step.at)}</small>
+                                  </div>
+                                  {step.message && <p>{step.message}</p>}
+                                  {step.details && (
+                                    <div className="admin-jobs-detail__timeline-details">
+                                      {Object.entries(step.details).slice(0, 4).map(([key, value]) => (
+                                        <span key={key}>{key}: {formatDashboardJobValue(value)}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      ) : (
+                        <div className="admin-jobs-detail__json-empty">{t('dashboard.jobs_deck_detail_no_timeline')}</div>
+                      )}
                     </div>
 
                     <div className="admin-jobs-detail__json-shell">
@@ -3336,7 +4324,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'audit' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
           <section className="admin-audit-terminal">
             <div className="admin-audit-terminal__hero">
               <div className="admin-audit-terminal__hero-copy">
@@ -3484,7 +4472,75 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="admin-command-route__surface">
+          <div className="admin-command-route__surface ad-page">
+
+            {/* Kinetic Editorial: settings grid */}
+            <div className="ad-settings-grid">
+              {/* Language card */}
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.settings_language_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.settings_language_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-option-list">
+                  {dashboardLanguageOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`ad-option-card${lang === option.value ? ' is-active' : ''}`}
+                      onClick={() => setLang(option.value)}
+                      aria-pressed={lang === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Theme card */}
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.settings_theme_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.settings_theme_title')}</h3>
+                  </div>
+                </div>
+                <div className="ad-option-list">
+                  {dashboardThemeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`ad-option-card${theme === option.value ? ' is-active' : ''}`}
+                      onClick={() => setTheme(option.value)}
+                      aria-pressed={theme === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logout card */}
+              <div className="ad-card">
+                <div className="ad-card-head">
+                  <div>
+                    <div className="ad-kicker">{t('admin.kinetic.settings_logout_kicker')}</div>
+                    <h3 className="ad-card-title">{t('admin.kinetic.settings_logout_title')}</h3>
+                  </div>
+                </div>
+                <p className="ad-muted">{t('admin.kinetic.settings_logout_copy')}</p>
+                <button
+                  type="button"
+                  className="ad-logout-btn"
+                  onClick={logout}
+                >
+                  {t('admin.kinetic.settings_logout_btn')}
+                </button>
+              </div>
+            </div>
+
           <section className="admin-settings-studio">
             <div className="admin-settings-studio__hero">
               <div className="admin-settings-studio__hero-copy">
@@ -3636,7 +4692,7 @@ export default function Dashboard() {
             <div className="img-picker-grid">
               {imgCandidates.map((url, index) => (
                 <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(url, 'scan')}>
-                  <img src={url} alt={`candidate ${index + 1}`} />
+                  <img src={url} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>
@@ -3803,7 +4859,9 @@ export default function Dashboard() {
       </Modal>
     </div>
   );
-}
+});
+
+export default Dashboard;
 
 function Pagination({ pageData, onPageChange, t }) {
   if (!pageData || (pageData.totalPages || 0) <= 1) return null;

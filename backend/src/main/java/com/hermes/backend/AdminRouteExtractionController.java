@@ -64,11 +64,14 @@ public class AdminRouteExtractionController {
             status.state = JobState.RUNNING;
             try {
                 MarathonRoutePipelineService.PipelineResult result = pipelineService.runPipeline(
+                        runnerOptional.get(),
                         request.raceId(),
                         request.raceName(),
                         request.city(),
                         request.country(),
                         request.officialWebsite(),
+                        request.resolvedLatitude(),
+                        request.resolvedLongitude(),
                         request.distanceKm(),
                         request.imageFilePath()
                 );

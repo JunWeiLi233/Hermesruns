@@ -11,6 +11,851 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-12-01
+Date: 2026-06-12
+Surface: Comeback card reactivation on `/profile`
+Files: `frontend/src/components/ComebackMessage.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/utils/todayRun.js`, `frontend/src/styles/_split/profile.css`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/pages/profileComebackCardActions.smoke.test.js`, `frontend/src/utils/todayRunIntent.test.js`
+What changed: Reactivated `runner-comeback-card` on the signed-in profile surface by driving it from the today-run recommendation intent instead of the stale `runsFreshness` plus `daysOff >= 3` gate. The card now renders two real actions, `Open today's run` and `View runs`, and the dismiss control sits above the card body so it can actually be clicked.
+Why: The comeback card existed in source but stayed effectively dead in the live profile flow, and its pill affordances looked like buttons without doing anything.
+Rollback target: `DV-2026-06-11-13`
+Notes: Verified live on the local shared runner: card mounted on `/profile`, primary navigated to `/today-run`, secondary navigated to `/runs`, and dismiss removed the card from the current page state.
+
+### Version: DV-2026-06-11-13
+Date: 2026-06-11
+Surface: Runs recent insights primary card on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/analysis-detail-redesigns.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runsInsightPrimaryCard.smoke.test.js`
+What changed: Reworked the primary recent-runs insight card from a dark slab into a warm editorial signal panel with a lead grid column, coral rail, kinetic line accent, large transparent metric type, and dedicated dark-mode styling.
+Why: The old primary card fought the current profile-aligned Runs page and looked like a leftover dark theme component inside the light editorial surface.
+Rollback target: `DV-2026-06-11-12`
+Notes: Added focused split/bundled CSS and late-cascade guardrails for the exact primary-card design path.
+
+### Version: DV-2026-06-11-12
+Date: 2026-06-11
+Surface: Territory active land fidelity on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`
+What changed: Active territory render now keeps preserve-all budgets truly uncapped through region selection and final loop limiting, renders active loops as exact backend-derived topology, preserves internal hole loops, and retains active route-near concrete cells instead of replacing them with a corridor approximation.
+Why: The live map still had gaps over backend-owned active cells and false filled land inside active territory. Diagnosis showed `Infinity` budgets fell back to finite caps, exact active loops were smoothed/decimated, and active topology holes were being collapsed into solid land.
+Rollback target: `DV-2026-06-11-11`
+Notes: Focused territory guards, file-scoped ESLint, escalated frontend build, runtime sync, and authenticated localhost territory-cell proof passed. Browser plugin opened `/territory` but redirected to `/login`, so authenticated Playwright proof is the runtime geometry source.
+
+### Version: DV-2026-06-11-11
+Date: 2026-06-11
+Surface: Rewards 100-reward catalog on restore-pre-merge
+Files: `frontend/src/pages/Rewards.jsx`, `frontend/src/utils/rewardBadges.jsx`, `frontend/src/utils/rewardCatalog.js`, `frontend/src/styles/style.css`, `frontend/src/utils/rewardCatalog.test.js`, `frontend/src/utils/rewardCatalogIntegration.smoke.test.js`
+What changed: Ported the 100 additional rewards catalog into the restore-pre-merge worktree's ledger Rewards page, preserving the local `rewards-ledger-*` layout and adding a full catalog grid below the priority pipeline.
+Why: The rewards expansion had been applied to a separate worktree/branch; this worktree needed the same catalog rendered in its own Rewards page design.
+Rollback target: `DV-2026-06-11-10`
+Notes: Focused catalog and wiring tests were added for this port.
+
+### Version: DV-2026-06-11-10
+Date: 2026-06-11
+Surface: Runs street-accurate route thumbnails on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/pages/runsThumbDarkMapTile.smoke.test.js`, `.tools/verify-runs-route-thumb-runtime.mjs`
+What changed: Route thumbnails now keep point-derived Mercator coordinates and rebuild both `recent-runs-thumb-route-svg` and the CARTO tile grid from an aspect-aware viewport frame based on the rendered thumbnail size. Map tiles now preserve square map pixels instead of being stretched into tall rectangles.
+Why: The previous fix put the route over real tiles, but it independently scaled x/y into the tall thumbnail. That distorted the raster street grid, so the route could match GPS data while not visually sitting on the correct street.
+Rollback target: `DV-2026-06-11-09`
+Notes: Focused guards, file-scoped ESLint, escalated frontend build, runtime sync, and escalated browser verifier passed. Live `/runs` proof covered visible runs `1549`, `1548`, and `944`; each SVG path matched `/api/activities/{id}/points` under the measured thumbnail aspect, route SVG stayed over the tile layer, and tile square deltas were `0.02px`, `0.02px`, and `0px`.
+
+### Version: DV-2026-06-11-09
+Date: 2026-06-11
+Surface: Runs route thumbnails over real map tiles on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runsThumbDarkMapTile.smoke.test.js`, `frontend/src/pages/runsRoutePreviewCache.smoke.test.js`, `.tools/verify-runs-route-thumb-runtime.mjs`
+What changed: `recent-runs-thumb-route-svg` is explicitly layered above the real CARTO background tile layer with SVG z-index `2` and tile z-index `0`, while both layers keep the same point-derived Web Mercator coordinate frame and tile images remain uncapped by global responsive image CSS.
+Why: The thumbnail must show the actual running route on top of the corresponding real-world map, not just a correct path or a loaded background tile in separate coordinate or stacking contexts.
+Rollback target: `DV-2026-06-11-08`
+Notes: Focused route/tile guards, route-preview cache guard, file-scoped ESLint, escalated frontend build, runtime sync, and escalated browser verifier passed. Live `/runs` proof covered visible runs `1549`, `1548`, and `944`: each SVG path exactly matched `/api/activities/{id}/points`, each card rendered one background tile layer, SVG `preserveAspectRatio="none"`, z-order `svg=2` over `tile=0`, tile CSS `maxWidth/maxHeight=none`, and `/run/1549` loaded one Leaflet map.
+
+### Version: DV-2026-06-11-08
+Date: 2026-06-11
+Surface: Runs thumbnail tile sizing on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runsThumbDarkMapTile.smoke.test.js`
+What changed: Route thumbnail tile images now opt out of global responsive image caps with `max-width: none` and `max-height: none`, so their computed percentage tile rectangles are honored behind `recent-runs-thumb-route-svg`.
+Why: The background CARTO tile loaded, but global image CSS capped the tile to the thumbnail width; this broke the corresponding Leaflet/CARTO map background even though the route SVG path was correct.
+Rollback target: `DV-2026-06-11-07`
+Notes: Focused guards, file-scoped ESLint, escalated frontend build, runtime sync, route verifier, and rendered-tile inspection passed. Live `/runs` for run `1549` showed tile natural size `256x256`, computed `maxWidth/maxHeight=none`, computed tile rect `6036x1788px` behind a `132x239px` thumb, and route proof still matched `2262` actual points plus `/run/1549` Leaflet map.
+
+### Version: DV-2026-06-11-07
+Date: 2026-06-11
+Surface: Runs Leaflet-aligned thumbnail maps on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/pages/runsThumbDarkMapTile.smoke.test.js`, `.tools/verify-runs-route-thumb-runtime.mjs`
+What changed: `recent-runs-thumb-route-svg` route paths now project GPS points into normalized Web Mercator coordinates, and background CARTO tile layers are positioned from the same Mercator `mapFrame`, matching Leaflet/CARTO map geometry instead of linear latitude.
+Why: The previous route thumbnail used actual run points, but the SVG path still normalized latitude linearly while the background was a Leaflet-style Web Mercator tile map, so route and map could visually disagree.
+Rollback target: `DV-2026-06-11-06`
+Notes: Focused route/tile guards, file-scoped ESLint, escalated frontend build, frontend runtime sync, and escalated browser verifier passed. Browser proof on live `/runs` showed run `1549` thumbnail path matched the Web Mercator preview rebuilt from `/api/activities/1549/points` with `2262` commands for `2262` points, `preserveAspectRatio="none"`, background tile layer present, and `/run/1549` loaded one Leaflet route map.
+
+### Version: DV-2026-06-11-06
+Date: 2026-06-11
+Surface: Runs actual route thumbnails on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/pages/runsRoutePreviewCache.smoke.test.js`, `.tools/verify-runs-route-thumb-runtime.mjs`
+What changed: Runs list thumbnails now fetch `/api/activities/{runId}/points` for bounded visible cards even when the activity feed already includes `routePreview`, then prefer that point-derived preview over the feed preview. Run cards expose `data-run-id` for direct runtime comparison with `/run/:runId`.
+Why: The feed `routePreview` could be stored, sampled, or stale, so validating the thumbnail against itself did not prove it showed the same actual route as the run detail page.
+Rollback target: `DV-2026-06-11-05`
+Notes: Focused route-preview and tile guards passed. File-scoped ESLint passed. Escalated frontend build passed and synced live backend static assets. Runtime sync passed. Escalated browser verifier proved `/runs` run `1549` thumbnail path exactly matched a preview rebuilt from `/api/activities/1549/points` with `2262` commands for `2262` actual points, and `/run/1549` loaded one Leaflet route map.
+
+### Version: DV-2026-06-11-05
+Date: 2026-06-11
+Surface: Runs route thumbnail map alignment on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runsThumbDarkMapTile.smoke.test.js`
+What changed: Runs route thumbnails now render positioned CartoDB dark tile layers from the same padded preview bounds used by `recent-runs-thumb-route-svg`, and the SVG uses `preserveAspectRatio="none"` so the route path and tile frame share the rendered thumbnail coordinate space.
+Why: The previous thumbnail used one centered map tile stretched under the route SVG, which could not be accurate to the normalized route path because the tile and SVG used different coordinate frames.
+Rollback target: `DV-2026-06-11-04`
+Notes: `runsThumbDarkMapTile` and route-preview cache guards passed. Escalated frontend build passed and synced backend static/live assets. Frontend runtime sync passed. Escalated Playwright proof on `http://localhost:8080/runs` found a routed thumbnail with `has-route-tile`, one `data-route-tile-layer`, `object-fit: fill`, SVG `preserveAspectRatio="none"`, matching SVG/thumb rects, and non-empty route path bbox.
+
+### Version: DV-2026-06-10-03
+Date: 2026-06-10
+Surface: Territory Global zoom stability on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`
+What changed: Global territory now reuses same-signature processed render geometry after raw polygons hydrate, keeps Global geometry keys stable across zoom, and limits viewport-prioritized loop pruning to selected/Own scope. Leaflet territory layer swaps now paint the replacement layer before removing the previous layer.
+Why: Zooming the Global territory map could make owner regions appear/disappear because viewport-keyed raw rerenders reselected loops, and the previous layer could be removed before replacement paths were painted.
+Rollback target: `DV-2026-06-10-02`
+Notes: Territory wiring and heatmap guards passed. Escalated frontend build passed and synced backend static/live assets. Frontend runtime sync passed. Live shared `/territory` proof passed. Wheel-zoom node-stability proof sampled 236 frames across zooms 10/13/16/17 with active and rival SVG nodes continuously connected, `badCount=0`, and zero console errors. Screenshot: `task-images/territory-wheel-zoom-node-stability-proof.jpg`.
+
+### Version: DV-2026-06-10-02
+Date: 2026-06-10
+Surface: Territory global owner rendering on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonRepository.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`
+What changed: Global territory now includes every non-deleted runner with land-mask territory, including seeded `territory-*` owners. Initial global responses and frontend rendering reserve owner budget by distinct active owner, rank all rival owners instead of using a nearby-only branch, cache full drawable polygons even when `cells=false` is requested, and default `/territory` to Global so all returned owners paint before Own is explicitly selected. Global active land uses a smaller visible-region cap so the active fill remains readable alongside rival layers.
+Why: The Global territory page could show only the signed-in runner because generated territory owners were excluded, active masks exhausted the initial cap, `cells=false` could poison the canonical cache, and the page defaulted to Own-only selected-owner rendering.
+Rollback target: `DV-2026-06-10-01`
+Notes: Focused backend regressions passed. Territory frontend guards passed. Escalated Vite build passed and synced backend static/live assets. Runtime sync passed. Live `/territory` proof passed with `polygonCount=36`, `activePolygonCount=29`, `rivalPolygonCount=7`, `rivalOwnerNames=["Hermes Flushing Conqueror","Hermes Temporal Rival"]`, `rivalConcrete=2`, `rivalContour=2`, no synthetic/helper paths, and zero console errors. Cache runtime proof passed with cached paint `508ms` and preserved active plus rival layers. Screenshots: `task-images/territory-global-owners-proof.jpg`, `task-images/territory-global-cache-proof.jpg`.
+
+### Version: DV-2026-06-10-01
+Date: 2026-06-10
+Surface: Territory world country stress dataset and own-scope render performance on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/api.js`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-world-runtime.mjs`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Completed the world territory stress dataset as `24,900` fake-name owners across `249` ISO countries, with city-sized coarse masks, deliberate neighboring overlap, and a spaced fallback country grid so every owner keeps visible land after newest-overlap conquest. The Territory page now defaults to Own territory and filters topology generation to the selected owner before rendering, while Global territory still has all owners loaded for the global scope. Production API base resolution now uses same-origin so isolated backend proof servers work without cross-port CSP failures.
+Why: The global territory and conquest mechanisms need a full-country-scale mock dataset, but the page must still load quickly and not erase owners through anchor collisions or response-grid downsampling.
+Rollback target: `DV-2026-06-09-15`
+Notes: Targeted backend/frontend guards passed. Escalated frontend build passed. Isolated H2 runtime on `http://localhost:18080` seeded `accounts=24900`, `countries=249`, `seeded shoes=74700`, `seeded activities=24900`. Strict verifier passed with `polygonCount=24900`, `parsedCountryCount=249`, representative countries at `100` owners each, `uniqueCells=356399`, no duplicate-owned cells, and browser page proof `scopeButtonCount=2`, `landLayerCount=1`, `contourLayerCount=1`. Screenshot: `task-images/territory-world-country-owner-proof.jpg`.
+
+### Version: DV-2026-06-09-15
+Date: 2026-06-09
+Surface: Territory global country stress dataset on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapConfiguration.java`, `backend/src/main/resources/application.properties`, `backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `.tools/verify-territory-world-runtime.mjs`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Local world territory generation now creates 100 fake-name mock accounts for every ISO country instead of six continent groups. Accounts use country-coded emails, fake-name display names, city-anchored loop routes, and overlapping neighbor cells to stress global rendering and newest-overlap-wins conquest.
+Why: The global territory page needs a broad multi-country test dataset with real-looking users and deliberate land competition, not a small per-continent sample.
+Rollback target: `DV-2026-06-09-14`
+Notes: `node --check .tools/verify-territory-world-runtime.mjs` passed. Focused service generation/conquest tests passed. Focused controller proof generated the full country account set, asserted all 100 exact fake-name owners for every country, and verified a newer US neighbor owns the contested cell.
+
+### Version: DV-2026-06-09-14
+Date: 2026-06-09
+Surface: Territory campaign panel removal on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Removed the `terr-game-campaign-panel` overlay from the Territory map and deleted its dedicated campaign child styles. The map, navigation rail, scope switcher, owner inspector, and territory rendering remain intact.
+Why: The Territory page should no longer show the campaign card overlay on top of the map.
+Rollback target: `DV-2026-06-09-13`
+Notes: Static Territory guard passed. Sandboxed Vite build hit the known Windows `spawn EPERM`; escalated Vite build passed and synced backend static/live assets. Frontend runtime sync passed. In-app Browser proof on `http://localhost:8080/territory` showed `campaignPanelCount=0`, no campaign child classes, map section present, scope switcher present, visible land present, and zero console errors.
+
+### Version: DV-2026-06-09-13
+Date: 2026-06-09
+Surface: Territory locality-aware owner colors on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Territory owner colors now pass through a deterministic locality-aware allocator. The reusable palette can repeat for far-away owners, but when two owners' painted territory bounds are near each other, rivals are reassigned away from same-hue/same-lightness colors. The active user keeps the Hermes coral identity, and the resolved color is shared by map fills, contours, owner metadata, and the Global button's significant-color gradient.
+Why: Adjacent territories could previously look like minor shade variations of the same color, such as light green next to darker light green, making ownership boundaries hard to read.
+Rollback target: `DV-2026-06-09-12`
+Notes: Frontend cache is now `global-owner-territory-cache-v55`. Static Territory guard passed. Sandboxed Vite build hit the known Windows `spawn EPERM`; escalated Vite build passed and synced backend static/live assets. Frontend runtime sync passed. In-app Browser proof on `http://localhost:8080/territory` loaded the current bundle with Global selected, active territory visible, and zero console errors after reload.
+
+### Version: DV-2026-06-09-12
+Date: 2026-06-09
+Surface: Territory user-first scope focus on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: The Territory page now treats both scope buttons as user-first navigation. Clicking Own territory or Global territory refits the Leaflet viewport to the signed-in owner first; if that owner's territory spans a very large distance, the viewport picks the most recent route/territory cluster instead of zooming out to an unusable whole-world box. Global territory still paints every owner with all-mode classes and significant colors while centering the user's land.
+Why: Global and Own were valid display modes, but switching modes could leave the user far from their own territory or focused on a dominant rival/local cluster. The requested behavior is direct navigation to the user's current/recent land first.
+Rollback target: `DV-2026-06-09-11`
+Notes: Frontend cache is now `global-owner-territory-cache-v54`. Static Territory guard passed. Escalated Vite build passed and synced backend static/live assets after the known sandboxed Vite `spawn EPERM`. Frontend runtime sync passed. In-app Browser proof on `http://localhost:8080/territory` showed zero `.terr-theme-navigator` nodes, one `.terr-scope-switcher`, exactly two buttons (`我的领地`, `全局领地`), Own selected with active selected land visible, and Global selected with all-mode land visible while still focused on the active user.
+
+### Version: DV-2026-06-09-11
+Date: 2026-06-09
+Surface: Territory scope switcher on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Removed the per-owner `terr-theme-navigator` rail and replaced it with a compact two-button scope switcher: Own territory and Global territory. Own territory derives map focus from the active owner only; Global territory keeps all owners visible with the significant multi-user color treatment. Clicking map land now opens the owner inspector without creating a hidden rival-focus state.
+Why: The Territory page needed a simpler mode model with only two explicit choices instead of a horizontal owner navigator that exposed every user as a button.
+Rollback target: `DV-2026-06-09-10`
+Notes: Static Territory guard passed. Sandboxed Vite build hit the known Windows `spawn EPERM`; escalated Vite builds passed and synced backend static/live assets. Frontend runtime sync passed. In-app Browser proof on `http://localhost:8080/territory` showed zero `.terr-theme-navigator`/`.terr-theme-chip` nodes, one `.terr-scope-switcher`, exactly two buttons (`我的领地`, `全局领地`), Global selected by default with 6 visible land paths at zoom 12, Own selected with one active selected land path and rivals dimmed, then Global restored all-mode paint with 6 visible land paths.
+
+### Version: DV-2026-06-09-10
+Date: 2026-06-09
+Surface: Territory all-users render recovery on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Territory cache is now `global-owner-territory-cache-v53`, raw polygon and processed render cache reads must contain drawable geometry before they can hydrate the page, and render-only cache can no longer update the raw polygon signature or suppress the full `/api/territory/polygons` fetch. The all-users initial fit now selects the dominant local territory cluster using owner area and geometry instead of always fitting the active account's cluster.
+Why: The page could load the shell and owner chips while all Leaflet territory paths clipped to `M0 0`, because stale render-only cache plus a tiny far-away active-account center made the real Flushing/Shared/Temporal territories paint off-screen or not paint at all.
+Rollback target: `DV-2026-06-09-09`
+Notes: Static Territory guard passed. Escalated Vite build passed and synced backend static/live assets. Frontend runtime sync passed. In-app Browser proof on `http://localhost:8080/territory` showed 20 visible map tiles at zoom 12, 8 land paths/16 territory paths, 6 visible non-`M0 0` land paths, All users selected, and distinct visible fills for `Hermes Temporal Rival` (`rgb(56, 189, 248)`), `Hermes Flushing Conqueror` (`rgb(251, 191, 36)`), and `Hermes Shared Runner` (`rgb(91, 156, 245)`). The signed-in user's tiny far-away land remains off-screen in all-users mode by design so the dominant visible territory cluster loads instead of a blank global view.
+
+### Version: DV-2026-06-09-09
+Date: 2026-06-09
+Surface: Territory all-users map highlight on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: All users mode now applies an explicit `--theme-all` class to every rendered territory land and contour path. Rival land and contours get dedicated all-mode opacity/filter overrides, so blue, purple, yellow, and red owner territories all read as highlighted at the same time instead of only the active red owner standing out.
+Why: All users used an empty `selectedOwnerKey`, and the map focus helper treated that as no theme class. Rival owners therefore fell back to the subdued default rival opacity, making the global/all-owner mode look like only the red current-user territory was highlighted.
+Rollback target: `DV-2026-06-09-08`
+Notes: Static Territory guard passed. Escalated Vite build passed and synced backend static/live assets. Frontend runtime sync passed. Elevated Playwright proof saved `task-images/territory-v52-all-users-map-highlight-proof.jpg` with no console errors; proof showed All users selected, 1 active owner and 3 rival owners rendered, zero selected/dimmed paths, all land/contours carrying `--theme-all`, rival fill opacity `0.56`, rival contour stroke opacity `0.72`, and visible owner colors for `You`, `Hermes Temporal Rival`, `Hermes Africa Territory 001`, and `Hermes Flushing Conqueror`.
+
+### Version: DV-2026-06-09-08
+Date: 2026-06-09
+Surface: Territory all-users color chip on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: The owner theme rail now derives significant colors for the All users button from the actual visible owner theme list. The chip label is aligned to `All users`, and the all-users chip body plus swatch render a multi-color gradient using the active user and largest visible rival colors instead of a static hardcoded palette.
+Why: The All users button represented a global/all-owner state but visually looked like a generic single-color chip rather than showing the significant user colors currently on the map.
+Rollback target: `DV-2026-06-09-07`
+Notes: Static Territory guard passed. Sandboxed Vite build hit known Windows `spawn EPERM`; escalated Vite build passed and synced backend static. Frontend runtime sync passed. Elevated Playwright proof saved `task-images/territory-v52-all-users-colors-proof.jpg` with no console errors; proof showed owner colors `#f07561`, `#5b9cf5`, `#c084fc`, all-users band/gradient containing those colors, and non-empty chip body background.
+
+### Version: DV-2026-06-09-07
+Date: 2026-06-09
+Surface: Territory v52 real-run closed-loop coverage on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Backend land masks are now `mask:v16`; accepted closed loops fill by route-wall flood fill instead of even-odd scanlines, while unclosed route branches remain corridor-only. Backend API cache signatures are now `land-mask-union-v30-wall-flood-loop-fill` and `territory-map-v20-wall-flood-loop-fill`; frontend cache is now `global-owner-territory-cache-v52`.
+Why: Live Kissena diagnosis showed the shared-runner activity had a real closed east-park loop plus unclosed western branch, but v15 even-odd loop filling under-filled the concrete loop and stale cache could preserve that bad shape.
+Rollback target: `DV-2026-06-09-06`
+Notes: `TerritoryPolygonComputerTests`, targeted Territory ownership tests, targeted Flushing seed tests, backend compile, frontend smoke, escalated Vite build, frontend/backend runtime sync, live shared proof, cache proof, and focused Kissena proof passed. Live v52 proof saved `task-images/territory-v52-live-shared-proof.jpg` with active backend cells `2224`, active area `4,112,176m2`, v30 ETag, one active concrete path, two rival owners, unfiltered tiles, and zero console errors. Cache proof saved `task-images/territory-v52-cache-proof.jpg` with cached paint `448ms`. Kissena proof saved `task-images/territory-v52-kissena-centered-proof.jpg` with zoom `14`, active owner `You` above rival fill, `activeNearKissena=1062`, and v30 ETag.
+
+### Version: DV-2026-06-09-06
+Date: 2026-06-09
+Surface: Territory v47 fragment regression cleanup on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-live-shared-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Frontend cache is now `global-owner-territory-cache-v47`. The render pass still resolves exact concrete ownership before synthetic repair, but small disconnected components are again pruned against any competing owner concrete, not only already-processed newer concrete. The live shared-account verifier now rejects many tiny active subpaths so the v46 coral-chip regression cannot pass proof again.
+Why: v46 fixed activity-time conquest but narrowed fragment pruning to newer-only concrete. Live proof reproduced the broken-piece state with `64` active concrete subpaths because small active winner islands inside rival Flushing territory were no longer compared against older competing concrete.
+Rollback target: `DV-2026-06-09-05`
+Notes: Static guard passed. `node --check` passed for cache and live shared verifiers. Sandboxed Vite build failed with the known Windows `spawn EPERM`; escalated Vite build passed and synced backend static. Runtime sync passed. Live shared proof saved `task-images/territory-v47-fragment-clean-proof.jpg` with active concrete subpaths reduced from `64` to `6`, small active subpaths `2`, all 3 rival owners rendered, no helper/synthetic paths, unfiltered tiles, and zero console errors. Kissena proof saved `task-images/territory-v47-kissena-newer-run-proof.jpg` with active Kissena backend cells `555`, active geometry visible at zoom 14, nearest active point `17px`, and all 3 rivals present. Cache proof saved `task-images/territory-v47-cache-proof.jpg` with v47 cached paint `467ms`, active move commands `6`, conditional polygon revalidation after paint, no full polygon download, and raw polygon cache deleted before revisit.
+
+### Version: DV-2026-06-09-04
+Date: 2026-06-09
+Surface: Territory v45 conquered-fragment cleanup on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Frontend cache is now `global-owner-territory-cache-v45`. Territory ownership still starts from backend concrete winner cells, but the render pass now prunes small disconnected components that are mostly adjacent to a competing owner's concrete mask. Larger standalone active land and open-route corridors remain, while the tiny coral chips that survived exact-grid conquest inside the large rival territory are removed.
+Why: The v44 map still showed many small coral broken pieces inside a larger owned landmass because exact response-cell ownership could leave tiny active winner islands next to another owner's concrete field. The page needed to keep real global owner territory while removing those low-value conquered fragments.
+Rollback target: `DV-2026-06-09-03`
+Notes: Static guard and syntax checks passed. Escalated Vite build passed and synced backend static. Runtime sync passed. Live shared proof saved `task-images/territory-v45-competing-fragment-proof.jpg` with active concrete subpaths reduced from 64 to 5, active contour line commands reduced from about 102k to 7,296, all 3 rival owners still rendered, no helper/synthetic paths, unfiltered tiles, and zero console errors. Open-route proof saved `task-images/territory-v45-open-route-proof.jpg` with `p10=8`, `p50=8`, `p90=8`, `thicknessRatio=1`, and 12 samples. Owner theme proof saved `task-images/territory-v45-owner-theme-proof.jpg` with all 4 owner keys and owner inspector. Cache proof saved `task-images/territory-v45-cache-proof.jpg` with v45 cached paint `480ms`, shell API blocked before paint, conditional polygon revalidation after paint, no full polygon download, raw polygon cache deleted before revisit, and active move commands `5`.
+
+### Version: DV-2026-06-09-03
+Date: 2026-06-09
+Surface: Territory v44 ownership-safe gap and cache pass on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-open-route-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Frontend cache is now `global-owner-territory-cache-v44`. Territory rendering resolves ownership from backend concrete cells before synthetic repair, so newer/other owners cannot be hidden by same-owner render repair. Dense, fragmented masks get a bounded void/seam repair before contouring, open route traces render as continuous narrow corridors, selected rival territory is more opaque, dimmed owners remain visibly present, and Leaflet starts preloading as soon as the Territory module loads for faster cached replay.
+Why: The remaining visible “gaps” were a mix of stale render-cache geometry, synthetic repair competing with concrete owner cells, focus mode making valid rival land look black, and route corridors being clipped into sparse dashed pieces. The page needed to preserve global newest-overlap ownership while making real owner coverage visually legible.
+Rollback target: `DV-2026-06-09-02`
+Notes: Static guard and syntax checks passed. Escalated Vite build passed and synced backend static. Runtime sync passed. Owner theme proof saved `task-images/territory-v44-owner-theme-proof.jpg` with 4 owner chips/path keys, active plus 3 rival concrete layers, selected/dimmed paths, owner inspector, and zero console errors. Global shared proof saved `task-images/territory-v44-live-shared-proof.jpg` with 4 polygons, all 3 rival owner names, no helper/synthetic paths, unfiltered tiles, and zero console errors. Open-route proof saved `task-images/territory-v44-open-route-proof.jpg` with centerline samples `p10=8`, `p50=8`, `p90=8`, `thicknessRatio=1`, and unfilled interior. Cache proof saved `task-images/territory-v44-cache-proof.jpg` with v44 cached paint `656ms`, shell API blocked before paint, conditional polygon revalidation after paint, no full polygon download, raw polygon cache deleted before revisit, and unfiltered map tiles.
+
+### Version: DV-2026-06-09-02
+Date: 2026-06-09
+Surface: Territory gapless solid land fill on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-live-shared-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Frontend cache is now `global-owner-territory-cache-v28`. The territory renderer no longer promotes interior shared-boundary loops into the solid land fill; each connected concrete component now contributes its dominant outer loop only. The live shared verifier now parses exact SVG line commands and rejects opposite-winding active fill subpaths, so nonzero-filled territory cannot silently render long dark interior cracks.
+Why: Large connected territories could show many grid-aligned internal gaps because shared-boundary/interior loops were included as drawable fill rings. Those rings could become opposite-winding SVG subpaths and cut holes through what should read as one solid conquered landmass.
+Rollback target: `DV-2026-06-09-01`
+Notes: Backend ownership, newest-overlap conquest, route corridor rules, and owner-click behavior did not change. Smoke/static checks passed, sandboxed Vite build failed with the known Windows `spawn EPERM`, escalated Vite build passed and synced live backend static assets, and runtime sync passed. Live shared proof saved `task-images/territory-v28-gapless-shared-proof.jpg` with active/rival owner layers present, active fill/contour aligned, `activeConcreteMoveCommandCount=9`, `activeConcreteSubpathCount=9`, `activeConcreteSubpathSigns=[1]`, no helper/synthetic layers, unfiltered tiles, and zero console errors. Cache proof saved `task-images/territory-v28-gapless-cache-proof.jpg` with v28 cached paint `466ms`, raw polygon cache deleted before revisit, conditional polygon revalidation after paint, and no full polygon download. Owner-click regression proof saved `task-images/territory-v28-owner-click-proof.jpg`.
+
+### Version: DV-2026-06-09-01
+Date: 2026-06-09
+Surface: Territory click-to-owner inspector on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-theme-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Real Leaflet territory fills and contours are now clickable and keyboard-focusable. Clicking a territory shape selects that owner's theme, dims other owners without hiding them, and opens a map annotation showing username, current/rival status, owned area, mapped region count, and owner id when available. The same owner metadata stays on the SVG paths so the card, theme navigator, and live rendered land all resolve from the same backend owner key.
+Why: The global owner map exposed all users visually, but clicking the land itself did not explain which user owned it or show useful owner details. The territory page needed direct map interaction, not only the bottom color-theme rail.
+Rollback target: `DV-2026-06-08-12`
+Notes: Frontend cache remains `global-owner-territory-cache-v27`; no backend ownership, conquest, or geometry behavior changed. Smoke/static checks passed, sandboxed Vite build failed with the known Windows `spawn EPERM`, escalated Vite build passed and synced live backend static assets, and runtime sync passed. Live owner-click proof saved `task-images/territory-click-owner-info-proof.jpg` with 4 owners, direct path click on `Hermes Temporal Rival`, `role=button`, `tabindex=0`, synchronized selected theme chip, 2 selected paths, 6 dimmed paths, owner info rows in zh-CN, close behavior, and zero console errors. Shared global proof saved `task-images/territory-click-owner-shared-global-proof.jpg`; cache proof saved `task-images/territory-click-owner-cache-proof.jpg` with v27 cached paint `604ms`, raw polygon cache deleted before revisit, conditional polygon revalidation after paint, and no full polygon download.
+
+### Version: DV-2026-06-08-12
+Date: 2026-06-08
+Surface: Territory owner color-theme navigator on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-theme-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: `/territory` now derives an owner color-theme system from the same global owner keys used by the map paint path. A bottom theme navigator shows every returned owner with a swatch, current/rival status, area, and region count; selecting a chip focuses the Leaflet view to that owner's real concrete territory while dimming, not hiding, the other owner layers. Rendered SVG paths now carry `data-hermes-owner-key` so chips, cached render entries, and live map paths stay aligned.
+Why: The global territory map showed all owners, but there was no visible color index or direct way to navigate each user's territory. Users could see colored land but could not easily understand which color belonged to which owner or focus a specific rival such as `Hermes Flushing Conqueror`.
+Rollback target: `DV-2026-06-08-11`
+Notes: Frontend cache remains `global-owner-territory-cache-v27`; no conquest geometry or backend mask behavior changed. Smoke/static checks passed, sandboxed Vite build failed with the known Windows `spawn EPERM`, escalated Vite build passed and synced live backend static assets, and runtime sync passed. Theme proof saved `task-images/territory-theme-navigator-proof.jpg` with 4 visible owner chips, `aria-pressed` states, selected `Hermes Flushing Conqueror` focus, 2 selected paths, 6 dimmed paths, active plus 3 rival concrete layers still rendered, and zero console errors. Existing shared proof saved `task-images/territory-theme-shared-global-proof.jpg`; cache proof saved `task-images/territory-theme-cache-proof.jpg` with v27 cached paint `479ms`, raw polygon cache deleted before revisit, conditional polygon revalidation after paint, and no full polygon download.
+
+### Version: DV-2026-06-08-11
+Date: 2026-06-08
+Surface: Territory Central Park seam continuity on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Frontend cache is now `global-owner-territory-cache-v27`. The territory renderer adds a bounded same-owner component seam bridge after route normalization: nearby disconnected concrete route pieces are joined with narrow corridor tiles, not owner-wide hulls, district plates, or flood-filled interiors.
+Why: The v26 render fixed broad/uneven Central Park blobs, but the active route still broke into separate lower and mid-park pieces because the returned route trace payload was globally capped and incomplete for Central Park while backend owned mask cells covered the full run.
+Rollback target: `DV-2026-06-08-10`
+Notes: Source guard, syntax checks, escalated Vite build, and runtime sync passed. Central Park proof saved `task-images/territory-v27-central-park-seam-bridge-proof.jpg` with `sampleCount=36`, `p10=4`, `p50=8`, `p90=10`, and `thicknessRatio=2.5`; visual inspection shows the broken pieces joined while the reservoir/interior remains dark. DOM seam proof confirmed lower and mid seam neighborhoods are filled and the reservoir interior is empty. Shared global proof saved `task-images/territory-v27-shared-global-proof.jpg` with active plus three rival owners and zero console errors. Cache proof saved `task-images/territory-v27-repeat-load-proof.jpg` with v27 cached paint `565ms`, raw polygon cache deleted before revisit, conditional polygon revalidation after paint, and no full polygon download.
+
+### Version: DV-2026-06-08-10
+Date: 2026-06-08
+Surface: Territory uniform open-route corridor on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-open-route-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Backend land masks now use `mask:v14`, tighter 6m internal self-near closure, and cache signatures `land-mask-union-v26-wide-route-trace-coverage` / `territory-map-v16-tight-self-loop-closures` so stale false Central-Park-like interiors recompute. The frontend uses `global-owner-territory-cache-v26`, a narrower fixed route corridor, a bounded near-route replacement band, and render-tile-scale contour smoothing so unclosed open routes draw as consistent real-world corridors instead of broad source-cell-scale lobes.
+Why: The Central Park open route was no longer filling the whole park, but its displayed shape still had uneven thick/thin blobs because narrow route corridors were being simplified at the original backend cell scale instead of the finer render-tile scale.
+Rollback target: `DV-2026-06-08-09`
+Notes: Targeted frontend guard passed, Vite build passed after the known sandbox `spawn EPERM` rerun with escalation, and runtime sync passed. Central Park proof saved `task-images/territory-v26-cache-v26-central-park-uniform-corridor-proof.jpg` with `p10=2`, `p50=2`, `p90=4`, and `thicknessRatio=2`. Shared global proof saved `task-images/territory-v26-cache-v26-shared-global-proof.jpg` with active plus three rival land-mask owners, including `Hermes Flushing Conqueror`, and zero console errors. Cache proof saved `task-images/territory-v26-cache-v26-repeat-load-proof.jpg` with v26 cached paint `609ms`, raw polygon cache deleted before revisit, conditional polygon revalidation after paint, and no full polygon download.
+
+### Version: DV-2026-06-08-09
+Date: 2026-06-08
+Surface: Territory explicit-loop interiors on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Backend land masks now use `mask:v13` and no longer derive owned land from generic flood-fill of the brushed route wall. A run claims its route corridor plus interiors from explicit closed loops only. Endpoint closure remains 25m, while internal self-near loop detection is tightened to 12m so near-parallel park roads do not become false loop interiors. Territory API/cache signatures are bumped to `land-mask-union-v24-explicit-loop-interiors`, `territory-map-v15-explicit-loop-interiors`, and `global-owner-territory-cache-v19`.
+Why: Even after endpoint tightening, an open Central Park return path could still render as a broad filled band because the route corridor itself acted as a wall for flood-fill ownership. The intended rule is concrete run coverage: unclosed paths stay corridor-only; only real loops fill interiors.
+Rollback target: `DV-2026-06-08-08`
+Notes: Green backend coverage now includes `landMaskNarrowOpenReturnPathDoesNotFloodFillBetweenBrushedWalls`, proving both parallel route corridors are owned while the unrun center remains unclaimed. Full `TerritoryPolygonComputerTests` and `TerritoryControllerTests` pass. Runtime proof saved `task-images/territory-explicit-loop-live-proof.jpg` with live `v15`/`v24` signatures, `activeBackendArea=1896000`, active/rival land masks present, no helper/synthetic layers, unfiltered tiles, and zero console errors. Cache proof saved `task-images/territory-explicit-loop-cache-proof.jpg` with v19 cached paint `689ms`, current IndexedDB render cache, conditional polygon revalidation after paint, and no full polygon download. Central Park visual QA saved `task-images/territory-central-park-explicit-loop-proof.jpg`, showing unowned dark space between the open return sides.
+
+### Version: DV-2026-06-08-08
+Date: 2026-06-08
+Surface: Territory strict open-return corridor rule on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Backend land masks now use `mask:v12` with a 25m real endpoint-closure tolerance and no adaptive open-return fill. Open routes and run-back ribbons now claim only the concrete route corridor unless the route actually returns to the start within that tolerance. Territory API/cache signatures are bumped to `land-mask-union-v23-strict-open-return-corridors`, `territory-map-v14-strict-open-return-corridors`, and `global-owner-territory-cache-v18`.
+Why: The previous open-endpoint fix still let parallel open return paths fill the unrun interior between tracks, making Central-Park-style unclosed runs cover much more space than the runner actually ran.
+Rollback target: `DV-2026-06-08-07`
+Notes: Red backend tests first proved open return/ribbon middles were wrongly claimed. Green tests now prove open parallel tracks keep only upper/lower route cells, mid-route gaps with tails do not fill interiors, true 20m endpoint closures still fill, stale v10/v11 masks are invalidated, and `/api/territory/polygons` does not create hulls between same-owner open runs. Runtime proof passed with live `v14`/`v23` signatures, `task-images/territory-strict-open-return-proof.jpg`, active/rival land masks present, no helper/synthetic layers, unfiltered tiles, and zero console errors. Cache proof saved `task-images/territory-strict-open-return-cache-proof.jpg` with v18 cached paint `487ms`, current IndexedDB render cache, conditional polygon revalidation after paint, and no full polygon download.
+
+### Version: DV-2026-06-08-07
+Date: 2026-06-08
+Surface: Territory open-endpoint corridor rule on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Backend land masks now use `mask:v10` and cap adaptive endpoint closure at 150m, so a Central-Park-length open route with a 300m+ unrun gap stays a narrow route corridor instead of filling the park interior. Territory API/cache signatures are bumped to `land-mask-union-v21-open-endpoint-corridors`, `territory-map-v12-open-endpoint-corridors`, and `global-owner-territory-cache-v16`.
+Why: The previous adaptive closure allowed long routes to bridge up to 500m between endpoints, which made an open Central Park run render as a full filled territory even though the runner did not return near the start.
+Rollback target: `DV-2026-06-08-06`
+Notes: Red/green backend regression `landMaskOpenCentralParkLengthRouteWithParkScaleEndpointGapStaysCorridor` now proves the center of the implied park loop remains unclaimed while route-edge cells stay owned. Live shared proof saved `task-images/territory-open-endpoint-corridor-proof.jpg` with v21/v12 signatures, `activeBackendArea=2495504`, active/rival land masks present, no helper/synthetic layers, unfiltered tiles, aligned active fill/contour, and zero console errors. Cache proof saved `task-images/territory-open-endpoint-cache-proof.jpg` with v16 cached paint `526ms`, 304 polygon revalidation, and no full polygon download.
+
+### Version: DV-2026-06-08-06
+Date: 2026-06-08
+Surface: Territory additive coverage final render on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Territory render cache is now `global-owner-territory-cache-v13`. Cached repeat visits still paint a compact preview first, but the cache stores full additive render entries separately and immediately replays the full owner-level multipolygon geometry as the final state. Final active/rival fills and contours render as one multipolygon path per owner, with small post-conflict crumb components filtered before contour extraction instead of permanently capping the owner to preview regions.
+Why: The v12 fix made repeat loads look clean by preserving only the largest preview landmasses, but the requested territory model requires final owned land to be the add-up of all run coverage, with newest-overlap clipping only exact contested cells.
+Rollback target: `DV-2026-06-08-05`
+Notes: Red live proof after removing the cap rendered one active path with `256` move commands and visible Queens crumb artifacts. Green proof saved `task-images/territory-additive-full-shared-proof.jpg` with live backend `activeBackendCells=3566`, `activeRouteTraceCount=608`, final DOM `activeConcrete=1`, `activeContour=1`, `activeConcreteMoveCommandCount=7`, `rivalConcrete=3`, no helper/synthetic paths, aligned fill/contour boxes, and zero console errors. Cache proof saved `task-images/territory-additive-cache-proof.jpg` with v13 full render region count `273`, preview region count `26`, cached paint `689ms`, raw polygon cache deleted before revisit, 304 polygon revalidation, and no full polygon download. Flushing proof saved `task-images/territory-additive-flushing-proof.jpg`; older Flushing still saw `15953` `Hermes Flushing Conqueror` cells with aligned owner-level fill/contours at zoom 11/13/15.
+
+### Version: DV-2026-06-08-05
+Date: 2026-06-08
+Surface: Territory compact cached render on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Territory render cache is now `global-owner-territory-cache-v12`. Cached and fresh preview geometry no longer spreads one owner across geographic buckets; it sorts concrete regions by real area and keeps the largest landmasses first, capped at 4 active regions and 12 rival regions per owner. The cache runtime verifier now fails active broken-piece regressions and waits for real map tile coverage before saving its screenshot artifact.
+Why: The newest-overlap-wins backend was correct, but the previous cache preview still preserved small disconnected crumb fragments, making owned land look broken into pieces.
+Rollback target: `DV-2026-06-08-04`
+Notes: Red proof reproduced `activeConcrete=64` on live `/territory`. Green shared-account proof saved `task-images/territory-broken-pieces-fixed-shared-proof.jpg` with `activeConcrete=4`, `activeContour=4`, `rivalConcrete=28`, `rivalContour=28`, aligned active fill/contour boxes, unfiltered tiles, and zero console errors. Cache proof saved `task-images/territory-broken-pieces-fixed-cache-proof.jpg` with cached paint `458ms`, v12 render index, deleted raw polygon cache, 304 polygon revalidation, no full polygon download, and no active broken-piece replay. Flushing proof still showed older Flushing sees `15953` `Hermes Flushing Conqueror` cells with aligned fill/contours at zoom 11/13/15.
+
+### Version: DV-2026-06-08-04
+Date: 2026-06-08
+Surface: Territory newest-overlap conquest on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Territory conquest now follows the user sketch: the newest land-mask row/activity wins each overlapping response cell, the older owner is clipped out of that overlap, and coverage density only tie-breaks equal recency. `/api/territory/polygons` and `/api/territory` now use the same recency-first owner choice. Cache signatures were bumped to `land-mask-union-v18-newest-overlap-wins`, `territory-map-v11-newest-overlap-wins`, and `global-owner-territory-cache-v11` so old strength-first cached renders are ignored.
+Why: The previous strength-first rule let older dense masks keep overlap against newer territory, which contradicted the provided conquest layout and made new land claims feel non-conquering.
+Rollback target: `DV-2026-06-08-03`
+Notes: Backend red/green coverage now proves a sparse newer runner takes overlap from denser older coverage in both the territory grid and polygon mask APIs. Runtime API proof returned polygon signature `land-mask-union-v18-newest-overlap-wins` and territory ETag `territory-map-v11-newest-overlap-wins`. Cache proof saved `task-images/territory-newest-overlap-cache-proof.jpg` with cached paint `560ms`, v11 render index, no raw polygon cache, 304 polygon revalidation, and no full polygon download. Flushing conquest proof saved `task-images/territory-newest-overlap-flushing-proof.jpg`; the older Flushing account saw `15953` cells owned by `Hermes Flushing Conqueror`, kept `1282` older active cells, and rendered aligned conqueror fill/contours at zoom 11/13/15.
+
+### Version: DV-2026-06-07-19
+Date: 2026-06-07
+Surface: Territory global owner rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-flushing-conquest-runtime.mjs`, `.tools/verify-territory-live-shared-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Restored `/territory` as a global owner map. The frontend now passes every returned backend owner polygon through the owner merge/latest-wins resolver, paints non-active owners in lower rival panes, paints the active owner above them, and stamps owner metadata onto SVG paths for cross-account runtime proof. Fill and contour now both render as owner-level multipolygon paths, so each owner's border follows the same concrete land geometry as the fill.
+Why: The previous active-only filter hid global owners from other accounts, so `Hermes Flushing Conqueror` did not show up on the older Flushing account even though the backend returned it.
+Rollback target: `DV-2026-06-07-18`
+Notes: Verified with older Flushing logged into live `/territory`: API showed `Hermes Flushing Conqueror` owned `32414` cells and older active overlap was `0`; browser proof at zoom 11/13/15 rendered `rivalConcrete=4`, `rivalContour=4`, `conquerorConcrete=1`, `conquerorContour=1`, owner names included `Hermes Flushing Conqueror`, active and conqueror fill/contour boxes aligned, map tile filter was `none`, and screenshot artifact was `task-images/territory-flushing-global-users-proof.jpg`. Shared-account proof rendered `activeConcrete=1`, `activeContour=1`, `rivalConcrete=4`, `rivalContour=4`, zero synthetic/helper paths, zero console errors, and screenshot artifact `task-images/territory-live-shared-global-users-proof.jpg`.
+
+### Version: DV-2026-06-07-18
+Date: 2026-06-07
+Surface: Territory startup loading animation on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the Territory startup loading treatment with the same Heatmap loading page structure while the route waits for auth hydration and the initial `/api/territory` shell data. The loader now uses the Heatmap shell/empty-state classes and exits before the concrete map renders.
+Why: The Territory page previously mounted the map shell immediately at startup, which could read as stuck or blank before the first territory data arrived.
+Rollback target: working tree before DV-2026-06-07-18
+Notes: Verified with a Playwright proof that delayed `/api/territory`: `heatmap-page territory-loading-page`, `heatmap-page-map-shell`, `heatmap-page-empty`, and `heatmap-page-empty-copy` were present with `aria-busy=true`; no custom route-loading bar was present. The live map then rendered with `activeConcrete=1`, `activeContour=4`, `rivalConcrete=0`, `rivalContour=0`, and zero console errors. Screenshot artifact: `task-images/territory-heatmap-loading-proof.jpg`.
+
+### Version: DV-2026-06-07-17
+Date: 2026-06-07
+Surface: Territory exact border alignment on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `.tools/verify-territory-live-shared-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Removed the independent cubic SVG contour rewrite from Territory. Active concrete land still renders as one exact Leaflet multi-polygon fill, and the visible border now renders as stroke-only Leaflet polygons built from the same territory rings with `smoothFactor: 0`, so the border follows the actual filled land edge.
+Why: Close-zoom proof showed the cubic contour could drift away from the filled territory edge, creating borders that did not draw along the owned land.
+Rollback target: working tree before DV-2026-06-07-17
+Notes: Verified with in-app Browser on live `/territory`: `activeConcrete=1`, `activeContour=4`, `rivalConcrete=0`, `rivalContour=0`, `lineCommandCount=25721`, `cubicCount=0`, unfiltered tiles, and contour/fill `boxDelta=0`. Runtime proofs passed: authenticated `TERRITORY_PROOF_BROWSER=playwright node .tools/verify-territory-border-runtime.mjs --url http://localhost:8080/territory --screenshot task-images/territory-border-aligned-proof.jpg` and `node .tools/verify-territory-live-shared-runtime.mjs --zoom 12 --screenshot task-images/territory-border-aligned-live-proof.jpg`.
+
+### Version: DV-2026-06-07-16
+Date: 2026-06-07
+Surface: Territory v8 loop-interior land on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Restored backend v8 closed-loop territory masks so legitimate loop-enclosed land is real owned territory instead of a hollow route corridor. The frontend no longer rewrites the filled land SVG path with smoothed contour geometry; it uses Leaflet's exact composed polygon fill and keeps cubic smoothing only on the visible contour stroke.
+Why: The v7 route-corridor-only mask left black holes inside claimed loop territory, and smoothing the fill path could not fix missing backend land. Loop interiors now come from backend mask cells, not fake frontend fields or helper layers.
+Rollback target: working tree before DV-2026-06-07-16
+Notes: Verified with Browser plugin on live `/territory`: `activeConcrete=1`, `activeContour=1`, `rivalConcrete=0`, `rivalContour=0`, `fieldLayerCount=0`, `genericRegionCount=0`, `fillRule=nonzero`, unfiltered tiles, and no visible interior cutouts. Runtime proofs passed: `node .tools/verify-territory-live-shared-runtime.mjs --screenshot task-images/territory-v8-loop-interior-proof.jpg` and authenticated `TERRITORY_PROOF_BROWSER=playwright node .tools/verify-territory-border-runtime.mjs --url http://localhost:8080/territory --screenshot task-images/territory-v8-border-proof.jpg`.
+
+### Version: DV-2026-06-07-15
+Date: 2026-06-07
+Surface: Territory solid outer-contour land on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `.tools/verify-territory-live-shared-runtime.mjs`, `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Finalized Territory as active-only concrete land: backend masks use route-corridor v7 rows and response unions no longer flood-fill interior voids; frontend no longer runs visual void sealing, does not paint rival/helper/field layers, and fills each active component from its smoothed outer contour with `fillRule: nonzero` plus fill-only winding normalization so the owned surface no longer shows broken black interior cutouts.
+Why: The previous iterations alternated between fake slabs and broken interior holes. The final rendering keeps ownership grounded in backend concrete mask cells while making the visible active territory read as one solid INTLV-style land surface.
+Rollback target: working tree before DV-2026-06-07-15
+Notes: Verified with Browser plugin on live `/territory`: `activeConcrete=1`, `activeContour=4`, `fieldLayerCount=0`, `genericRegionCount=0`, `fillRules=["nonzero"]`, cubic-only SVG paths. Runtime proofs passed: `node .tools/verify-territory-border-runtime.mjs` and `node .tools/verify-territory-live-shared-runtime.mjs`; screenshot artifact: `task-images/territory-solid-contour-fill-20260607.png`.
+
+### Version: DV-2026-06-07-14
+Date: 2026-06-07
+Surface: Territory route-grounded visual sealing on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Tightened the Territory frontend visual seal from a broad 32-cell / 32x fill cap to an 8-cell / 6x cap, so a Central Park-style near-closed route gap no longer turns into a fake filled slab. The renderer still repairs small grid voids inside connected concrete components, but true enclosed land remains owned by backend route-loop masks.
+Why: The previous wide seal fixed black holes but could visually invent park-sized land across a real route opening, which made the territory look like an artificial blob instead of concrete route-owned land.
+Rollback target: working tree before DV-2026-06-07-14
+Notes: Red/green guard now simulates a long near-closed Central Park loop and rejects the overfill case (`addedTiles=8460`, accepted before fix). Runtime live shared-account proof is blocked in this session because the in-app browser blocks loopback URLs and the local shared-runner password currently rejects the verifier login; source/runtime sync and backend route-mask tests passed.
+
+### Version: DV-2026-06-07-13
+Date: 2026-06-07
+Surface: Privacy policy light-mode trust page on `/privacy`
+Files: `frontend/src/pages/LegalPage.jsx`, `frontend/src/styles/_split/misc.css`, `frontend/src/styles/style.css`, `frontend/src/pages/legalPrivacyRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Converted the Privacy legal-page treatment from dark Kinetic Editorial to the Hermes light-mode gallery palette: warm paper background, white translucent panels, dark readable typography, muted coral/sage accents, and a dark-tone Hermes logo while preserving the asymmetric trust panel and signal strip.
+Why: The page was visually dark even under the site light theme, which conflicted with the requested light-mode Privacy surface.
+Rollback target: working tree before DV-2026-06-07-13
+Notes: Presentation-only frontend change. Legal copy, routing, auth-aware back navigation, footer links, public `/privacy` access, and the Privacy-only layout split from `/terms` are preserved.
+
+### Version: DV-2026-06-07-12
+Date: 2026-06-07
+Surface: Territory solid active-land interior on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Increased the component-local visual seal radius and fill cap for Territory concrete masks so route-enclosed interior voids render as solid active land instead of black holes inside the owned shape. The change stays in the frontend visual mask layer, now uses a wider seal tuned from live Browser proof, and does not add backend ownership, synthetic district fields, rival paint, or owner-wide hulls.
+Why: Browser proof on the live shared-runner `/territory` page showed the active concrete path had correct nonzero fill winding but still displayed dark interior gaps because the visual seal treated smooth-boundary bays as exterior at grid resolution.
+Rollback target: working tree before DV-2026-06-07-12
+Notes: Verified with in-app Browser and live zoom-17 proof: `activeConcrete=1`, `activeContour=4`, main contour `stableContourPoints=367`, `fillRule=nonzero`, `rivalConcrete=0`, `rivalContour=0`, `syntheticFields=0`, `helperPaths=0`, unfiltered Leaflet tiles, and zero console errors. Keep future fixes anchored to backend land-mask cells plus component-local interior sealing; do not restore fake INTVL rectangles or broad bounds-derived slabs.
+
+### Version: DV-2026-06-07-11
+Date: 2026-06-07
+Surface: Privacy policy editorial trust page on `/privacy`
+Files: `frontend/src/pages/LegalPage.jsx`, `frontend/src/styles/_split/misc.css`, `frontend/src/styles/style.css`, `frontend/src/pages/legalPrivacyRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Gave the Privacy variant of the shared legal page a distinct Kinetic Editorial layout with an asymmetric hero, a privacy trust panel, icon-led data signal strip, staggered section rhythm, tactile back action, and strict mobile collapse. Terms continues to use the same content and legal page component without receiving the Privacy-only signal strip.
+Why: The previous Privacy page used a generic two-column legal card grid, which made an important trust surface feel like boilerplate rather than a clear account-data promise.
+Rollback target: working tree before DV-2026-06-07-11
+Notes: Presentation-only frontend change. Legal copy, routing, auth-aware back navigation, footer links, and public `/privacy` access are preserved.
+
+### Version: DV-2026-06-07-10
+Date: 2026-06-07
+Surface: Territory close-zoom concrete border and sealed active-land interior on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `.tools/verify-territory-live-shared-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Retuned the concrete land contour renderer for close zoom by reducing simplification, smoothing, corner radius, cubic tension, control padding, and axis softening while moving the stable contour reference zoom to 16. The Territory visual fill now seals interior voids per connected concrete component before drawing the active land surface, while still avoiding owner-wide hulls or synthetic district plates.
+Why: The close-zoom active territory border still looked too coarse and the active land interior had large black voids, making the concrete owned land read as broken instead of a solid INTVL-style territory surface.
+Rollback target: working tree before DV-2026-06-07-10
+Notes: Verified at map zoom 15 with Hermes Shared Runner: the current main active contour uses 526 stable cubic points, reference zoom 16, zero SVG line commands, one active concrete fill, four active contour components, four active fill subpaths, no rival/helper/synthetic layers, and zero console errors. Browser and Browser Use plugin clients were unavailable in this environment because `scripts/browser-client.mjs` was missing, so runtime evidence used the repo Playwright proof helper.
+
+### Version: DV-2026-06-06-09
+Date: 2026-06-06
+Surface: Territory ownership color and real-world map color on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Switched Territory to the Heatmap dark real-world tile source, matched the Heatmap tile color filter, strengthened active and rival land opacity, and increased the active ownership glow while preserving the stable contour renderer.
+Why: The territory color was too hard to read over the previous real-world map treatment, and the user requested the real-world Territory map to share the Heatmap map color.
+Rollback target: `eeff7a7a`
+Notes: Territory ownership rendering, map tile color, and runtime proof coverage only. Routing, auth, data ownership, bilingual copy, and the no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-08
+Date: 2026-06-06
+Surface: Territory zoom-stable ownership border on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Moved Territory contour simplification and axis softening to a fixed reference zoom, reprojected the same stable LatLng contour during Leaflet zoom and pan updates, and tuned the stable spline to preserve a rounded anti-grid silhouette.
+Why: The border was being simplified, deduped, and softened in current screen pixels, so zooming could regenerate a different SVG outline even when the territory geometry had not changed.
+Rollback target: `eeff7a7a`
+Notes: Rendering stability and proof coverage only. Stroke styling, territory ownership data, auth, route navigation, bilingual copy, and the no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-07
+Date: 2026-06-06
+Surface: Territory map border clarity on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Strengthened the active territory contour, slightly lowered active/rival land fill opacity, and sharpened the existing contour glow so the ownership boundary reads as a crisp single border above the land surface.
+Why: The previous map pass reduced visual noise but left the active territory edge too close to the fill, making the border look weak against the map substrate.
+Rollback target: `0a7d6d13`
+Notes: Presentation and proof expectations only. Territory data, auth, route navigation, ownership math, bilingual copy, and the no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-06
+Date: 2026-06-06
+Surface: Territory premium map-first composition on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Softened the base map substrate, reduced active/rival land opacity and contour weights, removed the animated dashed active border, and hid the permanent HUD/dock chrome so the full-bleed territory ownership layer reads as the primary organized surface.
+Why: Browser comparison showed the previous page still felt visually noisy: multiple permanent panels competed with the map, and the high-opacity/dashed land treatment made the ownership layer look less polished.
+Rollback target: `working tree before DV-2026-06-06-06`
+Notes: Presentation and proof expectations only. Territory data, auth, route navigation, ownership math, bilingual copy, and the no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-05
+Date: 2026-06-06
+Surface: Territory organized ownership layers on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Moved Territory land rendering into explicit Leaflet panes for rival fill, rival contour, active fill, and active contour, with active-owned land always above rival borders. The runtime proof now verifies pane existence, z-order, and layer class placement.
+Why: Browser inspection showed rival contour paths were drawn after active fills, letting opponent borders visually cut through the user-owned layer and making the map feel disorganized.
+Rollback target: `040ea264`
+Notes: Frontend render ordering and proof coverage only. Territory data, auth, route navigation, ownership math, and visual copy remain unchanged.
+
+### Version: DV-2026-06-06-04
+Date: 2026-06-06
+Surface: Territory owned-land focus on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Split active and rival land-mask SVG layers, strengthened the active owned-land fill and animated boundary, subdued rival territory, and compressed the campaign/HUD/dock chrome so the map territory carries the visual hierarchy.
+Why: Browser/reference review showed the prior pass still leaned on surrounding panels instead of making the runner-owned territory feel like the premium game surface.
+Rollback target: `f3b7faea`
+Notes: Frontend presentation and runtime proof expectations only. Territory APIs, auth, route navigation, ownership logic, and the no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-03
+Date: 2026-06-06
+Surface: Territory campaign-quality game layer on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a black/coral campaign panel with oversized conquest messaging, live next-target pressure, start-run and recenter actions, and responsive mobile prioritization that avoids stacking every HUD panel at once.
+Why: The prior pass improved data hierarchy but still lacked the bold game proposition, premium contrast, and app-poster confidence requested for the Territory surface.
+Rollback target: `e4b9622e`
+Notes: Frontend presentation only. Territory APIs, auth, route navigation, ownership logic, land-mask rendering, and verifier no-reference policy remain unchanged.
+
+### Version: DV-2026-06-06-02
+Date: 2026-06-06
+Surface: Territory personal layout on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Replaced the oversized leaderboard drawer with a compact personal territory dock that foregrounds controlled area, coverage, rank, owned sectors, capture feed, next target, and a smaller local rival stack. The top game HUD is narrower so the concrete land map remains the dominant surface.
+Why: Browser measurement showed the previous overlay stack covered too much of the viewport and made the user-owned territory feel secondary to the chrome.
+Rollback target: `804d09af`
+Notes: Frontend presentation and verifier wording only. Territory ownership, backend APIs, route navigation, auth, and land-mask rendering remain unchanged.
+
+### Version: DV-2026-06-06-01
+Date: 2026-06-06
+Surface: Territory game-map HUD on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryMultiPlayerMarkers.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the map-only Territory page as a live territory game board with labelled dark street tiles, an over-map mode selector, active runner status, local battle meter, and bottom leaderboard drawer powered by the existing `/api/territory` leaderboard and summary data.
+Why: The prior page still read as a sparse utility map and did not surface capture, battle, rank, and leaderboard state strongly enough.
+Rollback target: `DV-2026-06-03-02`
+Notes: Frontend presentation only. Backend territory ownership, polygon masks, auth, route navigation, and latest-wins land rendering remain unchanged.
+
+### Version: DV-2026-06-03-02
+Date: 2026-06-03
+Surface: Territory layered ownership on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed territory polygon ownership from deleting older overlapping cells to preserving every owner's claimed land as stacked layers. The API keeps older and newer overlapping masks, while the frontend paints older layers first and the most recent claim on top.
+Why: The user clarified that overlapping claims should cover one another visually, not remove ownership from the covered-down territory.
+Rollback target: `DV-2026-06-03-01`
+Notes: Territory score ranking remains separate; this entry covers the concrete land-mask polygon stack used by `/api/territory/polygons` and the Leaflet territory view.
+
+### Version: DV-2026-06-03-01
+Date: 2026-06-03
+Surface: Territory exact coverage and smoothed claim map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Split territory land rendering into a visible exact ownership underlay plus brighter smoothed land fills and a single neon owner contour, using less aggressive smoothing and nonzero SVG fill rules so narrow claimed areas stay covered instead of being clipped by the visual path.
+Why: The previous count-based fix still let smoothed fill geometry leave user-owned cells visually uncovered around red, blue, and green overlaps.
+Rollback target: `working tree before DV-2026-06-03-01`
+Notes: Frontend rendering and proof-harness update only. Backend ownership cells, auth, routing, and territory API contracts remain unchanged.
+
+### Version: DV-2026-06-01-01
+Date: 2026-06-01
+Surface: Territory concrete land border on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the land-mask edge as layered Leaflet canvas strokes: dark undercut, warm cement bevel, chipped aggregate grit, and owner-color seam. The active territory remains a sealed conquest surface while the border reads more like a physical concrete landmass than a flat vector outline.
+Why: The Territory page needed stronger visual proof that occupied land is concrete territory, not overlapping translucent sectors or route traces.
+Rollback target: `working tree before DV-2026-06-01-01`
+Notes: Frontend presentation only. Territory APIs, auth, route data, ownership rules, and seeded test accounts remain unchanged.
+### Version: DV-2026-05-24-04
+Date: 2026-05-24
+Surface: Muscle Training light-theme settings contrast on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a high-specificity white-theme guard for the bottom training check-in and plan tuning console so headings, helper copy, form controls, normal day chips, select options, summary values, impact copy, and disabled buttons use dark readable text on light surfaces.
+Why: The light theme inherited dark-route pale text colors inside the settings console, making several labels, values, and controls nearly invisible on white cards.
+Rollback target: `DV-2026-05-24-03`
+Notes: CSS and smoke-test guard only. Dark theme styling, red active states, training data, save/reset/profile APIs, exercise selection, Reference Dock, and sidebar behavior remain unchanged.
+
+### Version: DV-2026-05-24-03
+Date: 2026-05-24
+Surface: Muscle Training sidebar typography on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the strength-route sidebar overrides for nav link font size, weight, letter spacing, and text transform while keeping the dark and white sidebar color branches intact.
+Why: Entering the strength page made the shared left navigation text look larger than the rest of the site.
+Rollback target: `DV-2026-05-24-02`
+Notes: CSS and smoke-test guard only. Strength page content, global theme selection, training logic, save APIs, and the red settings control deck remain unchanged.
+
+### Version: DV-2026-05-24-02
+Date: 2026-05-24
+Surface: Muscle Training settings control deck on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the bottom training check-in and plan tuning console's leftover lime active states with the red and coral control palette used elsewhere in Hermes. Primary actions, active chips, sync pills, hover and focus states, summary borders, and the plan-impact strip now share the same red tone in both dark and white muscle themes.
+Why: The settings console visually drifted from the rest of the page and still used neon green for important states, making the lower section feel disconnected.
+Rollback target: `DV-2026-05-24-01`
+Notes: CSS and smoke-test guard only. Check-in save, reset, profile save, fields, routes, backend APIs, exercise recommendations, Reference Dock, and training plan generation remain unchanged.
+
+### Version: DV-2026-05-24-01
+Date: 2026-05-24
+Surface: Strength route sidebar theme sync on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Split the strength-route sidebar styling into dark-default and white-theme branches so the shared runner sidebar follows the strength page `data-muscle-theme` instead of always rendering as a light shell.
+Why: The user reported that entering the strength area made the left sidebar turn white while the strength page itself stayed dark.
+Rollback target: `DV-2026-05-19-06`
+Notes: This is a scoped visual repair for `/muscle-training`. It does not change the global theme switch, training logic, exercise selection, media, or save APIs.
+
+### Version: DV-2026-05-23-17
+Date: 2026-05-23
+Surface: Muscle Training global theme sync on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the route-local strength theme switch and made the page follow the global app theme directly. The light variant now fixes Reference Dock headings, recommendation names, step indicators, card surfaces, and active controls so they stay readable on the white surface.
+Why: The strength page should not have a second theme system, and the first white-theme pass left several titles and neon labels unreadable.
+Rollback target: `DV-2026-05-23-16`
+Notes: Frontend presentation only. Routes, backend APIs, training plan logic, check-in save, profile save, exercise image mapping, and video embeds remain unchanged.
+
+### Version: DV-2026-05-23-16
+Date: 2026-05-23
+Surface: Muscle Training local themes on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a local dark and white theme switch for the strength page, tied the default to the global app theme, persisted manual selection, and rebuilt the white theme surfaces for the workbench, exercise cards, Reference Dock, and settings console.
+Why: The strength page was effectively dark-only because its route CSS overrode the global light theme.
+Rollback target: `DV-2026-05-23-15`
+Notes: Frontend presentation only. Routes, backend APIs, training plan logic, check-in save, profile save, exercise image mapping, and video embeds remain unchanged.
+
+### Version: DV-2026-05-23-15
+Date: 2026-05-23
+Surface: Muscle Training settings purpose on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the training profile panel as plan tuning, added draft-based preview results, field-level impact hints, a synced or unsaved state chip, and clearer save copy that explains the plan refresh.
+Why: The previous settings area looked like a questionnaire and did not clearly show why the user should answer those fields.
+Rollback target: `DV-2026-05-23-14`
+Notes: Frontend presentation and copy only. Check-in, profile save, reset, routes, APIs, fields, and plan generation remain unchanged.
+
+### Version: DV-2026-05-23-14
+Date: 2026-05-23
+Surface: Muscle Training settings chip readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final light-theme override so active settings chips keep dark text on the lime background.
+Why: `body.theme-light` was repainting active settings chips with pale text, leaving `计划中`, `轻松跑`, `周一`, and `周四` at very low contrast.
+Rollback target: `DV-2026-05-23-13`
+Notes: CSS-only readability fix. Check-in, profile save, reset, fields, layout, routes, APIs, and training data are unchanged.
+
+### Version: DV-2026-05-23-13
+Date: 2026-05-23
+Surface: Muscle Training settings console readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Filled enabled settings primary actions with the lime treatment and replaced the low-contrast profile pills with readable light text on a restrained green tint.
+Why: The compact settings console still had dark action text and red-brown preference pills that were hard to read on the black training surface.
+Rollback target: `DV-2026-05-23-12`
+Notes: CSS-only readability fix. Check-in save, profile save, reset, form fields, APIs, routes, training data, and layout structure are unchanged.
+
+### Version: DV-2026-05-23-12
+Date: 2026-05-23
+Surface: Muscle Training hero CTA on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a dedicated label wrapper to the top hero CTA and tightened its internal grid, line-height, icon sizing, and no-wrap behavior so `记录今日训练` stays on one readable line beside the arrow.
+Why: The CTA text could collapse into three stacked Chinese lines, making the main action look broken.
+Rollback target: `DV-2026-05-23-11`
+Notes: The CTA still uses the same localized copy and the same `scrollToControls` click behavior. No settings, training data, recommendation, route, or backend behavior changed.
+
+### Version: DV-2026-05-23-11
+Date: 2026-05-23
+Surface: Muscle Training compact settings console on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the bottom settings area into a compact two-lane control console, with today check-in on the left and training profile preferences on the right. The plan source moved into a lightweight inline note, the profile summary became a compact data strip, and the plan-impact copy became a short bottom strip.
+Why: The previous bottom settings area looked like two large stacked admin forms with heavy blank space and weak hierarchy.
+Rollback target: `DV-2026-05-23-10`
+Notes: Check-in save, check-in reset, profile save, existing fields, backend APIs, training plan generation, muscle selection, exercise details, and Reference Dock behavior are unchanged.
+
+### Version: DV-2026-05-23-10
+Date: 2026-05-23
+Surface: Muscle Training settings visibility and contrast on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the vague coach-settings disclosure button so the check-in and training profile panels are directly visible, then strengthened the dark settings deck contrast for summary cards, form controls, disabled actions, and native select options.
+Why: The grey "Open coach settings" button added no useful meaning, and some settings text was still too dim or washed out when selecting options.
+Rollback target: `DV-2026-05-23-09`
+Notes: Settings functionality, save flows, check-in reset, profile fields, routes, backend APIs, and training logic are unchanged.
+
+### Version: DV-2026-05-23-09
+Date: 2026-05-23
+Surface: Muscle Training settings readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Raised contrast inside the expanded settings deck for the today check-in card and training profile card, including muted copy, summary values, form controls, day chips, and disabled buttons.
+Why: Some words in the dark bottom settings area were too dim to read clearly.
+Rollback target: `DV-2026-05-23-08`
+Notes: CSS-only readability fix. Save flows, profile fields, training data, routes, API contracts, and layout structure are unchanged.
+
+### Version: DV-2026-05-23-08
+Date: 2026-05-23
+Surface: Muscle Training profile controls on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Upgraded the bottom Training Profile preferences panel with a real summary strip and plan-impact notes, while keeping the existing preference fields and save flow.
+Why: The profile record area looked like a plain stacked form and needed clearer information density without adding fake log controls or new backend fields.
+Rollback target: `DV-2026-05-23-07`
+Notes: This only changes the bottom expanded settings profile panel. Muscle selection, recommendations, exercise details, Reference Dock, profile API shape, routes, and training logic are unchanged.
+
+### Version: DV-2026-05-23-07
+Date: 2026-05-23
+Surface: Muscle Training expanded exercise detail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the expanded action detail card so the prescription, steps, and intent stay in a left record area while the existing `MuscleHeatmap` sits inside the same frame on the right.
+Why: The lower half of the muscle-training detail card looked unbalanced, and the requested layout was record content on the left with the anatomy figure on the right.
+Rollback target: `DV-2026-05-23-06`
+Notes: This is a local layout-only change. Top muscle selection, recommended actions, Reference Dock, training logic, routes, backend contracts, videos, and image mappings are unchanged.
+
+### Version: DV-2026-05-23-06
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a persistent selected ring to the anatomy image. Clicking the image keeps that specific ring visible, and clicking a visible muscle button keeps that muscle area's primary ring visible.
+Why: The selector needed to show the current body-part choice after the click instead of losing the visual target immediately.
+Rollback target: `DV-2026-05-23-05`
+Notes: This only changes selector feedback. Training logic, recommendations, videos, exercise images, routes, and backend contracts are unchanged.
+
+### Version: DV-2026-05-23-05
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored anatomy-image body-part clicking with transparent hit zones aligned to the current 512px image, while keeping the six visible muscle buttons as the readable labels.
+Why: Removing the bad hotspot circles also removed the expected body-part click path, so the selector needed clickable anatomy areas without misleading visible markers.
+Rollback target: `DV-2026-05-23-04`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-04
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the anatomy-image hotspot layer because its percentage coordinates did not match the current image. The anatomy image is now visual context only, and the six visible muscle buttons are the only selector.
+Why: The hotspot circles could appear over the abdomen, chest, or empty space while shoulder was selected, creating a misleading interaction.
+Rollback target: `working tree before this change`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-03
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the anatomy image hotspots, made their default hit areas visible, and added six clear muscle shortcut buttons below the image. Both paths now use the same top-muscle selection handler and expose a stronger selected state.
+Why: The previous selector required users to guess where the invisible hotspots were, making the first interaction feel unreliable.
+Rollback target: `working tree before this change`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-02
+Date: 2026-05-23
+Surface: Muscle Training right media rail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Wrapped the right-side video and reference card in an inner sticky rail for desktop, capped its viewport height, and restored normal document flow below 1180px. The page-level overflow rules now avoid creating an outer scroll ancestor that breaks sticky behavior.
+Why: The user wanted the action demo video and professional tip card to stay visible while scrolling the desktop exercise list, without covering the mobile layout.
+Rollback target: `working tree before this change`
+Notes: No exercise selection, image resolution, video embed mapping, or training data behavior changed.
+
+### Version: DV-2026-05-23-01
+Date: 2026-05-23
+Surface: Muscle Training exercise reference rail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/assets/muscle-training/ASSET_SOURCES.md`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the repeated target-area image in the right-side reference rail with action-keyed online exercise images. Top action thumbnails and the top reference dock now use the same exercise image resolver, with target-area imagery only as a fallback.
+Why: The user reported that the right-side image stayed the same across exercises and asked for each action to have its own image from the web.
+Rollback target: `working tree before this change`
+Notes: No backend contract, training recommendation logic, video embed mapping, or route behavior changed.
+
+### Version: DV-2026-05-22-06
+Date: 2026-05-22
+Surface: Muscle Training top anatomy workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/assets/muscle-training/anatomy-neon-selector.png`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a screenshot-matched top workbench with a local neon anatomy image, clickable muscle-group hotspots, a real recommendation list, and a right Reference Dock synced to the selected action.
+Why: The user supplied the target HTML and wanted only the top strength area rebuilt around a usable anatomy image, without reworking the lower action protocol workbench.
+Rollback target: `working tree before this change`
+Notes: The lower protocol rows and existing plan/library data contracts are preserved.
+
+### Version: DV-2026-05-22-05
+Date: 2026-05-22
+Surface: Muscle Training restored card workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the pre-merge `mt-*` card-based Muscle Training frontend design on the current page: warm card canvas, hero progress ring, recommendation banner, target filters, session/history cards, and expandable exercise rows.
+Why: The user asked to apply the previous frontend design to the current page after the upstream IRONPULSE merge.
+Rollback target: `ecbe742f`
+Notes: The removed action-diagram implementation remains excluded and is guarded by the smoke test.
+
+### Version: DV-2026-05-19-07
+Date: 2026-05-19
+Surface: Muscle Training action protocol drawer on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/en.js`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Upgraded the selected exercise detail card into an IRONPULSE-style protocol drawer. Clicking a plan or library row now opens a right-side desktop drawer, or an in-flow mobile sheet, with a breadcrumb, dose/equipment/source tags, a real YouTube nocookie iframe when the exercise has a mapped video, honest no-video copy when it does not, accordion coach tips, and high-contrast numbered step cards.
+Why: The prior detail card was too flat for the action-workbench interaction. The user wanted the row click to feel like the reference action-analysis drawer while preserving the practical left-side exercise ledger.
+Rollback target: `working tree before this change`
+Notes: No backend schema or training-plan generation changed. Optional library exercises remain clearly marked as not participating in today's training recommendation calculation.
+
+### Version: DV-2026-05-19-01
+Date: 2026-05-19
+Surface: Schedule light-mode text contrast on `/schedule`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/scheduleContrast.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a route-scoped light-theme contrast repair for the Schedule hero and next-session card so the main weekly title, target/completed volume values, and upcoming-session heading stay dark on warm white cards even when broader runner-card rules apply later in the cascade.
+Why: The live Schedule page rendered several primary words in near-white text on a white background, making the hero and next-up title hard to read.
+Rollback target: `working tree before this change`
+Notes: Added `scheduleContrast.smoke.test.js` to guard the Schedule-only contrast selectors.
+
+### Version: DV-2026-05-18-02
+Date: 2026-05-18
+Surface: Shoes locker and Add Shoes catalog grids on `/shoes` and `/shoes/add`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a profile-aligned Shoes grid visibility pass that gives the locker cards, rotation signal panels, filter/action strips, brand grids, model grids, form fields, placeholders, and empty states explicit warm-paper foreground/background tokens in light mode plus matching dark-mode tokens. The repair targets the real runtime classes `.shoes-dashboard-page` and `.add-shoes-page`, keeping the existing Shoes/Add Shoes structure and data wiring while preventing inherited near-white dark-theme text from disappearing on warm light cards.
+Why: Several Shoes grids and card sub-surfaces could become visually invisible after the Profile-aligned redesign because dark-theme text, placeholders, and translucent grid cards were still cascading onto light warm-paper panels, and some older profile-aligned selectors were scoped to a wrapper that the current Shoes runtime does not emit.
+Rollback target: `working tree before this change`
+Notes: Added `shoesGridVisibility.smoke.test.js` to guard the route-scoped contrast repair selectors and the live Shoes/Add Shoes class hooks.
+
+### Version: DV-2026-05-18-01
+Date: 2026-05-18
+Surface: Rewards / `/rewards` milestone ledger
+Files: `frontend/src/pages/Rewards.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/en.js`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `.ai-sync/CONTEXT_LEDGER.md`, `DESIGN_VERSIONS.md`
+What changed: Reworked the Rewards first fold into an asymmetric milestone ledger that keeps the live earned/all badge progress while promoting `upcomingRewards[0]` into a dedicated closest-next-unlock rail. The page now exposes earned, locked, and logged-run metrics above the existing earned/upcoming badge grids, preserving the shared runner shell and live `buildRewardShowcase` ordering.
+Why: The previous Rewards page showed the correct data but made the next achievable badge feel like one generic upcoming card instead of the primary runner decision for the page.
+Rollback target: `working tree before this change`
+Notes: Focused verification passed with `node frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `node frontend/src/utils/rewardsShellMarker.smoke.test.js`, `node --check frontend/src/i18n/locales/en.js`, and `node --check frontend/src/i18n/locales/zh-CN.js`. Full frontend build is currently blocked before Rewards compilation by missing pre-existing Muscle Training imports: `frontend/src/assets/anatomy/muscles-anterior-gray.png` and `frontend/src/assets/anatomy/muscles-posterior-gray-unlabeled.png`.
+
+### Version: DV-2026-04-29-03
+Date: 2026-04-29
+Surface: Add Shoes / `/shoes/add` Chinese running-brand logos
+Files: `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/AddShoes.jsx`, `frontend/src/utils/addShoeCatalog.js`, `frontend/src/utils/addShoeCatalog.test.js`, `frontend/vite.config.js`, `frontend/src/assets/brand-logos/lining.svg`, `frontend/src/assets/brand-logos/anta.svg`, `frontend/src/assets/brand-logos/peak.svg`, `frontend/src/assets/brand-logos/bmai.svg`, `frontend/src/assets/brand-logos/do-win.svg`, `frontend/src/pages/addShoesChineseBrandLogoAssets.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added repo-local transparent SVG logo assets for Li-Ning, ANTA, Peak, Bmai, and Do-win, then mapped the catalog's Chinese brand names plus normalized English aliases through the shared `ShoeBrandLogo` component used by `/shoes/add` brand and model cards. The Add Shoes series catalog now keeps parent brand identity on each series model and caches the built series catalog in localStorage so the model browser can recover locally if the live catalog is unavailable.
+Why: The Add Shoes brand browser still fell back to synthetic text/emoji marks for several core Chinese running-shoe brands even though the user supplied the correct logo order and expected those brands to display real marks. The follow-up asked for shoe series to get the same local-first treatment, so series/model cards now preserve local brand-logo resolution and keep a local browser cache of the filtered series catalog.
+Rollback target: `working tree before this change`
+Notes: Added `addShoesChineseBrandLogoAssets.smoke.test.js` to guard the five asset imports, brand aliases, AddShoes shared-logo usage, series-cache hooks, remote-logo avoidance, and the Vite `assetsInlineLimit: 0` setting that keeps small SVG logos emitted as local backend-served asset files. Expanded `addShoeCatalog.test.js` to guard series brand retention and localStorage read/write behavior.
+
+### Version: DV-2026-04-29-02
+Date: 2026-04-29
+Surface: Runner strength page on `/muscle-training` plus runner-shell sidebars
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/muscleTrainingShellNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reconnected Muscle Training to the shared runner-shell sidebar contract, added the strength route to older one-off runner sidebars, and fixed the MuscleTraining control-deck markup so the weekly context and full week plan no longer sit inside the collapsible settings/control section.
+Why: The strength page could feel disconnected from the rest of Hermes and its lower page structure was broken by a misplaced section close. The repair keeps the existing Daily Opening Test strength redesign while making navigation and layout behave like the other runner pages.
+Rollback target: `working tree before this change`
+Notes: Added `muscleTrainingShellNav.smoke.test.js` to guard shared nav usage, side-nav connectivity, clean above-fold copy, and the control-deck close boundary.
+
+### Version: DV-2026-04-29-01
+Date: 2026-04-29
+Surface: Admin course-map add portal on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/dashboardCourseMapProgressBar.smoke.test.js`, `frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js`, `frontend/src/pages/dashboardCourseMapFifoUploadQueue.smoke.test.js`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`
+What changed: Added a live progress bar to the admin course-map upload/re-analysis flow. The portal now starts with upload progress, moves into FIFO queued scan progress, streams admin background-job progress into an accessible progressbar, and keeps a localized helper explaining that maps are scanned in upload order rather than in parallel.
+Why: Admins uploading marathon course maps needed visible feedback while Qwen scanning waits for or runs through the FIFO queue, instead of a static queued message that made the scan feel stalled.
+Rollback target: `DV-2026-04-24-02`
+Notes: Verification passed with `node frontend/src/pages/dashboardCourseMapProgressBar.smoke.test.js`, `node frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js`, `node frontend/src/pages/dashboardCourseMapFifoUploadQueue.smoke.test.js`, `node frontend/src/pages/dashboardCourseMapWorkbench.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/Dashboard.jsx||frontend/src/pages/dashboardCourseMapProgressBar.smoke.test.js||frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js||frontend/src/pages/dashboardCourseMapFifoUploadQueue.smoke.test.js||frontend/src/styles/style.css||frontend/src/i18n/translations.js"`.
+
+### Version: DV-2026-04-24-02
+Date: 2026-04-24
+Surface: Runner race-detail course map on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `frontend/src/utils/raceDetailMapVisualBaseline.smoke.test.js`, `backend/src/main/java/com/hermes/backend/RaceController.java`, `backend/src/main/java/com/hermes/backend/RaceCourseMapImageService.java`, `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`
+What changed: Added a generated transparent course-map image layer for trusted aligned course maps. The runner-facing Leaflet map still uses OpenStreetMap as the real-world basemap and still draws extracted route geometry on top, but now it can place a cleared-background course-map PNG in a dedicated middle pane for visual context when Hermes has verified route points and bounds.
+Why: Real marathon course-map uploads can carry useful station/marker context that should be visible without turning the runner map back into an opaque poster overlay.
+Rollback target: `DV-2026-04-24-01`
+Notes: Verification included focused backend and frontend smoke checks before the broader build/runtime gates.
+
+### Version: DV-2026-04-24-01
+Date: 2026-04-24
+Surface: Admin jobs inspector on `/dashboard/jobs`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/dashboardJobsInspector.smoke.test.js`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`
+What changed: Expanded the selected-job rail into a real inspector surface. Selecting a job now fetches `/api/admin/jobs/{jobId}` for the full detail payload, labels course-map and Garmin/Strava background-job types, shows queue/run timing, extracts top-level `detailsJson` highlights, and renders Qwen/course-map watcher steps from `qwenScanSteps` as a readable scan timeline while preserving the raw JSON payload below.
+Why: Admins debugging course-map and Qwen scanning jobs needed to inspect more than status counters. The new rail keeps the command-deck layout but makes failed or long-running scan jobs easier to diagnose without leaving `/dashboard/jobs`.
+Rollback target: `DV-2026-04-21-07`
+Notes: Verification passed with `node frontend/src/pages/dashboardJobsInspector.smoke.test.js`, `node frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/Dashboard.jsx||frontend/src/pages/dashboardJobsInspector.smoke.test.js||frontend/src/styles/style.css||frontend/src/i18n/translations.js"`.
+
+### Version: DV-2026-04-21-07
+Date: 2026-04-21
+Surface: Admin course-map workbench on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Promoted the course-map review stage into a true side-by-side compare surface so admins can see both the current live website map and the pending candidate map at the same time inside the main stage. The existing preview engine stays intact through `AdminCourseMapPreview`, but the dominant map area now splits into explicit live and pending panels with their own labels, map frames, and compact metadata strips. The operator controls, publish verdict, output deck, and queue rail remain in place underneath the compare stage instead of being replaced.
+Why: The previous workbench already carried both live and pending preview data, but it only surfaced one preview at a time in the main stage and pushed the compare logic down into smaller footer signals. The user asked for admins to clearly see the current website map and the new pending map together before making publish decisions.
+Rollback target: `DV-2026-04-19-11`
+Notes: Verification passed with `node frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/Dashboard.jsx||frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js||frontend/src/styles/style.css"`.
+
+### Version: DV-2026-04-21-06
+Date: 2026-04-21
+Surface: Admin portal desktop spacing on `/dashboard`, `/dashboard/users`, `/dashboard/course-maps`, `/dashboard/shoes`, `/dashboard/jobs`, `/dashboard/audit`, and `/dashboard/settings`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Loosened the full admin portal while preserving the existing Hermes operator shell and route workbench layouts. The desktop shell now uses a wider canvas, larger outer gutters, more space between the sticky sidebar/topbar/main content, a roomier shared route summary rail, and a new route-surface spacing baseline. The overview, users, shoes, course-maps, jobs, audit, and settings sections all received coordinated padding/gap increases so cards, workbenches, toolbars, and data rows no longer feel packed together, but the route structure, visual identity, and existing data/control flows stay the same.
+Why: The current admin portal already had strong route-specific designs, but the user called out that the whole operator experience felt squeezed together. This pass keeps the same shell language and hierarchy while giving the portal more breathing room across every level of the desktop layout.
+Rollback target: `DV-2026-04-20-06`
+Notes: Verification passed with `node frontend/src/pages/dashboardKineticShell.smoke.test.js`, `node frontend/src/pages/dashboardRouteSections.smoke.test.js`, `node frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js`, `node frontend/src/pages/dashboardAuditTerminal.smoke.test.js`, `node frontend/src/pages/dashboardAdminLightMode.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/styles/style.css||frontend/src/pages/Dashboard.jsx"`.
+
+### Version: DV-2026-04-21-05
+Date: 2026-04-21
+Surface: Today Run shell alignment on `/today-run`
+Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/pages/todayRunShellAlignment.smoke.test.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Aligned Today Run back toward the shared runner-shell structure used by Profile and the other runner pages without replacing its existing coaching content. The page now builds its sidebar navigation from the shared `runnerShellNav` helper instead of maintaining a local copy, restores the same sidebar workout CTA pattern used on Profile, and drops the page-specific light-mode sidebar/topbar overrides so the shared runner shell styling can carry more of the chrome. A focused smoke guard now protects that alignment contract.
+Why: Today Run already had the same broad shell scaffolding, but it still behaved like a special-case surface because it hand-rolled its nav and overrode parts of the shared shell styling. The user asked for it to feel like the same runner-shell family as `/profile`, not a separate product inside Hermes.
+Rollback target: `DV-2026-04-20-02`
+Notes: Verification passed with `node frontend/src/pages/todayRunShellAlignment.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/TodayRun.jsx||frontend/src/pages/todayRunShellAlignment.smoke.test.js||frontend/src/styles/style.css"`.
+
+### Version: DV-2026-04-21-03
+Date: 2026-04-21
+Surface: Runner Settings import surfaces on `/settings`, `/settings/import-data`, and `/settings/garmin-import`
+Files: `frontend/src/App.jsx`, `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/pages/Settings.jsx`, `frontend/src/pages/ImportDataSettings.jsx`, `frontend/src/pages/GarminImportSettings.jsx`, `frontend/src/pages/garminImportRoute.smoke.test.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Split the old mixed Garmin/manual import flow into two clearer settings sibling routes. The Settings atlas manual-import card now opens a new `/settings/import-data` page that keeps the settings-atlas visual family but translates the supplied reference into a lighter editorial intake board with distinct FIT/GPX, COROS, Huawei, and command lanes. The `/settings/garmin-import` page was narrowed so it only handles Garmin account import plus Garmin wellness sync, removing the manual-file guide and mixed-source messaging.
+Why: The previous setup blurred two different jobs into one destination: Garmin account sync versus manual file intake. The user asked for a clean route split while keeping the new manual page visually tied to the current Settings atlas rather than turning it into a totally separate dark landing page.
+Rollback target: `DV-2026-04-21-01`
+Notes: Verification passed with `node frontend/src/pages/garminImportRoute.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/App.jsx||frontend/src/components/SettingsAtlasLayout.jsx||frontend/src/pages/Settings.jsx||frontend/src/pages/GarminImportSettings.jsx||frontend/src/pages/ImportDataSettings.jsx||frontend/src/pages/garminImportRoute.smoke.test.js||frontend/src/styles/style.css"`. Repo-wide translation parity still has unrelated pre-existing gaps outside this change set.
+
 ### Version: DV-2026-04-20-06
 Date: 2026-04-20
 Surface: Admin portal / `/dashboard`, `/dashboard/users`, `/dashboard/course-maps`, `/dashboard/shoes`, `/dashboard/jobs`, `/dashboard/audit`, `/dashboard/settings`
@@ -1971,3 +2816,606 @@ What changed: Reworked the race-detail elevation profile from a fixed sparse che
 Why: The user wanted the elevation chart to respect every kilometer and show more accurate elevation change over the full course. That required fixing both the data contract and the chart geometry instead of only restyling the existing sparse profile.
 Rollback target: `DV-2026-04-14-29`
 Notes: `cd backend && ./mvnw -q -Dtest=RaceCourseMapServiceTests test`, `cd backend && ./mvnw -q -DskipTests compile`, `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`, `cd frontend && npm run lint` (with unrelated pre-existing warnings only), frontend build, frontend runtime sync, and backend runtime sync all passed.
+
+### Version: DV-2026-04-21-01
+Date: 2026-04-21
+Surface: Runner Settings Garmin import on `/settings/garmin-import`
+Files: `frontend/src/App.jsx`, `frontend/src/pages/Settings.jsx`, `frontend/src/pages/GarminImportSettings.jsx`, `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/garminImportRoute.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Garmin activity-import and wellness-sync experience out of the in-place settings modal and into a dedicated routed page with a focused back-link workflow. The Settings atlas now stays as the control hub and launches the Garmin surface, while the new route reuses the existing Garmin import/wellness APIs inside a full-page split editorial layout that keeps manual file import as a secondary path.
+Why: The user asked for the Garmin modal-card settings surface to become a standalone page instead of a modal, while keeping both activity import and wellness controls together. A route-level redesign gives the flow more space and clearer hierarchy without changing the backend contract.
+Rollback target: `DV-2026-04-20-03`
+Notes: This redesign is scoped to the Garmin import path only. `/settings` remains the runner settings hub, and the Garmin APIs plus manual import modal behavior stay intact behind the new page entry point.
+
+### Version: DV-2026-04-21-02
+Date: 2026-04-21
+Surface: Profile dashboard feature grid on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `DESIGN_VERSIONS.md`
+What changed: Removed the standalone recent-sessions summary card from the lower Profile feature grid. The grid now ends after the training-load card while the earlier recent-sessions timeline module stays in place.
+Why: The user explicitly asked to remove the duplicate recent-sessions card because it repeated information already shown elsewhere on the Profile surface.
+Rollback target: `DV-2026-04-21-01`
+Notes: This is a subtraction-only UI change. No data wiring, translations, routes, or backend contracts changed.
+
+### Version: DV-2026-04-21-03
+Date: 2026-04-21
+Surface: Profile dashboard hero on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Moved the recent-sessions utility card into a new hero row so it now sits beside the welcome heading at the top of the Profile dashboard. The lower dashboard grid now focuses on readiness, workout, and weekly progress, while the greeting and session history read as one top-level opening band.
+Why: The user explicitly asked to place the white/dark utility card next to the `欢迎回来, JunWei Li.` greeting instead of keeping that card lower on the page.
+Rollback target: `DV-2026-04-21-02`
+Notes: This is a layout-only repositioning of existing Profile content. Session data, interactions, and routes remain unchanged.
+
+### Version: DV-2026-04-21-04
+Date: 2026-04-21
+Surface: Profile dashboard hero and grid on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Restored the recent-sessions utility card to its previous origin in the lower Profile dashboard grid and reverted the hero back to the simpler greeting-plus-subline layout.
+Why: The user asked to restore the previous version so the white/dark utility card returns to the place it originally came from instead of staying attached to the greeting row.
+Rollback target: `DV-2026-04-21-03`
+Notes: This is a rollback of the hero-row repositioning only. The existing recent-sessions card content, links, and session interactions remain unchanged.
+
+### Version: DV-2026-04-28-01
+Date: 2026-04-28
+Surface: Login brand introduction on `/login`
+Files: `frontend/src/pages/Login.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/loginBrandCarousel.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Turned the static `auth-flow-brand-inner` login brand block into a three-message rolling introduction carousel with website-value slides for daily decisions, training trust, and race readiness. The form side, OAuth/email auth behavior, and public footer remain unchanged.
+Why: The user asked for `auth-flow-brand-inner` on the login page to use a slide animation that rolls information introducing the website.
+Rollback target: `DV-2026-04-21-04`
+Notes: The animation is CSS-only, dual-mode-safe for the existing login treatment, and includes a reduced-motion fallback that shows the first slide without auto movement.
+
+### Version: DV-2026-04-29-02
+Date: 2026-04-29
+Surface: Admin Dashboard course-map publish canvas on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapPublishCanvasGrid.smoke.test.js`, `frontend/src/pages/dashboardCourseMapWorkspace.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the course-map command bridge so the publish canvas owns the recommended next action and spans the full top row, while secondary source/analysis controls and parameter review sit beneath it. The improve state now has a stronger processing-tone treatment so admins can immediately see that the next useful action is to improve/re-analyze the map before publishing.
+Why: The user asked to redesign the `admin-coursemap-publish-canvas admin-track-hub-footer-panel admin-track-hub-footer-panel--publish is-improve` grid to make admin map processing easier.
+Rollback target: `DV-2026-04-29-01`
+Notes: This is a layout and hierarchy change only. It preserves existing upload, re-analyze, pipeline, accept-live, preview, and backend course-map contracts.
+
+### Version: DV-2026-04-29-03
+Date: 2026-04-29
+Surface: Admin Dashboard course-map working notice on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapWorkingNotification.smoke.test.js`, `frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added an explicit live working notice to the course-map progress card and made upload, source-scan, and re-analysis actions announce their active/queued state immediately through the dashboard status banner. The progress card still appears in the header and beside the publish-canvas decision dock, but now it includes a pulsing work indicator plus accessible status copy.
+Why: The admin source-scan and re-analysis jobs were running, but the UI only showed completion/failure messages, so operators could miss that Hermes was actively working after they clicked the button.
+Rollback target: `DV-2026-04-29-02`
+Notes: This is a feedback-layer change only. It preserves the existing FIFO job lane, polling helper, course-map action buttons, and backend contracts.
+
+### Version: DV-2026-04-29-04
+Date: 2026-04-29
+Surface: Prediction detail on `/prediction/:distKey`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/predictionDetailCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the prediction detail page into a Race Forecast Cockpit. The page now leads with a dominant predicted finish-time hero, confidence bar, trend delta, Today Run / Analysis actions, an effort ladder, coach judgment rail, evidence tiles, and a larger prediction trend card. User-facing copy now routes through i18n instead of hard-coded strings.
+Why: The old route stacked small utility sections and made the main forecast feel secondary. The new structure answers the runner's first questions faster: what can I run, how trustworthy is it, and what should I train next?
+Rollback target: `DV-2026-04-29-03`
+Notes: This redesign preserves the existing `/prediction/:distKey` route, `/api/activities` fetch, VDOT utilities, calibrated prediction math, Chart.js trend, auth shell, and distance keys.
+
+### Version: DV-2026-04-29-05
+Date: 2026-04-29
+Surface: Analysis overview and Profile dashboard quick preview on `/analysis` and `/profile`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/analysisVdotTrendAccent.smoke.test.js`, `frontend/src/pages/profileDashboardBrandCarouselLightMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the Analysis VO2/VDOT trend card a static data grid instead of a clickable navigation target, removed the old VO2 detail CTA affordance, and normalized the low-load ACWR status pill away from the removed `is-cool` variant. Reworked the Profile `runner-dashboard-brand-carousel` into a user-data quick preview with readiness, weekly distance, cumulative distance/sessions, and VO2 trend cards.
+Why: The user asked for the Analysis VO2max trend grid to stop behaving like a click target, to remove the `analysis-overview-status-pill is-cool` treatment, and to make the Profile brand carousel useful as a fast user-data preview instead of rotating brand copy.
+Rollback target: `DV-2026-04-29-04`
+Notes: This is a frontend presentation change only. It preserves existing Analysis/Profile data fetches, dashboard calculations, auth shell, and routing outside the removed VO2 overview click affordance.
+
+### Version: DV-2026-04-30-01
+Date: 2026-04-30
+Surface: Public landing page on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/landingCinematicEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the public landing page into a cinematic editorial runner experience inspired by premium sports journalism and a performance HUD. The page now leads with an asymmetric dark hero, readiness/workout HUD, live training ticker, coach voice pull-quote, three-answer product cards, methodology paper, race landscape map, comparison table, Daniels zone grid, and final CTA.
+Why: The user supplied a prototype direction for a premium sports-journalism x performance-HUD landing redesign and asked to apply it to Hermes.
+Rollback target: `DV-2026-04-29-05`
+Notes: The redesign preserves the existing public `/` route, authenticated-user redirect behavior, `/login` and `/signup` links, Strava OAuth start path, public footer links, and bilingual translation contract.
+
+### Version: DV-2026-04-30-02
+Date: 2026-04-30
+Surface: Public landing page on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCinematicEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Isolated the cinematic landing page from the broader app design system by removing the legacy `landing-page` root class, replacing shared `AppIcon` and `FooterNavLinks` usage with landing-local SVG glyphs and footer links, and moving the landing CSS onto local `--lc-*` typography tokens.
+Why: The user explicitly asked to keep using the same landing files but not apply the system `design.md` visual language to the landing page.
+Rollback target: `DV-2026-04-30-01`
+Notes: The page still preserves the supplied cinematic editorial direction, authenticated redirect behavior, `/login` and `/signup` links, Strava OAuth start path, and public Terms/Privacy/Support footer destinations.
+
+### Version: DV-2026-04-30-03
+Date: 2026-04-30
+Surface: Global design authority in `design.md`
+Files: `design.md`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rewrote `design.md` around the new Hermes Cinematic Editorial language with explicit surface expressions for the public landing page, signed-in runner app, and admin operations tools. The document now treats the landing page as the signature campaign expression while keeping it intentionally isolated from shared app-shell components and global typography tokens.
+Why: The user asked to rewrite `design.md` based on the new landing-driven design language.
+Rollback target: `DV-2026-04-30-02`
+Notes: Documentation/workflow authority change only. No frontend runtime sync is required because no shipped UI source changed in this round.
+
+### Version: DV-2026-04-30-04
+Date: 2026-04-30
+Surface: Profile dashboard Coach Cockpit on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/profileCoachCockpitRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Reworked the Profile opening surface into the approved Coach Cockpit option. The top fold now combines the runner greeting, readiness score, quick-preview data cards, and suggested workout prescription into one editorial cockpit while retaining the existing `runner-dashboard-brand-carousel` and quick-preview hooks.
+Why: The user chose option A for the profile redesign and explicitly asked to remember the original version.
+Rollback target: `DV-2026-04-29-05`
+Notes: This is a top-fold presentation change only. It preserves the batch-first dashboard data loading, quick-preview data model, calibrated race predictions, lower recent-session card, existing Today Run / Analysis actions, and the original quick-preview design as the rollback baseline.
+
+### Version: DV-2026-05-18-02
+Date: 2026-05-18
+Surface: Territory full-screen world map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Opted Territory into the Heatmap-style full-viewport Leaflet shell, using the same dark real-world CARTO map treatment as the page background with glass overlay cards, an overlay brand/sector/action topbar, and a compact route utility rail.
+Why: The user asked to inspect the Heatmap page and apply the same real-world map background style to Territory.
+Rollback target: `DV-2026-05-18-01`
+Notes: This is a presentation-layer change only. It preserves the live `/api/territory` and `/api/territory/polygons` wiring, polygon/zone toggle, sidebar route availability via the overlay utility rail, and existing Territory backend contracts.
+
+### Version: DV-2026-05-18-03
+Date: 2026-05-18
+Surface: Territory full-screen world map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the obsolete `terr-brief` overlay card from the Territory full-screen map so the real-world Leaflet surface owns the viewport without a duplicate conquered-space panel.
+Why: The user said the `terr-brief` block was unnecessary and asked to remove it.
+Rollback target: `DV-2026-05-18-02`
+Notes: This is a presentation cleanup only. It preserves the Heatmap-style world-map shell, overlay topbar, route utility rail, polygon/zone toggle, and live backend territory rendering.
+
+### Version: DV-2026-05-18-04
+Date: 2026-05-18
+Surface: Territory map-only land view on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the Territory page's visible buttons, overlay topbar, utility rail, filters, legend, lower panels, and footer so `/territory` renders only the full-screen real-world Leaflet map plus concrete backend conquered-land masks.
+Why: The user asked to remove the page buttons and keep only the concrete lands visible.
+Rollback target: `DV-2026-05-18-03`
+Notes: This preserves `/api/territory` and `/api/territory/polygons` data loading, Leaflet readiness, full-bleed map sizing, and external route availability from other runner sidebars; the Territory page itself no longer renders local navigation controls.
+
+### Version: DV-2026-05-18-05
+Date: 2026-05-18
+Surface: Territory map-only land view on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored the compact icon-only navigation rail on top of the Territory map while keeping the page free of action buttons, filters, legends, cards, footer, and Leaflet controls.
+Why: The user clarified that necessary buttons, specifically navigation buttons, should remain available.
+Rollback target: `DV-2026-05-18-04`
+Notes: This preserves the concrete backend land-mask map-only treatment and reuses the shared runner navigation model for route exits.
+
+### Version: DV-2026-05-18-06
+Date: 2026-05-18
+Surface: Territory map title strip on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added the Heatmap-style title strip to Territory with a Hermes/territory brand pill, recenter status with map coordinates, View Runs, Open Settings, and avatar actions while keeping the land map, navigation rail, and concrete backend mask as the main view.
+Why: The user shared the Heatmap top strip reference and asked to add those titles to Territory too.
+Rollback target: `DV-2026-05-18-05`
+Notes: This preserves the removed filters, legends, lower panels, footer, and Leaflet controls; only title/action chrome and the navigation rail remain over the map.
+
+### Version: DV-2026-05-18-07
+Date: 2026-05-18
+Surface: Territory concrete land and competition model on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `backend/src/test/java/com/hermes/backend/ProfileControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Hardened latest-run territory competition so a newer rival capture blocks older loop interior refill, then changed the map renderer from dotted circle markers to aggregated filled Leaflet rectangles so straight routes and loop interiors read as concrete occupied land tiles.
+Why: The user asked to redesign the occupied-land mechanism so borders fill concretely, loops fill their interiors, and newer user coverage consumes the land it overlaps from previous owners.
+Rollback target: `DV-2026-05-18-06`
+Notes: The backend still uses activity start time as the ownership ordering source, preserves the existing `/api/territory/polygons` land-mask contract, and keeps only the necessary Territory navigation/title controls over the map.
+
+### Version: DV-2026-05-18-08
+Date: 2026-05-18
+Surface: Territory concrete border polish on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Increased client mask density and added continuous anti-aliased land-mask border loops plus rounded route-trace skins over the filled tiles so occupied land reads as a concrete map shape rather than a pixelized grid edge.
+Why: The user said the Territory border still looked pixelized and asked to make it more concrete.
+Rollback target: `DV-2026-05-18-07`
+Notes: This is a visual renderer refinement only. It preserves the backend latest-wins ownership model, `/api/territory/polygons` land-mask data contract, filled tile occupation, title strip, and icon-only navigation rail.
+
+### Version: DV-2026-05-18-09
+Date: 2026-05-18
+Surface: Territory active red land rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Demoted route traces into a low-opacity underlay, removed the bright route-core overlay, and suppresses heavy concrete border halos for small active red masks so active territory no longer reads as stamp-like markers on top of the land fill.
+Why: The user asked to review a visible bug on the red Territory land after the border polish pass.
+Rollback target: `DV-2026-05-18-08`
+Notes: The backend ownership data was verified as non-empty and consistent; this is a frontend paint-order/opacity/border-threshold repair that preserves concrete filled tiles, smooth mask borders for larger land, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-10
+Date: 2026-05-18
+Surface: Territory narrow land-conquest mechanism on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the backend land-mask grid from 16m to 8m cells, reduced open-route claim radius from 22m to a center-strict 6m paint radius, and bumped mask/cache versions so old wide masks are treated as stale and recomputed. A regression now requires an open straight run to stay within a narrow corridor, including rejecting land 20m off the route, instead of claiming a broad territory block.
+Why: The user said a single line was over-estimating occupied land and asked for more concrete land-conquering semantics.
+Rollback target: `DV-2026-05-18-09`
+Notes: Open routes now claim a road-like strip; closed loops still flood-fill the genuinely enclosed interior. Latest-wins ownership and frontend concrete tile rendering remain unchanged.
+
+### Version: DV-2026-05-18-11
+Date: 2026-05-18
+Surface: Territory personal route visibility on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored a slim, high-contrast active-runner route centerline above the concrete land fill while keeping the broad route skin as a low-opacity underlay. The visible line is independent from the backend 6m land-conquest radius, so personal routes remain readable without inflating conquered land.
+Why: After narrowing the backend conquest radius, the user's own running route visually disappeared because the route trace was only a subtle underlay below the filled land tiles.
+Rollback target: `DV-2026-05-18-10`
+Notes: This is a frontend paint-order/visibility repair. It preserves the narrow backend land mask, latest-wins ownership, concrete tile fill, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-12
+Date: 2026-05-18
+Surface: Territory authenticated route loading on `/territory`
+Files: `frontend/src/contexts/AuthContext.jsx`, `frontend/src/contexts/authUrlTokenPersistence.smoke.test.js`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Persisted URL tokens synchronously in `AuthProvider` before child route effects can call `apiJson`, and made Territory wait for auth hydration before loading `/api/territory` and `/api/territory/polygons`. This prevents the page from briefly using unauthenticated fallback/demo data with zero route overlays on first load.
+Why: The user's running routes were not displaying because `/territory?token=...` could race: the page requested route/land-mask data before the URL token reached localStorage, then stayed on the empty/demo map until a reload.
+Rollback target: `DV-2026-05-18-11`
+Notes: This preserves the narrow land-conquest backend, visible route centerline, concrete land fill, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-13
+Date: 2026-05-18
+Surface: Territory continuous route and loop-fill conquest on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Bumped the land-mask encoding to v5 so stale persisted masks cannot keep rendering old broken/wide geometry, and explicitly paints detected mid-route loop closures before flood-fill so a route that returns to an earlier border seals and fills the enclosed land. Added regressions for connected sparse straight routes, mid-route loop interior fill, and stale v4 mask rejection.
+Why: The user reported straight route territory appearing broken into pieces and route loops failing to cover the enclosed area.
+Rollback target: `DV-2026-05-18-12`
+Notes: This preserves the 8m concrete mask grid, 6m open-route conquest radius, latest-wins ownership, active route centerline, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-14
+Date: 2026-05-18
+Surface: Territory own-route warmup refresh on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Territory now schedules a bounded refresh while `/api/territory/polygons` reports `backfillInProgress` or pending activity recomputation, so the page automatically repaints the active runner's route traces after backend land-mask versions rebuild.
+Why: The user's own running route could appear erased when the first load happened during polygon backfill: the warming response contained only already-cached rival land and no active own route traces until a later manual reload.
+Rollback target: `DV-2026-05-18-13`
+Notes: This is a frontend hydration/polling repair only. It preserves the 8m concrete mask grid, 6m open-route conquest radius, mid-route loop fill, latest-wins ownership, active route centerline, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-15
+Date: 2026-05-18
+Surface: Territory land-first route highlight removal on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the bright white personal-route centerline overlay from active Territory land masks while keeping the subtle low-opacity route skin underneath the concrete fill for corridor softness.
+Why: The user pointed at the white route highlighting and asked to remove it so the page reads as occupied land rather than a route-tracing view.
+Rollback target: `DV-2026-05-18-14`
+Notes: This is a visual paint-layer repair only. It preserves the 8m concrete mask grid, 6m open-route conquest radius, mid-route loop fill, latest-wins ownership, warmup refresh, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-16
+Date: 2026-05-18
+Surface: Territory solid land fill on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the remaining route-skin underlay and made occupied land tiles substantially more opaque, so background road/route lines no longer show through conquered territory.
+Why: The user pointed at visible background lines inside the red occupied land and asked to remove them.
+Rollback target: `DV-2026-05-18-15`
+Notes: Territory still uses backend land-mask cells and route traces for bounds, but it no longer paints route lines over or under the concrete land fill; active fill opacity is now `0.9`.
+
+### Version: DV-2026-05-18-17
+Date: 2026-05-18
+Surface: Heatmap continuous route rendering on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the visible GPS sample overlay from isolated Leaflet circle markers with same-activity rounded route polylines, while leaving the real-world basemap and heat-fog layer intact.
+Why: The user reported that a straight heatmap route appeared broken into separated pieces instead of reading as one continuous line.
+Rollback target: `DV-2026-05-18-16`
+Notes: This is a frontend rendering repair only. Backend `/api/profile/heatmap` still owns sampling, newest-run protection, and point totals; the frontend now uses those sampled points as route continuity geometry instead of disconnected dots.
+
+### Version: DV-2026-05-18-18
+Date: 2026-05-18
+Surface: Territory sealed concrete land rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the same-color `routeTraces` corridor bridge and instead seals the concrete land-mask tile bounds with a small client-side overlap, so straight or diagonal conquered land reads continuously without painting any route highlight on the Territory map.
+Why: The user clarified that route highlighting is unnecessary on Territory; the broken-straight-line issue must be solved at the occupied-land mask level.
+Rollback target: `DV-2026-05-18-17`
+Notes: This does not restore the removed white route highlighter, route-skin overlay, or same-color route bridge. Backend route traces remain available only for bounds/warmup reference; visible continuity comes from slightly overlapped concrete land tiles while preserving the narrow 8m/6m conquest semantics.
+
+### Version: DV-2026-05-19-01
+Date: 2026-05-19
+Surface: Heatmap auth-hydrated loading on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Heatmap now reads `authHydrated` from `AuthContext`, waits for hydration before redirecting to `/login`, and waits for hydration before requesting `/api/profile/heatmap` plus `/api/activities`.
+Why: The live `/heatmap` route could bounce to `/login` before URL/local token hydration completed, matching the earlier Territory first-load race.
+Rollback target: `DV-2026-05-18-17`
+Notes: This preserves the current Heatmap map-first layout, Leaflet heat layer, same-activity rounded route polylines, and signed-in auth requirement; unauthenticated sessions still redirect to `/login` after hydration.
+
+### Version: DV-2026-05-19-02
+Date: 2026-05-19
+Surface: Heatmap visible GPS dot restoration on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored the visible GPS overlay from same-activity route polylines back to sampled Leaflet circle markers while keeping the auth-hydrated redirect/data-loading guard added in the previous round.
+Why: The user explicitly asked to restore Heatmap to the dot version.
+Rollback target: `DV-2026-05-19-01`
+Notes: This changes only the visible overlay style. The heat-fog layer, sampled backend payload, and auth requirement stay intact.
+
+### Version: DV-2026-05-19-03
+Date: 2026-05-19
+Surface: IRONPULSE strength cockpit on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the existing single strength route as a dark route-scoped cockpit with an acid-lime hero, weekly strength goal ring, target-area filters, weekly runway, real run-load/recovery metrics, sticky exercise detail panel, and clearly labeled placeholder strength-history cards.
+Why: The user asked to remake the strength area using the provided IRONPULSE references while preserving Hermes runner-strength logic and avoiding fake PR/1RM data.
+Rollback target: `DV-2026-05-19-02`
+Notes: No backend schema or route was added. Check-in save/reset now uses the existing `/api/training/muscle/today` backend endpoint instead of the stale `/check-in/today` path.
+
+### Version: DV-2026-05-19-04
+Date: 2026-05-19
+Surface: IRONPULSE reference-one strength home on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `frontend/src/assets/muscle-training/*.svg`, `DESIGN_VERSIONS.md`
+What changed: Replaced the failed hybrid cockpit with a reference-one IRONPULSE home layout: centered weekly strength goal ring, current training arrangement strip, six local dark target-area image cards, explicit pending strength-history records, and secondary protocol/check-in panels below the first visual pass.
+Why: The user clarified that the main content should match the first IRONPULSE reference rather than retain the Runner Atlas white-card or anatomy-board direction.
+Rollback target: `DV-2026-05-19-03`
+Notes: The visible main route now uses `mt-ironpulse-page` instead of `muscle-training-page`, removes `data-friendly-strength-lab`, and suppresses the old Runner Atlas white canvas overlay for `/muscle-training`. Check-in still uses `/api/training/muscle/today`; PR, total lifted, and 1RM remain clearly marked as pending real strength history.
+
+### Version: DV-2026-05-19-05
+Date: 2026-05-19
+Surface: Compound target library on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a frontend-only compound exercise library for all six target areas, with four optional movements per area, split from real `today plan` rows and wired into target-card counts, row selection, and the detail panel.
+Why: The user wanted every muscle-area card to expose several compound-focused exercise options without pretending those optional movements are part of the backend-generated runner strength plan.
+Rollback target: `DV-2026-05-19-04`
+Notes: This does not change backend planning or recommendation math. Optional library rows are labeled as not participating in today's training suggestion calculation, while real check-in still uses `/api/training/muscle/today`.
+
+### Version: DV-2026-05-19-06
+Date: 2026-05-19
+Surface: Practical protocol workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted the exercise protocol area into the primary route experience: compact target filters, ledger-style exercise rows, and a right-side detail panel with dose, equipment, intent, and execution phases.
+Why: The user clarified that the image-card-first layout was not practical and asked for a page closer to the action detail/workbench reference.
+Rollback target: `DV-2026-05-19-05`
+Notes: The six target photos remain available only as small filter thumbnails. Real plan/recovery/check-in wiring is unchanged, and optional library movements still do not participate in today's recommendation calculation.
+
+### Version: DV-2026-06-06-01
+Date: 2026-06-06
+Surface: Territory reference-style plate map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `.ai-sync/CONTEXT_LEDGER.md`, `DESIGN_VERSIONS.md`
+What changed: Reworked the visible ownership layer from coral neon blobs into darker, INTVL-like translucent map plates: muted blue/green/yellow/magenta/slate fills, stronger plate opacity, thinner pale boundaries, no active glow, and a less washed-out dark map veil while preserving sharp Leaflet tiles.
+Why: The user asked to continue improving Territory until it looks closer to INTVL's territory screenshot.
+Rollback target: working tree before `DV-2026-06-06-01`
+Notes: This is a visual layer pass only. `/territory` still renders only Hermes Shared Account active backend masks, keeps all 79 active regions visible in live proof, and does not paint rival/other-user map territory.
+
+### Version: DV-2026-06-06-02
+Date: 2026-06-06
+Surface: Territory game chrome on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the visible old map titlebar, side route rail, and campaign card with a centered top game HUD and a rounded bottom leaderboard sheet. The sheet now includes four tabs, up to eight leaderboard rows, and the shared runner navigation as a compact bottom nav while the active territory map remains visible behind it.
+Why: The previous plate-map pass still looked broken because the page chrome did not match the reference game-map composition and mobile CSS could still hide the HUD.
+Rollback target: `DV-2026-06-06-01`
+Notes: This is a frontend chrome/layout pass only. Live Chrome proof after build/runtime sync showed 79 active concrete land paths, 79 active contours, 0 rival paths, visible HUD/dock/tabs/bottom nav, hidden legacy title/rail/campaign chrome, sharp tiles (`filter: none`, `opacity: 1`, `mix-blend-mode: normal`), and no console warnings/errors. Browser Use remains unavailable because the installed plugin lacks `scripts/browser-client.mjs`; the repo wrapper verifier is also blocked by a missing `browser_harness.run` Python module, so direct Chrome proof was used.
+
+### Version: DV-2026-06-06-03
+Date: 2026-06-06
+Surface: Territory portrait phone-stage on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.omx/state/territory/ralph-progress.json`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `DESIGN_VERSIONS.md`
+What changed: Desktop `/territory` now renders as a centered portrait app frame with rounded device rim, notch and home indicator, clipped sharp Leaflet map, top segmented control/player badge, right action rail, and compact bottom tab/nav sheet. The old full-bleed runner-shell two-column grid is overridden for this surface so the frame centers correctly.
+Why: The reference territory snapshot is a phone-stage game map, while Hermes was still a full-bleed desktop map after the previous chrome pass.
+Rollback target: `DV-2026-06-06-02`
+Notes: Live Chrome proof after build/runtime sync showed a centered 500px x 917px frame, 474px x 891px map, visible HUD/dock/side actions, hidden old title/rail/campaign chrome, 79 active owned paths, 0 rival paths, sharp tiles, and no console warnings/errors. Visual verdict is `78/revise`: major chrome/category match is achieved, but the real Hermes owned masks are still sparser than the reference's broad local territory plates.
+
+### Version: DV-2026-06-06-04
+Date: 2026-06-06
+Surface: Territory active-owner field on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added an active-only broad territory field beneath the precise concrete land mask and removed the active nth-of-type color cycling so Hermes Shared Account renders as one coral owner color. The field expands active backend mask tiles visually without entering ownership resolution, while concrete land and contour remain crisp, normal-blended SVG paths over unfiltered Leaflet tiles.
+Why: The previous portrait pass still looked broken because sparse backend cells read as missing territory and the active palette cycling made one Hermes account look like multiple users.
+Rollback target: `DV-2026-06-06-03`
+Notes: Live Chrome proof after build/runtime sync showed 22 active field paths, 97 active concrete land paths, 97 active contours, 0 rival field/land/contour paths, one active fill color `rgb(240, 117, 97)`, sharp tiles (`filter: none`, `opacity: 1`, `mix-blend-mode: normal`), and a centered 500px x 917px phone frame.
+
+### Version: DV-2026-06-07-01
+Date: 2026-06-07
+Surface: Territory website-layout correction on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`, `.omx/state/territory/ralph-progress.json`
+What changed: Removed the portrait phone-stage chrome, side action bubbles, mobile sheet tabs, and bottom-nav additions from the Territory surface. Restored the website map title/action strip and previous overlay positioning while keeping the active-only coral territory field, sharper real-world tiles, and active-only backend mask rendering.
+Why: The user clarified that the goal is not to make `/territory` look like a phone app; only the territory shapes should move toward the INTVL-style filled map treatment.
+Rollback target: `DV-2026-06-06-04`
+Notes: Targeted smoke guards now reject phone-app selectors and portrait-stage CSS while preserving the broad active field checks. Frontend build and runtime sync passed after this correction.
+
+### Version: DV-2026-06-07-02
+Date: 2026-06-07
+Surface: Territory INTVL-style plate field on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.omx/state/territory/ralph-progress.json`
+What changed: Refined the active-only Hermes Shared Account field into a more INTVL-like territory plate: broader component-bounds expansion, lower translucent fill, subtle coral edge stroke, mitered joins, and no contour-smoothing pass on the broad field. The precise concrete land and active contour still render above it, while the website title/action strip and page layout remain unchanged.
+Why: The official INTVL territory screenshot shows large translucent map plates with sharp real-world streets visible through them and straighter neighborhood/block edges, not a rounded glow/blob treatment.
+Rollback target: `DV-2026-06-07-01`
+Notes: Browser Use could not be used because its required bundled plugin files are missing in this environment. The implementation was guided by the official INTVL site image and guarded by Territory smoke tests, frontend build/runtime sync, and a one-process Playwright fixture proof saved at `task-images/territory-intvl-plate-field-proof.jpg`.
+
+### Version: DV-2026-06-07-03
+Date: 2026-06-07
+Surface: Territory website map with meter-sized active plate field on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.omx/state/territory/ralph-progress.json`
+What changed: Kept the existing website Territory page shell and changed only the map territory rendering: the active-only Hermes Shared Account broad field now uses a meter-sized component envelope with an 8km x 4.8km minimum footprint, 800m expansion, 420m chamfer, 0.44 translucent fill, subtle 1.05px edge, mitered joins, and no smoothing pass on the broad plate. The precise concrete land and active contour remain above it.
+Why: The user clarified the target is not a phone-app redesign; the Territory page should stay a website map while the territory shapes move toward INTVL's broad translucent real-map plate style.
+Rollback target: `DV-2026-06-07-02`
+Notes: Browser Use remains unavailable because the bundled Browser Use skill/client files are missing. The verified Playwright fixture proof saved `task-images/territory-intvl-plate-field-proof.jpg` and showed 1 active field, 1 active concrete land, 1 active contour, 0 rival field/land/contour paths, 0 phone-app selectors, unfiltered Leaflet tiles, and a `276px x 166px` active field footprint.
+
+### Version: DV-2026-06-07-04
+Date: 2026-06-07
+Surface: Territory block-notched active plate field on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.omx/state/territory/ralph-progress.json`
+What changed: Replaced the active field's plain chamfered rectangle with a larger meter-sized block-notched plate outline: 8.8km x 5.8km minimum footprint, 800m expansion, 420m chamfer, 760m deterministic block step, 0.44 fill, and 1.05px mitered edge. Runtime proof now requires a multi-edge field path rather than accepting a simple rectangle.
+Why: The prior website-layout pass still looked like a centered UI rectangle. The target territory treatment needs broad, stepped map polygons while keeping `/territory` as a website page and keeping rival/other-user territory removed.
+Rollback target: `DV-2026-06-07-03`
+Notes: Browser Use remains unavailable because the bundled Browser Use skill/client files are missing. The Playwright fixture proof saved `task-images/territory-intvl-plate-field-proof.jpg` and showed 1 active field, 0 rival field/land/contour paths, 0 phone-app selectors, unfiltered Leaflet tiles, 19 straight line commands, and a `304px x 200px` active field footprint.
+
+### Version: DV-2026-06-07-05
+Date: 2026-06-07
+Surface: Territory same-owner plate cluster on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.omx/state/territory/ralph-progress.json`
+What changed: Replaced the single active broad field with five active-only Hermes Shared Account plate paths derived from the owned component. The cluster uses a 10.4km x 6.8km minimum envelope, 800m expansion, 420m chamfer, 760m deterministic block steps, 0.34 translucent fill, and 1.05px mitered edges so the map reads as same-owner neighborhood plates rather than one centered block.
+Why: The previous block-notched pass still looked like one simplified territory tile. The reference territory map reads as a dense arrangement of stepped map plates, while the user explicitly wants the website page kept and other users' territory removed.
+Rollback target: `DV-2026-06-07-04`
+Notes: Browser Use remains unavailable because the bundled Browser Use skill/client files are missing. The Playwright fixture proof saved `task-images/territory-intvl-plate-field-proof.jpg` and showed 5 active field paths, 1 active concrete land, 1 active contour, 0 rival field/land/contour paths, 0 phone-app selectors, unfiltered Leaflet tiles, 19 straight line commands per field, and a `323px x 211px` active field union.
+
+### Version: DV-2026-06-07-06
+Date: 2026-06-07
+Surface: Territory broad same-owner mosaic on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.omx/state/territory/ralph-progress.json`
+What changed: Expanded the active-only Hermes Shared Account plate layer from five paths to seven same-owner mosaic paths. The field now uses an 11.8km x 7.6km minimum envelope, 800m expansion, 420m chamfer, 760m deterministic block steps, 0.28 translucent fill, and 1.05px mitered edges, producing a wider territory mosaic with visible internal plate seams.
+Why: The prior five-plate cluster moved in the right direction but still read as a compact algorithmic group. The reference territory treatment reads as a broader arrangement of stepped map plates over sharp streets.
+Rollback target: `DV-2026-06-07-05`
+Notes: Browser Use remains unavailable because the bundled Browser Use skill/client files are missing. The Playwright fixture proof saved `task-images/territory-intvl-plate-field-proof.jpg` and showed 7 active field paths, 1 active concrete land, 1 active contour, 0 rival field/land/contour paths, 0 phone-app selectors, unfiltered Leaflet tiles, 19 straight line commands per field, and a `407px x 255px` active field union.
+
+### Version: DV-2026-06-07-07
+Date: 2026-06-07
+Surface: Territory adjacent district field on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.omx/state/territory/ralph-progress.json`
+What changed: Replaced the overlapping same-owner plate offsets with seven adjacent ratio-bounded district plates separated by a 120m seam. The broad active Hermes Shared Account field now uses a brighter 0.46 translucent coral fill, 0.5 plate edge opacity, and a crisp 2px / 0.86 active concrete contour while preserving the website map shell.
+Why: The previous seven-plate cluster still read as generated overlapping blocks. The user clarified the website page should remain a website; only the territory layer should move toward the INTVL-style filled district map.
+Rollback target: `DV-2026-06-07-06`
+Notes: Browser Use remains unavailable because the bundled Browser Use skill/client files are missing. Escalated Playwright fixture proof saved `task-images/territory-intvl-district-field-proof.jpg` and passed with 7 active field paths plus 1 active concrete land/contour, 0 rival paths, 0 helper/phone layers, unfiltered Leaflet tiles, and generated territory color metrics within the reference gates.
+
+### Version: DV-2026-06-07-08
+Date: 2026-06-07
+Surface: Territory bounded INTVL district cluster on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Constrained the active-only Hermes Shared Account field to the dominant active component and its quantile core, then capped the field envelope at 10.4km x 7.2km with seven staggered block-notched district plates. This removes repeated disconnected-component carpets and the huge rectangular Long Island/Queens slab while preserving the website map shell and concrete active route contour above the field.
+Why: The previous adjacent district pass still over-generated broad territory whenever the route data had disconnected activity islands. The target INTVL treatment should read as one owned district cluster around the current user's territory, not every sampled cluster or other users' space.
+Rollback target: `DV-2026-06-07-07`
+Notes: Escalated Playwright fixture proof saved `task-images/territory-intvl-bounded-core-proof.jpg` and passed with 8 active-fill paths, 1 active contour, 0 rival paths, sharp unfiltered Leaflet tiles, and a visibly bounded seven-district cluster around the active concrete route.
+
+### Version: DV-2026-06-07-09
+Date: 2026-06-07
+Surface: Territory concrete land and border on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the synthetic INTVL district-field generator, its field constants, helper functions, render entries, paint function, and CSS classes. The map now renders only real active Hermes Shared Account concrete land from backend mask cells plus its smoothed active contour border; rival panes remain mounted but receive zero paths.
+Why: The user clarified that the fake district shapes were wrong. Territory should display concrete owned land and its border, not invented plates derived from bounds.
+Rollback target: `DV-2026-06-07-08`
+Notes: Escalated Playwright fixture proof saved `task-images/territory-concrete-border-proof.jpg` and passed with 1 active concrete land path, 1 active contour path, 0 synthetic field paths, 0 rival paths, sharp unfiltered Leaflet tiles, cubic-smoothed concrete geometry, and no helper/halo layers.
+
+### Version: DV-2026-06-07-10
+Date: 2026-06-07
+Surface: Territory concrete land fidelity on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Limited backend response-level interior filling to tiny compact void components so nearby recent-run corridors no longer become one invented land slab. Reduced frontend mask source brush expansion to cell-scale fidelity, removed visual contour pruning that dropped legitimate small owned pieces, and skipped only degenerate screen-space contour strokes while preserving real concrete land fills.
+Why: The previous pass still produced weird shapes because backend union hole filling and frontend visual expansion were inventing or deleting land around real runs. Territory should read as concrete land claimed from actual activity masks, with no synthetic district fields and no overfilled gaps between separate corridors.
+Rollback target: `DV-2026-06-07-09`
+Notes: Focused backend regression passed for recent run corridors and small interior voids. Escalated Playwright proof saved `task-images/territory-concrete-fidelity-proof.jpg` and passed with 65 active concrete land paths, 1 active curved contour, 0 rival paths, 0 synthetic/helper fields, sharp unfiltered Leaflet tiles, and stable cubic contour geometry.
+
+### Version: DV-2026-06-07-11
+Date: 2026-06-07
+Surface: Territory shared-account concrete land on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-live-shared-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Preserved active route trace ids through unioned shared-runner land-mask responses, added a shared-runner fallback to derive trace ids from RUN activities when stored union rows have no activity id, and changed the Territory renderer to use route traces only as bounded geometry guidance adjacent to real backend-owned cells. The visible border now promotes only the outer contour for each connected concrete component, so internal mask loops no longer render as tangled active borders.
+Why: The live Hermes Shared Account page was still exposing raw mask fragments and internal contours as weird shapes instead of one concrete owned land surface around actual conquered routes.
+Rollback target: `DV-2026-06-07-10`
+Notes: Escalated live Playwright proof logged in as `Hermes Shared Runner` and saved `task-images/territory-live-shared-account-proof.jpg`. Proof showed `activeRouteTraceCount=18`, `activeBackendCells=44475`, `activeContour=1`, `rivalConcrete=0`, `rivalContour=0`, `syntheticFields=0`, `helperPaths=0`, sharp unfiltered Leaflet tiles, and zero console errors after restarting the stale local backend runtime.
+
+### Version: DV-2026-06-07-12
+Date: 2026-06-07
+Surface: Territory extra-layer cleanup on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-live-shared-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Disabled the stale `.terr-map-section::after` pseudo overlay in Territory map-only mode and changed active concrete land rendering from many semi-transparent per-region polygons to one composed multi-polygon path per owner entry. The composed fill now aligns every SVG subpath to the same winding direction so internal boundary loops cannot become cutout holes.
+Why: The old pseudo-element could appear as an extra dark map layer, per-region active fills could visually stack into darker patches inside the territory, and opposite-winding subpaths in the composed fill could cut holes through owned land.
+Rollback target: `DV-2026-06-07-11`
+Notes: Escalated live Playwright proof logged in as `Hermes Shared Runner` and saved `task-images/territory-live-shared-account-proof.jpg`. Proof showed `activeConcrete=1`, `activeConcreteSubpathSigns=[1]`, `rivalConcrete=0`, `syntheticFields=0`, `helperPaths=0`, `mapSectionAfterStyle.display=none`, `mapSectionAfterStyle.backgroundImage=none`, sharp unfiltered Leaflet tiles, and zero console errors.
+
+### Version: DV-2026-06-07-13
+Date: 2026-06-07
+Surface: Territory Heatmap startup loading page on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-loading-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Updated the Territory startup loader to mirror Heatmap's full loading-page scaffold: the same `heatmap-page-map-shell`, map canvas, vignette node, topbar brand/search/action strip, and centered `heatmap-page-empty` status card. Territory keeps its own loading copy and links, but the first paint now uses the same page structure as `/heatmap`.
+Why: The previous Territory loading pass reused the Heatmap empty-card classes but skipped the surrounding Heatmap canvas and topbar skeleton, so it did not visually read as the same loading page.
+Rollback target: `DV-2026-06-07-12`
+Notes: Source guard now requires the Heatmap canvas, vignette, topbar, brand/search/action strip, and empty card in `TerritoryInitialLoading`. Escalated runtime proof saved `task-images/territory-heatmap-startup-loading-proof.jpg` and passed with `loadingPage=true`, Heatmap shell/canvas/vignette/topbar/actions/empty card present, `territoryMapMounted=false` while `/api/territory` was pending, and zero console errors.
+
+### Version: DV-2026-06-07-14
+Date: 2026-06-07
+Surface: Territory Flushing conquest proof on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapConfiguration.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/resources/application.properties`, `backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `.tools/verify-territory-flushing-conquest-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added the local `territory-flushing-conqueror@hermes.local` mock runner with three recent full-Flushing activities and persisted land-mask territory. Territory ownership proof now uses exact response-cell overlap to verify that older Flushing cells do not remain active where the newer conqueror owns the returned cells. The live zoom verifier samples zoom 11, 13, and 15 for active fill/contour alignment and active-only rendering.
+Why: The requested conquest mechanism needs a mock account that covers the full Flushing board and proves latest-activity ownership really transfers territory away from the older Flushing account instead of merely rendering another mock layer.
+Rollback target: `DV-2026-06-07-13`
+Notes: Live backend restart seeded `Hermes Flushing Conqueror` with shoes=3 and activities=3. Escalated runtime proof saved `task-images/territory-flushing-conqueror-proof.jpg`; conqueror active bounds were `40.723532..40.782966 / -73.866553..-73.77188` with `32414` cells, older Flushing saw those `32414` cells under the conqueror owner, exact overlap with older active cells was `0`, and zoom 11/13/15 passed with active concrete=1, active contour=2, rival paths=0, unfiltered tiles, and aligned boxes.
+
+### Version: DV-2026-06-07-15
+Date: 2026-06-07
+Surface: Territory cached repeat-load performance on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a versioned browser cache for Territory shell data, backend polygon payloads, and compact processed preview render geometry. Repeat visits now seed the map from local cache, paint compact active/rival concrete land before `/api/territory` returns, and defer polygon refresh into the background when cached data exists.
+Why: Territory was too slow because repeat visits still waited for heavy polygon payloads and rebuilt million-point mask contours even when no data changed.
+Rollback target: `DV-2026-06-07-14`
+Notes: Escalated cache proof saved `task-images/territory-cache-proof.jpg` and passed with both `/api/territory` and `/api/territory/polygons` blocked until after paint, `cachedPaintMs=512`, active concrete/contour present, four rival owners present including `Hermes Flushing Conqueror`, unfiltered tiles, and zero console errors. Shared/global regression proof saved `task-images/territory-live-shared-cache-regression-proof.jpg` and passed with five backend polygons, four rival owners, and no synthetic/helper paths.
+
+### Version: DV-2026-06-08-01
+Date: 2026-06-08
+Surface: Territory v5 cached render replay and concrete-region cap on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Bumped the Territory browser cache to `global-owner-territory-cache-v5`, added a lightweight latest-render index so repeat visits can paint compact processed render geometry without loading the raw polygon payload first, and capped visible owner contour/fill regions to the largest 96 concrete components. The cached replay path now works even after the bulky raw polygon cache entry is deleted.
+Why: Repeat visits needed to be instant when data has not changed, while the active land fill also needed to stop rendering hundreds of tiny fragmented subpaths.
+Rollback target: `DV-2026-06-07-15`
+Notes: Escalated shared proof saved `task-images/territory-cohesive-live-shared-proof.jpg` and passed with `activeConcreteMoveCommandCount=96`, active/rival concrete and contours present, four global rivals visible, aligned active fill/contour boxes, and zero console errors. Escalated cache proof saved `task-images/territory-v5-cache-proof.jpg` and passed with `/api/territory` and `/api/territory/polygons` blocked until after paint, raw polygon cache deleted before revisit, `cachedPaintMs=496`, current render index, unfiltered tiles, and all rivals present. Border proof saved `task-images/territory-v5-border-proof.jpg`; Flushing conquest proof saved `task-images/territory-v5-conquest-proof.jpg`.
+
+### Version: DV-2026-06-08-02
+Date: 2026-06-08
+Surface: Territory strength-based conquest and v7 concrete rendering on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Changed Territory ownership from latest-row-wins to strength-first land control: dense established coverage wins against sparse newer claims, while equal-strength overlaps still break toward newer activity. Large live mask responses now use a 16m response ownership grid so nearby repeated coverage competes as land pressure instead of exact-cell checkerboards. The frontend cache is now `global-owner-territory-cache-v7`, and visible concrete regions are capped to the largest 24 owner regions to keep real land masses without replaying dozens of route crumbs.
+Why: Live inspection showed the shared account had 608 route traces and 104,547 trace points but only 7,007 active backend cells because sparse/newer rival rows erased established land. The page rendered as broken strips instead of concrete territory. The fix makes conquest require comparable coverage strength and trims low-value render fragments after the backend ownership recovers.
+Rollback target: `DV-2026-06-08-01`
+Notes: Backend `TerritoryControllerTests,TerritoryPolygonComputerTests` passed. Live shared proof saved `task-images/territory-final-v7-shared-live-proof.jpg` with active area `10,388,576m2`, `activeConcreteMoveCommandCount=24`, four global rival owners, aligned active fill/contour, unfiltered tiles, and zero console errors. Cache proof saved `task-images/territory-final-v7-cache-proof.jpg` and passed with cached paint `511ms` while both Territory APIs were blocked and raw polygon cache was deleted. Conquest proof saved `task-images/territory-final-v7-conquest-proof.jpg` and still rendered `Hermes Flushing Conqueror` globally across the older Flushing account at zoom 11/13/15.
+
+### Version: DV-2026-06-08-03
+Date: 2026-06-08
+Surface: Territory v8 compact render cache replay on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Bumped the Territory browser cache to `global-owner-territory-cache-v8`, tightened compact render geometry to 5,200 points and 64 regions per owner, and changed fresh polygon paints to draw the same compact render entries that are written to cache. Repeat visits now replay compact fill and contour geometry directly from the latest-render index when the polygon signature has not changed, while fresh data no longer forces a full-detail SVG first paint before the cache write.
+Why: Territory already had a render cache, but the first data paint still drew the raw high-detail owner masks and the cached geometry budget remained larger than necessary. That kept the page sluggish and made later cache visits pay more SVG path cost than needed.
+Rollback target: `DV-2026-06-08-02`
+Notes: Escalated cache proof saved `task-images/territory-v8-cache-fast-proof.jpg` and passed with both Territory APIs blocked until after paint, raw polygon cache deleted before revisit, current v8 render index, `cachedPaintMs=453`, active concrete/contour present, four rival owners present, unfiltered tiles, and zero console errors. Border proof saved `task-images/territory-v8-cache-border-proof.jpg` with active fill/contour boxes aligned at zoom 12/13 and active line commands reduced to 5,630. Flushing global proof saved `task-images/territory-v8-cache-flushing-proof.jpg` and passed at zoom 11/13/15 with `Hermes Flushing Conqueror` still visible. Shared proof saved `task-images/territory-v8-cache-shared-proof.jpg` with five backend owner polygons, active area `10,388,576m2`, and zero console errors.
+
+### Version: DV-2026-06-09-05
+Date: 2026-06-09
+Surface: Territory activity-time overlap conquest on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/ActivityRepository.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Backend overlap ownership now uses effective activity time instead of polygon row creation time, so a newer shared-user run can display above an older rival territory even when that rival's polygon was computed later. Frontend fragment pruning now only removes small older-owner fragments near already-processed newer concrete, and Territory browser cache is bumped to `global-owner-territory-cache-v46`.
+Why: Live Kissena Park diagnosis showed activity `944` existed as a shared-user route trace, but the shared owner had `0` winning cells in the park because delayed older rival polygon rows won by `TerritoryPolygon.createdAt`. The previous competing-owner pruning would also risk hiding the recovered newer active cells.
+Rollback target: `DV-2026-06-09-04`
+Notes: Red regression first returned only `Late Computed Older Rival`; after the fix `TerritoryControllerTests` passed. Frontend smoke, backend compile, escalated Vite build, frontend/backend runtime sync, and live PostgreSQL-backed proof passed. Live `/api/territory/polygons` for `Hermes Shared User` now returns active `parkCells=473` around Kissena Park with route trace `944`, while the page renders active concrete/contour plus three rival concrete layers with zero console errors. Screenshot: `task-images/territory-kissena-overlap-proof.jpg`.
+
+### Version: DV-2026-06-10-01
+Date: 2026-06-10
+Surface: Territory real-user global ownership on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-world-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Normal Global territory now excludes generated local fixture accounts (`territory-* @hermes.local`) before backend ownership coloring and cache signature proof. Removed the dead local fixture-rival warmup path and replaced the stale world runtime verifier/test expectation that required 24,900 generated mock owners with a real-user global contract.
+Why: Global territory is a product map for real signed-up users; the local Flushing/Temporal/Berlin/world fixture accounts were leaking into shared/global mode and creating fake rival layers that looked like broken territory.
+Rollback target: `DV-2026-06-09-05`
+Notes: Focused backend regressions and frontend smoke guards passed, Vite build synced live static assets, and the stale backend was restarted from `land-mask-union-v37-mask-activity-time` to `land-mask-union-v38-real-user-global`. Live API proof returned `polygonCount=143`, `fixtureOwnerCount=0`, and no generated owner names. Browser proof saved `task-images/territory-live-shared-real-user-global-proof.jpg` with one active concrete layer, zero rival/generated concrete layers, aligned active fill/contour, and zero console errors.
+
+### Version: DV-2026-06-11-01
+Date: 2026-06-11
+Surface: Territory sparse open-route fidelity on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-world-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Bumped land masks to `mask:v21` and changed unclosed routes with no accepted endpoint/self loop to sparse fixed 8m route corridors. Owner union now returns exact resolved source tiles without final gap sealing, and normal real-user polygon responses cap visual response cells at 16m under `land-mask-union-v42-mask-v21-response-16m-real-user-global`. Territory browser cache is now `global-owner-territory-cache-v82-mask-v21-response-16m`.
+Why: Live Queens/Flushing proof showed `mask:v20` removed stale false-loop slabs but long open runs still rendered as broad artificial land because adaptive/source-count coarsening inflated route corridors to 24m-28m cells. Open routes should add concrete path coverage; only closed loops should fill land.
+Rollback target: `DV-2026-06-10-01`
+Notes: Tests passed for frontend wiring/heatmap guards, full `TerritoryPolygonComputerTests`, focused `TerritoryControllerTests`, backend compile, Vite build, frontend/backend runtime sync, world runtime verifier, live shared runtime verifier, and in-app Browser proof. Live API returned `polygonCount=217`, all returned cells at `16m`, active area `5,159,424m2`, zero fixture owners, and screenshot `task-images/territory-v82-mask-v21-response-16m-proof.jpg` rendered one active concrete layer plus one contour with zero console errors.
+
+### Version: DV-2026-06-11-02
+Date: 2026-06-11
+Surface: Heatmap overlay on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/styles/_split/heatmap.css`, `frontend/src/styles/style.css`, `frontend/src/styles/dark-mode-final-fixes.css`, `frontend/src/pages/heatmapMobileOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the `heatmap-page-story-card` focus/story overlay and its collapsed focus controls. Recolored `heatmap-page-legend-card` to the same dark glass family as `heatmap-page-brand-pill`, including readable legend labels and meta chips, while keeping the mobile legend bounded above the utility rail.
+Why: The story card was no longer wanted on the map surface, and the legend visually conflicted with the topbar brand pill by using a separate warm card treatment.
+Rollback target: `DV-2026-06-11-01`
+Notes: Targeted smoke now guards that the retired story/focus overlay is absent and the mobile legend remains scroll-bounded.
+
+### Version: DV-2026-06-11-03
+Date: 2026-06-11
+Surface: Runs profile-aligned history cockpit on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `frontend/src/pages/runsRoutePreviewCache.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the old generated-photo Runs hero with a profile-aligned history cockpit, moved search and filters into a warm workbench card, and restyled stats, insights, month groups, and run cards to fit the Profile visual system. Run cards are now semantic full-card buttons, and the inert three-dot `recent-runs-card-menu` affordance is removed.
+Why: `/runs` visually diverged from the current Profile page and still carried a dead menu affordance. The page needed to feel like the same product surface while preserving history, route previews, search/filter/sort, Strava sync, imports, and bounded page-flow loading.
+Rollback target: `DV-2026-06-11-02`
+Notes: Guardrails now assert the profile cockpit/workbench contract, semantic run-card buttons, absence of the old hero overlay/card menu, route-preview cache behavior, and normal page-flow month grouping.
+
+### Version: DV-2026-06-11-04
+Date: 2026-06-11
+Surface: Runs separated grid panels on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Removed the route-level Runs canvas background, removed the decorative cockpit grid pseudo-layer, and flattened the cockpit into a plain separate panel while keeping the stats, insight, filter, month, and run-card grids as distinct contained surfaces.
+Why: The follow-up request was to remove the Runs page background and let the grid sections work as separate pieces instead of sitting inside another decorative background field.
+Rollback target: `DV-2026-06-11-03`
+Notes: The Runs cockpit guard now requires a transparent page canvas, a plain `var(--runs-profile-card-strong)` cockpit panel, and no `.runs-profile-cockpit::before` background grid layer.
+
+### Version: DV-2026-06-12-01
+Date: 2026-06-12
+Surface: Real route thumbnails on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `backend/src/main/java/com/hermes/backend/ActivityController.java`, `backend/src/main/java/com/hermes/backend/ActivityPointRepository.java`, `DESIGN_VERSIONS.md`
+What changed: `/runs` thumbnails now draw dense route previews on matching CARTO map tiles, keep the Strava badge above the route line, and preload upcoming preview batches so cards do not visibly upgrade after entering the viewport.
+Why: The route cards were showing oversized or stale simplified paths, and later cards could appear with fallback geometry before the real route preview arrived.
+Rollback target: `DV-2026-05-19-06`
+Notes: The run-detail route source remains authoritative; the list page uses the batched route-preview endpoint only for thumbnail-grade rendering.
+
+### Version: DV-2026-06-12-02
+Date: 2026-06-12
+Surface: Territory enclosed-run land map on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-stale-cache-clear-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Removed normal route-corridor territory persistence and made `/api/territory/polygons` land-only. Territory now comes from meaningful enclosed regions within a single run, with newer overlap still winning. Shared-runner bootstrap routes were reseeded as v3 closed loops around Flushing at 32 samples and now persist land masks during bootstrap so the live page has real territory immediately after restart.
+Why: The territory page needed to stop showing open-route artifacts as land and move to the user-approved single-run enclosed-land model, while still proving the shared local account on localhost with real territory instead of an empty page.
+Rollback target: `DV-2026-06-12-01`
+Notes: Backend tests passed for `LocalSharedRunnerBootstrapServiceTests`, `TerritoryPolygonComputerTests`, and `TerritoryControllerTests`; frontend smoke/build/runtime-sync passed; live `/api/territory/polygons` returned `polygonCount=18` for `Hermes Shared Runner`; escalated live verifier saved `task-images/territory-live-shared-account-proof.jpg` and passed with `activeConcrete=1`, `activeContour=1`, `mapZoom=14`, aligned boxes, no helper/synthetic layers, sharp unfiltered tiles, and zero console errors.
+
+### Version: DV-2026-06-12-03
+Date: 2026-06-12
+Surface: Territory sparse generated-loop rejection on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-live-shared-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-stale-cache-clear-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
+What changed: Bumped territory masks to `mask:v30`, API ETag to `land-mask-union-v54-mask-v30-concrete-boundary-sampling`, and browser cache to `global-owner-territory-cache-v97-concrete-boundary-sampling`. A closed outline must now have at least `48` points and no segment longer than `70m` before it can become land. No-territory activities now persist an empty processed land-mask marker so rejected runs do not remain pending.
+Why: The visible shared-runner "territory" was not real land. It came from 32-point generated local seed loops that were closed but too sparse to prove a concrete covered boundary. The page must show no active territory for those runs instead of drawing false land.
+Rollback target: `DV-2026-06-12-02`
+Notes: Backend tests passed for `TerritoryPolygonComputerTests`, `TerritoryControllerTests`, and `LocalSharedRunnerBootstrapServiceTests`; frontend territory smoke/build/runtime-sync passed; live `/api/territory/polygons` for `Hermes Shared Runner` returned `polygonCount=0`, `activeCount=0`, `pending=0`, and `backfill=false`; in-app Browser on `/territory` rendered map tiles and both scope buttons with `activeConcrete=0` and `activeContour=0` before and after wheel zoom in/out; escalated live verifier passed with `activeBackendCells=0`, no synthetic/helper layers, unfiltered tiles, and zero console errors.

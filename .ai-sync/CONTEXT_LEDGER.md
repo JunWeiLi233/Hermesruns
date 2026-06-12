@@ -16,6 +16,360 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - After a meaningful verified round, refresh the matching capsule.
 
 ## Surface Capsules
+### runner shell sidebar
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### Territory /territory (Leaflet CARTO base map + polygon tooltips)
+- Goal: Make claimed land read as layered territory on the same dark CARTO-style map: every owner keeps ownership, overlaps are covered visually by newer claims.
+- Changed: `/api/territory/polygons` now preserves overlapping cells per owner instead of globally consuming them; the Leaflet renderer paints older masks first and newest masks as the top layer.
+- Preserve: Keep backend masks as concrete land cells, exact underlay + smoothed fill + single neon contour, nonzero SVG fill rules, heatmap base map styling, auth/routing, and the separate `/api/territory` score-board behavior.
+- Next Risk: Future ownership fixes could reintroduce `claimedCells`/`claimedTiles` pruning or active-owner sorting, which would delete covered-down ownership instead of only changing visual layer order.
+- Rollback Target: working tree before this round
+
+### Auto-Hermes control plane
+- Goal: Future browser-visible rounds should keep proof gates active even when browser-harness.exe is blocked by local policy.
+- Changed: Replaced the stale browser-harness hard-block fallback with the repo Playwright wrapper and fixed the wrapper to restore last URL across commands.
+- Preserve: Browser proof still requires real route URL, console summary, screenshot/DOM evidence, runtime-sync gates, and web-quality audit when in scope.
+- Next Risk: Raw browser-harness.exe is still blocked by OS policy; this fix routes Auto-Hermes to the verified Playwright wrapper before declaring browser proof blocked.
+- Rollback Target: working tree before this round
+
+### Weekly Digest /profile
+- Goal:
+- Changed: Weekly digest implementation verified; reviewer gate blocked
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### /settings + readiness
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### Wellness /settings /api/wellness/source-preferences
+- Goal: Support runners who combine wellness devices by letting each readiness metric choose the best configured source instead of one global provider.
+- Changed: `/api/wellness/source-preferences` now persists per-metric sources across auto, Garmin, Oura, Apple Health, Google Health, and manual; `/settings` renders editable selectors; Readiness and automated coach gates use the same multi-source resolver.
+- Preserve: Keep Settings selector values, Runner source fields, `ReadinessService.resolveReadinessSnapshot`, and `AutomatedCoachService.resolveReadiness` aligned.
+- Next Risk: Returning coach gates to `readinessService.compute(state)` or treating manual as auto will bypass user-selected sources.
+- Rollback Target: working tree before this round
+
+### /login
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### /settings
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### /races/details/:raceId
+- Goal: Keep Race Detail course maps grounded in the current official event route instead of stale admin-upload geometry or under-detailed fallback paths.
+- Changed: Added a dedicated `WuxiMarathonOfficialCourse` startup seed, wired Wuxi into the official-course source/trust path, and verified the live `/races/details/wuxi-marathon` page now serves `wuxi-official-course` with a 600-point official route and updated elevation profile after backend restart/reseed.
+- Preserve: Keep the existing Race Detail dossier layout, countdown/prediction behavior, official-route trust messaging, Leaflet route stage, and the startup seeding safeguards already used for Boston/Tokyo/Chicago/NYC/Osaka/Athens.
+- Next Risk: Future Wuxi or race-detail course-map work could leave a stale `admin-*`/city-level asset in the DB, skip the startup official-source promotion list, or forget to add new official-course source ids to the frontend trust set, which would regress the page back to non-authoritative geometry.
+- Rollback Target: working tree before this round
+
+### /today-run
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### /prediction/marathon
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### /schedule + /today-run
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### /analysis
+- Goal: Interactive Injury Prevention Dashboard combining objective ACWR with daily subjective soreness feedback to give runners a clear "should I run today and how hard" signal.
+- Changed: Added Injury Prevention card section in Analysis.jsx (SVG risk ring, ACWR gauge with zone coloring, Low/Medium/High soreness logger, coach-voice advice). New backend: InjuryRiskService (EWMA ACWR + combined risk scoring), InjuryRiskController (POST /api/injury-risk/log, GET /api/injury-risk/status), SorenessLog entity + repository, 7 controller tests. 26 i18n keys added (en + zh-CN).
+- Preserve: All existing Analysis sections (VO2max trend, load balance, coach insight, intensity split, training zones table, prediction table). Existing injury risk card in bento grid. ACWR computation thresholds: > 1.2 (+30), > 1.3 (+20), > 1.5 (+15, capped 70). Soreness "high" (+25), "medium" (+10). Combined 0-100: > 85 = rest, > 70 = caution, else ready.
+- Next Risk: ACWR uses distance-based load (km) rather than pace-weighted load from MuscleTrainingMetricsService — frontend may need reconciliation if both ACWR displays appear.
+- Rollback Target: ee6113b6^ (before injury prevention commit)
+
+### /territory
+- Goal: Preserve layered concrete land ownership where overlap stacks rather than deletes older claims.
+- Changed: Backend polygon masks and frontend render guards now keep older and newer overlapping territory layers.
+- Preserve: Newest claim paints on top, older covered-down territory remains owned underneath.
+- Next Risk: Cache or visual fallback changes could accidentally restore latest-wins cell removal.
+- Rollback Target: working tree before this round
+
+### /runs
+- Goal: Keep `/runs` focused on trusted recent activity history: every visible control should either open a run, filter history, import/sync data, or reveal more runs.
+- Changed: Removed the inert three-dot button from run cards and added a smoke guard so future cards cannot show a menu affordance unless a real menu implementation exists.
+- Preserve: Keep card click-through to `/run/:id`, route-preview thumbnails, search/filter/sort controls, Strava sync, import modal, one-run collapsed default, and bounded load-more batches.
+- Next Risk: Future card-action work could reintroduce a stop-propagation-only button or duplicate run-detail actions without focus/menu semantics.
+- Rollback Target: `DV-2026-05-11-07`
+
+### /
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### /signup
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### runner-bootstrap
+- Goal: Let documented Windows shell-set APP_LOCAL_SHARED_RUNNER_* values reach the backend launched by start_hermes.bat.
+- Changed: Forwarded all six shared-runner env vars through the local-env allowlist and generated backend boot script; updated Windows docs and added a batch handoff smoke guard.
+- Preserve: Preserve the existing start_hermes.bat launcher flow, curated env forwarding pattern, Hermes.local.env.ps1 support, and shared runner local-only production skip semantics.
+- Next Risk: Launcher env forwarding still follows the existing echo-based batch pattern, so unusual batch metacharacters in values remain fragile outside the documented simple values.
+- Rollback Target: revert runner-bootstrap round 2026-05-08
+
+### /muscle-training
+- Goal: 
+- Changed: 
+- Preserve: 
+- Next Risk: 
+- Rollback Target: working tree before this round
+
+### frontend /races/details/:raceId
+- Goal: Keep Race Detail as a Profile-aligned race dossier: runner sees the event identity, countdown, distance/prediction, coach interpretation, course elevation, and real map proof without the page feeling like a detached dark marketing poster.
+- Latest Layout: `/races/details/:raceId` now uses a route-scoped Profile dossier layer with the visibility repair applied. The first fold is a warm paper card with a clipped editorial race photo on the right, oversized city/race typography on the left, a compact dark countdown rail, and a dedicated readable hero-copy board so text is not floating over the image wash. The command strip below is asymmetric and now wrapped in a visible board: distance/prediction metrics get accent spines and stronger card borders, the coach interpretation remains a dark decision card, the elevation decision card uses a clearer grid/chart background, and the real Leaflet map stays large with a stronger frame. If the runner-facing course-map endpoint fails, the map stage now overlays a localized course-map unavailable notice with retry and an admin-only upload CTA instead of reading as a blank grey box.
+- Preserve: Keep auth redirect, race catalog lookup, hero image fallback/cache invalidation, projected race date/countdown, profile and run analysis loading, VDOT prediction, coach identity, course-map trust gate, transparent overlay route rendering, Leaflet pan/zoom, tile fallback, elevation hover tooltip, official-site accessibility copy, the course-map failure overlay/retry/admin upload path, and the map stage without the older floating HUD/copy/action overlays.
+- Next Risk: Future race-detail restyles could bypass the route-scoped Profile selector, restore the full dark image wash, remove the readable hero-copy board, fade card borders back into paper-on-paper surfaces, overlap the countdown with the race title on laptop widths, shrink the real map below a proof-level stage, reintroduce the old floating map HUD, replace real course/elevation/map data with decorative race-card content, or collapse failed course-map requests back into a silent grey Leaflet stage without retry copy.
+- Rollback Target: `DV-2026-05-11-08`
+
+### frontend /shoes/add
+- Goal: Keep Add Shoes as a guided intake workflow that helps the runner pick brand, model, and setup values quickly while visually matching the current warm Profile/Shoes system.
+- Latest Layout: `/shoes/add` now uses a Profile-aligned route layer over the existing AddShoes workflow. The page has a warm paper background, large intake dossier hero, warm stat rail, full-width setup board, dark featured-brand decision tile, four-column desktop model board, warm form fields, black primary submit action, and a dark selected-shoe summary tile.
+- Preserve: Keep auth shell, sidebar/topbar navigation, brand selection, expandable extra brands, model category/type filters, model search, selected model syncing, nickname/max-distance/primary form fields, submit/cancel navigation, shoe catalog data, and bilingual copy wiring.
+- Next Risk: Future AddShoes restyles could revive the dark standalone editorial island, shrink the model board back to three columns despite the wider route canvas, detach the final form from the selected-shoe summary, or bypass the Profile-aligned route scope with later unscoped AddShoes selectors.
+- Rollback Target: `DV-2026-05-07-45`
+
+### frontend /shoes
+- Goal: Keep Shoes as a Profile-aligned rotation locker: the runner should see rotation health, recent shoe performance signal, inventory state, and shoe actions without large dead areas or detached utility slabs.
+- Latest Layout: `/shoes` keeps the warm Profile card system. The `.shoe-rotation-signal` card is now a full-width stacked surface where the header spans the card and `.shoe-rotation-signal-body` spans the entire signal width below it. The body uses a wider highlight/sidecar grid and the three signal metric chips spread across the sidecar so the previous blank right-side space is consumed by useful signal content.
+- Preserve: Keep Shoes data loading, rotation signal collapse/expand, recent tagged run calculations, performance fallback copy, inventory filters/sorting, image scan entry, shoe add/edit flows, shoe cards, auth redirect, and bilingual copy wiring.
+- Next Risk: Future CSS passes could restore the old two-column parent grid where the signal body is trapped in the right column, collapse the sidecar metrics back to two columns on desktop, or reintroduce empty visual space inside the signal card.
+- Rollback Target: `DV-2026-05-06-44`
+
+### frontend /run/:id
+- Goal: Keep Run Detail as a single-activity decision cockpit: route proof first, key run outcomes immediately visible, coach interpretation clear, and splits/physiology/gear/route data available without feeling like an unrelated analytics report.
+- Latest Layout: `/run/:id` now follows the Profile cockpit system. The topbar is a wide warm activity dossier with an oversized run title and compact actions, the real Leaflet route map remains the first-fold hero, the distance/pace/time rail uses bento stat tiles with the primary distance tile dark, the coach debrief is a dark Profile-native decision panel, and the heart-rate, split, gear, route, performance, and elevation panels share the warm Profile card/hairline rhythm.
+- Preserve: Keep real run loading, selected-run session bootstrap, `/api/runs/:id`, route point loading, Leaflet rendering, Strava resync, share feedback, shoe assignment/unlinking, analytics debrief, HR chart, splits table, route intelligence, elevation recalibration, auth redirect, and bilingual copy wiring.
+- Next Risk: Future Run Detail restyles could shrink the route map, turn the topbar back into a small utility strip, lose the Profile warm card tokens, bury the coach debrief below generic tables, or break the real route/Strava/shoe interactions while changing visual hierarchy.
+- Rollback Target: `DV-2026-05-06-43`
+
+### frontend /territory
+- Goal: Keep Territory as a map-first conquest surface: the runner should understand current held space, next defend/steal route, and active sectors without losing trust in the real Leaflet map.
+- Latest Layout: `/territory` now follows the Heatmap page outline. The real Leaflet map owns the first viewport as a full-bleed layer with no runner-shell side gutters, a dark overlay topbar carries brand/current sector/actions, a compact vertical utility rail replaces the visible sidebar, stats/filter/legend overlays stay on the canvas, and leaderboard/zones/target/recent/contest/cities remain as lower support cards after the map. The concrete GPS land-mask endpoint is response-cached per runner with an activity-set signature, now includes ordered GPS `routeTraces`, and the Leaflet `GridLayer` prefers smooth round-joined route coverage from those traces so conquered space follows the exact GPS runs instead of rectangular cells or layered radius circles. Demo state now renders a wide localized map banner and zh-CN display-only names for seeded demo runners.
+- Preserve: Keep `/api/territory`, `/api/territory/polygons`, bundled Leaflet, polygon/zone toggle, filters, floating map stats, selected-sector command overlay, clickable sector selection, leaderboard, cities, contest bars from backend control fields, auth shell, bilingual copy wiring, the display-only demo runner localization helper, the real GPS-only land-mask contract, ordered `routeTraces` for exact rendering, and the per-runner territory cache invalidation on newly computed runs.
+- Next Risk: Future Territory restyles could reintroduce a separate hero above the map, restore the removed brief/command overlay grids, shrink the full-viewport map shell, let shared runner-shell/GPT Taste canvas rules add side gutters back, hide the utility rail controls, replace real territory/polygon data with decorative conquest percentages, expose backend land-mask cells as rectangles or circular blobs again, drop `routeTraces` and fall back to pixelized borders, remove the cache guards and make `/api/territory/polygons` backfill every run on each page load again, render seeded demo names directly in zh-CN, or demote the demo disclosure back to a small badge.
+- Rollback Target: `DV-2026-05-11-09`
+
+### frontend /analysis
+- Goal: Keep Analysis as the runner's physiology decision cockpit: VO2 trend first, load/risk/forecast actions clearly secondary, and pace tables available without making the page feel like an unrelated analytics report.
+- Latest Layout: `/analysis` now follows the warm Profile GPT Taste system without the extra top decision grid. The page starts directly with an existing-hero Profile cockpit: VO2 trend is the primary physiology dossier with a three-signal decision spine for current raw VO2, weather-adjusted VO2, and marathon forecast; load is a full-width compact dark reference strip; coach/VDOT trend form the secondary reference cards; intensity/risk/forecast keep the asymmetric 12-column Profile bento rhythm; the intensity distribution pill is color-filled edge-to-edge without the old padded rim; and the training-zone/prediction tables share one responsive lower grid. Each training-zone row now includes a subdued basis line naming the current representative VDOT, qualifying run sample count, and update recency.
+- Preserve: Keep the real run-derived Analysis snapshot, VO2 hover/touch tooltip behavior, weather-adjusted VO2 legend, ACWR gauge, coach insight navigation, intensity/risk/forecast navigation, prediction row navigation, training-zone table, per-zone VDOT basis line, import action, runs action, auth redirect, and bilingual copy wiring.
+- Next Risk: Future broad Analysis restyles could reintroduce a redundant top decision grid, split the cockpit back into a loose card wall, remove the first-fold decision spine, flatten load back into an equal side card, drop the Profile reference/bento/table hooks, revive cold glass surfaces, neon/glow bar treatment, black table headers, clickable affordances on static training-zone rows, remove the VDOT/sample basis line from training zones, or drift away from the Profile card tokens.
+- Rollback Target: `DV-2026-05-11-03`
+
+### frontend /profile
+- Goal: Keep Profile as a clear runner decision surface: readiness, today's prescription, recent progress, race context, and physiology without promo clutter or repeated card grids.
+- Latest VO2 Graph: The top reference rail VO2 card uses a real rolling representative VDOT graph from run-derived VO2 estimates instead of the old static decorative sparkline; its plotted points are small CSS circles so the stretched SVG line cannot turn them into ovals.
+- Latest Layout: The Profile support band uses the restored previous layout: `runner-dashboard-profile-support-grid` owns separate `streak`, `weekly`, and `sessions` named areas, so Training Load and Recent Training are no longer nested in a paired column. The top `runner-dashboard-coach-primary` now reads as a warm Profile-native coach decision card with shared hairline/card/ink tokens, a distinct active-window overline, tighter dossier title hierarchy, and a contained readiness strip. The physiology signal ledger uses a warm Profile-native GPT Taste rail: `runner-dashboard-profile-signal-grid` and its four metric cards share the same card, hairline, ink, and subtle diffusion-shadow tokens as the surrounding bento cards. Compact signal cards explicitly override the stale minimalist non-first metric text colors so their labels and values stay visible on the unified Profile surface. The lower bento grid now includes a Profile-native Weekly Digest card backed by authenticated `GET /api/weekly-digest`, showing previous ISO-week distance/sessions, VDOT delta, wellness trend, and one backend coach-focus message when available.
+- Latest Bento: The lower Profile bento grid is restored to the pre-experiment design: Recent Sessions is full-width again, and the Muscle card only renders when real muscle-plan data exists.
+- Changed: Removed the remaining PRO/quota promo grid and quota fetch from `/profile`, then moved the lower-page repair into actual Profile markup. The support band now owns `runner-dashboard-profile-support-grid` with explicit `streak`, `weekly`, and `sessions` named areas so the weekly chart and recent sessions do not conflict at full screen. The streak card now receives real run history, reuses `/rewards` `buildRewardShowcase`, and places earned reward chips inside the Current Streak and All-time Best stat cards instead of showing generic decorative medals. Those two stat cards are top-aligned and stacked full-width inside the running-streak card, no longer hard-cap real earned awards at 4/6 items, expose a `data-award-count` hook so sparse award states become large adaptive tiles, and remove the desktop max-height cap so all gained awards can display when `跑步连击` has enough space. The top reference rail now contains the weekly card as a grid so weekly text and bars do not overflow each other. The lower page owns `runner-dashboard-profile-bento-grid`/card classes for race, predictions, stamina, load, muscle, and sessions, plus `runner-dashboard-profile-signal-grid` cards for physiology metrics instead of relying on the generic metric strip or a CSS hide fallback.
+- Preserve: Auth redirect, checkout banner handling, batch-first profile dashboard loading, `/api/weekly-digest` fallback enrichment, fallback endpoints, Strava data, progression atlas, calibrated race predictions, recent sessions, muscle plan link, Today Run/Analysis/Runs/Races actions, and the clear-purpose first fold.
+- Next Risk: Future broad Profile restyles could reintroduce quota/pro upgrade cards on this page, revive inherited dashboard grid areas on the support band, replace real Rewards-page award chips with fake local medals, restore a low hard cap or desktop clipping max-height on streak awards, remove the narrow-screen containment guard, make the weekly reference graph absolute again, swap the VO2 graph back to a static decorative arc, put VO2 points back inside a non-uniformly scaled SVG where they become ovals, move Profile back onto generic feature/metric-strip classes, repeat the same overline/H1 copy in `runner-dashboard-coach-primary`, or mix dark/inverted metric cards back into the physiology ledger instead of keeping it visually unified with the Profile bento system.
+- Rollback Target: `DV-2026-05-06-22`
+
+### frontend route surfaces
+- Goal: Keep runner-facing Hermes pages visually aligned to Profile's warm decision-cockpit language while preserving admin as its own operator Command Lane system.
+- Changed: `App.jsx` now exposes `data-runner-design` with `source-profile` for `/profile`, `profile-cockpit` for `/analysis`, and `profile-aligned` for the rest of runner pages. The late CSS pass applies Profile-style paper/card/ink tokens, a Profile-width left rail, a wide filled runner canvas, warm hairline cards, pill CTAs, map/table panels, hover lift, and a unified `runnerTopbarUnified.css` layer for every `runner-shell-topbar runner-dashboard-shell-topbar` surface.
+- Preserve: Keep admin/dashboard routes excluded, keep `/profile` as the source surface, keep `/analysis` on its existing Profile cockpit, preserve all runner page data loading, navigation, maps, forms, OAuth/import actions, and keep Territory's map-first exception where the shell topbar is hidden and the live map overlay owns the viewport.
+- Next Risk: Future broad restyles could apply Profile runner tokens to admin/operator pages, remove the `data-runner-design` distinction, reintroduce route-local topbar/card surfaces that fight the shared Profile alignment layer, or accidentally override Territory's hidden shell topbar with a global display rule.
+- Rollback Target: `DV-2026-05-10-02`
+
+### /login + /signup
+- Goal: Keep auth entry pages image-led and functional: warm generated-runner visual language, fast credential entry, and no backend-invisible signup fields.
+- Changed: `/login` and `/signup` now share one image-to-code auth system from the latest generated references: login uses a 58/42 editorial-left/form-right board with the generated `landing-runner-hero` photo as a full-height poster, signup mirrors it as form-left/editorial-right and uses a generated-photo board via `profile-runner-reference`. Both pages keep warm paper panels, black primary CTAs, neutral secondary provider buttons, Google-before-Strava provider order, consistent input/provider geometry, no repetitive page grid overlay, a login readiness/next-run/route-trust proof row, and signup proof points for privacy, coach decisions, and provider readiness. The active 2026-05-05 18:45/18:46 generated reference set is login `ig_0349cba8ae703bc50169fa72e5a44881998df875293b69baf6.png` and signup `ig_0349cba8ae703bc50169fa731c323881998962aa643dd1ba4a.png` under `C:\Users\Junwei\.codex\generated_images\019dfa0c-a3d4-7750-bda6-936271d4e3b6`. The auth base CSS has also been consolidated so the old repetitive texture and old non-mirrored signup split are not left behind as shadow rules under later overrides. Auth pages opt out of the global route fade so visible-state browser fidelity captures cannot freeze at opacity 0. Signup is translation-backed, keeps only the real email/password backend fields, hides the password-strength checklist until the user types, and relies on the i18n runtime preserving intentional empty strings so optional generated-reference copy does not render humanized placeholder keys.
+- Preserve: Keep existing email/password submit handlers, Google/Strava OAuth entry points, redirect behavior, verification/resend banners, password rules, footer/legal links, login brand-carousel source hooks, and bilingual locale parity.
+- Next Risk: Future auth visual passes could add generated-reference-only form fields, place providers above the primary credential flow, remove verification or footer links, reintroduce the old coral gradient through theme-specific selectors, swap the signup photo board back to a vector-only panel, bring back repetitive global grid texture, re-enable route-transition opacity on auth screenshots, restore truthy i18n fallback behavior that turns empty optional copy into placeholders, or leave contradictory auth CSS that only works because of late overrides.
+- Rollback Target: `DV-2026-05-05-13`
+
+### Whole Site Taste Frame
+- Goal: Keep every Hermes route under one restrained editorial visual frame while preserving each page's existing product contract.
+- Changed: `App.jsx` classifies public/auth/runner/admin route surfaces and wraps all routes in `hermes-site-frame`; `style.css` keeps the prior Taste frame, the image-to-code picture treatment, and now adds the `DV-2026-05-04-10` minimalist retry enforcement. The current frame exposes `data-taste-system="design-taste-frontend"`, `data-minimalist-system="minimalist-ui"`, `data-image-code-system="image-to-code"`, plus visible `is-minimalist` / `is-image-code` mode classes. The retry layer force-flattens page-local hero/cockpit/shoe/muscle panels into warm bone/white surfaces, 1px borders, 12px max radii, no gradients, no glass blur, no heavy shadows, and strict black primary CTAs; the Muscle Training `.mt-*` cockpit is additionally normalized back to horizontal auto-height panels so its top fold remains readable.
+- Preserve: Keep all current routes, data fetches, auth/admin guards, localized copy, public Landing isolation, Admin Command Lane, shared runner-shell navigation, map surfaces, page-specific smoke contracts, branded route-loading hooks, existing image assets, image-to-code plate treatment, and the visible runner left rail marker/opaque light-mode rail intact.
+- Next Risk: Future page-local CSS could bypass or fight the shared frame by adding even more specific gradient/glass selectors after the retry layer, causing one route family to drift back into cinematic styling, making the Muscle Training cockpit collapse into narrow vertical rails again, or making anatomy/shoe images look like unrelated raw pictures instead of contained code-native plates.
+- Rollback Target: `DV-2026-05-04-10`
+
+### muscle-training
+- Goal: 
+- Changed: 
+- Preserve: 
+- Next Risk: 
+- Rollback Target: working tree before this round
+
+### Auth image-code entry
+- Goal: Keep `/login` and `/signup` aligned to the generated image-to-code references: restrained warm paper, split editorial/auth panels, condensed performance typography, route-map image language, and flat functional forms.
+- Changed: Login and signup now use `auth-page--lab auth-page--image-code` mirrored split boards with code-native route SVGs, runner/figure plates, Manrope editorial headlines, flat form surfaces, theme-proof black primary CTAs, provider buttons after the primary action, compact signup password/verification blocks, and bilingual `auth_lab_*` copy parity.
+- Preserve: Keep existing email/password auth behavior, OAuth start handlers, verification/resend banners, redirect logic, footer/legal links, login brand carousel source hooks for regression tests, and the active whole-site minimalist/image-code frame.
+- Next Risk: Future auth restyles could reintroduce glass cards, put providers above the primary form flow, break first-view fit, remove generated-reference route/runner motifs, restore the gradient CTA through `body.theme-light` specificity, or add signup fields that the backend does not persist.
+- Rollback Target: `DV-2026-05-05-09`
+
+### Recent Runs
+- Goal: Keep `/runs` focused on the latest useful run first, with deeper history available only when the runner asks for it.
+- Latest Hero Asset: `recent-runs-hero-overlay` now embeds the generated project asset `frontend/src/assets/generated/recent-runs-hero-overlay.png` as a real decorative `<img>` inside the overlay, with the dark left/bottom gradients moved to the overlay pseudo-layer and a route-scoped cream text override so the "最近训练" hero copy remains readable over the artwork.
+- Changed: The recent-runs history no longer uses `recent-runs-virtual-list` or react-window on this surface. It renders normal run cards, shows one filtered run by default, and the load-more control reveals bounded 12-run batches. Run cards no longer show the dead three-dot action button; a source smoke guard requires either no card menu button or a real menu implementation.
+- Preserve: Keep search, filters, sorting, route-preview thumbnails, run-detail navigation, file import, Strava sync, the single-run collapsed default, the bounded batch behavior for deeper history, and no inert card action controls.
+- Next Risk: Future performance cleanup could reintroduce virtualization, render the full history immediately, turn load more back into an all-at-once expansion, or re-add a stop-propagation-only card menu button that feels broken on tap.
+- Rollback Target: `DV-2026-05-11-07`
+
+### Admin Portal
+- Goal: Keep `/dashboard` and all admin child routes optimized for fast operator queue triage and route-to-decision flow.
+- Changed: The admin portal now follows the selected Command Lane direction: persistent left route rail, compact sticky topbar, sticky route command strip with the first metric promoted, and more consistent queue-side vs decision-stage panel treatment across users, course maps, shoes, jobs, audit, and settings. Dark mode carries the command-center mood while light mode has explicit parity styling.
+- Preserve: Keep the route-driven admin shell, existing `/dashboard/*` URLs, auth/admin workflows, course-map compare/publish flows, shoe review queue, jobs inspector, audit terminal, and dual-mode treatment. Preserve `admin-command-lane` and the primary summary-card signal as the shared shell contract.
+- Next Risk: Broad admin restyles could remove the command strip, make route pages custom in incompatible ways, or let light mode fall behind the dark command-center treatment.
+- Rollback Target: `DV-2026-05-01-01`
+
+### Territory
+- Goal: Make `/territory` feel like a competitive conquest board, not only a territory report, while keeping route-footprint claiming for ordinary GPS runs.
+- Changed: Territory still opens map-first with the full-bleed Leaflet board and route-footprint polygon logic, but the top brief now states the INTVL-style game loop directly: `Run. Capture. Conquer.`, every GPS run paints land, and each daily run can steal rival sectors or defend held ground. The brief adds Run/Capture/Conquer step cards, a local lobby strip, and a route-to-steal/route-to-defend preview tied to the selected sector while the land-control model continues to use GPS sample density, distinct route passes, and recency. `/api/territory` exposes owner/challenger/active score, `controlPct`, and `samplesToContest`; the map renders the sector-command overlay and contest bars from those real control fields instead of fake share percentages.
+- Preserve: Keep the Hermes `runner-shell-sidebar` and `runner-shell-topbar`, `/api/territory` and `/api/territory/polygons` fetches, dynamic bundled Leaflet import, `terr-*` prototype layout hooks, `terr-intvl-*`/`terr-game-*` game-loop hooks, clickable zone-selection behavior, sector-command/watchlist overlay, rivalry grid visibility, and the route-footprint/backfill behavior guarded by `TerritoryPolygonComputerTests`, `TerritoryControllerTests`, `territoryIntvlGameLoop.smoke.test.js`, `territoryPrototypeLayout.smoke.test.js`, and `territoryIntegration.smoke.test.js`.
+- Next Risk: Future cleanup could hide the rivalry grid behind the old disclosure gate again, remove the game-loop brief/route preview, remove the sector-command overlay/watchlist, blur live vs demo territory states, flatten the score model back to raw sample count, or render contest bars from frontend-only fake percentages.
+- Rollback Target: `DV-2026-05-04-14`
+
+### Race Course Map
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### Analysis + Profile Quick Preview
+- Goal: Keep Analysis focused on readable trend data without dead drill-down affordances, and make the Profile opening carousel useful as immediate runner data.
+- Changed: The Analysis VO2/VDOT overview card is now a static chart article rather than a button to `/analysis/vo2max`, and the ACWR status pill normalizes the low-load tone to `is-muted` instead of emitting `is-cool`. The Profile `runner-dashboard-brand-carousel` now renders readiness, weekly distance, cumulative distance/sessions, and VO2 trend as quick-preview data cards.
+- Preserve: Do not reintroduce the `/analysis/vo2max` overview click target, the `analysis-overview-status-pill is-cool` selector, the rotating `brandMsgIndex` marketing carousel, or brand-dot pagination on the Profile dashboard.
+- Next Risk: Broad Profile dashboard restyles could bring back the old brand-copy carousel or remove the quick data cards; broad Analysis restyles could make the VO2 chart look clickable again even without a route.
+- Rollback Target: working tree before 2026-04-29 Analysis/Profile quick-preview round
+
+### Profile Coach Cockpit
+- Goal: Make `/profile` open like a signed-in runner command surface that answers readiness, today's prescription, and recent progress before the lower dashboard modules.
+- Changed: The Profile `runner-dashboard-brand-carousel` now also carries `runner-dashboard-coach-cockpit`, `runner-dashboard-profile-dossier`, and `runner-dashboard-profile-image-code`. The exact generated-reference screenshot lock remains removed, and the live image-to-code runner dossier grid now opens with a title row, left runner figure/readiness overlay, center next-session prescription, right stacked quick metrics, and lower reference cards. Below that, `runner-dashboard-profile-dossier-band`, `runner-dashboard-profile-atlas`, `runner-dashboard-profile-continuation`, and `runner-dashboard-profile-signal-ledger` carry the full-page continuation. Latest repair keeps the widened uncollapsed desktop rail/canvas, removes the repetitive lower same-card grid rhythm, styles the streak card through a Profile semantic hook, turns race/predictions into a dark command board, sessions into a wider log board, and metrics into an asymmetric signal ledger.
+- Preserve: Keep the original quick-preview data cards and selector hooks, batch-first `/api/profile/dashboard` loading with fallback endpoints, calibrated race predictions, recent-session lower grid, Today Run / Analysis actions, minimalist route-frame compatibility, widened uncollapsed desktop rail, filled profile canvas, collapsed-sidebar behavior, distinct lower section hierarchy, and the previous quick-preview treatment as the recoverable baseline.
+- Next Risk: Future Profile restyles could delete the compatibility `runner-dashboard-brand-carousel`/`runner-dashboard-brand-preview-grid` hooks, duplicate the old rotating brand carousel, reintroduce the static exact screenshot lock and break live profile behavior, restore the 100px rail or 1390px content cap, or flatten the dossier/atlas/command/log/ledger sections back into a repetitive generic card grid. Keep Coach Cockpit recoverable as a top-fold wrapper, not a replacement for the lower analytics modules.
+- Rollback Target: `DV-2026-05-05-08`
+
+### Profile/Admin Browser Harness Refresh
+- Goal: Keep `/profile` and `/dashboard` visually intentional after browser-harness inspection while preserving live runner/admin behavior.
+- Changed: Profile now keeps the Coach Cockpit contract but reads more like a training-passport cockpit: stronger card layers, orbit/track texture, denser quick metric cards, and cleaner light-mode contrast. Admin Portal keeps the Command Lane shell but gains a warmer mission-control rail, glass sticky topbar, stronger sticky route command strip, and larger summary cards with explicit light-mode parity.
+- Preserve: Keep Profile data fetches, quick-preview hooks, readiness/workout actions, lower dashboard modules, admin route URLs, route-driven admin shell, sticky `admin-command-lane`, and all child-route actions/data wiring intact.
+- Next Risk: Future CSS-only admin/profile passes could overfit one theme and let light mode regress, or remove the sticky command strip while preserving only the page-specific child route styles.
+- Rollback Target: `DV-2026-05-03-03`
+
+### Environment configuration
+- Goal:
+- Changed: Created placeholder-only env documentation and hardened ignore rules, but paused because tracked local auth/config files require human credential rotation/history cleanup.
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### Profile and Today dashboards
+- Goal: Keep Profile and Today focused on immediate runner decisions, with Today Run answering what to do today and why before deeper workout detail.
+- Changed: Added authenticated profile/today batch dashboard endpoints and switched ProfileDashboard/TodayRun to batch-first loading with individual endpoint fallback. Today Run now has `DV-2026-05-04-11`: a `today-run-decision-suite` that groups coaching intelligence, workout focus, readiness panel, briefing, rationale, and metrics into one flat minimalist decision board while preserving the shared runner shell.
+- Preserve: Keep `/api/today/dashboard` batch-first loading, individual endpoint fallback, shared runner-shell navigation, existing localized copy, shoe recommendation logic, weather/downshift behavior, workout blueprint, coach reasoning, and the whole-site `is-minimalist` / `is-image-code` frame.
+- Next Risk: Future Today Run restyles could split the top fold back into separate metric strip plus old cinematic hero, reintroduce gradients/glass that fight the whole-site minimalist retry, or break the batch-first dashboard fetch.
+- Rollback Target: `DV-2026-05-04-11`
+
+### Workflow Builder
+- Goal: Make Workflow Builder usable and understandable for empty/error/loading states and accessible to keyboard and screen-reader users while preserving existing workflow wiring.
+- Changed: Workflow Builder now has localized loading, error retry, and empty canvas states; React Flow canvas/palette/nodes expose translated accessible labels; palette keyboard activation adds nodes with Enter or Space. The self-loop controller no longer treats drag-and-drop accessibility text as destructive.
+- Preserve: Existing workflow store behavior, React Flow routing, runner shell navigation, shoe/route/course-map changes, and unrelated dirty worktree changes preserved.
+- Next Risk: React Flow default control accessible names depend on upstream rendering, but localized ariaLabelConfig and explicit wrapper labels are now covered by source guard and build proof.
+- Rollback Target: working tree before this round
+
+### Schedule route planner
+- Goal: The "计划路线" card on /schedule must answer "where should I run today?" with a real, accessible route on a Leaflet/OSM map — not a static SVG sketch. Recommendation should land instantly even when backend planner is slow.
+- Changed: 3-wave round (commits `19020771` + `11141441` + `41ad08d5`). (1) Replaced the normalized-SVG sketch with a real Leaflet map (raw `import('leaflet')`, OSM tiles, polyline + start/finish markers, fitBounds). (2) Auto-plan effect now derives start coords from the most recent run's `/api/activities/{id}/points` (because `/api/activities` doesn't expose top-level `startLat/startLng`). (3) **Recent-run fallback**: when no saved plannedRoutes exist, immediately decimate the most recent run's GPS points (~100 waypoints) and render them on Leaflet as the "based on your last run" recommendation. The async `/api/route/plan` POST still runs and supersedes the fallback when it lands. Single points fetch shared between start-coord derivation and recent-run fallback. New copy `route_planner_source_recent_run` (en + zh).
+- Preserve: `/api/route/plan` POST and `/api/route/plan/recent` GET contracts; existing planner-source recommendation precedence (saved planner > recent-run > coach history); Schedule hero, week grid, readiness, next-up, coach card layout; smoke test contract (now asserts Leaflet path).
+- Next Risk: `/api/coach/today` `routeRecommendation` still returns SVG-only `preview` with no waypoints — won't render on Leaflet. Backend `/api/route/plan` depends on rate-limited Overpass; expect 10–30s latency or fallback retention. Recent-run decimation strips elevation detail from the rendered polyline.
+- Rollback Target: `66b480e9` (pre-wave-1 commit)
+
+### Qwen Course Map Alignment Client
+- Goal: Let admins publish real uploaded marathon course-map images even when Qwen cannot extract trustworthy route geometry, while keeping runner-facing maps honest.
+- Changed: The pending publish gate can now promote a failed admin-upload scan into a city-level course-map reference for standard city road marathons with known coordinates, but only when the scan did not produce implausible route geometry or an operational Qwen failure. London, Paris, Chicago, and Berlin pending uploads were published as city-level references with confidence 58 and empty route geometry.
+- Preserve: Never fabricate route points from a failed map scan. Keep implausible detected routes, timeout/operational Qwen failures, trail/non-standard races, and missing-coordinate uploads blocked from this fallback.
+- Next Risk: Future fallback broadening could accidentally turn bad route geometry or non-map uploads into accepted live maps; keep the publish-gate regression tests around the positive city-reference case and the implausible-route rejection case.
+- Rollback Target: working tree before this round
+
+### Shoe
+- Goal: Let runners bring retired shoes back without losing history.
+- Changed: Retired shoes now have one-click reactivation in the Shoes UI, and backend retirement state consistently stamps or clears retiredDate.
+- Preserve: Retired shoes stay soft-retired in the database; active endpoints and rotation logic continue excluding retired shoes unless explicitly included.
+- Next Risk: Static frontend assets were regenerated by the Vite sync build; unrelated pre-existing translations.js course-map diffs were preserved.
+- Rollback Target: working tree before this round
+
+### i18n System
+- Goal: All user-visible copy centralized in translations.js with zh-CN/en parity; inline lang ternaries eliminated; translations.js split to per-locale files.
+- Changed: 12 files cleaned of inline `lang === 'zh-CN'` ternaries (~397 keys moved to translations.js). Missing keys backfilled (600+ added). translations.js (6,500+ lines) split to locales/zh-CN.js and locales/en.js (3,754 keys each), with translations.js as a 7-line re-export shim. I18nContext imports from per-locale files directly.
+- Preserve: All 3,754 translation keys, zh-CN/en parity (0 gap, 0 undefined). Backward compatibility via shim for direct imports from translations.js.
+- Next Risk: Future agents adding keys should add to the per-locale files (zh-CN.js / en.js), not the shim. The shim auto-merges both locale files.
+- Rollback Target: Wave 1 commit 9371d2c9 (pre-split)
+
+### Course Map Recognition
+- Goal: Fix marathon course map recognition — Qwen could not accurately recognize maps or extract routes.
+- Changed: RaceCourseMapPromptBuilder completely overhauled with 3-stage prompt (CLASSIFY→GEOREFERENCE→TRACE), Boston Marathon few-shot example, coordinate extraction priority tiers, self-verification checklist. QwenImagePreprocessor added with CLAHE contrast stretch + mild sharpening + PNG output. JPEG quality raised to 0.92. extract_route_path.py added spur removal, 4-directional morphological bridging, multi-color mask combination, auto color detection. AffineTransformEstimator added triangular endpoint weighting + quadratic fallback. Osaka deterministic plan fixed (INTEX Osaka→Nakanoshima Park).
+- Preserve: All existing API contracts, CourseMapScanWatcher observability, geometry validation, DB schema. buildPlausibilityRescuePrompt() and knownCourseGuidance() unchanged.
+- Next Risk: QwenImagePreprocessor pipeline is NOT yet wired into QwenCourseMapAlignmentClient.analyzeCandidate() — images still flow raw to Qwen. Integration call site documented in Lane 2 mergeNotes. Must wire preprocessImageBytesForQwen() call before image bytes are sent to the Python worker.
+- Rollback Target: Commit ceb4f7f5
+
+### Frontend Performance
+- Goal: React.memo + lazy loading + list virtualization on top-5 pages.
+- Changed: Dashboard.jsx, Shoes.jsx, Races.jsx, Runs.jsx, ShoeBrandLogo.jsx — all wrapped with React.memo. img tags have loading=lazy decoding=async. Shoes grid virtualized with react-window when >20 items. Runs list virtualized with react-window.
+- Preserve: All existing behavior, routing, data wiring. CSS grid layout preserved for normal shoe counts.
+- Next Risk: react-window v2.2.7 uses rowComponent prop; upgrading may require API migration.
+- Rollback Target: Wave 2 commit 77797150
+
+### Performance
+- Goal: Preserve existing performance patterns; avoid premature optimization without measurement.
+- Changed: React.memo, lazy loading, and react-window virtualization added.
+- Preserve: Existing rendering behavior for normal data sizes.
+- Next Risk: Virtualization may need tuning for edge cases (empty lists, single items).
+- Rollback Target: working tree before wave 2
+
+### Configuration
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
+### OAuth
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
+- Rollback Target: working tree before this round
+
 ### RacesDetail Real-World Leaflet Basemap
 - Goal: Keep `/races/details/:raceId` anchored to a real OpenStreetMap street basemap at useful city-street scale, with the extracted route overlaid above it.
 - Changed: The race-detail map now depends on a same-origin OSM tile proxy as the primary basemap, attaches tiles only after Leaflet knows the real stage size and race viewport, and fits to the actual route bounds with a tight pad so the page reads as a real street map instead of a flat color stage. Auto-Hermes tech-debt generation now explicitly skips the generic oversized-file refactor task for `frontend/src/pages/RacesDetail.jsx` because repeated structural rewrites were destabilizing the map path.
@@ -25,9 +379,9 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 
 ### Weather Editorial Surface
 - Goal: Make `/weather` feel like a premium environmental decision board that answers the runner's first question before a session: is today a green-light weather day, a caution day, or a timing day?
-- Changed: Renamed the runner weather route from `/weather-engine` to `/weather` and rebuilt `WeatherEngine.jsx` into a Hermes-native editorial surface. The page now uses a dominant temperature hero, live status kicker, compact humidity/wind HUD cards, a horizontal 12-hour forecast pipeline, a larger `Heat Adaptation Engine` analysis card, and a dedicated `Coach Judgment` companion rail. The redesign preserves the existing `/api/v1/weather/context` acclimatization payload and the Open-Meteo current/hourly fetch instead of introducing new backend behavior. Shared runner-shell navigation now points to `/weather`, and a focused `weatherEditorialRedesign.smoke.test.js` guards the route rename plus the new hero/pipeline/judgment structure.
-- Preserve: Keep the route at `/weather` with `/weather-engine` only as a compatibility redirect. Keep the page inside the shared runner shell, keep the forecast + heat-engine data wiring exactly tied to the current APIs, and preserve the hero -> forecast pipeline -> engine/judgment hierarchy rather than flattening the page back into equal-weight cards.
-- Next Risk: Future nav edits could update the shared `runnerShellNav` helper but miss the remaining hard-coded weather nav entries on a few runner pages. Light-mode refinements also need to preserve the same editorial hierarchy rather than falling back to white-card utility styling.
+- Changed: Renamed the runner weather route from `/weather-engine` to `/weather` and rebuilt `WeatherEngine.jsx` into a Hermes-native editorial surface. The page now uses a dominant temperature hero, live status kicker, compact humidity/wind HUD cards, a horizontal 12-hour forecast pipeline, a larger `Heat Adaptation Engine` analysis card, and a dedicated `Coach Judgment` companion rail. The redesign preserves the existing `/api/v1/weather/context` acclimatization payload and the Open-Meteo current/hourly fetch instead of introducing new backend behavior. Latest loading fix: page hydration and the Open-Meteo forecast request now have bounded abort timers so backend/API stalls fall back into the visible Weather page instead of leaving loading copy forever.
+- Preserve: Keep the route at `/weather` with `/weather-engine` only as a compatibility redirect. Keep the page inside the shared runner shell, keep the forecast + heat-engine data wiring exactly tied to the current APIs, preserve the hero -> forecast pipeline -> engine/judgment hierarchy rather than flattening the page back into equal-weight cards, and keep timeout fallback behavior around both initial Weather hydration and the external forecast fetch.
+- Next Risk: Future nav edits could update the shared `runnerShellNav` helper but miss the remaining hard-coded weather nav entries on a few runner pages. Light-mode refinements also need to preserve the same editorial hierarchy rather than falling back to white-card utility styling. Removing the forecast timeout can make the page appear stuck if Open-Meteo stalls or the browser blocks the external request.
 - Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-16-39`
 
 ### Schedule Weekly Coach Summary
@@ -53,9 +407,9 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 
 ### Route Extraction Pipeline
 - Goal: Turn static marathon course-map images into trustworthy geospatial breadcrumbs via an automated end-to-end pipeline (Gemini + OSRM) exposed through an admin surface.
-- Changed: Finalized Phase 3/4 by creating `AdminRouteExtractionController` and `MarathonRoutePipelineService`. Added "Run Pipeline" action and status UI to the Admin Dashboard's course-map workspace. Added full i18n support and integration tests for the orchestration flow. Updated `MarathonRouteExtractionService` to handle data URLs (base64) by saving them to temporary files for Python script processing. Fixed unrelated compilation errors in `StravaSyncStateService` and `OAuthControllerTests`.
+- Changed: Finalized Phase 3/4 by creating `AdminRouteExtractionController` and `MarathonRoutePipelineService`. Added "Run Pipeline" action and status UI to the Admin Dashboard's course-map workspace. Added full i18n support and integration tests for the orchestration flow. Updated `MarathonRouteExtractionService` to handle data URLs (base64) by saving them to temporary files for Python script processing. Fixed unrelated compilation errors in `StravaSyncStateService` and `OAuthControllerTests`. Latest fidelity round tightened Qwen/CV route extraction: out-and-back prompts now require full outbound-turnaround-return geometry, route points must be visible-evidence anchored rather than generic race-memory guesses, collapsed out-and-back rescues now require the standard 12-point plausibility floor, `extract_route_path.py` walks all skeleton edges for branched/forward-back routes, scans all precise palette masks before accepting a merely usable first mask, and `extract_route_parameters_qwen.py` now imports `argparse` plus asks for visible anchors spanning separate return lanes.
 - Preserve: Keep the internal multi-service stage separation (Extraction -> Georeferencing -> Matching), preserve the Admin Audit logging for pipeline runs, and maintain the existing "Re-scan" vs "Run Pipeline" distinction in the UI.
-- Next Risk: Large route-extraction jobs could timeout the HTTP request if not made async; future rounds might need to move this to a background task with a status polling mechanism if jobs exceed 30s.
+- Next Risk: Large route-extraction jobs could timeout the HTTP request if not made async; future rounds might need to move this to a background task with a status polling mechanism if jobs exceed 30s. Keep CV branch-preservation and partial-mask fallback tests in place before loosening color thresholds, because saturated/decorative poster strokes can still beat the intended route if fallback scoring becomes too eager.
 - Rollback Target: working tree before 2026-04-18 end-to-end pipeline round
 
 ### Backend Reliability + Test Coverage
@@ -122,16 +476,16 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-20-03`
 
 ### ShoeCatalog
-- Goal: 
-- Changed: 
-- Preserve: 
-- Next Risk: 
-- Rollback Target: working tree before this round
+- Goal: Keep the local Hermes running-shoe model database current and localizable for both zh-CN and en users.
+- Changed: Replaced Chinese model names in global brands (Nike, Saucony, Brooks, Puma) with official English product names (飞马→Pegasus, 菁华→Kinvara, 胜利→Triumph, 啡鹏→Endorphin Pro, etc.), removed 14 duplicate entries where Chinese name was a translation of an already-present English entry, added `ZH_MODEL_REVERSE_MAP` in shoeNames.js so `localizeShoeModel()` resolves Chinese→English before falling back to pinyin. Some uncertain mappings (Hurricane, Axon, Sinister, Cohesion, Phoenix, Endorphin Racer, Levitate, Catamount) based on Chinese running community knowledge; 彪电 kept as Chinese.
+- Preserve: Only add confirmed running shoes, write series-level entries unless the user explicitly asks for exact versions, prefer an existing family when present, keep Chinese category labels short, keep all Chinese-brand models (李宁, 安踏, etc.) as-is, and do not refactor the `brand()` / `model()` data shape during catalog maintenance rounds.
+- Next Risk: Uncertain Saucony/Brooks/Puma mappings may need correction if community sources differ. 啡速/Endorphin Speed and Endorphin Speed 5 coexist — may be redundant.
+- Rollback Target: working tree before 2026-05-12 Chinese-to-English shoe name round
 
 ### Shoes + AddShoes Brand Logos
 - Goal: Make the Shoes ecosystem use real runner-brand marks for the core branded surfaces instead of synthetic text badges for the supported top brands.
-- Changed: Added repo-local logo assets for ASICS, Nike, Adidas, New Balance, and Saucony under `frontend/src/assets/brand-logos/`, then introduced shared `frontend/src/components/ShoeBrandLogo.jsx` so AddShoes uses the real assets for the featured brand background, secondary brand cards, and model cards. The live Shoes inventory cards now also show the shared logo next to the brand label in the side metadata. Unsupported brands still fall back to the existing synthetic mark/text path.
-- Preserve: Keep the five provided image assets as the source of truth for those brands, keep AddShoes background art driven through `--add-shoes-brand-bg-image`, and keep unsupported brands on the fallback renderer instead of showing broken image placeholders.
+- Changed: Added repo-local logo assets for ASICS, Nike, Adidas, New Balance, Saucony, Li-Ning, ANTA, Peak, Bmai, and Do-win under `frontend/src/assets/brand-logos/`, then introduced shared `frontend/src/components/ShoeBrandLogo.jsx` so AddShoes uses the real assets for featured/secondary brand cards and model cards. The live Shoes inventory cards also show the shared logo next to the brand label in the side metadata. The Add Shoes series catalog now stores parent brand identity on each series model and caches the filtered series catalog in localStorage after successful catalog loads so series browsing can recover locally. Unsupported brands still fall back to the existing synthetic mark/text path.
+- Preserve: Keep the provided image/logo references as the source of truth for supported brands, keep AddShoes logo rendering routed through `ShoeBrandLogo`, keep Vite `assetsInlineLimit: 0` so small SVG logos are emitted as local static files instead of JS data URLs, keep shoe series filtered through `buildSeriesCatalog` with parent brand metadata, and keep unsupported brands on the fallback renderer instead of showing broken image placeholders.
 - Next Risk: The real logos have wider aspect ratios than the old synthetic tiles, so future CSS edits on AddShoes background sizing/positioning or `.shoe-brand-logo-svg` dimensions could make marks look too small, crowded, or low-contrast.
 - Rollback Target: working tree before 2026-04-20 real brand logo round
 
@@ -164,11 +518,11 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Rollback Target: working tree before 2026-04-18 performance fix round
 
 ### MuscleTraining
-- Goal: Verify mobile breakpoint coverage for responsive design.
-- Changed: Confirmed mobile breakpoints already exist in style.css (lines 6945-6985) with @media rules for max-width 860px and 520px. No code changes required — auto-suggestion was false positive.
-- Preserve: Keep existing @media (max-width: 860px) for hero grid stacking and @media (max-width: 520px) for compact mobile layout.
-- Next Risk: Future auto-suggestion tools may flag this again if they don't detect the existing media queries.
-- Rollback Target: working tree before this round
+- Goal: Make `/muscle-training` answer today's strength decision first while helping runners see which body regions the plan is protecting or loading.
+- Changed: The cockpit still opens with the readiness deck, week-dose strip, recovery rail, and week runway. The body atlas now renders each side as ONE coherent muscular silhouette with 34 pixel-traced muscle mask clipPaths (from `muscleMasks.data.json`) overlaid as `.mt-muscle-pixel-fill` rects that highlight active/plan/focused regions. Two anatomy PNG reference images (anterior + posterior) sit behind the masks, clipped to their respective rounded panels. The 18-region label set with leader lines drives plan and clicked-region highlighting. Old per-muscle blob paths and dead display:none layers are deleted. Console-clean verified 2026-05-12 (Playwright, zero errors).
+- Preserve: Keep shared runner-shell nav, `/api/muscle-training` plan/check-in/profile wiring, 34 mask clipPaths from `muscleMasks.data.json`, 18-region `REFERENCE_BODY_MEASURE_REGIONS` array, `MASK_KEY_TO_REGION_KEY` mapping, SVG anatomy reference images, and the readiness-deck first fold. Do NOT reintroduce per-muscle blob paths or face-detail layers. Keep the bbox and console-clean invariants verified in this round.
+- Next Risk: Mask regeneration could shift pixel-traced paths; run `extract-muscle-masks.py` to regenerate and verify bbox bounds. Console regressions from new frontend deps on the muscle-training route may break the console-clean pass.
+- Rollback Target: `68d9e80e` (pixel-traced muscle highlights baseline)
 
 ### Dashboard
 - Goal: Keep the admin portal as a route-driven operator shell while making each section feel like a first-class operator workspace, with `/dashboard/audit` now reading as a true event terminal rather than a generic data table.
@@ -177,12 +531,26 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Next Risk: Future audit cleanup could collapse the page back into the generic `DataTable` treatment, remove the status inference mapping and leave the terminal badges empty, or replace the dedicated audit terminal classes with shared table styles that lose the reference-driven hierarchy. If audit payload fields change, the trace/summary row formatting should be checked before assuming the terminal layout still reads clearly.
 - Rollback Target: `DV-2026-04-19-12`
 
-### AdminLogin
-- Goal: 
-- Changed: 
-- Preserve: 
-- Next Risk: 
-- Rollback Target: working tree before this round
+### StravaWebhookSecurity
+- Goal: Reject unauthenticated forged Strava webhook events by verifying owner_id maps to a known registered runner before processing.
+- Changed: Added synchronous `runnerRepository.findByStravaAthleteId(ownerId)` check in `StravaWebhookController.handleEvent()` that returns 403 UNKNOWN_OWNER for forged owner_ids before any async processing or resource consumption. The WebhookRateLimitFilter and async runner lookup remain as secondary boundaries.
+- Preserve: Keep the synchronous owner_id check as the primary auth gate. Keep WebhookRateLimitFilter as secondary. Keep identical response body for all password-reset paths.
+- Next Risk: If the webhook endpoint is refactored to add different auth mechanisms, ensure at least one gate remains. The 150ms timing delay in password reset may need adjustment if sendResetLink latency changes significantly.
+- Rollback Target: working tree before 2026-04-24 auto-hermes-max security round
+
+### PasswordResetEnumeration
+- Goal: Prevent user enumeration via timing differential in password reset endpoint.
+- Changed: Added 150ms Thread.sleep to the not-found path in `LoginController.requestPasswordReset()` to mask the observable latency from `sendResetLink()` on the found path. The response body was already identical for all paths.
+- Preserve: Keep the same generic response body for all paths. Keep the timing normalization delay active.
+- Next Risk: If email send latency changes significantly (e.g., switching providers), the fixed 150ms delay may not mask it. Consider making it configurable or adaptive.
+- Rollback Target: working tree before 2026-04-24 auto-hermes-max security round
+
+### AiShoeScanService
+- Goal: Reduce ShoeImageController size by extracting AI provider communication into a focused service.
+- Changed: Created `AiShoeScanService` with `callGemini` and `callClaude` methods + `SHOE_PROMPT` constant. Updated `ShoeImageController` to inject and delegate. Controller reduced from 652 to ~555 lines.
+- Preserve: Keep `AiShoeScanService.callAi(base64, mediaType)` as the single entry point. Keep `shoeprovider` routing inside the service, not the controller.
+- Next Risk: If new AI providers are added, they should go into `AiShoeScanService`, not back into the controller.
+- Rollback Target: working tree before 2026-04-24 auto-hermes-max tech-debt round
 
 ### dashboard
 - Goal: Keep `/dashboard/jobs` as a route-driven operator page while making it read like a true jobs command deck instead of a generic filter row plus table.
@@ -192,10 +560,10 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Rollback Target: `DV-2026-04-19-12`
 
 ### telemetry-surface
-- Goal: 
-- Changed: 
-- Preserve: 
-- Next Risk: 
+- Goal:
+- Changed:
+- Preserve:
+- Next Risk:
 - Rollback Target: working tree before this round
 
 ### I18N Trust (Runs / Rewards / Races)
@@ -257,8 +625,18 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 ### Admin Portal
 - Goal: Keep `/dashboard` as a trustworthy operator command center where admins can review globally impactful asset changes before they reach every runner, and make course-map uploads fast enough that admins actually re-run the AI pass when the first scan underperforms.
 - Changed: The admin portal `Race Course Maps` tab still uses the `pending preview -> live` review model with aligned-map previews, and the workspace still supports drag-and-drop, image/PDF upload, paste-from-clipboard images, and `Re-analyze this upload`, but the dashboard copy path is now localized more completely for Chinese operators. The top brand mark, role labels, subscription tier labels, course-map workspace title, AI-scan guidance, and catalog bilingual chips now resolve through dashboard i18n keys instead of mixing Chinese with leftover English labels like `Race Course Maps`, `ADMIN`, `USER`, `FREE`, `PRO`, `ZH`, and `EN`. Job rows now also map known type/status enums through localized dashboard labels instead of showing raw enum values for the common states. A follow-up repair also restored the dashboard page after the translation round briefly broke the bundle path: the actual failure was the dashboard i18n source file becoming invalid for the frontend build, not a backend `/dashboard` route failure. The newest regression turned a narrow set of zh-CN dashboard keys into literal `????` placeholders even though the rest of the file stayed valid JS, so the fix restored those 17 operator-facing strings and added `dashboardTranslations.smoke.test.js` plus a frontend `npm test` hook entry to catch future question-mark rewrites before they ship. Another follow-up repair hardened `AdminCourseMapPreview` so aligned-map mode no longer fails closed into a permanent blank gray box: if Leaflet setup fails or the map is still not ready, the panel now falls back to the source image instead of hiding all visual content behind the wash layer, and `dashboardCourseMapPreview.smoke.test.js` now guards that fallback path. The next fix closed the deeper runtime gap for admin detail: `RaceCourseMapService.getAdminDetail(...)` now materializes external course-map URLs into a displayable `previewImageUrl` data image for `pendingPreview`, stored `live`, and `currentLivePreview`, while the dashboard preview component now prefers `previewImageUrl` over raw `imageUrl`. That means the review panes no longer depend on direct browser access to brittle third-party course-map hosts like `legacyhalf.tokyo`. The next root-cause fix for the still-blank panel was frontend layout: in map mode the fallback `<img>` and the Leaflet host were being rendered as normal flex children inside `.admin-review-preview`, so the image could collapse/clip instead of occupying the same stage. `AdminCourseMapPreview` now renders explicit image/map overlay layers, and the matching CSS makes them share one positioned preview stage. The latest regression turned out not to be backend alignment data at all: Leaflet was fitting preview bounds before the admin panel had its real size, then only invalidating size later, so the route rendered on a stale blank viewport. `AdminCourseMapPreview` now reapplies `fitBounds(...)` and redraws tiles after `invalidateSize()` once layout settles, and the smoke test now guards that resize/refit path. The final root-cause issue was basemap delivery itself: the preview still depended on direct browser requests to `tile.openstreetmap.org`, so the background could stay blank even while the route line rendered. Hermes now serves admin preview basemap tiles through a same-origin `GET /api/maps/tiles/{z}/{x}/{y}.png` proxy in `MapTileController`, and `AdminCourseMapPreview` now uses that Hermes tile URL instead of the third-party host directly. The new `MapTileControllerTests` and updated dashboard smoke test lock in the proxy path.
+- Changed: Latest course-map upload flow now stores each uploaded pending map first, then automatically runs the Qwen reanalysis job through a dedicated single-thread FIFO course-map executor. Upload and manual reanalysis jobs share that serial lane so admins can add maps one by one without parallel scans colliding, and the dashboard now shows a queued status while the scan waits its turn.
+- Changed: Dashboard course-map progress now tracks active upload/reanalysis/pipeline actions per race instead of one global action. A queued `PENDING` reanalysis renders as a stable waiting bar for that race, and repeated identical job polls no-op so the progress bar does not blink or restart while another course-map scan owns the FIFO lane.
+- Changed: Follow-up scan failure repair prevents stale staged upload summaries from surviving failed analysis jobs. Upload/reanalysis catch paths now persist a pending-preview failure summary when Qwen or image resolution fails before a replacement result is saved, and stored legacy `Click Re-analyze` placeholders are sanitized to the automatic scan wording on read.
+- Changed: Admin course-map `已上线` / live status is now reserved for snapshots that can render an actual route layer on OpenStreetMap. Raw stored live images without route geometry remain usable as pipeline source material, but they no longer count as live in the course-map queue, filter, or comparison panel.
 - Preserve: Keep the admin shell inside the existing dashboard route, keep the `pending preview -> live` review model intact for both race-course and shoe assets, keep `/pending/scan` as the web-search path and `/pending/upload` as the new-upload path (do not fold them together), keep `/pending/reanalyze` strictly reusing the stored pending image, keep paste image-only unless a dedicated PDF paste path is intentionally designed later, keep the workspace preview driven from the same stored alignment contract the public race-detail route publishes, and keep dashboard-visible operator copy routed through `translations.js` rather than reintroducing raw English labels in `Dashboard.jsx` or corrupting the locale file through unsafe rewrite paths.
+- Preserve: Keep course-map upload scanning FIFO and non-parallel by routing upload-triggered scans and manual reanalysis through `runCourseMapScanAsync(...)`; that lane now requires a database-backed FIFO claim before entering the scan body, so queued maps stay `PENDING` while another course-map scan is `RUNNING` and only the oldest pending scan can transition to `RUNNING`. Keep the JVM lock as a local optimization only, and keep generic background jobs on the existing pool.
+- Preserve: Keep the course-map live label stricter than the stored `live` payload: a race is `live` only when the selected current/stored live preview has route points that draw on OSM, not when Hermes only has an image, city marker, or empty fallback map.
 - Next Risk: Future admin changes could reintroduce direct-to-live image writes, collapse the three distinct admin actions (scan / upload / reanalyze) back into one ambiguous button, drop local PDF data-url support at validation time, weaken the upload guidance so operators feed poster-style assets that look fine visually but scan poorly for AI alignment, add new dashboard labels as raw English strings instead of extending the dashboard i18n block in both locales, rewrite `translations.js` through the wrong encoding path and break the dashboard bundle again, partially overwrite the zh-CN dashboard block with ASCII `?` placeholders while leaving the file syntactically valid, remove the preview fallback path and let Leaflet import/init failures regress back into blank review grids, stop refitting bounds after the preview host resizes and bring back the blank stale Leaflet viewport, switch the preview back to direct third-party OSM tile URLs and reintroduce blank backgrounds in blocked environments, or stop materializing `previewImageUrl` in admin detail and push the dashboard back onto fragile third-party image hosts.
+- Next Risk: A future refactor could accidentally move `/pending/upload` or `/pending/reanalyze` back to `runAsync(...)`, remove the database-backed FIFO claim, or rely only on the JVM lock again, which would restart parallel Qwen scans and make `CourseMapScanWatcher` evidence unreliable again.
+- Next Risk: Future dashboard state cleanup could collapse `courseMapActions` back into a single selected-row action, which would make two reanalysis jobs fight over one progress bar and bring back the 8% queued blink.
+- Next Risk: If scan failures are only written to the background job and not the pending course-map asset, admins will again see a stale staged-upload preview and think the analyzer never ran.
+- Next Risk: Future dashboard status cleanup could accidentally switch `getCourseMapStatus(...)` back to `getCourseMapLive(...)` and mark blank live-image records as `已上线` even though no OSM route layer exists.
 - Rollback Target: working tree before 2026-04-17 admin course-map upload-UX round
 
 ### Shoe Catalog API
@@ -305,9 +683,12 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 
 ### Settings
 - Goal: Keep `/settings` as a premium runner-control surface where account identity, preferences, integrations, and digest controls feel like one editorial command center inside the shared signed-in shell instead of a stack of disconnected utility cards.
+- Latest: The 2026-05-03 quick-controls pass renders Settings shortcuts as full-width command rows with icon, text, and a trailing arrow affordance instead of cramped two-column tiles; keep this one-column command-row contract so Chinese labels do not fragment into one-character wraps.
+- Latest Wellness: The wellness hub is now an editable per-metric source matrix. Sleep, HRV, stress, and body can each persist auto, Garmin, Oura, Apple Health, Google Health, or manual through `/api/wellness/source-preferences`; Readiness and automated coach gates use those choices, including manual coach-state fallback, instead of collapsing to one provider.
 - Changed: The live settings route still uses one dedicated `SettingsAtlasLayout`, and the body keeps the command-center hierarchy with a restrained title band, a denser profile-led hero with three stat cards, and the lower three-column structure for `Preferences`, `Connectivity`, and `Account Actions`. That lower grid still exposes the quick-controls, sync-health, and readiness-checklist feature layer, and the real display-name save form, local mantra, theme/language/unit controls, Strava link management, Garmin/manual import modal entry points, digest toggle, and logout behavior all remain live. The Garmin area inside `Connectivity` is now a stronger editorial import lane instead of a flat sibling service row: the main Garmin surface carries live state, import scope, and trust framing, manual file import is demoted into a quieter fallback tile, and the Garmin modal now uses a two-part dual-mode composition with tonal layering and clearer active-state emphasis instead of bordered utility-form containment.
 - Preserve: Keep the current command-center layout as the only live settings body, preserve the shared signed-in shell around it, keep the compacted header/hero proportions instead of letting the title and identity card grow oversized again, preserve the quick-controls / sync-health / setup-checklist trio as the current settings feature layer, keep the real handler wiring behind profile save / theme / language / units / Strava / Garmin / manual import / digest / logout, preserve manual import as a visible Garmin fallback path, and do not replace these interactive blocks with static showcase cards while iterating on visuals.
 - Next Risk: Future settings cleanup could accidentally flatten the page back into generic equal cards, restore the oversized title/avatar/stat scale and waste first-screen space again, remove the quick controls and force runners back into scattered toggles, hide the manual-import escape hatch while “simplifying” Garmin, reintroduce bordered utility styling into the Garmin lane or modal, or break the real submit/modal/auth handlers while restyling the connectivity and account-action rails.
+- Wellness Risk: Keep `/api/wellness/source-preferences`, Settings selectors, `ReadinessService.resolveReadinessSnapshot`, and `AutomatedCoachService.resolveReadiness` aligned; routing coach gates back through `readinessService.compute(state)` bypasses the per-metric wearable choices.
 - Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-16-42`
 
 ### Analysis
@@ -354,6 +735,13 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Next Risk: Future prediction cleanup could accidentally restore the default narrower shell width, flatten the hero/chart/coach hierarchy into a standard card stack without preserving the underlying trend and normalized-run evidence, or restyle the evidence cards without updating their internal light-mode text roles and bring back low-contrast labels or table cells.
 - Rollback Target: `DESIGN_VERSIONS.md` prediction-marathon route entries on 2026-04-14
 
+### Prediction Marathon confidence explanation
+- Goal: Keep the `/prediction/marathon` confidence percentage explainable so runners understand what the score measures before trusting a race forecast.
+- Changed: The confidence panel now exposes a native details disclosure plus hover title explaining what the percentage means, with localized factor rows for VDOT signal, 90-day run volume, rolling VDOT stability, and nearest similar-distance evidence. Missing effort-level locale keys were also added so the effort ladder renders runner-facing labels instead of raw dynamic keys, and the shared `runner-dashboard-sidebar-toggle` invariant is restored on this route.
+- Preserve: Keep the existing prediction formula, VDOT/race-time pipeline, chart behavior, runner-shell framing, and evidence tiles intact.
+- Next Risk: If future confidence math changes, update the disclosure factors in the same commit so the explanation stays honest to the actual formula.
+- Rollback Target: `DV-2026-05-11-05`
+
 ### Frontend Runtime Sync
 - Goal: Keep local Hermes pages recoverable during frontend work so one failed Vite build cannot blank every signed-in route by deleting the currently served hashed assets.
 - Changed: `frontend/scripts/run-vite-build.mjs` now backs up `backend/src/main/resources/static/assets` before cleaning and restores that bundle if the Vite build fails, while `I18nContext.jsx` was reset to a minimal parse-safe provider so frontend builds stop failing on corrupted fallback/comment debris.
@@ -391,10 +779,10 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 
 ### Heatmap
 - Goal: Make route heat density a first-class runner page again so athletes can see where they actually train without waiting through avoidable shell or map delays.
-- Changed: The dedicated signed-in /heatmap route still keeps the non-blocking profile-first load model, the floating full-screen cockpit, the restored Hermes brand pill, and the reversible Map focus metric fold. The backend heatmap feed still budgets up to 24000 points and fully protects the newest five run activities before older-run sampling, but older activities are now sampled with a per-activity target plus guaranteed route anchors instead of a blind modulo-only stride, so sparse older runs still keep enough GPS shape to read as full routes on the map. The map now tracks view bounds in the frontend and surfaces a "Recent Sessions in Area" list showing the 10 most recent runs within the current viewport, allowing for direct navigation to session details from favorite corridors. The stats contract still separates uncapped all-run `pointCount` from capped `sampledPointCount` so the heatmap GPS total matches the sum of every run's stored GPS samples instead of the sampled render budget, and the GPS-dot speed palette plus right-hand legend are now bound to one shared four-band speed source so the visible `slow / mid / fast / peak` legend chips match the actual point colors exactly instead of approximating them with blended gradients. The latest pass also routes dot coloring through an explicit shared speed-band resolver, derives each point color from same-run segment speed deltas instead of cumulative run-average pace, maps those segment speeds by percentile rank instead of fragile global min/max so a few outlier spikes cannot collapse the whole map back into one low-speed red band, and now also performs one payload-local percentile normalization in the frontend so the visible GPS dots and heat fog still spread across the legend bands even when the live datasource arrives with compressed low-end ratios.
-- Preserve: Keep /heatmap as its own runner destination, preserve the fast sampled backend payload plus preload/non-blocking frontend load path, preserve the map-first composition with floating overlays instead of returning to a padded dashboard card, keep the restored Hermes brand pill in the top-left cockpit position, preserve the quieter warm heat-fog plus GPS-dot coverage treatment as the primary read instead of reconnecting points into fragile path lines, preserve the reversible Map focus fold state, keep the newest five run activities guaranteed before older-run sampling unless a future measured performance issue forces a different recent-run policy, keep older-run sampling anchor-aware so every activity still retains a visible route skeleton, keep the heatmap stat cards tied to the full run-history GPS total rather than the sampled render budget, and keep the visible speed legend structurally tied to the same thresholds that color the map dots.
-- Next Risk: Future shell cleanup could reintroduce the shared-shell section label and drop the branded pill again, reintroduce heavy dashboard framing around the map, swap the dark basemap back to a brighter utility layer, desync the visible speed legend from the actual dot thresholds, reconnect sparse GPS samples into lines and bring back spaghetti traces, revert older-run sampling back to a blind global modulo query that drops route-defining anchors, lower the backend sampling budget without rechecking that recent activities still survive intact and older routes still keep a readable skeleton, collapse `pointCount` and `sampledPointCount` back into one field and make the heatmap total lie again, regress the speed backend to cumulative average pace, switch back to raw min/max normalization and let a few outlier points wash the whole map into one low-speed color, or remove the frontend payload normalization and expose the same compression bug again when live ratios bunch up near the low end.
-- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-13-92`
+- Changed: The dedicated signed-in /heatmap route still keeps the non-blocking profile-first load model, the floating full-screen cockpit, the restored Hermes brand pill, and the reversible Map focus metric fold. The backend heatmap feed still budgets up to 24000 points and protects the newest five run activities before older-run sampling. The map tracks view bounds and surfaces a "Recent Sessions in Area" list showing the 10 most recent runs within the current viewport. The stats contract still separates uncapped all-run `pointCount` from capped `sampledPointCount`, and the GPS-dot speed palette plus right-hand legend are bound to one shared four-band speed source. Latest overlay-only pass keeps the real-world Leaflet map untouched while refining the nearby grid: Map Focus uses a clearer six-column stat grid, Density spans the row, the speed legend is a compact four-band instrument, the utility rail reads as a contained dock with compact controls plus desktop internal scrolling, and recent-session rows share the warm Profile card language.
+- Preserve: Keep /heatmap as its own runner destination, preserve the fast sampled backend payload plus preload/non-blocking frontend load path, preserve the map-first composition with floating overlays instead of returning to a padded dashboard card, keep the restored Hermes brand pill in the top-left cockpit position, preserve the dark real-world Leaflet basemap, preserve the warm heat-fog plus GPS-dot coverage treatment as the primary read instead of reconnecting points into fragile path lines, preserve the reversible Map focus fold state, keep the contained utility rail from spilling past the viewport, keep the newest five run activities guaranteed before older-run sampling, keep older-run sampling anchor-aware, keep the heatmap stat cards tied to the full run-history GPS total rather than the sampled render budget, and keep the visible speed legend structurally tied to the same thresholds that color the map dots.
+- Next Risk: Future shell cleanup could reintroduce the shared-shell section label and drop the branded pill again, reintroduce heavy dashboard framing around the map, touch the Leaflet basemap/heat layer while only intending to adjust overlays, let the 13-button utility rail grow past the desktop viewport again, swap the dark basemap back to a brighter utility layer, desync the visible speed legend from the actual dot thresholds, reconnect sparse GPS samples into lines and bring back spaghetti traces, revert older-run sampling back to a blind global modulo query, collapse `pointCount` and `sampledPointCount` back into one field, or remove the frontend payload normalization and expose the same compression bug again when live ratios bunch up near the low end.
+- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-05-06-39`
 ### Shared Runner Topbar
 - Goal: Keep the signed-in Hermes runner shell header focused so the right edge surfaces only the essential utility controls without duplicating page actions that already exist in the sidebar or body.
 - Changed: The shared signed-in topbar on `/profile`, `/runs`, `/races`, `/schedule`, `/shoes`, `/today-run`, `/analysis`, `/prediction/:distKey`, `/rewards`, and `/analysis/vo2max` no longer renders the extra top-right pill buttons, the left side now uses a single active red section label instead of multi-button mini-nav strips, and the bell icon now opens a compact glass notification popover with Hermes message cards instead of acting like a silent redirect-only shortcut. The tray now also keeps a stable contained panel treatment when open, highlights the bell as the active utility button, clears the unread dot after the runner opens the notifications once, and has its own Aerodynamic Gallery light-theme contrast layer so both Chinese and English notification copy remain readable instead of inheriting the dark-shell pale text palette on vellum surfaces.
@@ -424,11 +812,11 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-12-07`
 
 ### Schedule
-- Goal: Keep `/schedule` on the shared signed-in runner dashboard shell so weekly planning feels visually continuous with the profile dashboard and activity routes.
-- Changed: The weekly planning surface now shares the same collapsible runner dashboard shell language as `/profile`, with the shared sidebar, topbar, and footer framing preserved around the existing readiness, next-session, route, coach, and gear content. The route also now has fuller `theme-light` plus `theme-high-contrast-light` coverage across the page-local planning widgets, so the weekly strip, readiness ring, next-session card, route card, coach module, gear panel, and planning buttons all follow the selected light theme instead of leaving dark-only pockets behind. The planned-route card is no longer keyed off the active training-block name either: it now reads from `/api/profile/heatmap`, picks the runner's dominant run zone by usage with recent activity as the tie-break, and renders a small real route preview from one representative run instead of a purely decorative placeholder background.
-- Preserve: Keep the shared dashboard shell framing on `/schedule`, preserve the current live planning content instead of drifting back to a slightly different analysis-shell variant, keep the whole planning surface theme-aware across both dark and light modes instead of only skinning the shared shell chrome, and keep the planned-route card tied to actual run geography rather than reverting to a static block-title/fake-map treatment.
-- Next Risk: Future shell cleanup could update `/profile` and `/runs` together but leave `/schedule` on an older topbar/sidebar treatment, reintroduce mixed footer link styles while touching planning-page polish, restyle one planning widget with hard-coded dark values and silently break light mode again, or bypass the shared route-intel helper and quietly restore a placeholder route card disconnected from real heatmap data.
-- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-13-90`
+- Goal: Keep /schedule route guidance runner-facing while ensuring PostgreSQL can create and query planned_route.
+- Changed: Changed PlannedRoute.waypoints from CLOB to TEXT, added a schema smoke guard, hardened Schedule route-card fallback copy against internal route zones/counts/no-recommendation insight chips, added missing bilingual route insight copy, and marked the queue task complete.
+- Preserve: Preserve saved-planner > recent-run > coach-history recommendation precedence, Leaflet/OSM route preview, shared runner shell, auto-plan behavior, /api/route/plan and /api/route/plan/recent contracts, and bilingual schedule copy parity.
+- Next Risk: Future route-card work could bypass the route zone whitelist, reintroduce fallback insight chips without a safe recommendation, or add PostgreSQL-incompatible entity DDL outside the schema smoke guard.
+- Rollback Target: working tree before 2026-05-08 schedule planned-route raw-token/PostgreSQL round
 
 ### Legal Pages
 - Goal: Give Hermes a real legal baseline so public auth flows and signed-in shells can link to actual Terms and Privacy pages instead of dead placeholder anchors.
@@ -450,6 +838,13 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Preserve: Keep the live forecast math, chart behavior, and run drill-downs intact, preserve both the prediction-detail content hierarchy and the shared runner-shell framing instead of reverting to the old route-specific sidebar/footer extras or the older inline-style card layout, keep the explicit no-related-runs message consistent across all prediction distances rather than only marathon, and keep `/prediction/marathon` free of the removed cross-distance tile strip unless the user explicitly asks for it back.
 - Next Risk: Future chart or copy cleanup could accidentally desync the premium hero metrics from the underlying forecast data, reintroduce route-specific shell chrome while touching the forecast panels and shared analysis-shell CSS, let one distance route drift back to the older generic empty-state wording or low-contrast light-mode text while the others stay aligned, or quietly restore the removed marathon cross-distance tiles while reusing old projection helpers.
 - Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-14-14`
+
+### Prediction Detail Weather Correction
+- Goal: Make `/prediction/:distKey` expose weather correction as a first-class readable signal rather than hiding it inside the mixed forecast chart.
+- Changed: The prediction cockpit now includes a dedicated weather-correction impact graph driven by the existing rolling adjusted-VDOT series. The section visualizes time recovered by weather adjustment across corrected windows and surfaces compact average/peak-save pills while preserving the existing prediction-history chart and forecast math.
+- Preserve: Keep the weather-correction graph as its own section, not just a dashed secondary line in the main prediction chart. Keep the current `/prediction/:distKey` route, calibrated prediction model, and runner-shell framing intact.
+- Next Risk: Future chart cleanup could merge this graph back into the main prediction history and make the weather signal unreadable again, or let the summary pills drift away from the rolling-series math.
+- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-05-02-02`
 
 ### Today Run
 - Goal: Make `/today-run` read like a high-confidence daily race-prep command surface so the runner can understand today's workout, readiness, and coaching intent in one fast pass.
@@ -523,10 +918,17 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 
 ### Admin Dashboard Course-Map Publishing Desk
 - Goal: Keep the admin `/dashboard` course-map workspace readable when an operator is iterating on one race, instead of forcing recommendation, evidence, and source-improvement actions into one cramped row.
-- Changed: The course-map workbench now uses a quieter left queue rail, one dominant publish canvas, a stacked evidence column, and a grouped operations band beneath the publish decision. Pending-vs-live comparison panels still exist, but they now sit lower on the page as supporting review tools instead of crowding the main recommendation strip.
-- Preserve: Keep the current queue/search behavior, preview renderer, publish/replace/reanalyze/pipeline actions, and all real backend data wiring intact. Preserve the recommendation-driven operator flow while making the primary publish action visibly dominant.
-- Next Risk: Future dashboard polish could collapse the evidence stack back into horizontal micro-cards, let secondary actions become equal-weight with the primary publish CTA again, or widen the rail cards with too many badges until the workspace feels compressed again.
-- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-18-02`
+- Changed: The course-map workbench now uses a quieter left queue rail, one dominant publish canvas, a stacked evidence column, and a grouped operations band beneath the publish decision. Pending-vs-live comparison panels still exist, but they now sit lower on the page as supporting review tools instead of crowding the main recommendation strip. Latest grid pass promotes the publish canvas to the full top row of the command bridge, moves the recommended next action into that canvas, keeps source/analysis alternatives in the ops lane, and gives `is-improve` a clearer processing-tone treatment.
+- Preserve: Keep the current queue/search behavior, preview renderer, publish/replace/reanalyze/pipeline actions, and all real backend data wiring intact. Preserve the recommendation-driven operator flow while making the primary publish action visibly dominant inside the publish canvas itself.
+- Next Risk: Future dashboard polish could collapse the evidence stack back into horizontal micro-cards, move the recommended action back into the secondary ops lane, let secondary actions become equal-weight with the primary publish CTA again, or widen the rail cards with too many badges until the workspace feels compressed again.
+- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-29-02`
+
+### Admin Dashboard Course-Map Source Scan FIFO
+- Goal: Keep `/pending/scan` as the admin source-discovery scan path, separate from pending-upload reanalysis, while preserving one-by-one course-map processing.
+- Changed: `/api/admin/race-course-maps/{raceId}/pending/scan` now creates a `COURSE_MAP_PREVIEW_SCAN` background job and runs through the course-map FIFO worker. `RaceCourseMapService.scanPendingCourseMap` now stages the best local/remote discovered candidate when no pending upload exists, instead of delegating directly to pending reanalysis and throwing `race_course_map_pending_missing`. The dashboard now exposes this path through a dedicated source-scan button and recommendation action that calls `/pending/scan`; upload stays as a separate fallback action. The same progress card now renders beside the publish-canvas decision dock as well as the stage header, and it includes a live working notice plus dashboard status message so the admin sees both progress and an explicit work notification at the button they clicked.
+- Preserve: Keep upload and manual reanalysis queued one-by-one with scan jobs in the same course-map scan timeline. Do not make source scan synchronous again, do not collapse it back into the pending-upload reanalysis path, and do not let the dashboard regress to a backend-only scan endpoint with no clickable UI path. Keep source-scan progress and working notice visible in the lower decision/ops area instead of only in the top header.
+- Next Risk: Future queue or timeline edits could omit `COURSE_MAP_PREVIEW_SCAN` from the FIFO job-type set, causing scan jobs to run outside the visible one-by-one operator flow. Future dashboard copy/action cleanup could also make the primary button open upload again instead of source scanning when no pending preview exists, or move the progress/working notice back offscreen from the lower button area.
+- Rollback Target: working tree before 2026-04-29 source-scan FIFO repair round
 
 ### Dashboard Course-Map Rail Live Leaflet Cards
 - Goal: Make every small race card in `/dashboard/course-maps` read as a real world-map-backed course thumbnail instead of a static poster preview, while keeping the current status/confidence chrome on top.
@@ -572,17 +974,17 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 
 ### Races
 - Goal: Make Race Center feel like a premium desktop race-planning command surface where the next target, PB evidence, discovery, and calendar management all read clearly in one pass, and where the marathon drill-down feels intentionally designed in both midnight and light themes.
-- Changed: `/races` still follows the strict desktop Stitch shell with a fixed top bar, left nav rail, cinematic next-race countdown hero, personal-bests strip from live activity data, editorial race-discovery cards backed by the real catalog search/country filters, and a selected-calendar section that still opens the real Hermes add/edit race modal. The discovery layer still expands beyond two cards when a runner picks a specific country or searches, and the race image on each discovery card still opens the dedicated `/races/details/:raceId` route. That detail route now matches the newer Tokyo-Marathon-style reference more closely too: the city hero is shorter and more cinematic, the countdown chips sit tighter against the image, the metrics plus coach note live in one floating command strip, the course profile reads as one darker stage, and the lower route-preview plus readiness board now lands as a denser two-panel race cockpit instead of a looser desktop dashboard row. It still carries the Aerodynamic Gallery light/high-contrast-light override layer so the page-local hero and cards no longer stay dark when the shell theme switches to light.
-- Preserve: Keep the desktop hero -> PB strip -> discovery -> selected calendar hierarchy, preserve real catalog filtering plus the expanded country-specific discovery result set, keep the discovery image as the intel entry point, keep `/races/details/:raceId` as the canonical marathon drill-down, preserve the live prediction/course heuristic wiring instead of replacing the detail route with static mock copy, keep the tighter dark editorial command-strip composition on the marathon detail route instead of widening it back into a generic card grid, and keep light-mode support localized to the `race-detail-*` family rather than forking the route into a second layout.
-- Next Risk: Future cleanup could accidentally reintroduce the older generic planner shell, drop the edit/create hooks from the selected-calendar rows, sever the discovery cards from the live catalog filters while chasing visual cleanup, widen the marathon drill-down back into a loose dashboard instead of the newer race-board composition, or update only one theme branch and reintroduce a split-theme mismatch where the shell is light but the marathon drill-down cards stay dark.
+- Changed: `/races` still follows the strict desktop Stitch shell with a fixed top bar, left nav rail, cinematic next-race countdown hero, personal-bests strip from live activity data, editorial race-discovery cards backed by the real catalog search/country filters, and a selected-calendar section that still opens the real Hermes add/edit race modal. The page now uses the lightweight `/api/activities/analysis?limit=500` feed for PB/volume evidence instead of the full route-preview activity payload, renders the discovery catalog progressively in 12-card batches, and resolves official discovery images only for the currently visible eligible cards. Once a race card or race-detail hero image successfully loads in the browser, `raceImage.js` remembers that known-good URL in memory plus session/local storage so reloads and future visits can reuse it before resolving again. The discovery image on each card still opens the dedicated `/races/details/:raceId` route.
+- Preserve: Keep the desktop hero -> PB strip -> discovery -> selected calendar hierarchy, preserve real catalog filtering plus country-specific discovery result sets behind the progressive reveal control, keep official race imagery as a visible-card enhancement rather than a page-blocking requirement, keep loaded-image caching tied to successful `img` load events and error invalidation, keep the discovery image as the intel entry point, keep `/races/details/:raceId` as the canonical marathon drill-down, preserve the live prediction/course heuristic wiring instead of replacing the detail route with static mock copy, and keep light-mode support localized to the `race-detail-*` family rather than forking the route into a second layout.
+- Next Risk: Future cleanup could accidentally reintroduce the full `/api/activities` fetch, resolve official images for the entire catalog at once, render all catalog cards before the runner asks for them, cache unverified image candidates without waiting for browser load success, stop invalidating failed image URLs from both storage layers, drop the edit/create hooks from the selected-calendar rows, sever discovery cards from live filters while chasing visual cleanup, or update only one theme branch and reintroduce a split-theme mismatch where the shell is light but the marathon drill-down cards stay dark.
 - Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-14-21`
 
 ### Muscle Training
-- Goal: Make `/muscle-training` feel like a premium dark workout screen where the runner can read the current strength slot in one glance while Hermes still preserves the deeper coach controls below the fold.
-- Changed: `/muscle-training` again follows the approved Stitch weight-training shell after a safe recovery round, with the fixed top bar, left nav rail, premium hero, protocol strip, focus rail, coaching cues, recovery-impact card, and mobile dock restored around the real Hermes check-in, preferences, rationale, weekly status, and rolling 7-day strength planner.
-- Preserve: Keep the screenshot-led first screen plus the live Hermes strength engine, session prescriptions, coach rationale, and editable planner controls instead of collapsing either into a static design mock or back into the older planner-first layout or the temporary healthy-baseline fallback.
-- Next Risk: Future cleanup could accidentally re-expose the hidden legacy hero inside the preserved page body, drift the shell/nav treatment away from the approved screenshot hierarchy, or break the control-deck wrapping that now lets the premium shell and live planner coexist.
-- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-11-31`
+- Goal: Muscle diagram highlights should follow concrete anatomy paths instead of pixelized rectangular overlay borders.
+- Changed: Replaced rectangular muscle highlight fills with exact traced SVG path highlights and guardrails.
+- Preserve: Existing MuscleTraining API wiring, region hit targets, plan focus derivation, theme behavior, reduced-motion handling, and training-plan UI.
+- Next Risk: Design-token gate still fails on unrelated pre-existing analysis-injury-prevention CSS additions in style.css; reviewer subagent timed out, so approval is from local verified review.
+- Rollback Target: working tree before this round
 
 ### Schedule
 - Goal: Make weekly planning feel like a premium coach surface where runners can scan the whole training week, understand readiness, and see the next key session without leaving the signed-in shell — in both dark and light themes.
@@ -590,6 +992,13 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Preserve: Keep `/schedule` separate from `/today-run`, keep the sidebar/topbar planning shell, preserve the live coach-derived weekly structure, keep light-mode support in the `schedule-plan-*` selector family using `:is(.theme-light, .theme-high-contrast-light)` as the baseline, keep the existing `body.theme-high-contrast-light` override block intact above it, keep the planned-route card tied to coach-owned mileage logic plus real recent run geography instead of drifting back to a frontend-only most-used-zone guess, keep the preview branch visually distinct from the no-route fallback branch, keep marathon-target emphasis conditional on `activeBlock` so the default no-block schedule copy stays calm, and avoid reintroducing remote decorative/supporting images that can trigger blocked-client or remote-400 console noise.
 - Next Risk: Future schedule enhancements could add new `schedule-plan-*` sub-elements without extending the `:is()` baseline, accidentally remove the high-contrast override block and cause the flat high-contrast palette to inherit light-mode gradient values instead, bypass the backend `routeRecommendation` or `activeBlock` contract and quietly restore conflicting frontend-only interpretations, flatten the preview and fallback states back into one shell and reintroduce the blank map slab, let no-block weeks inherit marathon-specific copy and overstate the plan, or reintroduce third-party images and bring the blocked/400 resource noise back.
 - Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-11-20` (structure); light-mode extension: working tree before 2026-04-15 schedule light-mode round
+
+### Schedule adaptive readiness gate
+- Goal: Keep the weekly plan and Today Run decision synchronized when current readiness says a quality workout should be deferred.
+- Changed: `AutomatedCoachService.getSchedule` now applies the same readiness gate to today's scheduled workout before returning the schedule DTO. `/schedule` marks adjusted quality/long-run work as deferred, shows the original workout, and names the easy/recovery replacement in both the day card and Next Up card; `/today-run` continues to show the recovery-day replacement from the same readiness logic.
+- Preserve: Keep schedule generation, route-planner recommendations, runner-shell layout, bilingual Schedule copy, and the existing `/api/coach/today` readiness contract intact.
+- Next Risk: If future schedule work bypasses `applyReadinessGate` or drops the `readinessAdjusted`/`mutatedFrom` fields, the UI can again show a hard workout while Today Run recommends recovery. Keep `scheduleAdaptiveReadiness.smoke.test.js` and the backend low-readiness schedule tests together.
+- Rollback Target: `DV-2026-05-11-04`
 
 ### Auto-Hermes Workflow
 - Goal: Make `/auto-hermes` behave like one realistic bounded execution loop across Codex, Claude, and Gemini-facing prompts instead of drifting into branch-heavy or over-delegated ritual, while making frontend rounds meaningfully better at design quality instead of only runtime correctness.
@@ -620,10 +1029,10 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 
 ### Codex Agent Design Alignment
 - Goal: Make Hermes AI agents share one durable design core instead of drifting between ad hoc visual directions.
-- Changed: The repo `design.md` now mirrors the user-provided external master DESIGN.md and the active Codex-side design rules point back to `design.md` as the Hermes visual core, including Kinetic Editorial, No-Line, Glass & Gradient, Ambient Depth, and The Breath guidance.
-- Preserve: Future frontend/design work should read `design.md` first, then adapt it to the current task/reference rather than ignoring it by default.
-- Next Risk: Older non-Codex helper files or stale installed skills may still contain the earlier fresh-brief-only wording if they are updated separately.
-- Rollback Target: Current `design.md`, `.codex/agents/frontend-agent.md`, `.codex/workflows/hermes-multi-agent.md`, `HERMES_SELF_EVOLVING_ENGINE.md`, and `AGENTS.md` alignment as of 2026-04-11.
+- Changed: The repo `design.md` now defines the landing-driven Hermes Cinematic Editorial language as the durable visual core, with explicit expressions for public landing, signed-in runner Coach Cockpit, and admin Operations Control Room surfaces. It also records the landing exception: `/` can keep its isolated `.landing-page--cinematic` local tokens/glyphs and must not be forced back into shared app-shell chrome by default.
+- Preserve: Future frontend/design work should read `design.md` first, define the target expression and mode before editing, preserve live data/auth/i18n contracts, and adapt user references through Hermes language instead of copying generic SaaS patterns. Keep the public landing page as the bold campaign expression while using the shared app language for signed-in and admin surfaces.
+- Next Risk: Older non-Codex helper files or stale installed skills may still describe the earlier Kinetic Editorial wording and may miss the new landing isolation rule unless they are refreshed separately.
+- Rollback Target: `DESIGN_VERSIONS.md` entry `DV-2026-04-30-02` for the design-authority rewrite.
 
 ### Auto-Hermes Runtime Sync
 - Goal: Make `/auto-hermes` truthful about when source changes are actually live on the local Hermes website.
@@ -747,9 +1156,142 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Next Risk: Complexity in coordinate logic across multiple files if not properly documented.
 - Rollback Target: working tree before 2026-04-20 Muscle Refactor round
 
+### MuscleTraining Runner Shell
+- Goal: Keep `/muscle-training` connected to the same runner-shell left navigation as Profile, Analysis, Runs, Races, Schedule, Shoes, and Weather while preserving the Daily Opening Test strength-planning surface.
+- Changed: MuscleTraining now uses the shared `getRunnerShellNavItems` helper with the muscle item active, legacy one-off sidebars on Profile, Prediction detail, Analysis detail, Races detail, and Schedule include `/muscle-training`, and the coach control deck closes before weekly context/plan sections instead of swallowing the rest of the page.
+- Preserve: Keep the above-fold strength recommendation, week dose strip, protocol rail, check-in/preferences disclosure, and full weekly plan hierarchy. Keep `muscleTrainingShellNav.smoke.test.js` guarding shared nav usage and the control-deck close boundary.
+- Next Risk: Future one-off sidebar edits can omit the strength route again; prefer the shared runner-shell nav helper whenever touching runner pages.
+- Rollback Target: working tree before 2026-04-29 MuscleTraining shell/nav fix
+
 ### Race Course Map Service Refactor
 - Goal: Split oversized `RaceCourseMapService.java` (2395 lines) into smaller, focused units.
 - Changed: Extracted core responsibilities into four new services: `RaceCourseMapGeometryService.java` (coordinate math), `RaceCourseMapSearchService.java` (scraping/bing search), `RaceCourseMapImageService.java` (image/pdf processing), and `RaceCourseMapAiService.java` (Gemini/Claude integration). Moved 6 internal records into standalone files in `com.hermes.backend`. Updated `RaceController` and `AdminPortalController` to use these records.
 - Preserve: Keep the high-level coordination and persistence logic in `RaceCourseMapService.java`.
 - Next Risk: Service dependency depth increased, requiring more constructor injection.
 - Rollback Target: working tree before 2026-04-20 Race Course Map Refactor round
+
+### Auth & Transport Security Hardening
+- Goal: Prevent user enumeration and enforce secure transport (HTTPS) by default.
+- Changed: Prevented timing-based user enumeration in `AuthService.java` by always performing a password hash comparison (using a `DUMMY_HASH`) even when an email is not found. Sanitized login error messages in `LoginController.java` to a generic "Invalid credentials" to avoid triggering security heuristic detectors. Enabled `Strict-Transport-Security` (HSTS) by default in `SecurityHeadersFilter.java` and `application.properties`.
+- Preserve: Keep the `EMAIL_NOT_VERIFIED` logic but ensure it only triggers after a successful password match.
+- Next Risk: HSTS in local development without HTTPS may cause browser warnings if not configured correctly.
+- Rollback Target: working tree before 2026-04-20 Auth Security round
+
+### Generated Asset RLS Hardening
+- Goal: Add ownership metadata to generated assets (GPX and shoe images) to enable Row-Level Security.
+- Changed: Added `Runner` relationship to `GeneratedRaceGpxAsset.java` and `ShoeImageAsset.java`. Updated `ShoeImageAssetService` and `GeneratedRaceGpxPersistenceService` to persist the authenticated `Runner` who triggers asset generation. Updated `AdminRouteExtractionController` to pass the `Runner` context through the marathon pipeline.
+- Preserve: Keep the assets as shared catalog items by default; ownership metadata is for future fine-grained RLS.
+- Next Risk: Orphaned assets if the associated runner is deleted (currently handled by DB cascade or manual cleanup).
+- Rollback Target: working tree before 2026-04-21 Asset RLS round
+
+### Streak Protection & Comeback Messaging
+- Goal: Implement encouraging comeback messages for returning runners and provide clear streak visualization.
+- Changed: Centralized streak calculation logic in `frontend/src/utils/streakUtils.js` (fixing a bug where one-day gaps wiped best streaks). Implemented `StreakProtection.jsx` and `ComebackMessage.jsx` components. Integrated them into `ProfileDashboard.jsx` bento grid. Added comprehensive bilingual (en/zh-CN) translations for all new coaching copy. Updated `rewardBadges.jsx` to use the unified streak logic.
+- Preserve: Keep the "no guilt" coaching voice for comeback messaging.
+- Next Risk: Complexity in streak calculation if multiple runs per day are handled inconsistently (currently deduplicated by date).
+- Rollback Target: working tree before 2026-04-21 Streak Messaging round
+
+### Auto-Commit & Security Gate Advancement
+- Goal: Enable AI workflow sharing and enforce strict PII/secret scanning before commits.
+- Changed: Updated `.tools/auto-commit.ps1` to allow committing shared AI agent files (`.ai-sync`, `.codex`, `.claude`, `.gemini`, `AGENTS.md`, etc.). Integrated a new `runSecretAndPiiHunter` into `.tools/auto-hermes-security.mjs` that scans for API keys, high-entropy strings, and configured PII literals (e.g., "Junwei"). Modified the commit script to automatically block commits if critical security findings are detected. Improved auto-push functionality to GitHub.
+- Preserve: Keep local auth files and session logs strictly ignored.
+- Next Risk: Security tool false positives on high-entropy non-secret strings (hashes, etc.).
+- Rollback Target: working tree before 2026-04-21 Commit Gate round
+
+### Admin Route Security Audit
+- Goal: Verify that all administrative endpoints are properly protected against unauthorized access.
+- Changed: Performed a static analysis of all `Admin*Controller` classes. Confirmed that every public endpoint in `AdminShoePortalController`, `AdminUserPortalController`, `AdminRacePortalController`, `AdminAuditPortalController`, and `AdminPortalController` utilizes `adminService.requireAdmin()`. Verified that `AdminController` and `AdminRouteExtractionController` also enforce strict `ADMIN` role checks.
+- Preserve: Consistently use `AdminPortalService.requireAdmin()` for all new admin surfaces to ensure centralized policy enforcement.
+- Next Risk: Potential for new, un-prefixed admin routes to be added without proper guards.
+- Rollback Target: N/A (Security audit only)
+
+### Daily Coaching Decision Engine
+- Goal: Implement a clear daily recommendation engine based on wearable wellness data (HRV, Sleep, Stress).
+- Changed: Updated `CoachRunnerState.java` and `AutomatedCoachService.java` to persist and serve `lastStressScore` from Garmin wellness sync. Refactored `getTodayRunRecommendation` in `todayRun.js` to incorporate sleep and stress signals into the daily "Should I run?" logic. Enhanced `TodayRun.jsx` with a new "Wellness Signals" card and an updated "Readiness Score" model that weighs recovery metrics. Added `sleep` and `stress` icons to `AppIcon.jsx` and updated bilingual translations.
+- Preserve: Keep the balance between physical load (ACWR) and physiological recovery (Garmin signals).
+- Next Risk: Over-correction if wearable data is noisy or inaccurate (e.g., forgotten watch).
+- Rollback Target: working tree before 2026-04-21 Coaching Engine round
+
+### Garmin Wellness Data Auto-Sync Pipeline
+- Goal: Automate the synchronization of wearable wellness data (HRV, Sleep, Stress) from Garmin Connect.
+- Changed: Finalized `GarminWellnessImportService.java` by fixing field name mismatches between the Python downloader (snake_case) and Java map reading (camelCase). Verified that the 5 wellness entity tables (`DailyWellnessSummary`, `DailySleepData`, `DailyHRVData`, `DailyStressData`, `BodyCompositionData`) and their repositories are fully integrated. Confirmed `GarminWellnessSyncScheduler.java` correctly triggers an automated sync every 30 minutes for eligible runners and updates `CoachRunnerState` with the latest physiological signals.
+- Preserve: Maintain the 14-day and 90-day lookback windows for initial vs. incremental syncs.
+- Next Risk: Garmin SSO session expiration requiring occasional re-authentication (currently handled by login retry logic in the Python script).
+- Rollback Target: working tree before 2026-04-21 Garmin Wellness round
+
+### Garmin Wellness Pipeline & Readiness Score
+- Goal: Fully automate wearable recovery signals and implement a visual coaching readiness gate.
+- Changed: Finalized `GarminWellnessImportService.java` with snake_case mapping for the Python integration. Verified 5 wellness entity tables and automated 30-minute sync scheduler. Implemented a composite 0-100 **Readiness Score** in the backend (weighing sleep, HRV, RHR delta, and stress) and surfaced it via a kinetic "Confidence" battery on Today's Run and Profile. Hardened `AdminSecurityFilter.java` to intercept any path containing "/admin/" or "/api/dev/" for centralized protection.
+- Preserve: Keep the 25% equal weighting for the 4 primary recovery signals in the readiness model.
+- Next Risk: Potential for "red-flag" wellness signals to conflict with high-motivation "green-flag" ACWR data (handled by recovery-priority recommendations).
+- Rollback Target: working tree before 2026-04-21 Wellness & Readiness round
+
+### Unified Search-First Add Shoe UX (REVERTED)
+- Goal: Simplify the "Add Shoe" experience.
+- Result: Design reverted to the previous multi-step wizard per user request. Refactored `AddShoes.jsx` restored from commit `dc41ba5^`. Obsolete search-centric CSS removed from `style.css`.
+- Preserve: New 2026 shoe catalog entries are kept as they are data-level improvements.
+- Next Risk: UX remains slightly more complex but maintains the established brand-browsing mental model.
+- Rollback Target: N/A (Restored to previous stable design)
+
+### Wearable Wellness Interpretation Layer
+- Goal: Turn raw recovery data into human-readable "Coach Voice" insights.
+- Changed: Created `wellnessInterpretation.js` utility to translate raw Garmin signals (Sleep, HRV, Stress, RHR) into semantic coaching sentences. Integrated this layer into `TodayRun.jsx` within a new "Wellness Insights" section in the morning briefing. Added comprehensive bilingual (en/zh-CN) translations for all recovery scenarios. Enhanced `TodayRun.jsx` with a new `chat_bubble_outline` icon path for interpretations.
+- Preserve: Maintain the direct, supportive, and data-backed coaching voice.
+- Next Risk: Insight fatigue if too many sentences are shown at once (currently limited to 1 per signal type).
+- Rollback Target: working tree before 2026-04-21 Wellness Interpretation round
+
+### Analysis (Issue #14-1, #14-2, #14-3, #14-10)
+- Goal: Fix VO2Max tooltip drag-follow, demote explanation text weight, deepen risk signal colors, fix "计算方法" truncation.
+- Changed: Analysis.jsx (tooltip inline left calculation, methodology kicker letter-spacing override for zh-CN), AnalysisInsightDetail.jsx, style.css (risk colors deepened, VDOT copy demoted, tooltip centering, risk meter active glow strengthened).
+- Preserve: Existing VO2Max chart behavior, prediction table layout, risk meter bar structure.
+- Next Risk: VO2Max detail page (Vo2MaxDetail.jsx) also has a tooltip-less scrubber — may need similar fix.
+- Rollback Target: working tree before 2026-04-29 lane-analysis merge.
+
+### RunDetail / Runs (Issue #14-4, #14-5, #14-6, #14-7, #14-8, #14-9)
+- Goal: Full zh-CN coach review translation, draggable HR chart with dense points, rename "生理反应"→"心率", per-lap elevation gain, run-vs-recent comparison section, fix unreadable text colors on Runs page.
+- Changed: RunDetail.jsx (Chart.js line chart replacing SVG HR chart, lap elevation gain from profile data, new "How You Stack Up" comparison section), Runs.jsx (text color fixes), translations.js (new coach debrief + run comparison keys), style.css (insight card text opacity deepened). Latest fix: frontend `apiFetch` now sends `Accept-Language` from `hermes_lang`, and `ActivityController.buildPostRunDebrief` now localizes every readiness/drift coach-review branch with analytics cache keys separated by language.
+- Preserve: Existing run detail layout, coach review data flow, lap table structure, and English debrief output when callers request English.
+- Next Risk: Run comparison fetches all activities — may be slow for 1000+ runs. If new backend-generated run-detail copy is added, keep it language-aware and include language in any response cache key.
+- Rollback Target: working tree before 2026-04-29 lane-rundetail merge.
+
+### Prediction (Issue #14-11)
+- Goal: Redesign sparse prediction/:distance page with real predicted times, training recommendations, and confidence basis.
+- Changed: PredictionDetail.jsx (4 effort-level prediction cards with VDOT-based pace→time calculation, confidence basis showing calibration run, distance-specific coach-voice training recommendation), style.css (new .prediction-hero, .prediction-effort-grid, .prediction-recommendation, .prediction-chart-section classes).
+- Preserve: Existing VDOT calculation logic, chart card section.
+- Next Risk: Inline lang-conditional strings should be moved to translations.js for consistency.
+- Rollback Target: working tree before 2026-04-29 lane-prediction-shoes-profile merge.
+
+### Landing Cinematic Editorial
+- Goal: Keep the public `/` landing page as an image-first performance editorial surface that sells the runner decision loop quickly without inheriting the app shell.
+- Changed: `Landing.jsx` still owns the isolated cinematic editorial surface, but the first fold now follows the generated runner-photo reference: full-bleed warm hero media, Hermes as the primary H1, Product/Coach/Privacy nav, Start training/See the coach CTAs, and a readiness/route-trust/shoe-load proof strip above the existing ticker and lower editorial sections.
+- Preserve: Keep authenticated-user redirect behavior, Strava OAuth start path, `/login` and `/signup` links, public Terms/Privacy/Support footer links, no external CDN/prototype Babel runtime, landing-specific local token/glyph isolation, eager first-paint hero reveal, and reduced-motion coverage.
+- Next Risk: Future landing passes could hide the above-fold hero behind reveal timing, remove public auth/legal paths, overfill the generated-photo hero with dashboard chrome, or reintroduce generic app-shell cards instead of the current image-led editorial reference.
+- Rollback Target: `DV-2026-05-02-02`
+
+### Shoes (Issue #14-12)
+- Goal: Add 4-brand default view + expand button for brand browsing on shoes/add.
+- Changed: ShoeCatalog.jsx (4-brand default — random for new users, most-recently-clicked for returning via localStorage), style.css (.add-shoes-brand-rail, .add-shoes-brand-item, .add-shoes-brand-item--expand).
+- Preserve: Existing brand list completeness, model selection flow.
+- Next Risk: AddShoes.jsx not updated — same 4-brand pattern should be applied there for UX consistency. localStorage-based tracking resets on data clear.
+- Rollback Target: working tree before 2026-04-29 lane-prediction-shoes-profile merge.
+
+### Profile (Issue #14-13)
+- Goal: Remove VO2max recommendation text from Profile stamina grid.
+- Changed: ProfileDashboard.jsx (removed `readiness.copy` paragraph from stamina card only).
+- Preserve: Same readiness.copy still appears in main readiness card and workout card — only stamina grid was targeted.
+- Next Risk: None.
+- Rollback Target: working tree before 2026-04-29 lane-prediction-shoes-profile merge.
+
+### AI Agent Cross-Session Memory (mem0)
+- Goal: Give Hermes AI agents in `.claude/agents/` and `.codex/agents/` durable cross-session memory through the upstream [mem0](https://github.com/mem0ai/mem0) project without introducing a runtime dependency.
+- Changed: Added `.tools/mem0-bridge.mjs` (Node CLI wrapping the mem0 REST API; graceful no-op when `MEM0_API_KEY` is unset), `.claude/skills/mem0/SKILL.md` describing how agents call it, and a memory phase wired into `.claude/agents/attack-simulator.md` (recall before Phase 1, record after Phase 5). Added a small "AI Agent Cross-Session Memory (mem0)" section to CLAUDE.md describing the env-var contract.
+- Preserve: Bridge must keep skipping silently when MEM0 is not configured so agents can call it unconditionally. Never persist credentials, real tokens, or runner PII into a memory. Keep `agent_id` aligned to the agent frontmatter `name:` and `run_id` aligned to the engine runId.
+- Next Risk: Future agent edits could start gating execution on memory recall, which would break offline workflows. Adding new mem0 callers should reuse the bridge instead of forking a second client.
+- Rollback Target: working tree before 2026-05-03 mem0-wiring round.
+
+### Runner Weather, Shoes, and Muscle Training Profile Alignment
+- Goal: Align `/weather`, `/shoes`, and `/muscle-training` with the current Profile page design language while preserving all live route behavior.
+- Changed: Added a late route-scoped profile-aligned CSS layer in `frontend/src/styles/style.css`. Weather gets a stronger run-conditions cockpit and split forecast hierarchy; Shoes gets a clearer rotation-locker board with unified cards and controls; Muscle Training keeps the anatomy atlas untouched while its surrounding strength lab and protocol grids adopt the Profile paper/hairline/shadow language. Targeted smoke tests now guard each route-specific alignment hook.
+- Preserve: Do not change Weather API/fallback timing, shoe inventory filters/actions/retired-state/image scan quota, or Muscle Training coach-plan data, real anatomy atlas, hotspots, labels, and interaction wiring.
+- Next Risk: The route polish is CSS-specificity dependent because previous whole-site/minimalist layers also style these pages. Future app-frame changes should keep the `data-route-path` and `data-runner-design` attributes stable or update the smoke guards together.
+- Rollback Target: `DV-2026-05-06-01`

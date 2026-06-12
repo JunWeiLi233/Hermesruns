@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +23,12 @@ import java.util.zip.ZipInputStream;
 
 @Service
 public class ActivityImportService {
+    private static final Logger logger = LoggerFactory.getLogger(ActivityImportService.class);
     private final ActivityRepository activityRepository;
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final AcclimatizationService acclimatizationService;
 
     private static final int MAX_ZIP_ENTRIES = 200;
     private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry
@@ -37,12 +41,14 @@ public class ActivityImportService {
             ActivityRepository activityRepository,
             List<ActivityFileParser> fileParsers,
             ActivityPointRepository activityPointRepository,
-            ApplicationEventPublisher applicationEventPublisher
+            ApplicationEventPublisher applicationEventPublisher,
+            AcclimatizationService acclimatizationService
     ) {
         this.activityRepository = activityRepository;
         this.fileParsers = fileParsers;
         this.activityPointRepository = activityPointRepository;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.acclimatizationService = acclimatizationService;
     }
 
     @Transactional
@@ -161,6 +167,16 @@ public class ActivityImportService {
             );
         }
 
+        // Structural fingerprint dedup: catches re-imports of the same activity with different
+        // file bytes (re-exported, re-compressed, renamed). Key: (runner, startTime, distanceBucket)
+        // where distanceBucket = distanceMeters rounded to the nearest 10 m.
+        if (parsedActivity.startTime() != null && parsedActivity.distanceMeters() != null) {
+            long distanceBucket = Math.round(parsedActivity.distanceMeters() / 10.0) * 10L;
+            if (activityRepository.existsByRunnerAndStartTimeAndDistanceBucket(runner, parsedActivity.startTime(), distanceBucket)) {
+                return new ImportResult(provider.name(), 0, 0, 1, 0, "This activity was already imported (matched by start time and distance).", List.of());
+            }
+        }
+
         Activity activity = new Activity();
         activity.setRunner(runner);
         activity.setProvider(provider);
@@ -177,6 +193,16 @@ public class ActivityImportService {
         activity.setCreatedAt(LocalDateTime.now());
         activity.setAverageHeartRate(parsedActivity.averageHeartRate());
         activity.setMaxHeartRate(parsedActivity.maxHeartRate());
+
+        // Weather adjustment
+        try {
+            Integer penalty = acclimatizationService.calculatePenaltyForActivity(activity);
+            activity.setPacePenaltySecPerKm(penalty);
+            activity.setWeatherAdjusted(penalty != null && penalty > 0);
+        } catch (Exception e) {
+            logger.warn("Weather adjustment calculation failed during import: {}", e.getMessage(), e);
+        }
+
         // Persist the Activity first so we can bulk-insert ActivityPoint rows
         // without keeping the entire points list inside the Activity's JPA collection.
         Activity savedActivity = activityRepository.save(activity);
@@ -221,7 +247,7 @@ public class ActivityImportService {
         }
         // Help GC earlier on small-RAM servers.
         if (allPoints != null) {
-            try { allPoints.clear(); } catch (Exception ignored) {}
+            try { allPoints.clear(); } catch (Exception ignored) { logger.trace("GC helper: allPoints.clear() failed", ignored); }
         }
 
         return new ImportResult(

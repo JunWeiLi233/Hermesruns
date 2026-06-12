@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -118,16 +119,25 @@ public class AdminUserPortalController {
 
     @PostMapping("/{id}/impersonate")
     public ResponseEntity<?> impersonateUser(@PathVariable Long id,
-                                             @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+                                             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                             HttpServletRequest request) {
         Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
         if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
         Optional<Runner> targetOptional = adminService.getRunnerRepository().findById(id);
         if (targetOptional.isEmpty() || targetOptional.get().isDeleted()) return AdminApiResponses.error(HttpStatus.NOT_FOUND, "Runner not found.", "runner_not_found");
 
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        String sourceIp = (xForwardedFor != null && !xForwardedFor.isBlank())
+                ? xForwardedFor.split(",")[0].trim()
+                : request.getRemoteAddr();
+        String rawUa = request.getHeader("User-Agent");
+        String userAgent = (rawUa != null && rawUa.length() > 200) ? rawUa.substring(0, 200) : (rawUa != null ? rawUa : "");
+
         Runner target = targetOptional.get();
         String token = adminService.getAuthService().issueSessionToken(target);
         adminService.getAdminAuditService().log(adminOptional.get(), "runner.impersonated", "runner", String.valueOf(target.getId()),
-                "Started support impersonation", Map.of("targetEmail", target.getEmail()));
+                "Started support impersonation",
+                Map.of("targetEmail", target.getEmail(), "sourceIp", sourceIp, "userAgent", userAgent));
         return ResponseEntity.ok(Map.of("token", token, "email", target.getEmail(), "role", target.getRole()));
     }
 

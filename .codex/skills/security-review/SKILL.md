@@ -127,7 +127,7 @@ If ToolSearch finds no MCP tools, fall back to the `security-reviewer` agent.
 
 ```
 SECURITY REVIEW REPORT
-======================
+----------------------
 
 Scope: Entire codebase (42 files scanned)
 Scan Date: 2026-01-24T14:30:00Z

@@ -23,6 +23,11 @@ import static org.mockito.Mockito.when;
 
 class ShoeQueryNormalizationServiceTests {
 
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        private static Class<HttpEntity<Map<String, Object>>> httpEntityMapClass() {
+                return (Class) HttpEntity.class;
+        }
+
     @Test
     void normalizeReturnsCanonicalMetadataFromGemini() throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
@@ -62,14 +67,14 @@ class ShoeQueryNormalizationServiceTests {
         assertEquals("White/Red", metadata.colorway());
         assertEquals("Li-Ning Feidian 3.0 Elite White Red", metadata.searchString());
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<HttpEntity<Map<String, Object>>> entityCaptor = ArgumentCaptor.forClass((Class) HttpEntity.class);
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> entityCaptor = ArgumentCaptor.forClass(httpEntityMapClass());
         verify(restTemplate).exchange(
-                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=test-key"),
+                eq("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"),
                 eq(HttpMethod.POST),
                 entityCaptor.capture(),
                 eq(Map.class)
         );
+        assertEquals("test-key", entityCaptor.getValue().getHeaders().getFirst("x-goog-api-key"));
         Map<String, Object> request = entityCaptor.getValue().getBody();
         assertInstanceOf(Map.class, request.get("generationConfig"));
         assertTrue(String.valueOf(request).contains("Translate any Chinese brand/model names"));
@@ -132,6 +137,36 @@ class ShoeQueryNormalizationServiceTests {
         );
 
         assertEquals("AI normalization is not configured.", error.getMessage());
+    }
+
+    @Test
+    void normalizeCanUseConfiguredLettaAgent() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        LettaAgentClient lettaAgentClient = mock(LettaAgentClient.class);
+        when(lettaAgentClient.isConfigured()).thenReturn(true);
+        when(lettaAgentClient.sendUserMessage(any(String.class))).thenReturn("""
+                {
+                  "brand": "Nike",
+                  "model": "Pegasus 41",
+                  "searchString": "Nike Pegasus 41"
+                }
+                """);
+
+        ShoeQueryNormalizationService service = new ShoeQueryNormalizationService(
+                restTemplate,
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                systemConfigService,
+                lettaAgentClient
+        );
+        setField(service, "aiAgentProvider", "letta");
+
+        ShoeMetadataDto metadata = service.normalize("Nike Peg 41");
+
+        assertEquals("Nike", metadata.brand());
+        assertEquals("Pegasus 41", metadata.model());
+        assertEquals("Nike Pegasus 41", metadata.searchString());
+        verify(lettaAgentClient).sendUserMessage(any(String.class));
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

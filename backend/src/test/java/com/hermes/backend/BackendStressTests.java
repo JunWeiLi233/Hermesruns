@@ -1,6 +1,5 @@
 package com.hermes.backend;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +9,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
@@ -27,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -265,13 +264,11 @@ class BackendStressTests {
 
         assertThat(totalAllowed.get()).isEqualTo(keyCount * maxPerWindow);
 
-        Field windowsField = ApiRateLimiter.class.getDeclaredField("windows");
-        windowsField.setAccessible(true);
-        ConcurrentHashMap<?, ?> windows = (ConcurrentHashMap<?, ?>) windowsField.get(limiter);
-        assertThat(windows.size()).isEqualTo(keyCount);
+        int windows = limiter.windowCount();
+        assertThat(windows).isEqualTo(keyCount);
 
-        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows.size()
-                + " window entries after " + keyCount + " distinct keys. No eviction policy exists.");
+        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows
+                + " window entries after " + keyCount + " distinct keys.");
     }
 
     @Test
@@ -284,16 +281,11 @@ class BackendStressTests {
             limiter.allow("ip|" + i + ".0.0.0|GET|/api/test", 300, 60);
         }
 
-        Field windowsField = ApiRateLimiter.class.getDeclaredField("windows");
-        windowsField.setAccessible(true);
-        ConcurrentHashMap<?, ?> windows = (ConcurrentHashMap<?, ?>) windowsField.get(limiter);
+        int windows = limiter.windowCount();
+        assertThat(windows).isEqualTo(adversarialKeyCount);
 
-        assertThat(windows.size()).isEqualTo(adversarialKeyCount);
-
-        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows.size()
+        System.out.println("[STRESS INFO] ApiRateLimiter: " + windows
                 + " window entries after " + adversarialKeyCount + " adversarial keys.");
-
-        int boundBefore = limiter.windowCount();
 
         limiter.allow("ip|new|GET|/api/test", 300, 60);
         limiter.allow("ip|new2|GET|/api/test", 300, 60);
@@ -322,8 +314,10 @@ class BackendStressTests {
         when(stateRepository.findByRunner(runner)).thenReturn(Optional.of(existingState));
         when(blockRepository.findByRunnerAndActiveTrue(runner)).thenReturn(Optional.empty());
 
-        when(scheduleRepository.findByRunnerAndScheduledDateBetween(runner, today, today.plusDays(13)))
-                .thenReturn(List.of(), completeSchedule);
+        doReturn(List.of())
+                .doReturn(completeSchedule)
+                .when(scheduleRepository)
+                .findByRunnerAndScheduledDateBetween(runner, today, today.plusDays(13));
         when(scheduleRepository.saveAll(anyList()))
                 .thenThrow(new DataIntegrityViolationException("duplicate schedule"));
 
@@ -344,8 +338,11 @@ class BackendStressTests {
 
         CoachRunnerState recoveredState = aggregatedState(runner);
 
-        when(stateRepository.findByRunner(runner))
-                .thenReturn(Optional.empty(), Optional.of(recoveredState), Optional.of(recoveredState));
+        doReturn(Optional.empty())
+                .doReturn(Optional.of(recoveredState))
+                .doReturn(Optional.of(recoveredState))
+                .when(stateRepository)
+                .findByRunner(runner);
         when(stateRepository.save(any(CoachRunnerState.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate state"));
         when(scheduleRepository.findByRunnerAndScheduledDateBetween(any(), any(), any()))
@@ -621,7 +618,6 @@ class BackendStressTests {
 
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
         CoachRunnerStateRepository stateRepository = mock(CoachRunnerStateRepository.class);
         CoachScheduledWorkoutRepository scheduleRepository = mock(CoachScheduledWorkoutRepository.class);
         CoachTrainingBlockRepository blockRepository = mock(CoachTrainingBlockRepository.class);
@@ -642,7 +638,7 @@ class BackendStressTests {
         AutomatedCoachService service = new AutomatedCoachService(
                 runnerRepository, activityRepository,
                 stateRepository, scheduleRepository, blockRepository, alertRepository,
-                mock(ShoeTracker.class), mock(CoachRouteService.class));
+                mock(ShoeTrackerService.class), mock(CoachRouteService.class), mock(ReadinessService.class));
 
         assertThatCode(() -> service.nightlyAuditAllRunners()).doesNotThrowAnyException();
 
@@ -888,8 +884,9 @@ class BackendStressTests {
                 scheduleRepository,
                 blockRepository,
                 alertRepository,
-                mock(ShoeTracker.class),
-                mock(CoachRouteService.class)
+                mock(ShoeTrackerService.class),
+                mock(CoachRouteService.class),
+                mock(ReadinessService.class)
         );
     }
 
@@ -901,17 +898,6 @@ class BackendStressTests {
         a.setActivityType(ActivityType.RUN);
         a.setStartTime(LocalDateTime.of(2026, 4, 1, 7, 0));
         return a;
-    }
-
-    private static MuscleTrainingPlannerService createMuscleService(ActivityRepository activityRepository) {
-        return new MuscleTrainingPlannerService(
-                mock(MuscleTrainingProfileService.class),
-                mock(MuscleTrainingCheckInService.class),
-                mock(MuscleTrainingMetricsService.class),
-                mock(MuscleTrainingSessionService.class),
-                mock(AutomatedCoachService.class),
-                activityRepository
-        );
     }
 
     private static DigitalCosmeticsService createCosmeticsService() {

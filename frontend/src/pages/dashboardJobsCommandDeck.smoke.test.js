@@ -6,7 +6,15 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
-const translationsSource = readFileSync(path.join(here, '../i18n/translations.js'), 'utf8');
+const translationsSource = [
+  '../i18n/translations.js',
+  '../i18n/locales/en.js',
+  '../i18n/locales/zh-CN.js',
+  '../i18n/locales/en/components.js',
+  '../i18n/locales/zh-CN/components.js',
+  '../i18n/locales/en/pages.js',
+  '../i18n/locales/zh-CN/pages.js',
+].map((file) => readFileSync(path.join(here, file), 'utf8')).join('\n');
 
 assert.match(
   dashboardSource,

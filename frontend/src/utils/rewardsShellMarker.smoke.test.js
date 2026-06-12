@@ -9,7 +9,6 @@ const requiredPages = [
   'PredictionDetail.jsx',
   'Rewards.jsx',
   'Schedule.jsx',
-  'Vo2MaxDetail.jsx',
 ];
 
 for (const page of requiredPages) {

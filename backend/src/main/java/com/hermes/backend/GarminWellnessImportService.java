@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import java.util.concurrent.Executors;
 
 @Service
 public class GarminWellnessImportService {
+    private static final Logger logger = LoggerFactory.getLogger(GarminWellnessImportService.class);
 
     private final DailyWellnessSummaryRepository wellnessSummaryRepository;
     private final DailySleepDataRepository sleepDataRepository;
@@ -74,7 +77,7 @@ public class GarminWellnessImportService {
             try {
                 runImport(runner, email, password, clampedDays, tracker);
             } catch (Exception e) {
-                tracker.markFailed("Wellness import failed: " + safeMessage(e));
+                markDownloadFailure(tracker, "Wellness import failed: " + safeMessage(e), Map.of());
             }
         });
 
@@ -87,6 +90,11 @@ public class GarminWellnessImportService {
             return WellnessSyncStatus.idle();
         }
         return tracker.snapshot();
+    }
+
+    public long getRateLimitRetryAfterSeconds(Long runnerId) {
+        WellnessSyncTracker tracker = syncStates.get(runnerId);
+        return tracker == null ? 0 : tracker.retryAfterSeconds();
     }
 
     @SuppressWarnings("unchecked")
@@ -102,7 +110,7 @@ public class GarminWellnessImportService {
             Boolean success = (Boolean) result.get("success");
             if (!Boolean.TRUE.equals(success)) {
                 String error = (String) result.get("error");
-                tracker.markFailed(error != null ? error : "Garmin wellness download failed.");
+                markDownloadFailure(tracker, error != null ? error : "Garmin wellness download failed.", result);
                 return;
             }
 
@@ -135,23 +143,23 @@ public class GarminWellnessImportService {
                         entity.setRunner(runner);
                         entity.setDate(date);
                         entity.setProvider(provider);
-                        entity.setRestingHeartRate(intVal(wellness.get("restingHeartRate")));
-                        entity.setAvgStressLevel(intVal(wellness.get("avgStressLevel")));
-                        entity.setMaxStressLevel(intVal(wellness.get("maxStressLevel")));
-                        entity.setStressQualifier((String) wellness.get("stressQualifier"));
-                        entity.setTotalSteps(longVal(wellness.get("totalSteps")));
-                        entity.setTotalDistanceMeters(dblVal(wellness.get("totalDistanceMeters")));
-                        entity.setActiveKilocalories(dblVal(wellness.get("activeKilocalories")));
-                        entity.setSedentarySeconds(intVal(wellness.get("sedentarySeconds")));
-                        entity.setBodyBatteryHighest(intVal(wellness.get("bodyBatteryHighest")));
-                        entity.setBodyBatteryLowest(intVal(wellness.get("bodyBatteryLowest")));
-                        entity.setBodyBatteryAtWake(intVal(wellness.get("bodyBatteryAtWake")));
-                        entity.setModerateIntensityMinutes(intVal(wellness.get("moderateIntensityMinutes")));
-                        entity.setVigorousIntensityMinutes(intVal(wellness.get("vigorousIntensityMinutes")));
-                        entity.setAverageSpo2(dblVal(wellness.get("averageSpo2")));
-                        entity.setLowestSpo2(dblVal(wellness.get("lowestSpo2")));
-                        entity.setFloorsAscended(intVal(wellness.get("floorsAscended")));
-                        entity.setFloorsDescended(intVal(wellness.get("floorsDescended")));
+                        entity.setRestingHeartRate(intVal(wellness.get("resting_heart_rate")));
+                        entity.setAvgStressLevel(intVal(wellness.get("avg_stress_level")));
+                        entity.setMaxStressLevel(intVal(wellness.get("max_stress_level")));
+                        entity.setStressQualifier((String) wellness.get("stress_qualifier"));
+                        entity.setTotalSteps(longVal(wellness.get("total_steps")));
+                        entity.setTotalDistanceMeters(dblVal(wellness.get("total_distance_meters")));
+                        entity.setActiveKilocalories(dblVal(wellness.get("active_kilocalories")));
+                        entity.setSedentarySeconds(intVal(wellness.get("sedentary_seconds")));
+                        entity.setBodyBatteryHighest(intVal(wellness.get("body_battery_highest")));
+                        entity.setBodyBatteryLowest(intVal(wellness.get("body_battery_lowest")));
+                        entity.setBodyBatteryAtWake(intVal(wellness.get("body_battery_at_wake")));
+                        entity.setModerateIntensityMinutes(intVal(wellness.get("moderate_intensity_minutes")));
+                        entity.setVigorousIntensityMinutes(intVal(wellness.get("vigorous_intensity_minutes")));
+                        entity.setAverageSpo2(dblVal(wellness.get("average_spo2")));
+                        entity.setLowestSpo2(dblVal(wellness.get("lowest_spo2")));
+                        entity.setFloorsAscended(intVal(wellness.get("floors_ascended")));
+                        entity.setFloorsDescended(intVal(wellness.get("floors_descended")));
                         entity.setSourceChecksum("GARMIN_WELLNESS_" + runner.getId() + "_" + date.toString());
                         wellnessSummaryRepository.save(entity);
                         wellnessSaved++;
@@ -164,18 +172,18 @@ public class GarminWellnessImportService {
                         entity.setRunner(runner);
                         entity.setDate(date);
                         entity.setProvider(provider);
-                        entity.setSleepTimeSeconds(intVal(sleep.get("sleepTimeSeconds")));
-                        entity.setDeepSleepSeconds(intVal(sleep.get("deepSleepSeconds")));
-                        entity.setLightSleepSeconds(intVal(sleep.get("lightSleepSeconds")));
-                        entity.setRemSleepSeconds(intVal(sleep.get("remSleepSeconds")));
-                        entity.setAwakeSleepSeconds(intVal(sleep.get("awakeSleepSeconds")));
-                        entity.setSleepScore(intVal(sleep.get("sleepScore")));
-                        entity.setAwakeCount(intVal(sleep.get("awakeCount")));
-                        entity.setAverageSpO2(dblVal(sleep.get("averageSpO2")));
-                        entity.setLowestSpO2(dblVal(sleep.get("lowestSpO2")));
-                        entity.setHighestSpO2(dblVal(sleep.get("highestSpO2")));
-                        entity.setAverageRespiration(dblVal(sleep.get("averageRespiration")));
-                        entity.setAvgSleepStress(dblVal(sleep.get("avgSleepStress")));
+                        entity.setSleepTimeSeconds(intVal(sleep.get("sleep_time_seconds")));
+                        entity.setDeepSleepSeconds(intVal(sleep.get("deep_sleep_seconds")));
+                        entity.setLightSleepSeconds(intVal(sleep.get("light_sleep_seconds")));
+                        entity.setRemSleepSeconds(intVal(sleep.get("rem_sleep_seconds")));
+                        entity.setAwakeSleepSeconds(intVal(sleep.get("awake_sleep_seconds")));
+                        entity.setSleepScore(intVal(sleep.get("sleep_score")));
+                        entity.setAwakeCount(intVal(sleep.get("awake_count")));
+                        entity.setAverageSpO2(dblVal(sleep.get("average_spo2")));
+                        entity.setLowestSpO2(dblVal(sleep.get("lowest_spo2")));
+                        entity.setHighestSpO2(dblVal(sleep.get("highest_spo2")));
+                        entity.setAverageRespiration(dblVal(sleep.get("average_respiration")));
+                        entity.setAvgSleepStress(dblVal(sleep.get("avg_sleep_stress")));
                         entity.setSourceChecksum("GARMIN_SLEEP_" + runner.getId() + "_" + date.toString());
                         sleepDataRepository.save(entity);
                         sleepSaved++;
@@ -188,14 +196,14 @@ public class GarminWellnessImportService {
                         entity.setRunner(runner);
                         entity.setDate(date);
                         entity.setProvider(provider);
-                        entity.setLastNightAvg(dblVal(hrv.get("lastNightAvg")));
-                        entity.setLastNight5MinHigh(dblVal(hrv.get("lastNight5MinHigh")));
-                        entity.setWeeklyAvg(dblVal(hrv.get("weeklyAvg")));
-                        entity.setBaselineLowUpper(dblVal(hrv.get("baselineLowUpper")));
-                        entity.setBaselineBalancedLow(dblVal(hrv.get("baselineBalancedLow")));
-                        entity.setBaselineBalancedUpper(dblVal(hrv.get("baselineBalancedUpper")));
+                        entity.setLastNightAvg(dblVal(hrv.get("last_night_avg")));
+                        entity.setLastNight5MinHigh(dblVal(hrv.get("last_night_5_min_high")));
+                        entity.setWeeklyAvg(dblVal(hrv.get("weekly_avg")));
+                        entity.setBaselineLowUpper(dblVal(hrv.get("baseline_low_upper")));
+                        entity.setBaselineBalancedLow(dblVal(hrv.get("baseline_balanced_low")));
+                        entity.setBaselineBalancedUpper(dblVal(hrv.get("baseline_balanced_upper")));
                         entity.setStatus((String) hrv.get("status"));
-                        entity.setFeedbackPhrase((String) hrv.get("feedbackPhrase"));
+                        entity.setFeedbackPhrase((String) hrv.get("feedback_phrase"));
                         entity.setSourceChecksum("GARMIN_HRV_" + runner.getId() + "_" + date.toString());
                         hrvDataRepository.save(entity);
                         hrvSaved++;
@@ -208,11 +216,11 @@ public class GarminWellnessImportService {
                         entity.setRunner(runner);
                         entity.setDate(date);
                         entity.setProvider(provider);
-                        entity.setOverallStressLevel(intVal(stress.get("overallStressLevel")));
-                        entity.setRestStressDuration(intVal(stress.get("restStressDuration")));
-                        entity.setLowStressDuration(intVal(stress.get("lowStressDuration")));
-                        entity.setMediumStressDuration(intVal(stress.get("mediumStressDuration")));
-                        entity.setHighStressDuration(intVal(stress.get("highStressDuration")));
+                        entity.setOverallStressLevel(intVal(stress.get("overall_stress_level")));
+                        entity.setRestStressDuration(intVal(stress.get("rest_stress_duration")));
+                        entity.setLowStressDuration(intVal(stress.get("low_stress_duration")));
+                        entity.setMediumStressDuration(intVal(stress.get("medium_stress_duration")));
+                        entity.setHighStressDuration(intVal(stress.get("high_stress_duration")));
                         entity.setSourceChecksum("GARMIN_STRESS_" + runner.getId() + "_" + date.toString());
                         stressDataRepository.save(entity);
                         stressSaved++;
@@ -227,13 +235,13 @@ public class GarminWellnessImportService {
                         entity.setProvider(provider);
                         entity.setWeight(dblVal(body.get("weight")));
                         entity.setBmi(dblVal(body.get("bmi")));
-                        entity.setBodyFat(dblVal(body.get("bodyFat")));
-                        entity.setBodyWater(dblVal(body.get("bodyWater")));
-                        entity.setBoneMass(dblVal(body.get("boneMass")));
-                        entity.setMuscleMass(dblVal(body.get("muscleMass")));
-                        entity.setVisceralFat(dblVal(body.get("visceralFat")));
-                        entity.setMetabolicAge(intVal(body.get("metabolicAge")));
-                        entity.setPhysiqueRating(intVal(body.get("physiqueRating")));
+                        entity.setBodyFat(dblVal(body.get("body_fat")));
+                        entity.setBodyWater(dblVal(body.get("body_water")));
+                        entity.setBoneMass(dblVal(body.get("bone_mass")));
+                        entity.setMuscleMass(dblVal(body.get("muscle_mass")));
+                        entity.setVisceralFat(dblVal(body.get("visceral_fat")));
+                        entity.setMetabolicAge(intVal(body.get("metabolic_age")));
+                        entity.setPhysiqueRating(intVal(body.get("physique_rating")));
                         entity.setSourceChecksum("GARMIN_BODY_" + runner.getId() + "_" + date.toString());
                         bodyCompositionRepository.save(entity);
                         bodySaved++;
@@ -241,7 +249,7 @@ public class GarminWellnessImportService {
 
                     daysPersisted++;
                 } catch (Exception e) {
-                    System.err.println("[Hermes] Garmin wellness import skipped day: " + safeMessage(e));
+                    logger.warn("[Hermes] Garmin wellness import skipped day: {}", safeMessage(e), e);
                 }
             }
 
@@ -256,12 +264,24 @@ public class GarminWellnessImportService {
 
             tracker.markCompleted(null);
         } catch (Exception e) {
-            tracker.markFailed("Wellness import failed: " + safeMessage(e));
+            markDownloadFailure(tracker, "Wellness import failed: " + safeMessage(e), Map.of());
         } finally {
             if (tempDir != null) {
                 deleteTempDir(tempDir);
             }
         }
+    }
+
+    private void markDownloadFailure(WellnessSyncTracker tracker, String message, Map<String, Object> result) {
+        Object errorCode = result == null ? null : result.get("errorCode");
+        if (GarminRateLimitSupport.isRateLimited(errorCode, message)) {
+            long retryAfterSeconds = GarminRateLimitSupport.retryAfterSeconds(
+                    result == null ? null : result.get("retryAfterSeconds")
+            );
+            tracker.markRateLimited(GarminRateLimitSupport.message(retryAfterSeconds), retryAfterSeconds);
+            return;
+        }
+        tracker.markFailed(message);
     }
 
     private void updateCoachFromWellness(Runner runner) {
@@ -296,6 +316,28 @@ public class GarminWellnessImportService {
             }
         }
 
+        List<DailyStressData> stressList = stressDataRepository.findByRunnerOrderByDateDesc(runner);
+        if (!stressList.isEmpty()) {
+            DailyStressData latest = stressList.get(0);
+            if (latest.getOverallStressLevel() != null) {
+                coachRunnerState.setLastStressScore(latest.getOverallStressLevel());
+            }
+        }
+
+        if (!wellnessList.isEmpty()) {
+            DailyWellnessSummary latest = wellnessList.get(0);
+            if (latest.getBodyBatteryAtWake() != null) {
+                coachRunnerState.setLastBodyBatteryAtWake(latest.getBodyBatteryAtWake());
+            }
+        }
+
+        if (!hrvList.isEmpty()) {
+            DailyHRVData latest = hrvList.get(0);
+            if (latest.getStatus() != null && !latest.getStatus().isBlank()) {
+                coachRunnerState.setLastHrvStatus(latest.getStatus());
+            }
+        }
+
         coachRunnerState.setLastRecoveryLoggedAt(LocalDateTime.now());
         coachRunnerStateRepository.save(coachRunnerState);
     }
@@ -326,7 +368,7 @@ public class GarminWellnessImportService {
         int exitCode = process.waitFor();
 
         if (stderr.length > 0) {
-            System.err.println("[Hermes] Garmin wellness download stderr: " + new String(stderr, StandardCharsets.UTF_8).trim());
+            logger.warn("[Hermes] Garmin wellness download stderr: {}", new String(stderr, StandardCharsets.UTF_8).trim());
         }
 
         if (exitCode != 0 || stdout.length == 0) {
@@ -409,10 +451,11 @@ public class GarminWellnessImportService {
             int stressSaved,
             int bodySaved,
             String message,
-            boolean active
+            boolean active,
+            long retryAfterSeconds
     ) {
         static WellnessSyncStatus idle() {
-            return new WellnessSyncStatus("IDLE", 0, 0, 0, 0, 0, 0, 0, null, false);
+            return new WellnessSyncStatus("IDLE", 0, 0, 0, 0, 0, 0, 0, null, false, 0);
         }
     }
 
@@ -426,10 +469,12 @@ public class GarminWellnessImportService {
         private int stressSaved;
         private int bodySaved;
         private String message;
+        private long cooldownUntilMs;
         private long lastUpdatedMs = System.currentTimeMillis();
 
         synchronized boolean tryBegin() {
             if ("RUNNING".equals(status)) return false;
+            if (retryAfterSeconds() > 0) return false;
             status = "RUNNING";
             daysFetched = 0;
             daysPersisted = 0;
@@ -439,6 +484,7 @@ public class GarminWellnessImportService {
             stressSaved = 0;
             bodySaved = 0;
             message = null;
+            cooldownUntilMs = 0;
             return true;
         }
 
@@ -453,12 +499,21 @@ public class GarminWellnessImportService {
         synchronized void markCompleted(String msg) {
             status = "COMPLETED";
             message = msg;
+            cooldownUntilMs = 0;
             lastUpdatedMs = System.currentTimeMillis();
         }
 
         synchronized void markFailed(String msg) {
             status = "FAILED";
             message = msg;
+            cooldownUntilMs = 0;
+            lastUpdatedMs = System.currentTimeMillis();
+        }
+
+        synchronized void markRateLimited(String msg, long retryAfterSeconds) {
+            status = "RATE_LIMITED";
+            message = msg;
+            cooldownUntilMs = System.currentTimeMillis() + (retryAfterSeconds * 1000);
             lastUpdatedMs = System.currentTimeMillis();
         }
 
@@ -470,8 +525,16 @@ public class GarminWellnessImportService {
             return new WellnessSyncStatus(
                     status, daysFetched, daysPersisted,
                     wellnessSaved, sleepSaved, hrvSaved, stressSaved, bodySaved,
-                    message, "RUNNING".equals(status)
+                    message, "RUNNING".equals(status), retryAfterSeconds()
             );
+        }
+
+        synchronized long retryAfterSeconds() {
+            long remainingMs = cooldownUntilMs - System.currentTimeMillis();
+            if (remainingMs <= 0) {
+                return 0;
+            }
+            return (long) Math.ceil(remainingMs / 1000.0);
         }
     }
 }

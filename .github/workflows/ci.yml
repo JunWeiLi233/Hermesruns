@@ -58,7 +58,9 @@ jobs:
           cache: maven
       - name: Run Maven tests
         working-directory: backend
-        run: ./mvnw -q test
+        run: |
+          chmod +x mvnw
+          ./mvnw -q test
 
   # ── Docker build ───────────────────────────────────────────────────────────
   build-docker:
@@ -84,18 +86,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           severity: CRITICAL,HIGH
-          exit-code: '0'
+          exit-code: '1'
 
   # ── Docs deploy ────────────────────────────────────────────────────────────
   deploy-docs:
     name: deploy-docs
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.HERMES_DEPLOY_DOCS == 'true'
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Deploy docs to GitHub Pages

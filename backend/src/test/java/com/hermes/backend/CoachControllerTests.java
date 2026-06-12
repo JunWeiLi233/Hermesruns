@@ -21,7 +21,7 @@ class CoachControllerTests {
     void getStateRejectsMissingAuthorization() {
         AuthService authService = mock(AuthService.class);
         when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
-        CoachController controller = new CoachController(authService, mock(AutomatedCoachService.class));
+        CoachController controller = coachController(authService, mock(AutomatedCoachService.class));
 
         ResponseEntity<?> response = controller.getState(null);
 
@@ -45,7 +45,7 @@ class CoachControllerTests {
                         false));
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(coachService.getSchedule(runner, 21)).thenReturn(schedule);
-        CoachController controller = new CoachController(authService, coachService);
+        CoachController controller = coachController(authService, coachService);
 
         ResponseEntity<?> response = controller.getSchedule("Bearer runner-token", 21);
 
@@ -69,24 +69,7 @@ class CoachControllerTests {
                         null,
                         false
                 ),
-                new AutomatedCoachService.CoachStateDto(
-                        42.0,
-                        150.0,
-                        180,
-                        25,
-                        40,
-                        0,
-                        0.18,
-                        false,
-                        48,
-                        50,
-                        82,
-                        62,
-                        188,
-                        48,
-                        new AutomatedCoachService.CoachStaminaDto(95, 98, 300, 115, "down"),
-                        new AutomatedCoachService.CoachTrainingBlockDto(21.1, LocalDate.now().plusWeeks(10), 0, 18.0, "Half Build")
-                ),
+                coachState(),
                 new CoachRouteRecommendationDto(
                         "north-east",
                         "distance-match",
@@ -95,11 +78,13 @@ class CoachControllerTests {
                         2,
                         new CoachRoutePreviewDto("M 10.00 10.00 L 20.00 20.00", 10.0, 10.0, 20.0, 20.0)
                 ),
+                null,
+                null,
                 null
         );
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(coachService.getTodayWithReadiness(runner)).thenReturn(payload);
-        CoachController controller = new CoachController(authService, coachService);
+        CoachController controller = coachController(authService, coachService);
 
         ResponseEntity<?> response = controller.getToday("Bearer runner-token");
 
@@ -114,12 +99,12 @@ class CoachControllerTests {
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         IllegalArgumentException invalid = new IllegalArgumentException("restingHeartRateBpm must be between 20 and 120.");
-        org.mockito.Mockito.doThrow(invalid).when(coachService).logRecoveryMetrics(runner, 10, 85, 60);
-        CoachController controller = new CoachController(authService, coachService);
+        org.mockito.Mockito.doThrow(invalid).when(coachService).logRecoveryMetrics(runner, 10, 85, 60, null);
+        CoachController controller = coachController(authService, coachService);
 
         ResponseEntity<?> response = controller.postRecovery(
                 "Bearer runner-token",
-                new CoachController.RecoveryBody(10, 85, 60));
+                new CoachController.RecoveryBody(10, 85, 60, null));
 
         assertError(response, HttpStatus.BAD_REQUEST, "restingHeartRateBpm must be between 20 and 120.");
     }
@@ -132,7 +117,7 @@ class CoachControllerTests {
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         IllegalArgumentException invalid = new IllegalArgumentException("maxHeartRateBpm must be greater than restingHeartRateBpm.");
         org.mockito.Mockito.doThrow(invalid).when(coachService).updateCoachProfile(runner, 45, 50);
-        CoachController controller = new CoachController(authService, coachService);
+        CoachController controller = coachController(authService, coachService);
 
         ResponseEntity<?> response = controller.patchProfile(
                 "Bearer runner-token",
@@ -146,7 +131,7 @@ class CoachControllerTests {
         AuthService authService = mock(AuthService.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        CoachController controller = new CoachController(authService, mock(AutomatedCoachService.class));
+        CoachController controller = coachController(authService, mock(AutomatedCoachService.class));
 
         ResponseEntity<?> response = controller.startBlock(
                 "Bearer runner-token",
@@ -160,7 +145,7 @@ class CoachControllerTests {
         AuthService authService = mock(AuthService.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        CoachController controller = new CoachController(authService, mock(AutomatedCoachService.class));
+        CoachController controller = coachController(authService, mock(AutomatedCoachService.class));
 
         ResponseEntity<?> response = controller.startBlock(
                 "Bearer runner-token",
@@ -174,27 +159,11 @@ class CoachControllerTests {
         AuthService authService = mock(AuthService.class);
         AutomatedCoachService coachService = mock(AutomatedCoachService.class);
         Runner runner = runner();
-        AutomatedCoachService.CoachStateDto state = new AutomatedCoachService.CoachStateDto(
-                42.0,
-                150.0,
-                180,
-                25,
-                40,
-                0,
-                0.18,
-                false,
-                48,
-                50,
-                82,
-                62,
-                188,
-                48,
-                new AutomatedCoachService.CoachStaminaDto(95, 98, 300, 115, "down"),
-                new AutomatedCoachService.CoachTrainingBlockDto(21.1, LocalDate.now().plusWeeks(10), 0, 18.0, "Half Build"));
+        AutomatedCoachService.CoachStateDto state = coachState();
         LocalDate targetRaceDate = LocalDate.now().plusWeeks(10);
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(coachService.getCoachState(runner)).thenReturn(state);
-        CoachController controller = new CoachController(authService, coachService);
+        CoachController controller = coachController(authService, coachService);
 
         ResponseEntity<?> response = controller.startBlock(
                 "Bearer runner-token",
@@ -214,7 +183,7 @@ class CoachControllerTests {
                 new AutomatedCoachService.CoachFeedbackAlertDto(5L, "GREY_ZONE", "Too much middle-zone work.", LocalDateTime.now()));
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(coachService.listAlerts(runner)).thenReturn(alerts);
-        CoachController controller = new CoachController(authService, coachService);
+        CoachController controller = coachController(authService, coachService);
 
         ResponseEntity<?> response = controller.listAlerts("Bearer runner-token");
 
@@ -229,7 +198,7 @@ class CoachControllerTests {
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(coachService.dismissAlert(runner, 88L)).thenReturn(false);
-        CoachController controller = new CoachController(authService, coachService);
+        CoachController controller = coachController(authService, coachService);
 
         ResponseEntity<?> response = controller.dismissAlert("Bearer runner-token", 88L);
 
@@ -242,6 +211,39 @@ class CoachControllerTests {
         runner.setEmail("runner@hermes.test");
         runner.setRole("USER");
         return runner;
+    }
+
+    private CoachController coachController(AuthService authService, AutomatedCoachService coachService) {
+        return new CoachController(authService, coachService, mock(ReadinessService.class));
+    }
+
+    private AutomatedCoachService.CoachStateDto coachState() {
+        return new AutomatedCoachService.CoachStateDto(
+                42.0,
+                150.0,
+                180,
+                25,
+                40,
+                0,
+                0.18,
+                false,
+                48,
+                50,
+                82,
+                62,
+                188,
+                "ready",
+                48,
+                84,
+                "GO",
+                82,
+                62,
+                48,
+                40,
+                185,
+                50,
+                new AutomatedCoachService.CoachStaminaDto(95, 98, 300, 115, "down"),
+                new AutomatedCoachService.CoachTrainingBlockDto(21.1, LocalDate.now().plusWeeks(10), 0, 18.0, "Half Build"));
     }
 
     @SuppressWarnings("unchecked")

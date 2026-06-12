@@ -318,6 +318,8 @@ class RaceControllerTests {
         ));
         when(raceCourseMapService.materializePreviewImageUrl("https://cdn.example.com/boston-course-map.png"))
                 .thenReturn("data:image/png;base64,runner-preview");
+        when(raceCourseMapService.materializeTransparentOverlayImageUrl("https://cdn.example.com/boston-course-map.png"))
+                .thenReturn("data:image/png;base64,transparent-overlay");
         RaceController controller = new RaceController(
                 authService,
                 mock(RaceEventRepository.class),
@@ -350,7 +352,8 @@ class RaceControllerTests {
                 .containsEntry("aiAssisted", true);
         assertThat(payload)
                 .containsEntry("imageUrl", "https://cdn.example.com/boston-course-map.png")
-                .containsEntry("previewImageUrl", "data:image/png;base64,runner-preview");
+                .containsEntry("previewImageUrl", "data:image/png;base64,runner-preview")
+                .containsEntry("overlayImageUrl", "data:image/png;base64,transparent-overlay");
         assertThat(payload.get("routePoints")).isInstanceOf(List.class);
         assertThat(payload.get("viewportBounds")).isInstanceOf(OverlayBounds.class);
     }
@@ -461,6 +464,7 @@ class RaceControllerTests {
         assertThat(payload)
                 .containsEntry("imageUrl", "")
                 .containsEntry("previewImageUrl", "")
+                .containsEntry("overlayImageUrl", "")
                 .containsEntry("source", "")
                 .containsEntry("routeAvailable", false)
                 .containsEntry("confidence", 0)

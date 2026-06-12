@@ -6,6 +6,11 @@
 
 $ErrorActionPreference = "Stop"
 $Root = $PSScriptRoot
+$localPostgresRoot = Join-Path $Root ".tmp\postgres"
+$localPostgresData = Join-Path $localPostgresRoot "data"
+$localPostgresLog = Join-Path $localPostgresRoot "postgres.log"
+$localPgCtl = Join-Path $localPostgresRoot "pgsql\bin\pg_ctl.exe"
+$localPgIsReady = Join-Path $localPostgresRoot "pgsql\bin\pg_isready.exe"
 
 # ── Kill previous Hermes terminals ──
 $hermesTitles = @("Hermes - Spring Boot Server", "Hermes - Python Engine", "Hermes - Auto Import Watcher")
@@ -71,6 +76,32 @@ $weak = @("<set-a-strong-password>", "<set-me>", "password", "hermes123", "11111
 if ($weak -contains $env:APP_DB_PASSWORD.Trim()) {
     Write-Host "[Hermes] APP_DB_PASSWORD looks like a placeholder or weak default. Set a strong password in Hermes.local.env.ps1" -ForegroundColor Red
     exit 1
+}
+
+if ((Test-Path -LiteralPath $localPgCtl) -and (Test-Path -LiteralPath $localPostgresData)) {
+    $port = "5432"
+    if ($env:APP_DB_URL -match 'jdbc:postgresql://[^/:]+:(\d+)/') {
+        $port = $Matches[1]
+    }
+
+    & $localPgCtl status -D $localPostgresData *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[Hermes] Starting bundled PostgreSQL on port $port..." -ForegroundColor Cyan
+        & $localPgCtl start -D $localPostgresData -l $localPostgresLog -o "-p $port -c listen_addresses=localhost"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[Hermes] Failed to start bundled PostgreSQL. Check $localPostgresLog" -ForegroundColor Red
+            exit 1
+        }
+        Start-Sleep -Seconds 2
+    }
+
+    if (Test-Path -LiteralPath $localPgIsReady) {
+        & $localPgIsReady -q -h localhost -p $port -d postgres -U $env:APP_DB_USERNAME
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[Hermes] Bundled PostgreSQL did not become ready on port $port. Check $localPostgresLog" -ForegroundColor Red
+            exit 1
+        }
+    }
 }
 
 # ── Launch (env vars flow into start_hermes.bat -> run-backend.cmd) ──

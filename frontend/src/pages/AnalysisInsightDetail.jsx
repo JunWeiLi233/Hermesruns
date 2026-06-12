@@ -8,10 +8,11 @@ import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration } from '../utils/format';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } from '../utils/analysisInsights';
-import TopbarNotifications from '../components/TopbarNotifications';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -80,16 +81,16 @@ function formatDistanceValue(distanceKm, unit) {
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${suffix}`;
 }
 
-function formatRelativeDuration(seconds, lang) {
-  if (seconds == null || Number.isNaN(seconds)) return lang === 'zh-CN' ? '节奏基线缺失' : 'No race baseline yet';
+function formatRelativeDuration(seconds, t) {
+  if (seconds == null || Number.isNaN(seconds)) return t('analysisInsight.rhythm_no_baseline');
   const magnitude = formatDuration(Math.abs(seconds));
   if (seconds < 0) {
-    return lang === 'zh-CN' ? `快于基线 ${magnitude}` : `${magnitude} faster than baseline`;
+    return t('analysisInsight.rhythm_faster', { magnitude });
   }
   if (seconds > 0) {
-    return lang === 'zh-CN' ? `慢于基线 ${magnitude}` : `${magnitude} slower than baseline`;
+    return t('analysisInsight.rhythm_slower', { magnitude });
   }
-  return lang === 'zh-CN' ? '与基线持平' : 'On baseline';
+  return t('analysisInsight.rhythm_on_baseline');
 }
 
 function clamp(value, min, max) {
@@ -444,7 +445,7 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
     title: copy.planTitles[phaseKey],
     subtitle: copy.planSubtitles[phaseKey],
     forecastLabel: snapshot.marathonRow?.timeLabel || '--',
-    forecastDelta: formatRelativeDuration(snapshot.marathonDeltaSeconds, lang),
+    forecastDelta: '--',
     keyWorkout: sessions[1]?.title || sessions[0]?.title,
     statCards: [
       { label: copy.volume7Label, value: formatDistanceValue(volume7Km, unit), detail: `${runCount7} ${lang === 'zh-CN' ? '次训练' : 'runs'}` },
@@ -455,7 +456,7 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
       { label: copy.loadLabel, value: snapshot.trainingLoad?.lastAcwr?.toFixed(2) || '--', detail: loadZoneLabel, tone: snapshot.loadZone.tone || 'cool' },
       { label: copy.intensityLabel, value: snapshot.polarized ? `${snapshot.polarized.hardPct}%` : '--', detail: snapshot.polarized ? `${snapshot.polarized.easySharePct}/${snapshot.polarized.moderateSharePct}/${snapshot.polarized.hardSharePct}` : '--', tone: (snapshot.polarized?.hardPct ?? 0) >= 32 ? 'warn' : 'good' },
       { label: copy.injuryLabel, value: injuryLabel, detail: `${cadenceDelta} / ${driftDelta}`, tone: injuryTone(snapshot.injury.level) },
-      { label: copy.raceForecastLabel, value: snapshot.marathonRow?.timeLabel || '--', detail: formatRelativeDuration(snapshot.marathonDeltaSeconds, lang), tone: (snapshot.marathonDeltaSeconds ?? 0) < 0 ? 'good' : 'cool' },
+      { label: copy.raceForecastLabel, value: snapshot.marathonRow?.timeLabel || '--', detail: '--', tone: (snapshot.marathonDeltaSeconds ?? 0) < 0 ? 'good' : 'cool' },
     ],
     phases: copy.phases.map((label, index) => ({ label, active: index === phaseIndex })),
     sessions,
@@ -463,7 +464,7 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
       copy.reasonTemplates.load(snapshot.trainingLoad?.lastAcwr?.toFixed(2) || '--', loadZoneLabel),
       copy.reasonTemplates.intensity(snapshot.polarized?.hardPct ?? 0),
       copy.reasonTemplates.injury(injuryLabel, cadenceDelta, driftDelta),
-      copy.reasonTemplates.forecast(snapshot.marathonRow?.timeLabel || '--', formatRelativeDuration(snapshot.marathonDeltaSeconds, lang)),
+      copy.reasonTemplates.forecast(snapshot.marathonRow?.timeLabel || '--', '--'),
     ],
     recentRows,
     emptyRunsCopy: copy.emptyRuns,
@@ -609,27 +610,15 @@ function mergedCoachSectionCopy(t, key) {
   return { label: t('analysis.coach_insight_planning_title'), copy: t('analysis.coach_insight_planning_copy') };
 }
 
-function mergedCoachReasonLines(snapshot, coachSections, lang) {
+function mergedCoachReasonLines(t, snapshot, coachSections) {
   const signals = coachSections.signals || {};
-  const loadZoneLabel = snapshot.loadZone.key === 'optimal' ? (lang === 'zh-CN' ? '最佳区间' : 'optimal zone') : snapshot.loadZone.key;
-  const injuryLabel = lang === 'zh-CN'
-    ? (snapshot.injury.level === 'high' ? '高' : snapshot.injury.level === 'moderate' ? '中' : '低')
-    : snapshot.injury.level;
-
-  if (lang === 'zh-CN') {
-    return [
-      `负荷比 ${signals.acwr?.toFixed(2) || '--'}，当前处在 ${loadZoneLabel}，所以系统先判断这周该推进还是回收。`,
-      `最近高强度占比 ${signals.hardSharePct ?? 0}% ，这会直接影响系统要不要把训练重新拉回有氧主线。`,
-      `伤病信号 ${injuryLabel}，步频变化 ${formatSignedPercent(snapshot.injury.cadenceDelta)}，帮助系统控制恢复与质量课比例。`,
-      `当前马拉松预测 ${snapshot.marathonRow?.timeLabel || '--'}，相对基线 ${formatRelativeDuration(snapshot.marathonDeltaSeconds, lang)}，决定这轮更适合建设还是兑现。`,
-    ];
-  }
+  const loadZoneLabel = snapshot.loadZone.key === 'optimal' ? t('analysisInsight.load_zone_optimal_zone') : snapshot.loadZone.key;
 
   return [
-    `Load ratio is ${signals.acwr?.toFixed(2) || '--'} in the ${loadZoneLabel}, so the system first decides whether this week should push or absorb.`,
-    `Hard work currently makes up ${signals.hardSharePct ?? 0}% of recent time, which tells Hermes how far to pull back toward aerobic control.`,
-    `Injury signal is ${injuryLabel}, with cadence at ${formatSignedPercent(snapshot.injury.cadenceDelta)}, so durability still shapes the block.`,
-    `Your marathon forecast is ${snapshot.marathonRow?.timeLabel || '--'} and ${formatRelativeDuration(snapshot.marathonDeltaSeconds, lang)}, which tells Hermes whether to build or sharpen.`,
+    t('analysisInsight.coach_reason_load', { acwr: signals.acwr?.toFixed(2) || '--', zone: loadZoneLabel }),
+    t('analysisInsight.coach_reason_intensity', { pct: signals.hardSharePct ?? 0 }),
+    t('analysisInsight.coach_reason_injury', { level: t(`analysisInsight.injury_level_${snapshot.injury.level}`), cadence: formatSignedPercent(snapshot.injury.cadenceDelta) }),
+    t('analysisInsight.coach_reason_forecast', { forecast: snapshot.marathonRow?.timeLabel || '--', delta: formatRelativeDuration(snapshot.marathonDeltaSeconds, t) }),
   ];
 }
 
@@ -668,20 +657,20 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
   if (daysSinceLastRun != null && daysSinceLastRun >= 2) readinessScore += 6;
   readinessScore = clamp(Math.round(readinessScore), 38, 95);
 
-  const readinessBandLabel = lang === 'zh-CN'
-    ? (readinessScore >= 78 ? '高' : readinessScore >= 62 ? '中' : '保守')
-    : (readinessScore >= 78 ? 'High' : readinessScore >= 62 ? 'Medium' : 'Conservative');
   const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
   const sessionTemplates = mergedCoachSessionTemplates(lang, phaseKey);
   const sessionTargets = [
     formatDistanceValue(easyRunTargetKm, unit),
     formatDistanceValue(keyRunTargetKm, unit),
     formatDistanceValue(longRunTargetKm, unit),
-    lang === 'zh-CN' ? '20-30 分钟' : '20-30 min',
+    t('analysisInsight.session_strength'),
   ];
-  const sessionSlots = lang === 'zh-CN'
-    ? ['今天', '下一次质量课', '长跑主线', '支持训练']
-    : ['Today', 'Next quality', 'Long run line', 'Support work'];
+  const sessionSlots = [
+    t('analysisInsight.session_today'),
+    t('analysisInsight.session_quality'),
+    t('analysisInsight.session_long_run'),
+    t('analysisInsight.session_support'),
+  ];
 
   return {
     copy: {
@@ -693,18 +682,18 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
       focusCopy: t('analysis.coach_insight_next_focus_copy', {
         focus: t(`analysis.coach_insight_focus_${phaseKey === 'protect' || phaseKey === 'absorb' ? 'recovery' : phaseKey === 'rebalance' ? 'easy' : phaseKey === 'press' ? 'quality' : 'base'}`),
       }),
-      phaseTitle: lang === 'zh-CN' ? '训练推进阶段' : 'Block progression',
+      phaseTitle: t('analysisInsight.coach_phase_title'),
       phases: COACH_PHASE_LABELS[lang] || COACH_PHASE_LABELS.en,
       scheduleTitle: t('analysis.coach_insight_planning_title'),
       scheduleCopy: t('analysis.coach_insight_planning_copy'),
-      reasonsTitle: lang === 'zh-CN' ? '系统为什么这样排' : 'Why Hermes is steering this way',
-      reasonsIntro: lang === 'zh-CN' ? '每一条建议都来自最近训练证据，而不是固定模板。' : 'Each recommendation is tied to recent evidence, not a static template.',
+      reasonsTitle: t('analysisInsight.coach_reasons_title'),
+      reasonsIntro: t('analysisInsight.coach_reasons_intro'),
       evidenceTitle: t('analysis.coach_insight_recent_title'),
       evidenceIntro: t('analysis.coach_insight_recent_copy'),
-      keyWorkoutLabel: lang === 'zh-CN' ? '下一次关键课' : 'Next key workout',
-      raceForecastLabel: lang === 'zh-CN' ? '当前马拉松预测' : 'Current marathon forecast',
-      primaryActionLabel: lang === 'zh-CN' ? '今日优先动作' : 'Primary move today',
-      sessionWhy: lang === 'zh-CN' ? '原因' : 'Why',
+      keyWorkoutLabel: t('analysisInsight.coach_key_workout_label'),
+      raceForecastLabel: t('analysisInsight.coach_race_forecast_label'),
+      primaryActionLabel: t('analysisInsight.coach_primary_action_label'),
+      sessionWhy: t('analysisInsight.coach_session_why'),
     },
     palette,
     phaseKey,
@@ -713,12 +702,12 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
     title: stateCopy.title,
     subtitle: stateCopy.subtitle,
     forecastLabel: snapshot.marathonRow?.timeLabel || '--',
-    forecastDelta: formatRelativeDuration(snapshot.marathonDeltaSeconds, lang),
+    forecastDelta: formatRelativeDuration(snapshot.marathonDeltaSeconds, t),
     keyWorkout: sessionTemplates[1]?.title || sessionTemplates[0]?.title,
     statCards: [
-      { label: lang === 'zh-CN' ? '7 天训练量' : '7-day volume', value: formatDistanceValue(volume7Km, unit), detail: `${runCount7} ${lang === 'zh-CN' ? '次训练' : 'runs'}` },
-      { label: lang === 'zh-CN' ? '28 天训练量' : '28-day volume', value: formatDistanceValue(volume28Km, unit), detail: lang === 'zh-CN' ? '最近四周总量' : 'Recent four-week stack' },
-      { label: lang === 'zh-CN' ? '当前 VDOT' : 'Current VDOT', value: snapshot.bestVdot ? snapshot.bestVdot.toFixed(1) : '--', detail: snapshot.bestEstimate?.label || (lang === 'zh-CN' ? '代表性估算' : 'Representative estimate') },
+      { label: t('analysisInsight.volume_7_label'), value: formatDistanceValue(volume7Km, unit), detail: t('analysisInsight.run_count_unit', { count: runCount7 }) },
+      { label: t('analysisInsight.volume_28_label'), value: formatDistanceValue(volume28Km, unit), detail: t('analysisInsight.volume_28_detail') },
+      { label: t('analysisInsight.vdot_current_label'), value: snapshot.bestVdot ? snapshot.bestVdot.toFixed(1) : '--', detail: snapshot.bestEstimate?.label || t('analysisInsight.best_estimate') },
     ],
     focusCards: (coachSections.sections || []).map((section) => {
       const meta = mergedCoachSectionCopy(t, section.key);
@@ -728,10 +717,10 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
           ? (snapshot.polarized ? `${snapshot.polarized.easySharePct}/${snapshot.polarized.moderateSharePct}/${snapshot.polarized.hardSharePct}` : '--')
           : snapshot.marathonRow?.timeLabel || '--';
       const detail = section.key === 'load'
-        ? (lang === 'zh-CN' ? `伤病信号 ${snapshot.injury.score || 0}` : `Injury signal ${snapshot.injury.score || 0}`)
+        ? t('analysisInsight.injury_signal_value', { score: snapshot.injury.score || 0 })
         : section.key === 'mix'
-          ? (snapshot.polarized ? `${snapshot.polarized.hardPct}% ${lang === 'zh-CN' ? '高强度' : 'hard work'}` : '--')
-          : formatRelativeDuration(snapshot.marathonDeltaSeconds, lang);
+          ? (snapshot.polarized ? `${snapshot.polarized.hardPct}% ${t('analysisInsight.intensity_hard_label')}` : '--')
+          : formatRelativeDuration(snapshot.marathonDeltaSeconds, t);
       return { label: meta.label, value, detail, copy: meta.copy, tone: section.tone || 'cool' };
     }),
     phases: (COACH_PHASE_LABELS[lang] || COACH_PHASE_LABELS.en).map((label, index) => ({ label, active: index === phaseIndex })),
@@ -743,9 +732,9 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
       tone: session.tone,
       detail: session.detail,
     })),
-    reasons: mergedCoachReasonLines(snapshot, coachSections, lang),
+    reasons: mergedCoachReasonLines(t, snapshot, coachSections),
     recentRows,
-    emptyRunsCopy: lang === 'zh-CN' ? '最近训练还不够多，先完成一堂轻松跑，系统会开始补全教练计划。' : 'Not enough recent training yet. One easy run will give Hermes enough context to start shaping the plan.',
+    emptyRunsCopy: t('analysisInsight.coach_empty_runs'),
   };
 }
 
@@ -1043,36 +1032,20 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang) 
   const zoneLabel = zoneKey === 'optimal'
     ? t('analysis.stitch_optimal_zone')
     : t(`analysis.stitch_acwr_${zoneKey}`);
-  const statusCopyMap = lang === 'zh-CN'
-    ? {
-      low: '最近训练刺激偏轻，适合稳稳把基础量堆起来，而不是急着追求高压课。',
-      moderate: '负荷开始逼近上沿，下一次质量课要更讲节奏，不要连续硬顶。',
-      high: '这组负荷已经接近过冲区，优先把恢复窗口留出来，再决定是否继续加码。',
-      optimal: '你现在处在健康负荷区间，训练刺激和恢复节奏保持得很稳。',
-      unknown: '最近样本还不够，先继续完成几次稳定训练，系统会把负荷轮廓补全。',
-    }
-    : {
-      low: 'Your recent stress is light, so the better move is to keep stacking base volume instead of forcing intensity.',
-      moderate: 'Load is approaching the upper edge, so the next quality day should stay precise rather than heroic.',
-      high: 'This stack is pressing toward overreach, so recovery space matters more than another hard push.',
-      optimal: 'You are sitting in a healthy load zone, with training stress and recovery rhythm holding together well.',
-      unknown: 'There is not enough recent evidence yet. A few more steady sessions will sharpen the load profile.',
-    };
-  const judgmentFollowupMap = lang === 'zh-CN'
-    ? {
-      low: '如果明天状态正常，可以安排一次有目的的节奏刺激，把 acute 往目标区轻推一点。',
-      moderate: '建议把下一次关键课的前后都留成轻松日，让 chronic 继续兜住波动。',
-      high: '未来 24 小时更适合轻松跑或完全恢复，等 ACWR 回落后再接高质量训练。',
-      optimal: '如果明天主观疲劳正常，你有空间完成一次高质量训练，然后接一个恢复日。',
-      unknown: '先把最近一周跑完整，Hermes 才能给出更可信的战术建议。',
-    }
-    : {
-      low: 'If tomorrow feels normal, one purposeful tempo or hill touch can nudge acute load back toward target.',
-      moderate: 'Place easy days around the next key workout so chronic support keeps carrying the block.',
-      high: 'The next 24 hours are better used for easy running or full recovery before another demanding session.',
-      optimal: 'If tomorrow’s legs feel normal, you have room for one quality session before a recovery day.',
-      unknown: 'Complete a steadier training week first so Hermes can give you a more trustworthy tactical read.',
-    };
+  const statusCopyMap = {
+    low: t('analysisInsight.load_status_low'),
+    moderate: t('analysisInsight.load_status_moderate'),
+    high: t('analysisInsight.load_status_high'),
+    optimal: t('analysisInsight.load_status_optimal'),
+    unknown: t('analysisInsight.load_status_unknown'),
+  };
+  const judgmentFollowupMap = {
+    low: t('analysisInsight.load_followup_low'),
+    moderate: t('analysisInsight.load_followup_moderate'),
+    high: t('analysisInsight.load_followup_high'),
+    optimal: t('analysisInsight.load_followup_optimal'),
+    unknown: t('analysisInsight.load_followup_unknown'),
+  };
   const sampleRows = recentRows.slice(0, 3).map((row) => ({
     ...row,
     icon: row.zoneKey === 'threshold' || row.zoneKey === 'interval' || row.zoneKey === 'rep'
@@ -1085,30 +1058,30 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang) 
     loadLabel: row.loadScore != null ? String(row.loadScore) : '--',
   }));
   const nextWindowDays = zoneKey === 'high' ? 2 : zoneKey === 'moderate' ? 1 : 0;
-  const nextWindowTitle = lang === 'zh-CN' ? '下一负荷窗口' : 'Next load window';
+  const nextWindowTitle = t('analysisInsight.load_next_window');
   const nextWindowValue = nextWindowDays === 0
-    ? (lang === 'zh-CN' ? '今天可推进' : 'Open today')
-    : (lang === 'zh-CN' ? `${nextWindowDays} 天后` : `${nextWindowDays}d out`);
+    ? t('analysisInsight.load_open_today')
+    : t('analysisInsight.load_days_out', { days: nextWindowDays });
   const nextWindowCopy = zoneKey === 'high'
-    ? (lang === 'zh-CN' ? '先恢复，再推进。' : 'Recover first, then push.')
+    ? t('analysisInsight.load_recover_first')
     : zoneKey === 'low'
-      ? (lang === 'zh-CN' ? '适合温和加压。' : 'Room to add pressure.')
-      : (lang === 'zh-CN' ? '维持节奏最重要。' : 'Keep the rhythm controlled.');
-  const athleteLabel = profile?.displayName || profile?.name || (lang === 'zh-CN' ? '当前训练周期' : 'Current block');
+      ? t('analysisInsight.load_room_to_add')
+      : t('analysisInsight.load_keep_rhythm');
+  const athleteLabel = profile?.displayName || profile?.name || t('analysisInsight.load_current_block');
 
   return {
-    heroEyebrow: lang === 'zh-CN' ? '分析引擎 v2.4' : 'Analytical Engine v2.4',
-    heroTitle: lang === 'zh-CN' ? '负荷' : 'Load',
-    heroAccent: lang === 'zh-CN' ? '平衡' : 'Balance',
-    statusLabel: lang === 'zh-CN' ? '当前状态' : 'Status update',
+    heroEyebrow: t('analysisInsight.load_hero_eyebrow'),
+    heroTitle: t('analysisInsight.load_hero_title'),
+    heroAccent: t('analysisInsight.load_hero_accent'),
+    statusLabel: t('analysisInsight.load_status_label'),
     statusValue: zoneLabel,
-    ratioLabel: lang === 'zh-CN' ? '当前负荷比' : 'Current load ratio',
+    ratioLabel: t('analysisInsight.load_ratio_label'),
     ratioValue: acwr != null ? acwr.toFixed(2) : '--',
-    ratioRangeLabel: lang === 'zh-CN' ? '最佳区间 0.8 - 1.3' : 'Optimal (0.8 - 1.3)',
+    ratioRangeLabel: t('analysisInsight.load_ratio_range'),
     ratioProgress: acwr == null ? 42 : clamp(((acwr - 0.5) / 1.0) * 100, 0, 100),
-    chartTitle: lang === 'zh-CN' ? '负荷趋势（最近 28 天）' : 'Load trend (28 days)',
-    chartLegendAcute: lang === 'zh-CN' ? '急性负荷' : 'Acute',
-    chartLegendChronic: lang === 'zh-CN' ? '慢性负荷' : 'Chronic',
+    chartTitle: t('analysisInsight.load_chart_title'),
+    chartLegendAcute: t('analysisInsight.load_chart_acute_legend'),
+    chartLegendChronic: t('analysisInsight.load_chart_chronic_legend'),
     chartWindow: chartWindow.map((entry) => ({
       ...entry,
       acuteHeight: clamp((entry.acute / chartMax) * 100, 8, 100),
@@ -1116,54 +1089,54 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang) 
       label: new Date(entry.day).toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric' }),
     })),
     chartMax,
-    chartBadge: acwr != null ? `${acwr.toFixed(2)} ${lang === 'zh-CN' ? 'ACWR' : 'ACWR'}` : '--',
-    chartBadgeLabel: lang === 'zh-CN' ? '最新比值' : 'Latest ratio',
+    chartBadge: acwr != null ? `${acwr.toFixed(2)} ${t('analysisInsight.load_chart_acwr')}` : '--',
+    chartBadgeLabel: t('analysisInsight.load_chart_badge_label'),
     metricCards: [
       {
-        label: lang === 'zh-CN' ? '急性负荷（7天）' : 'Acute load (7d)',
+        label: t('analysisInsight.load_metric_acute_7d'),
         value: Math.round(acute).toString(),
-        detail: `${acuteDeltaPct >= 0 ? '+' : ''}${acuteDeltaPct}% ${lang === 'zh-CN' ? '对比上次更新' : 'vs prior update'}`,
+        detail: `${acuteDeltaPct >= 0 ? '+' : ''}${acuteDeltaPct}% ${t('analysisInsight.load_metric_vs_prior')}`,
         tone: 'accent',
       },
       {
-        label: lang === 'zh-CN' ? '慢性负荷（28天）' : 'Chronic load (28d)',
+        label: t('analysisInsight.load_metric_chronic_28d'),
         value: Math.round(chronic).toString(),
-        detail: lang === 'zh-CN' ? '长期基线' : 'Stable baseline',
+        detail: t('analysisInsight.load_metric_baseline'),
         tone: 'muted',
       },
       {
-        label: lang === 'zh-CN' ? '负荷差值' : 'Load delta',
+        label: t('analysisInsight.load_metric_delta'),
         value: `${loadDelta >= 0 ? '+' : ''}${Math.round(loadDelta)}`,
-        detail: lang === 'zh-CN' ? 'acute 对比 chronic' : 'acute vs chronic',
+        detail: t('analysisInsight.load_metric_delta_desc'),
         tone: loadDelta > 40 ? 'risk' : loadDelta > 10 ? 'watch' : 'muted',
       },
       {
-        label: lang === 'zh-CN' ? '伤病信号' : 'Injury signal',
+        label: t('analysisInsight.load_metric_injury'),
         value: injuryScore != null ? `${injuryScore}` : '--',
         detail: t(`analysis.stitch_injury_${snapshot.injury?.level || 'low'}`),
         tone: snapshot.injury?.level === 'high' ? 'risk' : snapshot.injury?.level === 'moderate' ? 'watch' : 'accent',
       },
     ],
-    judgmentKicker: lang === 'zh-CN' ? '教练判断' : 'Coach judgment',
+    judgmentKicker: t('analysisInsight.load_judgment_kicker'),
     judgmentTitle: zoneKey === 'high'
-      ? (lang === 'zh-CN' ? '先稳住，不要再硬推' : 'Hold the edge, do not force it')
+      ? t('analysisInsight.load_judgment_high')
       : zoneKey === 'low'
-        ? (lang === 'zh-CN' ? '基础稳定，可以轻推刺激' : 'Stable base, ready for a nudge')
+        ? t('analysisInsight.load_judgment_low')
         : zoneKey === 'moderate'
-          ? (lang === 'zh-CN' ? '控制节奏，比加量更重要' : 'Control matters more than volume')
-          : (lang === 'zh-CN' ? '负荷保持得很稳' : 'Load is holding together well'),
+          ? t('analysisInsight.load_judgment_moderate')
+          : t('analysisInsight.load_judgment_optimal'),
     judgmentBody: statusCopyMap[zoneKey] || statusCopyMap.unknown,
     judgmentFollowup: judgmentFollowupMap[zoneKey] || judgmentFollowupMap.unknown,
-    judgmentCta: lang === 'zh-CN' ? '查看今日训练建议' : 'View today’s training',
+    judgmentCta: t('analysisInsight.load_judgment_cta'),
     nextWindowTitle,
     nextWindowAthlete: athleteLabel,
     nextWindowValue,
     nextWindowCopy,
-    samplesTitle: lang === 'zh-CN' ? '最近样本' : 'Recent samples',
-    samplesFilter: lang === 'zh-CN' ? '筛选：跑步' : 'Filter: Running',
-    sampleDistanceLabel: lang === 'zh-CN' ? '距离' : 'Distance',
-    sampleLoadLabel: lang === 'zh-CN' ? '负荷' : 'Load',
-    samplesViewAll: lang === 'zh-CN' ? '查看历史负荷档案' : 'Load historical archive',
+    samplesTitle: t('analysisInsight.load_samples_title'),
+    samplesFilter: t('analysisInsight.load_samples_filter'),
+    sampleDistanceLabel: t('analysisInsight.load_sample_distance'),
+    sampleLoadLabel: t('analysisInsight.load_sample_load'),
+    samplesViewAll: t('analysisInsight.load_samples_view_all'),
     sampleRows,
     statusTone,
   };
@@ -1307,14 +1280,14 @@ export default function AnalysisInsightDetail() {
   const coachSecondarySessions = coachSystem?.sessions?.slice(coachPrimarySession ? 2 : 1, 4) || [];
   const coachFocusShare = snapshot.polarized?.easySharePct ?? snapshot.polarized?.easyPct ?? 0;
   const coachToneLabel = coachSystem?.phaseKey === 'protect'
-    ? (lang === 'zh-CN' ? '保护周' : 'Protect week')
+    ? t('analysisInsight.coach_week_protect')
     : coachSystem?.phaseKey === 'absorb'
-      ? (lang === 'zh-CN' ? '吸收周' : 'Absorb week')
+      ? t('analysisInsight.coach_week_absorb')
       : coachSystem?.phaseKey === 'rebalance'
-        ? (lang === 'zh-CN' ? '重平衡周' : 'Rebalance week')
+        ? t('analysisInsight.coach_week_rebalance')
         : coachSystem?.phaseKey === 'press'
-          ? (lang === 'zh-CN' ? '推进周' : 'Push week')
-          : (lang === 'zh-CN' ? '建设周' : 'Build week');
+          ? t('analysisInsight.coach_week_press')
+          : t('analysisInsight.coach_week_build');
   const coachTrendTooltip = injuryTrend.points[injuryTrend.points.length - 1] || null;
 
   const [injuryScrubber, setInjuryScrubber] = useState(null);
@@ -1353,9 +1326,12 @@ export default function AnalysisInsightDetail() {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights', active: true },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
+    { key: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory', icon: 'territory' },
+    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
+    { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
   ];
   const topnavTitle = detail.title;
 
@@ -1372,7 +1348,7 @@ export default function AnalysisInsightDetail() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page analysis-insight-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page analysis-insight-detail-page${insightKey === 'intensity' ? ' is-intensity' : ''}${insightKey === 'coach-insight' ? ' is-coach-insight' : ''}${insightKey === 'injury-risk' ? ' is-injury-risk' : ''}${insightKey === 'load-balance' ? ' is-load-balance' : ''}${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -1420,13 +1396,13 @@ export default function AnalysisInsightDetail() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav runner-shell-topnav--editorial-detail">
-              <button type="button" className="runner-shell-topnav-brand" onClick={() => navigate('/profile')}>HERMES</button>
-              <button type="button" className="runner-shell-topnav-link" onClick={() => navigate('/analysis')}>
-                {t('profile.dashboard_nav_analysis')}
-              </button>
-              <span className="runner-shell-topnav-link is-section is-active">{topnavTitle}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              parentLabel={t('profile.dashboard_nav_analysis')}
+              parentRoute="/analysis"
+              activeLabel={topnavTitle}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions">
@@ -1641,7 +1617,7 @@ export default function AnalysisInsightDetail() {
                   <div className="analysis-coach-command-phase-row">
                     {coachSystem.phases.map((phase) => (
                       <div key={phase.label} className={cx('analysis-coach-command-phase-chip', phase.active && 'is-active')}>
-                        <span>{phase.active ? (lang === 'zh-CN' ? '当前' : 'Active') : (lang === 'zh-CN' ? '阶段' : 'Track')}</span>
+                        <span>{phase.active ? t('analysisInsight.coach_phase_active') : t('analysisInsight.coach_phase_track')}</span>
                         <strong>{phase.label}</strong>
                       </div>
                     ))}
@@ -1932,9 +1908,9 @@ export default function AnalysisInsightDetail() {
                       <div className="analysis-load-command-ratio-fill" style={{ width: `${loadDashboard.ratioProgress}%` }} />
                     </div>
                     <div className="analysis-load-command-ratio-labels">
-                      <span>{lang === 'zh-CN' ? '偏低' : 'Underload'}</span>
+                      <span>{t('analysisInsight.load_underload')}</span>
                       <span>{loadDashboard.ratioRangeLabel}</span>
-                      <span>{lang === 'zh-CN' ? '过冲' : 'Overreach'}</span>
+                      <span>{t('analysisInsight.load_overreach')}</span>
                     </div>
                   </div>
                 </article>
@@ -2013,7 +1989,7 @@ export default function AnalysisInsightDetail() {
                       </svg>
                     ) : (
                       <div className="analysis-load-command-chart-empty">
-                        {lang === 'zh-CN' ? '暂无负荷数据' : 'No load data yet'}
+                        {t('analysisInsight.load_no_data')}
                       </div>
                     )}
 
@@ -2022,8 +1998,8 @@ export default function AnalysisInsightDetail() {
                       <div className="analysis-load-command-chart-tooltip" style={{ pointerEvents: 'none' }}>
                         <span>{loadScrubber.label}</span>
                         <div>
-                          <strong style={{ color: '#f07561' }}>{lang === 'zh-CN' ? '急性' : 'Acute'} {Math.round(loadScrubber.acute)}</strong>
-                          <strong style={{ color: '#78b4ff' }}>{lang === 'zh-CN' ? '慢性' : 'Chronic'} {Math.round(loadScrubber.chronic)}</strong>
+                          <strong style={{ color: '#f07561' }}>{t('analysisInsight.load_chart_acute_short')} {Math.round(loadScrubber.acute)}</strong>
+                          <strong style={{ color: '#78b4ff' }}>{t('analysisInsight.load_chart_chronic_short')} {Math.round(loadScrubber.chronic)}</strong>
                         </div>
                       </div>
                     ) : (
@@ -2050,7 +2026,7 @@ export default function AnalysisInsightDetail() {
                 <article className="analysis-load-command-methodology-card">
                   <div className="analysis-load-command-panel-head">
                     <div>
-                      <span className="analysis-overview-card-kicker">{t('analysis.load_methodology_kicker')}</span>
+                      <span className="analysis-overview-card-kicker" style={{ letterSpacing: lang === 'zh-CN' ? '0.08em' : undefined, textTransform: lang === 'zh-CN' ? 'none' : undefined }}>{t('analysis.load_methodology_kicker')}</span>
                       <h2>{t('analysis.load_methodology_title')}</h2>
                     </div>
                   </div>
@@ -2059,9 +2035,9 @@ export default function AnalysisInsightDetail() {
                       <div className="analysis-formula-box">
                         <span className="analysis-formula-label">ACWR =</span>
                         <div className="analysis-formula-fraction">
-                          <span className="analysis-formula-numerator">{lang === 'zh-CN' ? '急性负荷 (7天 EWMA)' : 'Acute Load (7-day EWMA)'}</span>
+                          <span className="analysis-formula-numerator">{t('analysisInsight.load_formula_acute')}</span>
                           <hr />
-                          <span className="analysis-formula-denominator">{lang === 'zh-CN' ? '慢性负荷 (28天 EWMA)' : 'Chronic Load (28-day EWMA)'}</span>
+                          <span className="analysis-formula-denominator">{t('analysisInsight.load_formula_chronic')}</span>
                         </div>
                       </div>
                     </div>

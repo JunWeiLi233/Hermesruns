@@ -55,31 +55,31 @@ public class RaceCourseMapSearchService {
 
     public LinkedHashMap<String, RaceCourseMapService.CourseMapCandidate> collectCandidates(String raceName, String city, String country, String websiteUrl, Double distanceKm) {
         LinkedHashMap<String, RaceCourseMapService.CourseMapCandidate> candidates = new LinkedHashMap<>();
+        String websiteHost = "";
         if (websiteUrl != null) {
-            collectOfficialPageCandidates(candidates, websiteUrl);
-            if (!candidates.isEmpty()) {
-                return candidates;
+            try {
+                websiteHost = URI.create(websiteUrl).getHost();
+            } catch (Exception ignored) {
+                websiteHost = "";
             }
-            String websiteHost = URI.create(websiteUrl).getHost();
-            for (String query : buildSearchQueries(raceName, city, country, websiteHost, distanceKm)) {
-                collectSearchCandidates(candidates, query);
-            }
-        } else {
-            for (String query : buildSearchQueries(raceName, city, country, "", distanceKm)) {
-                collectSearchCandidates(candidates, query);
-            }
+        }
+        for (String query : buildSearchQueries(raceName, city, country, websiteHost, distanceKm).stream().limit(4).toList()) {
+            collectSearchCandidates(candidates, query);
         }
         return candidates;
     }
 
-    private void collectOfficialPageCandidates(Map<String, RaceCourseMapService.CourseMapCandidate> candidates, String websiteUrl) {
+    void collectOfficialPageCandidates(Map<String, RaceCourseMapService.CourseMapCandidate> candidates, String websiteUrl) {
         List<String> pages = new ArrayList<>();
         pages.add(websiteUrl);
         List<String> relativePages = List.of(
                 "course", "course/", "course-map", "course-map/", "route", "route/", "route-map", "route-map/",
-                "map", "map/", "the-course", "race-info", "race-info/course", "course-details", "race-details",
+                "map", "map/", "the-course", "course-and-start-finish", "course-and-start-finish/",
+                "race-info", "race-info/course", "course-details", "race-details",
                 "en/course", "en/course/", "en/race/course", "en/map", "about/course", "about/course/",
-                "about/course-map", "about/course-map/", "about/route", "about/route-map", "?page=course",
+                "about/course-map", "about/course-map/", "about/route", "about/route-map",
+                "info/course", "info/course/", "race-information/course", "race-information/course/",
+                "?page=course",
                 "?tab=map", "?section=route", "course.pdf", "race-map.pdf", "course-map.pdf"
         );
         for (String relativePage : relativePages) {
@@ -91,12 +91,14 @@ public class RaceCourseMapSearchService {
         pages.add(appendPath(websiteUrl, "/route-map"));
         pages.add(appendPath(websiteUrl, "/map"));
         pages.add(appendPath(websiteUrl, "/the-course"));
+        pages.add(appendPath(websiteUrl, "/course-and-start-finish"));
         pages.add(appendPath(websiteUrl, "/race-info"));
         pages.add(appendPath(websiteUrl, "/race-info/course"));
         pages.add(appendPath(websiteUrl, "/course-details"));
         pages.add(appendPath(websiteUrl, "/race-details"));
         pages.add(appendPath(websiteUrl, "/en/course"));
         pages.add(appendPath(websiteUrl, "/en/race/course"));
+        pages.add(appendPath(websiteUrl, "/en/info/course"));
         pages.add(appendPath(websiteUrl, "/en/course-map"));
         pages.add(appendPath(websiteUrl, "/en/map"));
         pages.add(appendPath(websiteUrl, "/en/route"));
@@ -163,6 +165,8 @@ public class RaceCourseMapSearchService {
             String resolved = baseUri == null ? raw.trim() : baseUri.resolve(raw.trim()).toString();
             String safe = SafeUrlValidator.validateHttpsUrlOrNull(resolved, MAX_URL_LENGTH, "courseMapImageUrl");
             if (safe == null || (!isImageFileUrl(safe) && !isPdfFileUrl(safe))) return false;
+            if (baseUri == null && !hasPriorityCourseHint(safe)) return false;
+            if (baseUri == null && isFullMarathonSearch(source) && isHalfMarathonSignal(safe)) return false;
             int totalScore = score + scoreText(safe) + scorePriorityHints(safe);
             if (totalScore <= 0) return false;
             RaceCourseMapService.CourseMapCandidate existing = candidates.get(safe);
@@ -173,6 +177,32 @@ public class RaceCourseMapSearchService {
         } catch (IllegalArgumentException ignored) {
             return false;
         }
+    }
+
+    private boolean hasPriorityCourseHint(String value) {
+        if (value == null || value.isBlank()) return false;
+        String lower = value.toLowerCase(Locale.ROOT);
+        for (String hint : PRIORITY_COURSE_HINTS) {
+            if (lower.contains(hint)) return true;
+        }
+        return false;
+    }
+
+    private boolean isFullMarathonSearch(String source) {
+        if (source == null) return false;
+        String lower = source.toLowerCase(Locale.ROOT);
+        return lower.contains("42km") || lower.contains("42.195") || lower.contains("marathon");
+    }
+
+    private boolean isHalfMarathonSignal(String value) {
+        if (value == null) return false;
+        String lower = value.toLowerCase(Locale.ROOT);
+        return lower.contains("half-marathon")
+                || lower.contains("half_marathon")
+                || lower.contains("halfmarathon")
+                || lower.contains("half-route")
+                || lower.contains("half_route")
+                || lower.contains("/half/");
     }
 
     private String fetchHtml(String url) {

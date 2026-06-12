@@ -1,0 +1,81 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const loginSource = readFileSync(path.join(here, 'Login.jsx'), 'utf8');
+const slideSource = readFileSync(path.join(here, '../data/authBrandSlides.js'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const translationsSource = [
+  readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8'),
+  readFileSync(path.join(here, '../i18n/locales/zh-CN/pages.js'), 'utf8'),
+].join('\n');
+
+assert.match(
+  loginSource,
+  /import authBrandSlides from '\.\.\/data\/authBrandSlides';/,
+  'Login should use the shared brand slide list for the brand introduction carousel.',
+);
+
+assert.match(
+  slideSource,
+  /const authBrandSlides\s*=\s*\[/,
+  'Shared auth brand carousel data should define the reusable slide list.',
+);
+
+assert.match(
+  loginSource,
+  /auth-flow-slide-track/,
+  'Login brand intro should render a rolling slide track inside auth-flow-brand-inner.',
+);
+
+assert.match(
+  loginSource,
+  /apiFetch\('\/api\/auth\/strava\/status'\)[\s\S]*?if \(!response\.ok\) \{[\s\S]*?return null;/,
+  'Login should load optional Strava status without apiJson, because apiJson redirects on 401 and can trap users on /login.',
+);
+
+assert.doesNotMatch(
+  loginSource,
+  /apiJson\('\/api\/auth\/strava\/status'\)/,
+  'Login must not use apiJson for optional Strava status because unauthenticated 401 responses should not reload /login.',
+);
+
+assert.match(
+  loginSource,
+  /auth-flow-slide/,
+  'Login brand intro should render individual slide panels instead of one static copy block.',
+);
+
+assert.match(
+  styleSource,
+  /@keyframes authFlowSlideRoll/,
+  'Login brand intro styles should define the rolling slide animation.',
+);
+
+assert.match(
+  styleSource,
+  /\.auth-flow-slide-track\s*\{/,
+  'Login brand intro styles should define the slide track.',
+);
+
+assert.match(
+  styleSource,
+  /prefers-reduced-motion:\s*reduce[\s\S]*auth-flow-slide-track/,
+  'Login brand intro should respect reduced-motion users.',
+);
+
+assert.match(
+  translationsSource,
+  /"stitch_slide_1_kicker":/,
+  'Login carousel copy should be translated in the index namespace.',
+);
+
+assert.match(
+  translationsSource,
+  /"stitch_slide_3_copy":/,
+  'Login carousel should include all three translated slide copy entries.',
+);
+
+console.log('[PASS] Login brand carousel guardrails passed.');

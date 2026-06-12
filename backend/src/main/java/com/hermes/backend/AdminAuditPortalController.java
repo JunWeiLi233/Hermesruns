@@ -51,6 +51,16 @@ public class AdminAuditPortalController {
         return ResponseEntity.ok(AdminPagedResponse.from(result.map(adminService::toJobDto), pageable.getSort()));
     }
 
+    @GetMapping("/jobs/{jobId}")
+    public ResponseEntity<?> job(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                 @PathVariable Long jobId) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        return adminService.getAdminBackgroundJobRepository().findById(jobId)
+                .<ResponseEntity<?>>map(job -> ResponseEntity.ok(adminService.toJobDto(job)))
+                .orElseGet(() -> AdminApiResponses.error(HttpStatus.NOT_FOUND, "Job not found.", "job_not_found"));
+    }
+
     @PostMapping("/jobs/strava-sync")
     public ResponseEntity<?> triggerStravaSync(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);

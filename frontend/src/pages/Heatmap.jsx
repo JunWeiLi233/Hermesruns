@@ -190,7 +190,7 @@ function formatCoordinate(value, positiveSuffix, negativeSuffix) {
 }
 
 export default function Heatmap() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authHydrated } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -201,13 +201,15 @@ export default function Heatmap() {
   const [heatmapState, setHeatmapState] = useState('loading');
   const [heatmapReloadToken, setHeatmapReloadToken] = useState(0);
   const [mapMountFailed, setMapMountFailed] = useState(false);
-  const [isFocusGridCollapsed, setIsFocusGridCollapsed] = useState(false);
   const [viewBounds, setViewBounds] = useState(null);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
   useEffect(() => {
+    if (!authHydrated) {
+      return;
+    }
     if (!isAuthenticated) {
       navigate('/login');
       return;
@@ -231,10 +233,10 @@ export default function Heatmap() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate]);
+  }, [authHydrated, isAuthenticated, navigate]);
 
   useEffect(() => {
-    if (!isAuthenticated) return undefined;
+    if (!authHydrated || !isAuthenticated) return undefined;
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 12000);
@@ -271,7 +273,7 @@ export default function Heatmap() {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [isAuthenticated, heatmapReloadToken]);
+  }, [authHydrated, isAuthenticated, heatmapReloadToken]);
 
   useEffect(() => {
     loadLeafletModules().catch(() => {
@@ -411,11 +413,6 @@ export default function Heatmap() {
     }).slice(0, 10);
   }, [viewBounds, runs]);
 
-  const focusCards = [
-    { label: t('heatmap.page_runs_label'), value: activityCount },
-    { label: t('heatmap.page_points_label'), value: pointCount },
-    { label: t('heatmap.page_density_label'), value: densityPerRun, emphasis: 'density' },
-  ];
   const speedLegendLabels = {
     slow: t('heatmap.page_legend_slow'),
     mid: t('heatmap.page_legend_mid'),
@@ -485,7 +482,7 @@ export default function Heatmap() {
             <AppIcon name="search" className="heatmap-page-pill-icon" />
             <div className="heatmap-page-search-copy">
               <strong>{t('heatmap.page_recenter')}</strong>
-              <span>{showMapOverlays ? centerLabel : t('heatmap_loading')}</span>
+              <span>{showMapOverlays ? centerLabel : t('heatmap.loading')}</span>
             </div>
           </button>
 
@@ -553,53 +550,6 @@ export default function Heatmap() {
                 <AppIcon name="map" className="heatmap-page-utility-icon" />
               </button>
             </nav>
-
-            <section className={cx('heatmap-page-story-card', isFocusGridCollapsed && 'is-collapsed')}>
-              {isFocusGridCollapsed ? (
-                <button
-                  type="button"
-                  className="heatmap-page-focus-toggle is-collapsed"
-                  onClick={() => setIsFocusGridCollapsed(false)}
-                  aria-label={t('heatmap.page_focus_expand')}
-                  title={t('heatmap.page_focus_expand')}
-                  aria-pressed="true"
-                  aria-expanded="false"
-                >
-                  <span className="heatmap-page-focus-toggle-dot" aria-hidden="true" />
-                </button>
-              ) : (
-                <>
-                  <div className="heatmap-page-story-head">
-                    <span className="heatmap-page-card-kicker">{t('heatmap.page_map_kicker')}</span>
-                    <button
-                      type="button"
-                      className="heatmap-page-focus-toggle"
-                      onClick={() => setIsFocusGridCollapsed(true)}
-                      aria-label={t('heatmap.page_focus_collapse')}
-                      title={t('heatmap.page_focus_collapse')}
-                      aria-pressed="false"
-                      aria-expanded="true"
-                    >
-                      <span className="heatmap-page-focus-toggle-dot" aria-hidden="true" />
-                    </button>
-                  </div>
-                  <h1>{t('heatmap.page_title')}</h1>
-                  <p>{t('heatmap.page_copy')}</p>
-
-                  <div className="heatmap-page-focus-grid">
-                    {focusCards.map((card) => (
-                      <div
-                        key={card.label}
-                        className={cx('heatmap-page-focus-card', card.emphasis === 'density' && 'is-density')}
-                      >
-                        <span>{card.label}</span>
-                        <strong>{card.value}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </section>
 
             <aside className="heatmap-page-legend-card">
               <span className="heatmap-page-card-kicker">{t('heatmap.page_legend_title')}</span>
@@ -687,7 +637,7 @@ export default function Heatmap() {
           <div className="heatmap-page-empty">
             <div className="heatmap-page-empty-copy">
               <span className="heatmap-page-card-kicker">{t('heatmap.page_empty_kicker')}</span>
-              <h3>{t('heatmap_empty')}</h3>
+              <h3>{t('heatmap.empty')}</h3>
               <p>{t('heatmap.page_empty_copy')}</p>
             </div>
             <div className="heatmap-page-empty-actions">

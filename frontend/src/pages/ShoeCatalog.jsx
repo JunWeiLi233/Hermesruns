@@ -81,13 +81,13 @@ const CATALOG_CATEGORY_META = {
   trail: { zh: '越野', en: 'Trail' },
 };
 
-function getCatalogCategoryLabel(category, lang) {
+function getCatalogCategoryLabel(category, t) {
   const raw = (category || '').toString();
-  if (!raw) return lang === 'zh-CN' ? '其他' : 'Other';
+  if (!raw) return t('shoeCatalog.category_other');
   const normalized = normalizeBrandKey(raw);
-  const meta = CATALOG_CATEGORY_META[normalized];
-  if (meta) return lang === 'zh-CN' ? meta.zh : meta.en;
-  return raw;
+  const key = `shoeCatalog.category.${normalized}`;
+  const translated = t(key);
+  return translated !== key ? translated : raw;
 }
 
 function getCatalogModelLabel(item, lang) {
@@ -98,7 +98,7 @@ function getCatalogModelLabel(item, lang) {
 }
 
 export default function ShoeCatalog() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -109,7 +109,38 @@ export default function ShoeCatalog() {
   const [selectedModel, setSelectedModel] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [brandsExpanded, setBrandsExpanded] = useState(false);
+  const avatarMenuRef = useRef(null);
   const seriesSectionRef = useRef(null);
+
+  const viewedBrandKeys = useMemo(() => {
+    try {
+      const raw = window.localStorage.getItem('hermes_shoe_brand_views');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }, []);
+
+  const recordBrandView = (brand) => {
+    try {
+      const raw = window.localStorage.getItem('hermes_shoe_brand_views');
+      const list = raw ? JSON.parse(raw) : [];
+      const filtered = list.filter((b) => b !== brand);
+      filtered.unshift(brand);
+      const trimmed = filtered.slice(0, 20);
+      window.localStorage.setItem('hermes_shoe_brand_views', JSON.stringify(trimmed));
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
+        setAvatarMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -179,9 +210,11 @@ export default function ShoeCatalog() {
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
+    { key: 'territory', icon: 'territory', label: t('profile.dashboard_nav_territory') || 'Territory', route: '/territory' },
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
+    { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
   ];
 
   const availableCatalogCategories = useMemo(() => {
@@ -189,6 +222,33 @@ export default function ShoeCatalog() {
     const categories = Array.from(new Set(source.map((item) => item.category || item.type).filter(Boolean)));
     return ['all', ...categories];
   }, [catalog, selectedBrand]);
+
+  const visibleCatalogBrands = useMemo(() => {
+    if (brandsExpanded) return catalog;
+    if (catalog.length <= 4) return catalog;
+    if (viewedBrandKeys.length > 0) {
+      const ordered = [];
+      const remaining = new Set(catalog.map((b) => b.brand));
+      for (const key of viewedBrandKeys) {
+        const match = catalog.find((b) => b.brand === key);
+        if (match) {
+          ordered.push(match);
+          remaining.delete(match.brand);
+        }
+        if (ordered.length >= 4) break;
+      }
+      if (ordered.length < 4) {
+        const extras = catalog.filter((b) => remaining.has(b.brand));
+        for (const b of extras) {
+          ordered.push(b);
+          if (ordered.length >= 4) break;
+        }
+      }
+      return ordered;
+    }
+    const shuffled = [...catalog].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 4);
+  }, [catalog, brandsExpanded, viewedBrandKeys]);
 
   const visibleCatalogModels = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -222,6 +282,7 @@ export default function ShoeCatalog() {
     setSelectedBrand(brand);
     setSelectedCategory('all');
     setSearchQuery('');
+    recordBrandView(brand.brand);
     requestAnimationFrame(() => {
       seriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
@@ -280,7 +341,7 @@ export default function ShoeCatalog() {
           <div className="runner-shell-topbar-left">
             <button type="button" className="add-shoes-topbar-back" onClick={() => navigate('/shoes')}>
               <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
-              <span>{lang === 'zh-CN' ? '返回跑鞋库' : 'Back to shoes'}</span>
+              <span>{t('shoeCatalog.back_to_shoes')}</span>
             </button>
           </div>
 
@@ -288,9 +349,21 @@ export default function ShoeCatalog() {
             <button type="button" className="runner-shell-topbar-link" onClick={() => navigate('/shoes/add')}>
               {t('shoes.add_page_title')}
             </button>
-            <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label="Profile">
-              H
-            </button>
+            <div className="user-menu-shell" ref={avatarMenuRef}>
+              <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label="Profile" onClick={() => setAvatarMenuOpen((prev) => !prev)}>
+                H
+              </button>
+              <div className={`user-menu-dropdown${avatarMenuOpen ? ' visible' : ''}`}>
+                <button type="button" className="user-menu-item" onClick={() => { setAvatarMenuOpen(false); navigate('/profile'); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  {t('profile.change_name')}
+                </button>
+                <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setAvatarMenuOpen(false); logout(); }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  {t('profile.logout')}
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -298,7 +371,7 @@ export default function ShoeCatalog() {
           {isLoading && (
             <div className="shoe-catalog-loading" aria-live="polite" aria-busy="true">
               <span className="shoe-catalog-loading-spinner" aria-hidden="true" />
-              <span>{lang === 'zh-CN' ? '正在加载鞋款库…' : 'Loading catalog…'}</span>
+              <span>{t('shoeCatalog.loading')}</span>
             </div>
           )}
           <div className={`add-shoes-shell${isLoading ? ' shoe-catalog-shell--loading' : ''}`}>
@@ -318,7 +391,6 @@ export default function ShoeCatalog() {
                       placeholder={t('shoes.catalog_search_placeholder')}
                       value={searchQuery}
                       onChange={(e) => {
-                        if (selectedBrand) setSelectedBrand(null);
                         setSearchQuery(e.target.value);
                       }}
                     />
@@ -336,13 +408,13 @@ export default function ShoeCatalog() {
                 </div>
 
                 <button type="button" className="runner-shell-inline-btn" onClick={handleCustom}>
-                  {lang === 'zh-CN' ? '清空' : 'Clear'}
+                  {t('shoeCatalog.clear')}
                 </button>
               </div>
 
               <div className="add-shoes-browser-layout">
                 <aside className="add-shoes-brand-rail">
-                  {catalog.map((entry) => (
+                  {visibleCatalogBrands.map((entry) => (
                     <button
                       key={entry.brand}
                       type="button"
@@ -358,17 +430,32 @@ export default function ShoeCatalog() {
                       </div>
                     </button>
                   ))}
+                  {catalog.length > 4 && (
+                    <button
+                      type="button"
+                      className={`add-shoes-brand-item add-shoes-brand-item--expand${brandsExpanded ? ' is-expanded' : ''}`}
+                      onClick={() => setBrandsExpanded((prev) => !prev)}
+                    >
+                      <span className="add-shoes-brand-logo add-shoes-brand-logo--expand">
+                        <AppIcon name={brandsExpanded ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
+                      </span>
+                      <div className="add-shoes-brand-copy">
+                        <strong>{brandsExpanded ? t('shoeCatalog.collapse') : t('shoeCatalog.expand_browse')}</strong>
+                        <span>{brandsExpanded ? '' : t('shoes.model_count', { count: catalog.length })}</span>
+                      </div>
+                    </button>
+                  )}
                 </aside>
 
                 <div ref={seriesSectionRef} className="add-shoes-model-grid-shell">
                   <div className="add-shoes-model-grid-head">
-                    <strong>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : (lang === 'zh-CN' ? '系列' : 'Series')}</strong>
+                    <strong>{selectedBrand ? localizeShoeBrand(selectedBrand.brand, lang) : t('shoeCatalog.series')}</strong>
                     <span>{selectedBrand ? t('shoes.model_count', { count: visibleCatalogModels.length }) : t('shoes.stitch_preview_label')}</span>
                   </div>
 
                   {!selectedBrand ? (
                     <div className="add-shoes-model-empty">
-                      {lang === 'zh-CN' ? '先点一个品牌，这里才会展开对应系列。' : 'Pick a brand first to open the matching series grid.'}
+                      {t('shoeCatalog.pick_brand_first')}
                     </div>
                   ) : (
                     <>
@@ -380,7 +467,7 @@ export default function ShoeCatalog() {
                             className={`add-shoes-filter-chip${selectedCategory === categoryKey ? ' is-active' : ''}`}
                             onClick={() => setSelectedCategory(categoryKey)}
                           >
-                            {getCatalogCategoryLabel(categoryKey, lang)}
+                            {getCatalogCategoryLabel(categoryKey, t)}
                           </button>
                         ))}
                       </div>
@@ -397,7 +484,7 @@ export default function ShoeCatalog() {
                               <BrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
                             </span>
                             <strong>{getCatalogModelLabel(item, lang)}</strong>
-                            <span>{getCatalogCategoryLabel(item.category || item.type, lang)}</span>
+                            <span>{getCatalogCategoryLabel(item.category || item.type, t)}</span>
                           </button>
                         ))}
                       </div>
@@ -413,9 +500,7 @@ export default function ShoeCatalog() {
                 <strong>{selectedModel || t('shoes.add_page_selected_empty')}</strong>
                 <p>
                   {selectedModel
-                    ? lang === 'zh-CN'
-                      ? '已选型号可以直接带入新版添加跑鞋流程。'
-                      : 'The selected model can be carried straight into the newer add-shoe flow.'
+                    ? t('shoeCatalog.selected_model_flow')
                     : t('shoes.add_page_selected_copy')}
                 </p>
               </section>
@@ -423,9 +508,7 @@ export default function ShoeCatalog() {
               <section className="add-shoes-side-card">
                 <span className="add-shoes-panel-kicker">{t('shoes.stitch_actions')}</span>
                 <p>
-                  {lang === 'zh-CN'
-                    ? '找到目标鞋款后，跳到新版添加页完成库存写入和主力鞋设置。'
-                    : 'Once you find the right pair, jump to the newer add page to create the inventory entry and set a primary shoe.'}
+                  {t('shoeCatalog.side_rail_action')}
                 </p>
                 <div className="today-run-marathon-cta-row">
                   <button
@@ -444,9 +527,7 @@ export default function ShoeCatalog() {
               <section className="add-shoes-side-card">
                 <span className="add-shoes-panel-kicker">{t('shoes.stitch_preview_label')}</span>
                 <p>
-                  {lang === 'zh-CN'
-                    ? '这个页面保留为浏览入口，不再停留在旧 top-nav 壳层里。'
-                    : 'This route stays as a browse-first utility surface instead of living inside the older top-nav chrome.'}
+                  {t('shoeCatalog.side_rail_preview')}
                 </p>
               </section>
             </aside>

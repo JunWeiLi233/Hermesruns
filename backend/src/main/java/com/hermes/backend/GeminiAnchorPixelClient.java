@@ -3,12 +3,14 @@ package com.hermes.backend;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -22,6 +24,7 @@ import java.util.Map;
 
 @Service
 public class GeminiAnchorPixelClient {
+    private static final long[] GEMINI_RETRY_DELAYS_MS = {0L, 400L, 1200L};
     private static final String ANCHOR_PIXEL_PROMPT = """
             Inspect this marathon course-map image and return ONLY JSON with exactly this structure:
             {
@@ -71,21 +74,7 @@ public class GeminiAnchorPixelClient {
         }
 
         List<String> anchorLabels = extractAnchorLabels(routeParameters);
-
-        Path imagePath = Path.of(imageFilePath);
-        if (!Files.isRegularFile(imagePath)) {
-            throw new IllegalArgumentException("Route image file does not exist: " + imageFilePath);
-        }
-
-        byte[] imageBytes;
-        try {
-            imageBytes = Files.readAllBytes(imagePath);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to read route image file.", e);
-        }
-        if (imageBytes.length == 0) {
-            throw new IllegalArgumentException("Route image file is empty.");
-        }
+        ImagePayload imagePayload = loadImagePayload(imageFilePath);
 
         String prompt = ANCHOR_PIXEL_PROMPT.formatted(
                 anchorLabels.get(0),
@@ -102,8 +91,8 @@ public class GeminiAnchorPixelClient {
                 "contents", List.of(Map.of(
                         "parts", List.of(
                                 Map.of("inline_data", Map.of(
-                                        "mime_type", detectMimeType(imagePath),
-                                        "data", Base64.getEncoder().encodeToString(imageBytes)
+                                        "mime_type", imagePayload.mediaType(),
+                                        "data", Base64.getEncoder().encodeToString(imagePayload.bytes())
                                 )),
                                 Map.of("text", prompt)
                         )
@@ -112,15 +101,12 @@ public class GeminiAnchorPixelClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", aiApiKey);
 
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + aiModel + ":generateContent?key=" + aiApiKey;
-        ResponseEntity<Map> response = restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                new HttpEntity<>(request, headers),
-                Map.class
-        );
+                + aiModel + ":generateContent";
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        ResponseEntity<Map<String, Object>> response = exchangeWithTransientGeminiRetry(url, entity);
 
         Map<String, Object> body = response.getBody();
         if (body == null) {
@@ -214,6 +200,58 @@ public class GeminiAnchorPixelClient {
         return rawText.substring(start, end + 1);
     }
 
+    private ImagePayload loadImagePayload(String imageReference) {
+        if (imageReference != null && imageReference.regionMatches(true, 0, "data:image/", 0, 11)) {
+            int commaIndex = imageReference.indexOf(',');
+            if (commaIndex <= 0 || commaIndex >= imageReference.length() - 1) {
+                throw new IllegalArgumentException("Route image data URL is invalid.");
+            }
+            String mediaType = extractDataUrlMediaType(imageReference.substring(0, commaIndex));
+            try {
+                byte[] imageBytes = Base64.getMimeDecoder().decode(imageReference.substring(commaIndex + 1).trim());
+                if (imageBytes.length == 0) {
+                    throw new IllegalArgumentException("Route image data URL is empty.");
+                }
+                return new ImagePayload(imageBytes, mediaType);
+            } catch (IllegalArgumentException ex) {
+                if ("Route image data URL is empty.".equals(ex.getMessage())) {
+                    throw ex;
+                }
+                throw new IllegalArgumentException("Route image data URL is invalid.", ex);
+            }
+        }
+
+        Path imagePath = Path.of(imageReference);
+        if (!Files.isRegularFile(imagePath)) {
+            throw new IllegalArgumentException("Route image file does not exist: " + imageReference);
+        }
+
+        byte[] imageBytes;
+        try {
+            imageBytes = Files.readAllBytes(imagePath);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read route image file.", e);
+        }
+        if (imageBytes.length == 0) {
+            throw new IllegalArgumentException("Route image file is empty.");
+        }
+        return new ImagePayload(imageBytes, detectMimeType(imagePath));
+    }
+
+    private String extractDataUrlMediaType(String metadata) {
+        if (metadata == null || metadata.isBlank()) {
+            return "image/png";
+        }
+        String normalized = metadata.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("data:")) {
+            int semicolonIndex = normalized.indexOf(';');
+            if (semicolonIndex > "data:".length()) {
+                return normalized.substring("data:".length(), semicolonIndex);
+            }
+        }
+        return "image/png";
+    }
+
     private String detectMimeType(Path imagePath) {
         String filename = imagePath.getFileName() == null ? "" : imagePath.getFileName().toString().toLowerCase(Locale.ROOT);
         if (filename.endsWith(".png")) {
@@ -240,4 +278,46 @@ public class GeminiAnchorPixelClient {
         }
         return "application/octet-stream";
     }
+
+    private ResponseEntity<Map<String, Object>> exchangeWithTransientGeminiRetry(
+            String url,
+            HttpEntity<Map<String, Object>> entity
+    ) {
+        HttpStatusCodeException lastFailure = null;
+        for (long delayMs : GEMINI_RETRY_DELAYS_MS) {
+            if (delayMs > 0) {
+                sleepBeforeRetry(delayMs);
+            }
+            try {
+                return restTemplate.exchange(
+                        url,
+                        HttpMethod.POST,
+                        entity,
+                        new ParameterizedTypeReference<Map<String, Object>>() {}
+                );
+            } catch (HttpStatusCodeException ex) {
+                lastFailure = ex;
+                if (!isTransientGeminiFailure(ex)) {
+                    throw ex;
+                }
+            }
+        }
+        throw lastFailure == null ? new IllegalStateException("Gemini anchor pixel request failed.") : lastFailure;
+    }
+
+    private boolean isTransientGeminiFailure(HttpStatusCodeException ex) {
+        int status = ex.getStatusCode().value();
+        return status == 429 || ex.getStatusCode().is5xxServerError();
+    }
+
+    private void sleepBeforeRetry(long delayMs) {
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Gemini anchor pixel retry was interrupted.", interruptedException);
+        }
+    }
+
+    private record ImagePayload(byte[] bytes, String mediaType) {}
 }

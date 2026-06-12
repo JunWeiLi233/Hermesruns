@@ -125,6 +125,33 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
+  parseSignupStatusQuery('?error=GOOGLE_NOT_CONFIGURED', {
+    stravaConfirmationFallback: 'fallback',
+  }),
+  {
+    banner: 'google_not_configured',
+    autoOpen: true,
+    errorMessage: null,
+    shouldClear: true,
+    prefillEmail: '',
+  }
+);
+
+assert.deepEqual(
+  parseLoginStatusQuery('?error=GOOGLE_FAILED&details=Denied', {
+    verifyInvalid: 'invalid',
+    verifyExpired: 'expired',
+    stravaConfirmationFallback: 'fallback',
+  }),
+  {
+    banner: 'google_failed',
+    autoOpen: true,
+    errorMessage: 'Denied',
+    shouldClear: true,
+  }
+);
+
+assert.deepEqual(
   parseSignupStatusQuery('?email=runner%40hermes.com&error=STRAVA_LINK_CONFIRMATION_REQUIRED&details=Choose%20runner', {
     stravaConfirmationFallback: 'fallback',
   }),

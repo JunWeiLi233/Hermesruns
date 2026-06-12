@@ -1,6 +1,6 @@
 # Cross-Agent Sync
 
-Updated: 2026-04-19T23:59:31.6849286-04:00
+Updated: 2026-06-05T19:14:32-04:00
 
 Use this file as the shared cross-platform coordination layer for Codex, Claude, and other Hermes-capable agents.
 
@@ -13,197 +13,106 @@ Use this file as the shared cross-platform coordination layer for Codex, Claude,
 - Keep entries short and overwrite stale claims instead of appending long history.
 
 ## Active Claims
-- Key: add-shoes-expand-extra-brands
-  Task: Add an expandable extra-brand section on /shoes/add so runners can reveal 李宁、安踏、Brooks、and HOKA when they are not visible in the default brand deck
-  Surface: AddShoes
+- Key: wuxi-marathon-coursemap-fix
+  Task: Fix Wuxi Marathon course map against the official 2026 route
+  Surface: /races/details/wuxi-marathon
   Agent: codex
-  Owner: frontend
-  Status: in_progress
-  Started: 2026-04-20T23:00:00-04:00
-  Verify: eslint pending | vite build pending
-  Files: frontend/src/pages/AddShoes.jsx, frontend/src/styles/style.css
-
-- Key: vdot-fitness-race-predictions
-  Task: Add VDOT Fitness + Race Predictions strip to Profile page with prominent VDOT number, 30-day trend arrow, and calibrated race time predictions for 5K/10K/half/marathon
-  Surface: Profile
-  Agent: opencode
-  Owner: frontend
   Status: completed
-  Completed: 2026-04-19T14:30:00.000Z
-  Verify: eslint PASS | vite build PASS
-  Files: frontend/src/pages/ProfileDashboard.jsx, frontend/src/i18n/translations.js, frontend/src/styles/style.css
+  Started: 2026-06-05T18:15:00-04:00
+  Completed: 2026-06-05T19:14:32-04:00
+  Verify: official 2026 Wuxi Marathon regulations route text checked; `./mvnw.cmd -q "-Dtest=WuxiMarathonOfficialCourseTests,OfficialCourseStartupSeedConfigurationTests" test`; `cd backend && ./mvnw.cmd -q -DskipTests compile`; `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`; `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`; `cd frontend && node scripts/run-vite-build.mjs`; frontend runtime sync PASS; backend runtime sync PASS with `http://localhost:8080 -> 200`; startup reseed log shows `wuxi-marathon -> SEEDED`; live API proof shows `source=wuxi-official-course`, `confidence=90`, `routePointCount=600`; Browser proof on `/races/details/wuxi-marathon` shows official route, `90%` confidence, `600` route points, and no console warnings/errors
+  Files: backend/src/main/java/com/hermes/backend/WuxiMarathonOfficialCourse.java | backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java | backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java | backend/src/main/java/com/hermes/backend/RaceCourseMapService.java | frontend/src/pages/RacesDetail.jsx | backend/src/test/java/com/hermes/backend/WuxiMarathonOfficialCourseTests.java | backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java
 
-- Key: coaching-intelligence-strip
-  Task: Add 4-column Coaching Intelligence Strip to TodayRun page answering Daily Opening Test within 10 seconds
-  Surface: Today's Run
-  Agent: opencode
-  Owner: frontend
+- Key: tokyo-marathon-coursemap-gyoko-dori-finish-fix
+  Task: Fix Tokyo Marathon course-map finish marker to the official map's Tokyo Station / Gyoko-dori Ave. finish
+  Surface: /races/details/tokyo-marathon
+  Agent: codex
   Status: completed
-  Completed: 2026-04-19T13:00:00.000Z
-  Verify: eslint PASS | vite build PASS | runtime sync PASS
-  Files: frontend/src/pages/TodayRun.jsx, frontend/src/i18n/translations.js, frontend/src/styles/style.css
+  Started: 2026-06-05T18:50:00-04:00
+  Completed: 2026-06-05T19:01:07-04:00
+  Verify: official Tokyo Marathon downloadable map labels finish as Tokyo Station / Gyoko-dori Ave.; red/green backend guards for Tokyo official route and startup stale detection; `./mvnw.cmd -q "-Dtest=TokyoMarathonOfficialCourseTests,RaceCourseMapBulkSeedServiceTests,OfficialCourseStartupSeedConfigurationTests" test`; `cd backend && ./mvnw.cmd -q -DskipTests compile`; startup reseed log shows `tokyo-marathon -> SEEDED`; backend runtime sync PASS; DB proof source=tokyo-official-course routePoints=600 last=Finish - Tokyo Station / Gyoko-dori Ave. hasOldWadakura=false; Browser proof on /races/details/tokyo-marathon shows official 600-point Leaflet route with updated geometry and no missing map
+  Files: backend/src/main/java/com/hermes/backend/TokyoMarathonOfficialCourse.java | backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java | backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java | backend/src/test/java/com/hermes/backend/TokyoMarathonOfficialCourseTests.java | backend/src/test/java/com/hermes/backend/RaceCourseMapBulkSeedServiceTests.java | backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java
+
+- Key: race-detail-elevation-major-labels-4km
+  Task: Make race detail elevation major markers display explicit 4km-style labels
+  Surface: /races/details/chicago-marathon
+  Agent: codex
+  Status: completed
+  Started: 2026-06-05T18:44:00-04:00
+  Completed: 2026-06-05T18:49:27-04:00
+  Verify: Browser proof on /races/details/chicago-marathon shows major labels 0km/4km/8km/12km and 5 remains a minor tick; `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`; `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`; `cd frontend && node scripts/run-vite-build.mjs`; frontend runtime sync PASS
+  Files: frontend/src/pages/RacesDetail.jsx | frontend/src/pages/raceDetailElevationPerKm.smoke.test.js
+
+- Key: tokyo-marathon-coursemap-fix
+  Task: Re-make Tokyo Marathon course map because the current route is wrong
+  Surface: /races/details/tokyo-marathon
+  Agent: codex
+  Status: completed
+  Started: 2026-06-05T17:16:00-04:00
+  Completed: 2026-06-05T17:49:00-04:00
+  Verify: superseded by `tokyo-marathon-coursemap-gyoko-dori-finish-fix`; current DB/browser proof uses Tokyo Station / Gyoko-dori Ave. finish and excludes the old Wadakura finish label
+  Files: backend/src/main/java/com/hermes/backend/TokyoMarathonOfficialCourse.java | backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java | backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java | backend/src/test/java/com/hermes/backend/TokyoMarathonOfficialCourseTests.java | backend/src/test/java/com/hermes/backend/RaceCourseMapBulkSeedServiceTests.java | backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java
+
+- Key: boston-marathon-coursemap-fix
+  Task: Fix Boston Marathon course map against official B.A.A. route
+  Surface: /races/details/boston-marathon
+  Agent: codex
+  Status: completed
+  Started: 2026-06-05T16:58:00-04:00
+  Completed: 2026-06-05T17:13:00-04:00
+  Verify: `./mvnw.cmd -q "-Dtest=BostonMarathonOfficialCourseTests,RaceCourseMapBulkSeedServiceTests,OfficialCourseStartupSeedConfigurationTests" test`; `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`; `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`; `cd backend && ./mvnw.cmd -q -DskipTests compile`; `cd frontend && node scripts/run-vite-build.mjs`; backend/frontend runtime sync PASS; live API proof source=boston-official-course routePoints=600 start=Start - Hopkinton finish=Finish - Boylston Street; Browser plugin Chrome proof on /races/details/boston-marathon shows official route, Leaflet, and 600 route points
+  Files: backend/src/main/java/com/hermes/backend/BostonMarathonOfficialCourse.java | backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java | backend/src/main/java/com/hermes/backend/RaceCourseMapService.java | backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java | backend/src/test/java/com/hermes/backend/BostonMarathonOfficialCourseTests.java | backend/src/test/java/com/hermes/backend/RaceCourseMapBulkSeedServiceTests.java | backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java | frontend/src/pages/RacesDetail.jsx | frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
+
+- Key: race-detail-elevation-major-every-4km
+  Task: Make race detail elevation chart render major markers every 4 km
+  Surface: /races/details/:raceId
+  Agent: codex
+  Status: completed
+  Started: 2026-06-05T16:36:00-04:00
+  Completed: 2026-06-05T16:53:00-04:00
+  Verify: `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`; `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`; `cd frontend && node scripts/run-vite-build.mjs`; frontend runtime sync PASS; localhost 200
+  Files: frontend/src/pages/RacesDetail.jsx | frontend/src/pages/raceDetailElevationPerKm.smoke.test.js
+
+- Key: chicago-marathon-elevation-fix
+  Task: Fix Chicago Marathon elevation chart against official course-map profile
+  Surface: /races/details/chicago-marathon
+  Agent: codex
+  Status: completed
+  Started: 2026-06-05T16:00:00-04:00
+  Completed: 2026-06-05T16:15:19-04:00
+  Verify: focused Chicago seed tests, backend compile, frontend build/runtime sync, live API proof source=chicago-official-course totalClimb=35 min=176 max=183 samples=64 routePoints=163, Chrome page proof shows 35m and no 289 spike
+  Files: backend/src/main/java/com/hermes/backend/ChicagoMarathonKnownCourse.java | backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java | backend/src/main/java/com/hermes/backend/RaceCourseMapService.java | backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java | backend/src/test/java/com/hermes/backend/ChicagoMarathonKnownCourseTests.java | backend/src/test/java/com/hermes/backend/RaceCourseMapBulkSeedServiceTests.java | backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java | frontend/src/pages/RacesDetail.jsx | frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
 
 ## Recently Completed
-- Key: races-detail-elevation-per-km
-  Task: Upgrade the race-detail elevation chart to use kilometer-aware aligned-route sampling and per-km chart markers
-  Surface: Races Detail
+- Key: nyc-marathon-coursemap-elevation-fix
+  Task: Fixed New York City Marathon course map and elevation chart seed
+  Surface: /races/details/new-york-city-marathon
   Agent: codex
-  Owner: frontend+backend
-  Status: completed
-  Completed: 2026-04-20T18:54:00.000Z
-  Verify: RaceCourseMapServiceTests PASS | raceDetailElevationPerKm PASS | eslint PASS with unrelated warnings | frontend build PASS | frontend runtime sync PASS | backend compile PASS | backend runtime sync PASS
-  Files: backend/src/main/java/com/hermes/backend/RaceCourseMapService.java, backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java, frontend/src/pages/RacesDetail.jsx, frontend/src/styles/style.css, frontend/src/pages/raceDetailElevationPerKm.smoke.test.js
-
-- Key: copilot-hermes-slash-commands
-  Task: Expose the Hermes auto-hermes command family to GitHub Copilot through repository prompt files so they can be invoked as slash commands
-  Surface: Repo tooling / GitHub Copilot prompt integration
-  Agent: codex
-  Owner: tooling
-  Status: completed
-  Completed: 2026-04-20T12:00:00.000Z
-  Verify: copilotPromptFiles PASS | eslint PASS with unrelated warnings only
-  Files: .github/prompts/auto-hermes.prompt.md, .github/prompts/auto-hermes-max.prompt.md, .github/prompts/auto-hermes-market.prompt.md, .github/prompts/auto-hermes-attack.prompt.md, .github/prompts/auto-hermes-security.prompt.md, .github/prompts/auto-hermes-tech-debt.prompt.md, .github/copilot-instructions.md, frontend/src/utils/copilotPromptFiles.smoke.test.js
-
-- Key: weather-editorial-redesign
-  Task: Rename the runner weather route from /weather-engine to /weather and redesign the Weather page around the approved cinematic editorial hierarchy
-  Surface: Weather
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-20T11:46:00.000Z
-  Verify: weatherEditorialRedesign PASS | eslint PASS with unrelated warnings | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/App.jsx, frontend/src/pages/WeatherEngine.jsx, frontend/src/utils/runnerShellNav.js, frontend/src/styles/style.css, frontend/src/pages/weatherEditorialRedesign.smoke.test.js
-
-- Key: shoes-real-brand-logos
-  Task: Replace synthetic top-brand marks with real ASICS/Nike/Adidas/New Balance/Saucony logo assets on Shoes/AddShoes live brand-logo surfaces
-  Surface: Shoes + AddShoes
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-20T11:45:00.000Z
-  Verify: addShoesKineticEditorial PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/components/ShoeBrandLogo.jsx, frontend/src/pages/AddShoes.jsx, frontend/src/pages/Shoes.jsx, frontend/src/styles/style.css, frontend/src/assets/brand-logos/*
-
-- Key: shoes-display-image-cleanup
-  Task: Automatically clean baked checkerboard/flat backgrounds at display time for shoe images from local uploads and remote URLs without mutating stored image references
-  Surface: Shoes image pipeline
-  Agent: codex
-  Owner: frontend+backend
-  Status: completed
-  Completed: 2026-04-20T12:01:00.000Z
-  Verify: targeted eslint PASS | addShoesKineticEditorial PASS | vite build PASS | frontend runtime sync PASS | backend compile PASS | backend runtime sync PASS
-  Files: frontend/src/utils/removeBackground.js, frontend/src/pages/Shoes.jsx, backend/src/main/java/com/hermes/backend/ShoeImageController.java, frontend/src/assets/brand-logos/*
-
-- Key: schedule-weekly-coach-summary
-  Task: Add a coach-voice weekly summary to the Schedule page using VDOT trend, ACWR/load state, and block focus
-  Surface: Schedule
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T23:59:31.6849286-04:00
-  Verify: scheduleCoachSummary PASS | eslint PASS | vite build PASS
-  Files: frontend/src/pages/Schedule.jsx, frontend/src/utils/scheduleCoachSummary.js, frontend/src/utils/scheduleCoachSummary.test.js, frontend/src/i18n/translations.js, frontend/src/styles/style.css
-
-- Key: dashboard-coursemap-rail-live-leaflet
-  Task: Make the `/dashboard/course-maps` left rail use live Leaflet/OpenStreetMap thumbnails instead of static course-map posters
-  Surface: dashboard course maps
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-20T02:37:06.660Z
-  Verify: dashboardCourseMapRailLeaflet PASS | dashboardCourseMapPreview PASS | eslint PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/pages/Dashboard.jsx, frontend/src/components/AdminCourseMapPreview.jsx, frontend/src/pages/dashboardCourseMapRailLeaflet.smoke.test.js
-
-- Key: today-run-acwr-warning-system
-  Task: Add ACWR load warning callout with plain-language coaching guidance on Today's Run
-  Surface: Today's Run
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-20T02:09:30.000Z
-  Verify: todayRunAcwrInsight PASS | todayRunAcwrNarrative PASS | eslint PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/pages/TodayRun.jsx, frontend/src/utils/todayRunAcwrInsight.js, frontend/src/utils/todayRunAcwrInsight.test.js, frontend/src/utils/todayRunAcwrNarrative.smoke.test.js, frontend/src/i18n/translations.js, frontend/src/styles/style.css
-
-- Key: dashboard-jobs-command-deck
-  Task: Redesign `/dashboard/jobs` into an editorial command deck with terminal queue and selected-job detail rail
-  Surface: dashboard jobs
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-20T00:05:30.000Z
-  Verify: dashboardJobsCommandDeck PASS | dashboardTranslations PASS | eslint PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/pages/Dashboard.jsx, frontend/src/styles/style.css, frontend/src/i18n/translations.js, frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js, frontend/package.json
-
-- Key: dashboard-audit-terminal-redesign
-  Task: Redesign `/dashboard/audit` into a Sync Pipeline Terminal based on the provided operator reference
-  Surface: dashboard audit
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T23:56:28.714Z
-  Verify: dashboardAuditTerminal PASS | dashboardRouteSections PASS | dashboardKineticShell PASS | dashboardCourseMapTrackHubRefactor PASS | dashboardAdminLightMode PASS | eslint PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/pages/Dashboard.jsx, frontend/src/styles/style.css, frontend/src/i18n/translations.js, frontend/src/pages/dashboardAuditTerminal.smoke.test.js
-
-- Key: dashboard-admin-light-mode-pass
-  Task: Apply light mode across every page in the admin portal
-  Surface: dashboard
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T23:47:53.289Z
-  Verify: dashboardAdminLightMode PASS | dashboardRouteSections PASS | dashboardKineticShell PASS | dashboardCourseMapTrackHubRefactor PASS | eslint PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/styles/style.css, frontend/src/pages/dashboardAdminLightMode.smoke.test.js
-
-- Key: dashboard-route-shell-settings-surface
-  Task: Convert the admin dashboard into route-driven pages with a dedicated operator settings surface
-  Surface: dashboard
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T23:25:26.339Z
-  Verify: dashboardRouteSections PASS | dashboardKineticShell PASS | dashboardCourseMapTrackHubRefactor PASS | eslint PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/App.jsx, frontend/src/pages/Dashboard.jsx, frontend/src/styles/style.css, frontend/src/i18n/translations.js, frontend/src/pages/dashboardRouteSections.smoke.test.js
-
-- Key: dashboard-fix-broken-ui
-  Task: Redesign and fix the broken Course Maps dashboard UI
-  Surface: dashboard
-  Agent: opencode
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T15:12:00.000Z
-  Verify: vite build PASS | ui test PASS
-  Files: frontend/src/styles/style.css
-
-- Key: races-detail-fix-osm-world-map-tile-ordering
-  Task: Fix reversed race-detail Leaflet tile ordering so the world basemap renders with proxy-first and direct OSM fallback behavior
-  Surface: Races Detail
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T05:00:00.000Z
-  Verify: raceDetailMapFallback PASS | raceDetailMapLifecycle PASS | raceDetailMapHost PASS | raceDetailCourseMapOverlay PASS | eslint PASS | vite build PASS | frontend runtime sync PASS
-  Files: frontend/src/pages/RacesDetail.jsx, frontend/src/utils/raceDetailMapFallback.smoke.test.js
-
-- Key: races-detail-restore-real-world-osm-tile-rendering-on-race-detail-route-map
-  Task: Restore real-world OSM tile rendering on race detail route map
-  Surface: Races Detail
-  Agent: claude
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T04:53:20.868Z
-  Verify: eslint PASS | vite build PASS | runtime sync PASS
-  Files: frontend/src/pages/RacesDetail.jsx
-
-- Key: races-detail-map-stage-full-width-world-map
-  Task: Redesign the race-detail lower map area into a full-width OpenStreetMap Leaflet stage with the readiness card below it
-  Surface: Races Detail
-  Agent: codex
-  Owner: frontend
-  Status: completed
-  Completed: 2026-04-19T04:23:30.000
+  Completed: 2026-06-05T12:27:00-04:00
+  Verify: `./mvnw.cmd -q "-Dtest=RaceCourseMapBulkSeedServiceTests,OfficialCourseStartupSeedConfigurationTests" test`; `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`; `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`; `cd frontend && node scripts/run-vite-build.mjs`; frontend/backend runtime sync scripts; browser proof on localhost
+  Files: backend/src/main/java/com/hermes/backend/NycMarathonOfficialCourse.java | backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java | backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java | backend/src/test/java/com/hermes/backend/RaceCourseMapBulkSeedServiceTests.java | backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java | frontend/src/pages/RacesDetail.jsx | frontend/src/i18n/locales/en/pages.js | frontend/src/i18n/locales/zh-CN/pages.js | frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
 
 ## Must-Fix Queue
-- none
+- Key: runner-shell-sidebar-fix-squeezed-left-sidebar-collapsed-state
+  Task: Fix squeezed left sidebar collapsed state
+  Surface: runner shell sidebar
+  Agent: codex
+  Owner: codex
+  Status: must-fix
+  Started: 2026-06-03T17:14:27.204Z
+  Verify: node frontend/src/components/runnerShellSidebarRedesign.smoke.test.js; cd frontend; node scripts/run-vite-build.mjs; node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/styles/_split/profile.css,frontend/src/styles/style.css,frontend/src/components/runnerShellSidebarRedesign.smoke.test.js; localhost CSS asset signature check for 96px rail, icon-only brand, hidden counters, bounded 52x60 squeeze button
+  Files: frontend/src/styles/_split/profile.css | frontend/src/styles/style.css | frontend/src/components/runnerShellSidebarRedesign.smoke.test.js
+  Review: ralph-gate-must-fix
+
+- Key: profile-fix-profile-empty-state
+  Task: Fix Profile empty state
+  Surface: Profile
+  Agent: codex
+  Status: must-fix
+  Started: 2026-05-31T21:24:38.122Z
+  Verify: `cd frontend && npm run lint && npm run build`
+  Files: frontend/src/pages/Profile.jsx
+  Review: ralph-gate-must-fix
 
 ## Human Inbox
 - none

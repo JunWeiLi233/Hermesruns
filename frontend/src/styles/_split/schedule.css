@@ -1,0 +1,1011 @@
+.schedule-plan-canvas {
+  padding-top: 18px;
+}
+
+.schedule-plan-hero {
+    position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  padding: 26px 28px 28px;
+  border-radius: 28px;
+  background: #232120;
+  box-shadow: inset 4px 0 0 #f07561;
+}
+
+.schedule-plan-hero.is-block-active {
+  box-shadow:
+    inset 4px 0 0 #f49787,
+    0 24px 44px rgba(240, 117, 97, 0.12);
+}
+
+.schedule-plan-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: min(720px, 100%);
+}
+
+.schedule-plan-kicker {
+  display: inline-block;
+  color: #f49787;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-hero h1 {
+  margin: 10px 0 0;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(3.8rem, 7vw, 5.6rem);
+  font-style: normal;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+  color: #f3ede8;
+  white-space: pre-line;
+  transform: none;
+}
+
+.schedule-plan-hero-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.schedule-plan-hero-summary-chip {
+  min-width: 140px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(241, 236, 231, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.schedule-plan-hero-summary-chip span,
+.schedule-plan-route-target-metric span {
+  display: block;
+  color: rgba(232, 226, 220, 0.46);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-hero-summary-chip strong {
+  display: block;
+  margin-top: 6px;
+  color: #fff7f3;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  transform: none;
+}
+
+.schedule-plan-hero-metrics {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 34px;
+}
+
+.schedule-plan-hero-metrics div {
+  text-align: right;
+}
+
+.schedule-plan-hero-metrics span {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(232, 226, 220, 0.34);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-hero-metrics strong {
+  color: #f3ede8;
+  font-family: "Manrope", var(--font-display);
+  font-size: 2rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  transform: none;
+}
+
+.schedule-plan-hero-pulse {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 42%;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.schedule-plan-hero-pulse svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: #f49787;
+}
+
+.schedule-plan-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.schedule-plan-day {
+  min-height: 154px;
+  padding: 16px 14px;
+  border-radius: 18px;
+  background: #232120;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  transition: transform var(--transition), background var(--transition);
+}
+
+.schedule-plan-day:hover {
+  transform: translateY(-1px);
+  background: #282625;
+}
+
+.schedule-plan-day--quality {
+  background: #f07561;
+  color: #300d08;
+}
+
+.schedule-plan-day--peak {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 180, 167, 0.22), transparent 26%),
+    radial-gradient(circle at 82% 78%, rgba(240, 117, 97, 0.18), transparent 24%),
+    linear-gradient(145deg, rgba(55, 43, 40, 0.98), rgba(24, 22, 21, 0.96));
+  box-shadow: inset 0 0 0 2px rgba(240, 117, 97, 0.28);
+}
+
+.schedule-plan-day-label {
+  color: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.schedule-plan-day-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.schedule-plan-day-tag {
+  margin-top: 3px;
+  color: rgba(232, 226, 220, 0.48);
+  font-size: 0.56rem;
+  text-transform: none;
+}
+
+.schedule-plan-day-anchor {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(241, 236, 231, 0.14);
+  color: #ffb4a7;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.schedule-plan-day--quality .schedule-plan-day-tag,
+.schedule-plan-day--quality h2,
+.schedule-plan-day--quality p,
+.schedule-plan-day--quality .schedule-plan-day-label {
+  color: #300d08;
+}
+
+.schedule-plan-day h2 {
+  margin: 0;
+  color: #f4f0ea;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.12;
+}
+
+.schedule-plan-day > div:last-child p {
+  margin: 4px 0 0;
+  color: rgba(232, 226, 220, 0.4);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-day.is-today {
+  background:
+    radial-gradient(circle at top right, rgba(240, 117, 97, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(43, 39, 37, 0.98), rgba(30, 28, 27, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 117, 97, 0.34),
+    0 18px 36px rgba(240, 117, 97, 0.14);
+  transform: translateY(-2px);
+}
+
+.schedule-plan-day.is-today::before {
+  content: "TODAY";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.18);
+  color: #ffb4a7;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-day.is-today .schedule-plan-day-label,
+.schedule-plan-day.is-today h2 {
+  color: #fff7f3;
+}
+
+.schedule-plan-day.is-today .schedule-plan-day-tag,
+.schedule-plan-day.is-today > div:last-child p {
+  color: rgba(255, 214, 204, 0.82);
+}
+
+.schedule-plan-day.is-marathon-anchor {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 180, 167, 0.22),
+    0 18px 32px rgba(240, 117, 97, 0.1);
+}
+
+.schedule-plan-day.is-marathon-anchor .schedule-plan-day-tag,
+.schedule-plan-day.is-marathon-anchor > div:last-child p {
+  color: rgba(255, 214, 204, 0.82);
+}
+
+.schedule-plan-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.92fr);
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.schedule-plan-left-rail,
+.schedule-plan-right-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.schedule-plan-dual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.schedule-plan-readiness-card,
+.schedule-plan-next-card,
+.schedule-plan-route-card,
+.schedule-plan-coach-card,
+.schedule-plan-gear-card {
+  border-radius: 24px;
+  background: #232120;
+  padding: 22px;
+}
+
+.schedule-plan-readiness-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.schedule-plan-readiness-card h3,
+.schedule-plan-coach-card h3,
+.schedule-plan-gear-card h3 {
+  margin: 0;
+  color: rgba(232, 226, 220, 0.42);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-readiness-ring {
+  position: relative;
+  width: 184px;
+  height: 184px;
+  margin-top: 12px;
+}
+
+.schedule-plan-readiness-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.schedule-plan-readiness-track,
+.schedule-plan-readiness-progress {
+  fill: none;
+  stroke-width: 12;
+}
+
+.schedule-plan-readiness-track {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.schedule-plan-readiness-progress {
+  stroke: #f07561;
+  stroke-linecap: round;
+}
+
+.schedule-plan-readiness-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.schedule-plan-readiness-center strong {
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-size: 3.2rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  line-height: 0.9;
+  transform: none;
+}
+
+.schedule-plan-readiness-center span {
+  margin-top: 4px;
+  color: #f49787;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-readiness-card p,
+.schedule-plan-next-content p,
+.schedule-plan-coach-copy p {
+  color: rgba(232, 226, 220, 0.5);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.schedule-plan-next-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 320px;
+  display: flex;
+  align-items: end;
+}
+
+.schedule-plan-next-bg,
+.schedule-plan-next-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.schedule-plan-next-bg {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 180, 167, 0.2), transparent 24%),
+    radial-gradient(circle at 80% 28%, rgba(122, 202, 222, 0.12), transparent 22%),
+    linear-gradient(160deg, rgba(49, 43, 41, 0.92), rgba(18, 22, 28, 0.96));
+  opacity: 0.44;
+  transition: transform 0.7s ease;
+}
+
+.schedule-plan-next-card:hover .schedule-plan-next-bg {
+  transform: scale(1.04);
+}
+
+.schedule-plan-next-overlay {
+  background: linear-gradient(180deg, rgba(14, 20, 28, 0.1), rgba(14, 20, 28, 0.82));
+}
+
+.schedule-plan-next-content {
+  position: relative;
+  z-index: 1;
+}
+
+.schedule-plan-next-content > span {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.18);
+  color: #f7ab9b;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-next-content h3 {
+  margin: 12px 0 0;
+  color: #ffffff;
+  font-family: "Manrope", var(--font-display);
+  font-size: 2rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+  transform: none;
+}
+
+.schedule-plan-next-content button {
+  margin-top: 16px;
+  border: 0;
+  background: transparent;
+  color: #f49787;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.schedule-plan-route-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 236px;
+  display: flex;
+  align-items: end;
+}
+
+.schedule-plan-route-card.is-route-fallback {
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 18px;
+}
+
+.schedule-plan-route-map {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  background:
+      radial-gradient(circle at 24% 28%, rgba(255, 255, 255, 0.05), transparent 12%),
+      radial-gradient(circle at 64% 72%, rgba(255, 255, 255, 0.06), transparent 10%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 28%, rgba(255, 255, 255, 0.02) 48%, transparent 80%),
+      #201f1f;
+  opacity: 0.8;
+}
+
+.schedule-plan-route-card.is-route-fallback .schedule-plan-route-map {
+  position: relative;
+  inset: auto;
+  min-height: 144px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.schedule-plan-route-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+      repeating-radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.03) 0, rgba(255, 255, 255, 0.03) 2px, transparent 2px, transparent 18px),
+      repeating-radial-gradient(circle at 62% 42%, rgba(255, 255, 255, 0.025) 0, rgba(255, 255, 255, 0.025) 3px, transparent 3px, transparent 22px);
+  }
+
+.schedule-plan-route-map-svg {
+  position: absolute;
+  inset: 18px;
+  width: calc(100% - 36px);
+  height: calc(100% - 36px);
+  opacity: 0.92;
+}
+
+.schedule-plan-route-map-shadow,
+.schedule-plan-route-map-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.schedule-plan-route-map-shadow {
+  stroke: rgba(0, 0, 0, 0.24);
+  stroke-width: 6;
+}
+
+.schedule-plan-route-map-line {
+  stroke: rgba(244, 151, 135, 0.92);
+  stroke-width: 3.2;
+}
+
+.schedule-plan-route-map-start {
+  fill: rgba(255, 255, 255, 0.82);
+}
+
+.schedule-plan-route-map-finish {
+  fill: #f49787;
+  stroke: rgba(255, 255, 255, 0.32);
+  stroke-width: 1.4;
+}
+
+/* Leaflet map slot inside the route card */
+
+.schedule-plan-route-leaflet-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.schedule-plan-route-leaflet-map.leaflet-container,
+.schedule-plan-route-leaflet-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-xl);
+  background: transparent;
+}
+
+/* Spinner for auto-plan loading state */
+
+.schedule-plan-route-empty-panel--loading {
+  justify-content: center;
+  align-items: center;
+}
+
+.schedule-plan-route-auto-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--accent-coral);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: schedule-route-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.schedule-plan-route-empty-panel {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+}
+
+.schedule-plan-route-empty-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-plan-route-empty-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(244, 240, 234, 0.72);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-route-empty-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 28ch;
+}
+
+.schedule-plan-route-empty-copy strong {
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.42rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.schedule-plan-route-empty-copy span {
+  color: rgba(232, 226, 220, 0.76);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.schedule-plan-route-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 18px;
+}
+
+.schedule-plan-route-card.is-route-fallback .schedule-plan-route-content {
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 14px;
+}
+
+.schedule-plan-route-content span:first-child {
+  color: #f49787;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-route-content h3 {
+  margin: 8px 0 0;
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.7rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  transform: none;
+}
+
+.schedule-plan-route-meta {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.schedule-plan-route-meta span {
+  color: rgba(232, 226, 220, 0.48);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.schedule-plan-route-insight {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.schedule-plan-route-insight span {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 247, 243, 0.76);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 6px 9px;
+  text-transform: uppercase;
+}
+
+.schedule-plan-route-target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px 18px;
+  margin-top: 16px;
+}
+
+.schedule-plan-route-target-metric strong {
+  display: block;
+  margin-top: 6px;
+  color: #fff7f3;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.18rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  transform: none;
+}
+
+.schedule-plan-route-target p {
+  max-width: 28ch;
+  color: rgba(232, 226, 220, 0.62);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.schedule-plan-watch-btn,
+.schedule-plan-secondary-btn {
+  min-height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-watch-btn {
+  background: #f1ece7;
+  color: #171515;
+}
+
+.schedule-plan-coach-card {
+  box-shadow: inset 0 4px 0 rgba(255, 181, 156, 0.6);
+}
+
+.schedule-plan-coach-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.schedule-plan-coach-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(240, 117, 97, 0.3), rgba(239, 156, 132, 0.56));
+  color: #fff4ef;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.schedule-plan-coach-head p {
+  margin: 4px 0 0;
+  color: rgba(232, 226, 220, 0.32);
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-weekly-summary {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 181, 156, 0.16), transparent 34%),
+    rgba(241, 236, 231, 0.06);
+}
+
+.schedule-plan-weekly-summary.is-high,
+.schedule-plan-weekly-summary.is-danger {
+  background:
+    radial-gradient(circle at top right, rgba(255, 181, 156, 0.24), transparent 34%),
+    rgba(255, 181, 156, 0.09);
+}
+
+.schedule-plan-weekly-summary-kicker {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: rgba(244, 240, 234, 0.54);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-weekly-summary-body {
+  color: #f4f0ea;
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.schedule-plan-coach-focus-grid--summary {
+  margin-top: 14px;
+}
+
+.schedule-plan-coach-copy h4 {
+  margin: 0 0 10px;
+  color: #f8aa9a;
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.12rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.35;
+  transform: none;
+}
+
+.schedule-plan-coach-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.schedule-plan-coach-focus-pill {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(241, 236, 231, 0.08);
+}
+
+.schedule-plan-coach-focus-pill span {
+  display: block;
+  color: rgba(232, 226, 220, 0.44);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-coach-focus-pill strong {
+  display: block;
+  margin-top: 6px;
+  color: #f4f0ea;
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.94rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  transform: none;
+}
+
+.schedule-plan-signal-group {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-plan-signal-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(232, 226, 220, 0.44);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-signal-row strong {
+  color: #f3ede8;
+}
+
+.schedule-plan-signal-bar {
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.schedule-plan-signal-bar span {
+  display: block;
+  height: 100%;
+  background: #ffb59c;
+}
+
+.schedule-plan-signal-bar span.is-sleep {
+  background: #f07561;
+}
+
+.schedule-plan-secondary-btn {
+  width: 100%;
+  margin-top: 18px;
+  background: #2c2a29;
+  color: #f7ab9b;
+}
+
+.schedule-plan-gear-card h3 {
+  color: #f4f0ea;
+  font-size: 0.92rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.schedule-plan-gear-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #2a2827;
+}
+
+.schedule-plan-gear-thumb {
+  width: 62px;
+  height: 38px;
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 46%),
+    linear-gradient(135deg, #6dc9ff, #1b2734 46%, #111214 100%);
+}
+
+.schedule-plan-gear-row strong {
+  display: block;
+  color: #f4f0ea;
+  font-size: 0.9rem;
+}
+
+.schedule-plan-gear-row p {
+  margin: 4px 0 0;
+  color: rgba(232, 226, 220, 0.38);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.schedule-plan-gear-bar {
+  margin-top: 14px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.schedule-plan-gear-bar span {
+  display: block;
+  height: 100%;
+  background: #f07561;
+}
+
+@media (max-width: 1100px) {
+  .schedule-plan-week-grid,
+  .schedule-plan-dual-grid,
+  .schedule-plan-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-plan-coach-focus-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .schedule-plan-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .schedule-plan-hero-metrics {
+    gap: 20px;
+  }
+
+  .schedule-plan-hero-summary {
+    width: 100%;
+  }
+
+  .schedule-plan-hero-summary-chip {
+    flex: 1 1 160px;
+  }
+
+  .schedule-plan-week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .schedule-plan-coach-focus-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.schedule-plan-coach-badge {
+  margin-left: auto;
+}

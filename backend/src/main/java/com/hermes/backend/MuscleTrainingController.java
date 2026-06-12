@@ -55,7 +55,11 @@ public class MuscleTrainingController {
     public ResponseEntity<?> getTodayCheckIn(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> runner = authService.findByAuthorizationHeader(authHeader);
         if (runner.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
-        return ResponseEntity.ok(plannerService.getTodayCheckIn(runner.get()));
+        TodayCheckInDto todayCheckIn = plannerService.getTodayCheckIn(runner.get());
+        if (todayCheckIn == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(todayCheckIn);
     }
 
     @PutMapping("/today")
@@ -65,7 +69,11 @@ public class MuscleTrainingController {
     ) {
         Optional<Runner> runner = authService.findByAuthorizationHeader(authHeader);
         if (runner.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
-        return ResponseEntity.ok(plannerService.updateTodayCheckIn(runner.get(), update));
+        try {
+            return ResponseEntity.ok(plannerService.updateTodayCheckIn(runner.get(), update));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
+        }
     }
 
     @DeleteMapping("/today")
@@ -73,6 +81,6 @@ public class MuscleTrainingController {
         Optional<Runner> runner = authService.findByAuthorizationHeader(authHeader);
         if (runner.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
         plannerService.clearTodayCheckIn(runner.get());
-        return ResponseEntity.ok(Map.of("cleared", true));
+        return ResponseEntity.noContent().build();
     }
 }

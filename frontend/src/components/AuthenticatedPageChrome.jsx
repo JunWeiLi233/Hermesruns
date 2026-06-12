@@ -40,6 +40,7 @@ export default function AuthenticatedPageChrome({
   const resolvedMenuActions = useMemo(() => ({
     onSettings: () => navigate('/settings'),
     onRewards: () => navigate('/rewards'),
+    onChangeName: () => navigate('/profile'),
     ...(menuActions || {}),
   }), [menuActions, navigate]);
 

@@ -51,6 +51,22 @@ public class CoachRunnerState {
     private Integer lastSleepScore;
     /** HRV (ms) or vendor-normalized value — optional. */
     private Integer lastHrvMs;
+    /** 1–100 stress score from wearables. */
+    private Integer lastStressScore;
+
+    /** Garmin HRV status label (e.g., "balanced", "unbalanced", "poor"). */
+    @Column(length = 30)
+    private String lastHrvStatus;
+
+    /** Garmin Body Battery value at wake (0–100). */
+    private Integer lastBodyBatteryAtWake;
+
+    /** Composite readiness score 0–100 computed from sleep, HRV, stress, ACWR. */
+    private Integer readinessScore;
+
+    /** Readiness verdict: GO, EASY, RECOVERY, or REST. */
+    @Column(length = 15)
+    private String readinessVerdict;
 
     private LocalDateTime lastRecoveryLoggedAt;
 
@@ -176,6 +192,46 @@ public class CoachRunnerState {
 
     public void setLastHrvMs(Integer lastHrvMs) {
         this.lastHrvMs = lastHrvMs;
+    }
+
+    public Integer getLastStressScore() {
+        return lastStressScore;
+    }
+
+    public void setLastStressScore(Integer lastStressScore) {
+        this.lastStressScore = lastStressScore;
+    }
+
+    public String getLastHrvStatus() {
+        return lastHrvStatus;
+    }
+
+    public void setLastHrvStatus(String lastHrvStatus) {
+        this.lastHrvStatus = lastHrvStatus;
+    }
+
+    public Integer getLastBodyBatteryAtWake() {
+        return lastBodyBatteryAtWake;
+    }
+
+    public void setLastBodyBatteryAtWake(Integer lastBodyBatteryAtWake) {
+        this.lastBodyBatteryAtWake = lastBodyBatteryAtWake;
+    }
+
+    public Integer getReadinessScore() {
+        return readinessScore;
+    }
+
+    public void setReadinessScore(Integer readinessScore) {
+        this.readinessScore = readinessScore;
+    }
+
+    public String getReadinessVerdict() {
+        return readinessVerdict;
+    }
+
+    public void setReadinessVerdict(String readinessVerdict) {
+        this.readinessVerdict = readinessVerdict;
     }
 
     public LocalDateTime getLastRecoveryLoggedAt() {

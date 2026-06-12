@@ -303,7 +303,7 @@ function buildReasons(recommendation, t, metrics) {
   return reasons;
 }
 
-export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery }) {
+export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery, coachPayload }) {
   const totalKm = runs.reduce((s, r) => s + resolveRunDistanceKm(r), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
   const now = new Date();
@@ -364,8 +364,8 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
   const intervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'));
 
   const normalEasyPace = formatPaceRange(trainingPaces?.easy, t('profile.today_run_pace_easy'), false);
-  const normalThresholdPace = formatPaceRange(trainingPaces?.threshold, t('profile.today_run_pace_quality'), false);      
-  const normalIntervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'), false);        
+  const normalThresholdPace = formatPaceRange(trainingPaces?.threshold, t('profile.today_run_pace_quality'), false);
+  const normalIntervalPace = formatPaceRange(trainingPaces?.interval, t('profile.today_run_pace_quality'), false);
 
   const recoveryHours = recoveryState.recoveryHoursLeft || 0;
   const acwr = trainingLoad?.acwr ?? null;
@@ -375,6 +375,9 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
   const d3 = 3 * 24 * 60 * 60 * 1000;
   const recent3 = runs.filter((run) => (nowMs - resolveRunTimeMs(run)) <= d3);
   const hasGapInLast3 = recent3.length === 0 && runs.length > 0;
+
+  const sleep = coachPayload?.state?.lastSleepScore;
+  const stress = coachPayload?.state?.lastStressScore;
 
   let recommendation;
 
@@ -425,9 +428,33 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
       normalPace: t('profile.today_run_pace_restart'),
       purpose: t('profile.today_run_purpose_restart'),
     };
+  } else if ((sleep != null && sleep < 50) || (stress != null && stress > 75)) {
+    const isSleepIssue = sleep != null && sleep < 50;
+    const isStressIssue = stress != null && stress > 75;
+    let fallbackPurpose = '';
+    if (isSleepIssue && isStressIssue) fallbackPurpose = 'Garmin wellness sync shows poor sleep and high stress. Prioritize recovery today.';
+    else if (isSleepIssue) fallbackPurpose = 'Garmin wellness sync shows poor sleep. Prioritize recovery today.';
+    else fallbackPurpose = 'Garmin wellness sync shows high stress. Prioritize recovery today.';
+
+    let purpose = t('today_run.wellness_alert_purpose');
+    if (!purpose || purpose === 'today_run.wellness_alert_purpose') purpose = fallbackPurpose;
+
+    let title = t('today_run.wellness_alert_title');
+    if (!title || title === 'today_run.wellness_alert_title') title = 'Wellness Alert';
+
+    recommendation = {
+      intent: 'recovery',
+      type: t('profile.today_run_type_recovery'),
+      title,
+      distance: t('profile.today_run_distance_recovery'),
+      pace: easyPace,
+      normalPace: normalEasyPace,
+      purpose,
+    };
   } else if (recoveryState.hasData && recoveryHours > 24) {
     // High Debt: Downgrade intensity regardless of other signals
     recommendation = {
+      intent: 'recovery',
       type: t('profile.today_run_type_recovery'),
       title: t('profile.today_run_title_recovery'),
       distance: t('profile.today_run_distance_recovery'),
@@ -438,6 +465,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
   } else if (hasGapInLast3 && bestVdot > 0) {
     // Missed sessions: Don't jump straight to Quality
     recommendation = {
+      intent: 'comeback',
       type: t('profile.today_run_type_base'),
       title: t('today_run.recalibration_gap_title'),
       distance: '6-8 km',
@@ -447,6 +475,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
     };
   } else if (micro.hoursSinceHard !== null && micro.hoursSinceHard < 36) {
     recommendation = {
+      intent: 'easy',
       type: t('profile.today_run_type_easy'),
       title: t('profile.today_run_title_base'),
       distance: t('profile.today_run_distance_base', {
@@ -460,6 +489,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
     };
   } else if (acwr !== null && acwr > 1.2) {
     recommendation = {
+      intent: 'recovery',
       type: t('profile.today_run_type_recovery'),
       title: t('profile.today_run_title_load_high'),
       distance: t('profile.today_run_distance_load_high'),
@@ -475,6 +505,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
     && recoveryHours <= 18
   ) {
     recommendation = {
+      intent: 'quality',
       type: t('profile.today_run_type_quality'),
       title: t('profile.today_run_title_quality'),
       distance: t('profile.today_run_distance_quality_analysis'),
@@ -484,6 +515,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
     };
   } else if (daysSinceLastRun !== null && daysSinceLastRun >= 2) {
     recommendation = {
+      intent: 'comeback',
       type: t('profile.today_run_type_easy'),
       title: t('profile.today_run_title_comeback'),
       distance: t('profile.today_run_distance_comeback', {
@@ -500,6 +532,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
     && micro.hard7 < micro.qualityCap
   ) {
     recommendation = {
+      intent: 'quality',
       type: t('profile.today_run_type_quality'),
       title: t('profile.today_run_title_threshold'),
       distance: t('profile.today_run_distance_threshold'),
@@ -509,6 +542,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
     };
   } else {
     recommendation = {
+      intent: 'base',
       type: t('profile.today_run_type_base'),
       title: t('profile.today_run_title_base'),
       distance: t('profile.today_run_distance_base', {

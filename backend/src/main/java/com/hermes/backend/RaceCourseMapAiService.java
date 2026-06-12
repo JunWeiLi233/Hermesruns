@@ -2,45 +2,103 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 @Service
 public class RaceCourseMapAiService {
+    private static final Map<String, Object> ROUTE_POINT_SCHEMA = Map.of(
+            "type", "object",
+            "properties", Map.of(
+                    "lat", Map.of("type", "number"),
+                    "lng", Map.of("type", "number"),
+                    "label", Map.of("type", "string")
+            ),
+            "required", List.of("lat", "lng"),
+            "additionalProperties", false
+    );
+    private static final Map<String, Object> OVERLAY_BOUNDS_SCHEMA = Map.of(
+            "type", List.of("object", "null"),
+            "properties", Map.of(
+                    "north", Map.of("type", "number"),
+                    "south", Map.of("type", "number"),
+                    "east", Map.of("type", "number"),
+                    "west", Map.of("type", "number")
+            ),
+            "required", List.of("north", "south", "east", "west"),
+            "additionalProperties", false
+    );
+    private static final Map<String, Object> CANDIDATE_ALIGNMENT_SCHEMA = Map.of(
+            "type", "object",
+            "properties", Map.of(
+                    "confidence", Map.of("type", "number"),
+                    "summary", Map.of("type", "string"),
+                    "overlayBounds", OVERLAY_BOUNDS_SCHEMA,
+                    "routePoints", Map.of("type", "array", "items", ROUTE_POINT_SCHEMA),
+                    "startLabel", Map.of("type", "string"),
+                    "finishLabel", Map.of("type", "string")
+            ),
+            "required", List.of("confidence", "summary", "routePoints"),
+            "additionalProperties", false
+    );
+    private static final Map<String, Object> ALIGNMENT_RESPONSE_SCHEMA = Map.of(
+            "type", "object",
+            "properties", Map.of(
+                    "isCourseMap", Map.of("type", "boolean"),
+                    "confidence", Map.of("type", "number"),
+                    "summary", Map.of("type", "string"),
+                    "overlayBounds", OVERLAY_BOUNDS_SCHEMA,
+                    "routePoints", Map.of("type", "array", "items", ROUTE_POINT_SCHEMA),
+                    "startLabel", Map.of("type", "string"),
+                    "finishLabel", Map.of("type", "string"),
+                    "candidateAlignments", Map.of("type", "array", "items", CANDIDATE_ALIGNMENT_SCHEMA)
+            ),
+            "required", List.of("isCourseMap", "confidence", "summary", "routePoints"),
+            "additionalProperties", false
+    );
 
-    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RaceCourseMapGeometryService geometryService;
-
-    @Value("${app.ai.api-key:}")
-    private String aiApiKey;
-
-    @Value("${app.ai.model:gemini-2.0-flash}")
-    private String aiModel;
-
-    @Value("${app.ai.provider:gemini}")
-    private String aiProvider;
+    private final QwenCourseMapAlignmentClient qwenCourseMapAlignmentClient;
+    private final CourseMapScanWatcher scanWatcher;
+    private final RaceCourseMapPromptBuilder promptBuilder;
 
     public RaceCourseMapAiService(
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             RaceCourseMapGeometryService geometryService
     ) {
-        this.restTemplate = restTemplate;
+        this(restTemplate, objectMapper, geometryService, new QwenCourseMapAlignmentClient(objectMapper), new CourseMapScanWatcher(), new RaceCourseMapPromptBuilder());
+    }
+
+    public RaceCourseMapAiService(
+            RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            RaceCourseMapGeometryService geometryService,
+            QwenCourseMapAlignmentClient qwenCourseMapAlignmentClient
+    ) {
+        this(restTemplate, objectMapper, geometryService, qwenCourseMapAlignmentClient, new CourseMapScanWatcher(), new RaceCourseMapPromptBuilder());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public RaceCourseMapAiService(
+            RestTemplate restTemplate,
+            ObjectMapper objectMapper,
+            RaceCourseMapGeometryService geometryService,
+            QwenCourseMapAlignmentClient qwenCourseMapAlignmentClient,
+            CourseMapScanWatcher scanWatcher,
+            RaceCourseMapPromptBuilder promptBuilder
+    ) {
         this.objectMapper = objectMapper;
         this.geometryService = geometryService;
+        this.qwenCourseMapAlignmentClient = qwenCourseMapAlignmentClient;
+        this.scanWatcher = scanWatcher;
+        this.promptBuilder = promptBuilder;
     }
 
     public RaceCourseMapService.CourseMapAlignment analyzeCandidate(
@@ -56,54 +114,25 @@ public class RaceCourseMapAiService {
             RaceCourseMapService.PromptRaceType raceType,
             String mediaType
     ) {
-        RaceCourseMapService.CourseMapAlignment alignment = requestAlignment(
+        return analyzeCandidate(
+                imageReference,
                 imageBytes,
-                mediaType,
-                buildAlignmentPrompt(raceName, city, country, latitude, longitude, distanceKm, forceRouteExtraction, raceType, null),
+                raceName,
+                city,
+                country,
                 latitude,
                 longitude,
                 distanceKm,
-                raceType
-        );
-        if (alignment == null) return null;
-        RaceCourseMapService.RouteGeometryDiagnosis diagnosis = geometryService.diagnoseRouteGeometry(alignment.routePoints(), raceType, distanceKm);
-        if (!diagnosis.needsCorrectionPrompt()) {
-            return alignment;
-        }
-        RaceCourseMapService.CourseMapAlignment corrected = requestAlignment(
-                imageBytes,
+                forceRouteExtraction,
+                raceType,
                 mediaType,
-                buildAlignmentPrompt(raceName, city, country, latitude, longitude, distanceKm, true, raceType, diagnosis.feedbackPrompt()),
-                latitude,
-                longitude,
-                distanceKm,
-                raceType
+                false
         );
-        if (corrected == null) {
-            return alignment;
-        }
-        double originalScore = scoreAlignmentCandidate(alignment, latitude, longitude, distanceKm, raceType);
-        double correctedScore = scoreAlignmentCandidate(corrected, latitude, longitude, distanceKm, raceType);
-        return correctedScore >= originalScore ? corrected : alignment;
     }
 
-    private RaceCourseMapService.CourseMapAlignment requestAlignment(
+    public RaceCourseMapService.CourseMapAlignment analyzeCandidate(
+            String imageReference,
             byte[] imageBytes,
-            String mediaType,
-            String prompt,
-            Double latitude,
-            Double longitude,
-            Double distanceKm,
-            RaceCourseMapService.PromptRaceType raceType
-    ) {
-        String text = "claude".equalsIgnoreCase(aiProvider)
-                ? callClaude(imageBytes, mediaType, prompt)
-                : callGemini(imageBytes, mediaType, prompt);
-        if (text == null || text.isBlank()) return null;
-        return parseAlignment(text, latitude, longitude, distanceKm, raceType);
-    }
-
-    private String buildAlignmentPrompt(
             String raceName,
             String city,
             String country,
@@ -112,186 +141,344 @@ public class RaceCourseMapAiService {
             Double distanceKm,
             boolean forceRouteExtraction,
             RaceCourseMapService.PromptRaceType raceType,
-            String correctiveFeedback
+            String mediaType,
+            boolean preserveRejectedAlignment
     ) {
-        String locationContext = """
-                Race location: %s, %s.
-                Approximate race-area coordinates: %s, %s.
-                Key landmarks near course: city center, main roads, bridges, parks, waterfront if applicable.
-                %s
-                """.formatted(
-                safePromptValue(city),
-                safePromptValue(country),
-                latitude == null ? "unknown" : String.format(Locale.ROOT, "%.6f", latitude),
-                longitude == null ? "unknown" : String.format(Locale.ROOT, "%.6f", longitude),
-                forceRouteExtraction
-                        ? "You must identify the race route even if the course map is stylized, partially visible, or embedded in a poster layout."
-                        : "Prefer official course geometry over decorative page art whenever both appear."
+        scanWatcher.beginStep("qwen.build_prompt", "Building Qwen alignment prompt with race context.");
+        String promptText = promptBuilder.buildAlignmentPrompt(raceName, city, country, latitude, longitude, distanceKm, forceRouteExtraction, raceType, null);
+        scanWatcher.completeStep("qwen.build_prompt", "SUCCESS", "Alignment prompt built.", Map.of(
+                "promptChars", promptText.length(),
+                "forceRouteExtraction", forceRouteExtraction,
+                "raceType", raceType == null ? "" : raceType.name()
+        ));
+
+        // Preprocess the image once here and reuse the prepared bytes for both the
+        // initial alignment call and any rescue call. This avoids repeating the
+        // resize → contrast-enhance → sharpen pipeline on the same image bytes.
+        scanWatcher.beginStep("qwen.image_preprocess", "Preprocessing course-map image for Qwen (shared for all passes).");
+        byte[] preparedImageBytes = QwenImagePreprocessor.preprocessBytes(imageBytes);
+        String preparedMediaType = preparedImageBytes == imageBytes ? mediaType : "image/png";
+        scanWatcher.completeStep("qwen.image_preprocess", "SUCCESS", "Image preprocessing complete (shared for all passes).", Map.of(
+                "originalMediaType", mediaType == null ? "" : mediaType,
+                "finalMediaType", preparedMediaType
+        ));
+
+        scanWatcher.beginStep("qwen.call", "Sending course-map alignment request to Qwen.");
+        RaceCourseMapService.CourseMapAlignment alignment = requestAlignmentPrepared(
+                preparedImageBytes,
+                preparedMediaType,
+                promptText,
+                latitude,
+                longitude,
+                distanceKm,
+                raceType
         );
-        String raceTypeInstructions = switch (raceType) {
-            case OUT_AND_BACK -> """
-                    Race type: out-and-back.
-                    Total distance: %s km.
-                    This is an out-and-back course. The map shows two parallel lines (outbound + return).
-                    Trace ONLY the outbound direction (start -> turnaround).
-                    The return path is a mirror - do not include it.
-                    Reported distance should be HALF the total race distance.
-                    """.formatted(formatDistanceKm(distanceKm));
-            case LOOP -> """
-                    Race type: loop.
-                    Total distance: %s km.
-                    """.formatted(formatDistanceKm(distanceKm));
-            case POINT_TO_POINT -> """
-                    Race type: point-to-point.
-                    Total distance: %s km.
-                    """.formatted(formatDistanceKm(distanceKm));
-        };
-        String correctiveFeedbackBlock = correctiveFeedback == null || correctiveFeedback.isBlank()
-                ? ""
-                : "Correction request:\n- " + correctiveFeedback.trim() + "\n";
-        return """
-                You are aligning a road-race course map image to the real world.
-                Decide if the image is an actual course map for the race, not a medal, hero banner, sponsor graphic, or elevation-only chart.
-                Poster-style official race graphics still count as course maps when they visibly include a route line over a city map, landmarks, district labels, or a start/finish course diagram.
-                If it is a course map, infer an approximate real-world route and map bounds from the visible labels, landmarks, districts, bridges, parks, coastline, and race context.
-                Think at the highest level first: identify the overall city geography and major landmarks before tracing the route details.
-                %s
+        if (alignment == null) {
+            scanWatcher.completeStep("qwen.call", "FAILED", "Qwen returned no parseable course-map alignment.");
+            scanWatcher.record("qwen.alignment_missing", "FAILED", "Qwen returned no parseable course-map alignment.");
+            return null;
+        }
+        scanWatcher.completeStep("qwen.call", "SUCCESS", "Qwen returned a parseable alignment.", Map.of(
+                "confidence", alignment.confidence(),
+                "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                "isCourseMap", alignment.isCourseMap()
+        ));
+        if (!alignment.isCourseMap()) {
+            scanWatcher.beginStep("qwen.decision", "Final alignment decision - Qwen did not detect a course map.");
+            scanWatcher.completeStep("qwen.decision", "SUCCESS", "Non-course-map response accepted without rescue pass.", Map.of(
+                    "confidence", alignment.confidence()
+            ));
+            return alignment;
+        }
 
-                Race metadata:
-                - raceName: %s
-                - city: %s
-                - country: %s
-                - cityCenterLat: %s
-                - cityCenterLng: %s
-                - distanceKm: %s
-                - raceType: %s
+        scanWatcher.beginStep("qwen.geometry_check", "Running route geometry diagnosis on Qwen alignment.");
+        RaceCourseMapService.RouteGeometryDiagnosis diagnosis = geometryService.diagnoseRouteGeometry(alignment.routePoints(), raceType, distanceKm);
+        String rescuePrompt = null;
+        String rescueReason = null;
+        if (diagnosis.needsCorrectionPrompt()) {
+            rescuePrompt = diagnosis.feedbackPrompt();
+            rescueReason = "geometry";
+            scanWatcher.completeStep("qwen.geometry_check", "FAILED", "Route geometry diagnosis requested a corrective Qwen pass.", Map.of(
+                    "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                    "reason", "geometry"
+            ));
+            scanWatcher.record("qwen.rescue_requested", "RUNNING", "Route geometry diagnosis requested a corrective Qwen pass.", Map.of(
+                    "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                    "reason", "geometry"
+            ));
+        } else {
+            scanWatcher.completeStep("qwen.geometry_check", "SUCCESS", "Route geometry passed diagnosis checks.");
+            scanWatcher.beginStep("qwen.plausibility_check", "Running alignment plausibility assessment.");
+            RaceCourseMapGeometryService.AlignmentPlausibilityVerdict plausibilityVerdict =
+                    geometryService.assessAlignmentPlausibility(
+                            alignment.routePoints(),
+                            latitude,
+                            longitude,
+                            distanceKm,
+                            promptBuilder.minimumRoutePointCountForRescue(raceType),
+                            raceType
+                    );
+            if (!plausibilityVerdict.plausible()) {
+                rescuePrompt = promptBuilder.buildPlausibilityRescuePrompt(plausibilityVerdict, raceType, distanceKm);
+                rescueReason = plausibilityVerdict.reason();
+                scanWatcher.completeStep("qwen.plausibility_check", "FAILED", "Plausibility checks requested a corrective Qwen pass.", Map.of(
+                        "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                        "reason", plausibilityVerdict.reason() == null ? "" : plausibilityVerdict.reason()
+                ));
+                scanWatcher.record("qwen.rescue_requested", "RUNNING", "Plausibility checks requested a corrective Qwen pass.", Map.of(
+                        "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                        "reason", plausibilityVerdict.reason() == null ? "" : plausibilityVerdict.reason()
+                ));
+            } else {
+                scanWatcher.completeStep("qwen.plausibility_check", "SUCCESS", "Alignment passed plausibility checks.");
+            }
+        }
+        if (rescuePrompt == null || rescuePrompt.isBlank()) {
+            scanWatcher.beginStep("qwen.known_course_check", "Running known-course geography verification.");
+            KnownCourseGeographyVerdict geographyVerdict = assessKnownCourseGeography(alignment, raceName, city, country);
+            if (!geographyVerdict.valid()) {
+                rescuePrompt = geographyVerdict.correctivePrompt();
+                rescueReason = geographyVerdict.reason();
+                scanWatcher.completeStep("qwen.known_course_check", "FAILED", "Known-course geography checks requested a corrective Qwen pass.", Map.of(
+                        "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                        "reason", geographyVerdict.reason()
+                ));
+                scanWatcher.record("qwen.rescue_requested", "RUNNING", "Known-course geography checks requested a corrective Qwen pass.", Map.of(
+                        "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                        "reason", geographyVerdict.reason()
+                ));
+            } else {
+                scanWatcher.completeStep("qwen.known_course_check", "SUCCESS", "Known-course geography checks passed.");
+            }
+        }
+        if (rescuePrompt == null || rescuePrompt.isBlank()) {
+            scanWatcher.beginStep("qwen.decision", "Final alignment decision — no rescue needed.");
+            scanWatcher.completeStep("qwen.decision", "SUCCESS", "Alignment accepted without rescue pass.", Map.of(
+                    "confidence", alignment.confidence(),
+                    "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size()
+            ));
+            return alignment;
+        }
 
-                Route-tracing context:
-                %s
-                If multiple lines appear close together, trace only ONE continuous directed path.
-                Follow course arrows, timing mat markers, or directional cones if visible.
-                Do NOT zigzag between parallel lines - commit to one side.
-                %s
+        scanWatcher.beginStep("qwen.rescue", "Running corrective Qwen pass with rescue prompt.");
+        RaceCourseMapService.CourseMapAlignment corrected = requestAlignmentPrepared(
+                preparedImageBytes,
+                preparedMediaType,
+                promptBuilder.buildAlignmentPrompt(raceName, city, country, latitude, longitude, distanceKm, true, raceType, rescuePrompt),
+                latitude,
+                longitude,
+                distanceKm,
+                raceType
+        );
+        if (corrected == null) {
+            scanWatcher.completeStep("qwen.rescue", "FAILED", "Corrective Qwen pass returned no parseable alignment.");
+            scanWatcher.record("qwen.rescue_parse_failed", "FAILED", "Corrective Qwen pass returned no parseable alignment.");
+            return preserveRejectedAlignment ? alignment : null;
+        }
+        RaceCourseMapGeometryService.AlignmentPlausibilityVerdict correctedPlausibility =
+                geometryService.assessAlignmentPlausibility(
+                        corrected.routePoints(),
+                        latitude,
+                        longitude,
+                        distanceKm,
+                        promptBuilder.minimumRoutePointCountForRescue(raceType),
+                        raceType
+                );
+        KnownCourseGeographyVerdict correctedGeography = assessKnownCourseGeography(corrected, raceName, city, country);
+        double originalScore = scoreAlignmentCandidate(alignment, latitude, longitude, distanceKm, raceType);
+        double correctedScore = scoreAlignmentCandidate(corrected, latitude, longitude, distanceKm, raceType);
+        String rescueOutcome;
+        if (!correctedGeography.valid()) {
+            rescueOutcome = "FAILED: still failed known-course geography checks";
+            scanWatcher.completeStep("qwen.rescue", "FAILED", "Corrective Qwen pass still failed known-course geography checks.", Map.of(
+                    "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                    "reason", correctedGeography.reason()
+            ));
+            scanWatcher.record("qwen.rescue_rejected", "FAILED", "Corrective Qwen pass still failed known-course geography checks.", Map.of(
+                    "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                    "reason", correctedGeography.reason()
+            ));
+            return preserveRejectedAlignment ? alignment : null;
+        }
+        if (!correctedPlausibility.plausible()) {
+            if (isUsableLowerDensityCorrectiveRoute(corrected, correctedPlausibility.reason(), distanceKm)
+                    && correctedScore > originalScore) {
+                rescueOutcome = "SUCCESS: lower-density corrected route accepted";
+                scanWatcher.completeStep("qwen.rescue", "SUCCESS", "Corrective Qwen pass improved the route but remained below the dense-route point target.", Map.of(
+                        "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                        "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason(),
+                        "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                        "correctedScore", Math.round(correctedScore * 100.0) / 100.0
+                ));
+                scanWatcher.record("qwen.rescue_lower_density_accepted", "SUCCESS", "Corrective Qwen pass improved the route but remained below the dense-route point target.", Map.of(
+                        "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                        "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason(),
+                        "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                        "correctedScore", Math.round(correctedScore * 100.0) / 100.0
+                ));
+                return corrected;
+            }
+            if (isUsableLowerDensityCorrectiveRoute(alignment, rescueReason, distanceKm)
+                    && originalScore >= correctedScore) {
+                rescueOutcome = "SUCCESS: original lower-density route preserved (corrective regressed)";
+                scanWatcher.completeStep("qwen.rescue", "SUCCESS", "Corrective Qwen pass regressed, so Hermes kept the lower-density original route.", Map.of(
+                        "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                        "reason", rescueReason == null ? "" : rescueReason,
+                        "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                        "correctedScore", Math.round(correctedScore * 100.0) / 100.0
+                ));
+                scanWatcher.record("qwen.rescue_original_preserved", "SUCCESS", "Corrective Qwen pass regressed, so Hermes kept the lower-density original route.", Map.of(
+                        "routePoints", alignment.routePoints() == null ? 0 : alignment.routePoints().size(),
+                        "reason", rescueReason == null ? "" : rescueReason,
+                        "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                        "correctedScore", Math.round(correctedScore * 100.0) / 100.0
+                ));
+                return alignment;
+            }
+            rescueOutcome = "FAILED: still failed route plausibility checks";
+            scanWatcher.completeStep("qwen.rescue", "FAILED", "Corrective Qwen pass still failed route plausibility checks.", Map.of(
+                "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason()
+            ));
+            scanWatcher.record("qwen.rescue_rejected", "FAILED", "Corrective Qwen pass still failed route plausibility checks.", Map.of(
+                "routePoints", corrected.routePoints() == null ? 0 : corrected.routePoints().size(),
+                "reason", correctedPlausibility.reason() == null ? "" : correctedPlausibility.reason()
+            ));
+            return preserveRejectedAlignment ? alignment : null;
+        }
+        rescueOutcome = "SUCCESS: corrected alignment scored against original";
+        scanWatcher.completeStep("qwen.rescue", "SUCCESS", "Corrective Qwen pass scored against the original alignment.", Map.of(
+                "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                "correctedScore", Math.round(correctedScore * 100.0) / 100.0,
+                "selected", "corrected"
+        ));
+        scanWatcher.record("qwen.rescue_scored", "SUCCESS", "Corrective Qwen pass scored against the original alignment.", Map.of(
+                "originalScore", Math.round(originalScore * 100.0) / 100.0,
+                "correctedScore", Math.round(correctedScore * 100.0) / 100.0,
+                "selected", "corrected"
+        ));
+        return corrected;
+    }
 
-                Output ONLY JSON with this shape:
-                {
-                  "isCourseMap": true,
-                  "confidence": 0,
-                  "summary": "short plain summary",
-                  "overlayBounds": { "north": 0, "south": 0, "east": 0, "west": 0 },
-                  "routePoints": [
-                    { "lat": 0, "lng": 0, "label": "Start" }
-                  ],
-                  "startLabel": "optional",
-                  "finishLabel": "optional",
-                  "candidateAlignments": [
-                    {
-                      "confidence": 0,
-                      "summary": "optional alternate hypothesis",
-                      "overlayBounds": { "north": 0, "south": 0, "east": 0, "west": 0 },
-                      "routePoints": [
-                        { "lat": 0, "lng": 0, "label": "Start" }
-                      ],
-                      "startLabel": "optional",
-                      "finishLabel": "optional"
-                    }
-                  ]
-                }
+    private KnownCourseGeographyVerdict assessKnownCourseGeography(
+            RaceCourseMapService.CourseMapAlignment alignment,
+            String raceName,
+            String city,
+            String country
+    ) {
+        List<RoutePoint> routePoints = alignment == null || alignment.routePoints() == null
+                ? List.of()
+                : alignment.routePoints();
+        KnownCourseGeographyProfile profile = knownCourseGeographyProfile(raceName, city, country);
+        if (routePoints.isEmpty() || profile == null) {
+            return KnownCourseGeographyVerdict.ok();
+        }
+        for (RoutePoint point : routePoints) {
+            if (profile.isNewYorkCityMarathon() && isNewYorkOpenWaterPoint(point)) {
+                String reason = profile.courseName() + " route includes an open water checkpoint near New York Harbor or the Atlantic Ocean at "
+                        + String.format(Locale.ROOT, "%.4f, %.4f", point.lat(), point.lng());
+                String prompt = reason
+                        + ". Re-read the visible course line and labels instead of guessing from race memory. "
+                        + "The route may cross the Verrazzano-Narrows Bridge, Queensboro Bridge, and other visible bridge corridors, "
+                        + "but it must not draw checkpoints through open water. If the image cannot visually support the full route, return routePoints=[] with low confidence.";
+                return KnownCourseGeographyVerdict.invalid(reason, prompt);
+            }
+            if (!profile.contains(point)) {
+                String reason = profile.courseName() + " route includes a checkpoint outside the known "
+                        + profile.courseName()
+                        + " corridor at "
+                        + String.format(Locale.ROOT, "%.4f, %.4f", point.lat(), point.lng());
+                String prompt = reason
+                        + ". Re-read the visible course line and labels instead of stretching the route outside the known race corridor. "
+                        + "Use known-course context only to choose among visible map evidence, not to create unseen geometry. "
+                        + "If the image cannot visually support the full route, return routePoints=[] with low confidence.";
+                return KnownCourseGeographyVerdict.invalid(reason, prompt);
+            }
+        }
+        return KnownCourseGeographyVerdict.ok();
+    }
 
-                Rules:
-                - If the image is not a course map, return isCourseMap=false, confidence<=25, overlayBounds=null, routePoints=[].
-                - Output routePoints as an ordered array from START to FINISH.
-                - Each point must be strictly further along the course than the previous.
-                - Never backtrack unless this is an explicit out-and-back race.
-                - Use 24 to 48 route points when the map supports it.
-                - Provide 48 to 96 route points for courses with overlapping or parallel segments.
-                - Place extra points at every junction where two lines diverge or merge.
-                - Keep points approximate but geographically plausible.
-                - overlayBounds must cover the visible course-map canvas, not only the route line.
-                - Do not invent extreme precision. If unsure, lower confidence instead of hallucinating.
-                - Prefer official city geography implied by the image labels and race metadata.
-                - Ensure the route points roughly match the distanceKm provided.
-                - When multiple interpretations are plausible, include 2 to 3 candidateAlignments ordered best-first and repeat the single best hypothesis in the top-level fields.
+    private KnownCourseGeographyProfile knownCourseGeographyProfile(String raceName, String city, String country) {
+        String combined = String.join(
+                " ",
+                promptBuilder.safePromptValue(raceName),
+                promptBuilder.safePromptValue(city),
+                promptBuilder.safePromptValue(country)
+        ).toLowerCase(Locale.ROOT);
+        if (!combined.contains("marathon")) {
+            return null;
+        }
+        for (KnownCourseGeographyProfile profile : knownCourseGeographyProfiles()) {
+            if (profile.matches(combined)) {
+                return profile;
+            }
+        }
+        return null;
+    }
 
-                """.formatted(
-                locationContext,
-                safePromptValue(raceName),
-                safePromptValue(city),
-                safePromptValue(country),
-                latitude == null ? "unknown" : String.format(Locale.ROOT, "%.6f", latitude),
-                longitude == null ? "unknown" : String.format(Locale.ROOT, "%.6f", longitude),
-                distanceKm == null ? "unknown" : String.format(Locale.ROOT, "%.3f", distanceKm),
-                raceType.promptValue(),
-                raceTypeInstructions,
-                correctiveFeedbackBlock
+    private List<KnownCourseGeographyProfile> knownCourseGeographyProfiles() {
+        return List.of(
+                new KnownCourseGeographyProfile("New York City Marathon", List.of("new york", "nyc"), 40.5800, 40.8600, -74.1800, -73.9200),
+                new KnownCourseGeographyProfile("Chicago Marathon", List.of("chicago"), 41.7650, 41.9900, -87.7200, -87.5900),
+                new KnownCourseGeographyProfile("Boston Marathon", List.of("boston"), 42.2050, 42.3700, -71.5450, -71.0350),
+                new KnownCourseGeographyProfile("Paris Marathon", List.of("paris"), 48.8150, 48.8950, 2.2500, 2.4700),
+                new KnownCourseGeographyProfile("Munich Marathon", List.of("munich", "munchen", "muenchen"), 48.1050, 48.1900, 11.5050, 11.6400),
+                new KnownCourseGeographyProfile("Gold Coast Marathon", List.of("gold coast"), -28.1050, -27.8950, 153.3800, 153.4700)
         );
     }
 
-    private String callGemini(byte[] imageBytes, String mediaType, String prompt) {
-        Map<String, Object> request = Map.of(
-                "contents", List.of(Map.of(
-                        "parts", List.of(
-                                Map.of("inline_data", Map.of(
-                                        "mime_type", mediaType,
-                                        "data", Base64.getEncoder().encodeToString(imageBytes)
-                                )),
-                                Map.of("text", prompt)
-                        )
-                ))
-        );
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + aiModel + ":generateContent?key=" + aiApiKey;
-
-        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(request, headers), Map.class);
-        Map<?, ?> body = response.getBody();
-        if (body == null) return null;
-        Object candidates = body.get("candidates");
-        if (!(candidates instanceof List<?> list) || list.isEmpty() || !(list.get(0) instanceof Map<?, ?> first)) return null;
-        Object content = first.get("content");
-        if (!(content instanceof Map<?, ?> contentMap)) return null;
-        Object parts = contentMap.get("parts");
-        if (!(parts instanceof List<?> partList) || partList.isEmpty() || !(partList.get(0) instanceof Map<?, ?> partMap)) return null;
-        Object text = partMap.get("text");
-        return text instanceof String value ? value : null;
+    private boolean isNewYorkOpenWaterPoint(RoutePoint point) {
+        if (point == null) return false;
+        double lat = point.lat();
+        double lng = point.lng();
+        boolean lowerBayOrAtlantic = lat < 40.595 && lng > -74.020 && lng < -73.700;
+        boolean offshoreSouthOfBrooklyn = lat < 40.555 && lng > -74.160 && lng < -73.700;
+        return lowerBayOrAtlantic || offshoreSouthOfBrooklyn;
     }
 
-    private String callClaude(byte[] imageBytes, String mediaType, String prompt) {
-        Map<String, Object> request = Map.of(
-                "model", aiModel,
-                "max_tokens", 2048,
-                "messages", List.of(Map.of(
-                        "role", "user",
-                        "content", List.of(
-                                Map.of("type", "image",
-                                        "source", Map.of(
-                                                "type", "base64",
-                                                "media_type", mediaType,
-                                                "data", Base64.getEncoder().encodeToString(imageBytes)
-                                        )),
-                                Map.of("type", "text", "text", prompt)
-                        )
-                ))
-        );
+    /**
+     * Invoke Qwen with already-preprocessed image bytes. Preprocessing (resize, contrast-enhance,
+     * sharpen) must be applied by the caller before this method — call
+     * {@link QwenImagePreprocessor#preprocessBytes(byte[])} once and reuse the result for all
+     * passes (initial + rescue) to avoid redundant work.
+     */
+    private RaceCourseMapService.CourseMapAlignment requestAlignmentPrepared(
+            byte[] preparedBytes,
+            String preparedMediaType,
+            String prompt,
+            Double latitude,
+            Double longitude,
+            Double distanceKm,
+            RaceCourseMapService.PromptRaceType raceType
+    ) {
+        scanWatcher.beginStep("qwen.invoke", "Calling Qwen vision model for course-map alignment.");
+        String text = callQwen(preparedBytes, preparedMediaType, prompt);
+        if (text == null || text.isBlank()) {
+            scanWatcher.completeStep("qwen.invoke", "FAILED", "Qwen returned an empty alignment response.");
+            scanWatcher.record("qwen.response_empty", "FAILED", "Qwen returned an empty alignment response.");
+            return null;
+        }
+        scanWatcher.completeStep("qwen.invoke", "SUCCESS", "Qwen returned alignment response text.", Map.of(
+                "responseChars", text.length()
+        ));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-api-key", aiApiKey);
-        headers.set("anthropic-version", "2023-06-01");
+        scanWatcher.beginStep("qwen.parse_json", "Parsing Qwen JSON alignment response.");
+        RaceCourseMapService.CourseMapAlignment result = parseAlignment(text, latitude, longitude, distanceKm, raceType);
+        if (result == null) {
+            scanWatcher.completeStep("qwen.parse_json", "FAILED", "Failed to parse Qwen alignment JSON.");
+        } else {
+            scanWatcher.completeStep("qwen.parse_json", "SUCCESS", "Qwen JSON parsed into alignment candidate.", Map.of(
+                    "confidence", result.confidence(),
+                    "routePoints", result.routePoints() == null ? 0 : result.routePoints().size()
+            ));
+        }
+        return result;
+    }
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-                "https://api.anthropic.com/v1/messages",
-                HttpMethod.POST,
-                new HttpEntity<>(request, headers),
-                Map.class
-        );
-        Map<?, ?> body = response.getBody();
-        if (body == null) return null;
-        Object content = body.get("content");
-        if (!(content instanceof List<?> list) || list.isEmpty() || !(list.get(0) instanceof Map<?, ?> first)) return null;
-        Object text = first.get("text");
-        return text instanceof String value ? value : null;
+
+
+    private String callQwen(byte[] imageBytes, String mediaType, String prompt) {
+        return qwenCourseMapAlignmentClient.analyzeCandidate(imageBytes, mediaType, prompt);
     }
 
     private RaceCourseMapService.CourseMapAlignment parseAlignment(String text, Double latitude, Double longitude, Double distanceKm, RaceCourseMapService.PromptRaceType raceType) {
@@ -314,10 +501,20 @@ public class RaceCourseMapAiService {
                 }
             }
             if (alignments.isEmpty()) {
+                scanWatcher.record("qwen.alignment_parse_empty", "failed", "Qwen JSON contained no usable alignment candidates.");
                 return null;
             }
-            return chooseBestAlignment(alignments, latitude, longitude, distanceKm, raceType);
-        } catch (Exception ignored) {
+            RaceCourseMapService.CourseMapAlignment best = chooseBestAlignment(alignments, latitude, longitude, distanceKm, raceType);
+            scanWatcher.record("qwen.alignment_parsed", "completed", "Qwen JSON parsed into route alignment candidates.", Map.of(
+                    "candidateCount", alignments.size(),
+                    "selectedRoutePoints", best == null || best.routePoints() == null ? 0 : best.routePoints().size(),
+                    "selectedConfidence", best == null ? 0 : best.confidence()
+            ));
+            return best;
+        } catch (Exception ex) {
+            scanWatcher.record("qwen.alignment_parse_failed", "failed", "Qwen alignment JSON could not be parsed.", Map.of(
+                    "error", ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage()
+            ));
             return null;
         }
     }
@@ -325,7 +522,7 @@ public class RaceCourseMapAiService {
     private RaceCourseMapService.CourseMapAlignment parseAlignmentCandidate(Object raw, boolean defaultIsCourseMap, RaceCourseMapService.PromptRaceType raceType) {
         if (!(raw instanceof Map<?, ?> map)) return null;
         boolean isCourseMap = map.containsKey("isCourseMap")
-                ? Boolean.TRUE.equals(map.get("isCourseMap"))
+                ? asBoolean(map.get("isCourseMap"), defaultIsCourseMap)
                 : defaultIsCourseMap;
         int confidence = clampConfidence(map.get("confidence"));
         String summary = asTrimmedString(map.get("summary"));
@@ -424,6 +621,9 @@ public class RaceCourseMapAiService {
         double lengthRatioFactor = 1.0;
         if (distanceKm != null && distanceKm > 0) {
             double routeDistanceKm = geometryService.polylineDistanceKm(routePoints);
+            if (isCollapsedRouteCandidate(routeDistanceKm, distanceKm)) {
+                return -160.0;
+            }
             RaceCourseMapService.AlignmentRatioWindow ratioWindow = new RaceCourseMapService.AlignmentRatioWindow(0.30, 3.0);
             RaceCourseMapService.AlignmentRatioWindow expectedWindow = geometryService.expectedDistanceRatioWindow(distanceKm, routePoints.size());
             double distanceRatio = routeDistanceKm / distanceKm;
@@ -446,8 +646,23 @@ public class RaceCourseMapAiService {
         return score;
     }
 
-    private String safePromptValue(String value) {
-        return value == null || value.isBlank() ? "unknown" : value.trim();
+    private boolean isCollapsedRouteCandidate(double routeDistanceKm, Double distanceKm) {
+        if (distanceKm == null || distanceKm <= 0) return false;
+        return routeDistanceKm < Math.max(1.0, distanceKm * 0.08);
+    }
+
+    private boolean isUsableLowerDensityCorrectiveRoute(
+            RaceCourseMapService.CourseMapAlignment corrected,
+            String plausibilityReason,
+            Double distanceKm
+    ) {
+        if (corrected == null || !corrected.isCourseMap() || corrected.routePoints() == null) return false;
+        if (plausibilityReason == null || !plausibilityReason.startsWith("route has only ")) return false;
+        if (corrected.routePoints().size() < 6) return false;
+        if (distanceKm == null || distanceKm <= 0) return true;
+        double routeDistanceKm = geometryService.polylineDistanceKm(corrected.routePoints());
+        if (isCollapsedRouteCandidate(routeDistanceKm, distanceKm)) return false;
+        return routeDistanceKm >= 3.0;
     }
 
     private String asTrimmedString(Object value) {
@@ -468,13 +683,61 @@ public class RaceCourseMapAiService {
         return null;
     }
 
+    private boolean asBoolean(Object value, boolean fallback) {
+        if (value instanceof Boolean boolValue) return boolValue;
+        if (value instanceof Number numberValue) return numberValue.doubleValue() != 0.0;
+        if (value instanceof String stringValue) {
+            String normalized = stringValue.trim().toLowerCase(Locale.ROOT);
+            if ("true".equals(normalized)) return true;
+            if ("false".equals(normalized)) return false;
+        }
+        return fallback;
+    }
+
     private int clampConfidence(Object value) {
         Double parsed = asDouble(value);
         if (parsed == null) return 0;
         return Math.max(0, Math.min(100, (int) Math.round(parsed)));
     }
 
-    private String formatDistanceKm(Double distanceKm) {
-        return distanceKm == null ? "unknown" : String.format(Locale.ROOT, "%.3f", distanceKm);
+    private record KnownCourseGeographyVerdict(boolean valid, String reason, String correctivePrompt) {
+        static KnownCourseGeographyVerdict ok() {
+            return new KnownCourseGeographyVerdict(true, "", "");
+        }
+
+        static KnownCourseGeographyVerdict invalid(String reason, String correctivePrompt) {
+            return new KnownCourseGeographyVerdict(false, reason, correctivePrompt);
+        }
+    }
+
+    private record KnownCourseGeographyProfile(
+            String courseName,
+            List<String> matchTerms,
+            double south,
+            double north,
+            double west,
+            double east
+    ) {
+        boolean matches(String context) {
+            for (String matchTerm : matchTerms) {
+                if (context.contains(matchTerm)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        boolean contains(RoutePoint point) {
+            if (point == null) return false;
+            double padding = 0.015;
+            return point.lat() >= south - padding
+                    && point.lat() <= north + padding
+                    && point.lng() >= west - padding
+                    && point.lng() <= east + padding;
+        }
+
+        boolean isNewYorkCityMarathon() {
+            return courseName.toLowerCase(Locale.ROOT).contains("new york");
+        }
     }
 }

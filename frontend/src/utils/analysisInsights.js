@@ -1,6 +1,5 @@
-import { formatDuration, formatPaceSeconds } from './format';
+import { formatDuration, formatPaceSeconds } from './format.js';
 import {
-  calculateVdot,
   buildOrderedRacePredictions,
   collectAllVdotEntries,
   estimateCurrentVdot,
@@ -9,7 +8,7 @@ import {
   danielsRunningVo2CostMlKgMin,
   computeTrainingPaces,
   vdotToPaceSecondsPerKm,
-} from './vdot';
+} from './vdot.js';
 
 export const KM_TO_MILE = 1.60934;
 
@@ -32,13 +31,25 @@ const TRAINING_ZONE_DISPLAY_FRACTIONS = {
 
 const avg = (values) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0);
 
+export function normalizeAnalysisList(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 export function kmOf(run) {
   return Number(run?.distanceKm || 0) || (Number(run?.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
 }
 
+// Linear remap %HRmax → vo2Fraction calibrated so the boundaries below
+// match Daniels' running-zone literature:
+//   80% HRmax → vo2Fraction 0.75 (marathon / Z3 floor)
+//  100% HRmax → vo2Fraction 1.00 (vo2max ceiling)
+// Old anchor (`- 37) / 64`) effectively assumed resting HR ≈ 37% of HRmax
+// for everyone, which pushed the marathon-zone floor up to ~85% HRmax and
+// caused tempo / threshold runs at 80-84% HRmax to be misclassified as
+// "easy" instead of Z3. New anchor `(- 20) / 80` matches Daniels' HR zones.
 export function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
-  return Math.max(0, (((Math.min(1, avgHr / hrMax) * 100) - 37) / 64));
+  return Math.max(0, (((Math.min(1, avgHr / hrMax) * 100) - 20) / 80));
 }
 
 export function paceToVo2Fraction(paceSecPerKm, vdot) {
@@ -245,6 +256,7 @@ export function buildInjuryInsight(runs, trainingLoad) {
 }
 
 export function buildVo2Bars(entries, lang) {
+  const safeEntries = normalizeAnalysisList(entries);
   const fmt = new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { month: 'short' });
   const now = new Date();
   const bars = [];
@@ -252,29 +264,32 @@ export function buildVo2Bars(entries, lang) {
   for (let i = 5; i >= 0; i -= 1) {
     const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-    const best = entries
-      .filter((entry) => entry.date >= start && entry.date < end)
-      .reduce((max, entry) => Math.max(max, entry.vdot || 0), 0);
+    const monthEntries = safeEntries.filter((entry) => entry.date >= start && entry.date < end);
+    const best = monthEntries.reduce((max, entry) => Math.max(max, entry.vdot || 0), 0);
+    const bestAdjusted = monthEntries.reduce((max, entry) => Math.max(max, entry.adjustedVo2max || entry.vdot || 0), 0);
 
     bars.push({
       key: `${start.getFullYear()}-${start.getMonth()}`,
       label: fmt.format(start).slice(0, 3).toUpperCase(),
       value: best || null,
+      adjustedValue: bestAdjusted || best || null,
+      hasAdjustment: best > 0 && (bestAdjusted - best) > 0.05,
     });
   }
 
-  const max = Math.max(50, ...bars.map((bar) => bar.value || 0));
+  const max = Math.max(50, ...bars.flatMap((bar) => [bar.value || 0, bar.adjustedValue || 0]));
   return bars.map((bar, index) => ({
     ...bar,
     current: index === bars.length - 1,
     height: bar.value ? Math.max(26, Math.round((bar.value / max) * 100)) : 22,
+    adjustedHeight: bar.adjustedValue ? Math.max(26, Math.round((bar.adjustedValue / max) * 100)) : 22,
   }));
 }
 
 export function buildPredictionRows(bestVdot, runs, lang, unit) {
   if (!bestVdot) return [];
 
-  return buildOrderedRacePredictions(bestVdot, runs)
+  return normalizeAnalysisList(buildOrderedRacePredictions(bestVdot, runs))
     .map((row) => {
       const totalSeconds = Math.round((row.timeMin || 0) * 60);
       const paceSec = row.timeMin ? (totalSeconds / row.meters) * 1000 : null;
@@ -570,14 +585,14 @@ export function buildTrainingZones(bestVdot, lang, unit) {
 export function buildAnalysisSnapshot(runs, lang, unit) {
   const bestEstimate = estimateCurrentVdot(runs);
   const bestVdot = bestEstimate.representativeVdot;
-  const entries = collectAllVdotEntries(runs);
-  const vo2Bars = buildVo2Bars(entries, lang);
+  const entries = normalizeAnalysisList(collectAllVdotEntries(runs));
+  const vo2Bars = normalizeAnalysisList(buildVo2Bars(entries, lang));
   const trainingLoad = buildTrainingLoad(runs, bestVdot);
   const loadZone = acwrZone(trainingLoad?.lastAcwr);
   const polarized = buildPolarized(runs, bestVdot);
   const injury = buildInjuryInsight(runs, trainingLoad);
-  const predictionRows = buildPredictionRows(bestVdot, runs, lang, unit);
-  const trainingZones = buildTrainingZones(bestVdot, lang, unit);
+  const predictionRows = normalizeAnalysisList(buildPredictionRows(bestVdot, runs, lang, unit));
+  const trainingZones = normalizeAnalysisList(buildTrainingZones(bestVdot, lang, unit));
   const marathonRow = predictionRows.find((row) => row.key === 'marathon') || null;
 
   let marathonDeltaSeconds = null;
