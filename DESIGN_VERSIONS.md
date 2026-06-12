@@ -2645,3 +2645,12 @@ What changed: Promoted the exercise protocol area into the primary route experie
 Why: The user clarified that the image-card-first layout was not practical and asked for a page closer to the action detail/workbench reference.
 Rollback target: `DV-2026-05-19-05`
 Notes: The six target photos remain available only as small filter thumbnails. Real plan/recovery/check-in wiring is unchanged, and optional library movements still do not participate in today's recommendation calculation.
+
+### Version: DV-2026-06-12-01
+Date: 2026-06-12
+Surface: Real route thumbnails on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `backend/src/main/java/com/hermes/backend/ActivityController.java`, `backend/src/main/java/com/hermes/backend/ActivityPointRepository.java`, `DESIGN_VERSIONS.md`
+What changed: `/runs` thumbnails now draw dense route previews on matching CARTO map tiles, keep the Strava badge above the route line, and preload upcoming preview batches so cards do not visibly upgrade after entering the viewport.
+Why: The route cards were showing oversized or stale simplified paths, and later cards could appear with fallback geometry before the real route preview arrived.
+Rollback target: `DV-2026-05-19-06`
+Notes: The run-detail route source remains authoritative; the list page uses the batched route-preview endpoint only for thumbnail-grade rendering.

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +42,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     Optional<Activity> findByRunnerAndProviderAndSourceChecksum(Runner runner, ImportProvider provider, String sourceChecksum);
 
     Optional<Activity> findByIdAndRunner(Long id, Runner runner);
+
+    List<Activity> findByIdInAndRunner(Collection<Long> ids, Runner runner);
 
     long countByRunner(Runner runner);
 
