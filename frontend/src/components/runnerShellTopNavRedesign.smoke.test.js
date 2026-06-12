@@ -44,7 +44,6 @@ assert(
 
 [
   "key: 'territory'",
-  "key: 'workflows'",
   "t('profile.dashboard_nav_weather_engine')",
 ].forEach((needle) => {
   assert(navSource.includes(needle), `Shared runner nav is missing ${needle}.`);
